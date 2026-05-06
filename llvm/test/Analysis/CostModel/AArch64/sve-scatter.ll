@@ -10,24 +10,24 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @masked_scatters(<vscale x 4 x i1> %nxv4i1mask, <vscale x 8 x i1> %nxv8i1mask, <4 x i1> %v4i1mask, <1 x i1> %v1i1mask, <vscale x 1 x i1> %nxv1i1mask) #0 {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatters'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> align 4 undef, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> align 4 undef, <vscale x 8 x i1> %nxv8i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> align 8 undef, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatters'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> align 4 undef, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> align 4 undef, <vscale x 8 x i1> %nxv8i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> align 8 undef, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V2-LABEL: 'masked_scatters'
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
-; CHECK-V2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
-; CHECK-V2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> align 4 undef, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> align 4 undef, <vscale x 8 x i1> %nxv8i1mask)
+; CHECK-V2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> align 8 undef, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-V2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
@@ -39,21 +39,21 @@ define void @masked_scatters(<vscale x 4 x i1> %nxv4i1mask, <vscale x 8 x i1> %n
 
 define void @masked_scatters_tune_generic(<vscale x 4 x i1> %nxv4i1mask, <vscale x 8 x i1> %nxv8i1mask, <4 x i1> %v4i1mask, <1 x i1> %v1i1mask, <vscale x 1 x i1> %nxv1i1mask) #1 {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatters_tune_generic'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> align 4 undef, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> align 4 undef, <vscale x 8 x i1> %nxv8i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> align 8 undef, <vscale x 1 x i1> %nxv1i1mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatters_tune_generic'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> align 4 undef, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> align 4 undef, <vscale x 8 x i1> %nxv8i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> align 8 undef, <vscale x 1 x i1> %nxv1i1mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V2-LABEL: 'masked_scatters_tune_generic'
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
-; CHECK-V2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> align 4 undef, <vscale x 4 x i1> %nxv4i1mask)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> align 4 undef, <vscale x 8 x i1> %nxv8i1mask)
+; CHECK-V2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> align 8 undef, <vscale x 1 x i1> %nxv1i1mask)
 ; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
@@ -64,36 +64,36 @@ define void @masked_scatters_tune_generic(<vscale x 4 x i1> %nxv4i1mask, <vscale
 
 define void @masked_scatters_no_vscale_range() #2 {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatters_no_vscale_range'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4f64.nxv4p0(<vscale x 4 x double> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> undef, <vscale x 2 x ptr> undef, i32 1, <vscale x 2 x i1> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8f32.nxv8p0(<vscale x 8 x float> undef, <vscale x 8 x ptr> undef, i32 1, <vscale x 8 x i1> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> undef, <vscale x 2 x ptr> undef, i32 1, <vscale x 2 x i1> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv16i16.nxv16p0(<vscale x 16 x i16> undef, <vscale x 16 x ptr> undef, i32 1, <vscale x 16 x i1> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> undef, <vscale x 8 x ptr> undef, i32 1, <vscale x 8 x i1> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4f64.nxv4p0(<vscale x 4 x double> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> undef, <vscale x 2 x ptr> align 1 undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8f32.nxv8p0(<vscale x 8 x float> undef, <vscale x 8 x ptr> align 1 undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> undef, <vscale x 2 x ptr> align 1 undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv16i16.nxv16p0(<vscale x 16 x i16> undef, <vscale x 16 x ptr> align 1 undef, <vscale x 16 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> undef, <vscale x 8 x ptr> align 1 undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatters_no_vscale_range'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4f64.nxv4p0(<vscale x 4 x double> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> undef, <vscale x 2 x ptr> undef, i32 1, <vscale x 2 x i1> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8f32.nxv8p0(<vscale x 8 x float> undef, <vscale x 8 x ptr> undef, i32 1, <vscale x 8 x i1> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> undef, <vscale x 2 x ptr> undef, i32 1, <vscale x 2 x i1> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: call void @llvm.masked.scatter.nxv16i16.nxv16p0(<vscale x 16 x i16> undef, <vscale x 16 x ptr> undef, i32 1, <vscale x 16 x i1> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> undef, <vscale x 8 x ptr> undef, i32 1, <vscale x 8 x i1> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4f64.nxv4p0(<vscale x 4 x double> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> undef, <vscale x 2 x ptr> align 1 undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8f32.nxv8p0(<vscale x 8 x float> undef, <vscale x 8 x ptr> align 1 undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> undef, <vscale x 2 x ptr> align 1 undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: call void @llvm.masked.scatter.nxv16i16.nxv16p0(<vscale x 16 x i16> undef, <vscale x 16 x ptr> align 1 undef, <vscale x 16 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> undef, <vscale x 8 x ptr> align 1 undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V2-LABEL: 'masked_scatters_no_vscale_range'
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4f64.nxv4p0(<vscale x 4 x double> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> undef, <vscale x 2 x ptr> undef, i32 1, <vscale x 2 x i1> undef)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: call void @llvm.masked.scatter.nxv8f32.nxv8p0(<vscale x 8 x float> undef, <vscale x 8 x ptr> undef, i32 1, <vscale x 8 x i1> undef)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> undef, <vscale x 2 x ptr> undef, i32 1, <vscale x 2 x i1> undef)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 208 for instruction: call void @llvm.masked.scatter.nxv16i16.nxv16p0(<vscale x 16 x i16> undef, <vscale x 16 x ptr> undef, i32 1, <vscale x 16 x i1> undef)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> undef, <vscale x 8 x ptr> undef, i32 1, <vscale x 8 x i1> undef)
-; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4f64.nxv4p0(<vscale x 4 x double> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> undef, <vscale x 2 x ptr> align 1 undef, <vscale x 2 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: call void @llvm.masked.scatter.nxv8f32.nxv8p0(<vscale x 8 x float> undef, <vscale x 8 x ptr> align 1 undef, <vscale x 8 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> undef, <vscale x 2 x ptr> align 1 undef, <vscale x 2 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 208 for instruction: call void @llvm.masked.scatter.nxv16i16.nxv16p0(<vscale x 16 x i16> undef, <vscale x 16 x ptr> align 1 undef, <vscale x 16 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> undef, <vscale x 8 x ptr> align 1 undef, <vscale x 8 x i1> undef)
+; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> undef, <vscale x 4 x ptr> align 1 undef, <vscale x 4 x i1> undef)
 ; CHECK-V2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x ptr> undef, i32 1, <vscale x 4 x i1> undef)

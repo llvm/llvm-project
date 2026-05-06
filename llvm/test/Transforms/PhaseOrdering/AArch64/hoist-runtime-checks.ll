@@ -25,7 +25,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI11:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAY]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARRAY]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
@@ -49,7 +49,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER13]] ]
 ; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[SUM_07_PH]], [[FOR_BODY_PREHEADER13]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAY]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARRAY]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP8]], [[SUM_07]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -68,9 +68,9 @@ entry:
   store ptr %array, ptr %array.addr, align 8
   store i32 %count, ptr %count.addr, align 4
   store i32 %n, ptr %n.addr, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %sum) #3
+  call void @llvm.lifetime.start.p0(ptr %sum) #3
   store i32 0, ptr %sum, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.start.p0(ptr %i) #3
   store i32 0, ptr %i, align 4
   br label %for.cond
 
@@ -81,7 +81,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.end.p0(ptr %i) #3
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -113,7 +113,7 @@ for.inc:                                          ; preds = %if.end
 
 for.end:                                          ; preds = %for.cond.cleanup
   %9 = load i32, ptr %sum, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %sum)
+  call void @llvm.lifetime.end.p0(ptr %sum)
   ret i32 %9
 }
 
@@ -140,7 +140,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI9:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[S_COERCE0]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[S_COERCE0]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
@@ -164,7 +164,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY1]] ], [ [[I_07_PH]], [[FOR_BODY_PREHEADER11]] ]
 ; CHECK-NEXT:    [[RET_06:%.*]] = phi i32 [ [[ADD1]], [[FOR_BODY1]] ], [ [[RET_0_LCSSA]], [[FOR_BODY_PREHEADER11]] ]
-; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds i32, ptr [[S_COERCE0]], i64 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds [4 x i8], ptr [[S_COERCE0]], i64 [[I_07]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_I]], align 4
 ; CHECK-NEXT:    [[ADD1]] = add nsw i32 [[TMP7]], [[RET_06]]
 ; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_07]], 1
@@ -184,9 +184,9 @@ entry:
   %1 = getelementptr inbounds { ptr, i64 }, ptr %s, i32 0, i32 1
   store i64 %s.coerce1, ptr %1, align 8
   store i64 %n, ptr %n.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %ret) #7
+  call void @llvm.lifetime.start.p0(ptr %ret) #7
   store i32 0, ptr %ret, align 4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i) #7
+  call void @llvm.lifetime.start.p0(ptr %i) #7
   store i64 0, ptr %i, align 8
   br label %for.cond
 
@@ -197,7 +197,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i) #7
+  call void @llvm.lifetime.end.p0(ptr %i) #7
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -217,7 +217,7 @@ for.inc:                                          ; preds = %for.body
 
 for.end:                                          ; preds = %for.cond.cleanup
   %8 = load i32, ptr %ret, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %ret)
+  call void @llvm.lifetime.end.p0(ptr %ret)
   ret i32 %8
 }
 
@@ -234,7 +234,7 @@ define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_acces
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[THIS]], align 8
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[__IDX]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP1]], i64 [[__IDX]]
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX]]
 ;
 entry:
@@ -283,11 +283,11 @@ entry:
   ret i64 %0
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare void @llvm.trap()
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

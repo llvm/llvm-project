@@ -6,16 +6,24 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_add_i32 s0, s32, 0xf0
-; CHECK-NEXT:    s_add_i32 s1, s32, 0xf4
-; CHECK-NEXT:    s_add_i32 s2, s32, 0xf8
-; CHECK-NEXT:    s_add_i32 s3, s32, 0xfc
+; CHECK-NEXT:    s_movk_i32 s1, 0xf4
+; CHECK-NEXT:    s_movk_i32 s2, 0xf8
+; CHECK-NEXT:    s_movk_i32 s3, 0xfc
+; CHECK-NEXT:    s_movk_i32 s34, 0x100
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
-; CHECK-NEXT:    s_add_i32 s34, s32, 0x100
-; CHECK-NEXT:    s_add_i32 s35, s32, 0x104
-; CHECK-NEXT:    s_add_i32 s36, s32, 0x108
-; CHECK-NEXT:    s_add_i32 s37, s32, 0x110
-; CHECK-NEXT:    s_add_i32 s38, s32, 0x120
+; CHECK-NEXT:    s_movk_i32 s35, 0x104
+; CHECK-NEXT:    s_movk_i32 s36, 0x108
+; CHECK-NEXT:    s_movk_i32 s37, 0x110
+; CHECK-NEXT:    s_movk_i32 s38, 0x120
+; CHECK-NEXT:    s_add_i32 s0, s32, 0xf0
+; CHECK-NEXT:    s_add_i32 s1, s32, s1
+; CHECK-NEXT:    s_add_i32 s2, s32, s2
+; CHECK-NEXT:    s_add_i32 s3, s32, s3
+; CHECK-NEXT:    s_add_i32 s34, s32, s34
+; CHECK-NEXT:    s_add_i32 s35, s32, s35
+; CHECK-NEXT:    s_add_i32 s36, s32, s36
+; CHECK-NEXT:    s_add_i32 s37, s32, s37
+; CHECK-NEXT:    s_add_i32 s38, s32, s38
 ; CHECK-NEXT:    s_or_b32 s39, s32, 4
 ; CHECK-NEXT:    s_or_b32 s40, s32, 8
 ; CHECK-NEXT:    s_or_b32 s41, s32, 12

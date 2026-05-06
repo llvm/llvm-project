@@ -312,9 +312,9 @@ define void @caller_multiple(i32 %a, i32 %b) #1 {
 ; CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND1]]
 ; CHECK:       [[FOR_END4]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[B_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I]])
 ; CHECK-NEXT:    store i32 0, ptr [[A_ADDR_I]], align 4
 ; CHECK-NEXT:    store i32 5, ptr [[B_ADDR_I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
@@ -526,9 +526,9 @@ define void @caller_nested(i32 %a, i32 %b) #1 {
 ; CHECK-NEXT:    store i32 [[INC14]], ptr [[I9]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND10]]
 ; CHECK:       [[FOR_END15]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[B_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I]])
 ; CHECK-NEXT:    store i32 0, ptr [[A_ADDR_I]], align 4
 ; CHECK-NEXT:    store i32 5, ptr [[B_ADDR_I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]

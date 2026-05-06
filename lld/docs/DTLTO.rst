@@ -14,19 +14,23 @@ ELF LLD
 
 The command-line interface is as follows:
 
-- ``--thinlto-distributor=<path>``  
+- ``--thinlto-distributor=<path>``
   Specifies the file to execute as the distributor process. If specified,
   ThinLTO backend compilations will be distributed.
 
-- ``--thinlto-remote-compiler=<path>``  
+- ``--thinlto-remote-compiler=<path>``
   Specifies the path to the compiler that the distributor process will use for
   backend compilations. The compiler invoked must match the version of LLD.
 
-- ``--thinlto-distributor-arg=<arg>``  
+- ``--thinlto-distributor-arg=<arg>``
   Specifies ``<arg>`` on the command line when invoking the distributor.
   Can be specified multiple times.
 
-- ``--thinlto-remote-compiler-arg=<arg>``  
+- ``--thinlto-remote-compiler-prepend-arg=<arg>``
+  Prepends ``<arg>`` to the remote compiler's command line.
+  Can be specified multiple times.
+
+- ``--thinlto-remote-compiler-arg=<arg>``
   Appends ``<arg>`` to the remote compiler's command line.
   Can be specified multiple times.
 
@@ -55,6 +59,10 @@ The command-line interface is as follows:
 
 - ``/thinlto-distributor-arg:<arg>``
   Specifies ``<arg>`` on the command line when invoking the distributor.
+  Can be specified multiple times.
+
+- ``/thinlto-remote-compiler-prepend-arg:<arg>``
+  Prepends ``<arg>`` to the remote compiler's command line.
   Can be specified multiple times.
 
 - ``/thinlto-remote-compiler-arg:<arg>``

@@ -1,5 +1,4 @@
 // REQUIRES: host-supports-jit
-// UNSUPPORTED: system-aix
 // clang-repl can be called from the prompt in non-interactive mode as a
 // calculator in shell scripts, for example. In that case if there is an error
 // we should set the exit code as failure.

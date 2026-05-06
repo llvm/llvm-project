@@ -236,7 +236,7 @@ TEST_F(FormatTestJava, ArrayInitializers) {
                "};");
 
   FormatStyle Style = getStyleWithColumns(65);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(
       "expected = new int[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,\n"
       "  100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };",
@@ -596,7 +596,8 @@ TEST_F(FormatTestJava, RetainsLogicalShifts) {
 
 TEST_F(FormatTestJava, ShortFunctions) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_Java);
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   verifyFormat("enum Enum {\n"
                "  E1,\n"
                "  E2;\n"
@@ -846,6 +847,26 @@ TEST_F(FormatTestJava, TextBlock) {
 
   verifyNoChange("String name = \"\"\"\n"
                  "              Pat Q. Smith");
+
+  verifyFormat("String foo = \"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\";",
+               "String foo=\"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\" ;");
+}
+
+TEST_F(FormatTestJava, BreakAfterRecord) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  Style.BraceWrapping.SplitEmptyRecord = true;
+
+  verifyFormat("public record Foo(int i)\n"
+               "{\n"
+               "}",
+               "public record Foo(int i) {}", Style);
 }
 
 } // namespace

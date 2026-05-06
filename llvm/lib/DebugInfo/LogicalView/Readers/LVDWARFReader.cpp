@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -210,7 +211,7 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
           FoundLowPC = false;
           // We are dealing with an index into the .debug_addr section.
           LLVM_DEBUG({
-            dbgs() << format("indexed (%8.8x) address = ", (uint32_t)UValue);
+            dbgs() << formatv("indexed ({0:x-8}) address = ", (uint32_t)UValue);
           });
         }
       }
@@ -262,9 +263,8 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
           GetRanges(FormValue, U);
       if (!RangesOrError) {
         LLVM_DEBUG({
-          std::string TheError(toString(RangesOrError.takeError()));
-          dbgs() << format("error decoding address ranges = ",
-                           TheError.c_str());
+          dbgs() << formatv("error decoding address ranges = {0}",
+                            fmt_consume(RangesOrError.takeError()));
         });
         consumeError(RangesOrError.takeError());
         break;
@@ -274,7 +274,7 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       for (DWARFAddressRange &Range : Ranges) {
         // This seems to be a tombstone for empty ranges.
         if ((Range.LowPC == Range.HighPC) ||
-            (Range.LowPC = getTombstoneAddress()))
+            (Range.LowPC == getTombstoneAddress()))
           continue;
         // Store the real upper limit for the address range.
         if (UpdateHighAddress && Range.HighPC > 0)
@@ -395,10 +395,9 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
       if (abbrCode) {
         if (const DWARFAbbreviationDeclaration *AbbrevDecl =
                 TheDIE.getAbbreviationDeclarationPtr())
-          if (AbbrevDecl)
-            for (const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec :
-                 AbbrevDecl->attributes())
-              processOneAttribute(TheDIE, &CurrentEndOffset, AttrSpec);
+          for (const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec :
+               AbbrevDecl->attributes())
+            processOneAttribute(TheDIE, &CurrentEndOffset, AttrSpec);
       }
     };
 
@@ -461,13 +460,17 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
         if (!CurrentRanges.empty()) {
           for (LVAddressRange &Range : CurrentRanges)
             addSectionRange(SectionIndex, CurrentScope, Range.first,
-                            Range.second);
+                            Range.second > Range.first
+                                ? Range.second - 1 // Make hi-pc exclusive
+                                : Range.second);
           CurrentRanges.clear();
         }
         // If the scope is the CU, do not update the ranges set.
         if (FoundLowPC && FoundHighPC && !IsCompileUnit) {
           addSectionRange(SectionIndex, CurrentScope, CurrentLowPC,
-                          CurrentHighPC);
+                          CurrentHighPC > CurrentLowPC
+                              ? CurrentHighPC - 1 // Make hi-pc exclusive
+                              : CurrentHighPC);
         }
       }
     }
@@ -802,8 +805,7 @@ void LVDWARFReader::processLocationList(dwarf::Attribute Attr,
       (DWARFAttribute::mayHaveLocationExpr(Attr) &&
        FormValue.isFormClass(DWARFFormValue::FC_Exprloc))) {
     ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
-    DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                       IsLittleEndian, 0);
+    DataExtractor Data(Expr, IsLittleEndian);
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
 
@@ -956,10 +958,7 @@ LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
 Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
   // Detect the architecture from the object file. We usually don't need OS
   // info to lookup a target and create register info.
-  Triple TT;
-  TT.setArch(Triple::ArchType(Obj.getArch()));
-  TT.setVendor(Triple::UnknownVendor);
-  TT.setOS(Triple::UnknownOS);
+  Triple TT = Obj.makeTriple();
 
   // Features to be passed to target/subtarget
   Expected<SubtargetFeatures> Features = Obj.getFeatures();
@@ -969,7 +968,12 @@ Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
     FeaturesValue = SubtargetFeatures();
   }
   FeaturesValue = *Features;
-  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString());
+
+  StringRef CPU;
+  if (auto OptCPU = Obj.tryGetCPUName())
+    CPU = *OptCPU;
+
+  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString(), CPU);
 }
 
 void LVDWARFReader::mapRangeAddress(const ObjectFile &Obj) {

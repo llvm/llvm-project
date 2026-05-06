@@ -41,10 +41,10 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
   assert(!Loc->getNestedNameSpecifierLoc() ||
          (!Loc->getNestedNameSpecifierLoc()
                .getNestedNameSpecifier()
-               ->isInstantiationDependent() &&
+               .isInstantiationDependent() &&
           !Loc->getNestedNameSpecifierLoc()
                .getNestedNameSpecifier()
-               ->containsUnexpandedParameterPack()));
+               .containsUnexpandedParameterPack()));
   assert((!isValueDependent() || isInstantiationDependent()) &&
          "should not be value-dependent");
 }
@@ -101,8 +101,13 @@ concepts::ExprRequirement::ReturnTypeRequirement::getTypeConstraint() const {
 // Search through the requirements, and see if any have a RecoveryExpr in it,
 // which means this RequiresExpr ALSO needs to be invalid.
 static bool RequirementContainsError(concepts::Requirement *R) {
-  if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(R))
-    return ExprReq->getExpr() && ExprReq->getExpr()->containsErrors();
+  if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(R)) {
+    if (ExprReq->isExprSubstitutionFailure())
+      return true;
+    if (auto *E = ExprReq->getExpr())
+      return E->containsErrors();
+    return false;
+  }
 
   if (auto *NestedReq = dyn_cast<concepts::NestedRequirement>(R))
     return !NestedReq->hasInvalidConstraint() &&

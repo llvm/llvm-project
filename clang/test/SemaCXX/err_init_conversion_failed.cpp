@@ -56,6 +56,6 @@ template <class P> struct S2 {
 
 void test_15() {
   S2<S> X = {&S::foo};
-  // expected-error-re@-1{{cannot initialize a member subobject of type 'void (S::*)(const int &){{( __attribute__\(\(thiscall\)\))?}}' with an rvalue of type 'void (S::*)(int){{( __attribute__\(\(thiscall\)\))?}}': type mismatch at 1st parameter ('const int &' vs 'int')}}
+  // expected-error-re@-1{{cannot initialize a member subobject of type 'void (template_test::S::*)(const int &){{( __attribute__\(\(thiscall\)\))?}}' with an rvalue of type 'void (S::*)(int){{( __attribute__\(\(thiscall\)\))?}}': type mismatch at 1st parameter ('const int &' vs 'int')}}
 }
 }

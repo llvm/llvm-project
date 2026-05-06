@@ -103,11 +103,15 @@ protected:
 ///
 /// The format being:
 ///
-///   <prefix>:<module uid>:<symbol uid>:<name>
+///   <prefix>:<discriminator>:<module uid>:<symbol uid>:<name>
 ///
 /// The label string needs to stay valid for the entire lifetime
 /// of this object.
 struct FunctionCallLabel {
+  /// Arbitrary string which language plugins can interpret for their
+  /// own needs.
+  llvm::StringRef discriminator;
+
   /// Unique identifier of the lldb_private::Module
   /// which contains the symbol identified by \c symbol_id.
   lldb::user_id_t module_id;
@@ -133,7 +137,7 @@ struct FunctionCallLabel {
   ///
   /// The representation roundtrips through \c fromString:
   /// \code{.cpp}
-  /// llvm::StringRef encoded = "$__lldb_func:0x0:0x0:_Z3foov";
+  /// llvm::StringRef encoded = "$__lldb_func:blah:0x0:0x0:_Z3foov";
   /// FunctionCallLabel label = *fromString(label);
   ///
   /// assert (label.toString() == encoded);

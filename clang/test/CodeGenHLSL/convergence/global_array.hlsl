@@ -8,9 +8,9 @@
 // CHECK: [[loop_token:%.*]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[entry_token]]) ]
 // CHECK: call void {{.*}} [ "convergencectrl"(token [[loop_token]]) ]
 // CHECK: br i1 {{%.*}} label {{%.*}} label %[[loop_entry]]
-RWBuffer<float> e[2];
 
-[numthreads(4,1,1)]
+static RWBuffer<float> s[2];
+
+[numthreads(1,1,1)]
 void main() {
 }
-

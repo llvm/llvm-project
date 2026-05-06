@@ -15,7 +15,6 @@ unittest("LLVMFrontendTests") {
   sources = [
     "HLSLBindingTest.cpp",
     "HLSLRootSignatureDumpTest.cpp",
-    "HLSLRootSignatureRangesTest.cpp",
     "OpenACCTest.cpp",
     "OpenMPCompositionTest.cpp",
     "OpenMPContextTest.cpp",

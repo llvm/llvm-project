@@ -261,13 +261,12 @@ updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
   return std::make_pair(inputType, memref);
 }
 
-void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &result, mlir::Value memref,
-                             llvm::StringRef uniq_name, mlir::Value shape,
-                             mlir::ValueRange typeparams,
-                             mlir::Value dummy_scope,
-                             fir::FortranVariableFlagsAttr fortran_attrs,
-                             cuf::DataAttributeAttr data_attr) {
+void hlfir::DeclareOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Value memref,
+    llvm::StringRef uniq_name, mlir::Value shape, mlir::ValueRange typeparams,
+    mlir::Value dummy_scope, mlir::Value storage, std::uint64_t storage_offset,
+    fir::FortranVariableFlagsAttr fortran_attrs,
+    cuf::DataAttributeAttr data_attr, unsigned dummy_arg_no) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
@@ -278,8 +277,12 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   }
   auto [hlfirVariableType, firVarType] =
       getDeclareOutputTypes(inputType, hasExplicitLbs);
+  mlir::IntegerAttr argNoAttr;
+  if (dummy_arg_no > 0)
+    argNoAttr = builder.getUI32IntegerAttr(dummy_arg_no);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
-        typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
+        typeparams, dummy_scope, storage, storage_offset, nameAttr,
+        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{}, argNoAttr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {
@@ -292,6 +295,9 @@ llvm::LogicalResult hlfir::DeclareOp::verify() {
     return emitOpError("first result type is inconsistent with variable "
                        "properties: expected ")
            << hlfirVariableType;
+  if (getSkipRebox() && !llvm::isa<fir::BaseBoxType>(getMemref().getType()))
+    return emitOpError(
+        "skip_rebox attribute must only be set when the input is a box");
   // The rest of the argument verification is done by the
   // FortranVariableInterface verifier.
   auto fortranVar =
@@ -586,6 +592,12 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   return mlir::success();
 }
 
+std::optional<std::int64_t> hlfir::DesignateOp::getViewOffset(mlir::OpResult) {
+  // TODO: we can compute the constant offset
+  // based on the component/indices/etc.
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // ParentComponentOp
 //===----------------------------------------------------------------------===//
@@ -814,6 +826,84 @@ void hlfir::ConcatOp::build(mlir::OpBuilder &builder,
 }
 
 void hlfir::ConcatOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// CmpCharOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::CmpCharOp::verify() {
+  mlir::Value lchr = getLchr();
+  mlir::Value rchr = getRchr();
+
+  unsigned kind = getCharacterKind(lchr.getType());
+  if (kind != getCharacterKind(rchr.getType()))
+    return emitOpError("character arguments must have the same KIND");
+
+  switch (getPredicate()) {
+  case mlir::arith::CmpIPredicate::slt:
+  case mlir::arith::CmpIPredicate::sle:
+  case mlir::arith::CmpIPredicate::eq:
+  case mlir::arith::CmpIPredicate::ne:
+  case mlir::arith::CmpIPredicate::sgt:
+  case mlir::arith::CmpIPredicate::sge:
+    break;
+  default:
+    return emitOpError("expected signed predicate");
+  }
+
+  return mlir::success();
+}
+
+void hlfir::CmpCharOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// CharTrimOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::CharTrimOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value chr) {
+  unsigned kind = getCharacterKind(chr.getType());
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind,
+                              fir::CharacterType::unknownLen()),
+      /*polymorphic=*/false);
+  build(builder, result, resultType, chr);
+}
+
+void hlfir::CharTrimOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// IndexOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::IndexOp::verify() {
+  mlir::Value substr = getSubstr();
+  mlir::Value str = getStr();
+
+  unsigned charKind = getCharacterKind(substr.getType());
+  if (charKind != getCharacterKind(str.getType()))
+    return emitOpError("character arguments must have the same KIND");
+
+  return mlir::success();
+}
+
+void hlfir::IndexOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
@@ -1440,44 +1530,46 @@ void hlfir::MatmulTransposeOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
-// CShiftOp
+// Array shifts: CShiftOp/EOShiftOp
 //===----------------------------------------------------------------------===//
 
-llvm::LogicalResult hlfir::CShiftOp::verify() {
-  mlir::Value array = getArray();
+template <typename Op>
+static llvm::LogicalResult verifyArrayShift(Op op) {
+  mlir::Value array = op.getArray();
   fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
       hlfir::getFortranElementOrSequenceType(array.getType()));
   llvm::ArrayRef<int64_t> inShape = arrayTy.getShape();
   std::size_t arrayRank = inShape.size();
   mlir::Type eleTy = arrayTy.getEleTy();
-  hlfir::ExprType resultTy = mlir::cast<hlfir::ExprType>(getResult().getType());
+  hlfir::ExprType resultTy =
+      mlir::cast<hlfir::ExprType>(op.getResult().getType());
   llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
   std::size_t resultRank = resultShape.size();
   mlir::Type resultEleTy = resultTy.getEleTy();
-  mlir::Value shift = getShift();
+  mlir::Value shift = op.getShift();
   mlir::Type shiftTy = hlfir::getFortranElementOrSequenceType(shift.getType());
 
-  // TODO: turn allowCharacterLenMismatch into true.
-  if (auto match = areMatchingTypes(*this, eleTy, resultEleTy,
-                                    /*allowCharacterLenMismatch=*/false);
+  if (auto match = areMatchingTypes(
+          op, eleTy, resultEleTy,
+          /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
       match.failed())
-    return emitOpError(
+    return op.emitOpError(
         "input and output arrays should have the same element type");
 
   if (arrayRank != resultRank)
-    return emitOpError("input and output arrays should have the same rank");
+    return op.emitOpError("input and output arrays should have the same rank");
 
   constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
   for (auto [inDim, resultDim] : llvm::zip(inShape, resultShape))
     if (inDim != unknownExtent && resultDim != unknownExtent &&
         inDim != resultDim)
-      return emitOpError(
+      return op.emitOpError(
           "output array's shape conflicts with the input array's shape");
 
   int64_t dimVal = -1;
-  if (!getDim())
+  if (!op.getDim())
     dimVal = 1;
-  else if (auto dim = fir::getIntIfConstant(getDim()))
+  else if (auto dim = fir::getIntIfConstant(op.getDim()))
     dimVal = *dim;
 
   // The DIM argument may be statically invalid (e.g. exceed the
@@ -1485,45 +1577,98 @@ llvm::LogicalResult hlfir::CShiftOp::verify() {
   // so avoid some checks unless useStrictIntrinsicVerifier is true.
   if (useStrictIntrinsicVerifier && dimVal != -1) {
     if (dimVal < 1)
-      return emitOpError("DIM must be >= 1");
+      return op.emitOpError("DIM must be >= 1");
     if (dimVal > static_cast<int64_t>(arrayRank))
-      return emitOpError("DIM must be <= input array's rank");
+      return op.emitOpError("DIM must be <= input array's rank");
   }
 
-  if (auto shiftSeqTy = mlir::dyn_cast<fir::SequenceType>(shiftTy)) {
-    // SHIFT is an array. Verify the rank and the shape (if DIM is constant).
-    llvm::ArrayRef<int64_t> shiftShape = shiftSeqTy.getShape();
-    std::size_t shiftRank = shiftShape.size();
-    if (shiftRank != arrayRank - 1)
-      return emitOpError(
-          "SHIFT's rank must be 1 less than the input array's rank");
+  // A helper lambda to verify the shape of the array types of
+  // certain operands of the array shift (e.g. the SHIFT and BOUNDARY operands).
+  auto verifyOperandTypeShape = [&](mlir::Type type,
+                                    llvm::Twine name) -> llvm::LogicalResult {
+    if (auto opndSeqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
+      // The operand is an array. Verify the rank and the shape (if DIM is
+      // constant).
+      llvm::ArrayRef<int64_t> opndShape = opndSeqTy.getShape();
+      std::size_t opndRank = opndShape.size();
+      if (opndRank != arrayRank - 1)
+        return op.emitOpError(
+            name + "'s rank must be 1 less than the input array's rank");
 
-    if (useStrictIntrinsicVerifier && dimVal != -1) {
-      // SHIFT's shape must be [d(1), d(2), ..., d(DIM-1), d(DIM+1), ..., d(n)],
-      // where [d(1), d(2), ..., d(n)] is the shape of the ARRAY.
-      int64_t arrayDimIdx = 0;
-      int64_t shiftDimIdx = 0;
-      for (auto shiftDim : shiftShape) {
-        if (arrayDimIdx == dimVal - 1)
+      if (useStrictIntrinsicVerifier && dimVal != -1) {
+        // The operand's shape must be
+        // [d(1), d(2), ..., d(DIM-1), d(DIM+1), ..., d(n)],
+        // where [d(1), d(2), ..., d(n)] is the shape of the ARRAY.
+        int64_t arrayDimIdx = 0;
+        int64_t opndDimIdx = 0;
+        for (auto opndDim : opndShape) {
+          if (arrayDimIdx == dimVal - 1)
+            ++arrayDimIdx;
+
+          if (inShape[arrayDimIdx] != unknownExtent &&
+              opndDim != unknownExtent && inShape[arrayDimIdx] != opndDim)
+            return op.emitOpError("SHAPE(ARRAY)(" +
+                                  llvm::Twine(arrayDimIdx + 1) +
+                                  ") must be equal to SHAPE(" + name + ")(" +
+                                  llvm::Twine(opndDimIdx + 1) +
+                                  "): " + llvm::Twine(inShape[arrayDimIdx]) +
+                                  " != " + llvm::Twine(opndDim));
           ++arrayDimIdx;
-
-        if (inShape[arrayDimIdx] != unknownExtent &&
-            shiftDim != unknownExtent && inShape[arrayDimIdx] != shiftDim)
-          return emitOpError("SHAPE(ARRAY)(" + llvm::Twine(arrayDimIdx + 1) +
-                             ") must be equal to SHAPE(SHIFT)(" +
-                             llvm::Twine(shiftDimIdx + 1) +
-                             "): " + llvm::Twine(inShape[arrayDimIdx]) +
-                             " != " + llvm::Twine(shiftDim));
-        ++arrayDimIdx;
-        ++shiftDimIdx;
+          ++opndDimIdx;
+        }
       }
+    }
+    return mlir::success();
+  };
+
+  if (failed(verifyOperandTypeShape(shiftTy, "SHIFT")))
+    return mlir::failure();
+
+  if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>) {
+    if (mlir::Value boundary = op.getBoundary()) {
+      mlir::Type boundaryTy =
+          hlfir::getFortranElementOrSequenceType(boundary.getType());
+      // In case of polymorphic ARRAY type, the BOUNDARY's element type
+      // may not match the ARRAY's element type.
+      if (!hlfir::isPolymorphicType(array.getType()))
+        if (auto match = areMatchingTypes(
+                op, eleTy, hlfir::getFortranElementType(boundaryTy),
+                /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
+            match.failed())
+          return op.emitOpError(
+              "ARRAY and BOUNDARY operands must have the same element type");
+      if (failed(verifyOperandTypeShape(boundaryTy, "BOUNDARY")))
+        return mlir::failure();
     }
   }
 
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// CShiftOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::CShiftOp::verify() {
+  return verifyArrayShift(*this);
+}
+
 void hlfir::CShiftOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// EOShiftOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::EOShiftOp::verify() {
+  return verifyArrayShift(*this);
+}
+
+void hlfir::EOShiftOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
@@ -1543,7 +1688,8 @@ llvm::LogicalResult hlfir::ReshapeOp::verify() {
       hlfir::getFortranElementOrSequenceType(array.getType()));
   if (auto match = areMatchingTypes(
           *this, hlfir::getFortranElementType(resultType),
-          arrayType.getElementType(), /*allowCharacterLenMismatch=*/true);
+          arrayType.getElementType(),
+          /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
       match.failed())
     return emitOpError("ARRAY and the result must have the same element type");
   if (hlfir::isPolymorphicType(resultType) !=
@@ -1565,9 +1711,9 @@ llvm::LogicalResult hlfir::ReshapeOp::verify() {
   if (mlir::Value pad = getPad()) {
     auto padArrayType = mlir::cast<fir::SequenceType>(
         hlfir::getFortranElementOrSequenceType(pad.getType()));
-    if (auto match = areMatchingTypes(*this, arrayType.getElementType(),
-                                      padArrayType.getElementType(),
-                                      /*allowCharacterLenMismatch=*/true);
+    if (auto match = areMatchingTypes(
+            *this, arrayType.getElementType(), padArrayType.getElementType(),
+            /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
         match.failed())
       return emitOpError("ARRAY and PAD must be of the same type");
   }
@@ -1847,8 +1993,7 @@ hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
     // shape information is not available at compile time
     return llvm::LogicalResult::failure();
 
-  rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
-  rewriter.eraseOp(shapeOf);
+  rewriter.replaceOp(shapeOf, shape);
   return llvm::LogicalResult::success();
 }
 

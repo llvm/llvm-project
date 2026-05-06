@@ -1,3 +1,4 @@
+// clang-format off
 // The OpenMP standard defines 3 ways of providing ompt_start_tool:
 
 // RUN: mkdir -p %t.tool_dir
@@ -44,10 +45,11 @@
 // RUN:    FileCheck %s -DPARENTPATH=%t.tool_dir --check-prefixes CHECK,TOOLLIB
 
 // REQUIRES: ompt
+// clang-format on
 
 /*
- *  This file contains code for an OMPT shared library tool to be 
- *  loaded and the code for the OpenMP executable. 
+ *  This file contains code for an OMPT shared library tool to be
+ *  loaded and the code for the OpenMP executable.
  *  -DTOOL enables the code for the tool during compilation
  *  -DCODE enables the code for the executable during compilation
  */
@@ -57,18 +59,17 @@
 #include "omp.h"
 #include "omp-tools.h"
 
-int main()
-{
-  #pragma omp parallel num_threads(2)
+int main() {
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
       int result = omp_control_tool(omp_control_tool_start, 0, NULL);
       printf("0: control_tool()=%d\n", result);
     }
   }
 
-
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback
 
@@ -98,7 +99,7 @@ int main()
   // TOOLLIB-NEXT: ----- END LOGGING OF TOOL REGISTRATION -----
 
   // CHECK: {{^}}0: control_tool()=-2
-  
+  // clang-format on
 
   return 0;
 }
@@ -110,10 +111,8 @@ int main()
 #include <omp-tools.h>
 #include "stdio.h"
 
-ompt_start_tool_result_t* ompt_start_tool(
-  unsigned int omp_version,
-  const char *runtime_version)
-{
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version) {
   printf("0: Do not initialize tool\n");
   return NULL;
 }

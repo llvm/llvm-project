@@ -70,7 +70,7 @@ template <class Alloc, class AllocatorInvariant = NoOp>
 void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
                 const Alloc& rhs_alloc                   = Alloc(),
                 AllocatorInvariant check_alloc_invariant = NoOp()) {
-  {   // Test empty/non-empy set combinations
+  {   // Test empty/non-empty set combinations
     { // assign from a non-empty container into an empty one
       using Set = std::set<int, std::less<int>, Alloc>;
 
@@ -218,7 +218,7 @@ void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       assert(std::next(orig.begin(), 3) == orig.end());
     }
     check_alloc_invariant();
-    { // Make a somewhat larget set to exercise the algorithm a bit
+    { // Make a somewhat larger set to exercise the algorithm a bit
       using Set = std::set<int, std::less<int>, Alloc>;
 
       Set orig(rhs_alloc);

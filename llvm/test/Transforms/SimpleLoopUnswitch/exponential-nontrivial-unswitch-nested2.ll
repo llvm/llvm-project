@@ -60,7 +60,7 @@
 ;
 ; Half unswitched loop nests, with unscaled3 and div1 it gets less depth1 loops unswitched
 ; since they have more cost.
-; LOOP-UNSCALE3-DIV1-COUNT-2: Loop at depth 1 containing:
+; LOOP-UNSCALE3-DIV1-COUNT-4: Loop at depth 1 containing:
 ; LOOP-UNSCALE3-DIV1-NOT:      Loop at depth 1 containing:
 ; LOOP-UNSCALE3-DIV1-COUNT-1: Loop at depth 2 containing:
 ; LOOP-UNSCALE3-DIV1-NOT:      Loop at depth 2 containing:
@@ -69,7 +69,7 @@
 ;
 ; Half unswitched loop nests, with unscaled3 and div2 it gets more depth1 loops unswitched
 ; as div2 kicks in.
-; LOOP-UNSCALE3-DIV2-COUNT-2: Loop at depth 1 containing:
+; LOOP-UNSCALE3-DIV2-COUNT-6: Loop at depth 1 containing:
 ; LOOP-UNSCALE3-DIV2-NOT:      Loop at depth 1 containing:
 ; LOOP-UNSCALE3-DIV2-COUNT-1: Loop at depth 2 containing:
 ; LOOP-UNSCALE3-DIV2-NOT:      Loop at depth 2 containing:
@@ -77,7 +77,7 @@
 ; LOOP-UNSCALE3-DIV2-NOT:      Loop at depth 3 containing:
 ;
 ; Maximally unswitched (copy of the outer loop per each condition)
-; LOOP-MAX-COUNT-2: Loop at depth 1 containing:
+; LOOP-MAX-COUNT-6: Loop at depth 1 containing:
 ; LOOP-MAX-NOT:      Loop at depth 1 containing:
 ; LOOP-MAX-COUNT-1: Loop at depth 2 containing:
 ; LOOP-MAX-NOT:      Loop at depth 2 containing:

@@ -50,8 +50,8 @@ typedef void*               FILE;       // NOLINT
 #define NULL                (0)         // NOLINT
 
 #ifndef __cplusplus
-typedef _Bool               bool;       // NOLINT
 typedef __WCHAR_TYPE__      wchar_t;    // NOLINT
+#define bool                _Bool       // NOLINT
 #define true                1           // NOLINT
 #define false               0           // NOLINT
 #endif

@@ -76,7 +76,7 @@ export int case3() {
 // Vector swizzles in HLSL produce lvalues, so they can be used as arguments to
 // inout parameters and the swizzle is reversed on writeback.
 
-// CHECK: define hidden void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(12) {{%.*}})
 void funky(inout int3 X) {
   X.x += 1;
   X.y += 2;
@@ -99,12 +99,18 @@ void funky(inout int3 X) {
 // CHECK:  store <3 x i32> [[Vyzx]], ptr [[ArgTmp]]
 
 // Call the function with the temporary.
-// CHECK: call void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) [[ArgTmp]])
+// CHECK: call void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(12) [[ArgTmp]])
 
-// Shuffle it back.
+// Write it back.
 // CHECK:  [[RetVal:%.*]] = load <3 x i32>, ptr [[ArgTmp]]
-// CHECK:  [[Vxyz:%.*]] = shufflevector <3 x i32> [[RetVal]], <3 x i32> poison, <3 x i32> <i32 2, i32 0, i32 1>
-// CHECK:  store <3 x i32> [[Vxyz]], ptr [[V]]
+// CHECK:  [[Src0:%.*]] = extractelement <3 x i32> [[RetVal]], i32 0
+// CHECK:  [[PtrY:%.*]] = getelementptr <3 x i32>, ptr %V, i32 0, i32 1
+// CHECK:  store i32 [[Src0]], ptr [[PtrY]], align 4
+// CHECK:  [[Src1:%.*]] = extractelement <3 x i32> [[RetVal]], i32 1
+// CHECK:  [[PtrZ:%.*]] = getelementptr <3 x i32>, ptr %V, i32 0, i32 2
+// CHECK:  store i32 [[Src1]], ptr [[PtrZ]], align 4
+// CHECK:  [[Src2:%.*]] = extractelement <3 x i32> [[RetVal]], i32 2
+// CHECK:  store i32 [[Src2]], ptr %V, align 4
 
 // OPT: ret <3 x i32> <i32 3, i32 1, i32 2>
 export int3 case4() {
@@ -194,7 +200,7 @@ export int case7() {
 
 // Case 8: Non-scalars with a cast expression.
 
-// CHECK: define hidden void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(12) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
 // ALL-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}case8
@@ -204,7 +210,7 @@ void trunc_vec(inout int3 V) {}
 // CHECK: [[FVal:%.*]] = load <3 x float>, ptr [[V]]
 // CHECK: [[IVal:%.*]] = fptosi <3 x float> [[FVal]] to <3 x i32>
 // CHECK: store <3 x i32> [[IVal]], ptr [[Tmp]]
-// CHECK: call void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) [[Tmp]])
+// CHECK: call void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(12) [[Tmp]])
 // CHECK: [[IRet:%.*]] = load <3 x i32>, ptr [[Tmp]]
 // CHECK: [[FRet:%.*]] = sitofp <3 x i32> [[IRet]] to <3 x float>
 // CHECK: store <3 x float> [[FRet]], ptr [[V]]

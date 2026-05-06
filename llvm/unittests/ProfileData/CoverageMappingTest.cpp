@@ -64,6 +64,7 @@ namespace {
 struct OutputFunctionCoverageData {
   StringRef Name;
   uint64_t Hash;
+  std::vector<std::string> FilenamesStorage;
   std::vector<StringRef> Filenames;
   std::vector<CounterMappingRegion> Regions;
   std::vector<CounterExpression> Expressions;
@@ -71,8 +72,10 @@ struct OutputFunctionCoverageData {
   OutputFunctionCoverageData() : Hash(0) {}
 
   OutputFunctionCoverageData(OutputFunctionCoverageData &&OFCD)
-      : Name(OFCD.Name), Hash(OFCD.Hash), Filenames(std::move(OFCD.Filenames)),
-        Regions(std::move(OFCD.Regions)) {}
+      : Name(OFCD.Name), Hash(OFCD.Hash),
+        FilenamesStorage(std::move(OFCD.FilenamesStorage)),
+        Filenames(std::move(OFCD.Filenames)), Regions(std::move(OFCD.Regions)) {
+  }
 
   OutputFunctionCoverageData(const OutputFunctionCoverageData &) = delete;
   OutputFunctionCoverageData &
@@ -135,7 +138,6 @@ struct InputFunctionCoverageData {
 struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
   bool UseMultipleReaders;
   StringMap<unsigned> Files;
-  std::vector<std::string> Filenames;
   std::vector<InputFunctionCoverageData> InputFunctions;
   std::vector<OutputFunctionCoverageData> OutputFunctions;
 
@@ -233,13 +235,11 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
 
   void readCoverageRegions(const std::string &Coverage,
                            OutputFunctionCoverageData &Data) {
-    // We will re-use the StringRef in duplicate tests, clear it to avoid
-    // clobber previous ones.
-    Filenames.clear();
-    Filenames.resize(Files.size() + 1);
+    // +1 here since `Files` (filename to index map) uses 1-based index.
+    Data.FilenamesStorage.resize(Files.size() + 1);
     for (const auto &E : Files)
-      Filenames[E.getValue()] = E.getKey().str();
-    ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(Filenames);
+      Data.FilenamesStorage[E.getValue()] = E.getKey().str();
+    ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(Data.FilenamesStorage);
     RawCoverageMappingReader Reader(Coverage, FilenameRefs, Data.Filenames,
                                     Data.Expressions, Data.Regions);
     EXPECT_THAT_ERROR(Reader.read(), Succeeded());

@@ -37,6 +37,8 @@ public:
   template <typename T> void Post(const parser::Statement<T> &) {
     currStmt_ = std::nullopt;
   }
+  void Post(const parser::Name &name);
+
   bool Pre(const parser::AccClause &clause) {
     currStmt_ = clause.source;
     return true;
@@ -47,28 +49,53 @@ public:
     return true;
   }
   void Post(const parser::OmpClause &) { currStmt_ = std::nullopt; }
+  bool Pre(const parser::OpenMPGroupprivate &dir) {
+    currStmt_ = dir.source;
+    return true;
+  }
+  void Post(const parser::OpenMPGroupprivate &) { currStmt_ = std::nullopt; }
   bool Pre(const parser::OpenMPThreadprivate &dir) {
     currStmt_ = dir.source;
     return true;
   }
   void Post(const parser::OpenMPThreadprivate &) { currStmt_ = std::nullopt; }
-  void Post(const parser::Name &name);
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  bool Pre(const parser::OmpDeclareMapperDirective &x) {
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OpenMPDeclareMapperConstruct &) {
+  void Post(const parser::OmpDeclareMapperDirective &) {
     currStmt_ = std::nullopt;
   }
 
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+  bool Pre(const parser::OmpDeclareReductionDirective &x) {
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+  void Post(const parser::OmpDeclareReductionDirective &) {
     currStmt_ = std::nullopt;
   }
+
+  bool Pre(const parser::OmpDeclareTargetDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpDeclareTargetDirective &) {
+    currStmt_ = std::nullopt;
+  }
+
+  // Directive arguments can be objects with symbols.
+  bool Pre(const parser::OmpBeginDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpBeginDirective &) { currStmt_ = std::nullopt; }
+
+  bool Pre(const parser::OmpEndDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpEndDirective &) { currStmt_ = std::nullopt; }
 
 private:
   std::optional<SourceName> currStmt_; // current statement we are processing
@@ -102,6 +129,7 @@ void SymbolDumpVisitor::Indent(llvm::raw_ostream &out, int indent) const {
 void SymbolDumpVisitor::Post(const parser::Name &name) {
   if (const auto *symbol{name.symbol}) {
     if (!symbol->has<MiscDetails>()) {
+      CHECK(currStmt_.has_value());
       symbols_.emplace(currStmt_.value().begin(), symbol);
     }
   }

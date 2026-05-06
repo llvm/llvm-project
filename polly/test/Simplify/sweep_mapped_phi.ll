@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,print<polly-simplify>' -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;simplify-0>' -polly-print-simplify -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Map %phi to A[j], so the scalar write in Stmt_for_bodyA can be removed.
 ;

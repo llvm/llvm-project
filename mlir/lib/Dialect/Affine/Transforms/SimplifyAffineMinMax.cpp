@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
@@ -151,10 +151,12 @@ LogicalResult mlir::affine::simplifyAffineMinMaxOps(RewriterBase &rewriter,
                                                     bool *modified) {
   bool changed = false;
   for (Operation *op : ops) {
-    if (auto minOp = dyn_cast<AffineMinOp>(op))
+    if (auto minOp = dyn_cast<AffineMinOp>(op)) {
       changed = simplifyAffineMinOp(rewriter, minOp) || changed;
-    else if (auto maxOp = cast<AffineMaxOp>(op))
-      changed = simplifyAffineMaxOp(rewriter, maxOp) || changed;
+      continue;
+    }
+    auto maxOp = cast<AffineMaxOp>(op);
+    changed = simplifyAffineMaxOp(rewriter, maxOp) || changed;
   }
   RewritePatternSet patterns(rewriter.getContext());
   AffineMaxOp::getCanonicalizationPatterns(patterns, rewriter.getContext());
@@ -225,7 +227,7 @@ struct SimplifyAffineApplyOp : public OpRewritePattern<AffineApplyOp> {
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_SIMPLIFYAFFINEMINMAXPASS
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -244,6 +246,6 @@ void SimplifyAffineMinMaxPass::runOnOperation() {
   patterns.add<SimplifyAffineMaxOp, SimplifyAffineMinOp, SimplifyAffineApplyOp>(
       func.getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  if (failed(applyPatternsGreedily(func, std::move(frozenPatterns))))
+  if (failed(applyPatternsGreedily(func, frozenPatterns)))
     return signalPassFailure();
 }

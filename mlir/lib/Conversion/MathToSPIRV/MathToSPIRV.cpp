@@ -117,7 +117,7 @@ struct CheckedElementwiseOpPattern final
 
 /// Converts math.copysign to SPIR-V ops.
 struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::CopySignOp copySignOp, OpAdaptor adaptor,
@@ -155,11 +155,11 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
       int count = vectorType.getNumElements();
       intType = VectorType::get(count, intType);
 
-      SmallVector<Value> signSplat(count, signMask);
+      Repeated<Value> signSplat(count, signMask);
       signMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
                                                      signSplat);
 
-      SmallVector<Value> valueSplat(count, valueMask);
+      Repeated<Value> valueSplat(count, valueMask);
       valueMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
                                                       valueSplat);
     }
@@ -183,12 +183,15 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
 
 /// Converts math.ctlz to SPIR-V ops.
 ///
-/// SPIR-V does not have a direct operations for counting leading zeros. If
-/// Shader capability is supported, we can leverage GL FindUMsb to calculate
-/// it.
+/// OpenCL targets lower math.ctlz directly to OpenCL.std clz via the generic
+/// elementwise pattern. This pattern handles the shader fallback.
+///
+/// SPIR-V does not have a direct operations for counting leading zeros for
+/// glsl. If Shader capability is supported, we can leverage GL FindUMsb to
+/// calculate it.
 struct CountLeadingZerosPattern final
     : public OpConversionPattern<math::CountLeadingZerosOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::CountLeadingZerosOp countOp, OpAdaptor adaptor,
@@ -200,7 +203,11 @@ struct CountLeadingZerosPattern final
     if (!type)
       return failure();
 
-    // We can only support 32-bit integer types for now.
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.getTargetEnv().allows(spirv::Capability::Shader))
+      return rewriter.notifyMatchFailure(countOp, "requires Shader capability");
+
+    // The GL FindUMsb fallback only supports 32-bit integer types for now.
     unsigned bitwidth = 0;
     if (isa<IntegerType>(type))
       bitwidth = type.getIntOrFloatBitWidth();
@@ -239,7 +246,7 @@ struct CountLeadingZerosPattern final
 /// these operations.
 template <typename ExpOp>
 struct ExpM1OpPattern final : public OpConversionPattern<math::ExpM1Op> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::ExpM1Op operation, OpAdaptor adaptor,
@@ -267,7 +274,7 @@ struct ExpM1OpPattern final : public OpConversionPattern<math::ExpM1Op> {
 /// these operations.
 template <typename LogOp>
 struct Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::Log1pOp operation, OpAdaptor adaptor,
@@ -351,7 +358,7 @@ struct Log2Log10OpPattern final : public OpConversionPattern<MathLogOp> {
 
 /// Converts math.powf to SPIRV-Ops.
 struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::PowFOp powfOp, OpAdaptor adaptor,
@@ -407,11 +414,11 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     if (auto vectorType = dyn_cast<VectorType>(operandType))
       nanAttr = DenseElementsAttr::get(vectorType, nan);
 
-    Value NanValue =
+    Value nanValue =
         spirv::ConstantOp::create(rewriter, loc, operandType, nanAttr);
     Value lhs =
         spirv::SelectOp::create(rewriter, loc, cmpNegativeWithFractionalExp,
-                                NanValue, adaptor.getLhs());
+                                nanValue, adaptor.getLhs());
     Value abs = spirv::GLFAbsOp::create(rewriter, loc, lhs);
 
     // TODO: The following just forcefully casts y into an integer value in
@@ -440,7 +447,7 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
 
 /// Converts math.round to GLSL SPIRV extended ops.
 struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::RoundOp roundOp, OpAdaptor adaptor,
@@ -449,8 +456,14 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
       return res;
 
     Location loc = roundOp.getLoc();
-    Value operand = roundOp.getOperand();
-    Type ty = operand.getType();
+    auto ty = getTypeConverter()->convertType(adaptor.getOperand().getType());
+    if (!ty) {
+      return rewriter.notifyMatchFailure(
+          roundOp->getLoc(),
+          llvm::formatv("failed to convert type {0} for SPIR-V",
+                        roundOp.getType()));
+    }
+
     Type ety = getElementTypeOrSelf(ty);
 
     auto zero = spirv::ConstantOp::getZero(ty, loc, rewriter);
@@ -466,14 +479,15 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
                                        rewriter.getFloatAttr(ety, 0.5));
     }
 
-    auto abs = spirv::GLFAbsOp::create(rewriter, loc, operand);
+    auto abs = spirv::GLFAbsOp::create(rewriter, loc, adaptor.getOperand());
     auto floor = spirv::GLFloorOp::create(rewriter, loc, abs);
     auto sub = spirv::FSubOp::create(rewriter, loc, abs, floor);
     auto greater =
         spirv::FOrdGreaterThanEqualOp::create(rewriter, loc, sub, half);
     auto select = spirv::SelectOp::create(rewriter, loc, greater, one, zero);
     auto add = spirv::FAddOp::create(rewriter, loc, floor, select);
-    rewriter.replaceOpWithNewOp<math::CopySignOp>(roundOp, add, operand);
+    rewriter.replaceOpWithNewOp<math::CopySignOp>(roundOp, add,
+                                                  adaptor.getOperand());
     return success();
   }
 };
@@ -526,35 +540,37 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
           typeConverter, patterns.getContext());
 
   // OpenCL patterns
-  patterns.add<Log1pOpPattern<spirv::CLLogOp>, ExpM1OpPattern<spirv::CLExpOp>,
-               Log2Log10OpPattern<math::Log2Op, spirv::CLLogOp>,
-               Log2Log10OpPattern<math::Log10Op, spirv::CLLogOp>,
-               CheckedElementwiseOpPattern<math::AbsFOp, spirv::CLFAbsOp>,
-               CheckedElementwiseOpPattern<math::AbsIOp, spirv::CLSAbsOp>,
-               CheckedElementwiseOpPattern<math::AtanOp, spirv::CLAtanOp>,
-               CheckedElementwiseOpPattern<math::Atan2Op, spirv::CLAtan2Op>,
-               CheckedElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
-               CheckedElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
-               CheckedElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,
-               CheckedElementwiseOpPattern<math::ExpOp, spirv::CLExpOp>,
-               CheckedElementwiseOpPattern<math::FloorOp, spirv::CLFloorOp>,
-               CheckedElementwiseOpPattern<math::FmaOp, spirv::CLFmaOp>,
-               CheckedElementwiseOpPattern<math::LogOp, spirv::CLLogOp>,
-               CheckedElementwiseOpPattern<math::PowFOp, spirv::CLPowOp>,
-               CheckedElementwiseOpPattern<math::RoundEvenOp, spirv::CLRintOp>,
-               CheckedElementwiseOpPattern<math::RoundOp, spirv::CLRoundOp>,
-               CheckedElementwiseOpPattern<math::RsqrtOp, spirv::CLRsqrtOp>,
-               CheckedElementwiseOpPattern<math::SinOp, spirv::CLSinOp>,
-               CheckedElementwiseOpPattern<math::SqrtOp, spirv::CLSqrtOp>,
-               CheckedElementwiseOpPattern<math::TanhOp, spirv::CLTanhOp>,
-               CheckedElementwiseOpPattern<math::TanOp, spirv::CLTanOp>,
-               CheckedElementwiseOpPattern<math::AsinOp, spirv::CLAsinOp>,
-               CheckedElementwiseOpPattern<math::AcosOp, spirv::CLAcosOp>,
-               CheckedElementwiseOpPattern<math::SinhOp, spirv::CLSinhOp>,
-               CheckedElementwiseOpPattern<math::CoshOp, spirv::CLCoshOp>,
-               CheckedElementwiseOpPattern<math::AsinhOp, spirv::CLAsinhOp>,
-               CheckedElementwiseOpPattern<math::AcoshOp, spirv::CLAcoshOp>,
-               CheckedElementwiseOpPattern<math::AtanhOp, spirv::CLAtanhOp>>(
+  patterns.add<
+      Log1pOpPattern<spirv::CLLogOp>, ExpM1OpPattern<spirv::CLExpOp>,
+      Log2Log10OpPattern<math::Log2Op, spirv::CLLogOp>,
+      Log2Log10OpPattern<math::Log10Op, spirv::CLLogOp>,
+      CheckedElementwiseOpPattern<math::AbsFOp, spirv::CLFAbsOp>,
+      CheckedElementwiseOpPattern<math::AbsIOp, spirv::CLSAbsOp>,
+      CheckedElementwiseOpPattern<math::CountLeadingZerosOp, spirv::CLClzOp>,
+      CheckedElementwiseOpPattern<math::AtanOp, spirv::CLAtanOp>,
+      CheckedElementwiseOpPattern<math::Atan2Op, spirv::CLAtan2Op>,
+      CheckedElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
+      CheckedElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
+      CheckedElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,
+      CheckedElementwiseOpPattern<math::ExpOp, spirv::CLExpOp>,
+      CheckedElementwiseOpPattern<math::FloorOp, spirv::CLFloorOp>,
+      CheckedElementwiseOpPattern<math::FmaOp, spirv::CLFmaOp>,
+      CheckedElementwiseOpPattern<math::LogOp, spirv::CLLogOp>,
+      CheckedElementwiseOpPattern<math::PowFOp, spirv::CLPowOp>,
+      CheckedElementwiseOpPattern<math::RoundEvenOp, spirv::CLRintOp>,
+      CheckedElementwiseOpPattern<math::RoundOp, spirv::CLRoundOp>,
+      CheckedElementwiseOpPattern<math::RsqrtOp, spirv::CLRsqrtOp>,
+      CheckedElementwiseOpPattern<math::SinOp, spirv::CLSinOp>,
+      CheckedElementwiseOpPattern<math::SqrtOp, spirv::CLSqrtOp>,
+      CheckedElementwiseOpPattern<math::TanhOp, spirv::CLTanhOp>,
+      CheckedElementwiseOpPattern<math::TanOp, spirv::CLTanOp>,
+      CheckedElementwiseOpPattern<math::AsinOp, spirv::CLAsinOp>,
+      CheckedElementwiseOpPattern<math::AcosOp, spirv::CLAcosOp>,
+      CheckedElementwiseOpPattern<math::SinhOp, spirv::CLSinhOp>,
+      CheckedElementwiseOpPattern<math::CoshOp, spirv::CLCoshOp>,
+      CheckedElementwiseOpPattern<math::AsinhOp, spirv::CLAsinhOp>,
+      CheckedElementwiseOpPattern<math::AcoshOp, spirv::CLAcoshOp>,
+      CheckedElementwiseOpPattern<math::AtanhOp, spirv::CLAtanhOp>>(
       typeConverter, patterns.getContext());
 }
 

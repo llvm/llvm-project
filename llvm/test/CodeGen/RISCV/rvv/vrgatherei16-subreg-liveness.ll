@@ -62,11 +62,3 @@ loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopI
   br label %loopIR3.i.i
 }
 
-; Function Attrs: nocallback nofree nosync nounwind readnone willreturn
-declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16>, <vscale x 1 x i16>, i64 immarg) #0
-
-; Function Attrs: nounwind readnone
-declare <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i16>, i64) #1
-
-attributes #0 = { nocallback nofree nosync nounwind readnone willreturn }
-attributes #1 = { nounwind readnone }

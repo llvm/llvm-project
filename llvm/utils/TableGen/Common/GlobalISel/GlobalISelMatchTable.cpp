@@ -10,6 +10,7 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -20,17 +21,16 @@
 
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
 
-namespace {
-
-Error failUnsupported(const Twine &Reason) {
+// FIXME: Use createStringError instead.
+static Error failUnsupported(const Twine &Reason) {
   return make_error<StringError>(Reason, inconvertibleErrorCode());
 }
 
 /// Get the name of the enum value used to number the predicate function.
-std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
+static std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
   if (Predicate.hasGISelLeafPredicateCode())
@@ -39,51 +39,51 @@ std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
          Predicate.getFnName();
 }
 
-std::string getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
+static std::string
+getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
   return "GIM_Check" + Predicate.getImmTypeIdentifier().str() + "ImmPredicate";
 }
 
 // GIMT_Encode2/4/8
 constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
 
-} // namespace
-
 //===- Helpers ------------------------------------------------------------===//
 
-void emitEncodingMacrosDef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosDef(raw_ostream &OS) {
   OS << "#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t(Val), uint8_t((uint16_t)Val >> 8)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t(Val), uint8_t((uint32_t)Val >> 8), "
-        "uint8_t((uint32_t)Val >> 16), uint8_t((uint32_t)Val >> 24)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t(Val), uint8_t((uint64_t)Val >> 8), "
-        "uint8_t((uint64_t)Val >> 16), uint8_t((uint64_t)Val >> 24),  "
-        "uint8_t((uint64_t)Val >> 32), uint8_t((uint64_t)Val >> 40), "
-        "uint8_t((uint64_t)Val >> 48), uint8_t((uint64_t)Val >> 56)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24),  "
+        "uint8_t(uint64_t(Val) >> 32), uint8_t(uint64_t(Val) >> 40), "
+        "uint8_t(uint64_t(Val) >> 48), uint8_t(uint64_t(Val) >> 56)\n"
      << "#else\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t((uint16_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t((uint32_t)Val >> 24), uint8_t((uint32_t)Val >> 16), "
-        "uint8_t((uint32_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t((uint64_t)Val >> 56), uint8_t((uint64_t)Val >> 48), "
-        "uint8_t((uint64_t)Val >> 40), uint8_t((uint64_t)Val >> 32),  "
-        "uint8_t((uint64_t)Val >> 24), uint8_t((uint64_t)Val >> 16), "
-        "uint8_t((uint64_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t(uint64_t(Val) >> 56), uint8_t(uint64_t(Val) >> 48), "
+        "uint8_t(uint64_t(Val) >> 40), uint8_t(uint64_t(Val) >> 32),  "
+        "uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#endif\n";
 }
 
-void emitEncodingMacrosUndef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosUndef(raw_ostream &OS) {
   OS << "#undef " << EncodeMacroName << "2\n"
      << "#undef " << EncodeMacroName << "4\n"
      << "#undef " << EncodeMacroName << "8\n";
 }
 
-std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
-                                    int HwModeIdx) {
+std::string
+llvm::gi::getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
+                                  int HwModeIdx) {
   std::string Name = "GIFBS";
   for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
@@ -94,8 +94,8 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 
 template <class GroupT>
 std::vector<Matcher *>
-optimizeRules(ArrayRef<Matcher *> Rules,
-              std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
+llvm::gi::optimizeRules(ArrayRef<Matcher *> Rules,
+                        std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
 
   std::vector<Matcher *> OptRules;
   std::unique_ptr<GroupT> CurrentGroup = std::make_unique<GroupT>();
@@ -142,11 +142,11 @@ optimizeRules(ArrayRef<Matcher *> Rules,
   return OptRules;
 }
 
-template std::vector<Matcher *> optimizeRules<GroupMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<GroupMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
-template std::vector<Matcher *> optimizeRules<SwitchMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<SwitchMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
@@ -156,9 +156,13 @@ static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
   llvm_unreachable("Unsupported number of bytes!");
 }
 
+template <class Range> static bool matchersRecordOperand(Range &&R) {
+  return any_of(R, [](const auto &I) { return I->recordsOperand(); });
+}
+
 //===- Global Data --------------------------------------------------------===//
 
-std::set<LLTCodeGen> KnownTypes;
+std::set<LLTCodeGen> llvm::gi::KnownTypes;
 
 //===- MatchTableRecord ---------------------------------------------------===//
 
@@ -237,9 +241,12 @@ MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
 
 MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   assert(isUIntN(NumBytes * 8, IntValue) || isIntN(NumBytes * 8, IntValue));
-  auto Str = llvm::to_string(IntValue);
-  if (NumBytes == 1 && IntValue < 0)
-    Str = "uint8_t(" + Str + ")";
+  uint64_t UIntValue = IntValue;
+  if (NumBytes < 8)
+    UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
+  std::string Str = llvm::to_string(UIntValue);
+  if (UIntValue > INT64_MAX)
+    Str += 'u';
   // TODO: Could optimize this directly to save the compiler some work when
   // building the file
   return MatchTableRecord(std::nullopt, Str, NumBytes,
@@ -357,42 +364,101 @@ std::string LLTCodeGen::getCxxEnumValue() const {
 
 void LLTCodeGen::emitCxxEnumValue(raw_ostream &OS) const {
   if (Ty.isScalar()) {
-    OS << "GILLT_s" << Ty.getSizeInBits();
+    if (Ty.isBFloat16())
+      OS << "GILLT_bf16";
+    else if (Ty.isPPCF128())
+      OS << "GILLT_ppcf128";
+    else if (Ty.isX86FP80())
+      OS << "GILLT_x86fp80";
+    else if (Ty.isFloat())
+      OS << "GILLT_f" << Ty.getSizeInBits();
+    else if (Ty.isInteger())
+      OS << "GILLT_i" << Ty.getSizeInBits();
+    else
+      OS << "GILLT_s" << Ty.getSizeInBits();
     return;
   }
   if (Ty.isVector()) {
     OS << (Ty.isScalable() ? "GILLT_nxv" : "GILLT_v")
-       << Ty.getElementCount().getKnownMinValue() << "s"
-       << Ty.getScalarSizeInBits();
+       << Ty.getElementCount().getKnownMinValue();
+
+    LLT ElemTy = Ty.getElementType();
+    if (ElemTy.isBFloat16())
+      OS << "bf16";
+    else if (ElemTy.isPPCF128())
+      OS << "ppcf128";
+    else if (ElemTy.isX86FP80())
+      OS << "x86fp80";
+    else if (ElemTy.isFloat())
+      OS << "f" << ElemTy.getSizeInBits();
+    else if (ElemTy.isInteger())
+      OS << "i" << ElemTy.getSizeInBits();
+    else
+      OS << "s" << ElemTy.getSizeInBits();
     return;
   }
+
   if (Ty.isPointer()) {
     OS << "GILLT_p" << Ty.getAddressSpace();
     if (Ty.getSizeInBits() > 0)
       OS << "s" << Ty.getSizeInBits();
     return;
   }
+
   llvm_unreachable("Unhandled LLT");
 }
 
 void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
+  auto EmitScalarType = [&OS](LLT T) {
+    if (T.isInteger())
+      OS << "LLT(LLT::Kind::INTEGER, ElementCount::getFixed(0), "
+         << T.getScalarSizeInBits() << ")";
+    else if (T.isBFloat16())
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 16, "
+            "LLT::FpSemantics::S_BFloat)";
+    else if (T.isPPCF128())
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 128, "
+            "LLT::FpSemantics::S_PPCDoubleDouble)";
+    else if (T.isX86FP80())
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 80, "
+            "LLT::FpSemantics::S_x87DoubleExtended)";
+    else if (T.isFloat(16))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 16, "
+            "LLT::FpSemantics::S_IEEEhalf)";
+    else if (T.isFloat(32))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 32, "
+            "LLT::FpSemantics::S_IEEEsingle)";
+    else if (T.isFloat(64))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 64, "
+            "LLT::FpSemantics::S_IEEEdouble)";
+    else if (T.isFloat(128))
+      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 128, "
+            "LLT::FpSemantics::S_IEEEquad)";
+    else
+      OS << "LLT::scalar(" << T.getScalarSizeInBits() << ")";
+  };
+
   if (Ty.isScalar()) {
-    OS << "LLT::scalar(" << Ty.getSizeInBits() << ")";
+    EmitScalarType(Ty);
     return;
   }
+
   if (Ty.isVector()) {
     OS << "LLT::vector("
        << (Ty.isScalable() ? "ElementCount::getScalable("
                            : "ElementCount::getFixed(")
-       << Ty.getElementCount().getKnownMinValue() << "), "
-       << Ty.getScalarSizeInBits() << ")";
+       << Ty.getElementCount().getKnownMinValue() << "), ";
+    EmitScalarType(Ty.getElementType());
+    OS << ")";
     return;
   }
+
   if (Ty.isPointer() && Ty.getSizeInBits() > 0) {
     OS << "LLT::pointer(" << Ty.getAddressSpace() << ", " << Ty.getSizeInBits()
        << ")";
     return;
   }
+
   llvm_unreachable("Unhandled LLT");
 }
 
@@ -400,46 +466,27 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
 /// particular logic behind the order but either A < B or B < A must be
 /// true if A != B.
 bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
-  if (Ty.isValid() != Other.Ty.isValid())
-    return Ty.isValid() < Other.Ty.isValid();
-  if (!Ty.isValid())
-    return false;
-
-  if (Ty.isVector() != Other.Ty.isVector())
-    return Ty.isVector() < Other.Ty.isVector();
-  if (Ty.isScalar() != Other.Ty.isScalar())
-    return Ty.isScalar() < Other.Ty.isScalar();
-  if (Ty.isPointer() != Other.Ty.isPointer())
-    return Ty.isPointer() < Other.Ty.isPointer();
-
-  if (Ty.isPointer() && Ty.getAddressSpace() != Other.Ty.getAddressSpace())
-    return Ty.getAddressSpace() < Other.Ty.getAddressSpace();
-
-  if (Ty.isVector() && Ty.getElementCount() != Other.Ty.getElementCount())
-    return std::tuple(Ty.isScalable(),
-                      Ty.getElementCount().getKnownMinValue()) <
-           std::tuple(Other.Ty.isScalable(),
-                      Other.Ty.getElementCount().getKnownMinValue());
-
-  assert((!Ty.isVector() || Ty.isScalable() == Other.Ty.isScalable()) &&
-         "Unexpected mismatch of scalable property");
-  return Ty.isVector()
-             ? std::tuple(Ty.isScalable(),
-                          Ty.getSizeInBits().getKnownMinValue()) <
-                   std::tuple(Other.Ty.isScalable(),
-                              Other.Ty.getSizeInBits().getKnownMinValue())
-             : Ty.getSizeInBits().getFixedValue() <
-                   Other.Ty.getSizeInBits().getFixedValue();
+  return Ty.getUniqueRAWLLTData() < Other.Ty.getUniqueRAWLLTData();
 }
 
 //===- LLTCodeGen Helpers -------------------------------------------------===//
 
-std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
-  MVT VT(SVT);
-
+std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT VT) {
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
+    return LLTCodeGen(LLT(VT));
+
+  if (VT.isInteger() || VT.isFloatingPoint())
+    return LLTCodeGen(LLT(VT));
+
+  return std::nullopt;
+}
+
+std::optional<LLTCodeGen> llvm::gi::MVTToGenericLLT(MVT VT) {
+  if (VT.isVector() && !VT.getVectorElementCount().isScalar()) {
+    unsigned ElemBits = VT.getVectorElementType().getSizeInBits();
     return LLTCodeGen(
-        LLT::vector(VT.getVectorElementCount(), VT.getScalarSizeInBits()));
+        LLT::vector(VT.getVectorElementCount(), LLT::scalar(ElemBits)));
+  }
 
   if (VT.isInteger() || VT.isFloatingPoint())
     return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));
@@ -451,9 +498,13 @@ std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
 
 void Matcher::optimize() {}
 
-Matcher::~Matcher() {}
+Matcher::~Matcher() = default;
 
 //===- GroupMatcher -------------------------------------------------------===//
+
+bool GroupMatcher::recordsOperand() const {
+  return matchersRecordOperand(Conditions) || matchersRecordOperand(Matchers);
+}
 
 bool GroupMatcher::candidateConditionMatches(
     const PredicateMatcher &Predicate) const {
@@ -476,12 +527,23 @@ bool GroupMatcher::candidateConditionMatches(
   return Predicate.isIdentical(RepresentativeCondition);
 }
 
+std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
+  assert(!Conditions.empty() &&
+         "Trying to pop a condition from a condition-less group");
+  std::unique_ptr<PredicateMatcher> P = std::move(Conditions.front());
+  Conditions.erase(Conditions.begin());
+  return P;
+}
+
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
   if (!Candidate.hasFirstCondition())
     return false;
 
+  // Only add candidates that have a matching first condition that can be
+  // hoisted into the GroupMatcher.
   const PredicateMatcher &Predicate = Candidate.getFirstCondition();
-  if (!candidateConditionMatches(Predicate))
+  if (!candidateConditionMatches(Predicate) ||
+      !Predicate.canHoistOutsideOf(Candidate))
     return false;
 
   Matchers.push_back(&Candidate);
@@ -499,10 +561,17 @@ void GroupMatcher::finalize() {
     for (const auto &Rule : Matchers)
       if (!Rule->hasFirstCondition())
         return;
+    // Hoist the first condition if it is identical in all matchers in the group
+    // and it can be hoisted in every matcher.
     const auto &FirstCondition = FirstRule.getFirstCondition();
-    for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
-      if (!Matchers[I]->getFirstCondition().isIdentical(FirstCondition))
+    if (!FirstCondition.canHoistOutsideOf(FirstRule))
+      return;
+    for (unsigned I = 1, E = Matchers.size(); I < E; ++I) {
+      const auto &OtherFirstCondition = Matchers[I]->getFirstCondition();
+      if (!OtherFirstCondition.isIdentical(FirstCondition) ||
+          !OtherFirstCondition.canHoistOutsideOf(*Matchers[I]))
         return;
+    }
 
     Conditions.push_back(FirstRule.popFirstCondition());
     for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
@@ -559,8 +628,15 @@ void GroupMatcher::optimize() {
 
 //===- SwitchMatcher ------------------------------------------------------===//
 
+bool SwitchMatcher::recordsOperand() const {
+  assert(!isa_and_present<RecordNamedOperandMatcher>(Condition.get()) &&
+         "Switch conditions should not record named operands");
+  return matchersRecordOperand(Matchers);
+}
+
 bool SwitchMatcher::isSupportedPredicateType(const PredicateMatcher &P) {
-  return isa<InstructionOpcodeMatcher>(P) || isa<LLTOperandMatcher>(P);
+  return isa<InstructionOpcodeMatcher>(P) || isa<LLTOperandShapeMatcher>(P) ||
+         isa<LLTOperandMatcher>(P);
 }
 
 bool SwitchMatcher::candidateConditionMatches(
@@ -592,9 +668,7 @@ bool SwitchMatcher::candidateConditionMatches(
   if (!Predicate.isIdenticalDownToValue(RepresentativeCondition))
     return false;
 
-  const auto Value = Predicate.getValue();
-  // ... but be unique with respect to the actual value they check:
-  return Values.count(Value) == 0;
+  return true;
 }
 
 bool SwitchMatcher::addMatcher(Matcher &Candidate) {
@@ -605,25 +679,45 @@ bool SwitchMatcher::addMatcher(Matcher &Candidate) {
   if (!candidateConditionMatches(Predicate))
     return false;
   const auto Value = Predicate.getValue();
-  Values.insert(Value);
-
+  auto It = Buckets.find(Value.RawValue);
+  if (It == Buckets.end())
+    It = Buckets.emplace(Value.RawValue, Bucket(Value)).first;
+#ifndef NDEBUG
+  else
+    assert(It->second.Value.Record.EmitStr == Value.Record.EmitStr &&
+           "Mismatched records for identical switch value");
+#endif
+  It->second.Matchers.push_back(&Candidate);
   Matchers.push_back(&Candidate);
   return true;
 }
 
 void SwitchMatcher::finalize() {
   assert(Condition == nullptr && "Already finalized");
-  assert(Values.size() == Matchers.size() && "Broken SwitchMatcher");
+#ifndef NDEBUG
+  unsigned NumBucketedMatchers = 0;
+  for (const auto &Entry : Buckets)
+    NumBucketedMatchers += Entry.second.Matchers.size();
+  assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");
+#endif
   if (empty())
     return;
 
-  llvm::stable_sort(Matchers, [](const Matcher *L, const Matcher *R) {
-    return L->getFirstCondition().getValue() <
-           R->getFirstCondition().getValue();
-  });
-  Condition = Matchers[0]->popFirstCondition();
-  for (unsigned I = 1, E = Values.size(); I < E; ++I)
+  Condition = Matchers.front()->popFirstCondition();
+  for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
     Matchers[I]->popFirstCondition();
+
+  // After removing the switch condition, try to hoist any shared predicates
+  // within each switch bucket.
+  for (auto &Entry : Buckets) {
+    auto &BucketMatchers = Entry.second.Matchers;
+    BucketMatchers =
+        optimizeRules<GroupMatcher>(BucketMatchers, MatcherStorage);
+  }
+
+  Matchers.clear();
+  for (auto &Entry : Buckets)
+    append_range(Matchers, Entry.second.Matchers);
 }
 
 void SwitchMatcher::emitPredicateSpecificOpcodes(const PredicateMatcher &P,
@@ -633,6 +727,14 @@ void SwitchMatcher::emitPredicateSpecificOpcodes(const PredicateMatcher &P,
   if (const auto *Condition = dyn_cast<InstructionOpcodeMatcher>(&P)) {
     Table << MatchTable::Opcode("GIM_SwitchOpcode") << MatchTable::Comment("MI")
           << MatchTable::ULEB128Value(Condition->getInsnVarID());
+    return;
+  }
+  if (const auto *Condition = dyn_cast<LLTOperandShapeMatcher>(&P)) {
+    Table << MatchTable::Opcode("GIM_SwitchTypeShape")
+          << MatchTable::Comment("MI")
+          << MatchTable::ULEB128Value(Condition->getInsnVarID())
+          << MatchTable::Comment("Op")
+          << MatchTable::ULEB128Value(Condition->getOpIdx());
     return;
   }
   if (const auto *Condition = dyn_cast<LLTOperandMatcher>(&P)) {
@@ -648,19 +750,24 @@ void SwitchMatcher::emitPredicateSpecificOpcodes(const PredicateMatcher &P,
 }
 
 void SwitchMatcher::emit(MatchTable &Table) {
-  assert(Values.size() == Matchers.size() && "Broken SwitchMatcher");
+#ifndef NDEBUG
+  unsigned NumBucketedMatchers = 0;
+  for (const auto &Entry : Buckets)
+    NumBucketedMatchers += Entry.second.Matchers.size();
+  assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");
+#endif
   if (empty())
     return;
   assert(Condition != nullptr &&
          "Broken SwitchMatcher, hasn't been finalized?");
 
-  std::vector<unsigned> LabelIDs(Values.size());
+  std::vector<unsigned> LabelIDs(Buckets.size());
   std::generate(LabelIDs.begin(), LabelIDs.end(),
                 [&Table]() { return Table.allocateLabelID(); });
   const unsigned Default = Table.allocateLabelID();
 
-  const int64_t LowerBound = Values.begin()->RawValue;
-  const int64_t UpperBound = Values.rbegin()->RawValue + 1;
+  const int64_t LowerBound = Buckets.begin()->second.Value.RawValue;
+  const int64_t UpperBound = Buckets.rbegin()->second.Value.RawValue + 1;
 
   emitPredicateSpecificOpcodes(*Condition, Table);
 
@@ -669,31 +776,42 @@ void SwitchMatcher::emit(MatchTable &Table) {
         << MatchTable::Comment("default:") << MatchTable::JumpTarget(Default);
 
   int64_t J = LowerBound;
-  auto VI = Values.begin();
-  for (unsigned I = 0, E = Values.size(); I < E; ++I) {
-    auto V = *VI++;
+  unsigned CaseIdx = 0;
+  for (auto &Entry : Buckets) {
+    auto &V = Entry.second.Value;
     while (J++ < V.RawValue)
       Table << MatchTable::IntValue(4, 0);
     V.Record.turnIntoComment();
     Table << MatchTable::LineBreak << V.Record
-          << MatchTable::JumpTarget(LabelIDs[I]);
+          << MatchTable::JumpTarget(LabelIDs[CaseIdx]);
+    ++CaseIdx;
   }
   Table << MatchTable::LineBreak;
 
-  for (unsigned I = 0, E = Values.size(); I < E; ++I) {
-    Table << MatchTable::Label(LabelIDs[I]);
-    Matchers[I]->emit(Table);
+  CaseIdx = 0;
+  for (auto &Entry : Buckets) {
+    Table << MatchTable::Label(LabelIDs[CaseIdx]);
+    for (Matcher *M : Entry.second.Matchers)
+      M->emit(Table);
     Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
+    ++CaseIdx;
   }
   Table << MatchTable::Label(Default);
 }
 
 //===- RuleMatcher --------------------------------------------------------===//
 
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
+    : Matcher(Matcher::MK_Rule), SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
+
 uint64_t RuleMatcher::NextRuleID = 0;
 
 StringRef RuleMatcher::getOpcode() const {
   return Matchers.front()->getOpcode();
+}
+
+bool RuleMatcher::recordsOperand() const {
+  return matchersRecordOperand(Matchers);
 }
 
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
@@ -1096,13 +1214,15 @@ unsigned RuleMatcher::countRendererFns() const {
       });
 }
 
+void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
+
 //===- PredicateMatcher ---------------------------------------------------===//
 
-PredicateMatcher::~PredicateMatcher() {}
+PredicateMatcher::~PredicateMatcher() = default;
 
 //===- OperandPredicateMatcher --------------------------------------------===//
 
-OperandPredicateMatcher::~OperandPredicateMatcher() {}
+OperandPredicateMatcher::~OperandPredicateMatcher() = default;
 
 bool OperandPredicateMatcher::isHigherPriorityThan(
     const OperandPredicateMatcher &B) const {
@@ -1149,6 +1269,11 @@ void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::Comment("OtherOpIdx")
         << MatchTable::ULEB128Value(OtherOM.getOpIdx())
         << MatchTable::LineBreak;
+}
+
+bool SameOperandMatcher::canHoistOutsideOf(const Matcher &M) const {
+  const auto *RM = dyn_cast<RuleMatcher>(&M);
+  return !RM || !RM->hasOperand(MatchingName);
 }
 
 //===- LLTOperandMatcher --------------------------------------------------===//
@@ -1363,6 +1488,10 @@ TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
   return TTIdx;
 }
 
+bool OperandMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates);
+}
+
 void OperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                           RuleMatcher &Rule) {
   if (!Optimized) {
@@ -1411,10 +1540,18 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
   if (!VTy.isMachineValueType())
     return failUnsupported("unsupported typeset");
 
-  if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
+  if ((VTy.getMachineValueType() == MVT::iPTR ||
+       VTy.getMachineValueType() == MVT::cPTR) &&
+      OperandIsAPointer) {
     addPredicate<PointerToAnyOperandMatcher>(0);
     return Error::success();
   }
+
+  // Metadata operands have no LLT representation and no runtime type check is
+  // needed — they are guaranteed to be MO_Metadata by the IRTranslator. This
+  // mirrors how srcvalue is handled in importChildMatcher.
+  if (VTy.getMachineValueType() == MVT::Metadata)
+    return Error::success();
 
   auto OpTyOrNone = MVTToLLT(VTy.getMachineValueType().SimpleTy);
   if (!OpTyOrNone)
@@ -1439,9 +1576,8 @@ RecordAndValue
 InstructionOpcodeMatcher::getInstValue(const CodeGenInstruction *I) const {
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return {MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName()),
-            VI->second};
-  return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
+    return {MatchTable::NamedValue(2, I->Namespace, I->getName()), VI->second};
+  return MatchTable::NamedValue(2, I->Namespace, I->getName());
 }
 
 void InstructionOpcodeMatcher::initOpcodeValuesMap(
@@ -1458,9 +1594,8 @@ RecordAndValue InstructionOpcodeMatcher::getValue() const {
   const CodeGenInstruction *I = Insts[0];
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return {MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName()),
-            VI->second};
-  return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
+    return {MatchTable::NamedValue(2, I->Namespace, I->getName()), VI->second};
+  return MatchTable::NamedValue(2, I->Namespace, I->getName());
 }
 
 void InstructionOpcodeMatcher::emitPredicateOpcodes(MatchTable &Table,
@@ -1487,17 +1622,17 @@ bool InstructionOpcodeMatcher::isHigherPriorityThan(
   // using instruction frequency information to improve compile time.
   if (const InstructionOpcodeMatcher *BO =
           dyn_cast<InstructionOpcodeMatcher>(&B))
-    return Insts[0]->TheDef->getName() < BO->Insts[0]->TheDef->getName();
+    return Insts[0]->getName() < BO->Insts[0]->getName();
 
   return false;
 }
 
 bool InstructionOpcodeMatcher::isConstantInstruction() const {
-  return Insts.size() == 1 && Insts[0]->TheDef->getName() == "G_CONSTANT";
+  return Insts.size() == 1 && Insts[0]->getName() == "G_CONSTANT";
 }
 
 StringRef InstructionOpcodeMatcher::getOpcode() const {
-  return Insts[0]->TheDef->getName();
+  return Insts[0]->getName();
 }
 
 bool InstructionOpcodeMatcher::isVariadicNumOperands() const {
@@ -1746,6 +1881,10 @@ OperandMatcher &InstructionMatcher::addPhysRegInput(const Record *Reg,
   return *OM;
 }
 
+bool InstructionMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates) || matchersRecordOperand(operands());
+}
+
 void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
                                               RuleMatcher &Rule) {
   if (canAddNumOperandsCheck()) {
@@ -1756,8 +1895,8 @@ void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
   // First emit all instruction level predicates need to be verified before we
   // can verify operands.
   emitFilteredPredicateListOpcodes(
-      [](const PredicateMatcher &P) { return !P.dependsOnOperands(); }, Table,
-      Rule);
+      [](const PredicateMatcher &P) { return !P.dependsOnRecordedOperands(); },
+      Table, Rule);
 
   // Emit all operand constraints.
   for (const auto &Operand : Operands)
@@ -1766,8 +1905,8 @@ void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
   // All of the tablegen defined predicates should now be matched. Now emit
   // any custom predicates that rely on all generated checks.
   emitFilteredPredicateListOpcodes(
-      [](const PredicateMatcher &P) { return P.dependsOnOperands(); }, Table,
-      Rule);
+      [](const PredicateMatcher &P) { return P.dependsOnRecordedOperands(); },
+      Table, Rule);
 }
 
 bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {
@@ -1841,7 +1980,7 @@ void InstructionMatcher::optimize() {
   }
   for (auto &OM : Operands) {
     for (auto &OP : OM->predicates())
-      if (isa<LLTOperandMatcher>(OP))
+      if (isa<LLTOperandMatcher>(OP) || isa<LLTOperandShapeMatcher>(OP))
         Stash.push_back(std::move(OP));
     OM->eraseNullPredicates();
   }
@@ -1881,7 +2020,7 @@ bool InstructionOperandMatcher::isHigherPriorityThan(
 
 //===- OperandRenderer ----------------------------------------------------===//
 
-OperandRenderer::~OperandRenderer() {}
+OperandRenderer::~OperandRenderer() = default;
 
 //===- CopyRenderer -------------------------------------------------------===//
 
@@ -2014,7 +2153,8 @@ void AddRegisterRenderer::emitRenderOpcodes(MatchTable &Table,
   // register and flags in a single field.
   if (IsDef) {
     Table << MatchTable::NamedValue(
-        2, IsDead ? "RegState::Define | RegState::Dead" : "RegState::Define");
+        2, IsDead ? "static_cast<uint16_t>(RegState::Define|RegState::Dead)"
+                  : "static_cast<uint16_t>(RegState::Define)");
   } else {
     assert(!IsDead && "A use cannot be dead");
     Table << MatchTable::IntValue(2, 0);
@@ -2047,9 +2187,10 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   Table << MatchTable::Comment("TempRegFlags");
   if (IsDef) {
     SmallString<32> RegFlags;
-    RegFlags += "RegState::Define";
+    RegFlags += "static_cast<uint16_t>(RegState::Define";
     if (IsDead)
       RegFlags += "|RegState::Dead";
+    RegFlags += ")";
     Table << MatchTable::NamedValue(2, RegFlags);
   } else {
     Table << MatchTable::IntValue(2, 0);
@@ -2229,7 +2370,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
           << MatchTable::Comment("RecycleInsnID")
           << MatchTable::ULEB128Value(RecycleInsnID)
           << MatchTable::Comment("Opcode")
-          << MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName())
+          << MatchTable::NamedValue(2, I->Namespace, I->getName())
           << MatchTable::LineBreak;
 
     if (!I->ImplicitDefs.empty() || !I->ImplicitUses.empty()) {
@@ -2242,7 +2383,8 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
               << MatchTable::Comment("InsnID")
               << MatchTable::ULEB128Value(InsnID)
               << MatchTable::NamedValue(2, Namespace, Def->getName())
-              << (IsDead ? MatchTable::NamedValue(2, "RegState", "Dead")
+              << (IsDead ? MatchTable::NamedValue(
+                               2, "static_cast<unsigned>(RegState::Dead)")
                          : MatchTable::IntValue(2, 0))
               << MatchTable::LineBreak;
       }
@@ -2276,7 +2418,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
   }
 
   Table << MatchTable::Comment("Opcode")
-        << MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName())
+        << MatchTable::NamedValue(2, I->Namespace, I->getName())
         << MatchTable::LineBreak;
 
   for (const auto &Renderer : OperandRenderers)
@@ -2420,6 +2562,3 @@ void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
         << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID")
         << Ty << MatchTable::LineBreak;
 }
-
-} // namespace gi
-} // namespace llvm

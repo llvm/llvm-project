@@ -109,4 +109,23 @@ bb:
   ret void
 }
 
+@global = external addrspace(1) constant [16 x float], align 64
+
+define float @issue160302(i1 %cond, ptr addrspace(5) %arg) {
+; CHECK-LABEL: define float @issue160302(
+; CHECK-SAME: i1 [[COND:%.*]], ptr addrspace(5) [[ARG:%.*]]) {
+; CHECK-NEXT:    [[AGG_TMP2_I4:%.*]] = alloca [16 x float], align 64, addrspace(5)
+; CHECK-NEXT:    [[SELECT_PTR:%.*]] = select i1 [[COND]], ptr addrspace(5) [[AGG_TMP2_I4]], ptr addrspace(5) [[ARG]]
+; CHECK-NEXT:    [[COND_I:%.*]] = load float, ptr addrspace(5) [[SELECT_PTR]], align 4
+; CHECK-NEXT:    ret float [[COND_I]]
+;
+  %agg.tmp2.i4 = alloca [16 x float], align 64, addrspace(5)
+  call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) %agg.tmp2.i4, ptr addrspace(1) @global, i64 0, i1 false)
+  %m_Data.i14.i = getelementptr [16 x float], ptr addrspace(5) %agg.tmp2.i4, i32 0, i32 0
+  %gep = getelementptr [16 x float], ptr addrspace(5) %arg, i32 0, i32 0
+  %select.ptr = select i1 %cond, ptr addrspace(5) %m_Data.i14.i, ptr addrspace(5) %gep
+  %cond.i = load float, ptr addrspace(5) %select.ptr, align 4
+  ret float %cond.i
+}
+
 declare void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noalias writeonly captures(none), ptr addrspace(4) noalias readonly captures(none), i64, i1 immarg) #0

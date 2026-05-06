@@ -37,9 +37,9 @@ PatternApplicator::~PatternApplicator() = default;
 #ifndef NDEBUG
 /// Log a message for a pattern that is impossible to match.
 static void logImpossibleToMatch(const Pattern &pattern) {
-  llvm::dbgs() << "Ignoring pattern '" << pattern.getRootKind()
-               << "' because it is impossible to match or cannot lead "
-                  "to legal IR (by cost model)\n";
+  LDBG() << "Ignoring pattern '" << pattern.getRootKind()
+         << "' because it is impossible to match or cannot lead "
+            "to legal IR (by cost model)";
 }
 
 /// Log IR after pattern application.
@@ -217,7 +217,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
                 std::make_unique<RewriterBase::PatternLoggingListener>(
                     oldListener, pattern->getDebugName());
             rewriter.setListener(loggingListener.get());
-            auto resetListenerCallback = llvm::make_scope_exit(
+            llvm::scope_exit resetListenerCallback(
                 [&] { rewriter.setListener(oldListener); });
 #endif
             result = pattern->matchAndRewrite(op, rewriter);

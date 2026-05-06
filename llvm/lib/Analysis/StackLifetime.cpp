@@ -70,7 +70,7 @@ void StackLifetime::collectMarkers() {
       const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (!II || !II->isLifetimeStartOrEnd())
         continue;
-      const AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(1));
+      const AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
       if (!AI)
         continue;
       auto It = AllocaNumbering.find(AI);
@@ -173,7 +173,7 @@ void StackLifetime::calculateLocalLiveness() {
         BitsIn.resize(NumAllocas, true);
 
       // Update block LiveIn set, noting whether it has changed.
-      if (BitsIn.test(BlockInfo.LiveIn)) {
+      if (!BitsIn.subsetOf(BlockInfo.LiveIn)) {
         BlockInfo.LiveIn |= BitsIn;
       }
 
@@ -198,7 +198,7 @@ void StackLifetime::calculateLocalLiveness() {
       }
 
       // Update block LiveOut set, noting whether it has changed.
-      if (BitsIn.test(BlockInfo.LiveOut)) {
+      if (!BitsIn.subsetOf(BlockInfo.LiveOut)) {
         Changed = true;
         BlockInfo.LiveOut |= BitsIn;
       }

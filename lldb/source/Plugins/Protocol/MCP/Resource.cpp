@@ -5,12 +5,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Resource.h"
-#include "MCPError.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Target/Platform.h"
+#include "lldb/Protocol/MCP/MCPError.h"
+#include "llvm/Support/ErrorExtras.h"
 
+using namespace lldb_private;
 using namespace lldb_private::mcp;
+using namespace lldb_protocol::mcp;
 
 namespace {
 struct DebuggerResource {
@@ -54,21 +56,15 @@ llvm::json::Value toJSON(const TargetResource &TR) {
 
 static constexpr llvm::StringLiteral kMimeTypeJSON = "application/json";
 
-template <typename... Args>
-static llvm::Error createStringError(const char *format, Args &&...args) {
-  return llvm::createStringError(
-      llvm::formatv(format, std::forward<Args>(args)...).str());
-}
-
 static llvm::Error createUnsupportedURIError(llvm::StringRef uri) {
   return llvm::make_error<UnsupportedURI>(uri.str());
 }
 
-protocol::Resource
+lldb_protocol::mcp::Resource
 DebuggerResourceProvider::GetDebuggerResource(Debugger &debugger) {
   const lldb::user_id_t debugger_id = debugger.GetID();
 
-  protocol::Resource resource;
+  lldb_protocol::mcp::Resource resource;
   resource.uri = llvm::formatv("lldb://debugger/{0}", debugger_id);
   resource.name = debugger.GetInstanceName();
   resource.description =
@@ -78,7 +74,7 @@ DebuggerResourceProvider::GetDebuggerResource(Debugger &debugger) {
   return resource;
 }
 
-protocol::Resource
+lldb_protocol::mcp::Resource
 DebuggerResourceProvider::GetTargetResource(size_t target_idx, Target &target) {
   const size_t debugger_id = target.GetDebugger().GetID();
 
@@ -87,7 +83,7 @@ DebuggerResourceProvider::GetTargetResource(size_t target_idx, Target &target) {
   if (Module *exe_module = target.GetExecutableModulePointer())
     target_name = exe_module->GetFileSpec().GetFilename().GetString();
 
-  protocol::Resource resource;
+  lldb_protocol::mcp::Resource resource;
   resource.uri =
       llvm::formatv("lldb://debugger/{0}/target/{1}", debugger_id, target_idx);
   resource.name = target_name;
@@ -98,8 +94,9 @@ DebuggerResourceProvider::GetTargetResource(size_t target_idx, Target &target) {
   return resource;
 }
 
-std::vector<protocol::Resource> DebuggerResourceProvider::GetResources() const {
-  std::vector<protocol::Resource> resources;
+std::vector<lldb_protocol::mcp::Resource>
+DebuggerResourceProvider::GetResources() const {
+  std::vector<lldb_protocol::mcp::Resource> resources;
 
   const size_t num_debuggers = Debugger::GetNumDebuggers();
   for (size_t i = 0; i < num_debuggers; ++i) {
@@ -121,7 +118,7 @@ std::vector<protocol::Resource> DebuggerResourceProvider::GetResources() const {
   return resources;
 }
 
-llvm::Expected<protocol::ResourceResult>
+llvm::Expected<lldb_protocol::mcp::ReadResourceResult>
 DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
 
   auto [protocol, path] = uri.split("://");
@@ -140,8 +137,8 @@ DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
 
   size_t debugger_idx;
   if (components[1].getAsInteger(0, debugger_idx))
-    return createStringError("invalid debugger id '{0}': {1}", components[1],
-                             path);
+    return llvm::createStringErrorV("invalid debugger id '{0}': {1}",
+                                    components[1], path);
 
   if (components.size() > 3) {
     if (components[2] != "target")
@@ -149,8 +146,8 @@ DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
 
     size_t target_idx;
     if (components[3].getAsInteger(0, target_idx))
-      return createStringError("invalid target id '{0}': {1}", components[3],
-                               path);
+      return llvm::createStringErrorV("invalid target id '{0}': {1}",
+                                      components[3], path);
 
     return ReadTargetResource(uri, debugger_idx, target_idx);
   }
@@ -158,41 +155,41 @@ DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
   return ReadDebuggerResource(uri, debugger_idx);
 }
 
-llvm::Expected<protocol::ResourceResult>
+llvm::Expected<lldb_protocol::mcp::ReadResourceResult>
 DebuggerResourceProvider::ReadDebuggerResource(llvm::StringRef uri,
                                                lldb::user_id_t debugger_id) {
   lldb::DebuggerSP debugger_sp = Debugger::FindDebuggerWithID(debugger_id);
   if (!debugger_sp)
-    return createStringError("invalid debugger id: {0}", debugger_id);
+    return llvm::createStringErrorV("invalid debugger id: {0}", debugger_id);
 
   DebuggerResource debugger_resource;
   debugger_resource.debugger_id = debugger_id;
   debugger_resource.name = debugger_sp->GetInstanceName();
   debugger_resource.num_targets = debugger_sp->GetTargetList().GetNumTargets();
 
-  protocol::ResourceContents contents;
+  lldb_protocol::mcp::TextResourceContents contents;
   contents.uri = uri;
   contents.mimeType = kMimeTypeJSON;
   contents.text = llvm::formatv("{0}", toJSON(debugger_resource));
 
-  protocol::ResourceResult result;
+  lldb_protocol::mcp::ReadResourceResult result;
   result.contents.push_back(contents);
   return result;
 }
 
-llvm::Expected<protocol::ResourceResult>
+llvm::Expected<lldb_protocol::mcp::ReadResourceResult>
 DebuggerResourceProvider::ReadTargetResource(llvm::StringRef uri,
                                              lldb::user_id_t debugger_id,
                                              size_t target_idx) {
 
   lldb::DebuggerSP debugger_sp = Debugger::FindDebuggerWithID(debugger_id);
   if (!debugger_sp)
-    return createStringError("invalid debugger id: {0}", debugger_id);
+    return llvm::createStringErrorV("invalid debugger id: {0}", debugger_id);
 
   TargetList &target_list = debugger_sp->GetTargetList();
   lldb::TargetSP target_sp = target_list.GetTargetAtIndex(target_idx);
   if (!target_sp)
-    return createStringError("invalid target idx: {0}", target_idx);
+    return llvm::createStringErrorV("invalid target idx: {0}", target_idx);
 
   TargetResource target_resource;
   target_resource.debugger_id = debugger_id;
@@ -206,12 +203,12 @@ DebuggerResourceProvider::ReadTargetResource(llvm::StringRef uri,
   if (lldb::PlatformSP platform_sp = target_sp->GetPlatform())
     target_resource.platform = platform_sp->GetName();
 
-  protocol::ResourceContents contents;
+  lldb_protocol::mcp::TextResourceContents contents;
   contents.uri = uri;
   contents.mimeType = kMimeTypeJSON;
   contents.text = llvm::formatv("{0}", toJSON(target_resource));
 
-  protocol::ResourceResult result;
+  lldb_protocol::mcp::ReadResourceResult result;
   result.contents.push_back(contents);
   return result;
 }

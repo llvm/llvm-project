@@ -509,13 +509,12 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   // We need an actual supported target.
   const llvm::Triple &TheTriple = Actions.Context.getTargetInfo().getTriple();
-  const std::string &TT = TheTriple.getTriple();
   const llvm::Target *TheTarget = nullptr;
   if (!TheTriple.isX86()) {
     Diag(AsmLoc, diag::err_msasm_unsupported_arch) << TheTriple.getArchName();
   } else {
     std::string Error;
-    TheTarget = llvm::TargetRegistry::lookupTarget(TT, Error);
+    TheTarget = llvm::TargetRegistry::lookupTarget(TheTriple, Error);
     if (!TheTarget)
       Diag(AsmLoc, diag::err_msasm_unable_to_create_target) << Error;
   }
@@ -543,7 +542,8 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   std::string FeaturesStr =
       llvm::join(TO.Features.begin(), TO.Features.end(), ",");
 
-  std::unique_ptr<llvm::MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+  std::unique_ptr<llvm::MCRegisterInfo> MRI(
+      TheTarget->createMCRegInfo(TheTriple));
   if (!MRI) {
     Diag(AsmLoc, diag::err_msasm_unable_to_create_target)
         << "target MC unavailable";
@@ -552,11 +552,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   // FIXME: init MCOptions from sanitizer flags here.
   llvm::MCTargetOptions MCOptions;
   std::unique_ptr<llvm::MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   // Get the instruction descriptor.
   std::unique_ptr<llvm::MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<llvm::MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TT, TO.CPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, TO.CPU, FeaturesStr));
   // Target MCTargetDesc may not be linked in clang-based tools.
 
   if (!MAI || !MII || !STI) {
@@ -566,7 +566,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   }
 
   llvm::SourceMgr TempSrcMgr;
-  llvm::MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &TempSrcMgr);
+  llvm::MCContext Ctx(TheTriple, *MAI, *MRI, *STI, &TempSrcMgr);
   std::unique_ptr<llvm::MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());
@@ -582,7 +582,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
       createMCAsmParser(TempSrcMgr, Ctx, *Str, *MAI));
 
   std::unique_ptr<llvm::MCTargetAsmParser> TargetParser(
-      TheTarget->createMCAsmParser(*STI, *Parser, *MII, MCOptions));
+      TheTarget->createMCAsmParser(*STI, *Parser, *MII));
   // Target AsmParser may not be linked in clang-based tools.
   if (!TargetParser) {
     Diag(AsmLoc, diag::err_msasm_unable_to_create_target)
@@ -591,7 +591,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   }
 
   std::unique_ptr<llvm::MCInstPrinter> IP(
-      TheTarget->createMCInstPrinter(llvm::Triple(TT), 1, *MAI, *MII, *MRI));
+      TheTarget->createMCInstPrinter(TheTriple, 1, *MAI, *MII, *MRI));
 
   // Change to the Intel dialect.
   Parser->setAssemblerDialect(1);

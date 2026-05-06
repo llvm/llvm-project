@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple wasm32 -target-feature +reference-types %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple wasm32 -target-abi experimental-mv -DMULTIVALUE -target-feature +reference-types %s
 
 #define EXPR_HAS_TYPE(expr, type) _Generic((expr), type : 1, default : 0)
 
@@ -57,8 +58,8 @@ void test_table_copy(int dst_idx, int src_idx, int nelem) {
 
 typedef void (*F1)(void);
 typedef int (*F2)(int);
-typedef int (*F3)(__externref_t);
-typedef __externref_t (*F4)(int);
+typedef void (*F3)(struct {int x; double y;});
+typedef struct {int x; double y;} (*F4)(void);
 
 void test_function_pointer_signature() {
   // Test argument count validation
@@ -68,8 +69,6 @@ void test_function_pointer_signature() {
   // // Test argument type validation - should require function pointer
   (void)__builtin_wasm_test_function_pointer_signature((void*)0); // expected-error {{used type 'void *' where function pointer is required}}
   (void)__builtin_wasm_test_function_pointer_signature((int)0);   // expected-error {{used type 'int' where function pointer is required}}
-  (void)__builtin_wasm_test_function_pointer_signature((F3)0);   // expected-error {{not supported for function pointers with a reference type parameter}}
-  (void)__builtin_wasm_test_function_pointer_signature((F4)0);   // expected-error {{not supported for function pointers with a reference type return value}}
 
   // // Test valid usage
   int res = __builtin_wasm_test_function_pointer_signature((F1)0);
@@ -77,4 +76,14 @@ void test_function_pointer_signature() {
 
   // Test return type
   _Static_assert(EXPR_HAS_TYPE(__builtin_wasm_test_function_pointer_signature((F1)0), int), "");
+
+#ifdef MULTIVALUE
+  // Test that struct arguments and returns are rejected with multivalue abi
+  (void)__builtin_wasm_test_function_pointer_signature((F3)0); // expected-error {{not supported with the multivalue ABI for function pointers with a struct/union as parameter}}
+  (void)__builtin_wasm_test_function_pointer_signature((F4)0); // expected-error {{not supported with the multivalue ABI for function pointers with a struct/union as return value}}
+#else
+  // with default abi they are fine
+  (void)__builtin_wasm_test_function_pointer_signature((F3)0);
+  (void)__builtin_wasm_test_function_pointer_signature((F4)0);
+#endif
 }

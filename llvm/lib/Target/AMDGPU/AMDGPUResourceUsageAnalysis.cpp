@@ -17,6 +17,7 @@
 
 #include "AMDGPUResourceUsageAnalysis.h"
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -76,7 +77,7 @@ bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
     return false;
 
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+  const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
@@ -103,7 +104,7 @@ AnalysisKey AMDGPUResourceUsageAnalysis::Key;
 AMDGPUResourceUsageAnalysis::Result
 AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+  const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
@@ -141,6 +142,8 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
                          MRI.isPhysRegUsed(AMDGPU::FLAT_SCR_HI) ||
                          MRI.isLiveIn(MFI->getPreloadedReg(
                              AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT));
+
+  Info.NumNamedBarrier = MFI->getNumNamedBarriers();
 
   // Even if FLAT_SCRATCH is implicitly used, it has no effect if flat
   // instructions aren't used to access the scratch buffer. Inline assembly may
@@ -241,6 +244,9 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
         if (!RC || !TRI.isVGPRClass(RC))
           continue;
 
+        if (MI.isCall() || MI.isMetaInstruction())
+          continue;
+
         unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
         unsigned HWReg = TRI.getHWRegIndex(Reg);
         int MaxUsed = HWReg + Width - 1;
@@ -251,17 +257,13 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
         // Pseudo used just to encode the underlying global. Is there a better
         // way to track this?
 
+        // TODO: Some of the generic call-like pseudos do not encode the callee,
+        // so we overly conservatively treat this as an indirect call.
         const MachineOperand *CalleeOp =
             TII->getNamedOperand(MI, AMDGPU::OpName::callee);
 
-        const Function *Callee = getCalleeFunction(*CalleeOp);
-
-        // Avoid crashing on undefined behavior with an illegal call to a
-        // kernel. If a callsite's calling convention doesn't match the
-        // function's, it's undefined behavior. If the callsite calling
-        // convention does match, that would have errored earlier.
-        if (Callee && AMDGPU::isEntryFunctionCC(Callee->getCallingConv()))
-          report_fatal_error("invalid call to entry function");
+        const Function *Callee =
+            CalleeOp ? getCalleeFunction(*CalleeOp) : nullptr;
 
         auto isSameFunction = [](const MachineFunction &MF, const Function *F) {
           return F == &MF.getFunction();
@@ -271,6 +273,15 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
           Info.Callees.push_back(Callee);
 
         bool IsIndirect = !Callee || Callee->isDeclaration();
+        Info.HasIndirectCall |= IsIndirect;
+
+        // In object linking mode the linker has the full cross-TU view. It
+        // propagates resource usage across both direct calls to external
+        // declarations and true indirect calls. Skip the compile-time
+        // conservative assumptions so that the locally emitted metadata
+        // describes this function's own usage only.
+        if (AMDGPUTargetMachine::EnableObjectLinking)
+          continue;
 
         // FIXME: Call site could have norecurse on it
         if (!Callee || !Callee->doesNotRecurse()) {
@@ -300,7 +311,6 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
           Info.UsesVCC = true;
           Info.UsesFlatScratch = ST.hasFlatAddressSpace();
           Info.HasDynamicallySizedStack = true;
-          Info.HasIndirectCall = true;
         }
       }
     }

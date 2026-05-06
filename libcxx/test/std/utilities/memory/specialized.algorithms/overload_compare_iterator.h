@@ -19,7 +19,7 @@
 // An iterator type that overloads operator== and operator!= without any constraints, which
 // can trip up some algorithms if we compare iterators against types that we're not allowed to.
 //
-// See https://github.com/llvm/llvm-project/issues/69334 for details.
+// See https://llvm.org/PR69334 for details.
 template <class Iterator>
 struct overload_compare_iterator {
   static_assert(

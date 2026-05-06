@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "check-acc-structure.h"
+#include "resolve-names-utils.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
@@ -106,18 +108,25 @@ bool AccStructureChecker::IsComputeConstruct(
       directive == llvm::acc::ACCD_kernels_loop;
 }
 
-bool AccStructureChecker::IsInsideComputeConstruct() const {
-  if (dirContext_.size() <= 1) {
-    return false;
-  }
+bool AccStructureChecker::IsLoopConstruct(
+    llvm::acc::Directive directive) const {
+  return directive == llvm::acc::Directive::ACCD_loop ||
+      directive == llvm::acc::ACCD_parallel_loop ||
+      directive == llvm::acc::ACCD_serial_loop ||
+      directive == llvm::acc::ACCD_kernels_loop;
+}
 
+std::optional<llvm::acc::Directive>
+AccStructureChecker::getParentComputeConstruct() const {
   // Check all nested context skipping the first one.
-  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
-    if (IsComputeConstruct(dirContext_[i - 1].directive)) {
-      return true;
-    }
-  }
-  return false;
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i)
+    if (IsComputeConstruct(dirContext_[i - 1].directive))
+      return dirContext_[i - 1].directive;
+  return std::nullopt;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  return getParentComputeConstruct().has_value();
 }
 
 void AccStructureChecker::CheckNotInComputeConstruct() {
@@ -126,6 +135,14 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
         "Directive %s may not be called within a compute region"_err_en_US,
         ContextDirectiveAsFortran());
   }
+}
+
+bool AccStructureChecker::IsInsideKernelsConstruct() const {
+  if (auto directive = getParentComputeConstruct())
+    if (*directive == llvm::acc::ACCD_kernels ||
+        *directive == llvm::acc::ACCD_kernels_loop)
+      return true;
+  return false;
 }
 
 void AccStructureChecker::Enter(const parser::AccClause &x) {
@@ -250,6 +267,155 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   dirContext_.pop_back();
 }
 
+std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
+    DirectiveContext &dirContext) {
+  for (auto it : dirContext.clauseInfo) {
+    const auto *clause{it.second};
+    if (const auto *gangClause{
+            std::get_if<parser::AccClause::Gang>(&clause->u)})
+      if (gangClause->v) {
+        const Fortran::parser::AccGangArgList &x{*gangClause->v};
+        for (const Fortran::parser::AccGangArg &gangArg : x.v)
+          if (const auto *dim{
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)})
+            if (const auto v{EvaluateInt64(context_, dim->v)})
+              return *v;
+      }
+  }
+  return std::nullopt;
+}
+
+void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
+    auto &parent{dirContext_[i - 1]};
+    if (IsLoopConstruct(parent.directive)) {
+      for (auto parentClause : parent.actualClauses) {
+        for (auto cl : GetContext().actualClauses) {
+          bool invalid{false};
+          if (parentClause == llvm::acc::Clause::ACCC_gang &&
+              cl == llvm::acc::Clause::ACCC_gang) {
+            if (IsInsideKernelsConstruct()) {
+              context_.Say(GetContext().clauseSource,
+                  "Nested GANG loops are not allowed in the region of a KERNELS construct"_err_en_US);
+            } else {
+              auto parentDim = getGangDimensionSize(parent);
+              auto currentDim = getGangDimensionSize(GetContext());
+              std::int64_t parentDimNum = 1, currentDimNum = 1;
+              if (parentDim)
+                parentDimNum = *parentDim;
+              if (currentDim)
+                currentDimNum = *currentDim;
+              if (parentDimNum <= currentDimNum) {
+                std::string parentDimStr, currentDimStr;
+                if (parentDim)
+                  parentDimStr = "(dim:" + std::to_string(parentDimNum) + ")";
+                if (currentDim)
+                  currentDimStr = "(dim:" + std::to_string(currentDimNum) + ")";
+                context_.Say(GetContext().clauseSource,
+                    "%s%s clause is not allowed in the region of a loop with the %s%s clause"_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(cl).str()),
+                    currentDimStr,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(parentClause).str()),
+                    parentDimStr);
+                continue;
+              }
+            }
+          } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker)) {
+            invalid = true;
+          } else if (parentClause == llvm::acc::Clause::ACCC_vector &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker ||
+                  cl == llvm::acc::Clause::ACCC_vector)) {
+            invalid = true;
+          }
+          if (invalid)
+            context_.Say(GetContext().clauseSource,
+                "%s clause is not allowed in the region of a loop with the %s clause"_err_en_US,
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(cl).str()),
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(parentClause).str()));
+        }
+      }
+    }
+    if (IsComputeConstruct(parent.directive))
+      break;
+  }
+}
+
+void AccStructureChecker::Enter(const parser::CallStmt &call) {
+  if (dirContext_.empty() || !call.typedCall) {
+    return;
+  }
+  const Symbol *sym{call.typedCall->proc().GetSymbol()};
+  if (!sym) {
+    return;
+  }
+  const Symbol &ult{sym->GetUltimate()};
+  const auto *subp{ult.detailsIf<SubprogramDetails>()};
+  if (!subp || subp->openACCRoutineInfos().empty()) {
+    return;
+  }
+  std::string routineParDim;
+  unsigned routineGangDim = 0;
+  for (const OpenACCRoutineInfo &ri : subp->openACCRoutineInfos()) {
+    if (ri.isGang()) {
+      if (unsigned gangDim = ri.gangDim()) {
+        routineGangDim = gangDim;
+        routineParDim = "GANG(" + std::to_string(gangDim) + ")";
+      } else {
+        routineGangDim = 1;
+        routineParDim = "GANG";
+      }
+    } else if (ri.isWorker()) {
+      routineParDim = "WORKER";
+    } else if (ri.isVector()) {
+      routineParDim = "VECTOR";
+    } else if (ri.isSeq()) {
+      routineParDim = "SEQ";
+    }
+  }
+
+  DirectiveContext &inner{dirContext_.back()};
+  for (llvm::acc::Clause cl : inner.actualClauses) {
+    if (cl == llvm::acc::Clause::ACCC_vector) {
+      if (!routineParDim.empty() && routineParDim != "SEQ") {
+        context_.Say(GetContext().clauseSource,
+            "Calling %s routine inside VECTOR loop is not allowed"_err_en_US,
+            routineParDim);
+      }
+    }
+    if (cl == llvm::acc::Clause::ACCC_worker) {
+      if (!routineParDim.empty() &&
+          (routineParDim != "SEQ" && routineParDim != "VECTOR")) {
+        context_.Say(GetContext().clauseSource,
+            "Calling %s routine inside WORKER loop is not allowed"_err_en_US,
+            routineParDim);
+      }
+    }
+    if (cl == llvm::acc::Clause::ACCC_gang) {
+      const std::optional<std::int64_t> loopGangDim{
+          getGangDimensionSize(inner)};
+      const std::int64_t loopDimNum{loopGangDim.value_or(1)};
+      if (routineGangDim && routineGangDim >= loopDimNum) {
+        if (loopGangDim) {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG(%s) loop is not allowed"_err_en_US,
+              routineParDim, std::to_string(*loopGangDim));
+        } else {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG loop is not allowed"_err_en_US,
+              routineParDim);
+        }
+      }
+    }
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
@@ -267,6 +433,8 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
     CheckNotAllowedIfClause(llvm::acc::Clause::ACCC_seq,
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
+    // Restriction - 2.9.2, 2.9.3, 2.9.4
+    CheckNotInSameOrSubLevelLoopConstruct();
   }
   dirContext_.pop_back();
 }
@@ -569,9 +737,44 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
-  if (loopNestLevel == 0) {
-    context_.Say(verbatim.source,
-          "The CACHE directive must be inside a loop"_err_en_US);
+  // Check cache directive array section constraints
+  const auto &objectListWithModifier =
+      std::get<parser::AccObjectListWithModifier>(x.t);
+  const auto &objectList =
+      std::get<parser::AccObjectList>(objectListWithModifier.t);
+
+  for (const auto &accObject : objectList.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *dataRef =
+                      std::get_if<parser::DataRef>(&designator.u)) {
+                if (const auto *arrayElem =
+                        std::get_if<common::Indirection<parser::ArrayElement>>(
+                            &dataRef->u)) {
+                  for (const auto &subscript :
+                      arrayElem->value().Subscripts()) {
+                    if (const auto *triplet =
+                            std::get_if<parser::SubscriptTriplet>(
+                                &subscript.u)) {
+                      const auto &stride{std::get<2>(triplet->t)};
+                      if (stride) {
+                        if (auto strideVal{GetIntValue(*stride)}) {
+                          if (*strideVal != 1) {
+                            context_.Say(designator.source,
+                                "The CACHE directive does not support strided array sections"_err_en_US);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            [&](const parser::Name &) {
+              // Common block names are not expected in cache directive
+            }},
+        accObject.u);
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
@@ -611,7 +814,8 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
                     context_.Warn(common::UsageWarning::OpenAccUsage,
@@ -884,26 +1088,29 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (name->symbol) {
-                  const auto *type{name->symbol->GetType()};
-                  if (type->IsNumeric(TypeCategory::Integer) &&
-                      !reductionIntegerSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for integer type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Real) &&
-                      !reductionRealSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for real type"_err_en_US);
-                  } else if (type->IsNumeric(TypeCategory::Complex) &&
-                      !reductionComplexSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for complex type"_err_en_US);
-                  } else if (type->category() ==
-                          Fortran::semantics::DeclTypeSpec::Category::Logical &&
-                      !reductionLogicalSet.test(op.v)) {
-                    context_.Say(GetContext().clauseSource,
-                        "reduction operator not supported for logical type"_err_en_US);
+                  if (const auto *type{name->symbol->GetType()}) {
+                    if (type->IsNumeric(TypeCategory::Integer) &&
+                        !reductionIntegerSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for integer type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Real) &&
+                        !reductionRealSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for real type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Complex) &&
+                        !reductionComplexSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for complex type"_err_en_US);
+                    } else if (type->category() ==
+                            Fortran::semantics::DeclTypeSpec::Category::
+                                Logical &&
+                        !reductionLogicalSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for logical type"_err_en_US);
+                    }
                   }
                   // TODO: check composite type.
                 }

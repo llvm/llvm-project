@@ -1,10 +1,10 @@
 ; RUN: opt < %s -passes=loop-vectorize -mattr=+sve -force-vector-width=4 -pass-remarks-analysis=loop-vectorize \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S 2>%t | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail -S 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-REMARKS
 target triple = "aarch64-linux-gnu"
 
 ; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
-define dso_local void @loop_sve_i128(ptr nocapture %ptr, i64 %N) {
+define void @loop_sve_i128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_sve_i128
 ; CHECK: vector.body
 ; CHECK:  %[[LOAD1:.*]] = load i128, ptr {{.*}}
@@ -31,7 +31,7 @@ for.end:
 }
 
 ; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
-define dso_local void @loop_sve_f128(ptr nocapture %ptr, i64 %N) {
+define void @loop_sve_f128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_sve_f128
 ; CHECK: vector.body
 ; CHECK: %[[LOAD1:.*]] = load fp128, ptr
@@ -58,7 +58,7 @@ for.end:
 }
 
 ; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
-define dso_local void @loop_invariant_sve_i128(ptr nocapture %ptr, i128 %val, i64 %N) {
+define void @loop_invariant_sve_i128(ptr nocapture %ptr, i128 %val, i64 %N) {
 ; CHECK-LABEL: @loop_invariant_sve_i128
 ; CHECK: vector.body
 ; CHECK: %[[GEP1:.*]] = getelementptr inbounds i128, ptr %ptr
@@ -80,7 +80,7 @@ for.end:
   ret void
 }
 
-define dso_local void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) {
+define void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_fixed_width_i128
 ; CHECK: load <4 x i128>, ptr
 ; CHECK: add nsw <4 x i128> {{.*}}, splat (i128 42)

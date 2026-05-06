@@ -41,7 +41,7 @@ LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf buf)) {
       [epilogue] "X"(sigsetjmp_epilogue)
       : "eax", "ebx", "ecx");
 }
-#endif
+#else
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf, int)) {
   asm(R"(
@@ -64,5 +64,6 @@ LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf, int)) {
       [epilogue] "X"(sigsetjmp_epilogue)
       : "rax", "rbx");
 }
+#endif
 
 } // namespace LIBC_NAMESPACE_DECL

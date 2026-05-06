@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_num_groups.h>
+#include "clc/workitem/clc_get_num_groups.h"
 
 _CLC_OVERLOAD _CLC_DEF size_t __clc_get_num_groups(uint dim) {
   switch (dim) {
@@ -17,6 +17,6 @@ _CLC_OVERLOAD _CLC_DEF size_t __clc_get_num_groups(uint dim) {
   case 2:
     return __nvvm_read_ptx_sreg_nctaid_z();
   default:
-    return 0;
+    return 1;
   }
 }

@@ -18,6 +18,7 @@
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LLVMContext;
@@ -26,75 +27,15 @@ class Metadata;
 
 namespace hlsl {
 namespace rootsig {
-
-template <typename T>
 class RootSignatureValidationError
-    : public ErrorInfo<RootSignatureValidationError<T>> {
+    : public ErrorInfo<RootSignatureValidationError> {
 public:
   static char ID;
-  StringRef ParamName;
-  T Value;
+  std::string Msg;
 
-  RootSignatureValidationError(StringRef ParamName, T Value)
-      : ParamName(ParamName), Value(Value) {}
+  RootSignatureValidationError(const Twine &Msg) : Msg(Msg.str()) {}
 
-  void log(raw_ostream &OS) const override {
-    OS << "Invalid value for " << ParamName << ": " << Value;
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
-public:
-  static char ID;
-  StringRef Message;
-  MDNode *MD;
-
-  GenericRSMetadataError(StringRef Message, MDNode *MD)
-      : Message(Message), MD(MD) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << Message;
-    if (MD) {
-      OS << "\n";
-      MD->printTree(OS);
-    }
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class InvalidRSMetadataFormat : public ErrorInfo<InvalidRSMetadataFormat> {
-public:
-  static char ID;
-  StringRef ElementName;
-
-  InvalidRSMetadataFormat(StringRef ElementName) : ElementName(ElementName) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Invalid format for  " << ElementName;
-  }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-class InvalidRSMetadataValue : public ErrorInfo<InvalidRSMetadataValue> {
-public:
-  static char ID;
-  StringRef ParamName;
-
-  InvalidRSMetadataValue(StringRef ParamName) : ParamName(ParamName) {}
-
-  void log(raw_ostream &OS) const override {
-    OS << "Invalid value for " << ParamName;
-  }
+  void log(raw_ostream &OS) const override { OS << Msg; }
 
   std::error_code convertToErrorCode() const override {
     return llvm::inconvertibleErrorCode();

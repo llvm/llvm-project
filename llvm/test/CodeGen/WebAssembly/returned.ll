@@ -99,8 +99,8 @@ define void @test() {
 ; CHECK-NEXT:    return
 entry:
   %a = alloca i32
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   %ret = call ptr @returns_arg(ptr %a)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }

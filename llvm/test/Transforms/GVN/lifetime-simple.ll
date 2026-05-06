@@ -6,18 +6,18 @@ define i8 @test() nounwind {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P:%.*]] = alloca [32 x i8], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[P]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[P]])
 ; CHECK-NEXT:    store i8 1, ptr [[P]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[P]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[P]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
   %P = alloca [32 x i8]
-  call void @llvm.lifetime.start.p0(i64 32, ptr %P)
+  call void @llvm.lifetime.start.p0(ptr %P)
   %0 = load i8, ptr %P
   store i8 1, ptr %P
-  call void @llvm.lifetime.end.p0(i64 32, ptr %P)
+  call void @llvm.lifetime.end.p0(ptr %P)
   %1 = load i8, ptr %P
   ret i8 %1
 }
@@ -28,17 +28,17 @@ define void @assume_eq_arg(ptr %arg) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[ALLOCA]], [[ARG]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ALLOCA]])
 ; CHECK-NEXT:    store volatile i32 0, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOCA]])
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca i32
   %cmp = icmp eq ptr %alloca, %arg
   call void @llvm.assume(i1 %cmp)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %alloca)
+  call void @llvm.lifetime.start.p0(ptr %alloca)
   store volatile i32 0, ptr %alloca
-  call void @llvm.lifetime.end.p0(i64 4, ptr %alloca)
+  call void @llvm.lifetime.end.p0(ptr %alloca)
   ret void
 }
 
@@ -47,17 +47,17 @@ define void @assume_eq_null() {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(1)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[ALLOCA]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p1(i64 4, ptr addrspace(1) [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[ALLOCA]])
 ; CHECK-NEXT:    store volatile i32 0, ptr addrspace(1) null, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p1(i64 4, ptr addrspace(1) [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[ALLOCA]])
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca i32, addrspace(1)
   %cmp = icmp eq ptr addrspace(1) %alloca, null
   call void @llvm.assume(i1 %cmp)
-  call void @llvm.lifetime.start.p1(i64 4, ptr addrspace(1) %alloca)
+  call void @llvm.lifetime.start.p1(ptr addrspace(1) %alloca)
   store volatile i32 0, ptr addrspace(1) %alloca
-  call void @llvm.lifetime.end.p1(i64 4, ptr addrspace(1) %alloca)
+  call void @llvm.lifetime.end.p1(ptr addrspace(1) %alloca)
   ret void
 }
 
@@ -67,9 +67,9 @@ define void @dom_eq_null() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[ALLOCA]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p1(i64 4, ptr addrspace(1) [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[ALLOCA]])
 ; CHECK-NEXT:    store volatile i32 0, ptr addrspace(1) null, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p1(i64 4, ptr addrspace(1) [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[ALLOCA]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret void
@@ -79,14 +79,14 @@ define void @dom_eq_null() {
   br i1 %cmp, label %if, label %else
 
 if:
-  call void @llvm.lifetime.start.p1(i64 4, ptr addrspace(1) %alloca)
+  call void @llvm.lifetime.start.p1(ptr addrspace(1) %alloca)
   store volatile i32 0, ptr addrspace(1) %alloca
-  call void @llvm.lifetime.end.p1(i64 4, ptr addrspace(1) %alloca)
+  call void @llvm.lifetime.end.p1(ptr addrspace(1) %alloca)
   ret void
 
 else:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 %S, ptr nocapture %P) readonly
-declare void @llvm.lifetime.end.p0(i64 %S, ptr nocapture %P)
+declare void @llvm.lifetime.start.p0(ptr nocapture %P) readonly
+declare void @llvm.lifetime.end.p0(ptr nocapture %P)

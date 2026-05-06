@@ -31,6 +31,8 @@ add_llvm_component_library(LLVMMC
   MCInstrAnalysis.cpp
   MCInstrDesc.cpp
   MCInstrInfo.cpp
+  MCLFI.cpp
+  MCLFIRewriter.cpp
   MCLabel.cpp
   MCLinkerOptimizationHint.cpp
   MCMachOStreamer.cpp
@@ -45,10 +47,12 @@ add_llvm_component_library(LLVMMC
   MCSection.cpp
   MCSectionMachO.cpp
   MCStreamer.cpp
+  MCSFrame.cpp
   MCSPIRVStreamer.cpp
   MCSubtargetInfo.cpp
   MCSymbol.cpp
   MCSymbolELF.cpp
+  MCSymbolGOFF.cpp
   MCSymbolXCOFF.cpp
   MCTargetOptions.cpp
   MCTargetOptionsCommandFlags.cpp
@@ -72,9 +76,10 @@ add_llvm_component_library(LLVMMC
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC
 
   LINK_COMPONENTS
+  BinaryFormat
+  DebugInfoDWARFLowLevel
   Support
   TargetParser
-  BinaryFormat
 
   DEPENDS
   intrinsics_gen

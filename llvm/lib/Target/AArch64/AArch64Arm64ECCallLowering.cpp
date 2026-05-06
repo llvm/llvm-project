@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -75,7 +76,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
-  int cfguard_module_flag = 0;
+  ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
   Constant *GuardFnCFGlobal = nullptr;
@@ -316,6 +317,12 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
                         ThunkArgTranslation::PointerIndirection};
   };
 
+  if (T->isHalfTy()) {
+    // Prefix with `llvm` since MSVC doesn't specify `_Float16`
+    Out << "__llvm_h__";
+    return direct(T);
+  }
+
   if (T->isFloatTy()) {
     Out << "f";
     return direct(T);
@@ -327,8 +334,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
   }
 
   if (T->isFloatingPointTy()) {
-    report_fatal_error(
-        "Only 32 and 64 bit floating points are supported for ARM64EC thunks");
+    report_fatal_error("Only 16, 32, and 64 bit floating points are supported "
+                       "for ARM64EC thunks");
   }
 
   auto &DL = M->getDataLayout();
@@ -342,8 +349,16 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t ElementCnt = T->getArrayNumElements();
     uint64_t ElementSizePerBytes = DL.getTypeSizeInBits(ElementTy) / 8;
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
-    if (ElementTy->isFloatTy() || ElementTy->isDoubleTy()) {
-      Out << (ElementTy->isFloatTy() ? "F" : "D") << TotalSizeBytes;
+    if (ElementTy->isHalfTy() || ElementTy->isFloatTy() ||
+        ElementTy->isDoubleTy()) {
+      if (ElementTy->isHalfTy())
+        // Prefix with `llvm` since MSVC doesn't specify `_Float16`
+        Out << "__llvm_H__";
+      else if (ElementTy->isFloatTy())
+        Out << "F";
+      else if (ElementTy->isDoubleTy())
+        Out << "D";
+      Out << TotalSizeBytes;
       if (Alignment.value() >= 16 && !Ret)
         Out << "a" << Alignment.value();
       if (TotalSizeBytes <= 8) {
@@ -355,8 +370,9 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         return pointerIndirection(T);
       }
     } else if (T->isFloatingPointTy()) {
-      report_fatal_error("Only 32 and 64 bit floating points are supported for "
-                         "ARM64EC thunks");
+      report_fatal_error(
+          "Only 16, 32, and 64 bit floating points are supported "
+          "for ARM64EC thunks");
     }
   }
 
@@ -578,6 +594,11 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
 
   Value *RetVal = Call;
   if (TransformDirectToSRet) {
+    // The x64 side returns this value indirectly via a hidden pointer (sret).
+    // Mark the thunk's pointer arg with sret so that ISel saves it and copies
+    // it into x8 (RAX) on return, matching the x64 calling convention.
+    Thunk->addParamAttr(
+        1, Attribute::getWithStructRetType(M->getContext(), RetTy));
     IRB.CreateStore(RetVal, Thunk->getArg(1));
   } else if (X64RetType != RetTy) {
     Value *CastAlloca = IRB.CreateAlloca(X64RetType);
@@ -640,25 +661,22 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
   BasicBlock *BB = BasicBlock::Create(M->getContext(), "", GuestExit);
   IRBuilder<> B(BB);
 
-  // Load the global symbol as a pointer to the check function.
-  Value *GuardFn;
-  if (cfguard_module_flag == 2 && !F->hasFnAttribute("guard_nocf"))
-    GuardFn = GuardFnCFGlobal;
-  else
-    GuardFn = GuardFnGlobal;
-  LoadInst *GuardCheckLoad = B.CreateLoad(PtrTy, GuardFn);
-
-  // Create new call instruction. The CFGuard check should always be a call,
-  // even if the original CallBase is an Invoke or CallBr instruction.
+  // Create new call instruction. The call check should always be a call,
+  // even if the original CallBase is an Invoke or CallBr instructio.
+  // This is treated as a direct call, so do not use GuardFnCFGlobal.
+  LoadInst *GuardCheckLoad = B.CreateLoad(PtrTy, GuardFnGlobal);
   Function *Thunk = buildExitThunk(F->getFunctionType(), F->getAttributes());
   CallInst *GuardCheck = B.CreateCall(
       GuardFnType, GuardCheckLoad, {F, Thunk});
+  Value *GuardCheckDest = B.CreateExtractValue(GuardCheck, 0);
+  Value *GuardFinalDest = B.CreateExtractValue(GuardCheck, 1);
 
   // Ensure that the first argument is passed in the correct register.
   GuardCheck->setCallingConv(CallingConv::CFGuard_Check);
 
   SmallVector<Value *> Args(llvm::make_pointer_range(GuestExit->args()));
-  CallInst *Call = B.CreateCall(Arm64Ty, GuardCheck, Args);
+  OperandBundleDef OB("cfguardtarget", GuardFinalDest);
+  CallInst *Call = B.CreateCall(Arm64Ty, GuardCheckDest, Args, OB);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 
   if (Call->getType()->isVoidTy())
@@ -735,9 +753,6 @@ AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
 
 // Lower an indirect call with inline code.
 void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
-  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
-         "Only applicable for Windows targets");
-
   IRBuilder<> B(CB);
   Value *CalledOperand = CB->getCalledOperand();
 
@@ -749,7 +764,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 
   // Load the global symbol as a pointer to the check function.
   Value *GuardFn;
-  if (cfguard_module_flag == 2 && !CB->hasFnAttr("guard_nocf"))
+  if ((CFGuardModuleFlag == ControlFlowGuardMode::Enabled) &&
+      !CB->hasFnAttr("guard_nocf"))
     GuardFn = GuardFnCFGlobal;
   else
     GuardFn = GuardFnGlobal;
@@ -761,11 +777,21 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
   CallInst *GuardCheck =
       B.CreateCall(GuardFnType, GuardCheckLoad, {CalledOperand, Thunk},
                    Bundles);
+  Value *GuardCheckDest = B.CreateExtractValue(GuardCheck, 0);
+  Value *GuardFinalDest = B.CreateExtractValue(GuardCheck, 1);
 
   // Ensure that the first argument is passed in the correct register.
   GuardCheck->setCallingConv(CallingConv::CFGuard_Check);
 
-  CB->setCalledOperand(GuardCheck);
+  // Update the call: set the callee, and add a bundle with the final
+  // destination,
+  CB->setCalledOperand(GuardCheckDest);
+  OperandBundleDef OB("cfguardtarget", GuardFinalDest);
+  auto *NewCall = CallBase::addOperandBundle(CB, LLVMContext::OB_cfguardtarget,
+                                             OB, CB->getIterator());
+  NewCall->copyMetadata(*CB);
+  CB->replaceAllUsesWith(NewCall);
+  CB->eraseFromParent();
 }
 
 bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
@@ -775,15 +801,29 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   M = &Mod;
 
   // Check if this module has the cfguard flag and read its value.
-  if (auto *MD =
-          mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("cfguard")))
-    cfguard_module_flag = MD->getZExtValue();
+  CFGuardModuleFlag = M->getControlFlowGuardMode();
+
+  // Warn if the module flag requests an unsupported CFGuard mechanism.
+  if (CFGuardModuleFlag == ControlFlowGuardMode::Enabled) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(
+            Mod.getModuleFlag("cfguard-mechanism"))) {
+      auto MechanismOverride =
+          static_cast<ControlFlowGuardMechanism>(CI->getZExtValue());
+      if (MechanismOverride != ControlFlowGuardMechanism::Automatic &&
+          MechanismOverride != ControlFlowGuardMechanism::Check)
+        Mod.getContext().diagnose(
+            DiagnosticInfoGeneric("only the Check Control Flow Guard mechanism "
+                                  "is supported for Arm64EC",
+                                  DS_Warning));
+    }
+  }
 
   PtrTy = PointerType::getUnqual(M->getContext());
   I64Ty = Type::getInt64Ty(M->getContext());
   VoidTy = Type::getVoidTy(M->getContext());
 
-  GuardFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy}, false);
+  GuardFnType =
+      FunctionType::get(StructType::get(PtrTy, PtrTy), {PtrTy, PtrTy}, false);
   DispatchFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy, PtrTy}, false);
   GuardFnCFGlobal = M->getOrInsertGlobal("__os_arm64x_check_icall_cfg", PtrTy);
   GuardFnGlobal = M->getOrInsertGlobal("__os_arm64x_check_icall", PtrTy);

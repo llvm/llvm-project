@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 #define LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -88,6 +89,9 @@ struct LinkOptions {
   /// The Resources directory in the .dSYM bundle.
   std::optional<std::string> ResourceDir;
 
+  /// Resources to embed in the dSYM bundle's Contents/Resources/ directory.
+  StringMap<std::string> EmbedResources;
+
   /// Virtual File System.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       vfs::getRealFileSystem();
@@ -114,7 +118,18 @@ struct LinkOptions {
   /// Whether all remarks should be kept or only remarks with valid debug
   /// locations.
   bool RemarksKeepAll = true;
+
+  /// Whether or not to copy binary swiftmodules built from textual
+  /// .swiftinterface files into the dSYM bundle. These typically come only
+  /// from the SDK (since textual interfaces require library evolution) and
+  /// thus are a waste of space to copy into the bundle. Turn this on if the
+  /// swiftmodules are different from those in the SDK.
+  bool IncludeSwiftModulesFromInterface = false;
   /// @}
+
+  /// Whether to allow emitting Mach-O where, within a single slice, section
+  /// header offsets (section.offset, 32-bit) exceed 4GB (non-standard).
+  bool AllowSectionHeaderOffsetOverflow = false;
 
   LinkOptions() = default;
 };

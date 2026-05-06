@@ -22,3 +22,9 @@ void valid_root_signature_5() {}
 
 [RootSignature("DescriptorTable(SRV(t5), UAV(u5, numDescriptors=2))")]
 void valid_root_signature_6() {}
+
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967292), CBV(b1, numDescriptors = 3))")]
+void valid_root_signature_7() {}
+
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967294), CBV(b1))")]
+void valid_root_signature_8() {}

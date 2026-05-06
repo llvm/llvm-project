@@ -57,6 +57,7 @@ class AtomicCmpXchgInst;
 class BasicBlock;
 class CatchPadInst;
 class CatchReturnInst;
+class CycleInfo;
 class DominatorTree;
 class FenceInst;
 class LoopInfo;
@@ -175,6 +176,7 @@ public:
 class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DominatorTree &DT;
   const LoopInfo *LI;
+  const CycleInfo *CI;
 
   /// Map from identified local object to an instruction before which it does
   /// not escape (or nullptr if it never escapes) and the possible components
@@ -189,8 +191,9 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
 public:
-  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr)
-      : DT(DT), LI(LI) {}
+  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
+                         const CycleInfo *CI = nullptr)
+      : DT(DT), LI(LI), CI(CI) {}
 
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
                                       bool OrAt) override;
@@ -585,6 +588,7 @@ public:
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI = nullptr);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
 
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                         AAQueryInfo &AAQI,
@@ -658,6 +662,8 @@ class BatchAAResults {
   AAQueryInfo AAQI;
   SimpleCaptureAnalysis SimpleCA;
 
+  friend class BatchAACrossIterationScope;
+
 public:
   BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(AAR, &SimpleCA) {}
   BatchAAResults(AAResults &AAR, CaptureAnalysis *CA)
@@ -715,6 +721,21 @@ public:
   void disableDominatorTree() { AAQI.UseDominatorTree = false; }
 };
 
+/// Temporarily set the cross iteration mode on a BatchAA instance.
+class BatchAACrossIterationScope {
+  BatchAAResults &BAA;
+  bool OrigCrossIteration;
+
+public:
+  BatchAACrossIterationScope(BatchAAResults &BAA, bool CrossIteration)
+      : BAA(BAA), OrigCrossIteration(BAA.AAQI.MayBeCrossIteration) {
+    BAA.AAQI.MayBeCrossIteration = CrossIteration;
+  }
+  ~BatchAACrossIterationScope() {
+    BAA.AAQI.MayBeCrossIteration = OrigCrossIteration;
+  }
+};
+
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis
 /// pointer or reference.
 using AliasAnalysis = AAResults;
@@ -743,6 +764,11 @@ public:
   virtual AliasResult alias(const MemoryLocation &LocA,
                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
                             const Instruction *CtxI) = 0;
+
+  /// Returns an AliasResult indicating whether a specific memory location
+  /// aliases errno.
+  virtual AliasResult aliasErrno(const MemoryLocation &Loc,
+                                 const Module *M) = 0;
 
   /// @}
   //===--------------------------------------------------------------------===//
@@ -784,6 +810,12 @@ public:
   virtual ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
                                    AAQueryInfo &AAQI) = 0;
 
+  /// getModRefInfo (for fences) - Return information about whether
+  /// a particular fence modifies or reads the specified memory location.
+  virtual ModRefInfo getModRefInfo(const FenceInst *F,
+                                   const MemoryLocation &Loc,
+                                   AAQueryInfo &AAQI) = 0;
+
   /// @}
 };
 
@@ -803,6 +835,10 @@ public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *CtxI) override {
     return Result.alias(LocA, LocB, AAQI, CtxI);
+  }
+
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
+    return Result.aliasErrno(Loc, M);
   }
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
@@ -832,6 +868,11 @@ public:
                            AAQueryInfo &AAQI) override {
     return Result.getModRefInfo(Call1, Call2, AAQI);
   }
+
+  ModRefInfo getModRefInfo(const FenceInst *F, const MemoryLocation &Loc,
+                           AAQueryInfo &AAQI) override {
+    return Result.getModRefInfo(F, Loc, AAQI);
+  }
 };
 
 /// A base class to help implement the function alias analysis results concept.
@@ -851,12 +892,16 @@ protected:
 
   // Provide all the copy and move constructors so that derived types aren't
   // constrained.
-  AAResultBase(const AAResultBase &Arg) {}
+  AAResultBase(const AAResultBase &Arg) = default;
   AAResultBase(AAResultBase &&Arg) {}
 
 public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *I) {
+    return AliasResult::MayAlias;
+  }
+
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
     return AliasResult::MayAlias;
   }
 
@@ -883,6 +928,11 @@ public:
   }
 
   ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
+                           AAQueryInfo &AAQI) {
+    return ModRefInfo::ModRef;
+  }
+
+  ModRefInfo getModRefInfo(const FenceInst *F, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI) {
     return ModRefInfo::ModRef;
   }

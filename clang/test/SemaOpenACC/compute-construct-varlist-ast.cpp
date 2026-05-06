@@ -102,7 +102,7 @@ void NormalUses(float *PointerParam) {
 #pragma acc parallel copy(GlobalArray) pcopy(always: PointerParam[Global]) present_or_copy(alwaysin, alwaysout: Global)
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
-  // CHECK-NEXT: copy clause 
+  // CHECK-NEXT: copy clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
   // CHECK-NEXT: pcopy clause modifiers: always
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
@@ -649,7 +649,7 @@ void TemplUses(T t, U u, T*PointerParam) {
 
 struct S {
   // CHECK-NEXT: CXXRecordDecl{{.*}} struct S definition
-  // CHECK: CXXRecordDecl{{.*}} implicit struct S
+  // CHECK: CXXRecordDecl{{.*}} implicit {{.*}}struct S{{$}}
   int ThisMember;
   // CHECK-NEXT: FieldDecl{{.*}} ThisMember 'int'
   int *ThisMemberPtr;

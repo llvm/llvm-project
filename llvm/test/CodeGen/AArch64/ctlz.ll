@@ -6,11 +6,10 @@
 define void @v2i8(ptr %p1) {
 ; CHECK-SD-LABEL: v2i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldrb w8, [x0]
-; CHECK-SD-NEXT:    ldrb w9, [x0, #1]
+; CHECK-SD-NEXT:    ldr h1, [x0]
 ; CHECK-SD-NEXT:    movi v0.2s, #24
-; CHECK-SD-NEXT:    fmov s1, w8
-; CHECK-SD-NEXT:    mov v1.s[1], w9
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    clz v1.2s, v1.2s
 ; CHECK-SD-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
@@ -47,10 +46,9 @@ define void @v3i8(ptr %p1) {
 ; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
-; CHECK-SD-NEXT:    str s1, [sp, #12]
-; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
-; CHECK-SD-NEXT:    strh w8, [x0]
+; CHECK-SD-NEXT:    str h1, [x0]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
@@ -101,8 +99,7 @@ define void @v4i8(ptr %p1) {
 ; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
 ; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
 ; CHECK-GI-NEXT:    clz v0.8b, v2.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
+; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
@@ -145,11 +142,9 @@ entry:
 define void @v2i16(ptr %p1) {
 ; CHECK-SD-LABEL: v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldrh w8, [x0]
-; CHECK-SD-NEXT:    ldrh w9, [x0, #2]
+; CHECK-SD-NEXT:    ldr s1, [x0]
 ; CHECK-SD-NEXT:    movi v0.2s, #16
-; CHECK-SD-NEXT:    fmov s1, w8
-; CHECK-SD-NEXT:    mov v1.s[1], w9
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    clz v1.2s, v1.2s
 ; CHECK-SD-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
@@ -597,4 +592,17 @@ define <4 x i128> @v4i128(<4 x i128> %d) {
 entry:
   %s = call <4 x i128> @llvm.ctlz(<4 x i128> %d, i1 false)
   ret <4 x i128> %s
+}
+
+define <8 x i4> @v8i4(<8 x i4> %a) {
+; CHECK-LABEL: v8i4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.8b, #15
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    movi v1.8b, #4
+; CHECK-NEXT:    clz v0.8b, v0.8b
+; CHECK-NEXT:    sub v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %r = call <8 x i4> @llvm.ctlz(<8 x i4> %a, i1 false)
+  ret <8 x i4> %r
 }

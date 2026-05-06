@@ -6,16 +6,15 @@ define void @test(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    clrlwi 5, 5, 24
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    .p2align 5
 ; PPC64LE-NEXT:  .LBB0_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmplw 6, 4
-; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:    bnelr- 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
-; PPC64LE-NEXT:    bne 0, .LBB0_1
+; PPC64LE-NEXT:    bne- 0, .LBB0_1
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic

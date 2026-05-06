@@ -6,8 +6,8 @@
       implicit none
       integer     i,j,n
       n = 100
-! CHECK: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: TARGET TEAMS DISTRIBUTE PARALLEL&
-! CHECK: !$OMP& DO) DEFAULT(TARGET TEAMS LOOP)
+! CHECK: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: TARGET TEAMS DISTRIBUTE PARALLEL &
+! CHECK: !$OMP&DO) DEFAULT(TARGET TEAMS LOOP)
 !$omp  metadirective
 !$omp& when(user={condition(OMP_TARGET.or.OMP_SIMD)}:
 !$omp&      target teams distribute parallel do )

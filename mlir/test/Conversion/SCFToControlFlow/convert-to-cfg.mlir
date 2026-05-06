@@ -1,4 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf="allow-pattern-rollback=0" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
@@ -13,6 +14,24 @@
 //  CHECK-NEXT:    return
 func.func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
+    %c1 = arith.constant 1 : index
+  }
+  return
+}
+
+// CHECK-LABEL: func @unsigned_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
+//  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
+//  CHECK-NEXT:  ^bb1(%{{.*}}: index):    // 2 preds: ^bb0, ^bb2
+//  CHECK-NEXT:    %{{.*}} = arith.cmpi ult, %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    cf.cond_br %{{.*}}, ^bb2, ^bb3
+//  CHECK-NEXT:  ^bb2:   // pred: ^bb1
+//  CHECK-NEXT:    %{{.*}} = arith.constant 1 : index
+//  CHECK-NEXT:    %[[iv:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    cf.br ^bb1(%[[iv]] : index)
+//  CHECK-NEXT:  ^bb3:   // pred: ^bb1
+//  CHECK-NEXT:    return
+func.func @unsigned_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
+  scf.for unsigned %i0 = %arg0 to %arg1 step %arg2 {
     %c1 = arith.constant 1 : index
   }
   return
@@ -622,8 +641,8 @@ func.func @func_execute_region_elim_multi_yield() {
 
 // CHECK-LABEL: @index_switch
 func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
-  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i32
-  // CHECK: cf.switch %[[CASE]] : i32
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i64
+  // CHECK: cf.switch %[[CASE]] : i64
   // CHECK-NEXT: default: ^[[DEFAULT:.+]],
   // CHECK-NEXT: 0: ^[[bb1:.+]],
   // CHECK-NEXT: 1: ^[[bb2:.+]]
@@ -646,6 +665,32 @@ func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
   // CHECK: ^[[bb4]](%[[V:.*]]: i32
   // CHECK-NEXT: return %[[V]]
   return %0 : i32
+}
+
+// Verify that case values larger than INT32_MAX are not truncated (issue #111589).
+// In particular, case 4294967296 (2^32) must not alias with case 0 after lowering.
+// CHECK-LABEL: @index_switch_large_cases
+func.func @index_switch_large_cases(%i: index) {
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i64
+  // CHECK: cf.switch %[[CASE]] : i64, [
+  // CHECK-NEXT: default: ^[[DEFAULT:.+]],
+  // CHECK-NEXT: 0: ^[[bb0:.+]],
+  // CHECK-NEXT: 4294967296: ^[[bb1:.+]],
+  // CHECK-NEXT: 8589934592: ^[[bb2:.+]]
+  scf.index_switch %i
+  case 0 {
+    scf.yield
+  }
+  case 4294967296 { // 2^32, previously truncated to 0
+    scf.yield
+  }
+  case 8589934592 { // 2^33
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
 }
 
 // Note: scf.forall is lowered to scf.parallel, which is currently lowered to

@@ -38,7 +38,7 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
   // for the .debug_names contributions they are in .debug_str section.
   if (BC.getNumDWOCUs()) {
     DataExtractor StrData(BC.DwCtx->getDWARFObj().getStrSection(),
-                          BC.DwCtx->isLittleEndian(), 0);
+                          BC.DwCtx->isLittleEndian());
     uint64_t Offset = 0;
     uint64_t StrOffset = 0;
     while (StrData.isValidOffset(Offset)) {
@@ -55,7 +55,7 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
           llvm::hash_value(llvm::StringRef(CStr)), StrOffset);
       if (!R.second)
         BC.errs()
-            << "BOLT-WARNING: [internal-dwarf-error]: collision occured on "
+            << "BOLT-WARNING: [internal-dwarf-error]: collision occurred on "
             << CStr << " at offset : 0x" << Twine::utohexstr(StrOffset)
             << ". Previous string offset is: 0x"
             << Twine::utohexstr(R.first->second) << ".\n";
@@ -86,7 +86,7 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
   if (Unit.isTypeUnit()) {
     if (DWOID) {
       // We adding an entry for a DWO TU. The DWO CU might not have any entries,
-      // so need to add it to the list pre-emptively.
+      // so need to add it to the list preemptively.
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
         CUList.push_back(BADCUOFFSET);
@@ -136,9 +136,7 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
     constructVect(LocAttrInfo.getDIELoc().values());
   else
     constructVect(LocAttrInfo.getDIEBlock().values());
-  ArrayRef<uint8_t> Expr = ArrayRef<uint8_t>(Sblock);
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Unit.getContext().isLittleEndian(), 0);
+  DataExtractor Data(Sblock, Unit.getContext().isLittleEndian());
   DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
                           Unit.getFormParams().Format);
   for (const DWARFExpression::Operation &Expr : LocExpr)
@@ -555,7 +553,7 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
 
 void DWARF5AcceleratorTable::writeEntry(BOLTDWARF5AccelTableData &Entry) {
   const uint64_t EntryID = getEntryID(Entry);
-  if (EntryRelativeOffsets.find(EntryID) != EntryRelativeOffsets.end())
+  if (EntryRelativeOffsets.contains(EntryID))
     EntryRelativeOffsets[EntryID] = EntriesBuffer->size();
 
   const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
@@ -648,9 +646,9 @@ void DWARF5AcceleratorTable::writeEntries() {
         if (const auto Iter = EntryRelativeOffsets.find(*ParentOffset);
             Iter != EntryRelativeOffsets.end()) {
           const uint64_t PatchOffset = Entry->getPatchOffset();
-          uint32_t *Ptr =
-              reinterpret_cast<uint32_t *>(&EntriesBuffer->data()[PatchOffset]);
-          *Ptr = Iter->second;
+          uint32_t RelativeOffset = Iter->second;
+          memcpy(&EntriesBuffer->data()[PatchOffset], &RelativeOffset,
+                 sizeof(uint32_t));
         } else {
           BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
                        "entry with offset "
@@ -677,11 +675,11 @@ static constexpr uint32_t getDebugNamesHeaderSize() {
   constexpr uint32_t BucketCountLength = sizeof(uint32_t);
   constexpr uint32_t NameCountLength = sizeof(uint32_t);
   constexpr uint32_t AbbrevTableSizeLength = sizeof(uint32_t);
-  constexpr uint32_t AugmentationStringSizeLenght = sizeof(uint32_t);
+  constexpr uint32_t AugmentationStringSizeLength = sizeof(uint32_t);
   return VersionLength + PaddingLength + CompUnitCountLength +
          LocalTypeUnitCountLength + ForeignTypeUnitCountLength +
          BucketCountLength + NameCountLength + AbbrevTableSizeLength +
-         AugmentationStringSizeLenght;
+         AugmentationStringSizeLength;
 }
 
 void DWARF5AcceleratorTable::emitHeader() const {

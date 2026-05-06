@@ -235,7 +235,8 @@ TEST_F(LSPTest, ClangTidyRename) {
             .takeValue()
             .getAsArray())[0];
 
-  ASSERT_EQ((*RenameCommand.getAsObject())["title"], "change 'foo' to 'Foo'");
+  ASSERT_EQ((*RenameCommand.getAsObject())["title"],
+            "Apply fix: change 'foo' to 'Foo'");
 
   Client.expectServerCall("workspace/applyEdit");
   Client.call("workspace/executeCommand", RenameCommand);

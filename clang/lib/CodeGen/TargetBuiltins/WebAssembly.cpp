@@ -246,35 +246,26 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     llvm::FunctionType *LLVMFuncTy =
         cast<llvm::FunctionType>(ConvertType(QualType(FuncTy, 0)));
 
+    bool VarArg = LLVMFuncTy->isVarArg();
     unsigned NParams = LLVMFuncTy->getNumParams();
     std::vector<Value *> Args;
-    Args.reserve(NParams + 3);
+    Args.reserve(NParams + 3 + VarArg);
     // The only real argument is the FuncRef
     Args.push_back(FuncRef);
 
     // Add the type information
-    auto addType = [this, &Args](llvm::Type *T) {
-      if (T->isVoidTy()) {
-        // Do nothing
-      } else if (T->isFloatingPointTy()) {
-        Args.push_back(ConstantFP::get(T, 0));
-      } else if (T->isIntegerTy()) {
-        Args.push_back(ConstantInt::get(T, 0));
-      } else if (T->isPointerTy()) {
-        Args.push_back(ConstantPointerNull::get(llvm::PointerType::get(
-            getLLVMContext(), T->getPointerAddressSpace())));
-      } else {
-        // TODO: Handle reference types. For now, we reject them in Sema.
-        llvm_unreachable("Unhandled type");
-      }
-    };
-
-    addType(LLVMFuncTy->getReturnType());
+    llvm::Type *RetType = LLVMFuncTy->getReturnType();
+    if (!RetType->isVoidTy()) {
+      Args.push_back(PoisonValue::get(RetType));
+    }
     // The token type indicates the boundary between return types and param
     // types.
     Args.push_back(PoisonValue::get(llvm::Type::getTokenTy(getLLVMContext())));
     for (unsigned i = 0; i < NParams; i++) {
-      addType(LLVMFuncTy->getParamType(i));
+      Args.push_back(PoisonValue::get(LLVMFuncTy->getParamType(i)));
+    }
+    if (VarArg) {
+      Args.push_back(PoisonValue::get(Builder.getPtrTy()));
     }
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_test_func);
     return Builder.CreateCall(Callee, Args);
@@ -381,8 +372,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_abs_f32x4:
   case WebAssembly::BI__builtin_wasm_abs_f64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::fabs, Vec->getType());
-    return Builder.CreateCall(Callee, {Vec});
+    return Builder.CreateFAbs(Vec);
   }
   case WebAssembly::BI__builtin_wasm_sqrt_f16x8:
   case WebAssembly::BI__builtin_wasm_sqrt_f32x4:
@@ -642,8 +632,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee;
     if (E->getArg(1)->getType().isWebAssemblyExternrefType())
       Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_externref);
-    else if (E->getArg(2)->getType().isWebAssemblyFuncrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_fill_funcref);
+    else if (E->getArg(1)->getType().isWebAssemblyFuncrefType())
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_funcref);
     else
       llvm_unreachable(
           "Unexpected reference type for __builtin_wasm_table_grow");

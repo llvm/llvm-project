@@ -38,9 +38,9 @@ template <template <class...> class KeyContainer, template <class...> class Valu
 constexpr void test() {
   {
     // flat_map(sorted_unique_t, key_container_type , mapped_container_type)
-    using M                 = std::flat_map<int, char, std::less<int>, KeyContainer<int>, ValueContainer<char>>;
+    using M                 = std::flat_map<int, long, std::less<int>, KeyContainer<int>, ValueContainer<long>>;
     KeyContainer<int> ks    = {1, 2, 4, 10};
-    ValueContainer<char> vs = {4, 3, 2, 1};
+    ValueContainer<long> vs = {4, 3, 2, 1};
     auto ks2                = ks;
     auto vs2                = vs;
 
@@ -59,8 +59,8 @@ constexpr void test() {
     // flat_map(sorted_unique_t, key_container_type , mapped_container_type)
     // non-default container, comparator and allocator type
     using Ks = KeyContainer<int, min_allocator<int>>;
-    using Vs = ValueContainer<char, min_allocator<char>>;
-    using M  = std::flat_map<int, char, std::greater<int>, Ks, Vs>;
+    using Vs = ValueContainer<long, min_allocator<long>>;
+    using M  = std::flat_map<int, long, std::greater<int>, Ks, Vs>;
     Ks ks    = {10, 4, 2, 1};
     Vs vs    = {1, 2, 3, 4};
     auto m   = M(std::sorted_unique, ks, vs);
@@ -87,9 +87,9 @@ constexpr void test() {
   {
     // flat_map(sorted_unique_t, key_container_type , mapped_container_type, key_compare)
     using C                 = test_less<int>;
-    using M                 = std::flat_map<int, char, C, KeyContainer<int>, ValueContainer<char>>;
+    using M                 = std::flat_map<int, long, C, KeyContainer<int>, ValueContainer<long>>;
     KeyContainer<int> ks    = {1, 2, 4, 10};
-    ValueContainer<char> vs = {4, 3, 2, 1};
+    ValueContainer<long> vs = {4, 3, 2, 1};
 
     auto m = M(std::sorted_unique, ks, vs, C(4));
     assert((m == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));

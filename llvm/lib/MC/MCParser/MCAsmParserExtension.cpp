@@ -50,8 +50,8 @@ bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
 
-  MCSymbol *FromSym = getContext().getOrCreateSymbol(From);
-  MCSymbol *ToSym = getContext().getOrCreateSymbol(To);
+  MCSymbol *FromSym = getContext().parseSymbol(From);
+  MCSymbol *ToSym = getContext().parseSymbol(To);
 
   getStreamer().emitCGProfileEntry(
       MCSymbolRefExpr::create(FromSym, getContext(), FromLoc),

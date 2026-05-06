@@ -1,6 +1,7 @@
 # Enable errors for any global constructors.
 add_flag_if_supported("-Werror=global-constructors" WERROR_GLOBAL_CONSTRUCTOR)
 
+add_subdirectory(ABI)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)
 add_subdirectory(Bytecode)
@@ -13,6 +14,7 @@ add_subdirectory(Parser)
 add_subdirectory(Pass)
 add_subdirectory(Query)
 add_subdirectory(Reducer)
+add_subdirectory(Remark)
 add_subdirectory(Rewrite)
 add_subdirectory(Support)
 add_subdirectory(TableGen)

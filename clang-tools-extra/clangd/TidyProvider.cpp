@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TidyProvider.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
+#include "../clang-tidy/ClangTidyModule.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "Config.h"
 #include "support/FileCache.h"
@@ -223,7 +223,8 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
       // Checks use dataflow analysis, which might hang/crash unexpectedly on
       // incomplete code.
       "-bugprone-unchecked-optional-access",
-      "-bugprone-null-check-after-dereference");
+      "-bugprone-null-check-after-dereference",
+      "-abseil-unchecked-statusor-access");
 
   size_t Size = BadChecks.size();
   for (const std::string &Str : ExtraBadChecks) {

@@ -13,6 +13,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class DebugIntegerTypesFailures(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

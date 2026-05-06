@@ -23,20 +23,18 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE static ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst,
-                                              const char **__restrict src,
-                                              size_t nmc, size_t len,
-                                              mbstate *__restrict ps) {
+LIBC_INLINE static ErrorOr<size_t>
+mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
+           size_t max_src_bytes, size_t max_dst_chars, mbstate *__restrict ps) {
   LIBC_CRASH_ON_NULLPTR(src);
-  // Checking if mbstate is valid
   CharacterConverter char_conv(ps);
   if (!char_conv.isValidState())
     return Error(EINVAL);
 
   StringConverter<char8_t> str_conv(reinterpret_cast<const char8_t *>(*src), ps,
-                                    len, nmc);
+                                    max_dst_chars, max_src_bytes);
   size_t dst_idx = 0;
-  ErrorOr<char32_t> converted = str_conv.popUTF32();
+  ErrorOr<char32_t> converted = str_conv.pop<char32_t>();
   while (converted.has_value()) {
     if (dst != nullptr)
       dst[dst_idx] = converted.value();
@@ -47,7 +45,7 @@ LIBC_INLINE static ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst,
       return dst_idx;
     }
     dst_idx++;
-    converted = str_conv.popUTF32();
+    converted = str_conv.pop<char32_t>();
   }
 
   if (converted.error() == -1) { // if we hit conversion limit

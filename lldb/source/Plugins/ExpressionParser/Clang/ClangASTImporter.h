@@ -157,6 +157,8 @@ public:
   /// \see ClangASTImporter::Import
   bool CanImport(const CompilerType &type);
 
+  bool CanImport(const clang::Decl *d);
+
   /// If the given type was copied from another TypeSystemClang then copy over
   /// all missing information (e.g., the definition of a 'class' type).
   ///
@@ -200,7 +202,7 @@ public:
   typedef std::shared_ptr<NamespaceMap> NamespaceMapSP;
 
   void RegisterNamespaceMap(const clang::NamespaceDecl *decl,
-                            NamespaceMapSP &namespace_map);
+                            NamespaceMapSP namespace_map);
 
   NamespaceMapSP GetNamespaceMap(const clang::NamespaceDecl *decl);
 
@@ -346,6 +348,8 @@ public:
     llvm::Expected<clang::Decl *> ImportImpl(clang::Decl *From) override;
 
   private:
+    void MarkDeclImported(clang::Decl *from, clang::Decl *to);
+
     /// Decls we should ignore when mapping decls back to their original
     /// ASTContext. Used by the CxxModuleHandler to mark declarations that
     /// were created from the 'std' C++ module to prevent that the Importer

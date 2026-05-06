@@ -115,6 +115,9 @@ check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
 check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
 check_cxx_compiler_flag("-Werror -ftrivial-auto-var-init=pattern" COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
+check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
+check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
+check_c_compiler_flag("-Xclang -mcode-object-version=none" COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG)
 
 if(NOT WIN32 AND NOT CYGWIN)
   # MinGW warns if -fvisibility-inlines-hidden is used.
@@ -150,7 +153,11 @@ check_cxx_compiler_flag(-Wno-pedantic COMPILER_RT_HAS_WNO_PEDANTIC)
 check_cxx_compiler_flag(-Wno-format COMPILER_RT_HAS_WNO_FORMAT)
 check_cxx_compiler_flag(-Wno-format-pedantic COMPILER_RT_HAS_WNO_FORMAT_PEDANTIC)
 
-check_cxx_compiler_flag("/experimental:external /external:W0" COMPILER_RT_HAS_EXTERNAL_FLAG)
+if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  check_cxx_compiler_flag("/experimental:external /external:W0" COMPILER_RT_HAS_EXTERNAL_FLAG)
+else()
+  set(COMPILER_RT_HAS_EXTERNAL_FLAG FALSE)
+endif()
 
 check_cxx_compiler_flag(/W4 COMPILER_RT_HAS_W4_FLAG)
 check_cxx_compiler_flag(/WX COMPILER_RT_HAS_WX_FLAG)
@@ -204,7 +211,7 @@ check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 llvm_check_compiler_linker_flag(C "-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
 llvm_check_compiler_linker_flag(C "-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
   set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
   llvm_check_compiler_linker_flag(C "${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
 endif()
@@ -218,6 +225,10 @@ if(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
   string(APPEND VERS_OPTION " ${VERS_COMPAT_OPTION}")
 endif()
 llvm_check_compiler_linker_flag(C "${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
+
+if(APPLE)
+  llvm_check_compiler_linker_flag(C "-Wl,-mac_public_arm64e" COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
+endif()
 
 if(ANDROID)
   llvm_check_compiler_linker_flag(C "-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
@@ -308,14 +319,6 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
       list(APPEND ${cflags_out} ${DARWIN_osx_CFLAGS})
     endif()
     string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
-  endif()
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT ANDROID)
-    # ARM on Linux might use the slow unwinder as default and the unwind table
-    # is required to get a complete stacktrace.
-    string(APPEND ${cflags_out} " -funwind-tables")
-    if(CMAKE_SYSROOT)
-      string(APPEND ${cflags_out} " --sysroot=${CMAKE_SYSROOT}")
-    endif()
   endif()
 endmacro()
 
@@ -416,12 +419,18 @@ if(APPLE)
   include(CompilerRTDarwinUtils)
 
   find_darwin_sdk_dir(DARWIN_osx_SYSROOT macosx)
-  find_darwin_sdk_dir(DARWIN_iossim_SYSROOT iphonesimulator)
-  find_darwin_sdk_dir(DARWIN_ios_SYSROOT iphoneos)
-  find_darwin_sdk_dir(DARWIN_watchossim_SYSROOT watchsimulator)
-  find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
-  find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
-  find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  if(COMPILER_RT_ENABLE_IOS)
+    find_darwin_sdk_dir(DARWIN_iossim_SYSROOT iphonesimulator)
+    find_darwin_sdk_dir(DARWIN_ios_SYSROOT iphoneos)
+  endif()
+  if(COMPILER_RT_ENABLE_WATCHOS)
+    find_darwin_sdk_dir(DARWIN_watchossim_SYSROOT watchsimulator)
+    find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
+  endif()
+  if(COMPILER_RT_ENABLE_TVOS)
+    find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
+    find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  endif()
 
   if(NOT DARWIN_osx_SYSROOT)
     message(WARNING "Could not determine OS X sysroot, trying /usr/include")
@@ -704,7 +713,7 @@ else()
   filter_available_targets(LSAN_COMMON_SUPPORTED_ARCH
     ${SANITIZER_COMMON_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_COMMON_SUPPORTED_ARCH
-    ${SANITIZER_COMMON_SUPPORTED_ARCH})
+    ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(ASAN_SUPPORTED_ARCH ${ALL_ASAN_SUPPORTED_ARCH})
   filter_available_targets(RTSAN_SUPPORTED_ARCH ${ALL_RTSAN_SUPPORTED_ARCH})
   filter_available_targets(FUZZER_SUPPORTED_ARCH ${ALL_FUZZER_SUPPORTED_ARCH})
@@ -736,16 +745,9 @@ if (MSVC)
   set(LLVM_WINSYSROOT "" CACHE STRING
     "If set, argument to clang-cl's /winsysroot")
 
-  if (LLVM_WINSYSROOT)
-    set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
-        "Path to the DIA SDK")
-  else()
-    set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
-        "Path to the DIA SDK")
-  endif()
-
   # See if the DIA SDK is available and usable.
-  if (IS_DIRECTORY ${MSVC_DIA_SDK_DIR})
+  find_package(DIASDK)
+  if (DIASDK_FOUND)
     set(CAN_SYMBOLIZE 1)
   else()
     set(CAN_SYMBOLIZE 0)
@@ -844,7 +846,7 @@ else()
 endif()
 
 if (PROFILE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS|NetBSD|AIX|WASI|Haiku")
+    (OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS|NetBSD|AIX|WASI|Haiku" OR COMPILER_RT_PROFILE_BAREMETAL))
   set(COMPILER_RT_HAS_PROFILE TRUE)
 else()
   set(COMPILER_RT_HAS_PROFILE FALSE)
@@ -858,6 +860,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND TYSAN_SUPPORTED_ARCH AND
+        "tysan" IN_LIST COMPILER_RT_SANITIZERS_TO_BUILD AND
         OS_NAME MATCHES "Linux|Darwin")
   set(COMPILER_RT_HAS_TYSAN TRUE)
 else()
@@ -889,8 +892,9 @@ else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
 endif()
 
-if (COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Linux|FreeBSD|NetBSD|Android|Darwin")
+if (UBSAN_SUPPORTED_ARCH AND
+    (OS_NAME MATCHES "Linux|FreeBSD|NetBSD|Android|Darwin|SunOS" OR
+     "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx"))
   set(COMPILER_RT_HAS_UBSAN_MINIMAL TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN_MINIMAL FALSE)

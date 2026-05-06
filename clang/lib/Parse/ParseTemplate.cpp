@@ -196,7 +196,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
   ParsingDeclSpec DS(*this, &DiagsFromTParams);
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFrom(DeclSpecAttrs);
+  DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              getDeclSpecContextFromDeclaratorContext(Context));
@@ -533,6 +533,12 @@ bool Parser::isTypeConstraintAnnotation() {
 bool Parser::TryAnnotateTypeConstraint() {
   if (!getLangOpts().CPlusPlus20)
     return false;
+  // The type constraint may declare template parameters, notably
+  // if it contains a generic lambda, so we need to increment
+  // the template depth as these parameters would not be instantiated
+  // at the current depth.
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  ++CurTemplateDepthTracker;
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
@@ -1128,12 +1134,14 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
 
   // Build the annotation token.
   if (TNK == TNK_Type_template && AllowTypeAnnotation) {
-    TypeResult Type = ArgsInvalid
-                          ? TypeError()
-                          : Actions.ActOnTemplateIdType(
-                                getCurScope(), SS, TemplateKWLoc, Template,
-                                TemplateName.Identifier, TemplateNameLoc,
-                                LAngleLoc, TemplateArgsPtr, RAngleLoc);
+    TypeResult Type =
+        ArgsInvalid
+            ? TypeError()
+            : Actions.ActOnTemplateIdType(
+                  getCurScope(), ElaboratedTypeKeyword::None,
+                  /*ElaboratedKeywordLoc=*/SourceLocation(), SS, TemplateKWLoc,
+                  Template, TemplateName.Identifier, TemplateNameLoc, LAngleLoc,
+                  TemplateArgsPtr, RAngleLoc);
 
     Tok.setKind(tok::annot_typename);
     setTypeAnnotation(Tok, Type);
@@ -1194,10 +1202,11 @@ void Parser::AnnotateTemplateIdTokenAsType(
       TemplateId->isInvalid()
           ? TypeError()
           : Actions.ActOnTemplateIdType(
-                getCurScope(), SS, TemplateId->TemplateKWLoc,
-                TemplateId->Template, TemplateId->Name,
-                TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
-                TemplateArgsPtr, TemplateId->RAngleLoc,
+                getCurScope(), ElaboratedTypeKeyword::None,
+                /*ElaboratedKeywordLoc=*/SourceLocation(), SS,
+                TemplateId->TemplateKWLoc, TemplateId->Template,
+                TemplateId->Name, TemplateId->TemplateNameLoc,
+                TemplateId->LAngleLoc, TemplateArgsPtr, TemplateId->RAngleLoc,
                 /*IsCtorOrDtorName=*/false, IsClassName, AllowImplicitTypename);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
@@ -1263,7 +1272,8 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
           Actions.ActOnTemplateName(getCurScope(), SS, TemplateKWLoc, Name,
                                     /*ObjectType=*/nullptr,
                                     /*EnteringContext=*/false, Template))
-        Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
+        Result = ParsedTemplateArgument(TemplateKWLoc, SS, Template,
+                                        Name.StartLocation);
     }
   } else if (Tok.is(tok::identifier) || Tok.is(tok::annot_template_id) ||
              Tok.is(tok::annot_non_type)) {
@@ -1300,10 +1310,13 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
           TNK == TNK_Var_template || TNK == TNK_Concept_template) {
         // We have an id-expression that refers to a class template or
         // (C++0x) alias template.
-        Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
+        Result = ParsedTemplateArgument(/*TemplateKwLoc=*/SourceLocation(), SS,
+                                        Template, Name.StartLocation);
       }
     }
   }
+
+  Result = Actions.ActOnTemplateTemplateArgument(Result);
 
   // If this is a pack expansion, build it as such.
   if (EllipsisLoc.isValid() && !Result.isInvalid())

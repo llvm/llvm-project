@@ -120,6 +120,16 @@ func.func private @unknown_storage_class(!spirv.ptr<f32, SomeStorageClass>) -> (
 
 // -----
 
+// expected-error @+1 {{SPIR-V does not allow one-element vectors}}
+func.func private @invalid_ptr_to_vector_one_element(!spirv.ptr<vector<1xi32>, SomeStorageClass>) -> ()
+
+// -----
+
+// expected-error @+1 {{vector element type must be a SPIR-V scalar type}}
+func.func private @invalid_ptr_to_vector_index(!spirv.ptr<vector<2xindex>, SomeStorageClass>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // RuntimeArrayType
 //===----------------------------------------------------------------------===//
@@ -225,6 +235,15 @@ func.func private @image_parameters_nocomma_5(!spirv.image<f32, Dim1D, NoDepth, 
 // -----
 
 //===----------------------------------------------------------------------===//
+// SamplerType
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @sampler_type(!spirv.sampler)
+func.func private @sampler_type(!spirv.sampler) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // SampledImageType
 //===----------------------------------------------------------------------===//
 
@@ -235,6 +254,16 @@ func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, Dim
 
 // expected-error @+1 {{sampled image must be composed using image type, got 'f32'}}
 func.func private @samped_image_type_invaid_type(!spirv.sampled_image<f32>) -> ()
+
+// -----
+
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got Buffer}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got SubpassData}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
 
 // -----
 
@@ -364,6 +393,12 @@ func.func private @struct_missing_member_decorator_value(!spirv.struct<(!spirv.m
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/179675
+// expected-error @+1 {{member type must be a valid SPIR-V type}}
+func.func private @struct_type_non_spirv_member(!spirv.struct<(vector<2x2xi1>)>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // StructType (identified)
 //===----------------------------------------------------------------------===//
@@ -450,6 +485,18 @@ func.func private @id_struct_recursive(!spirv.struct<a10, (!spirv.ptr<!spirv.str
 func.func private @coop_matrix_types(!spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>,
                                      !spirv.coopmatrix<8x8xf32, Workgroup, MatrixB>,
                                      !spirv.coopmatrix<4x8xf32, Workgroup, MatrixAcc>) -> ()
+
+// CHECK-LABEL: func private @coop_matrix_types_f8E4M3FN
+// CHECK-SAME:    !spirv.coopmatrix<8x16xf8E4M3FN, Subgroup, MatrixA>
+func.func private @coop_matrix_types_f8E4M3FN(!spirv.coopmatrix<8x16xf8E4M3FN, Subgroup, MatrixA>) -> ()
+
+// CHECK-LABEL: func private @coop_matrix_types_f8E5M2
+// CHECK-SAME:    !spirv.coopmatrix<8x16xf8E5M2, Subgroup, MatrixA>
+func.func private @coop_matrix_types_f8E5M2(!spirv.coopmatrix<8x16xf8E5M2, Subgroup, MatrixA>) -> ()
+
+// CHECK-LABEL: func private @coop_matrix_types_bf16
+// CHECK-SAME:    !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>
+func.func private @coop_matrix_types_bf16(!spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>) -> ()
 
 // -----
 
@@ -572,6 +619,24 @@ func.func private @matrix_size_type(!spirv.matrix<2.0 x vector<3xi32>>) -> ()
 // -----
 
 //===----------------------------------------------------------------------===//
+// Float8_EXT
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @type_f8E4M3FN(f8E4M3FN)
+func.func private @type_f8E4M3FN(f8E4M3FN) -> ()
+
+// CHECK: func private @vector_type_f8E4M3FN(vector<4xf8E4M3FN>)
+func.func private @vector_type_f8E4M3FN(vector<4xf8E4M3FN>) -> ()
+
+// CHECK: func private @type_f8E5M2(f8E5M2)
+func.func private @type_f8E5M2(f8E5M2) -> ()
+
+// CHECK: func private @vector_type_f8E5M2(vector<4xf8E5M2>)
+func.func private @vector_type_f8E5M2(vector<4xf8E5M2>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // TensorArm
 //===----------------------------------------------------------------------===//
 
@@ -621,3 +686,18 @@ func.func private @arm_tensor_type_unranked(!spirv.arm.tensor<*xi32>) -> ()
 
 // expected-error @+1 {{arm.tensors do not support zero dimensions}}
 func.func private @arm_tensor_type_zero_dim(!spirv.arm.tensor<0xi32>) -> ()
+
+// -----
+
+// CHECK: func private @arm_tensor_type_bf16(!spirv.arm.tensor<2x3xbf16>)
+func.func private @arm_tensor_type_bf16(!spirv.arm.tensor<2x3xbf16>) -> ()
+
+// -----
+
+// CHECK: func private @arm_tensor_type_fp8e4m3fn(!spirv.arm.tensor<2x3xf8E4M3FN>)
+func.func private @arm_tensor_type_fp8e4m3fn(!spirv.arm.tensor<2x3xf8E4M3FN>) -> ()
+
+// -----
+
+// CHECK: func private @arm_tensor_type_fp8e5m2(!spirv.arm.tensor<2x3xf8E5M2>)
+func.func private @arm_tensor_type_fp8e5m2(!spirv.arm.tensor<2x3xf8E5M2>) -> ()

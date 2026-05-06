@@ -15,16 +15,30 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
 class AttributeCommonInfo;
+class Expr;
 class ParsedAttr;
 
 class SemaAMDGPU : public SemaBase {
+  llvm::SmallPtrSet<Expr *, 32> ExpandedPredicates;
+  llvm::SmallPtrSet<FunctionDecl *, 32> PotentiallyUnguardedBuiltinUsers;
+
 public:
   SemaAMDGPU(Sema &S);
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  /// Emits a diagnostic if the \p E is not an atomic ordering encoded in the C
+  /// ABI format, or if the atomic ordering is not valid for the operation type
+  /// as defined by \p MayLoad and \p MayStore. \returns true if a diagnostic
+  /// was emitted.
+  bool checkAtomicOrderingCABIArg(Expr *E, bool MayLoad, bool MayStore);
+
+  bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
+  bool checkAtomicMonitorLoad(CallExpr *TheCall);
 
   bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                unsigned NumDataArgs);
@@ -64,6 +78,16 @@ public:
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
+
+  /// Expand a valid use of the feature identification builtins into its
+  /// corresponding sequence of instructions.
+  Expr *ExpandAMDGPUPredicateBuiltIn(Expr *CE);
+  bool IsPredicate(Expr *E) const;
+  /// Diagnose unguarded usages of AMDGPU builtins and recommend guarding with
+  /// __builtin_amdgcn_is_invocable
+  void AddPotentiallyUnguardedBuiltinUser(FunctionDecl *FD);
+  bool HasPotentiallyUnguardedBuiltinUsage(FunctionDecl *FD) const;
+  void DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD);
 };
 } // namespace clang
 

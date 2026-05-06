@@ -5,10 +5,9 @@ declare dso_local void @main()
 
 define dso_local void @naked() naked "frame-pointer"="all" {
 ; CHECK-LABEL: naked:
-; CHECK:       naked$local:
-; CHECK-NEXT:    .type naked$local,@function
+; CHECK:       .Lnaked$local:
+; CHECK-NEXT:    .type .Lnaked$local,@function
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, main@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, main@rel32@hi+12
@@ -19,8 +18,8 @@ define dso_local void @naked() naked "frame-pointer"="all" {
 
 define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-LABEL: normal:
-; CHECK:       normal$local:
-; CHECK-NEXT:    .type normal$local,@function
+; CHECK:       .Lnormal$local:
+; CHECK-NEXT:    .type .Lnormal$local,@function
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33

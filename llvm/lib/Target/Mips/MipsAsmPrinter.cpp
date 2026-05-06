@@ -51,7 +51,6 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -661,7 +660,7 @@ void MipsAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     }
 
     case MachineOperand::MO_ConstantPoolIndex:
-      O << getDataLayout().getPrivateGlobalPrefix() << "CPI"
+      O << getDataLayout().getInternalSymbolPrefix() << "CPI"
         << getFunctionNumber() << "_" << MO.getIndex();
       if (MO.getOffset())
         O << "+" << MO.getOffset();
@@ -811,7 +810,8 @@ void MipsAsmPrinter::emitInlineAsmStart() const {
 }
 
 void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                      const MCSubtargetInfo *EndInfo) const {
+                                      const MCSubtargetInfo *EndInfo,
+                                      const MachineInstr *MI) {
   OutStreamer->addBlankLine();
   getTargetStreamer().emitDirectiveSetPop();
 }
@@ -968,8 +968,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   // freed) and since we're at the global level we can use the default
   // constructed subtarget.
   std::unique_ptr<MCSubtargetInfo> STI(TM.getTarget().createMCSubtargetInfo(
-      TM.getTargetTriple().str(), TM.getTargetCPU(),
-      TM.getTargetFeatureString()));
+      TM.getTargetTriple(), TM.getTargetCPU(), TM.getTargetFeatureString()));
 
   //
   // .global xxxx

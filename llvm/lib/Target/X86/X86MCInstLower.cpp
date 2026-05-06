@@ -145,7 +145,7 @@ void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
 X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
                                X86AsmPrinter &asmprinter)
     : Ctx(asmprinter.OutContext), MF(mf), TM(mf.getTarget()),
-      MAI(*TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
+      MAI(TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
 
 MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
   return AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoMachO>();
@@ -181,7 +181,7 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   if (!Suffix.empty())
-    Name += DL.getPrivateGlobalPrefix();
+    Name += DL.getInternalSymbolPrefix();
 
   if (MO.isGlobal()) {
     const GlobalValue *GV = MO.getGlobal();
@@ -370,7 +370,7 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
 
 // Replace TAILJMP opcodes with their equivalent opcodes that have encoding
 // information.
-static unsigned convertTailJumpOpcode(unsigned Opcode) {
+static unsigned convertTailJumpOpcode(unsigned Opcode, bool IsLarge = false) {
   switch (Opcode) {
   case X86::TAILJMPr:
     Opcode = X86::JMP32r;
@@ -392,7 +392,7 @@ static unsigned convertTailJumpOpcode(unsigned Opcode) {
     break;
   case X86::TAILJMPd:
   case X86::TAILJMPd64:
-    Opcode = X86::JMP_1;
+    Opcode = IsLarge ? X86::JMPABS64i : X86::JMP_1;
     break;
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
@@ -485,10 +485,17 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   case X86::TAILJMPr64:
   case X86::TAILJMPr64_REX:
   case X86::TAILJMPd:
-  case X86::TAILJMPd64:
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
+  case X86::TAILJMPd64: {
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
+    bool IsLarge = TM.getCodeModel() == CodeModel::Large;
+    assert((!IsLarge || AsmPrinter.getSubtarget().hasJMPABS()) &&
+           "Unexpected TAILJMPd64 in large code model without JMPABS");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode(), IsLarge));
+    break;
+  }
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
     assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
@@ -565,7 +572,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   // only using GOT when GOTPCRELX is enabled.
   // TODO Delete the workaround when rustc no longer relies on the hack
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
-                Ctx.getTargetOptions()->X86RelaxRelocations;
+                Ctx.getTargetOptions().X86RelaxRelocations;
 
   if (Specifier == X86::S_TLSDESC) {
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
@@ -902,11 +909,8 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // bytes.  This assumes that patchable-function-prefix is the same for all
   // functions.
   const MachineFunction &MF = *MI.getMF();
-  int64_t PrefixNops = 0;
-  (void)MF.getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixNops);
+  int64_t PrefixNops = MF.getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // KCFI allows indirect calls to any location that's preceded by a valid
   // type identifier. To avoid encoding the full constant into an instruction,
@@ -962,7 +966,7 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   StringRef Op = OrShadowOffset ? "or" : "add";
   std::string SymName = ("__asan_check_" + Name + "_" + Op + "_" +
                          Twine(1ULL << AccessInfo.AccessSizeIndex) + "_" +
-                         TM.getMCRegisterInfo()->getName(Reg.asMCReg()))
+                         TM.getMCRegisterInfo().getName(Reg.asMCReg()))
                             .str();
   if (OrShadowOffset)
     report_fatal_error(
@@ -1303,11 +1307,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
 
   const Function &F = MF->getFunction();
   if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     emitX86Nops(*OutStreamer, Num, Subtarget);
     return;
   }
@@ -1565,10 +1565,16 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
       printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
     if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
-      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-        if (I != 0)
-          CS << ',';
-        printConstant(CF->getValueAPF(), CS, PrintZero);
+      unsigned EltBits = VTy->getScalarSizeInBits();
+      unsigned E = std::min(BitWidth / EltBits, VTy->getNumElements());
+      if ((BitWidth % EltBits) == 0) {
+        for (unsigned I = 0; I != E; ++I) {
+          if (I != 0)
+            CS << ",";
+          printConstant(CF->getValueAPF(), CS, PrintZero);
+        }
+      } else {
+        CS << "?";
       }
     } else
       printConstant(CF->getValueAPF(), CS, PrintZero);
@@ -1646,6 +1652,22 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
     CS << " = [";
     for (int l = 0; l != Repeats; ++l) {
       if (l != 0)
+        CS << ",";
+      printConstant(C, BitWidth, CS);
+    }
+    CS << "]";
+    OutStreamer.AddComment(CS.str());
+  }
+}
+
+static void addConstantComment(const MachineInstr *MI, MCStreamer &OutStreamer,
+                               unsigned OpNo, int BitWidth, int Repeats = 1) {
+  if (auto *C = X86::getConstantFromPool(*MI, OpNo)) {
+    std::string Comment;
+    raw_string_ostream CS(Comment);
+    CS << "[";
+    for (int I = 0; I != Repeats; ++I) {
+      if (I != 0)
         CS << ",";
       printConstant(C, BitWidth, CS);
     }
@@ -1925,8 +1947,41 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   }
 
+  case X86::GF2P8AFFINEQBrmi:
+  case X86::VGF2P8AFFINEQBrmi:
+  case X86::VGF2P8AFFINEQBYrmi:
+  case X86::VGF2P8AFFINEQBZrmi:
+  case X86::VGF2P8AFFINEQBZ128rmi:
+  case X86::VGF2P8AFFINEQBZ256rmi: {
+    // TODO: Add predicate handling with test coverage.
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, Width);
+    break;
+  }
+
+  case X86::VGF2P8AFFINEQBZ128rmbi:
+  case X86::VGF2P8AFFINEQBZ256rmbi:
+  case X86::VGF2P8AFFINEQBZrmbi: {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, 64, Width / 64);
+    break;
+  }
+
 #define INSTR_CASE(Prefix, Instr, Suffix, Postfix)                             \
   case X86::Prefix##Instr##Suffix##rm##Postfix:
+
+#define CASE_AVX512_ARITH_RM(Instr)                                            \
+  INSTR_CASE(V, Instr, Z128, )                                                 \
+  INSTR_CASE(V, Instr, Z128, k)                                                \
+  INSTR_CASE(V, Instr, Z128, kz)                                               \
+  INSTR_CASE(V, Instr, Z256, )                                                 \
+  INSTR_CASE(V, Instr, Z256, k)                                                \
+  INSTR_CASE(V, Instr, Z256, kz)                                               \
+  INSTR_CASE(V, Instr, Z, )                                                    \
+  INSTR_CASE(V, Instr, Z, k)                                                   \
+  INSTR_CASE(V, Instr, Z, kz)
 
 #define CASE_ARITH_RM(Instr)                                                   \
   INSTR_CASE(, Instr, , )   /* SSE */                                          \
@@ -1943,41 +1998,24 @@ static void addConstantComments(const MachineInstr *MI,
   INSTR_CASE(V, Instr, Z, kz)
 
     // TODO: Add additional instructions when useful.
-    CASE_ARITH_RM(PMADDUBSW) {
-      unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 8) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
-      }
-      break;
-    }
-
+    CASE_ARITH_RM(PADDB)
+    CASE_ARITH_RM(PADDW)
+    CASE_ARITH_RM(PADDD)
+    CASE_ARITH_RM(PADDQ)
+    CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
+    CASE_ARITH_RM(PMULDQ)
+    CASE_ARITH_RM(PMULUDQ)
+    CASE_ARITH_RM(PMULLD)
+    CASE_AVX512_ARITH_RM(PMULLQ)
     CASE_ARITH_RM(PMULLW)
     CASE_ARITH_RM(PMULHW)
     CASE_ARITH_RM(PMULHUW)
     CASE_ARITH_RM(PMULHRSW) {
       unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 16) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
-      }
+      unsigned VectorWidth =
+          X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+      addConstantComment(MI, OutStreamer, SrcIdx + 1, VectorWidth);
       break;
     }
 
@@ -2529,6 +2567,12 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitSEHInstruction(MI);
     return;
 
+  case X86::SEH_SplitChainedAtEndOfBlock:
+    assert(!SplitChainedAtEndOfBlock &&
+           "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
+    SplitChainedAtEndOfBlock = true;
+    return;
+
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     EmitSEHInstruction(MI);
@@ -2607,6 +2651,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }
     break;
+
+  case X86::JCC_SELF:
+    MCSymbol *Sym = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Sym);
+    EmitAndCountInstruction(
+        MCInstBuilder(X86::JCC_1)
+            .addExpr(MCSymbolRefExpr::create(Sym, OutContext))
+            .addImm(MI->getOperand(0).getImm()));
+    return;
   }
 
   MCInst TmpInst;
@@ -2622,6 +2675,18 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   EmitAndCountInstruction(TmpInst);
+}
+
+void X86AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
+  if (MI) {
+    // If unwinding inline asm ends on a call, wineh may require insertion of
+    // a nop.
+    unsigned ExtraInfo = MI->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      maybeEmitNopAfterCallForWindowsEH(MI);
+  }
 }
 
 void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {
@@ -2702,8 +2767,8 @@ void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
   // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
   // (Don't let the name fool you: Itanium refers to table-based exception
   // handling, not the Itanium architecture.)
-  if (MAI->getExceptionHandlingType() != ExceptionHandling::WinEH ||
-      MAI->getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
+  if (MAI.getExceptionHandlingType() != ExceptionHandling::WinEH ||
+      MAI.getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
     return;
   }
 

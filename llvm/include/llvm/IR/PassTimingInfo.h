@@ -29,6 +29,17 @@ class Pass;
 class PassInstrumentationCallbacks;
 class raw_ostream;
 
+/// If the user specifies the -time-passes argument on an LLVM tool command line
+/// then the value of this boolean will be true, otherwise false.
+/// This is the storage for the -time-passes option.
+LLVM_ABI extern bool TimePassesIsEnabled;
+/// If TimePassesPerRun is true, there would be one line of report for
+/// each pass invocation.
+/// If TimePassesPerRun is false, there would be only one line of
+/// report for each pass (even there are more than one pass objects).
+/// (For new pass manager only)
+LLVM_ABI extern bool TimePassesPerRun;
+
 /// If -time-passes has been specified, report the timings immediately and then
 /// reset the timers to zero. By default it uses the stream created by
 /// CreateInfoOutputFile().

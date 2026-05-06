@@ -237,7 +237,7 @@ class TargetRegisterInfo;
   };
 
   /// Keep record of which SUnit are in the same cluster group.
-  typedef SmallSet<SUnit *, 8> ClusterInfo;
+  typedef SmallPtrSet<SUnit *, 8> ClusterInfo;
   constexpr unsigned InvalidClusterId = ~0u;
 
   /// Return whether the input cluster ID's are the same and valid.
@@ -480,6 +480,10 @@ class TargetRegisterInfo;
     /// Orders this node's predecessor edges such that the critical path
     /// edge occurs first.
     LLVM_ABI void biasCriticalPath();
+
+    LLVM_ABI bool isClustered() const {
+      return ParentClusterIdx != InvalidClusterId;
+    }
 
     LLVM_ABI void dumpAttributes() const;
 

@@ -877,7 +877,7 @@ define %struct.__neon_int8x16x2_t @ld2lane_16b(<16 x i8> %L1, <16 x i8> %L2, ptr
 ; CHECK-LABEL: define %struct.__neon_int8x16x2_t @ld2lane_16b(
 ; CHECK-SAME: <16 x i8> [[L1:%.*]], <16 x i8> [[L2:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -904,8 +904,8 @@ define %struct.__neon_int8x16x3_t @ld3lane_16b(<16 x i8> %L1, <16 x i8> %L2, <16
 ; CHECK-LABEL: define %struct.__neon_int8x16x3_t @ld3lane_16b(
 ; CHECK-SAME: <16 x i8> [[L1:%.*]], <16 x i8> [[L2:%.*]], <16 x i8> [[L3:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -936,9 +936,9 @@ define %struct.__neon_int8x16x4_t @ld4lane_16b(<16 x i8> %L1, <16 x i8> %L2, <16
 ; CHECK-LABEL: define %struct.__neon_int8x16x4_t @ld4lane_16b(
 ; CHECK-SAME: <16 x i8> [[L1:%.*]], <16 x i8> [[L2:%.*]], <16 x i8> [[L3:%.*]], <16 x i8> [[L4:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -977,7 +977,7 @@ define %struct.__neon_int16x8x2_t @ld2lane_8h(<8 x i16> %L1, <8 x i16> %L2, ptr 
 ; CHECK-LABEL: define %struct.__neon_int16x8x2_t @ld2lane_8h(
 ; CHECK-SAME: <8 x i16> [[L1:%.*]], <8 x i16> [[L2:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1004,8 +1004,8 @@ define %struct.__neon_int16x8x3_t @ld3lane_8h(<8 x i16> %L1, <8 x i16> %L2, <8 x
 ; CHECK-LABEL: define %struct.__neon_int16x8x3_t @ld3lane_8h(
 ; CHECK-SAME: <8 x i16> [[L1:%.*]], <8 x i16> [[L2:%.*]], <8 x i16> [[L3:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1036,9 +1036,9 @@ define %struct.__neon_int16x8x4_t @ld4lane_8h(<8 x i16> %L1, <8 x i16> %L2, <8 x
 ; CHECK-LABEL: define %struct.__neon_int16x8x4_t @ld4lane_8h(
 ; CHECK-SAME: <8 x i16> [[L1:%.*]], <8 x i16> [[L2:%.*]], <8 x i16> [[L3:%.*]], <8 x i16> [[L4:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1077,7 +1077,7 @@ define %struct.__neon_int32x4x2_t @ld2lane_4s(<4 x i32> %L1, <4 x i32> %L2, ptr 
 ; CHECK-LABEL: define %struct.__neon_int32x4x2_t @ld2lane_4s(
 ; CHECK-SAME: <4 x i32> [[L1:%.*]], <4 x i32> [[L2:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1104,8 +1104,8 @@ define %struct.__neon_int32x4x3_t @ld3lane_4s(<4 x i32> %L1, <4 x i32> %L2, <4 x
 ; CHECK-LABEL: define %struct.__neon_int32x4x3_t @ld3lane_4s(
 ; CHECK-SAME: <4 x i32> [[L1:%.*]], <4 x i32> [[L2:%.*]], <4 x i32> [[L3:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1136,9 +1136,9 @@ define %struct.__neon_int32x4x4_t @ld4lane_4s(<4 x i32> %L1, <4 x i32> %L2, <4 x
 ; CHECK-LABEL: define %struct.__neon_int32x4x4_t @ld4lane_4s(
 ; CHECK-SAME: <4 x i32> [[L1:%.*]], <4 x i32> [[L2:%.*]], <4 x i32> [[L3:%.*]], <4 x i32> [[L4:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -1177,7 +1177,7 @@ define %struct.__neon_int64x2x2_t @ld2lane_2d(<2 x i64> %L1, <2 x i64> %L2, ptr 
 ; CHECK-LABEL: define %struct.__neon_int64x2x2_t @ld2lane_2d(
 ; CHECK-SAME: <2 x i64> [[L1:%.*]], <2 x i64> [[L2:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 193514046488576
@@ -1204,8 +1204,8 @@ define %struct.__neon_int64x2x3_t @ld3lane_2d(<2 x i64> %L1, <2 x i64> %L2, <2 x
 ; CHECK-LABEL: define %struct.__neon_int64x2x3_t @ld3lane_2d(
 ; CHECK-SAME: <2 x i64> [[L1:%.*]], <2 x i64> [[L2:%.*]], <2 x i64> [[L3:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
@@ -1236,9 +1236,9 @@ define %struct.__neon_int64x2x4_t @ld4lane_2d(<2 x i64> %L1, <2 x i64> %L2, <2 x
 ; CHECK-LABEL: define %struct.__neon_int64x2x4_t @ld4lane_2d(
 ; CHECK-SAME: <2 x i64> [[L1:%.*]], <2 x i64> [[L2:%.*]], <2 x i64> [[L3:%.*]], <2 x i64> [[L4:%.*]], ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
@@ -2304,7 +2304,7 @@ define <16 x i8> @ld1_16b(<16 x i8> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <16 x i8> @ld1_16b(
 ; CHECK-SAME: <16 x i8> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2332,7 +2332,7 @@ define <8 x i16> @ld1_8h(<8 x i16> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <8 x i16> @ld1_8h(
 ; CHECK-SAME: <8 x i16> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2360,7 +2360,7 @@ define <4 x i32> @ld1_4s(<4 x i32> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <4 x i32> @ld1_4s(
 ; CHECK-SAME: <4 x i32> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2388,7 +2388,7 @@ define <4 x float> @ld1_4s_float(<4 x float> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <4 x float> @ld1_4s_float(
 ; CHECK-SAME: <4 x float> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2416,7 +2416,7 @@ define <2 x i64> @ld1_2d(<2 x i64> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <2 x i64> @ld1_2d(
 ; CHECK-SAME: <2 x i64> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2444,7 +2444,7 @@ define <2 x double> @ld1_2d_double(<2 x double> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <2 x double> @ld1_2d_double(
 ; CHECK-SAME: <2 x double> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2496,7 +2496,7 @@ define <8 x i8> @ld1_8b(<8 x i8> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <8 x i8> @ld1_8b(
 ; CHECK-SAME: <8 x i8> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2524,7 +2524,7 @@ define <4 x i16> @ld1_4h(<4 x i16> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <4 x i16> @ld1_4h(
 ; CHECK-SAME: <4 x i16> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2552,7 +2552,7 @@ define <2 x i32> @ld1_2s(<2 x i32> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <2 x i32> @ld1_2s(
 ; CHECK-SAME: <2 x i32> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2580,7 +2580,7 @@ define <2 x float> @ld1_2s_float(<2 x float> %V, ptr %bar) #0 {
 ; Make sure we are using the operands defined by the ABI
 ; CHECK-LABEL: define <2 x float> @ld1_2s_float(
 ; CHECK-SAME: <2 x float> [[V:%.*]], ptr [[BAR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2611,8 +2611,8 @@ define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture 
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], ptr captures(none) [[DIFF:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]

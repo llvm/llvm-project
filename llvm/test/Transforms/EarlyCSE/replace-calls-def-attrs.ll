@@ -262,7 +262,7 @@ define i32 @commutative_intrinsic_intersection_failure(i32 %arg, i32 %arg1) {
 }
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR1]] = { memory(none) }
 ; CHECK: attributes #[[ATTR2]] = { memory(read) }
 ; CHECK: attributes #[[ATTR3]] = { alwaysinline memory(none) }

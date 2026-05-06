@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSNRTOMBS_H
 
 #include "hdr/types/char32_t.h"
+#include "hdr/types/char8_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/__support/wchar/mbstate.h"
@@ -39,7 +39,7 @@ wcsnrtombs(char *__restrict dest, const wchar_t **__restrict ptr_to_src,
       reinterpret_cast<const char32_t *>(*ptr_to_src), ps, dest_len,
       num_src_widechars);
   size_t dst_idx = 0;
-  ErrorOr<char8_t> converted = str_conv.popUTF8();
+  ErrorOr<char8_t> converted = str_conv.pop<char8_t>();
   while (converted.has_value()) {
     if (dest != nullptr)
       dest[dst_idx] = converted.value();
@@ -51,7 +51,7 @@ wcsnrtombs(char *__restrict dest, const wchar_t **__restrict ptr_to_src,
     }
 
     dst_idx++;
-    converted = str_conv.popUTF8();
+    converted = str_conv.pop<char8_t>();
   }
 
   if (dest != nullptr)

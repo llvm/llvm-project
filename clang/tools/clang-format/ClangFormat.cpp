@@ -88,7 +88,7 @@ static cl::opt<std::string> AssumeFileName(
              "  CSharp: .cs\n"
              "  Java: .java\n"
              "  JavaScript: .js .mjs .cjs .ts\n"
-             "  Json: .json .ipynb\n"
+             "  JSON: .json .ipynb\n"
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
@@ -343,16 +343,15 @@ static void outputReplacementsXML(const Replacements &Replaces) {
   }
 }
 
-static bool
-emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
-                        const std::unique_ptr<llvm::MemoryBuffer> &Code) {
+static bool emitReplacementWarnings(const Replacements &Replaces,
+                                    StringRef AssumedFileName,
+                                    std::unique_ptr<llvm::MemoryBuffer> Code) {
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
     SourceMgr Mgr;
     const char *StartBuf = Code->getBufferStart();
 
-    Mgr.AddNewSourceBuffer(
-        MemoryBuffer::getMemBuffer(StartBuf, AssumedFileName), SMLoc());
+    Mgr.AddNewSourceBuffer(std::move(Code), SMLoc());
     for (const auto &R : Replaces) {
       SMDiagnostic Diag = Mgr.GetMessage(
           SMLoc::getFromPointer(StartBuf + R.getOffset()),
@@ -489,7 +488,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
     auto Err =
         Replaces.add(tooling::Replacement(AssumedFileName, 0, 0, "x = "));
     if (Err)
-      llvm::errs() << "Bad Json variable insertion\n";
+      llvm::errs() << "Bad JSON variable insertion\n";
   }
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
@@ -505,7 +504,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replaces = Replaces.merge(FormatChanges);
   if (DryRun) {
     return Replaces.size() > (IsJson ? 1u : 0u) &&
-           emitReplacementWarnings(Replaces, AssumedFileName, Code);
+           emitReplacementWarnings(Replaces, AssumedFileName, std::move(Code));
   }
   if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
@@ -637,6 +636,7 @@ static bool isIgnored(StringRef FilePath) {
   if (IgnoreDir.empty())
     return false;
 
+  bool IsIgnored = false;
   const auto Pathname{convert_to_slash(AbsPath)};
   for (const auto &Pat : Patterns) {
     const bool IsNegated = Pat[0] == '!';
@@ -658,11 +658,11 @@ static bool isIgnored(StringRef FilePath) {
       Pattern = Path;
     }
 
-    if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
-      return true;
+    if (clang::format::matchFilePath(Pattern, Pathname))
+      IsIgnored = !IsNegated;
   }
 
-  return false;
+  return IsIgnored;
 }
 
 int main(int argc, const char **argv) {
@@ -701,8 +701,15 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty()) {
-    if (isIgnored(AssumeFileName))
+    if (isIgnored(AssumeFileName)) {
+      // The user should be able to expect that running
+      // `cat foo | clang-format --assume-filename foo` and writing the output
+      // to foo will format foo.
+      // Thus, we need to just output stdin untouched if it is ignored.
+      if (!OutputXML)
+        outs() << MemoryBuffer::getSTDIN()->get()->getBuffer();
       return 0;
+    }
     return clang::format::format("-", FailOnIncompleteFormat);
   }
 

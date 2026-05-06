@@ -7,7 +7,7 @@
 
 # NORELAX:      Relocation section '.rela.text1' at offset {{.*}} contains 1 entries:
 # NORELAX-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name + Addend
-# NORELAX-NEXT: 00000000  00000313 R_RISCV_CALL_PLT       00000004   .L0 + 0
+# NORELAX-NEXT: 00000000  00000313 R_RISCV_CALL_PLT       00000008   .L0 + 0
 # NORELAX-EMPTY:
 # RELAX:        Relocation section '.rela.text1' at offset {{.*}} contains 2 entries:
 # RELAX:        R_RISCV_CALL_PLT
@@ -16,23 +16,25 @@
 # NORELAX-NEXT: Relocation section '.rela.eh_frame' at offset {{.*}} contains 1 entries:
 # NORELAX:       Offset     Info    Type                Sym. Value  Symbol's Name + Addend
 # NORELAX-NEXT: 0000001c  00000139 R_RISCV_32_PCREL       00000000   .L0 + 0
-# RELAX-NEXT:   Relocation section '.rela.eh_frame' at offset {{.*}} contains 5 entries:
+# RELAX-NEXT:   Relocation section '.rela.eh_frame' at offset {{.*}} contains 7 entries:
 # RELAX:         Offset     Info    Type                Sym. Value  Symbol's Name + Addend
 # RELAX-NEXT:   0000001c  00000139 R_RISCV_32_PCREL       00000000   .L0  + 0
-# RELAX-NEXT:   00000020  00000c23 R_RISCV_ADD32          0001017a   .L0  + 0
+# RELAX-NEXT:   00000020  00000d23 R_RISCV_ADD32          0001017c   .L0  + 0
 # RELAX-NEXT:   00000020  00000127 R_RISCV_SUB32          00000000   .L0  + 0
-# RELAX-NEXT:   00000035  00000b35 R_RISCV_SET6           00010176   .L0  + 0
-# RELAX-NEXT:   00000035  00000934 R_RISCV_SUB6           0001016e   .L0  + 0
+# RELAX-NEXT:   00000026  00000536 R_RISCV_SET8           00000068   .L0  + 0
+# RELAX-NEXT:   00000026  00000125 R_RISCV_SUB8           00000000   .L0  + 0
+# RELAX-NEXT:   00000035  00000c35 R_RISCV_SET6           00010178   .L0  + 0
+# RELAX-NEXT:   00000035  00000a34 R_RISCV_SUB6           0001016e   .L0  + 0
 # CHECK-EMPTY:
-# NORELAX:      Symbol table '.symtab' contains 13 entries:
-# RELAX:        Symbol table '.symtab' contains 16 entries:
+# NORELAX:      Symbol table '.symtab' contains 14 entries:
+# RELAX:        Symbol table '.symtab' contains 18 entries:
 # RELAX-NEXT:      Num:    Value  Size Type    Bind   Vis       Ndx Name
 # RELAX-NEXT:        0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
 # RELAX-NEXT:        1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
-# RELAX:             3: 00000004     0 NOTYPE  LOCAL  DEFAULT     2 .L0{{$}}
-# RELAX:             9: 0001016e     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
-# RELAX:            11: 00010176     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
-# RELAX:            12: 0001017a     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:             3: 00000008     0 NOTYPE  LOCAL  DEFAULT     2 .L0{{$}}
+# RELAX:            10: 0001016e     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:            12: 00010178     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:            13: 0001017c     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
 
 # CHECK-DWARFDUMP: DW_CFA_advance_loc1: 104
 # CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +8
@@ -48,11 +50,11 @@
         .type   test,@function
 test:
         .cfi_startproc
-        nop
+        call foo
 ## This looks similar to fake label names ".L0 ". Even if this is ".L0 ",
 ## the assembler will not conflate it with fake labels.
 .L0:
-        .zero 100, 0x90
+        .zero 96, 0x90
         .cfi_def_cfa_offset 8
         nop
         .zero 255, 0x90

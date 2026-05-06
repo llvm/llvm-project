@@ -6,7 +6,7 @@ define void @test(ptr %0, i1 %1, i1 %2) {
 ; CHECK-SAME: ptr [[TMP0:%.*]], i1 [[TMP1:%.*]], i1 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    br label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP12:%.*]], %[[TMP7:.*]] ], [ zeroinitializer, [[TMP3:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP15:%.*]], %[[TMP7:.*]] ], [ zeroinitializer, [[TMP3:%.*]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[TMP7]], label %[[BB15:.*]]
 ; CHECK:       [[TMP7]]:
@@ -14,9 +14,9 @@ define void @test(ptr %0, i1 %1, i1 %2) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x i32>, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i32> [[TMP10]], splat (i32 1)
-; CHECK-NEXT:    [[TMP12]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, <4 x i32> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP15]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB16:.*]], label %[[BB4]]
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    br label %[[BB16]]

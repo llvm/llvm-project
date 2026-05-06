@@ -299,3 +299,45 @@ void test10() {
   for (auto[i, j, k] = arr; i < a; ++i) { }
   for (auto[i, j, k] = arr; i < a; ++arr[0]) { }
 };
+
+namespace GH132038 {
+extern void foo(int);
+void test1() {
+  int a = 0;
+  auto incr_a = [&a]() { ++a; };
+
+  for (int b = 10; a <= b; incr_a())
+    foo(a);
+
+  for (int b = 10; a <= b;)
+    incr_a();
+
+  for (int b = 10; a <= b; [&a]() { ++a; }()) { }
+  for (int b = 10; a <= b; [&a]() { }()) { }
+}
+
+void test2() {
+  int a = 0;
+  int *c = &a;
+
+  auto incr_a = [a]() {  };
+  auto incr_b = [](int b) { };
+  auto incr_c = [c]() { ++*c; };
+
+  for (int b = 10; a <= b; incr_a()) // expected-warning {{variables 'a' and 'b' used in loop condition not modified in loop body}}
+    foo(a);
+
+  for (int b = 10; a <= b;) // expected-warning {{variables 'a' and 'b' used in loop condition not modified in loop body}}
+    incr_a();
+
+  for (int b = 10; a <= b; incr_b(b)) // expected-warning {{variables 'a' and 'b' used in loop condition not modified in loop body}}
+    foo(a);
+
+  for (int b = 10; a <= b;) // expected-warning {{variables 'a' and 'b' used in loop condition not modified in loop body}}
+    incr_b(b);
+
+  // FIXME: handle modification of loop control variable inside lambda body
+  for (a = 10; a <= 20; incr_c()) // expected-warning {{variable 'a' used in loop condition not modified in loop body}}
+    foo(a);
+}
+}

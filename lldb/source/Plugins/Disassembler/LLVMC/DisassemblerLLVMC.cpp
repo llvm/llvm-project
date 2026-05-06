@@ -70,12 +70,14 @@ public:
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
   bool IsLoad(llvm::MCInst &mc_inst) const;
+  bool IsBarrier(llvm::MCInst &mc_inst) const;
   bool IsAuthenticated(llvm::MCInst &mc_inst) const;
 
 private:
   MCDisasmInstance(std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
                    std::unique_ptr<llvm::MCRegisterInfo> &&reg_info_up,
                    std::unique_ptr<llvm::MCSubtargetInfo> &&subtarget_info_up,
+                   llvm::MCTargetOptions mc_options,
                    std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
                    std::unique_ptr<llvm::MCContext> &&context_up,
                    std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
@@ -85,6 +87,7 @@ private:
   std::unique_ptr<llvm::MCInstrInfo> m_instr_info_up;
   std::unique_ptr<llvm::MCRegisterInfo> m_reg_info_up;
   std::unique_ptr<llvm::MCSubtargetInfo> m_subtarget_info_up;
+  llvm::MCTargetOptions m_mc_options;
   std::unique_ptr<llvm::MCAsmInfo> m_asm_info_up;
   std::unique_ptr<llvm::MCContext> m_context_up;
   std::unique_ptr<llvm::MCDisassembler> m_disasm_up;
@@ -436,6 +439,11 @@ public:
     return m_is_load;
   }
 
+  bool IsBarrier() override {
+    VisitInstruction();
+    return m_is_barrier;
+  }
+
   bool IsAuthenticated() override {
     VisitInstruction();
     return m_is_authenticated;
@@ -451,7 +459,6 @@ public:
                 lldb::offset_t data_offset) override {
     // All we have to do is read the opcode which can be easy for some
     // architectures
-    bool got_op = false;
     DisassemblerScope disasm(*this);
     if (disasm) {
       const ArchSpec &arch = disasm->GetArchitecture();
@@ -462,42 +469,31 @@ public:
       if (min_op_byte_size == max_op_byte_size) {
         // Fixed size instructions, just read that amount of data.
         if (!data.ValidOffsetForDataOfSize(data_offset, min_op_byte_size))
-          return false;
+          return 0;
 
         switch (min_op_byte_size) {
         case 1:
           m_opcode.SetOpcode8(data.GetU8(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 2:
           m_opcode.SetOpcode16(data.GetU16(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 4:
           m_opcode.SetOpcode32(data.GetU32(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 8:
           m_opcode.SetOpcode64(data.GetU64(&data_offset), byte_order);
-          got_op = true;
           break;
 
         default:
-          if (arch.GetTriple().isRISCV())
-            m_opcode.SetOpcode16_32TupleBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size,
-                byte_order);
-          else
-            m_opcode.SetOpcodeBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
-          got_op = true;
+          m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size),
+                                  min_op_byte_size);
           break;
         }
-      }
-      if (!got_op) {
+      } else {
         bool is_alternate_isa = false;
         DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
             GetDisasmToUse(is_alternate_isa, disasm);
@@ -559,7 +555,7 @@ public:
   lldb::InstructionControlFlowKind
   GetControlFlowKind(const lldb_private::ExecutionContext *exe_ctx) override {
     DisassemblerScope disasm(*this, exe_ctx);
-    if (disasm){
+    if (disasm) {
       if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86)
         return x86::GetControlFlowKind(/*is_64b=*/false, m_opcode);
       else if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
@@ -1195,6 +1191,7 @@ protected:
   bool m_is_call = false;
   bool m_is_load = false;
   bool m_is_authenticated = false;
+  bool m_is_barrier = false;
 
   void VisitInstruction() {
     if (m_has_visited_instruction)
@@ -1227,6 +1224,7 @@ protected:
     m_is_call = mc_disasm_ptr->IsCall(inst);
     m_is_load = mc_disasm_ptr->IsLoad(inst);
     m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
+    m_is_barrier = mc_disasm_ptr->IsBarrier(inst);
   }
 
 private:
@@ -1249,11 +1247,14 @@ private:
 };
 
 std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>
-DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
+DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
+                                            const char *cpu,
                                             const char *features_str,
                                             unsigned flavor,
                                             DisassemblerLLVMC &owner) {
   using Instance = std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>;
+
+  llvm::Triple triple(triple_name);
 
   std::string Status;
   const llvm::Target *curr_target =
@@ -1282,9 +1283,8 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
   if (!asm_info_up)
     return Instance();
 
-  std::unique_ptr<llvm::MCContext> context_up(
-      new llvm::MCContext(llvm::Triple(triple), asm_info_up.get(),
-                          reg_info_up.get(), subtarget_info_up.get()));
+  std::unique_ptr<llvm::MCContext> context_up(new llvm::MCContext(
+      llvm::Triple(triple), *asm_info_up, *reg_info_up, *subtarget_info_up));
   if (!context_up)
     return Instance();
 
@@ -1322,7 +1322,7 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
 
   return Instance(new MCDisasmInstance(
       std::move(instr_info_up), std::move(reg_info_up),
-      std::move(subtarget_info_up), std::move(asm_info_up),
+      std::move(subtarget_info_up), MCOptions, std::move(asm_info_up),
       std::move(context_up), std::move(disasm_up), std::move(instr_printer_up),
       std::move(instr_analysis_up)));
 }
@@ -1331,6 +1331,7 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
     std::unique_ptr<llvm::MCRegisterInfo> &&reg_info_up,
     std::unique_ptr<llvm::MCSubtargetInfo> &&subtarget_info_up,
+    llvm::MCTargetOptions mc_options,
     std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
     std::unique_ptr<llvm::MCContext> &&context_up,
     std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
@@ -1339,7 +1340,7 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     : m_instr_info_up(std::move(instr_info_up)),
       m_reg_info_up(std::move(reg_info_up)),
       m_subtarget_info_up(std::move(subtarget_info_up)),
-      m_asm_info_up(std::move(asm_info_up)),
+      m_mc_options(mc_options), m_asm_info_up(std::move(asm_info_up)),
       m_context_up(std::move(context_up)), m_disasm_up(std::move(disasm_up)),
       m_instr_printer_up(std::move(instr_printer_up)),
       m_instr_analysis_up(std::move(instr_analysis_up)) {
@@ -1427,6 +1428,11 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
   return m_instr_info_up->get(mc_inst.getOpcode()).mayLoad();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsBarrier(
+    llvm::MCInst &mc_inst) const {
+  return m_instr_info_up->get(mc_inst.getOpcode()).isBarrier();
 }
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
@@ -1574,23 +1580,28 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   }
 
   if (triple.isRISCV() && !cpu_or_features_overriden) {
-    uint32_t arch_flags = arch.GetFlags();
-    if (arch_flags & ArchSpec::eRISCV_rvc)
-      features_str += "+c,";
-    if (arch_flags & ArchSpec::eRISCV_rve)
-      features_str += "+e,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
-        ArchSpec::eRISCV_float_abi_single)
-      features_str += "+f,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
-        ArchSpec::eRISCV_float_abi_double)
-      features_str += "+f,+d,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
-        ArchSpec::eRISCV_float_abi_quad)
-      features_str += "+f,+d,+q,";
-    // FIXME: how do we detect features such as `+a`, `+m`?
-    // Turn them on by default now, since everyone seems to use them
-    features_str += "+a,+m,";
+    auto subtarget_features = arch.GetSubtargetFeatures().getString();
+    if (!subtarget_features.empty()) {
+      features_str += subtarget_features;
+    } else {
+      uint32_t arch_flags = arch.GetFlags();
+      if (arch_flags & ArchSpec::eRISCV_rvc)
+        features_str += "+c,";
+      if (arch_flags & ArchSpec::eRISCV_rve)
+        features_str += "+e,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
+          ArchSpec::eRISCV_float_abi_single)
+        features_str += "+f,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
+          ArchSpec::eRISCV_float_abi_double)
+        features_str += "+f,+d,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
+          ArchSpec::eRISCV_float_abi_quad)
+        features_str += "+f,+d,+q,";
+      // FIXME: how do we detect features such as `+a`, `+m`?
+      // Turn them on by default now, since everyone seems to use them
+      features_str += "+a,+m,";
+    }
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
@@ -1605,9 +1616,8 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // thumb instruction disassembler.
   if (llvm_arch == llvm::Triple::arm) {
     std::string thumb_triple(thumb_arch.GetTriple().getTriple());
-    m_alternate_disasm_up =
-        MCDisasmInstance::Create(thumb_triple.c_str(), "", features_str.c_str(),
-                                 flavor, *this);
+    m_alternate_disasm_up = MCDisasmInstance::Create(
+        thumb_triple.c_str(), "", features_str.c_str(), flavor, *this);
     if (!m_alternate_disasm_up)
       m_disasm_up.reset();
 

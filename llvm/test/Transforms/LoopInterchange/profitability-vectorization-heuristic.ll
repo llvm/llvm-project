@@ -130,31 +130,31 @@ entry:
 
 for.i.header:
   %i = phi i64 [ 1, %entry ], [ %i.next, %for.i.inc ]
-  %i.inc = add i64 %i, 1
+  %i.inc = add nuw nsw i64 %i, 1
   br label %for.j.body
 
 for.j.body:
   %j = phi i64 [ 1, %for.i.header ], [ %j.next, %for.j.body ]
-  %j.dec = add i64 %j, -1
-  %a.load.index = getelementptr [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j.dec
-  %b.index = getelementptr [256 x [256 x float]], ptr @B, i64 0, i64 %i, i64 %j
-  %c.load.index = getelementptr [256 x [256 x float]], ptr @C, i64 0, i64 %i.inc, i64 %j
-  %c.store.index = getelementptr [256 x [256 x float]], ptr @C, i64 0, i64 %i, i64 %j
+  %j.dec = add nsw i64 %j, -1
+  %a.load.index = getelementptr inbounds [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j.dec
+  %b.index = getelementptr inbounds [256 x [256 x float]], ptr @B, i64 0, i64 %i, i64 %j
+  %c.load.index = getelementptr inbounds [256 x [256 x float]], ptr @C, i64 0, i64 %i.inc, i64 %j
+  %c.store.index = getelementptr inbounds [256 x [256 x float]], ptr @C, i64 0, i64 %i, i64 %j
   %a = load float, ptr %a.load.index
   %b = load float, ptr %b.index
   %c0 = load float, ptr %c.load.index
   %c1 = load float, ptr %c.store.index
   %add.0 = fadd float %a, %b
-  %a.store.index = getelementptr [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j
+  %a.store.index = getelementptr inbounds [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j
   store float %add.0, ptr %a.store.index
   %add.1 = fadd float %c0, %c1
   store float %add.1, ptr %c.store.index
-  %j.next = add i64 %j, 1
+  %j.next = add nuw nsw i64 %j, 1
   %cmp.j = icmp eq i64 %j.next, 256
   br i1 %cmp.j, label %for.i.inc, label %for.j.body
 
 for.i.inc:
-  %i.next = add i64 %i, 1
+  %i.next = add nuw nsw i64 %i, 1
   %cmp.i = icmp eq i64 %i.next, 255
   br i1 %cmp.i, label %exit, label %for.i.header
 
@@ -195,27 +195,27 @@ entry:
 
 for.i.header:
   %i = phi i64 [ 0, %entry ], [ %i.inc, %for.i.inc ]
-  %i.inc = add i64 %i, 1
+  %i.inc = add nuw nsw i64 %i, 1
   br label %for.j.header
 
 for.j.header:
   %j = phi i64 [ 0, %for.i.header ], [ %j.inc, %for.j.inc ]
-  %j.inc = add i64 %j, 1
+  %j.inc = add nuw nsw i64 %j, 1
   br label %for.k.body
 
 for.k.body:
   %k = phi i64 [ 0, %for.j.header ], [ %k.inc, %for.k.inc ]
-  %k.inc = add i64 %k, 1
-  %k.2 = mul i64 %k, 2
-  %d.index = getelementptr [256 x [256 x [256 x float]]], ptr @D, i64 0, i64 %i.inc, i64 %j.inc, i64 %k.2
-  %e.index = getelementptr [256 x [256 x [256 x float]]], ptr @E, i64 0, i64 %i, i64 %j, i64 %k
+  %k.inc = add nuw nsw i64 %k, 1
+  %k.2 = mul nuw nsw i64 %k, 2
+  %d.index = getelementptr inbounds [256 x [256 x [256 x float]]], ptr @D, i64 0, i64 %i.inc, i64 %j.inc, i64 %k.2
+  %e.index = getelementptr inbounds [256 x [256 x [256 x float]]], ptr @E, i64 0, i64 %i, i64 %j, i64 %k
   %d.load = load float, ptr %d.index
   store float %d.load, ptr %e.index
   %cond = freeze i1 undef
   br i1 %cond, label %if.then, label %for.k.inc
 
 if.then:
-  %d.index2 = getelementptr [256 x [256 x [256 x float]]], ptr @D, i64 0, i64 %i, i64 %j, i64 %k.inc
+  %d.index2 = getelementptr inbounds [256 x [256 x [256 x float]]], ptr @D, i64 0, i64 %i, i64 %j, i64 %k.inc
   store float 1.0, ptr %d.index2
   br label %for.k.inc
 

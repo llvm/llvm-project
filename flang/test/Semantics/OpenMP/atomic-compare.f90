@@ -5,7 +5,7 @@
   ! Check atomic compare. This combines elements from multiple other "atomic*.f90", as
   ! to avoid having several files with just a few lines in them. atomic compare needs
   ! higher openmp version than the others, so need a separate file.
-  
+
 
   real a, b, c
   a = 1.0

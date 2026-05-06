@@ -144,7 +144,13 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsComplexType() const;
+
+  /// Returns \c true for floating point types (including complex floats).
+  bool IsFloatingPointType() const;
+
+  /// Returns \c true for non-complex float types.
+  bool IsRealFloatingPointType() const;
 
   bool IsFunctionType() const;
 
@@ -159,6 +165,8 @@ public:
   bool IsFunctionPointerType() const;
 
   bool IsMemberFunctionPointerType() const;
+
+  bool IsMemberDataPointerType() const;
 
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
@@ -196,10 +204,10 @@ public:
 
   bool IsVoidType() const;
 
+  bool HasPointerAuthQualifier() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
-
-  bool IsFloat() const;
 
   /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;
@@ -218,6 +226,8 @@ public:
 
   bool IsScalarOrUnscopedEnumerationType() const;
 
+  /// Checks if the type is eligible for integral promotion.
+  /// \see GetPromotedIntegerType
   bool IsPromotableIntegerType() const;
 
   bool IsPointerToVoid() const;
@@ -400,7 +410,7 @@ public:
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
@@ -499,6 +509,11 @@ public:
   GetIntegralTemplateArgument(size_t idx, bool expand_pack = false) const;
 
   CompilerType GetTypeForFormatters() const;
+
+  /// If the type is promotable, returns the type promoted to a larger
+  /// integer type according to the type system rules.
+  /// \see IsPromotableIntegerType
+  CompilerType GetPromotedIntegerType() const;
 
   LazyBool ShouldPrintAsOneLiner(ValueObject *valobj) const;
 

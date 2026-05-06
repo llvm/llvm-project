@@ -26,7 +26,7 @@ target triple = "bpfel"
 %struct.s = type <{ i8, i16 }>
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !27, metadata !DIExpression()), !dbg !28
   %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg, i32 1, i32 4), !dbg !29, !llvm.preserve.access.index !18
@@ -70,17 +70,13 @@ entry:
 ; CHECK-NEXT:        .long   4
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32)
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64) #1
+declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
-
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readnone speculatable }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10, !11}

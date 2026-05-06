@@ -1,0 +1,268 @@
+//===- PyIR2Vec.cpp - Python Bindings for IR2Vec ------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "lib/Utils.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/unique_ptr.h>
+
+#include <fstream>
+#include <memory>
+#include <string>
+
+namespace nb = nanobind;
+using namespace llvm;
+using namespace llvm::ir2vec;
+
+namespace {
+
+std::unique_ptr<Module> getLLVMIR(const std::string &Filename,
+                                  LLVMContext &Context) {
+  SMDiagnostic Err;
+  auto M = parseIRFile(Filename, Err, Context);
+  if (!M)
+    throw nb::value_error(("Failed to parse IR file '" + Filename +
+                           "': " + Err.getMessage().str())
+                              .c_str());
+  return M;
+}
+
+class PyVocab {
+private:
+  std::shared_ptr<Vocabulary> Vocab;
+
+public:
+  explicit PyVocab(const std::string &VocabPath) {
+    if (VocabPath.empty())
+      throw nb::value_error("Empty vocabulary path not allowed");
+    auto VocabOrErr = ir2vec::loadVocabulary(VocabPath);
+    if (!VocabOrErr)
+      throw nb::value_error(
+          ("Failed to load vocabulary: " + toString(VocabOrErr.takeError()))
+              .c_str());
+    Vocab = std::move(*VocabOrErr);
+  }
+
+  std::shared_ptr<Vocabulary> getVocab() const { return Vocab; }
+};
+
+class PyIR2VecTool {
+private:
+  std::unique_ptr<LLVMContext> Ctx;
+  std::unique_ptr<Module> M;
+  std::unique_ptr<IR2VecTool> Tool;
+  IR2VecKind OutputEmbeddingMode;
+
+public:
+  /// \note
+  /// In the currently exposed API, the vocabulary is set once at construction
+  /// and there is no public interface to call this again. Callers should treat
+  /// the vocabulary as immutable for the lifetime of the tool instance.
+  PyIR2VecTool(const std::string &Filename, IR2VecKind Mode, PyVocab &Vocab) {
+    if (!Vocab.getVocab())
+      throw nb::value_error("Vocabulary object is not initialized");
+
+    if (Filename.empty())
+      throw nb::value_error("Empty filename not allowed");
+
+    OutputEmbeddingMode = Mode;
+
+    Ctx = std::make_unique<LLVMContext>();
+    M = getLLVMIR(Filename, *Ctx);
+    Tool = std::make_unique<IR2VecTool>(*M);
+
+    if (auto Err = Tool->setVocabulary(Vocab.getVocab()))
+      throw nb::value_error(toString(std::move(Err)).c_str());
+  }
+
+  nb::list getFuncNames() {
+    nb::list NbFuncNames;
+    for (const Function &F : M->getFunctionDefs())
+      NbFuncNames.append(nb::str(F.getName().str().c_str()));
+
+    return NbFuncNames;
+  }
+
+  nb::dict getFuncEmbMap() {
+    auto ToolFuncEmbMap = Tool->getFunctionEmbeddingsMap(OutputEmbeddingMode);
+
+    if (!ToolFuncEmbMap)
+      throw nb::value_error(toString(ToolFuncEmbMap.takeError()).c_str());
+
+    nb::dict NbFuncEmbMap;
+
+    for (const auto &[FuncPtr, FuncEmb] : *ToolFuncEmbMap) {
+      auto FuncEmbVec = FuncEmb.getData();
+      double *NbFuncEmbVec = new double[FuncEmbVec.size()];
+      std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NbFuncEmbVec);
+
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbFuncEmbVec, {FuncEmbVec.size()},
+          nb::capsule(NbFuncEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
+
+      NbFuncEmbMap[nb::str(FuncPtr->getName().str().c_str())] = NbArray;
+    }
+
+    return NbFuncEmbMap;
+  }
+
+  nb::ndarray<nb::numpy, double> getFuncEmb(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolFuncEmb = Tool->getFunctionEmbedding(*F, OutputEmbeddingMode);
+
+    if (!ToolFuncEmb)
+      throw nb::value_error(toString(ToolFuncEmb.takeError()).c_str());
+
+    auto FuncEmbVec = ToolFuncEmb->getData();
+    double *NbFuncEmbVec = new double[FuncEmbVec.size()];
+    std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NbFuncEmbVec);
+
+    auto NbArray = nb::ndarray<nb::numpy, double>(
+        NbFuncEmbVec, {FuncEmbVec.size()},
+        nb::capsule(NbFuncEmbVec, [](void *P) noexcept {
+          delete[] static_cast<double *>(P);
+        }));
+
+    return NbArray;
+  }
+
+  nb::dict getBBEmbMap(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolBBEmbMap = Tool->getBBEmbeddingsMap(*F, OutputEmbeddingMode);
+
+    if (!ToolBBEmbMap)
+      throw nb::value_error(toString(ToolBBEmbMap.takeError()).c_str());
+
+    nb::dict NbBBEmbMap;
+
+    for (const auto &[BBPtr, BBEmb] : *ToolBBEmbMap) {
+      auto BBEmbVec = BBEmb.getData();
+      double *NbBBEmbVec = new double[BBEmbVec.size()];
+      std::copy(BBEmbVec.begin(), BBEmbVec.end(), NbBBEmbVec);
+
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbBBEmbVec, {BBEmbVec.size()},
+          nb::capsule(NbBBEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
+
+      NbBBEmbMap[nb::str(BBPtr->getName().str().c_str())] = NbArray;
+    }
+
+    return NbBBEmbMap;
+  }
+
+  nb::dict getInstEmbMap(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolInstEmbMap = Tool->getInstEmbeddingsMap(*F, OutputEmbeddingMode);
+
+    if (!ToolInstEmbMap)
+      throw nb::value_error(toString(ToolInstEmbMap.takeError()).c_str());
+
+    nb::dict NbInstEmbMap;
+
+    for (const auto &[InstPtr, InstEmb] : *ToolInstEmbMap) {
+      auto InstEmbVec = InstEmb.getData();
+      double *NbInstEmbVec = new double[InstEmbVec.size()];
+      std::copy(InstEmbVec.begin(), InstEmbVec.end(), NbInstEmbVec);
+
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbInstEmbVec, {InstEmbVec.size()},
+          nb::capsule(NbInstEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
+
+      std::string InstStr;
+      raw_string_ostream OS(InstStr);
+      InstPtr->print(OS);
+
+      NbInstEmbMap[nb::str(OS.str().c_str())] = NbArray;
+    }
+
+    return NbInstEmbMap;
+  }
+};
+
+} // namespace
+
+NB_MODULE(ir2vec, m) {
+  m.doc() = std::string("Python bindings for ") + ToolName;
+
+  nb::enum_<IR2VecKind>(m, "IR2VecKind",
+                        "Embedding mode for IR2Vec representations")
+      .value("Symbolic", IR2VecKind::Symbolic, "Symbolic encodings only")
+      .value("FlowAware", IR2VecKind::FlowAware,
+             "Flow-aware encodings (includes data/control flow)")
+      .export_values();
+
+  nb::class_<PyVocab>(m, "Vocab");
+
+  m.def(
+      "loadVocab",
+      [](const std::string &vocabPath) {
+        return std::make_unique<PyVocab>(vocabPath);
+      },
+      nb::arg("vocabPath"), "Load an IR2Vec vocabulary from a JSON file",
+      nb::rv_policy::take_ownership);
+
+  nb::class_<PyIR2VecTool>(m, "IR2VecTool")
+      .def(nb::init<const std::string &, IR2VecKind, PyVocab &>(),
+           nb::arg("filename"), nb::arg("mode"), nb::arg("vocab"))
+      .def("getFuncNames", &PyIR2VecTool::getFuncNames,
+           "Get list of all defined functions in the module\n"
+           "Returns: list[str] - Function names")
+      .def("getFuncEmbMap", &PyIR2VecTool::getFuncEmbMap,
+           "Generate function-level embeddings for all functions\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{function_name: embedding vector}")
+      .def("getFuncEmb", &PyIR2VecTool::getFuncEmb, nb::arg("funcName"),
+           "Generate embedding for a single function by name\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: ndarray[float64] - Function embedding vector")
+      .def("getBBEmbMap", &PyIR2VecTool::getBBEmbMap, nb::arg("funcName"),
+           "Generate embeddings for all basic blocks in a function\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{basic_block_name: embedding vector}")
+      .def("getInstEmbMap", &PyIR2VecTool::getInstEmbMap, nb::arg("funcName"),
+           "Generate embeddings for all instructions in a function\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{instruction_string: embedding_vector}");
+
+  m.def(
+      "initEmbedding",
+      [](const std::string &filename, IR2VecKind mode, PyVocab &vocab) {
+        return std::make_unique<PyIR2VecTool>(filename, mode, vocab);
+      },
+      nb::arg("filename"), nb::arg("mode"), nb::arg("vocab"),
+      nb::rv_policy::take_ownership);
+}

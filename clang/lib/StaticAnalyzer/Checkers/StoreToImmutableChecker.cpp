@@ -26,52 +26,10 @@ class StoreToImmutableChecker : public Checker<check::Bind> {
   const BugType BT{this, "Write to immutable memory", "CERT Environment (ENV)"};
 
 public:
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
 };
 } // end anonymous namespace
-
-static bool isInitializationContext(const Stmt *S, CheckerContext &C) {
-  // Check if this is a DeclStmt (variable declaration)
-  if (isa<DeclStmt>(S))
-    return true;
-
-  // This part is specific for initialization of const lambdas pre-C++17.
-  // Lets look at the AST of the statement:
-  // ```
-  // const auto lambda = [](){};
-  // ```
-  //
-  // The relevant part of the AST for this case prior to C++17 is:
-  // ...
-  // `-DeclStmt
-  //   `-VarDecl
-  //     `-ExprWithCleanups
-  //       `-CXXConstructExpr
-  // ...
-  // In C++17 and later, the AST is different:
-  // ...
-  // `-DeclStmt
-  //   `-VarDecl
-  //     `-ImplicitCastExpr
-  //       `-LambdaExpr
-  //         |-CXXRecordDecl
-  //         `-CXXConstructExpr
-  // ...
-  // And even beside this, the statement `S` that is given to the checkBind
-  // callback is the VarDecl in C++17 and later, and the CXXConstructExpr in
-  // C++14 and before. So in order to support the C++14 we need the following
-  // ugly hack to detect whether this construction is used to initialize a
-  // variable.
-  //
-  // FIXME: This should be eliminated by improving the API of checkBind to
-  // ensure that it consistently passes the `VarDecl` (instead of the
-  // `CXXConstructExpr`) when the constructor call denotes the initialization
-  // of a variable with a lambda, or maybe less preferably, try the more
-  // invasive approach of passing the information forward to the checkers
-  // whether the current bind is an initialization or an assignment.
-  const auto *ConstructExp = dyn_cast<CXXConstructExpr>(S);
-  return ConstructExp && ConstructExp->isElidable();
-}
 
 static bool isEffectivelyConstRegion(const MemRegion *MR, CheckerContext &C) {
   if (isa<GlobalImmutableSpaceRegion>(MR))
@@ -128,6 +86,7 @@ getInnermostEnclosingConstDeclRegion(const MemRegion *MR, CheckerContext &C) {
 }
 
 void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
+                                        bool AtDeclInit,
                                         CheckerContext &C) const {
   // We are only interested in stores to memory regions
   const MemRegion *MR = Loc.getAsRegion();
@@ -136,9 +95,7 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
 
   // Skip variable declarations and initializations - we only want to catch
   // actual writes
-  // FIXME: If the API of checkBind would allow to distinguish between
-  // initialization and assignment, we could use that instead.
-  if (isInitializationContext(S, C))
+  if (AtDeclInit)
     return;
 
   // Check if the region is in the global immutable space

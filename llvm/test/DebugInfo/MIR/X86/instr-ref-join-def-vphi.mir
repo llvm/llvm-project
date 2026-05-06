@@ -152,8 +152,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$rdi', callee-saved-restored: true, debug-info-variable: '',

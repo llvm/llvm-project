@@ -18,10 +18,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 
@@ -444,8 +442,8 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   if (!getStreamer().getCurrentFragment())
     return Error(getTok().getLoc(), "expected section directive");
 
-  StringRef Label;
-  if (getParser().parseIdentifier(Label))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return Error(Loc, "expected identifier for procedure");
   if (getLexer().is(AsmToken::Identifier)) {
     StringRef nextVal = getTok().getString();
@@ -460,12 +458,12 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
       nextLoc = getTok().getLoc();
     }
   }
-  auto *Sym =
-      static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Label));
 
   // Define symbol as simple external function
-  Sym->setExternal(true);
-  Sym->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT);
+  auto *COFFSym = static_cast<MCSymbolCOFF *>(Sym);
+  COFFSym->setExternal(true);
+  COFFSym->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                   << COFF::SCT_COMPLEX_TYPE_SHIFT);
 
   bool Framed = false;
   if (getLexer().is(AsmToken::Identifier) &&
@@ -476,7 +474,7 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   }
   getStreamer().emitLabel(Sym, Loc);
 
-  CurrentProcedures.push_back(Label);
+  CurrentProcedures.push_back(Sym->getName());
   CurrentProceduresFramed.push_back(Framed);
   return false;
 }
@@ -511,8 +509,8 @@ bool COFFMasmParser::parseDirectiveAlias(StringRef Directive, SMLoc Loc) {
       getParser().parseAngleBracketString(ActualName))
     return Error(getTok().getLoc(), "expected <actualName>");
 
-  MCSymbol *Alias = getContext().getOrCreateSymbol(AliasName);
-  MCSymbol *Actual = getContext().getOrCreateSymbol(ActualName);
+  MCSymbol *Alias = getContext().parseSymbol(AliasName);
+  MCSymbol *Actual = getContext().parseSymbol(ActualName);
 
   getStreamer().emitWeakReference(Alias, Actual);
 
@@ -537,8 +535,6 @@ bool COFFMasmParser::parseSEHDirectiveEndProlog(StringRef Directive,
   return false;
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createCOFFMasmParser() { return new COFFMasmParser; }
-
-} // end namespace llvm
+MCAsmParserExtension *llvm::createCOFFMasmParser() {
+  return new COFFMasmParser;
+}

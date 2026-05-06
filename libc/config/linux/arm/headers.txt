@@ -1,5 +1,6 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.complex
+    libc.include.cpio
     libc.include.ctype
     libc.include.errno
     libc.include.fenv
@@ -18,6 +19,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.uchar
     libc.include.wchar
     libc.include.wctype
+
+    libc.include.sys_personality
 
     # Disabled due to epoll_wait syscalls not being available on this platform.
     # libc.include.sys_epoll

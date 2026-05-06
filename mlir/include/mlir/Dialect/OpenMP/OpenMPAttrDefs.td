@@ -42,10 +42,10 @@ def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
 //===----------------------------------------------------------------------===//
 
 def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
-  let parameters = (ins
-    OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
-    OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause
-  );
+  let parameters =
+      (ins OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
+          OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause,
+          OptionalParameter<"BoolAttr">:$automap);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }

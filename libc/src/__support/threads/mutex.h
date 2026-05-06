@@ -12,28 +12,6 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
-// Uses the platform specific specialization
-#define LIBC_THREAD_MODE_PLATFORM 0
-
-// Mutex guards nothing, used in single-threaded implementations
-#define LIBC_THREAD_MODE_SINGLE 1
-
-// Vendor provides implementation
-#define LIBC_THREAD_MODE_EXTERNAL 2
-
-#if !defined(LIBC_THREAD_MODE)
-#error LIBC_THREAD_MODE is undefined
-#endif // LIBC_THREAD_MODE
-
-#if LIBC_THREAD_MODE != LIBC_THREAD_MODE_PLATFORM &&                           \
-    LIBC_THREAD_MODE != LIBC_THREAD_MODE_SINGLE &&                             \
-    LIBC_THREAD_MODE != LIBC_THREAD_MODE_EXTERNAL
-#error LIBC_THREAD_MODE must be one of the following values: \
-LIBC_THREAD_MODE_PLATFORM, \
-LIBC_THREAD_MODE_SINGLE, \
-LIBC_THREAD_MODE_EXTERNAL.
-#endif
-
 #if LIBC_THREAD_MODE == LIBC_THREAD_MODE_PLATFORM
 
 // Platform independent code will include this header file which pulls
@@ -44,7 +22,7 @@ LIBC_THREAD_MODE_EXTERNAL.
 //
 // MutexError lock();
 // MutexError trylock();
-// MutexError timedlock(...);
+// MutexError timed_lock(...);
 // MutexError unlock();
 // MutexError reset(); // Used to reset inconsistent robust mutexes.
 //
@@ -62,9 +40,9 @@ LIBC_THREAD_MODE_EXTERNAL.
 // few global locks. So, to avoid static initialization order fiasco, we
 // want the constructors of the Mutex classes to be constexprs.
 
-#if defined(__linux__)
-#include "src/__support/threads/linux/mutex.h"
-#endif // __linux__
+#if defined(__linux__) || defined(__APPLE__)
+#include "src/__support/threads/unix_mutex.h"
+#endif
 
 #elif LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 
@@ -76,12 +54,15 @@ namespace LIBC_NAMESPACE_DECL {
 /// complete Mutex locks in general cannot be implemented on the GPU, or on some
 /// baremetal platforms. We simply define the Mutex interface and require that
 /// only a single thread executes code requiring a mutex lock.
+// TODO: declare abstract interface for timed_lock
 struct Mutex {
   LIBC_INLINE constexpr Mutex(bool, bool, bool, bool) {}
 
   LIBC_INLINE MutexError lock() { return MutexError::NONE; }
   LIBC_INLINE MutexError unlock() { return MutexError::NONE; }
   LIBC_INLINE MutexError reset() { return MutexError::NONE; }
+  LIBC_INLINE MutexError trylock() { return MutexError::NONE; }
+  LIBC_INLINE bool is_robust() const { return false; }
 };
 
 } // namespace LIBC_NAMESPACE_DECL

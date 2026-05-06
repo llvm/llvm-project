@@ -143,8 +143,7 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    mov v3.b[3], v0.b[0]
 ; CHECK-GI-NEXT:    mov v5.b[3], v1.b[0]
 ; CHECK-GI-NEXT:    uqsub v0.8b, v3.8b, v5.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x2]
+; CHECK-GI-NEXT:    str s0, [x2]
 ; CHECK-GI-NEXT:    ret
   %x = load <4 x i8>, ptr %px
   %y = load <4 x i8>, ptr %py
@@ -156,14 +155,12 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v2i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldrb w8, [x0]
-; CHECK-SD-NEXT:    ldrb w9, [x1]
-; CHECK-SD-NEXT:    ldrb w10, [x0, #1]
-; CHECK-SD-NEXT:    ldrb w11, [x1, #1]
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    mov v0.s[1], w10
-; CHECK-SD-NEXT:    mov v1.s[1], w11
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ldr h1, [x1]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x2]
@@ -208,14 +205,10 @@ define void @v4i16(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v2i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldrh w8, [x0]
-; CHECK-SD-NEXT:    ldrh w9, [x1]
-; CHECK-SD-NEXT:    ldrh w10, [x0, #2]
-; CHECK-SD-NEXT:    ldrh w11, [x1, #2]
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    mov v0.s[1], w10
-; CHECK-SD-NEXT:    mov v1.s[1], w11
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x2]

@@ -40,7 +40,7 @@ bool Mangled::IsMangledName(llvm::StringRef name) {
   return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
 }
 
-Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
+Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
@@ -172,8 +172,6 @@ GetItaniumDemangledStr(const char *M) {
 
     TrackingOutputBuffer OB(demangled_cstr, demangled_size);
     demangled_cstr = ipd.finishDemangle(&OB);
-    OB.NameInfo.SuffixRange.first = OB.NameInfo.QualifiersRange.second;
-    OB.NameInfo.SuffixRange.second = std::string_view(OB).size();
     info = std::move(OB.NameInfo);
 
     assert(demangled_cstr &&
@@ -395,10 +393,8 @@ void Mangled::Dump(Stream *s) const {
   if (m_mangled) {
     *s << ", mangled = " << m_mangled;
   }
-  if (m_demangled) {
-    const char *demangled = m_demangled.AsCString();
-    s->Printf(", demangled = %s", demangled[0] ? demangled : "<error>");
-  }
+  if (m_demangled)
+    s->Format(", demangled = {0}", m_demangled.GetStringRef());
 }
 
 // Dumps a debug version of this string with extra object and state information
@@ -430,9 +426,9 @@ lldb::LanguageType Mangled::GuessLanguage() const {
   Language::ForEach([this, &result](Language *l) {
     if (l->SymbolNameFitsToLanguage(*this)) {
       result = l->GetLanguageType();
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return result;
 }
@@ -557,4 +553,18 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
       file.AppendU32(strtab.Add(m_demangled));
       break;
   }
+}
+
+ConstString Mangled::GetBaseName() const {
+  const auto &demangled_info = GetDemangledInfo();
+  if (!demangled_info.has_value())
+    return {};
+
+  ConstString demangled_name = GetDemangledName();
+  if (!demangled_name)
+    return {};
+
+  const auto &range = demangled_info->BasenameRange;
+  return ConstString(
+      demangled_name.GetStringRef().slice(range.first, range.second));
 }

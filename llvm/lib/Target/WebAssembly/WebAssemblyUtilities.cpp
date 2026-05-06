@@ -113,7 +113,6 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
-    Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
   if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))

@@ -25,9 +25,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
-LLVM_ABI extern llvm::cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
-
 namespace llvm {
+
+LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
+
 namespace {
 
 class ProfileSummaryInfoTest : public testing::Test {

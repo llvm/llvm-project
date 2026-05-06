@@ -54,6 +54,26 @@ using namespace clang;
 using namespace sema;
 
 namespace {
+
+/// Return true if two associated-constraint sets are semantically equal.
+static bool HaveSameAssociatedConstraints(
+    Sema &SemaRef, const NamedDecl *Old, ArrayRef<AssociatedConstraint> OldACs,
+    const NamedDecl *New, ArrayRef<AssociatedConstraint> NewACs) {
+  if (OldACs.size() != NewACs.size())
+    return false;
+  if (OldACs.empty())
+    return true;
+
+  // General case: pairwise compare each associated constraint expression.
+  Sema::TemplateCompareNewDeclInfo NewInfo(New);
+  for (size_t I = 0, E = OldACs.size(); I != E; ++I)
+    if (!SemaRef.AreConstraintExpressionsEqual(
+            Old, OldACs[I].ConstraintExpr, NewInfo, NewACs[I].ConstraintExpr))
+      return false;
+
+  return true;
+}
+
 /// Tree transform to "extract" a transformed type from a class template's
 /// constructor to a deduction guide.
 class ExtractTypeForDeductionGuide
@@ -105,22 +125,21 @@ public:
     return false;
   }
 
-  QualType
-  RebuildTemplateSpecializationType(TemplateName Template,
-                                    SourceLocation TemplateNameLoc,
-                                    TemplateArgumentListInfo &TemplateArgs) {
+  QualType RebuildTemplateSpecializationType(
+      ElaboratedTypeKeyword Keyword, TemplateName Template,
+      SourceLocation TemplateNameLoc, TemplateArgumentListInfo &TemplateArgs) {
     if (!OuterInstantiationArgs ||
         !isa_and_present<TypeAliasTemplateDecl>(Template.getAsTemplateDecl()))
-      return Base::RebuildTemplateSpecializationType(Template, TemplateNameLoc,
-                                                     TemplateArgs);
+      return Base::RebuildTemplateSpecializationType(
+          Keyword, Template, TemplateNameLoc, TemplateArgs);
 
     auto *TATD = cast<TypeAliasTemplateDecl>(Template.getAsTemplateDecl());
     auto *Pattern = TATD;
     while (Pattern->getInstantiatedFromMemberTemplate())
       Pattern = Pattern->getInstantiatedFromMemberTemplate();
     if (!mightReferToOuterTemplateParameters(Pattern->getTemplatedDecl()))
-      return Base::RebuildTemplateSpecializationType(Template, TemplateNameLoc,
-                                                     TemplateArgs);
+      return Base::RebuildTemplateSpecializationType(
+          Keyword, Template, TemplateNameLoc, TemplateArgs);
 
     Decl *NewD =
         TypedefNameInstantiator->InstantiateTypeAliasTemplateDecl(TATD);
@@ -131,13 +150,14 @@ public:
     MaterializedTypedefs.push_back(NewTATD->getTemplatedDecl());
 
     return Base::RebuildTemplateSpecializationType(
-        TemplateName(NewTATD), TemplateNameLoc, TemplateArgs);
+        Keyword, TemplateName(NewTATD), TemplateNameLoc, TemplateArgs);
   }
 
   QualType TransformTypedefType(TypeLocBuilder &TLB, TypedefTypeLoc TL) {
     ASTContext &Context = SemaRef.getASTContext();
-    TypedefNameDecl *OrigDecl = TL.getTypedefNameDecl();
+    TypedefNameDecl *OrigDecl = TL.getDecl();
     TypedefNameDecl *Decl = OrigDecl;
+    const TypedefType *T = TL.getTypePtr();
     // Transform the underlying type of the typedef and clone the Decl only if
     // the typedef has a dependent context.
     bool InDependentContext = OrigDecl->getDeclContext()->isDependentContext();
@@ -155,7 +175,7 @@ public:
     //     };
     //   };
     if (OuterInstantiationArgs && InDependentContext &&
-        TL.getTypePtr()->isInstantiationDependentType()) {
+        T->isInstantiationDependentType()) {
       Decl = cast_if_present<TypedefNameDecl>(
           TypedefNameInstantiator->InstantiateTypedefNameDecl(
               OrigDecl, /*IsTypeAlias=*/isa<TypeAliasDecl>(OrigDecl)));
@@ -180,10 +200,17 @@ public:
       MaterializedTypedefs.push_back(Decl);
     }
 
-    QualType TDTy = Context.getTypedefType(Decl);
-    TypedefTypeLoc TypedefTL = TLB.push<TypedefTypeLoc>(TDTy);
-    TypedefTL.setNameLoc(TL.getNameLoc());
+    NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
+    if (QualifierLoc) {
+      QualifierLoc = getDerived().TransformNestedNameSpecifierLoc(QualifierLoc);
+      if (!QualifierLoc)
+        return QualType();
+    }
 
+    QualType TDTy = Context.getTypedefType(
+        T->getKeyword(), QualifierLoc.getNestedNameSpecifier(), Decl);
+    TLB.push<TypedefTypeLoc>(TDTy).set(TL.getElaboratedKeywordLoc(),
+                                       QualifierLoc, TL.getNameLoc());
     return TDTy;
   }
 };
@@ -193,7 +220,7 @@ public:
 // A deduction guide can be either a template or a non-template function
 // declaration. If \p TemplateParams is null, a non-template function
 // declaration will be created.
-NamedDecl *
+CXXDeductionGuideDecl *
 buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
                     TemplateParameterList *TemplateParams,
                     CXXConstructorDecl *Ctor, ExplicitSpecifier ES,
@@ -211,9 +238,51 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
       TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams();
 
   // Build the implicit deduction guide template.
+  QualType GuideType = TInfo->getType();
+
+  // In CUDA/HIP mode, avoid duplicate implicit guides that differ only in CUDA
+  // target attributes (same constructor signature and constraints).
+  if (IsImplicit && Ctor && SemaRef.getLangOpts().CUDA) {
+    SmallVector<AssociatedConstraint, 4> NewACs;
+    Ctor->getAssociatedConstraints(NewACs);
+
+    for (NamedDecl *Existing : DC->lookup(DeductionGuideName)) {
+      auto *ExistingFT = dyn_cast<FunctionTemplateDecl>(Existing);
+      auto *ExistingGuide =
+          ExistingFT
+              ? dyn_cast<CXXDeductionGuideDecl>(ExistingFT->getTemplatedDecl())
+              : dyn_cast<CXXDeductionGuideDecl>(Existing);
+      if (!ExistingGuide)
+        continue;
+
+      // Only consider guides that were also synthesized from a constructor.
+      auto *ExistingCtor = ExistingGuide->getCorrespondingConstructor();
+      if (!ExistingCtor)
+        continue;
+
+      // If the underlying constructors are overloads (different signatures once
+      // CUDA attributes are ignored), they should each get their own guides.
+      if (SemaRef.IsOverload(Ctor, ExistingCtor,
+                             /*UseMemberUsingDeclRules=*/false,
+                             /*ConsiderCudaAttrs=*/false))
+        continue;
+
+      // At this point, the constructors have the same signature ignoring CUDA
+      // attributes. Decide whether their associated constraints are also the
+      // same; only in that case do we treat one guide as a duplicate of the
+      // other.
+      SmallVector<AssociatedConstraint, 4> ExistingACs;
+      ExistingCtor->getAssociatedConstraints(ExistingACs);
+
+      if (HaveSameAssociatedConstraints(SemaRef, ExistingCtor, ExistingACs,
+                                        Ctor, NewACs))
+        return ExistingGuide;
+    }
+  }
+
   auto *Guide = CXXDeductionGuideDecl::Create(
-      SemaRef.Context, DC, LocStart, ES, Name, TInfo->getType(), TInfo, LocEnd,
-      Ctor, DeductionCandidate::Normal, FunctionTrailingRC);
+      SemaRef.Context, DC, LocStart, ES, Name, GuideType, TInfo, LocEnd, Ctor,
+      DeductionCandidate::Normal, FunctionTrailingRC);
   Guide->setImplicit(IsImplicit);
   Guide->setParams(Params);
 
@@ -238,7 +307,7 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
     GuideTemplate->setAccess(AS_public);
 
   DC->addDecl(GuideTemplate);
-  return GuideTemplate;
+  return Guide;
 }
 
 // Transform a given template type parameter `TTP`.
@@ -327,7 +396,7 @@ struct ConvertConstructorToDeductionGuideTransform {
   DeclarationName DeductionGuideName =
       SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(Template);
 
-  QualType DeducedType = SemaRef.Context.getTypeDeclType(Primary);
+  QualType DeducedType = SemaRef.Context.getCanonicalTagType(Primary);
 
   // Index adjustment to apply to convert depth-1 template parameters into
   // depth-0 template parameters.
@@ -501,7 +570,8 @@ struct ConvertConstructorToDeductionGuideTransform {
   }
 
   /// Build a deduction guide with the specified parameter types.
-  NamedDecl *buildSimpleDeductionGuide(MutableArrayRef<QualType> ParamTypes) {
+  CXXDeductionGuideDecl *
+  buildSimpleDeductionGuide(MutableArrayRef<QualType> ParamTypes) {
     SourceLocation Loc = Template->getLocation();
 
     // Build the requested type.
@@ -593,7 +663,10 @@ private:
     // context of the template), so implicit deduction guides can never collide
     // with explicit ones.
     QualType ReturnType = DeducedType;
-    TLB.pushTypeSpec(ReturnType).setNameLoc(Primary->getLocation());
+    auto TTL = TLB.push<TagTypeLoc>(ReturnType);
+    TTL.setElaboratedKeywordLoc(SourceLocation());
+    TTL.setQualifierLoc(NestedNameSpecifierLoc());
+    TTL.setNameLoc(Primary->getLocation());
 
     // Resolving a wording defect, we also inherit the variadicness of the
     // constructor.
@@ -622,41 +695,42 @@ private:
       ParmVarDecl *OldParam, MultiLevelTemplateArgumentList &Args,
       llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,
       bool TransformingOuterPatterns) {
-    TypeSourceInfo *OldDI = OldParam->getTypeSourceInfo();
-    TypeSourceInfo *NewDI;
-    if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
+    TypeSourceInfo *OldTSI = OldParam->getTypeSourceInfo();
+    TypeSourceInfo *NewTSI;
+    if (auto PackTL = OldTSI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
       // Expand out the one and only element in each inner pack.
       Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, 0u);
-      NewDI =
+      NewTSI =
           SemaRef.SubstType(PackTL.getPatternLoc(), Args,
                             OldParam->getLocation(), OldParam->getDeclName());
-      if (!NewDI)
+      if (!NewTSI)
         return nullptr;
-      NewDI =
-          SemaRef.CheckPackExpansion(NewDI, PackTL.getEllipsisLoc(),
+      NewTSI =
+          SemaRef.CheckPackExpansion(NewTSI, PackTL.getEllipsisLoc(),
                                      PackTL.getTypePtr()->getNumExpansions());
     } else
-      NewDI = SemaRef.SubstType(OldDI, Args, OldParam->getLocation(),
-                                OldParam->getDeclName());
-    if (!NewDI)
+      NewTSI = SemaRef.SubstType(OldTSI, Args, OldParam->getLocation(),
+                                 OldParam->getDeclName());
+    if (!NewTSI)
       return nullptr;
 
     // Extract the type. This (for instance) replaces references to typedef
     // members of the current instantiations with the definitions of those
     // typedefs, avoiding triggering instantiation of the deduced type during
     // deduction.
-    NewDI = ExtractTypeForDeductionGuide(
-                SemaRef, MaterializedTypedefs, NestedPattern,
-                TransformingOuterPatterns ? &Args : nullptr)
-                .transform(NewDI);
-
+    NewTSI = ExtractTypeForDeductionGuide(
+                 SemaRef, MaterializedTypedefs, NestedPattern,
+                 TransformingOuterPatterns ? &Args : nullptr)
+                 .transform(NewTSI);
+    if (!NewTSI)
+      return nullptr;
     // Resolving a wording defect, we also inherit default arguments from the
     // constructor.
     ExprResult NewDefArg;
     if (OldParam->hasDefaultArg()) {
       // We don't care what the value is (we won't use it); just create a
       // placeholder to indicate there is a default argument.
-      QualType ParamTy = NewDI->getType();
+      QualType ParamTy = NewTSI->getType();
       NewDefArg = new (SemaRef.Context)
           OpaqueValueExpr(OldParam->getDefaultArgRange().getBegin(),
                           ParamTy.getNonLValueExprType(SemaRef.Context),
@@ -665,13 +739,13 @@ private:
                                                              : VK_PRValue);
     }
     // Handle arrays and functions decay.
-    auto NewType = NewDI->getType();
+    auto NewType = NewTSI->getType();
     if (NewType->isArrayType() || NewType->isFunctionType())
       NewType = SemaRef.Context.getDecayedType(NewType);
 
     ParmVarDecl *NewParam = ParmVarDecl::Create(
         SemaRef.Context, DC, OldParam->getInnerLocStart(),
-        OldParam->getLocation(), OldParam->getIdentifier(), NewType, NewDI,
+        OldParam->getLocation(), OldParam->getIdentifier(), NewType, NewTSI,
         OldParam->getStorageClass(), NewDefArg.get());
     NewParam->setScopeInfo(OldParam->getFunctionScopeDepth(),
                            OldParam->getFunctionScopeIndex());
@@ -954,8 +1028,9 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
           Context.getDeducedTemplateSpecializationType(
-              TemplateName(AliasTemplate), /*DeducedType=*/QualType(),
-              /*IsDependent=*/true),
+              DeducedKind::DeducedAsDependent,
+              /*DeducedAsType=*/QualType(), ElaboratedTypeKeyword::None,
+              TemplateName(AliasTemplate)),
           AliasTemplate->getLocation()), // template specialization type whose
                                          // arguments will be deduced.
       Context.getTrivialTypeSourceInfo(
@@ -970,10 +1045,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
 getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
-  // Unwrap the sugared ElaboratedType.
-  auto RhsType = AliasTemplate->getTemplatedDecl()
-                     ->getUnderlyingType()
-                     .getSingleStepDesugaredType(SemaRef.Context);
+  auto RhsType = AliasTemplate->getTemplatedDecl()->getUnderlyingType();
   TemplateDecl *Template = nullptr;
   llvm::ArrayRef<TemplateArgument> AliasRhsTemplateArgs;
   if (const auto *TST = RhsType->getAs<TemplateSpecializationType>()) {
@@ -987,8 +1059,8 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
     //   using AliasFoo = Foo<bool>;
-    if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
-            RT->getAsCXXRecordDecl())) {
+    if (const auto *CTSD =
+            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl())) {
       Template = CTSD->getSpecializedTemplate();
       AliasRhsTemplateArgs = CTSD->getTemplateArgs().asArray();
     }
@@ -1010,12 +1082,16 @@ bool IsNonDeducedArgument(const TemplateArgument &TA) {
 }
 
 // Build deduction guides for a type alias template from the given underlying
-// deduction guide F.
-FunctionTemplateDecl *
-BuildDeductionGuideForTypeAlias(Sema &SemaRef,
-                                TypeAliasTemplateDecl *AliasTemplate,
-                                FunctionTemplateDecl *F, SourceLocation Loc) {
+// source deduction guide.
+CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
+    Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
+    CXXDeductionGuideDecl *SourceDeductionGuide, SourceLocation Loc) {
+  FunctionTemplateDecl *F =
+      SourceDeductionGuide->getDescribedFunctionTemplate();
+  assert(F && "deduction guide for alias template must be a function template");
+
   LocalInstantiationScope Scope(SemaRef);
+  Sema::NonSFINAEContext _1(SemaRef);
   Sema::InstantiatingTemplate BuildingDeductionGuides(
       SemaRef, AliasTemplate->getLocation(), F,
       Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});
@@ -1044,17 +1120,26 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   //
   // Instead, we need to canonicalize both against A, i.e. A<A<T>> and A<A<U>>,
   // such that T can be deduced as U.
-  auto RType = F->getTemplatedDecl()->getReturnType();
+  auto RType = SourceDeductionGuide->getReturnType();
   // The (trailing) return type of the deduction guide.
-  const TemplateSpecializationType *FReturnType =
-      RType->getAs<TemplateSpecializationType>();
-  if (const auto *InjectedCNT = RType->getAs<InjectedClassNameType>())
+  const auto *FReturnType = RType->getAs<TemplateSpecializationType>();
+  if (const auto *ICNT = RType->getAsCanonical<InjectedClassNameType>())
     // implicitly-generated deduction guide.
-    FReturnType = InjectedCNT->getInjectedTST();
-  else if (const auto *ET = RType->getAs<ElaboratedType>())
-    // explicit deduction guide.
-    FReturnType = ET->getNamedType()->getAsNonAliasTemplateSpecializationType();
-  assert(FReturnType && "expected to see a return type");
+    FReturnType = cast<TemplateSpecializationType>(
+        ICNT->getDecl()->getCanonicalTemplateSpecializationType(
+            SemaRef.Context));
+
+  ArrayRef<TemplateArgument> FReturnTemplateArgs;
+  if (FReturnType) {
+    FReturnTemplateArgs = FReturnType->template_arguments();
+  } else if (const auto *RT = RType->getAs<RecordType>()) {
+    // If the return type is a non-dependent class template specialization,
+    // it might be resolved to a RecordType.
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
+      FReturnTemplateArgs = CTSD->getTemplateArgs().asArray();
+  }
+  assert(!FReturnTemplateArgs.empty() && "expected to see template arguments");
+
   // Deduce template arguments of the deduction guide f from the RHS of
   // the alias.
   //
@@ -1086,7 +1171,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // performing deduction for rest of arguments to align with the C++
   // standard.
   SemaRef.DeduceTemplateArguments(
-      F->getTemplateParameters(), FReturnType->template_arguments(),
+      F->getTemplateParameters(), FReturnTemplateArgs,
       AliasRhsTemplateArgs, TDeduceInfo, DeduceResults,
       /*NumberOfArgumentsMustMatch=*/false);
 
@@ -1164,17 +1249,39 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
+    auto *TP = F->getTemplateParameters()->getParam(Index);
     if (IsNonDeducedArgument(D)) {
       // 2): Non-deduced template parameters would be substituted later.
       continue;
     }
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
-    TemplateArgumentLoc Output;
-    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
-      assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
-             "InstantiatedArgs must be null before setting");
-      TemplateArgsForBuildingFPrime[Index] = Output.getArgument();
+    TemplateArgumentListInfo Output;
+    if (SemaRef.SubstTemplateArguments(Input, Args, Output))
+      return nullptr;
+    assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
+           "InstantiatedArgs must be null before setting");
+    // CheckTemplateArgument is necessary for NTTP initializations.
+    // FIXME: We may want to call CheckTemplateArguments instead, but we cannot
+    // match packs as usual, since packs can appear in the middle of the
+    // parameter list of a synthesized CTAD guide. See also the FIXME in
+    // test/SemaCXX/cxx20-ctad-type-alias.cpp:test25.
+    Sema::CheckTemplateArgumentInfo CTAI;
+    for (auto TA : Output.arguments())
+      if (SemaRef.CheckTemplateArgument(
+              TP, TA, F, F->getLocation(), F->getLocation(),
+              /*ArgumentPackIndex=*/-1, CTAI,
+              Sema::CheckTemplateArgumentKind::CTAK_Specified))
+        return nullptr;
+    if (Input.getArgument().getKind() == TemplateArgument::Pack) {
+      // We will substitute the non-deduced template arguments with these
+      // transformed (unpacked at this point) arguments, where that substitution
+      // requires a pack for the corresponding parameter packs.
+      TemplateArgsForBuildingFPrime[Index] =
+          TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted);
+    } else {
+      assert(Output.arguments().size() == 1);
+      TemplateArgsForBuildingFPrime[Index] = CTAI.SugaredConverted[0];
     }
   }
 
@@ -1213,25 +1320,26 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
         buildAssociatedConstraints(SemaRef, F, AliasTemplate, DeduceResults,
                                    FirstUndeducedParamIdx, IsDeducible);
 
-    auto *FPrimeTemplateParamList = TemplateParameterList::Create(
-        Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
-        AliasTemplate->getTemplateParameters()->getLAngleLoc(),
-        FPrimeTemplateParams,
-        AliasTemplate->getTemplateParameters()->getRAngleLoc(),
-        /*RequiresClause=*/RequiresClause);
-    auto *Result = cast<FunctionTemplateDecl>(buildDeductionGuide(
+    TemplateParameterList *FPrimeTemplateParamList = nullptr;
+    if (!FPrimeTemplateParams.empty())
+      FPrimeTemplateParamList = TemplateParameterList::Create(
+          Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
+          AliasTemplate->getTemplateParameters()->getLAngleLoc(),
+          FPrimeTemplateParams,
+          AliasTemplate->getTemplateParameters()->getRAngleLoc(),
+          /*RequiresClause=*/RequiresClause);
+
+    auto *DGuide = buildDeductionGuide(
         SemaRef, AliasTemplate, FPrimeTemplateParamList,
         GG->getCorrespondingConstructor(), GG->getExplicitSpecifier(),
         GG->getTypeSourceInfo(), AliasTemplate->getBeginLoc(),
         AliasTemplate->getLocation(), AliasTemplate->getEndLoc(),
-        F->isImplicit()));
-    auto *DGuide = cast<CXXDeductionGuideDecl>(Result->getTemplatedDecl());
+        F->isImplicit());
     DGuide->setDeductionCandidateKind(GG->getDeductionCandidateKind());
-    DGuide->setSourceDeductionGuide(
-        cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
+    DGuide->setSourceDeductionGuide(SourceDeductionGuide);
     DGuide->setSourceDeductionGuideKind(
         CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
-    return Result;
+    return DGuide;
   }
   return nullptr;
 }
@@ -1309,16 +1417,16 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     // The **aggregate** deduction guides are handled in a different code path
     // (DeclareAggregateDeductionGuideFromInitList), which involves the tricky
     // cache.
-    if (cast<CXXDeductionGuideDecl>(F->getTemplatedDecl())
-            ->getDeductionCandidateKind() == DeductionCandidate::Aggregate)
+    auto *DGuide = cast<CXXDeductionGuideDecl>(F->getTemplatedDecl());
+    if (DGuide->getDeductionCandidateKind() == DeductionCandidate::Aggregate)
       continue;
 
-    BuildDeductionGuideForTypeAlias(SemaRef, AliasTemplate, F, Loc);
+    BuildDeductionGuideForTypeAlias(SemaRef, AliasTemplate, DGuide, Loc);
   }
 }
 
 // Build an aggregate deduction guide for a type alias template.
-FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
+CXXDeductionGuideDecl *DeclareAggregateDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     MutableArrayRef<QualType> ParamTypes, SourceLocation Loc) {
   TemplateDecl *RHSTemplate =
@@ -1342,7 +1450,7 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
     return nullptr;
 
   for (TypedefNameDecl *TD : TypedefDecls)
-    TD->setDeclContext(RHSDeductionGuide->getTemplatedDecl());
+    TD->setDeclContext(RHSDeductionGuide);
 
   return BuildDeductionGuideForTypeAlias(SemaRef, AliasTemplate,
                                          RHSDeductionGuide, Loc);
@@ -1350,7 +1458,7 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
 
 } // namespace
 
-FunctionTemplateDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
+CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
     TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
     SourceLocation Loc) {
   llvm::FoldingSetNodeID ID;
@@ -1360,18 +1468,15 @@ FunctionTemplateDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
   unsigned Hash = ID.ComputeHash();
 
   auto Found = AggregateDeductionCandidates.find(Hash);
-  if (Found != AggregateDeductionCandidates.end()) {
-    CXXDeductionGuideDecl *GD = Found->getSecond();
-    return GD->getDescribedFunctionTemplate();
-  }
+  if (Found != AggregateDeductionCandidates.end())
+    return Found->getSecond();
 
   if (auto *AliasTemplate = llvm::dyn_cast<TypeAliasTemplateDecl>(Template)) {
-    if (auto *FTD = DeclareAggregateDeductionGuideForTypeAlias(
+    if (auto *GD = DeclareAggregateDeductionGuideForTypeAlias(
             *this, AliasTemplate, ParamTypes, Loc)) {
-      auto *GD = cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
       GD->setDeductionCandidateKind(DeductionCandidate::Aggregate);
       AggregateDeductionCandidates[Hash] = GD;
-      return FTD;
+      return GD;
     }
   }
 
@@ -1406,13 +1511,11 @@ FunctionTemplateDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
       Transform.NestedPattern ? Transform.NestedPattern : Transform.Template;
   ContextRAII SavedContext(*this, Pattern->getTemplatedDecl());
 
-  auto *FTD = cast<FunctionTemplateDecl>(
-      Transform.buildSimpleDeductionGuide(ParamTypes));
+  CXXDeductionGuideDecl *GD = Transform.buildSimpleDeductionGuide(ParamTypes);
   SavedContext.pop();
-  auto *GD = cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
   GD->setDeductionCandidateKind(DeductionCandidate::Aggregate);
   AggregateDeductionCandidates[Hash] = GD;
-  return FTD;
+  return GD;
 }
 
 void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
@@ -1421,10 +1524,13 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     DeclareImplicitDeductionGuidesForTypeAlias(*this, AliasTemplate, Loc);
     return;
   }
-  if (CXXRecordDecl *DefRecord =
-          cast<CXXRecordDecl>(Template->getTemplatedDecl())->getDefinition()) {
+  CXXRecordDecl *DefRecord =
+      dyn_cast_or_null<CXXRecordDecl>(Template->getTemplatedDecl());
+  if (!DefRecord)
+    return;
+  if (const CXXRecordDecl *Definition = DefRecord->getDefinition()) {
     if (TemplateDecl *DescribedTemplate =
-            DefRecord->getDescribedClassTemplate())
+            Definition->getDescribedClassTemplate())
       Template = DescribedTemplate;
   }
 
@@ -1501,10 +1607,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
 
   //    -- An additional function template derived as above from a hypothetical
   //    constructor C(C), called the copy deduction candidate.
-  cast<CXXDeductionGuideDecl>(
-      cast<FunctionTemplateDecl>(
-          Transform.buildSimpleDeductionGuide(Transform.DeducedType))
-          ->getTemplatedDecl())
+  Transform.buildSimpleDeductionGuide(Transform.DeducedType)
       ->setDeductionCandidateKind(DeductionCandidate::Copy);
 
   SavedContext.pop();

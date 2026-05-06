@@ -86,15 +86,6 @@ void NormalFunc(int i, float f) {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
-#pragma acc serial reduction(|: f)
-  while(true);
-  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
-  // CHECK-NEXT: reduction clause Operator: |
-  // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
-  // CHECK-NEXT: WhileStmt
-  // CHECK-NEXT: CXXBoolLiteralExpr
-  // CHECK-NEXT: NullStmt
-
 
 #pragma acc parallel reduction(^: i)
   while(true);
@@ -283,16 +274,6 @@ void TemplFunc() {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
-#pragma acc parallel reduction(&: T::SomeFloat)
-  while(true);
-  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: reduction clause Operator: &
-  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
-  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
-  // CHECK-NEXT: WhileStmt
-  // CHECK-NEXT: CXXBoolLiteralExpr
-  // CHECK-NEXT: NullStmt
-
 #pragma acc serial reduction(|: i)
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
@@ -471,14 +452,6 @@ void TemplFunc() {
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
   // CHECK-NEXT: reduction clause Operator: min
   // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
-  // CHECK-NEXT: WhileStmt
-  // CHECK-NEXT: CXXBoolLiteralExpr
-  // CHECK-NEXT: NullStmt
-
-  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
-  // CHECK-NEXT: reduction clause Operator: &
-  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
-  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt

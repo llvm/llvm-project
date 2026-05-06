@@ -10,14 +10,14 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/wcs_to_integer.h"
+#include "src/__support/str_to_integer.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, wcstol,
                    (const wchar_t *__restrict str, wchar_t **__restrict str_end,
                     int base)) {
-  auto result = internal::wcstointeger<long>(str, base);
+  auto result = internal::strtointeger<long>(str, base);
   if (result.has_error())
     libc_errno = result.error;
 

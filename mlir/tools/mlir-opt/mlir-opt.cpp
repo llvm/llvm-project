@@ -89,7 +89,6 @@ void registerTestComposeSubView();
 void registerTestCompositePass();
 void registerTestControlFlowSink();
 void registerTestConvertToSPIRVPass();
-void registerTestDataLayoutPropagation();
 void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
@@ -97,9 +96,10 @@ void registerTestDiagnosticsPass();
 void registerTestDiagnosticsMetadataPass();
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
+void registerTestRemarkPass();
 void registerTestEmulateNarrowTypePass();
-void registerTestExpandMathPass();
 void registerTestFooAnalysisPass();
+void registerTestStagedAnalysesPass();
 void registerTestComposeSubView();
 void registerTestMultiBuffering();
 void registerTestIRVisitorsPass();
@@ -131,14 +131,15 @@ void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestMemRefToLLVMWithTransforms();
 void registerTestReshardingPartitionPass();
-void registerTestShardSimplificationsPass();
 void registerTestMultiBuffering();
 void registerTestNextAccessPass();
 void registerTestNVGPULowerings();
+void registerTestOpenACC();
 void registerTestOneShotModuleBufferizePass();
 void registerTestOpaqueLoc();
 void registerTestOpLoweringPasses();
 void registerTestPadFusion();
+void registerTestParallelLoopUnrollingPass();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUpliftWhileToFor();
 void registerTestSCFUtilsPass();
@@ -150,6 +151,7 @@ void registerTestSliceAnalysisPass();
 void registerTestSPIRVCPURunnerPipeline();
 void registerTestSPIRVFuncSignatureConversion();
 void registerTestSPIRVVectorUnrolling();
+void registerTestStridedMetadataRangeAnalysisPass();
 void registerTestTensorCopyInsertionPass();
 void registerTestTensorLikeAndBufferLikePass();
 void registerTestTensorTransforms();
@@ -179,7 +181,7 @@ void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
-void registerTestPasses() {
+static void registerTestPasses() {
   registerCloneTestPasses();
   registerConvertToTargetEnvPass();
   registerPrintTosaAvailabilityPass();
@@ -236,7 +238,6 @@ void registerTestPasses() {
   mlir::test::registerTestCompositePass();
   mlir::test::registerTestControlFlowSink();
   mlir::test::registerTestConvertToSPIRVPass();
-  mlir::test::registerTestDataLayoutPropagation();
   mlir::test::registerTestDataLayoutQuery();
   mlir::test::registerTestDeadCodeAnalysisPass();
   mlir::test::registerTestDecomposeCallGraphTypes();
@@ -244,9 +245,10 @@ void registerTestPasses() {
   mlir::test::registerTestDiagnosticsMetadataPass();
   mlir::test::registerTestDominancePass();
   mlir::test::registerTestDynamicPipelinePass();
+  mlir::test::registerTestRemarkPass();
   mlir::test::registerTestEmulateNarrowTypePass();
-  mlir::test::registerTestExpandMathPass();
   mlir::test::registerTestFooAnalysisPass();
+  mlir::test::registerTestStagedAnalysesPass();
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestIRVisitorsPass();
@@ -278,14 +280,15 @@ void registerTestPasses() {
   mlir::test::registerTestMemRefStrideCalculation();
   mlir::test::registerTestMemRefToLLVMWithTransforms();
   mlir::test::registerTestReshardingPartitionPass();
-  mlir::test::registerTestShardSimplificationsPass();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestNextAccessPass();
   mlir::test::registerTestNVGPULowerings();
+  mlir::test::registerTestOpenACC();
   mlir::test::registerTestOneShotModuleBufferizePass();
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestOpLoweringPasses();
   mlir::test::registerTestPadFusion();
+  mlir::test::registerTestParallelLoopUnrollingPass();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUpliftWhileToFor();
   mlir::test::registerTestSCFUtilsPass();
@@ -297,6 +300,7 @@ void registerTestPasses() {
   mlir::test::registerTestSPIRVCPURunnerPipeline();
   mlir::test::registerTestSPIRVFuncSignatureConversion();
   mlir::test::registerTestSPIRVVectorUnrolling();
+  mlir::test::registerTestStridedMetadataRangeAnalysisPass();
   mlir::test::registerTestTensorCopyInsertionPass();
   mlir::test::registerTestTensorLikeAndBufferLikePass();
   mlir::test::registerTestTensorTransforms();

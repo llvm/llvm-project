@@ -23,10 +23,13 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <chrono>
 #include <ranges>
+
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 using namespace std::chrono;
 

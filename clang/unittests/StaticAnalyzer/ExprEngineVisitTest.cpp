@@ -55,11 +55,13 @@ public:
                         ", Stmt = " + S->getStmtClassName());
   }
 
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const {
     emitErrorReport(C, Bug,
                     "checkBind: Loc = " + dumpToString(Loc) +
                         ", Val = " + dumpToString(Val) +
-                        ", Stmt = " + S->getStmtClassName());
+                        ", Stmt = " + S->getStmtClassName() +
+                        ", AtDeclInit = " + (AtDeclInit ? "true" : "false"));
   }
 
 private:
@@ -140,7 +142,7 @@ TEST(ExprEngineVisitTest, checkLocationAndBind) {
                        "Stmt = ImplicitCastExpr";
   std::string BindMsg =
       "checkBind: Loc = &MyClassWrite, Val = lazyCompoundVal{0x0,MyClassRead}, "
-      "Stmt = CXXOperatorCallExpr";
+      "Stmt = CXXOperatorCallExpr, AtDeclInit = false";
   std::size_t LocPos = Diags.find(LocMsg);
   std::size_t BindPos = Diags.find(BindMsg);
   EXPECT_NE(LocPos, std::string::npos);
@@ -148,6 +150,22 @@ TEST(ExprEngineVisitTest, checkLocationAndBind) {
   // Check order: first checkLocation is called, then checkBind.
   // In the diagnosis, however, the messages appear in reverse order.
   EXPECT_TRUE(LocPos > BindPos);
+}
+
+TEST(ExprEngineVisitTest, checkLocationAndBindInitialization) {
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCode<addMemAccessChecker>(R"(
+    class MyClass{
+    public:
+      int Value;
+    };
+    void top(MyClass param) {
+      MyClass MyClassWrite = param;
+    }
+  )",
+                                                    Diags));
+
+  EXPECT_TRUE(StringRef(Diags).contains("AtDeclInit = true"));
 }
 
 } // namespace

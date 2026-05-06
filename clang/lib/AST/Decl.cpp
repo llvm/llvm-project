@@ -1193,6 +1193,7 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
   case Decl::ModuleOwnershipKind::Unowned:
   case Decl::ModuleOwnershipKind::ReachableWhenImported:
   case Decl::ModuleOwnershipKind::ModulePrivate:
+  case Decl::ModuleOwnershipKind::VisiblePromoted:
     return false;
   case Decl::ModuleOwnershipKind::Visible:
   case Decl::ModuleOwnershipKind::VisibleWhenImported:
@@ -1604,17 +1605,20 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   // We have just computed the linkage for this decl. By induction we know
   // that all other computed linkages match, check that the one we just
   // computed also does.
-  NamedDecl *Old = nullptr;
-  for (auto *I : D->redecls()) {
-    auto *T = cast<NamedDecl>(I);
-    if (T == D)
+  // We can't assume the redecl chain is well formed at this point,
+  // so keep track of already visited declarations.
+  for (llvm::SmallPtrSet<const Decl *, 4> AlreadyVisited{D}; /**/; /**/) {
+    D = cast<NamedDecl>(const_cast<NamedDecl *>(D)->getNextRedeclarationImpl());
+    if (!AlreadyVisited.insert(D).second)
+      break;
+    if (D->isInvalidDecl())
       continue;
-    if (!T->isInvalidDecl() && T->hasCachedLinkage()) {
-      Old = T;
+    if (auto OldLinkage = D->getCachedLinkage();
+        OldLinkage != Linkage::Invalid) {
+      assert(LV.getLinkage() == OldLinkage);
       break;
     }
   }
-  assert(!Old || Old->getCachedLinkage() == D->getCachedLinkage());
 #endif
 
   return LV;
@@ -1693,9 +1697,9 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     return;
   }
   printNestedNameSpecifier(OS, P);
-  if (getDeclName())
-    OS << *this;
-  else {
+  if (getDeclName()) {
+    printName(OS, P);
+  } else {
     // Give the printName override a chance to pick a different name before we
     // fall back to "(anonymous)".
     SmallString<64> NameBuffer;
@@ -1739,6 +1743,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
   // Collect named contexts.
   DeclarationName NameInScope = getDeclName();
   for (; Ctx; Ctx = Ctx->getParent()) {
+    if (P.Callbacks && P.Callbacks->isScopeVisible(Ctx))
+      continue;
+
     // Suppress anonymous namespace if requested.
     if (P.SuppressUnwrittenScope && isa<NamespaceDecl>(Ctx) &&
         cast<NamespaceDecl>(Ctx)->isAnonymousNamespace())
@@ -1747,9 +1754,11 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
     // Suppress inline namespace if it doesn't make the result ambiguous.
     if (Ctx->isInlineNamespace() && NameInScope) {
       if (P.SuppressInlineNamespace ==
-              PrintingPolicy::SuppressInlineNamespaceMode::All ||
+              llvm::to_underlying(
+                  PrintingPolicy::SuppressInlineNamespaceMode::All) ||
           (P.SuppressInlineNamespace ==
-               PrintingPolicy::SuppressInlineNamespaceMode::Redundant &&
+               llvm::to_underlying(
+                   PrintingPolicy::SuppressInlineNamespaceMode::Redundant) &&
            cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(
                NameInScope))) {
         continue;
@@ -1783,11 +1792,18 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       }
       else
         OS << *ND;
-    } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
-      if (!RD->getIdentifier())
-        OS << "(anonymous " << RD->getKindName() << ')';
-      else
-        OS << *RD;
+    } else if (const auto *RD = llvm::dyn_cast<RecordDecl>(DC)) {
+      PrintingPolicy Copy(P);
+      // As part of a scope we want to print anonymous names as:
+      // ..::(anonymous struct)::..
+      //
+      // I.e., suppress tag locations, suppress leading keyword, *don't*
+      // suppress tag in name
+      Copy.SuppressTagKeyword = true;
+      Copy.SuppressTagKeywordInAnonNames = false;
+      Copy.AnonymousTagNameStyle =
+          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
+      RD->printName(OS, Copy);
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
@@ -1883,18 +1899,13 @@ bool NamedDecl::declarationReplaces(const NamedDecl *OldD,
 
   // Using declarations can be replaced if they import the same name from the
   // same context.
-  if (const auto *UD = dyn_cast<UsingDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-               cast<UsingDecl>(OldD)->getQualifier());
-  }
-  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UUVD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-                        cast<UnresolvedUsingValueDecl>(OldD)->getQualifier());
-  }
+  if (const auto *UD = dyn_cast<UsingDecl>(this))
+    return UD->getQualifier().getCanonical() ==
+
+           cast<UsingDecl>(OldD)->getQualifier().getCanonical();
+  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this))
+    return UUVD->getQualifier().getCanonical() ==
+           cast<UnresolvedUsingValueDecl>(OldD)->getQualifier().getCanonical();
 
   if (isRedeclarable(getKind())) {
     if (getCanonicalDecl() != OldD->getCanonicalDecl())
@@ -1982,8 +1993,10 @@ bool NamedDecl::isCXXInstanceMember() const {
 
 template <typename DeclT>
 static SourceLocation getTemplateOrInnerLocStart(const DeclT *decl) {
-  if (decl->getNumTemplateParameterLists() > 0)
-    return decl->getTemplateParameterList(0)->getTemplateLoc();
+  if (ArrayRef<TemplateParameterList *> TPLs =
+          decl->getTemplateParameterLists();
+      !TPLs.empty())
+    return TPLs.front()->getTemplateLoc();
   return decl->getInnerLocStart();
 }
 
@@ -2053,48 +2066,12 @@ SourceLocation DeclaratorDecl::getOuterLocStart() const {
   return getTemplateOrInnerLocStart(this);
 }
 
-// Helper function: returns true if QT is or contains a type
-// having a postfix component.
-static bool typeIsPostfix(QualType QT) {
-  while (true) {
-    const Type* T = QT.getTypePtr();
-    switch (T->getTypeClass()) {
-    default:
-      return false;
-    case Type::Pointer:
-      QT = cast<PointerType>(T)->getPointeeType();
-      break;
-    case Type::BlockPointer:
-      QT = cast<BlockPointerType>(T)->getPointeeType();
-      break;
-    case Type::MemberPointer:
-      QT = cast<MemberPointerType>(T)->getPointeeType();
-      break;
-    case Type::LValueReference:
-    case Type::RValueReference:
-      QT = cast<ReferenceType>(T)->getPointeeType();
-      break;
-    case Type::PackExpansion:
-      QT = cast<PackExpansionType>(T)->getPattern();
-      break;
-    case Type::Paren:
-    case Type::ConstantArray:
-    case Type::DependentSizedArray:
-    case Type::IncompleteArray:
-    case Type::VariableArray:
-    case Type::FunctionProto:
-    case Type::FunctionNoProto:
-      return true;
-    }
-  }
-}
-
 SourceRange DeclaratorDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
     // If the declaration has no name or the type extends past the name take the
     // end location of the type.
-    if (!getDeclName() || typeIsPostfix(TInfo->getType()))
+    if (!getDeclName() || TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getOuterLocStart(), RangeEnd);
@@ -2863,8 +2840,8 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
 
 bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
-  auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  auto *D = getType()->getAsRecordDecl();
+  if (!D || !D->hasFlexibleArrayMember())
     return false;
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List)
@@ -2878,8 +2855,8 @@ bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
 
 CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
-  auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  auto *RD = getType()->getAsRecordDecl();
+  if (!RD || !RD->hasFlexibleArrayMember())
     return CharUnits::Zero();
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List || List->getNumInits() == 0)
@@ -2889,7 +2866,7 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   if (!InitTy)
     return CharUnits::Zero();
   CharUnits FlexibleArraySize = Ctx.getTypeSizeInChars(InitTy);
-  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Ty->getDecl());
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(RD);
   CharUnits FlexibleArrayOffset =
       Ctx.toCharUnitsFromBits(RL.getFieldOffset(RL.getFieldCount() - 1));
   if (FlexibleArrayOffset + FlexibleArraySize < RL.getSize())
@@ -2941,6 +2918,33 @@ VarDecl::setInstantiationOfStaticDataMember(VarDecl *VD,
   getASTContext().setInstantiatedFromStaticDataMember(this, VD, TSK);
 }
 
+void VarDecl::assignAddressSpace(const ASTContext &Ctxt, LangAS AS) {
+  QualType Type = getType();
+  if (Type.hasAddressSpace())
+    return;
+  if (Type->isDependentType())
+    return;
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this)
+             ? !Type->isArrayType()
+             : !isa<DecayedType>(Type));
+  Type = Ctxt.getAddrSpaceQualType(Type, AS);
+  // Apply any qualifiers (including address space) from the array type to
+  // the element type. This implements C99 6.7.3p8: "If the specification of
+  // an array type includes any type qualifiers, the element type is so
+  // qualified, not the array type."
+  if (Type->isArrayType())
+    Type = QualType(Ctxt.getAsArrayType(Type), 0);
+  setType(Type);
+}
+
+void VarDecl::deduceParmAddressSpace(const ASTContext &Ctxt) {
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this));
+  if (Ctxt.getLangOpts().OpenCL)
+    assignAddressSpace(Ctxt, LangAS::opencl_private);
+}
+
 //===----------------------------------------------------------------------===//
 // ParmVarDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -2990,8 +2994,8 @@ bool ParmVarDecl::isDestroyedInCallee() const {
 
   // FIXME: isParamDestroyedInCallee() should probably imply
   // isDestructedType()
-  const auto *RT = getType()->getAs<RecordType>();
-  if (RT && RT->getDecl()->isParamDestroyedInCallee() &&
+  const auto *RT = getType()->getAsCanonical<RecordType>();
+  if (RT && RT->getDecl()->getDefinitionOrSelf()->isParamDestroyedInCallee() &&
       getType().isDestructedType())
     return true;
 
@@ -3182,7 +3186,7 @@ void FunctionDecl::DefaultedOrDeletedFunctionInfo::setDeletedMessage(
 }
 
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
-FunctionDecl::getDefalutedOrDeletedInfo() const {
+FunctionDecl::getDefaultedOrDeletedInfo() const {
   return FunctionDeclBits.HasDefaultedOrDeletedInfo ? DefaultedOrDeletedInfo
                                                     : nullptr;
 }
@@ -3315,6 +3319,10 @@ bool FunctionDecl::isImmediateEscalating() const {
       CD && CD->isInheritingConstructor())
     return CD->getInheritedConstructor().getConstructor();
 
+  // Destructors are not immediate escalating.
+  if (isa<CXXDestructorDecl>(this))
+    return false;
+
   // - a function that results from the instantiation of a templated entity
   // defined with the constexpr specifier.
   TemplatedKind TK = getTemplatedKind();
@@ -3378,11 +3386,11 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
     return false;
 
   return llvm::StringSwitch<bool>(getName())
-      .Cases("main",     // an ANSI console app
-             "wmain",    // a Unicode console App
-             "WinMain",  // an ANSI GUI app
-             "wWinMain", // a Unicode GUI app
-             "DllMain",  // a DLL
+      .Cases({"main",     // an ANSI console app
+              "wmain",    // a Unicode console App
+              "WinMain",  // an ANSI GUI app
+              "wWinMain", // a Unicode GUI app
+              "DllMain"}, // a DLL
              true)
       .Default(false);
 }
@@ -3502,7 +3510,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     while (const auto *TD = T->getAs<TypedefType>())
       T = TD->getDecl()->getUnderlyingType();
     const IdentifierInfo *II =
-        T->castAs<EnumType>()->getDecl()->getIdentifier();
+        T->castAsCanonical<EnumType>()->getDecl()->getIdentifier();
     if (II && II->isStr("__hot_cold_t"))
       Consume();
   }
@@ -3551,6 +3559,53 @@ void FunctionDecl::setIsTypeAwareOperatorNewOrDelete(bool IsTypeAware) {
   getASTContext().setIsTypeAwareOperatorNewOrDelete(this, IsTypeAware);
 }
 
+UsualDeleteParams FunctionDecl::getUsualDeleteParams() const {
+  UsualDeleteParams Params;
+
+  // This function should only be called for operator delete declarations.
+  assert(getDeclName().isAnyOperatorDelete());
+  if (!getDeclName().isAnyOperatorDelete())
+    return Params;
+
+  const FunctionProtoType *FPT = getType()->castAs<FunctionProtoType>();
+  auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
+
+  if (isTypeAwareOperatorNewOrDelete()) {
+    Params.TypeAwareDelete = TypeAwareAllocationMode::Yes;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // The first argument after the type-identity parameter (if any) is
+  // always a void* (or C* for a destroying operator delete for class
+  // type C).
+  ++AI;
+
+  // The next parameter may be a std::destroying_delete_t.
+  if (isDestroyingOperatorDelete()) {
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+    Params.DestroyingDelete = true;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // Figure out what other parameters we should be implicitly passing.
+  if (AI != AE && (*AI)->isIntegerType()) {
+    Params.Size = true;
+    ++AI;
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+
+  if (AI != AE && (*AI)->isAlignValT()) {
+    Params.Alignment = AlignedAllocationMode::Yes;
+    ++AI;
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+
+  assert(AI == AE && "unexpected usual deallocation function parameter");
+  return Params;
+}
+
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {
   return getDeclLanguageLinkage(*this);
 }
@@ -3597,6 +3652,10 @@ bool FunctionDecl::isNoReturn() const {
     return FnTy->getNoReturnAttr();
 
   return false;
+}
+
+bool FunctionDecl::isAnalyzerNoReturn() const {
+  return hasAttr<AnalyzerNoReturnAttr>();
 }
 
 bool FunctionDecl::isMemberLikeConstrainedFriend() const {
@@ -4652,7 +4711,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
   if (!isImplicit() || getDeclName())
     return false;
 
-  if (const auto *Record = getType()->getAs<RecordType>())
+  if (const auto *Record = getType()->getAsCanonical<RecordType>())
     return Record->getDecl()->isAnonymousStructOrUnion();
 
   return false;
@@ -4710,7 +4769,7 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
     return false;
 
   //     -- is not of class type, or
-  const auto *RT = getType()->getAs<RecordType>();
+  const auto *RT = getType()->getAsCanonical<RecordType>();
   if (!RT)
     return false;
   const RecordDecl *RD = RT->getDecl()->getDefinition();
@@ -4733,7 +4792,7 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   // MS ABI: has nonzero size if it is a class type with class type fields,
   // whether or not they have nonzero size
   return !llvm::any_of(CXXRD->fields(), [](const FieldDecl *Field) {
-    return Field->getType()->getAs<RecordType>();
+    return Field->getType()->isRecordType();
   });
 }
 
@@ -4836,10 +4895,6 @@ TagDecl *TagDecl::getCanonicalDecl() { return getFirstDecl(); }
 
 void TagDecl::setTypedefNameForAnonDecl(TypedefNameDecl *TDD) {
   TypedefNameDeclOrQualifier = TDD;
-  if (const Type *T = getTypeForDecl()) {
-    (void)T;
-    assert(T->isLinkageValid());
-  }
   assert(isLinkageValid());
 }
 
@@ -4867,25 +4922,16 @@ void TagDecl::completeDefinition() {
 }
 
 TagDecl *TagDecl::getDefinition() const {
-  if (isCompleteDefinition())
+  if (isCompleteDefinition() || isBeingDefined())
     return const_cast<TagDecl *>(this);
-
-  // If it's possible for us to have an out-of-date definition, check now.
-  if (mayHaveOutOfDateDef()) {
-    if (IdentifierInfo *II = getIdentifier()) {
-      if (II->isOutOfDate()) {
-        updateOutOfDate(*II);
-      }
-    }
-  }
 
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(this))
     return CXXRD->getDefinition();
 
-  for (auto *R : redecls())
-    if (R->isCompleteDefinition())
+  for (TagDecl *R :
+       redecl_range(redecl_iterator(getNextRedeclaration()), redecl_iterator()))
+    if (R->isCompleteDefinition() || R->isBeingDefined())
       return R;
-
   return nullptr;
 }
 
@@ -4909,19 +4955,81 @@ void TagDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   }
 }
 
+void TagDecl::printAnonymousTagDeclLocation(
+    llvm::raw_ostream &OS, const PrintingPolicy &Policy) const {
+  PresumedLoc PLoc =
+      getASTContext().getSourceManager().getPresumedLoc(getLocation());
+  if (!PLoc.isValid())
+    return;
+
+  OS << " at ";
+  StringRef File = PLoc.getFilename();
+  llvm::SmallString<1024> WrittenFile(File);
+  if (auto *Callbacks = Policy.Callbacks)
+    WrittenFile = Callbacks->remapPath(File);
+  // Fix inconsistent path separator created by
+  // clang::DirectoryLookup::LookupFile when the file path is relative
+  // path.
+  llvm::sys::path::Style Style =
+      llvm::sys::path::is_absolute(WrittenFile)
+          ? llvm::sys::path::Style::native
+          : (Policy.MSVCFormatting ? llvm::sys::path::Style::windows_backslash
+                                   : llvm::sys::path::Style::posix);
+  llvm::sys::path::native(WrittenFile, Style);
+  OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+}
+
+void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
+                                    const PrintingPolicy &Policy) const {
+  if (TypedefNameDecl *Typedef = getTypedefNameForAnonDecl()) {
+    assert(Typedef->getIdentifier() && "Typedef without identifier?");
+    OS << Typedef->getIdentifier()->getName();
+    return;
+  }
+
+  bool SuppressTagKeywordInName = Policy.SuppressTagKeywordInAnonNames;
+
+  // Emit leading keyword. Since we printed a leading keyword make sure we
+  // don't print the tag as part of the name too.
+  if (!Policy.SuppressTagKeyword) {
+    OS << getKindName() << ' ';
+    SuppressTagKeywordInName = true;
+  }
+
+  // Make an unambiguous representation for anonymous types, e.g.
+  //   (anonymous enum at /usr/include/string.h:120:9)
+  OS << (Policy.MSVCFormatting ? '`' : '(');
+
+  if (isa<CXXRecordDecl>(this) && cast<CXXRecordDecl>(this)->isLambda()) {
+    OS << "lambda";
+    SuppressTagKeywordInName = true;
+  } else if ((isa<RecordDecl>(this) &&
+              cast<RecordDecl>(this)->isAnonymousStructOrUnion())) {
+    OS << "anonymous";
+  } else {
+    OS << "unnamed";
+  }
+
+  if (!SuppressTagKeywordInName)
+    OS << ' ' << getKindName();
+
+  if (Policy.AnonymousTagNameStyle ==
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation))
+    printAnonymousTagDeclLocation(OS, Policy);
+
+  OS << (Policy.MSVCFormatting ? '\'' : ')');
+}
+
 void TagDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
   DeclarationName Name = getDeclName();
   // If the name is supposed to have an identifier but does not have one, then
   // the tag is anonymous and we should print it differently.
   if (Name.isIdentifier() && !Name.getAsIdentifierInfo()) {
-    // If the caller wanted to print a qualified name, they've already printed
-    // the scope. And if the caller doesn't want that, the scope information
-    // is already printed as part of the type.
-    PrintingPolicy Copy(Policy);
-    Copy.SuppressScope = true;
-    getASTContext().getTagDeclType(this).print(OS, Copy);
+    printAnonymousTagDecl(OS, Policy);
+
     return;
   }
+
   // Otherwise, do the normal printing.
   Name.print(OS, Policy);
 }
@@ -4963,19 +5071,13 @@ EnumDecl *EnumDecl::Create(ASTContext &C, DeclContext *DC,
                            IdentifierInfo *Id,
                            EnumDecl *PrevDecl, bool IsScoped,
                            bool IsScopedUsingClassTag, bool IsFixed) {
-  auto *Enum = new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl,
-                                    IsScoped, IsScopedUsingClassTag, IsFixed);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  C.getTypeDeclType(Enum, PrevDecl);
-  return Enum;
+  return new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl, IsScoped,
+                              IsScopedUsingClassTag, IsFixed);
 }
 
 EnumDecl *EnumDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  EnumDecl *Enum =
-      new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                           nullptr, nullptr, false, false, false);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return Enum;
+  return new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
+                              nullptr, nullptr, false, false, false);
 }
 
 SourceRange EnumDecl::getIntegerTypeRange() const {
@@ -5035,7 +5137,7 @@ EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
       EnumDecl *ED = getInstantiatedFromMemberEnum();
       while (auto *NewED = ED->getInstantiatedFromMemberEnum())
         ED = NewED;
-      return getDefinitionOrSelf(ED);
+      return ::getDefinitionOrSelf(ED);
     }
   }
 
@@ -5125,21 +5227,15 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
                                IdentifierInfo *Id, RecordDecl* PrevDecl) {
-  RecordDecl *R = new (C, DC) RecordDecl(Record, TK, C, DC,
-                                         StartLoc, IdLoc, Id, PrevDecl);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-
-  C.getTypeDeclType(R, PrevDecl);
-  return R;
+  return new (C, DC)
+      RecordDecl(Record, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
 }
 
 RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
                                            GlobalDeclID ID) {
-  RecordDecl *R = new (C, ID)
+  return new (C, ID)
       RecordDecl(Record, TagTypeKind::Struct, C, nullptr, SourceLocation(),
                  SourceLocation(), nullptr, nullptr);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return R;
 }
 
 bool RecordDecl::isLambda() const {
@@ -5162,7 +5258,7 @@ bool RecordDecl::isOrContainsUnion() const {
 
   if (const RecordDecl *Def = getDefinition()) {
     for (const FieldDecl *FD : Def->fields()) {
-      const RecordType *RT = FD->getType()->getAs<RecordType>();
+      const RecordType *RT = FD->getType()->getAsCanonical<RecordType>();
       if (RT && RT->getDecl()->isOrContainsUnion())
         return true;
     }
@@ -5179,6 +5275,10 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
   if (RecordDecl *D = getDefinition(); D && D != this)
     return D->field_begin();
   return field_iterator(decl_iterator(FirstDecl));
+}
+
+RecordDecl::field_iterator RecordDecl::noload_field_begin() const {
+  return field_iterator(decl_iterator(getDefinitionOrSelf()->FirstDecl));
 }
 
 /// completeDefinition - Notes that the definition of this type is now
@@ -5205,7 +5305,14 @@ void RecordDecl::completeDefinition() {
 /// This which can be turned on with an attribute, pragma, or the
 /// -mms-bitfields command-line option.
 bool RecordDecl::isMsStruct(const ASTContext &C) const {
-  return hasAttr<MSStructAttr>() || C.getLangOpts().MSBitfields == 1;
+  if (hasAttr<GCCStructAttr>())
+    return false;
+  if (hasAttr<MSStructAttr>())
+    return true;
+  auto LayoutCompatibility = C.getLangOpts().getLayoutCompatibility();
+  if (LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Default)
+    return C.defaultsToMsStruct();
+  return LayoutCompatibility == LangOptions::LayoutCompatibilityKind::Microsoft;
 }
 
 void RecordDecl::reorderDecls(const SmallVectorImpl<Decl *> &Decls) {
@@ -5294,9 +5401,8 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
     if (I->getIdentifier())
       return I;
 
-    if (const auto *RT = I->getType()->getAs<RecordType>())
-      if (const FieldDecl *NamedDataMember =
-              RT->getDecl()->findFirstNamedDataMember())
+    if (const auto *RD = I->getType()->getAsRecordDecl())
+      if (const FieldDecl *NamedDataMember = RD->findFirstNamedDataMember())
         return NamedDataMember;
   }
 
@@ -5490,14 +5596,19 @@ void ImplicitParamDecl::anchor() {}
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation IdLoc,
-                                             IdentifierInfo *Id, QualType Type,
+                                             const IdentifierInfo *Id,
+                                             QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  auto *Parm = new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  auto *Parm = new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::CreateDeserialized(ASTContext &C,
@@ -5665,7 +5776,7 @@ TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
       ThisTypedef = ThisTypedef->getCanonicalDecl();
     }
     if (OwningTypedef == ThisTypedef)
-      return TT->getDecl();
+      return TT->getDecl()->getDefinitionOrSelf();
   }
 
   return nullptr;
@@ -5715,7 +5826,7 @@ TypeAliasDecl *TypeAliasDecl::CreateDeserialized(ASTContext &C,
 SourceRange TypedefDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
-    if (typeIsPostfix(TInfo->getType()))
+    if (TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getBeginLoc(), RangeEnd);

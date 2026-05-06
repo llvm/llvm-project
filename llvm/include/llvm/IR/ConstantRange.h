@@ -41,6 +41,7 @@ namespace llvm {
 
 class MDNode;
 class raw_ostream;
+class CmpPredicate;
 struct KnownBits;
 
 /// This class represents a range of values.
@@ -107,6 +108,13 @@ public:
   /// Example: Pred = ult and Other = i8 [2, 5) returns Result = [0, 4)
   LLVM_ABI static ConstantRange
   makeAllowedICmpRegion(CmpInst::Predicate Pred, const ConstantRange &Other);
+
+  /// Produce the smallest range such that all values that may satisfy the given
+  /// predicate with any value contained within Other is contained in the
+  /// returned range. This overload takes a CmpPredicate, which may carry
+  /// samesign information for tighter ranges on unsigned predicates.
+  LLVM_ABI static ConstantRange
+  makeAllowedICmpRegion(CmpPredicate Pred, const ConstantRange &Other);
 
   /// Produce the largest range such that all values in the returned range
   /// satisfy the given predicate with all values contained within Other.
@@ -380,8 +388,10 @@ public:
   /// Return a new range in the specified integer type, which must be
   /// strictly smaller than the current type.  The returned range will
   /// correspond to the possible range of values if the source range had been
-  /// truncated to the specified type.
-  LLVM_ABI ConstantRange truncate(uint32_t BitWidth) const;
+  /// truncated to the specified type with wrap type \p NoWrapKind.
+  /// Note that the result of trunc nuw is exact.
+  LLVM_ABI ConstantRange truncate(uint32_t BitWidth,
+                                  unsigned NoWrapKind = 0) const;
 
   /// Make this range have the bit width given by \p BitWidth. The
   /// value is zero extended, truncated, or left alone to make it that width.

@@ -31,6 +31,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -86,7 +87,8 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // may be created without handles to some analyses and in that case don't
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
-      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
+      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)) ||
+      Inv.invalidate<TargetLibraryAnalysis>(Fn, PA))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -103,12 +105,15 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
                                              const TargetLibraryInfo &TLI,
                                              bool NullIsValidLoc,
                                              bool RoundToAlign = false) {
-  uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.RoundToAlign = RoundToAlign;
   Opts.NullIsUnknownSize = NullIsValidLoc;
-  if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::getFixed(Size);
+  if (std::optional<TypeSize> Size = getBaseObjectSize(V, DL, &TLI, Opts)) {
+    // FIXME: Remove this check, only exists to preserve previous behavior.
+    if (Size->isScalable())
+      return std::nullopt;
+    return Size;
+  }
   return std::nullopt;
 }
 
@@ -211,7 +216,10 @@ CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
-                         const LoopInfo *LI) {
+                         const LoopInfo *LI, const CycleInfo *CI) {
+  if (CI)
+    return !CI->getCycle(I->getParent());
+
   BasicBlock *BB = const_cast<BasicBlock *>(I->getParent());
   SmallVector<BasicBlock *> Succs(successors(BB));
   return Succs.empty() ||
@@ -227,9 +235,9 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
   auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
     std::pair<Instruction *, CaptureComponents> EarliestCapture =
-        FindEarliestCapture(
-            Object, *const_cast<Function *>(DT.getRoot()->getParent()),
-            /*ReturnCaptures=*/false, DT, CaptureComponents::Provenance);
+        FindEarliestCapture(Object, *DT.getRoot()->getParent(),
+                            /*ReturnCaptures=*/false, DT,
+                            CaptureComponents::Provenance);
     if (EarliestCapture.first)
       Inst2Obj[EarliestCapture.first].push_back(Object);
     Iter.first->second = EarliestCapture;
@@ -248,10 +256,10 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
     if (I == CaptureInst) {
       if (OrAt)
         return false;
-      return isNotInCycle(I, &DT, LI);
+      return isNotInCycle(I, &DT, LI, CI);
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI);
+    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
@@ -616,9 +624,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     if (Op->getOpcode() == Instruction::BitCast ||
         Op->getOpcode() == Instruction::AddrSpaceCast) {
       Value *NewV = Op->getOperand(0);
-      // Don't look through casts between address spaces with differing index
-      // widths.
-      if (DL.getIndexTypeSizeInBits(NewV->getType()) != IndexSize) {
+      auto *NewVTy = NewV->getType();
+      // Don't look through casts to non-scalar-pointer types or address spaces
+      // with differing index widths.
+      if (!isa<PointerType>(NewVTy) ||
+          DL.getIndexTypeSizeInBits(NewVTy) != IndexSize) {
         Decomposed.Base = V;
         return Decomposed;
       }
@@ -754,7 +764,7 @@ ModRefInfo BasicAAResult::getModRefInfoMask(const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI,
                                             bool IgnoreLocals) {
   assert(Visited.empty() && "Visited must be cleared after use!");
-  auto _ = make_scope_exit([&] { Visited.clear(); });
+  llvm::scope_exit _([&] { Visited.clear(); });
 
   unsigned MaxLookup = 8;
   SmallVector<const Value *, 16> Worklist;
@@ -948,7 +958,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
+  ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
+  ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
 
   // An identified function-local object that does not escape can only be
   // accessed via call arguments. Reduce OtherMR (which includes accesses to
@@ -994,6 +1005,15 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   }
 
   ModRefInfo Result = ArgMR | OtherMR;
+
+  // Refine accesses to errno memory.
+  if ((ErrnoMR | Result) != Result) {
+    if (AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
+      // Exclusion conditions do not hold, this memory location may alias errno.
+      Result |= ErrnoMR;
+    }
+  }
+
   if (!isModAndRefSet(Result))
     return Result;
 
@@ -1273,19 +1293,33 @@ AliasResult BasicAAResult::aliasGEP(
   for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
     const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
     const APInt &Scale = Index.Scale;
+
+    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
+    KnownBits Known = computeKnownBits(Index.Val.V, SQ);
+
     APInt ScaleForGCD = Scale;
     if (!Index.IsNSW)
       ScaleForGCD =
           APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
+
+    // If V has known trailing zeros, V is a multiple of 2^VarTZ, so
+    // V*Scale is a multiple of ScaleForGCD * 2^VarTZ. Shift ScaleForGCD
+    // left to account for this (trailing zeros compose additively through
+    // multiplication, even in Z/2^n).
+    unsigned VarTZ = Known.countMinTrailingZeros();
+    if (VarTZ > 0) {
+      unsigned MaxShift =
+          Scale.getBitWidth() - ScaleForGCD.getSignificantBits();
+      ScaleForGCD <<= std::min(VarTZ, MaxShift);
+    }
 
     if (i == 0)
       GCD = ScaleForGCD.abs();
     else
       GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-    ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
-                                            true, &AC, Index.CxtI);
-    KnownBits Known = computeKnownBits(Index.Val.V, DL, &AC, Index.CxtI, DT);
+    ConstantRange CR =
+        computeConstantRange(Index.Val.V, /*ForSigned=*/false, SQ);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);
@@ -1606,10 +1640,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // Null values in the default address space don't point to any object, so they
   // don't alias any other pointer.
   if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(O1))
-    if (!NullPointerIsDefined(&F, CPN->getType()->getAddressSpace()))
+    if (!NullPointerIsDefined(&F, CPN->getPointerType()->getAddressSpace()))
       return AliasResult::NoAlias;
   if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(O2))
-    if (!NullPointerIsDefined(&F, CPN->getType()->getAddressSpace()))
+    if (!NullPointerIsDefined(&F, CPN->getPointerType()->getAddressSpace()))
       return AliasResult::NoAlias;
 
   if (O1 != O2) {
@@ -1848,6 +1882,20 @@ AliasResult BasicAAResult::aliasCheckRecursive(
   return AliasResult::MayAlias;
 }
 
+AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
+                                      const Module *M) {
+  // There cannot be any alias with errno if the given memory location is an
+  // identified function-local object, or the size of the memory access is
+  // larger than the integer size.
+  if (Loc.Size.hasValue() &&
+      Loc.Size.getValue().getKnownMinValue() * 8 > TLI.getIntSize())
+    return AliasResult::NoAlias;
+
+  if (isIdentifiedFunctionLocal(getUnderlyingObject(Loc.Ptr)))
+    return AliasResult::NoAlias;
+  return AliasResult::MayAlias;
+}
+
 /// Check whether two Values can be considered equivalent.
 ///
 /// If the values may come from different cycle iterations, this will also
@@ -1869,7 +1917,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI=*/nullptr, /*CI=*/nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.

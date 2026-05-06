@@ -162,6 +162,43 @@ TEST(CallHierarchy, IncomingOneFileObjC) {
   EXPECT_THAT(IncomingLevel4, IsEmpty());
 }
 
+TEST(CallHierarchy, IncomingIncludeOverrides) {
+  Annotations Source(R"cpp(
+    void call^ee() {}
+    struct Interface {
+      virtual void Func() = 0;
+    };
+    struct Implementation : public Interface {
+      void Func() override {
+          $Callee[[callee]]();
+      }
+    };
+    void Test(Interface& cls){
+      cls.$FuncCall[[Func]]();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(AllOf(withName("Func"),
+                                           withDetail("Implementation::Func"))),
+                                iFromRanges(Source.range("Callee")))));
+  auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
+  ASSERT_THAT(
+      IncomingLevel2,
+      ElementsAre(AllOf(from(AllOf(withName("Test"), withDetail("Test"))),
+                        iFromRanges(Source.range("FuncCall")))));
+
+  auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get());
+  EXPECT_THAT(IncomingLevel3, IsEmpty());
+}
+
 TEST(CallHierarchy, MainFileOnlyRef) {
   // In addition to testing that we store refs to main-file only symbols,
   // this tests that anonymous namespaces do not interfere with the

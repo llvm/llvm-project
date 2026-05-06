@@ -27,13 +27,11 @@ class TestRealDefinition(TestBase):
         # Run at stop at main
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
-        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
-
         # This should display correctly.
         self.expect(
             "frame variable foo->_bar->_hidden_ivar",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["(NSString *)", "foo->_bar->_hidden_ivar = 0x"],
+            substrs=["foo->_bar->_hidden_ivar = 0x"],
         )
 
     def test_frame_var_after_stop_at_implementation(self):
@@ -54,11 +52,9 @@ class TestRealDefinition(TestBase):
         # Run at stop at main
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
-        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
-
         # This should display correctly.
         self.expect(
             "frame variable foo->_bar->_hidden_ivar",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=["(NSString *)", "foo->_bar->_hidden_ivar = 0x"],
+            substrs=["foo->_bar->_hidden_ivar = 0x"],
         )

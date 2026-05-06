@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This doesn't work on Windows because in the MSVC UCRT headers the math.h is
-// actually intended to implement the full C++ spec requirements. For details
-// see https://github.com/llvm/llvm-project/issues/70225#issuecomment-1992528828
-// XFAIL: msvc
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
 
 // <math.h>
 

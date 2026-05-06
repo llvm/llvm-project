@@ -51,7 +51,7 @@ static cl::opt<unsigned>
 namespace {
 
 enum HardClauseType {
-  // For GFX10:
+  // For GFX10 and GFX1250:
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
@@ -102,7 +102,8 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
-      if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
+      if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
+          ST->hasGFX1250Insts()) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
             SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
@@ -115,7 +116,6 @@ public:
         if (SIInstrInfo::isFLAT(MI))
           return HARDCLAUSE_FLAT;
       } else {
-        assert(ST->getGeneration() >= AMDGPUSubtarget::GFX11);
         if (SIInstrInfo::isMIMG(MI)) {
           const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
           const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
@@ -209,8 +209,21 @@ public:
     bool Changed = false;
     for (auto &MBB : MF) {
       ClauseInfo CI;
+      unsigned ExistingClauseRemaining = 0;
       for (auto &MI : MBB) {
-        HardClauseType Type = getHardClauseType(MI);
+        HardClauseType Type;
+        if (ExistingClauseRemaining) {
+          if (!MI.isMetaInstruction())
+            ExistingClauseRemaining--;
+          Type = HARDCLAUSE_ILLEGAL;
+        } else if (MI.getOpcode() == AMDGPU::S_CLAUSE) {
+          // Respect existing explicit clauses. Re-clausing instructions that
+          // are already covered by an S_CLAUSE can create nested clauses.
+          ExistingClauseRemaining = (MI.getOperand(0).getImm() & 63) + 1;
+          Type = HARDCLAUSE_ILLEGAL;
+        } else {
+          Type = getHardClauseType(MI);
+        }
 
         int64_t Dummy1;
         bool Dummy2;

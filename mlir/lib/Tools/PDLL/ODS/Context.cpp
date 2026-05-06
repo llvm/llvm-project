@@ -77,7 +77,8 @@ const Operation *Context::lookupOperation(StringRef name) const {
 }
 
 template <typename T>
-SmallVector<T *> sortMapByName(const llvm::StringMap<std::unique_ptr<T>> &map) {
+static SmallVector<T *>
+sortMapByName(const llvm::StringMap<std::unique_ptr<T>> &map) {
   SmallVector<T *> storage;
   for (auto &entry : map)
     storage.push_back(entry.second.get());

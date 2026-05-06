@@ -270,9 +270,9 @@ LLVM_ABI ProfileKind parseArchProfile(StringRef Arch);
 LLVM_ABI unsigned parseArchVersion(StringRef Arch);
 
 LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
-LLVM_ABI StringRef computeDefaultTargetABI(const Triple &TT);
-
-LLVM_ABI ARMABI computeTargetABI(const Triple &TT, StringRef ABIName = "");
+LLVM_ABI LLVM_READONLY StringRef computeDefaultTargetABI(const Triple &TT);
+LLVM_ABI LLVM_READONLY ARMABI computeTargetABI(const Triple &TT,
+                                               StringRef ABIName = "");
 
 /// Get the (LLVM) name of the minimum ARM CPU for the arch we are targeting.
 ///

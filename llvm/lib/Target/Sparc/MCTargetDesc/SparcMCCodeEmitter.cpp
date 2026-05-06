@@ -28,7 +28,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 
@@ -112,7 +111,7 @@ void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            const MCSubtargetInfo &STI) const {
   unsigned Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   support::endian::write(CB, Bits,
-                         Ctx.getAsmInfo()->isLittleEndian()
+                         Ctx.getAsmInfo().isLittleEndian()
                              ? llvm::endianness::little
                              : llvm::endianness::big);
 

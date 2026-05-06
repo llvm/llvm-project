@@ -31,11 +31,19 @@ if(MLIR_ENABLE_EXECUTION_ENGINE)
     MLIRCAPIExecutionEngine
     MLIRCAPIRegisterEverything
 )
+  _add_capi_test_executable(mlir-capi-global-constructors-test
+    global_constructors.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIConversion
+    MLIRCAPIExecutionEngine
+    MLIRCAPIRegisterEverything
+)
 endif()
 
 _add_capi_test_executable(mlir-capi-ir-test
   ir.c
   LINK_LIBS PRIVATE
+    MLIRCAPIInterfaces
     MLIRCAPIIR
     MLIRCAPIFunc
     MLIRCAPIRegisterEverything

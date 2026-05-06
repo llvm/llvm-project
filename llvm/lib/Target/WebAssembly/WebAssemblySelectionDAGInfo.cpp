@@ -11,23 +11,31 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "WebAssemblySelectionDAGInfo.h"
 #include "WebAssemblyTargetMachine.h"
+
+#define GET_SDNODE_DESC
+#include "WebAssemblyGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-selectiondag-info"
 
+WebAssemblySelectionDAGInfo::WebAssemblySelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(WebAssemblyGenSDNodeInfo) {}
+
 WebAssemblySelectionDAGInfo::~WebAssemblySelectionDAGInfo() = default; // anchor
 
-bool WebAssemblySelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+const char *
+WebAssemblySelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
-  default:
-    return false;
-  case WebAssemblyISD::GLOBAL_GET:
-  case WebAssemblyISD::GLOBAL_SET:
-  case WebAssemblyISD::TABLE_GET:
-  case WebAssemblyISD::TABLE_SET:
-    return true;
+  case WebAssemblyISD::CALL:
+    return "WebAssemblyISD::CALL";
+  case WebAssemblyISD::RET_CALL:
+    return "WebAssemblyISD::RET_CALL";
   }
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
 }
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(

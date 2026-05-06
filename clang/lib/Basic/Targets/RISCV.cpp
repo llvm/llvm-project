@@ -192,8 +192,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_muldiv");
   }
 
-  if (ISAInfo->hasExtension("a")) {
+  // The "a" extension is composed of "zalrsc" and "zaamo"
+  if (ISAInfo->hasExtension("a"))
     Builder.defineMacro("__riscv_atomic");
+
+  if (ISAInfo->hasExtension("zalrsc")) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
@@ -427,7 +430,7 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     ABI = ISAInfo->computeDefaultABI().str();
 
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
 
   FastScalarUnalignedAccess =
       llvm::is_contained(Features, "+unaligned-scalar-mem");

@@ -22,8 +22,8 @@ entry:
   call void @bar(i64 0, i64 0, i64 0, i64 0, i64 0, ptr null, ptr %rhs, ptr null, ptr %rhs)
 ; CHECK: call{{.*}}bar
 ; CHECK: addq{{.*}}$2147483647, %rsp
-; CHECK: addq{{.*}}$372037585, %rsp
-; CHECK: .cfi_adjust_cfa_offset -2519521232
+; CHECK: addq{{.*}}$372037601, %rsp
+; CHECK: .cfi_adjust_cfa_offset -2519521248
   ret void
 }
 

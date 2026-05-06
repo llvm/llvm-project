@@ -24,7 +24,7 @@
  {
 	;
  }
-// CHECK: load ptr, ptr getelementptr inbounds nuw (%struct._objc_class, ptr @OBJC_CLASS_BetterTable, i32 0, i32 1)
+// CHECK: load ptr, ptr getelementptr inbounds nuw (i8, ptr @OBJC_CLASS_BetterTable, i32 4)
 
  return self;
 }
