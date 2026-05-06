@@ -293,6 +293,15 @@ protected:
   /// Convert function-level branch data into instruction annotations.
   void convertBranchData(BinaryFunction &BF) const;
 
+  /// Attach the function's \c FuncBranchData to its CFG: bump entry /
+  /// landing-pad BB execution counts from \c FBD->EntryData; attach
+  /// intra-function edges via \c recordBranch from \c FBD->Data; and
+  /// convert call-site branch data into instruction annotations via
+  /// \c convertBranchData. Shared between \c DataReader::readProfile (after
+  /// \c matchProfileData) and \c DataAggregator::readProfile (after the
+  /// parser populates \c FBD).
+  void attachProfileToCFG(BinaryFunction &BF) const;
+
   /// Update function \p BF profile with a taken branch.
   /// \p Count could be 0 if verification of the branch is required.
   ///

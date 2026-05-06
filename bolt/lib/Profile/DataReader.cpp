@@ -347,6 +347,10 @@ void DataReader::readProfile(BinaryFunction &BF) {
   // Possibly assign/re-assign branch profile data.
   matchProfileData(BF);
 
+  attachProfileToCFG(BF);
+}
+
+void DataReader::attachProfileToCFG(BinaryFunction &BF) const {
   FuncBranchData *FBD = getBranchData(BF);
   if (!FBD)
     return;
