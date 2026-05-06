@@ -66,6 +66,10 @@ def C1NanoUnitVALU   : ProcResGroup<[C1NanoUnitVALU0, C1NanoUnitVALU1]>;
 def C1NanoUnitALU    : ProcResGroup<[C1NanoUnitALU0, C1NanoUnitALU1]>;
 def C1NanoUnitVMAC   : ProcResGroup<[C1NanoUnitVMAC0, C1NanoUnitVMAC1]>;
 
+// Workaround for throughput being doubled on a single resource
+def C1NanoUnit2VMC : ProcResGroup<[C1NanoUnitVMC, C1NanoUnitVMC]>;
+def C1NanoUnit4VMC : ProcResGroup<[C1NanoUnitVMC, C1NanoUnitVMC, C1NanoUnitVMC, C1NanoUnitVMC]>;
+
 // These latencies are modeled without taking into account forwarding paths
 // (the software optimisation guide lists latencies taking into account
 // typical forwarding paths).
@@ -216,24 +220,6 @@ let RetireOOO = 1 in {
 def : WriteRes<WriteFDiv, [C1NanoUnitVMC]> { let Latency = 22;
                                             let ReleaseAtCycles = [29]; }
 def C1NanoWriteVMAC : SchedWriteRes<[C1NanoUnitVMAC]> { let Latency = 4; }
-def C1NanoWriteFDivHP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 8;
-                                                     let ReleaseAtCycles = [5]; }
-def C1NanoWriteFDivSP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 13;
-                                                     let ReleaseAtCycles = [10]; }
-def C1NanoWriteFDivDP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 22;
-                                                     let ReleaseAtCycles = [19]; }
-def C1NanoWriteFSqrtHP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 8;
-                                                      let ReleaseAtCycles = [5]; }
-def C1NanoWriteFSqrtSP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 12;
-                                                      let ReleaseAtCycles = [9]; }
-def C1NanoWriteFSqrtDP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 22;
-                                                      let ReleaseAtCycles = [19]; }
-def C1NanoWriteFSqrtScalarHP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 11;
-                                                      let ReleaseAtCycles = [5]; }
-def C1NanoWriteFSqrtScalarSP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 14;
-                                                      let ReleaseAtCycles = [9]; }
-def C1NanoWriteFSqrtScalarDP : SchedWriteRes<[C1NanoUnitVMC]> { let Latency = 25;
-                                                      let ReleaseAtCycles = [19]; }
 }
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
@@ -631,27 +617,71 @@ def : InstRW<[C1NanoWriteMOPS<1, 1>], (instregex "^SETGM")>;
 // Memory Set with tag setting Epilogue
 def : InstRW<[C1NanoWriteMOPS<1, 1>], (instregex "^MOPSSETGE")>;
 
+// FP scalar data processing instructions
+// -----------------------------------------------------------------------------
+
+// FP divide, H-form
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnit4VMC>], (instrs FDIVHrr)>;
+
+// FP divide, S-form
+def : InstRW<[C1NanoMCWrite<13, 10, C1NanoUnit4VMC>], (instrs FDIVSrr)>;
+
+// FP divide, D-form
+def : InstRW<[C1NanoMCWrite<22, 19, C1NanoUnit4VMC>], (instrs FDIVDrr)>;
+
+// FP square root, H-form
+def : InstRW<[C1NanoMCWrite<11, 5, C1NanoUnit4VMC>], (instrs FSQRTHr)>;
+
+// FP square root, S-form
+def : InstRW<[C1NanoMCWrite<14, 9, C1NanoUnit4VMC>], (instrs FSQRTSr)>;
+
+// FP square root, D-form
+def : InstRW<[C1NanoMCWrite<25, 19, C1NanoUnit4VMC>], (instrs FSQRTDr)>;
+
 // ASIMD FP data processing instructions
 // -----------------------------------------------------------------------------
 
+// ASIMD FP, arith, normal
 def : InstRW<[C1NanoWriteVMAC], (instregex "^FN?M(ADD|SUB)")>;
+
+// ASIMD FP, complex add
 def : InstRW<[C1NanoWriteVMAC], (instregex "^FCADDv")>;
+
+// ASIMD FP, complex multiply add
 def : InstRW<[C1NanoWriteVMAC], (instregex "^FCMLAv")>;
+
+// ASIMD FP, multiply accumulate
 def : InstRW<[C1NanoWriteVMAC], (instregex "^FML(A|S)v")>;
-def : InstRW<[C1NanoWriteFDivHP], (instrs FDIVHrr)>;
-def : InstRW<[C1NanoWriteFDivSP], (instrs FDIVSrr)>;
-def : InstRW<[C1NanoWriteFDivDP], (instrs FDIVDrr)>;
-def : InstRW<[C1NanoWriteVALU_F2], (instrs FMOVSr, FMOVDr)>;
-def : InstRW<[C1NanoWriteVALU_F3], (instrs FMOVv2f32_ns, FMOVv4f32_ns, FMOVv2f64_ns, FMOVv4f16_ns, FMOVv8f16_ns)>;
-def : InstRW<[C1NanoWriteFSqrtScalarHP], (instrs FSQRTHr)>;
-def : InstRW<[C1NanoWriteFSqrtScalarSP], (instrs FSQRTSr)>;
-def : InstRW<[C1NanoWriteFSqrtScalarDP], (instrs FSQRTDr)>;
-def : InstRW<[C1NanoWriteFDivHP], (instregex "^FDIVv.*16$")>;
-def : InstRW<[C1NanoWriteFDivSP], (instregex "^FDIVv.*32$")>;
-def : InstRW<[C1NanoWriteFDivDP], (instregex "^FDIVv.*64$")>;
-def : InstRW<[C1NanoWriteFSqrtHP], (instregex "^FSQRT.*16$")>;
-def : InstRW<[C1NanoWriteFSqrtSP], (instregex "^FSQRT.*32$")>;
-def : InstRW<[C1NanoWriteFSqrtDP], (instregex "^FSQRT.*64$")>;
+
+// ASIMD FP divide, D-form, F61
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnitVMC>], (instrs FDIVv4f16)>;
+
+// ASIMD FP divide, D-form, F32
+def : InstRW<[C1NanoMC2Write<13, 5, C1NanoUnit2VMC>], (instrs FDIVv2f32)>;
+
+// ASIMD FP divide, Q-form, F16
+def : InstRW<[C1NanoMC2Write<8, 5, C1NanoUnit2VMC>], (instrs FDIVv8f16)>;
+
+// ASIMD FP divide, Q-form, F32
+def : InstRW<[C1NanoMC2Write<13, 10, C1NanoUnit2VMC>], (instrs FDIVv4f32)>;
+
+// ASIMD FP divide, Q-form, F64
+def : InstRW<[C1NanoMC2Write<22, 19, C1NanoUnit2VMC>], (instrs FDIVv2f64)>;
+
+// ASIMD FP square root, D-form, F16
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnitVMC>], (instrs FSQRTv4f16)>;
+
+// ASIMD FP square root, D-form, F32
+def : InstRW<[C1NanoMCWrite<12, 9, C1NanoUnitVMC>], (instrs FSQRTv2f32)>;
+
+// ASIMD FP square root, Q-form, F16
+def : InstRW<[C1NanoMC2Write<8, 5, C1NanoUnit2VMC>], (instrs FSQRTv8f16)>;
+
+// ASIMD FP square root, Q-form, F32
+def : InstRW<[C1NanoMC2Write<12, 9, C1NanoUnit2VMC>], (instrs FSQRTv4f32)>;
+
+// ASIMD FP square root, Q-form, F64
+def : InstRW<[C1NanoMC2Write<22, 19, C1NanoUnit2VMC>], (instrs FSQRTv2f64)>;
 
 def : InstRW<[C1NanoWriteVALU0_F3], (instrs FCSELHrrr, FCSELSrrr, FCSELDrrr)>;
 
@@ -663,6 +693,12 @@ def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "FML[AS]L2?(v|lane)")>
 
 // ASIMD miscellaneous instructions
 // -----------------------------------------------------------------------------
+
+// ASIMD move, FP immediate
+def : InstRW<[C1NanoWriteVALU_F2], (instrs FMOVSr, FMOVDr)>;
+
+// ASIMD move, FP transfer, from reg to vec reg
+def : InstRW<[C1NanoWriteVALU_F3], (instrs FMOVv2f32_ns, FMOVv4f32_ns, FMOVv2f64_ns, FMOVv4f16_ns, FMOVv8f16_ns)>;
 
 // ASIMD reciprocal estimate
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "FRECP[EX]v", "URECPEv", "[FU]RSQRTEv")>;
