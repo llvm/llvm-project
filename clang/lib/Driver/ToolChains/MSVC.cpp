@@ -133,11 +133,6 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         if (RuntimeVal == "dll_dbg")
           IsDebugBuild = true;
       }
-      // Check for /MDd flag, use getLastArg to handle overriding options
-      if (const Arg *A = Args.getLastArg(options::OPT__SLASH_M_Group)) {
-        if (A->getOption().matches(options::OPT__SLASH_MDd))
-          IsDebugBuild = true;
-      }
       CmdArgs.push_back(IsDebugBuild ? "-defaultlib:LLVMSYCLd"
                                      : "-defaultlib:LLVMSYCL");
     }

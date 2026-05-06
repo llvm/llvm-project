@@ -38,9 +38,8 @@ SYCLInstallationDetector::SYCLInstallationDetector(
       SmallString<128> SYCLLibPath(LibDir);
       llvm::sys::path::append(SYCLLibPath, "LLVMSYCL.lib");
 
-      if (D.getVFS().exists(SYCLLibPath)) {
+      if (D.getVFS().exists(SYCLLibPath))
         SYCLRTLibPath = LibDir;
-      }
     }
   } else {
     // Linux/Unix: Check for libLLVMSYCL.so
