@@ -1042,6 +1042,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         Result = Context.LongLongTy;
 
         if (S.getLangOpts().OpenCL) {
+          // OpenCL v3.0 s6.3.4: 'long long' is a reserved data type.
           S.Diag(DS.getTypeSpecWidthLoc(), diag::warn_opencl_longlong);
         } else if (!S.getLangOpts().C99) {
           // 'long long' is a C99 or C++11 feature.
@@ -1069,6 +1070,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         Result = Context.UnsignedLongLongTy;
 
         if (S.getLangOpts().OpenCL) {
+          // OpenCL v3.0 s6.3.4: 'long long' is a reserved data type.
           S.Diag(DS.getTypeSpecWidthLoc(), diag::warn_opencl_longlong);
         } else if (!S.getLangOpts().C99) {
           // 'long long' is a C99 or C++11 feature.
