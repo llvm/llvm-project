@@ -960,7 +960,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     Entries.push_back(
         {Version, Feature, /*NumBBRanges=*/{}, std::move(BBRanges)});
 
-    BBAddrMapYAML::PGOAnalysisMapEntry &PGOAnalysis = PGOAnalyses.emplace_back();
+    BBAddrMapYAML::PGOAnalysisMapEntry &PGOAnalysis =
+        PGOAnalyses.emplace_back();
     if (FeatureOrErr->hasPGOAnalysis()) {
       HasAnyPGOAnalysisMapEntry = true;
 

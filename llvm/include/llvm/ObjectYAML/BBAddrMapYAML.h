@@ -88,7 +88,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::BBAddrMapYAML::BBAddrMapEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::BBAddrMapYAML::BBAddrMapEntry::BBEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::BBAddrMapYAML::PGOAnalysisMapEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(
     llvm::BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry)
 
@@ -111,7 +112,8 @@ template <> struct MappingTraits<BBAddrMapYAML::PGOAnalysisMapEntry> {
   static void mapping(IO &IO, BBAddrMapYAML::PGOAnalysisMapEntry &E);
 };
 
-template <> struct MappingTraits<BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry> {
+template <>
+struct MappingTraits<BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry> {
   static void mapping(IO &IO,
                       BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry &E);
 };
