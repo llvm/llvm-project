@@ -671,6 +671,9 @@ public:
 
   /// Returns true if the target machine supports masked loads or stores
   /// for \p I's data type and alignment.
+  /// This does NOT check the access pattern of \p I, it is the responsibility
+  /// of the caller to check that the access is e.g. consecutive or interleaved
+  /// and can be vectorized.
   bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather
