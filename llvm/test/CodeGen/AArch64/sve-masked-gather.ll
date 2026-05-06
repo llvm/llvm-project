@@ -96,6 +96,22 @@ define <vscale x 2 x i64> @masked_sgather_nxv2i16(<vscale x 2 x ptr> %ptrs, <vsc
   ret <vscale x 2 x i64> %vals.sext
 }
 
+define <vscale x 2 x i64> @masked_gather_nxv1i64(<vscale x 2 x ptr> %wide.ptrs, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_gather_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [z0.d]
+; CHECK-NEXT:    ret
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
+      <vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %r = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64(
+      <vscale x 1 x ptr> %ptrs, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i64> poison)
+  %r.legal = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(
+      <vscale x 2 x i64> poison, <vscale x 1 x i64> %r, i64 0)
+  ret <vscale x 2 x i64> %r.legal
+}
+
 define <vscale x 2 x i64> @masked_sgather_nxv2i32(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_sgather_nxv2i32:
 ; CHECK:       // %bb.0:

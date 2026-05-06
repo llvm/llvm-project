@@ -73,6 +73,21 @@ define void @masked_scatter_nxv2f64(<vscale x 2 x double> %data, <vscale x 2 x p
   ret void
 }
 
+define void @masked_scatter_nxv1i64(<vscale x 2 x i64> %data.wide, <vscale x 2 x ptr> %wide.ptrs, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_scatter_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
+; CHECK-NEXT:    ret
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
+      <vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %data = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(
+      <vscale x 2 x i64> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i64(<vscale x 1 x i64> %data, <vscale x 1 x ptr> %ptrs, i32 8, <vscale x 1 x i1> %mask)
+  ret void
+}
+
 define void @masked_scatter_splat_constant_pointer (<vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: masked_scatter_splat_constant_pointer:
 ; CHECK:       // %bb.0: // %vector.body
