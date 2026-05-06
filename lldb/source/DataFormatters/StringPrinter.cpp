@@ -442,8 +442,8 @@ static bool ReadEncodedBufferAndDumpToStream(
   uint32_t sourceSize;
   if (elem_type == StringElementType::ASCII && !options.GetSourceSize()) {
     // FIXME: The NSString formatter sets HasSourceSize(true) when the size is
-    // actually unknown, as well as SetBinaryZeroIsTerminator(false). IIUC the
-    // C++ formatter also sets SetBinaryZeroIsTerminator(false) when it doesn't
+    // actually unknown, as well as SetZeroTermination(Ignore). IIUC the
+    // C++ formatter also sets SetZeroTermination(Ignore) when it doesn't
     // mean to. I don't see how this makes sense: we should fix the formatters.
     //
     // Until then, the behavior that's expected for ASCII strings with unknown
