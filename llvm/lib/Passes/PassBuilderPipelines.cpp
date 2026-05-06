@@ -149,6 +149,15 @@
 
 using namespace llvm;
 
+// EmbeddedJIT pipeline options.
+static cl::opt<bool> EnableEJITBitcode(
+    "enable-ejit-bitcode", cl::init(true), cl::Hidden,
+    cl::desc("Enable EmbeddedJIT bitcode extraction and embedding"));
+static cl::opt<bool> EnableEJITAOT(
+    "enable-ejit-aot", cl::init(true), cl::Hidden,
+    cl::desc("Enable EmbeddedJIT AOT passes (period register, wrapper "
+             "generation, lifecycle handlers)"));
+
 static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
     "enable-ml-inliner", cl::init(InliningAdvisorMode::Default), cl::Hidden,
     cl::desc("Enable ML policy for inliner. Currently trained for -Oz only"),
@@ -1655,7 +1664,18 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // EmbeddedJIT PASS1: Extract raw bitcode before any optimization.
   // Runs in all modes (non-LTO and LTO pre-link).
-  MPM.addPass(EJitRegisterBitcodePass());
+  if (EnableEJITBitcode)
+    MPM.addPass(EJitRegisterBitcodePass());
+
+  // EmbeddedJIT PASS2-4: Register periods, generate wrapper, handle
+  // lifecycle callbacks. Must run before the optimization pipeline so
+  // PASS3 operates on clean IR (before optimizations introduce PHI
+  // nodes that reference the entry block, which would be broken by
+  // the entry block replacement).
+  if (!isLTOPreLink(Phase))
+    if (EnableEJITAOT)
+      if (EnableEJITAOT)
+        MPM.addPass(EJitAotModulePass());
 
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, Phase));
@@ -1669,11 +1689,6 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
-
-  // EmbeddedJIT AOT module pass (PASS2-4): Add wrappers and lifecycle handlers.
-  // Only run in non-LTO modes; for LTO, this runs in post-link pipelines.
-  if (!isLTOPreLink(Phase))
-    MPM.addPass(EJitAotModulePass());
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
@@ -1724,7 +1739,9 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     MPM.addPass(
         buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
     // EmbeddedJIT AOT module pass (PASS2-4).
-    MPM.addPass(EJitAotModulePass());
+    if (EnableEJITAOT)
+      if (EnableEJITAOT)
+        MPM.addPass(EJitAotModulePass());
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
   }
@@ -1751,7 +1768,8 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   invokePipelineStartEPCallbacks(MPM, Level);
 
   // EmbeddedJIT PASS1: Extract raw bitcode in ThinLTO pre-link.
-  MPM.addPass(EJitRegisterBitcodePass());
+  if (EnableEJITBitcode)
+    MPM.addPass(EJitRegisterBitcodePass());
 
   // If we are planning to perform ThinLTO later, we don't bloat the code with
   // unrolling/vectorization/... now. Just simplify the module as much as we
@@ -1837,7 +1855,9 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     MPM.addPass(EliminateAvailableExternallyPass());
     MPM.addPass(GlobalDCEPass());
     // EmbeddedJIT AOT module pass (PASS2-4).
-    MPM.addPass(EJitAotModulePass());
+    if (EnableEJITAOT)
+      if (EnableEJITAOT)
+        MPM.addPass(EJitAotModulePass());
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
@@ -1853,7 +1873,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
       Level, ThinOrFullLTOPhase::ThinLTOPostLink));
 
   // EmbeddedJIT AOT module pass for ThinLTO post-link.
-  MPM.addPass(EJitAotModulePass());
+  if (EnableEJITAOT)
+    MPM.addPass(EJitAotModulePass());
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
@@ -1892,7 +1913,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
 
     // EmbeddedJIT AOT module pass for FullLTO post-link (O0 path).
-    MPM.addPass(EJitAotModulePass());
+    if (EnableEJITAOT)
+      if (EnableEJITAOT)
+        MPM.addPass(EJitAotModulePass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -1981,7 +2004,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
 
     // EmbeddedJIT AOT module pass (PASS2-4).
-    MPM.addPass(EJitAotModulePass());
+    if (EnableEJITAOT)
+      if (EnableEJITAOT)
+        MPM.addPass(EJitAotModulePass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2219,7 +2244,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(CoroCleanupPass());
 
   // EmbeddedJIT AOT module pass for FullLTO post-link (non-O0 path).
-  MPM.addPass(EJitAotModulePass());
+  if (EnableEJITAOT)
+    MPM.addPass(EJitAotModulePass());
 
   invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2259,7 +2285,15 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   invokePipelineStartEPCallbacks(MPM, Level);
 
   // EmbeddedJIT PASS1: Extract raw bitcode before any optimization.
-  MPM.addPass(EJitRegisterBitcodePass());
+  if (EnableEJITBitcode)
+    MPM.addPass(EJitRegisterBitcodePass());
+
+  // EmbeddedJIT PASS2-4: Must run early (before AlwaysInliner) so PASS3
+  // operates on clean IR without optimization-introduced PHI nodes.
+  if (!isLTOPreLink(Phase))
+    if (EnableEJITAOT)
+      if (EnableEJITAOT)
+        MPM.addPass(EJitAotModulePass());
 
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
@@ -2341,10 +2375,6 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   MPM.addPass(buildCoroWrapper(Phase));
 
   invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
-
-  // EmbeddedJIT AOT module pass (PASS2-4).
-  if (!isLTOPreLink(Phase))
-    MPM.addPass(EJitAotModulePass());
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);

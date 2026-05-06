@@ -93,8 +93,26 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
   M.getOrInsertFunction(FN_COMPILE_OR_GET,
       FunctionType::get(PtrTy, {PtrTy, PtrTy, Type::getInt32Ty(Ctx), PtrTy}, false));
 
+  auto isAlreadyWrapped = [](Function &F) -> bool {
+    if (!F.getEntryBlock().getName().starts_with("jit_entry"))
+      return false;
+    for (Instruction &I : F.getEntryBlock())
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->getCalledFunction() &&
+            CB->getCalledFunction()->getName() == FN_COMPILE_OR_GET)
+          return true;
+    return false;
+  };
+
   bool Changed = false;
   for (Function *F : EntryFuncs) {
+    // Idempotency guard: skip functions already wrapped by an earlier pass run.
+    // PASS3 may be invoked multiple times via EJitAotModulePass (e.g. O1+O2
+    // pipelines), and re-wrapping produces broken PHI nodes referencing stale
+    // predecessor blocks.
+    if (isAlreadyWrapped(*F))
+      continue;
+
     auto PeriodInds = getPeriodArrIndInfo(*F);
     unsigned DimCount = PeriodInds.size();
 
@@ -109,6 +127,11 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     // Splice all instructions from OrigEntry to jit_fallback
     JitFallback->splice(JitFallback->end(), &OrigEntry, OrigEntry.begin(),
                         OrigEntry.end());
+
+    // Fix PHI nodes in successor blocks that reference the original entry block.
+    // Optimization passes may have created PHI nodes pointing at the entry block,
+    // and after we replace it with jit_fallback those PHI entries must be updated.
+    OrigEntry.replaceAllUsesWith(JitFallback);
 
     // Delete the now-empty original entry block
     OrigEntry.eraseFromParent();

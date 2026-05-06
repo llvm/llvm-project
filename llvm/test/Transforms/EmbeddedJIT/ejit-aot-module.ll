@@ -19,8 +19,8 @@
 
 ; PASS4 output: lifecycle handler
 ; CHECK: define void @lc_handler(i32 %cell_idx)
-; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cell_data, i32 0)
-; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cell_data, i32 0)
+; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cell_data, i32 %cell_idx)
+; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cell_data, i32 %cell_idx)
 
 ; PASS2 output: period registration declarations and auto_register body
 ; CHECK: declare void @ejit_register_period_array(ptr, ptr, ptr, i64)

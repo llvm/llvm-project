@@ -1,15 +1,15 @@
 ; RUN: opt -passes=ejit-period-handler -S %s | FileCheck %s
 
 ; CHECK: define void @lc_single(i32 %cell_idx)
-; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cell_data, i32 0)
-; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cell_data, i32 0)
+; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cell_data, i32 %cell_idx)
+; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cell_data, i32 %cell_idx)
 
 ; Multi-lc: deactivate in order (cell, trp), activate in reverse (trp, cell)
 ; CHECK: define void @lc_multi(i32 %cell_idx, i32 %trp_idx)
-; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cell_data, i32 0)
-; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @trp_data, i32 1)
-; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @trp_data, i32 1)
-; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cell_data, i32 0)
+; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cell_data, i32 %cell_idx)
+; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @trp_data, i32 %trp_idx)
+; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @trp_data, i32 %trp_idx)
+; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cell_data, i32 %cell_idx)
 
 @cell_data = global [10 x i32] zeroinitializer, !ejit.metadata !10
 @trp_data = global [5 x i32] zeroinitializer, !ejit.metadata !12

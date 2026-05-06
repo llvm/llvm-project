@@ -156,7 +156,9 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
       Value *AP = LC.ArrayGV
           ? Builder.CreateBitCast(LC.ArrayGV, PtrTy)
           : ConstantPointerNull::get(PtrTy);
-      Value *Idx = Builder.getInt32(LC.ArgIndex);
+      // Use the actual argument value, not the argument index.
+      // LC.ArgIndex is the position of the ejit_period_arr_ind parameter.
+      Value *Idx = Builder.CreateZExtOrTrunc(F->getArg(LC.ArgIndex), I32Ty);
       Builder.CreateCall(DeactivateFn, {PN, AP, Idx});
     }
 
@@ -174,7 +176,8 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
         Value *AP = It->ArrayGV
             ? Builder.CreateBitCast(It->ArrayGV, PtrTy)
             : ConstantPointerNull::get(PtrTy);
-        Value *Idx = Builder.getInt32(It->ArgIndex);
+        // Use the actual argument value, not the argument index.
+        Value *Idx = Builder.CreateZExtOrTrunc(F->getArg(It->ArgIndex), I32Ty);
         Builder.CreateCall(ActivateFn, {PN, AP, Idx});
       }
     }
