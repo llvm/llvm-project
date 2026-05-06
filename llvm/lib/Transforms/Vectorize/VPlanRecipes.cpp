@@ -3443,24 +3443,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     for (const VPValue *ArgOp : ArgOps)
       Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
 
-    if (CalledFn->isIntrinsic())
-      // Various pseudo-intrinsics with costs of 0 are scalarized instead of
-      // vectorized via VPWidenIntrinsicRecipe. Return 0 for them early.
-      switch (CalledFn->getIntrinsicID()) {
-      case Intrinsic::assume:
-      case Intrinsic::lifetime_end:
-      case Intrinsic::lifetime_start:
-      case Intrinsic::sideeffect:
-      case Intrinsic::pseudoprobe:
-      case Intrinsic::experimental_noalias_scope_decl: {
-        assert(getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
-                                    ElementCount::getFixed(1), Ctx) == 0 &&
-               "scalarizing intrinsic should be free");
-        return InstructionCost(0);
-      }
-      default:
-        break;
-      }
+    if (CalledFn->isIntrinsic() &&
+        VPCostContext::isFreeScalarIntrinsic(CalledFn->getIntrinsicID())) {
+      assert(getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
+                                  ElementCount::getFixed(1), Ctx) == 0 &&
+             "scalarizing intrinsic should be free");
+      return InstructionCost(0);
+    }
 
     Type *ResultTy = Ctx.Types.inferScalarType(this);
     InstructionCost ScalarCallCost =

@@ -6,10 +6,7 @@
 
 // RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-no-key.json 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-MISSING-KEY
-// CHECK-MISSING-KEY: saw {
-// CHECK-MISSING-KEY:   "NoPointerFlow": [
-// CHECK-MISSING-KEY:     [
-// CHECK-MISSING-KEY: } but expected a JSON object with the key: PointerFlow
+// CHECK-MISSING-KEY: saw an object of 1 key(s) but expected a JSON object with the key: PointerFlow
 
 // RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-bad-summary.json 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-BAD-SUMMARY
@@ -24,4 +21,4 @@
 // CHECK-BAD-ARRAY:    },
 // CHECK-BAD-ARRAY:    2
 // CHECK-BAD-ARRAY:  ]
-// CHECK-BAD-ARRAY:] but expected a JSON array of EntityPointerLevels with a size greater than 1: [lhs, rhs, rhs, ...]
+// CHECK-BAD-ARRAY:] but expected a JSON array of EntityPointerLevels with a size greater than 1: [src, dest, dest, ...]
