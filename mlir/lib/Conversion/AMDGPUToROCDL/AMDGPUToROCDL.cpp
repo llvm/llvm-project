@@ -1697,7 +1697,13 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
     // smfmac is supported on gfx942 and gfx950.
     if (chipset.majorVersion != 9 || chipset < kGfx942)
       return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
-    bool isGfx950 = chipset >= kGfx950;
+
+    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
+    if (!maybeIntrinsic.has_value())
+      return op.emitOpError(
+          "no intrinsic matching sparse MFMA on the given chipset");
+    bool isGfx942BF16 = (*maybeIntrinsic == ROCDL::smfmac_f32_16x16x64_bf16::getOperationName() || *maybeIntrinsic == ROCDL::smfmac_f32_32x32x32_bf16::getOperationName());
+    bool isGfx950 = chipset >= kGfx950 && !isGfx942BF16;
 
     Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA(),
                                          isGfx950);
@@ -1705,10 +1711,6 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
                                          isGfx950);
     Value c = adaptor.getDestC();
 
-    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
-    if (!maybeIntrinsic.has_value())
-      return op.emitOpError(
-          "no intrinsic matching sparse MFMA on the given chipset");
 
     // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
     // gfx950 8-bit variants already carry the index as i32; skip the bitcast.
