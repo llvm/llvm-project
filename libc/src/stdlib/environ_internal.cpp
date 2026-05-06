@@ -91,21 +91,21 @@ cpp::optional<size_t> EnvironmentManager::find_var(cpp::string_view name) {
 // Helper: allocate new storage and ownership arrays of the given capacity,
 // copy the first `copy_count` entries from old_storage/old_ownership, and
 // initialize the remaining ownership slots to default (not-owned).
-// Returns false on allocation failure; on failure the old arrays are untouched.
-bool EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
-                                        EnvStringOwnership *old_ownership,
-                                        size_t copy_count, char **&out_storage,
-                                        EnvStringOwnership *&out_ownership) {
+// Returns nullopt on allocation failure; the old arrays are untouched.
+cpp::optional<EnvironmentManager::AllocResult>
+EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
+                                   EnvStringOwnership *old_ownership,
+                                   size_t copy_count) {
   AllocChecker ac;
   char **new_storage = new (ac) char *[new_capacity + 1];
   if (!ac)
-    return false;
+    return cpp::nullopt;
 
   EnvStringOwnership *new_ownership =
       new (ac) EnvStringOwnership[new_capacity + 1];
   if (!ac) {
     delete[] new_storage;
-    return false;
+    return cpp::nullopt;
   }
 
   for (size_t i = 0; i < copy_count; i++) {
@@ -114,9 +114,7 @@ bool EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
   }
   new_storage[copy_count] = nullptr;
 
-  out_storage = new_storage;
-  out_ownership = new_ownership;
-  return true;
+  return AllocResult{new_storage, new_ownership};
 }
 
 bool EnvironmentManager::ensure_capacity(size_t needed) {
@@ -131,12 +129,11 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
                               ? MIN_ENVIRON_CAPACITY
                               : needed * ENVIRON_GROWTH_FACTOR;
 
-    char **new_storage = nullptr;
-    EnvStringOwnership *new_ownership = nullptr;
-    if (!alloc_and_copy(new_capacity, old_env, nullptr, count, new_storage,
-                        new_ownership))
+    auto result = alloc_and_copy(new_capacity, old_env, nullptr, count);
+    if (!result)
       return false;
 
+    auto [new_storage, new_ownership] = *result;
     storage = new_storage;
     ownership = new_ownership;
     capacity = new_capacity;
@@ -156,15 +153,14 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   // manager in an inconsistent state.
   size_t new_capacity = needed * ENVIRON_GROWTH_FACTOR;
 
-  char **new_storage = nullptr;
-  EnvStringOwnership *new_ownership = nullptr;
-  if (!alloc_and_copy(new_capacity, storage, ownership, count, new_storage,
-                      new_ownership))
+  auto result = alloc_and_copy(new_capacity, storage, ownership, count);
+  if (!result)
     return false;
 
   delete[] storage;
   delete[] ownership;
 
+  auto [new_storage, new_ownership] = *result;
   storage = new_storage;
   ownership = new_ownership;
   capacity = new_capacity;

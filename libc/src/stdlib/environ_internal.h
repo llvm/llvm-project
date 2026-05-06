@@ -88,13 +88,20 @@ class EnvironmentManager {
   // success, false on allocation failure.
   bool ensure_capacity(size_t needed);
 
+  // Result of a successful environment storage allocation.
+  struct AllocResult {
+    char **storage;
+    EnvStringOwnership *ownership;
+  };
+
   // Helper: allocate new storage and ownership arrays of the given capacity,
   // copy the first `copy_count` entries from old_storage/old_ownership, and
   // initialize the remaining ownership slots to default (not-owned).
-  // Returns false on allocation failure.
-  bool alloc_and_copy(size_t new_capacity, char **old_storage,
-                      EnvStringOwnership *old_ownership, size_t copy_count,
-                      char **&out_storage, EnvStringOwnership *&out_ownership);
+  // Returns nullopt on allocation failure; the old arrays are untouched.
+  cpp::optional<AllocResult> alloc_and_copy(size_t new_capacity,
+                                            char **old_storage,
+                                            EnvStringOwnership *old_ownership,
+                                            size_t copy_count);
 
 public:
   // Get the singleton instance of the environment manager.
