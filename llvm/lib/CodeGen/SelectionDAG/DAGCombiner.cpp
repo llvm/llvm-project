@@ -7085,11 +7085,11 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   while (true) {
     if (NewVT == EVT())
       return SDValue();
-    if (TLI.getTypeAction(*DAG.getContext(), NewVT) ==
-        TargetLowering::TypeLegal)
-      break;
 
     EVT TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), NewVT);
+    if (TransformVT == NewVT)
+      break;
+
     if (TransformVT != EVT() &&
         TransformVT.getSizeInBits() == ResultVT.getSizeInBits() &&
         TLI.getOperationAction(N->getOpcode(), TransformVT) ==
