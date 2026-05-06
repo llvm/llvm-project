@@ -1044,7 +1044,7 @@ def fpimm0 : FPImmLeaf<fAny, [{
 }]>;
 
 def fpimmneg0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-0.0);
+  return Imm.isNegZero();
 }]>;
 
 def fpimm1 : FPImmLeaf<fAny, [{

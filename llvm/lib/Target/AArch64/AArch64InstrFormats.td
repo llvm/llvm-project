@@ -1560,7 +1560,7 @@ def fpimm0 : FPImmLeaf<fAny, [{
 }]>;
 
 def fpimm_minus0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-0.0);
+  return Imm.isNegZero();
 }]>;
 
 def fpimm_half : FPImmLeaf<fAny, [{

@@ -280,7 +280,7 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 
 // FP immediate patterns.
 def fpimm0 : FPImmLeaf<fAny, [{return Imm.isPosZero();}]>;
-def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isNegZero();}]>;
 def fpimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.5);}]>;
 def fpnegimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.5);}]>;
 

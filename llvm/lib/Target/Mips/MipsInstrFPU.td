@@ -102,7 +102,7 @@ def fpimm0 : PatLeaf<(fpimm), [{
 }]>;
 
 def fpimm0neg : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(-0.0);
+  return N->isNegZero();
 }]>;
 
 //===----------------------------------------------------------------------===//

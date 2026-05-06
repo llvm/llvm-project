@@ -19383,7 +19383,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   if (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs()) {
     if (N->getFlags().hasNoSignedZeros() ||
-        (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
+        (N2CFP && !N2CFP->isNegZero())) {
       if (N0CFP && N0CFP->isZero())
         return N2;
       if (N1CFP && N1CFP->isZero())

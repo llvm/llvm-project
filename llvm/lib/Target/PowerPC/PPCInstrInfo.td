@@ -737,7 +737,7 @@ def nzFPImmExactInti5 : PatLeaf<(fpimm), [{
 
 // Floating point zero immediates (positive and negative)
 def fpimm0 : PatLeaf<(fpimm), [{ return N->isPosZero(); }]>;
-def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isNegZero();}]>;
 
 def getFPAs5BitExactInt : SDNodeXForm<fpimm, [{
   APFloat FloatValue = N->getValueAPF();
