@@ -12,8 +12,7 @@ def MyTarget : Target {
 }
 
 // CHECK-LABEL: case 0:
-// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, Decoder)))
-// CHECK-NEXT:      return MCDisassembler::Fail;
+// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, Decoder))) return dbgFailOpd("op0", "bits<0>", "DecodeRCRegisterClass");
 // CHECK-NEXT:    tmp = fieldFromInstruction(insn, 2, 4);
 // CHECK-NEXT:    MI.addOperand(MCOperand::createImm(tmp));
 // CHECK-NEXT:    tmp = 0x0;

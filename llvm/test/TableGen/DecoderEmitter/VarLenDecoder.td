@@ -65,17 +65,17 @@ def FOO32 : MyVarInst<MemOp32> {
 
 // CHECK:      case 0:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
-// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) return dbgFailOpd("opd", "DecodeRegClassRegisterClass", {8, 3});
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
-// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) return dbgFailOpd("opd", "DecodeRegClassRegisterClass", {0, 3});
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 11, 16);
-// CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) return dbgFailOpd("opd", "myCustomDecoder", {11, 16});
 // CHECK-NEXT: return S;
 // CHECK-NEXT: case 1:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
-// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) return dbgFailOpd("opd", "DecodeRegClassRegisterClass", {8, 3});
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
-// CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) return dbgFailOpd("opd", "myCustomDecoder", {0, 3});
 // CHECK-NEXT: tmp = 0x0;
 // CHECK-NEXT: tmp |= fieldFromInstruction(insn, 11, 16) << 16;
 // CHECK-NEXT: tmp |= fieldFromInstruction(insn, 27, 16);

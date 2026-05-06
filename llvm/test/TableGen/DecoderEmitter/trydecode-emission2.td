@@ -42,5 +42,7 @@ def InstB : TestInstruction {
 // CHECK-NEXT:                                 // 22: }
 // CHECK-NEXT: };
 
-// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-// CHECK: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK-LABEL: case 0:
+// CHECK-NEXT:    if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) return dbgFailInsn("InstB", "DecodeInstB", &DecodeComplete);
+// CHECK-LABEL: case 1:
+// CHECK-NEXT:    if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) return dbgFailInsn("InstA", "DecodeInstA", &DecodeComplete);
