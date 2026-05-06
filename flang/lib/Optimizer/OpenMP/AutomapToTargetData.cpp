@@ -15,14 +15,11 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include <algorithm>
 
 namespace flangomp {
 #define GEN_PASS_DEF_AUTOMAPTOTARGETDATAPASS
@@ -90,11 +87,7 @@ class AutomapToTargetDataPass
   }
 
   void runOnOperation() override {
-    ModuleOp module = getOperation()->getParentOfType<ModuleOp>();
-    if (!module)
-      module = dyn_cast<ModuleOp>(getOperation());
-    if (!module)
-      return;
+    ModuleOp module = getOperation();
 
     // Build FIR builder for helper utilities.
     fir::KindMapping kindMap = fir::getKindMapping(module);
@@ -117,16 +110,61 @@ class AutomapToTargetDataPass
       if (needsBoundsOps(memOp.getMemref()))
         genBoundsOps(builder, memOp.getMemref(), bounds);
 
+      mlir::Value boxValue;
+      if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(memOp.getOperation()))
+        boxValue = storeOp.getValue();
+      else
+        boxValue = mlir::cast<fir::LoadOp>(memOp.getOperation()).getResult();
+
+      mlir::Value baseAddr =
+          fir::BoxAddrOp::create(builder, memOp.getLoc(), boxValue);
+      mlir::Value dataAddr = builder.createConvert(
+          memOp.getLoc(),
+          builder.getRefType(fir::unwrapRefType(baseAddr.getType())), baseAddr);
+      mlir::Type baseTy = fir::unwrapRefType(dataAddr.getType());
+      if (mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(baseTy))
+        baseTy = eleTy;
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(baseTy))
+        if (seqTy.hasDynamicExtents())
+          baseTy = seqTy.getEleTy();
+
       omp::TargetEnterExitUpdateDataOperands clauses;
+      bool isAlloc = isa<fir::StoreOp>(memOp);
+
+      auto createDescriptorMap =
+          [&](mlir::omp::ClauseMapFlags mapType) -> mlir::omp::MapInfoOp {
+        mlir::Type descriptorTy =
+            fir::unwrapRefType(memOp.getMemref().getType());
+        // The attach entry expects the descriptor object to already have a
+        // device mapping, but this raw object map must not be expanded as a
+        // Fortran descriptor member map.
+        return mlir::omp::MapInfoOp::create(
+            builder, memOp.getLoc(), memOp.getMemref().getType(),
+            memOp.getMemref(), TypeAttr::get(descriptorTy),
+            builder.getAttr<omp::ClauseMapFlagsAttr>(mapType),
+            builder.getAttr<omp::VariableCaptureKindAttr>(
+                omp::VariableCaptureKind::ByRef),
+            /*var_ptr_ptr=*/mlir::Value{},
+            /*var_ptr_ptr_type=*/mlir::TypeAttr{},
+            /*members=*/SmallVector<Value>{},
+            /*members_index=*/ArrayAttr{},
+            /*bounds=*/SmallVector<Value>{},
+            /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
+            builder.getBoolAttr(true));
+      };
+
+      if (isAlloc)
+        clauses.mapVars.push_back(createDescriptorMap(
+            omp::ClauseMapFlags::to | omp::ClauseMapFlags::always));
+
+      mlir::omp::ClauseMapFlags mapType =
+          isAlloc ? omp::ClauseMapFlags::storage : omp::ClauseMapFlags::del;
       mlir::omp::MapInfoOp mapInfo = mlir::omp::MapInfoOp::create(
-          builder, memOp.getLoc(), memOp.getMemref().getType(),
-          memOp.getMemref(),
-          TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
-          builder.getAttr<omp::ClauseMapFlagsAttr>(
-              isa<fir::StoreOp>(memOp) ? omp::ClauseMapFlags::to
-                                       : omp::ClauseMapFlags::del),
+          builder, memOp.getLoc(), dataAddr.getType(), dataAddr,
+          TypeAttr::get(baseTy),
+          builder.getAttr<omp::ClauseMapFlagsAttr>(mapType),
           builder.getAttr<omp::VariableCaptureKindAttr>(
-              omp::VariableCaptureKind::ByCopy),
+              omp::VariableCaptureKind::ByRef),
           /*var_ptr_ptr=*/mlir::Value{},
           /*var_ptr_ptr_type=*/mlir::TypeAttr{},
           /*members=*/SmallVector<Value>{},
@@ -134,9 +172,31 @@ class AutomapToTargetDataPass
           /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
           builder.getBoolAttr(false));
       clauses.mapVars.push_back(mapInfo);
-      isa<fir::StoreOp>(memOp)
-          ? omp::TargetEnterDataOp::create(builder, memOp.getLoc(), clauses)
-          : omp::TargetExitDataOp::create(builder, memOp.getLoc(), clauses);
+
+      if (isAlloc) {
+        mlir::omp::MapInfoOp attachInfo = mlir::omp::MapInfoOp::create(
+            builder, memOp.getLoc(), dataAddr.getType(), dataAddr,
+            TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
+            builder.getAttr<omp::ClauseMapFlagsAttr>(
+                omp::ClauseMapFlags::attach),
+            builder.getAttr<omp::VariableCaptureKindAttr>(
+                omp::VariableCaptureKind::ByRef),
+            /*var_ptr_ptr=*/memOp.getMemref(),
+            /*var_ptr_ptr_type=*/TypeAttr::get(
+                fir::unwrapRefType(memOp.getMemref().getType())),
+            /*members=*/SmallVector<Value>{},
+            /*members_index=*/ArrayAttr{},
+            /*bounds=*/SmallVector<Value>{},
+            /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
+            builder.getBoolAttr(false));
+        clauses.mapVars.push_back(attachInfo);
+      } else {
+        clauses.mapVars.push_back(
+            createDescriptorMap(omp::ClauseMapFlags::del));
+      }
+
+      isAlloc ? omp::TargetEnterDataOp::create(builder, memOp.getLoc(), clauses)
+              : omp::TargetExitDataOp::create(builder, memOp.getLoc(), clauses);
     };
 
     for (fir::GlobalOp globalOp : automapGlobals) {
@@ -154,107 +214,6 @@ class AutomapToTargetDataPass
           addMapInfo(globalOp, loadOp);
       }
     }
-
-    // Move automapped descriptors from map() to has_device_addr in target ops.
-    auto originatesFromAutomapGlobal = [&](mlir::Value varPtr) -> bool {
-      if (auto decl = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
-              varPtr.getDefiningOp())) {
-        if (auto addrOp = mlir::dyn_cast_or_null<fir::AddrOfOp>(
-                decl.getMemref().getDefiningOp())) {
-          if (auto g =
-                  mlir::SymbolTable::lookupNearestSymbolFrom<fir::GlobalOp>(
-                      decl, addrOp.getSymbol()))
-            return automapGlobals.contains(g);
-        }
-      }
-      return false;
-    };
-
-    module.walk([&](mlir::omp::TargetOp target) {
-      // Collect candidates to move: descriptor maps of automapped globals.
-      llvm::SmallVector<mlir::Value> newMapOps;
-      llvm::SmallVector<unsigned> removedIndices;
-      llvm::SmallVector<mlir::Value> movedToHDA;
-      llvm::SmallVector<mlir::BlockArgument> oldMapArgsForMoved;
-
-      auto mapRange = target.getMapVars();
-      newMapOps.reserve(mapRange.size());
-
-      auto argIface = llvm::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(
-          target.getOperation());
-      llvm::ArrayRef<mlir::BlockArgument> mapBlockArgs =
-          argIface.getMapBlockArgs();
-
-      for (auto [idx, mapVal] : llvm::enumerate(mapRange)) {
-        auto mapOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapVal.getDefiningOp());
-        if (!mapOp) {
-          newMapOps.push_back(mapVal);
-          continue;
-        }
-
-        mlir::Type varTy = fir::unwrapRefType(mapOp.getVarType());
-        bool isDescriptor = mlir::isa<fir::BaseBoxType>(varTy);
-        if (isDescriptor && originatesFromAutomapGlobal(mapOp.getVarPtr())) {
-          movedToHDA.push_back(mapVal);
-          removedIndices.push_back(idx);
-          oldMapArgsForMoved.push_back(mapBlockArgs[idx]);
-        } else {
-          newMapOps.push_back(mapVal);
-        }
-      }
-
-      if (movedToHDA.empty())
-        return;
-
-      // Update map vars to exclude moved entries.
-      mlir::MutableOperandRange mapMutable = target.getMapVarsMutable();
-      mapMutable.assign(newMapOps);
-
-      // Append moved entries to has_device_addr and insert corresponding block
-      // arguments.
-      mlir::MutableOperandRange hdaMutable =
-          target.getHasDeviceAddrVarsMutable();
-      llvm::SmallVector<mlir::Value> newHDA;
-      newHDA.reserve(hdaMutable.size() + movedToHDA.size());
-      llvm::for_each(hdaMutable.getAsOperandRange(),
-                     [&](mlir::Value v) { newHDA.push_back(v); });
-
-      unsigned hdaStart = argIface.getHasDeviceAddrBlockArgsStart();
-      unsigned oldHdaCount = argIface.numHasDeviceAddrBlockArgs();
-      llvm::SmallVector<mlir::BlockArgument> newHDAArgsForMoved;
-      unsigned insertIndex = hdaStart + oldHdaCount;
-      for (mlir::Value v : movedToHDA) {
-        newHDA.push_back(v);
-        target->getRegion(0).insertArgument(insertIndex, v.getType(),
-                                            v.getLoc());
-        // Capture the newly inserted block argument.
-        newHDAArgsForMoved.push_back(
-            target->getRegion(0).getArgument(insertIndex));
-        insertIndex++;
-      }
-      hdaMutable.assign(newHDA);
-
-      // Redirect uses in the region: replace old map block args with the
-      // corresponding new has_device_addr block args.
-      for (auto [oldArg, newArg] :
-           llvm::zip_equal(oldMapArgsForMoved, newHDAArgsForMoved))
-        oldArg.replaceAllUsesWith(newArg);
-
-      // Finally, erase corresponding map block arguments in descending order.
-      // Descending order is necessary to avoid index invalidation: erasing
-      // arguments from highest to lowest index ensures that earlier erases do
-      // not shift the indices of arguments yet to be erased.
-      unsigned mapStart = argIface.getMapBlockArgsStart();
-      // Convert indices to absolute argument numbers before erasing.
-      llvm::SmallVector<unsigned> absArgNos;
-      absArgNos.reserve(removedIndices.size());
-      for (unsigned idx : removedIndices)
-        absArgNos.push_back(mapStart + idx);
-      std::sort(absArgNos.begin(), absArgNos.end(), std::greater<>());
-      for (unsigned absNo : absArgNos)
-        target->getRegion(0).eraseArgument(absNo);
-    });
   }
 };
 } // namespace

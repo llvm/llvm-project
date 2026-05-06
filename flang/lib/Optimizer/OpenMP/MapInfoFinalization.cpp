@@ -1351,6 +1351,34 @@ class MapInfoFinalizationPass
     return false;
   }
 
+  static bool isAttachMap(mlir::omp::MapInfoOp op) {
+    return (op.getMapType() & mlir::omp::ClauseMapFlags::attach) ==
+           mlir::omp::ClauseMapFlags::attach;
+  }
+
+  static bool isDescriptorOnlyMap(mlir::omp::MapInfoOp op) {
+    // A descriptor-only map keeps the descriptor object present so that a
+    // subsequent attach map can update its base address. It intentionally does
+    // not map the descriptor's pointee data, so descriptor member expansion
+    // must leave it alone.
+    if (!op.getPartialMap() || !op.getMembers().empty() ||
+        !op.getBounds().empty() || op.getVarPtrPtr() ||
+        op.getMapCaptureType() != mlir::omp::VariableCaptureKind::ByRef)
+      return false;
+
+    mlir::omp::ClauseMapFlags mapType = op.getMapType();
+    if ((mapType & mlir::omp::ClauseMapFlags::from) ==
+            mlir::omp::ClauseMapFlags::from ||
+        (mapType & mlir::omp::ClauseMapFlags::storage) ==
+            mlir::omp::ClauseMapFlags::storage)
+      return false;
+
+    return (mapType & mlir::omp::ClauseMapFlags::del) ==
+               mlir::omp::ClauseMapFlags::del ||
+           (mapType & mlir::omp::ClauseMapFlags::to) ==
+               mlir::omp::ClauseMapFlags::to;
+  }
+
   // This pass executes on omp::MapInfoOp's containing descriptor based types
   // (allocatables, pointers, assumed shape etc.) and expanding them into
   // multiple omp::MapInfoOp's for each pointer member contained within the
@@ -1612,7 +1640,8 @@ class MapInfoFinalizationPass
                "single users or up to two users when those users"
                "are a MapInfoOp and Target mapping directive");
 
-        if (hasADescriptor(op.getVarPtr().getDefiningOp(),
+        if (!isAttachMap(op) && !isDescriptorOnlyMap(op) &&
+            hasADescriptor(op.getVarPtr().getDefiningOp(),
                            fir::unwrapRefType(op.getVarPtrType()))) {
           builder.setInsertionPoint(op);
           mlir::Operation *targetUser = getFirstTargetUser(op);
