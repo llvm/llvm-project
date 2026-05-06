@@ -13509,7 +13509,7 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   Register LabelReg = MRI.createVirtualRegister(PtrRC);
   Register BufReg = MI.getOperand(1).getReg();
 
-  unsigned SP = (PVT == MVT::i64) ? PPC::X1 : PPC::R1;
+  MCRegister SP = Subtarget.getStackPointerRegister();
 
   // Store FP to buf[0] if we have a frame pointer.
   // Note: hasFP() is unreliable here because it depends on getStackSize()
