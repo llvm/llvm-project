@@ -30,6 +30,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -88,6 +89,15 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                                          strides);
       })
       .Default([&](Type t) -> Operation * { return nullptr; });
+}
+
+static TypedAttr getScalarConstantAttrFromDenseSplat(Value input) {
+  DenseElementsAttr splatAttr;
+  matchPattern(input, m_Constant<DenseElementsAttr>(&splatAttr));
+  if (!splatAttr || !splatAttr.isSplat())
+    return {};
+
+  return dyn_cast<TypedAttr>(splatAttr.getSplatValue<Attribute>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2124,6 +2134,14 @@ LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
     return success();
   }
 
+  if (getInput().getType() == getInit().getType()) {
+    auto splatAttr = dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput());
+    if (splatAttr && splatAttr.isSplat()) {
+      result.push_back(getInput());
+      return success();
+    }
+  }
+
   return failure();
 }
 
@@ -2146,6 +2164,33 @@ struct FoldTransposeWithTranspose : OpRewritePattern<linalg::TransposeOp> {
     rewriter.replaceOpWithNewOp<TransposeOp>(
         transposeOp, defTransposeOp.getInput(), transposeOp.getInit(),
         foldedPerms);
+    return success();
+  }
+};
+
+/// Rewrite a transpose of a dense splat constant into a dense splat constant of
+/// the transposed output shape.
+struct FoldTransposeSplatConstant : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (!transposeOp.hasPureTensorSemantics())
+      return failure();
+
+    TypedAttr splatValue =
+        getScalarConstantAttrFromDenseSplat(transposeOp.getInput());
+    if (!splatValue)
+      return failure();
+
+    auto resultType =
+        cast<RankedTensorType>(transposeOp.getResult()[0].getType());
+    if (!resultType.hasStaticShape())
+      return failure();
+
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(transposeOp, resultType,
+                                                   resultAttr);
     return success();
   }
 };
@@ -2210,7 +2255,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
 
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<FoldTransposeWithTranspose, SwapTransposeWithBroadcast>(context);
+  results.add<FoldTransposeWithTranspose, FoldTransposeSplatConstant,
+              SwapTransposeWithBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
