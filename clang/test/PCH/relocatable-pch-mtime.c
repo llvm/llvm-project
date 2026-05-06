@@ -70,9 +70,9 @@
 // With content validation the change is caught even though size is the same.
 // RUN: not %clang_cc1 -include-pch %t/test.pch \
 // RUN:   -isysroot %t/sysroot_new -fvalidate-ast-input-files-content \
-// RUN:   -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=CHECK-CONTENT,CHECK
+// RUN:   -fsyntax-only %s 2>&1 | FileCheck %s
 
 // CHECK: fatal error: file '{{.*}}test.h' has been modified since the precompiled header '{{.*}}test.pch' was built
-// CHECK-CONTENT: note: content changed
+// CHECK: note: content changed
 
 int get_val(void) { return relocated_val; }
