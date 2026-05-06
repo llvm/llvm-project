@@ -534,6 +534,10 @@ test.with_properties_and_attr 16 <{rhs = 16 : i64}>
 // Assert through the verifier that its inferred as i32.
 test.format_all_types_match_var %should_be_i32, %i32 : i32
 
+// CHECK: test.with_attr_inferred_type %[[I32]] {lhs = 32 : i32} : i32
+%attr_inferred_i32 = test.with_attr_inferred_type %i32 {lhs = 32 : i32} : i32
+test.format_all_types_match_var %attr_inferred_i32, %i32 : i32
+
 // CHECK: test.using_property_in_custom_and_other [1, 4, 20] <{other = 16 : i64}>
 test.using_property_in_custom_and_other [1, 4, 20] <{other = 16 : i64}>
 

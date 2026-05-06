@@ -676,6 +676,17 @@ const char *const inferReturnTypesParserCode = R"(
   result.addTypes(inferredReturnTypes);
 )";
 
+/// The code snippet used to copy inherent attributes from
+/// `result.attributes` into the inline properties storage.
+///
+/// {0}: The operation class name.
+const char *const attrDictPopulatePropertiesCode = R"(
+auto &odsAttrDictProps = result.getOrAddProperties<{0}::Properties>();
+for (const ::mlir::NamedAttribute &namedAttr : result.attributes)
+  {0}::setInherentAttr(odsAttrDictProps, namedAttr.getName().getValue(),
+      namedAttr.getValue());
+)";
+
 /// The code snippet used to generate a parser call for a region list.
 ///
 /// {0}: The name for the region list.
@@ -1640,6 +1651,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
               "result.name.getStringRef() << \"' op \";\n"
            << "  })))\n"
            << "  return ::mlir::failure();\n";
+      body << formatv(attrDictPopulatePropertiesCode, opCppClassName);
     }
     body.unindent() << "}\n";
     body.unindent();
