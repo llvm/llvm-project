@@ -39,12 +39,12 @@
 @5 = global float +snan(0x1)
 ; CHECK: @6 = global x86_fp80 f0x0001FFFF000000000000
 @6 = global x86_fp80 f0x0000ffff000000000000
-; CHECK: @7 = global float 0xB810000000000000
+; CHECK: @7 = global float f0x80800000
 @7 = global float -0x1.0p-126
-; CHECK: @8 = global double 0x7FEFFFFFFFFFFFFF
+; CHECK: @8 = global double f0x7FEFFFFFFFFFFFFF
 @8 = global double 1.79769313486231570815e+308
 
-; CHECK-COUNT-3: global half 0xH01E3
+; CHECK-COUNT-3: global half 2.878900e-05
 @denormal.hex = global half +0x1.e3p-16
 @denormal.dec = global half 2.878904342651367875e-5
 @denormal.bits = global half f0x01e3
