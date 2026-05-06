@@ -35,6 +35,7 @@ using namespace clang::ast_matchers;
 static constexpr const char BoundCall[] = "CallExpr";
 static constexpr const char FuncDecl[] = "FuncDecl";
 static constexpr const char ArgName[] = "ArgName";
+static constexpr const char StructuredBindingResult[] = "StructuredBinding";
 
 namespace clang::tidy::utils {
 
@@ -53,6 +54,16 @@ AST_MATCHER(Expr, hasSideEffects) {
   return Node.HasSideEffects(Finder->getASTContext());
 }
 } // namespace
+
+static auto hasStructuredBindingResult() {
+  return callExpr(
+      anyOf(hasParent(decompositionDecl()),
+            hasParent(exprWithCleanups(hasParent(decompositionDecl())))));
+}
+
+static auto hasStructuredBindingResult(StringRef ID) {
+  return hasStructuredBindingResult().bind(ID);
+}
 
 static auto
 makeExprMatcher(const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
@@ -155,7 +166,9 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
                 ast_matchers::internal::DynTypedMatcher::VO_AnyOf,
                 ASTNodeKind::getFromNodeKind<CallExpr>(),
                 std::move(TotalMatchers))
-                .convertTo<CallExpr>()),
+                .convertTo<CallExpr>(),
+            anyOf(hasStructuredBindingResult(StructuredBindingResult),
+                  unless(hasStructuredBindingResult()))),
         this);
   }
 }
@@ -211,6 +224,23 @@ static bool isResultUsed(const CallExpr &Call,
   return isResultUsed(DynTypedNode::create(Call), Result);
 }
 
+static bool shouldEmitFixIts(UseRangesCheck::Replacer::ResultUsePolicy Policy,
+                             bool ResultUsed, bool IsStructuredBinding) {
+  using Kind = UseRangesCheck::Replacer::ResultUsePolicy::Kind;
+  if (!ResultUsed)
+    return true;
+  switch (Policy.PolicyKind) {
+  case Kind::Preserve:
+  case Kind::AppendAccessorForUsedResult:
+    return true;
+  case Kind::KeepFixItOnlyForStructuredBinding:
+    return IsStructuredBinding;
+  case Kind::SuppressFixItForUsedResult:
+    return false;
+  }
+  llvm_unreachable("Unhandled result use policy");
+}
+
 static void insertAccessor(DiagnosticBuilder &Diag, const CallExpr &Call,
                            StringRef Accessor, const ASTContext &Ctx) {
   const SourceLocation End = Lexer::getLocForEndOfToken(
@@ -254,10 +284,16 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
         return;
     }
 
+    const bool IsStructuredBinding =
+        Result.Nodes.getNodeAs<CallExpr>(StructuredBindingResult) != nullptr;
     const bool ResultUsed = isResultUsed(*Call, Result);
-    auto ResultPolicy = Replacer->getResultUsePolicy(*Function, false);
+    auto ResultPolicy =
+        Replacer->getResultUsePolicy(*Function, IsStructuredBinding);
 
     auto Diag = createDiag(*Call);
+    if (!shouldEmitFixIts(ResultPolicy, ResultUsed, IsStructuredBinding))
+      return;
+
     if (auto ReplaceName = Replacer->getReplaceName(*Function))
       Diag << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),
                                            *ReplaceName);

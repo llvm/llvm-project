@@ -5,6 +5,11 @@
 
 namespace std {
 
+template <class T1, class T2> struct pair {
+  T1 first;
+  T2 second;
+};
+
 template <typename Container> constexpr auto begin(const Container &Cont) {
   return Cont.begin();
 }
@@ -108,6 +113,11 @@ bool equal(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2,
 template <class ForwardIt, class T>
 void iota(ForwardIt first, ForwardIt last, T value);
 
+template <class InputIt, class UnaryFunc>
+UnaryFunc for_each(InputIt first, InputIt last, UnaryFunc f) {
+  return f;
+}
+
 template <class ForwardIt>
 ForwardIt unique(ForwardIt first, ForwardIt last);
 template <class ForwardIt, class BinaryPred>
@@ -138,6 +148,22 @@ template <class BidirIt, class UnaryPred>
 BidirIt stable_partition(BidirIt first, BidirIt last, UnaryPred pred) {
   return first;
 }
+template <class InputIt, class OutputIt1, class OutputIt2, class UnaryPred>
+pair<OutputIt1, OutputIt2> partition_copy(InputIt first, InputIt last,
+                                          OutputIt1 d_first_true,
+                                          OutputIt2 d_first_false,
+                                          UnaryPred pred) {
+  return {d_first_true, d_first_false};
+}
+
+template <class ForwardIt, class T>
+pair<ForwardIt, ForwardIt> equal_range(ForwardIt first, ForwardIt last,
+                                       const T &value);
+template <class ForwardIt>
+pair<ForwardIt, ForwardIt> minmax_element(ForwardIt first, ForwardIt last);
+template <class InputIt1, class InputIt2>
+pair<InputIt1, InputIt2> mismatch(InputIt1 first1, InputIt1 last1,
+                                  InputIt2 first2, InputIt2 last2);
 
 template <class ForwardIt>
 ForwardIt rotate(ForwardIt first, ForwardIt middle, ForwardIt last);
