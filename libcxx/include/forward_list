@@ -234,6 +234,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/exception_guard.h>
+#  include <__utility/exchange.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
 #  include <__utility/swap.h>
@@ -1022,8 +1023,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::__move_assign(forw
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
   clear();
   __base::__move_assign_alloc(__x);
-  __base::__before_begin()->__next_ = __x.__before_begin()->__next_;
-  __x.__before_begin()->__next_     = nullptr;
+  __base::__before_begin()->__next_ = std::__exchange(__x.__before_begin()->__next_, nullptr);
 }
 
 template <class _Tp, class _Alloc>

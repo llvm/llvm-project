@@ -27,7 +27,7 @@ At least one of the following commands are required:
 .. option:: --etm=<string>
 
   Path of the ETM trace file created by ARM CoreSight trace tools.
-  Requires the OpenCSD library to be enabled during the build.
+  Requires the OpenCSD library version 1.5.4 or higher to be enabled during the build.
 
 .. option:: --perfdata=<perfdata>, --pd
 

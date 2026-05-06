@@ -168,7 +168,7 @@ define <vscale x 4 x float> @bitcast() {
 
 define <vscale x 4 x ptr> @getelementptr_constant_foldable_1() {
 ; CHECK-LABEL: @getelementptr_constant_foldable_1(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x ptr> splat (ptr null)
 ;
   %ptr = getelementptr i32, <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> undef
   ret <vscale x 4 x ptr> %ptr
@@ -176,7 +176,7 @@ define <vscale x 4 x ptr> @getelementptr_constant_foldable_1() {
 
 define <vscale x 4 x ptr> @getelementptr_constant_foldable_2() {
 ; CHECK-LABEL: @getelementptr_constant_foldable_2(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x ptr> splat (ptr null)
 ;
   %ptr = getelementptr <vscale x 4 x i32>, ptr null, <vscale x 4 x i64> undef
   ret <vscale x 4 x ptr> %ptr

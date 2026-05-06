@@ -5,7 +5,7 @@ define double @test01() {
 ; CHECK-LABEL: define double @test01
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr null, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, <2 x ptr> zeroinitializer, <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, <2 x ptr> splat (ptr null), <2 x i32> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 [[TMP2]], <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP4]], i32 0

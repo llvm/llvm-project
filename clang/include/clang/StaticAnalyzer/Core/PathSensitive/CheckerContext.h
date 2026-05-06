@@ -105,9 +105,7 @@ public:
     return Pred->getLocationContext();
   }
 
-  const StackFrameContext *getStackFrame() const {
-    return Pred->getStackFrame();
-  }
+  const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
 
   /// Return true if the current LocationContext has no caller context.
   bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
@@ -168,9 +166,7 @@ public:
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return Pred->getSVal(S);
-  }
+  SVal getSVal(const Expr *E) const { return Pred->getSVal(E); }
 
   ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 

@@ -138,6 +138,25 @@ static bool poisonGuaranteesUB(const VPValue *V) {
   return false;
 }
 
+GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
+  // Like IR stripPointerCasts, look through GEPs with all-zero indices and
+  // casts to find a root GEP VPInstruction.
+  while (auto *PtrVPI = dyn_cast<VPInstruction>(Ptr)) {
+    unsigned Opcode = PtrVPI->getOpcode();
+    if (Opcode == Instruction::GetElementPtr) {
+      if (any_of(drop_begin(PtrVPI->operands()),
+                 [](VPValue *Op) { return !match(Op, m_ZeroInt()); }))
+        return PtrVPI->getGEPNoWrapFlags();
+      Ptr = PtrVPI->getOperand(0);
+      continue;
+    }
+    if (Opcode != Instruction::BitCast && Opcode != Instruction::AddrSpaceCast)
+      break;
+    Ptr = PtrVPI->getOperand(0);
+  }
+  return GEPNoWrapFlags::none();
+}
+
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
@@ -396,14 +415,14 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
+bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   // Live-ins and region values are uniform.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
     return true;
 
-  VPRecipeBase *R = V->getDefiningRecipe();
-  VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
-  VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
+  const VPRecipeBase *R = V->getDefiningRecipe();
+  const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
+  const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
   if (VPBB) {
     if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
       if (match(V->getDefiningRecipe(),
@@ -729,7 +748,8 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   VPInstruction *Increment = nullptr;
   for (VPUser *U : CanIV->users()) {
     VPValue *Step;
-    if (match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
+    if (isa<VPInstruction>(U) &&
+        match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
         IsIncrementStep(Step)) {
       assert(!Increment && "There must be a unique increment");
       Increment = cast<VPInstruction>(U);
