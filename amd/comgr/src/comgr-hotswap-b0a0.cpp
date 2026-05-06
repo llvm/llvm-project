@@ -63,6 +63,7 @@ static RewriteConfig makeGfx1250B0A0Config() {
 //
 // These have weak default definitions below; patch .cpp files may provide
 // strong overrides at link time so patches can land as independent PRs.
+// Patch entry points are declared in comgr-hotswap-internal.h.
 
 uint32_t applyInPlacePatches(PatchContext &, size_t);
 uint32_t applyTrampolinePatches(PatchContext &, size_t);
@@ -207,9 +208,9 @@ buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS) {
 /// sled, and pads the leftover bytes of the original slot with cached s_nop
 /// bytes. Advances \c Sled.WritePos by the amount consumed. Returns false if
 /// either branch encoding fails, leaving \c Ctx.Text partially written.
-[[nodiscard]] static bool emitToNopSled(PatchContext &Ctx, NopSled &Sled,
-                                        uint64_t InstOffset, uint32_t InstSize,
-                                        ArrayRef<uint8_t> Replacement) {
+[[nodiscard]] bool emitToNopSled(PatchContext &Ctx, NopSled &Sled,
+                                 uint64_t InstOffset, uint32_t InstSize,
+                                 ArrayRef<uint8_t> Replacement) {
   const LLVMState &LS = Ctx.LS;
   std::memcpy(Ctx.Text + Sled.WritePos, Replacement.data(), Replacement.size());
 
@@ -251,10 +252,9 @@ buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS) {
 /// MinInstSize zero bytes at the end of the trampoline body as a
 /// placeholder rather than encoding twice. Used when there is no reachable
 /// NOP sled for an in-place sled patch.
-[[nodiscard]] static bool emitToTrampoline(PatchContext &Ctx,
-                                           uint64_t InstOffset,
-                                           uint32_t InstSize,
-                                           ArrayRef<uint8_t> Replacement) {
+[[nodiscard]] bool emitToTrampoline(PatchContext &Ctx, uint64_t InstOffset,
+                                    uint32_t InstSize,
+                                    ArrayRef<uint8_t> Replacement) {
   Trampoline T;
   T.OriginalOffset = InstOffset;
   T.OriginalSize = InstSize;
@@ -268,12 +268,10 @@ buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS) {
 /// Emit \p Replacement for the instruction at [\p InstOffset,
 /// \p InstOffset + \p InstSize). Prefers an in-place NOP-sled rewrite when a
 /// reachable sled with sufficient headroom exists; otherwise falls back to a
-/// deferred trampoline. Marked [[maybe_unused]] because the weak-stub patch
-/// passes in this file do not yet call it -- the concrete patch .cpp files
-/// that land alongside will.
-[[maybe_unused, nodiscard]] static bool
-emitReplacementCode(PatchContext &Ctx, uint64_t InstOffset, uint32_t InstSize,
-                    ArrayRef<uint8_t> Replacement) {
+/// deferred trampoline.
+[[nodiscard]] bool emitReplacementCode(PatchContext &Ctx, uint64_t InstOffset,
+                                       uint32_t InstSize,
+                                       ArrayRef<uint8_t> Replacement) {
   // findNearestSled already enforces that the returned sled has at least
   // `Needed` bytes of headroom, so a non-null result is sufficient to take
   // the in-place path.

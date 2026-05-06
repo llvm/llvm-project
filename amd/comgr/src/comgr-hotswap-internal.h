@@ -497,6 +497,26 @@ struct PatchContext {
   std::vector<ScratchPatchInfo> &OutScratchPatches;
 };
 
+// -- Trampoline emission helpers (defined in comgr-hotswap-b0a0.cpp) ----------
+
+[[nodiscard]] bool emitToNopSled(PatchContext &Ctx, NopSled &Sled,
+                                 uint64_t InstOffset, uint32_t InstSize,
+                                 llvm::ArrayRef<uint8_t> Replacement);
+[[nodiscard]] bool emitToTrampoline(PatchContext &Ctx, uint64_t InstOffset,
+                                    uint32_t InstSize,
+                                    llvm::ArrayRef<uint8_t> Replacement);
+[[nodiscard]] bool emitReplacementCode(PatchContext &Ctx, uint64_t InstOffset,
+                                       uint32_t InstSize,
+                                       llvm::ArrayRef<uint8_t> Replacement);
+
+// -- Patch entry points (weak stubs in comgr-hotswap-b0a0.cpp) ----------------
+
+uint32_t applyInPlacePatches(PatchContext &Ctx, size_t Idx);
+uint32_t applyTrampolinePatches(PatchContext &Ctx, size_t Idx);
+uint32_t applyWmmaHazardPatch(PatchContext &Ctx);
+uint32_t applyWmmaSplitPatches(PatchContext &Ctx, size_t Idx);
+uint32_t applyScratchPatches(PatchContext &Ctx, size_t Idx);
+
 // -- Function declarations (B0-to-A0 policy layer) ----------------------------
 
 /// Run the full GFX1250 B0-to-A0 rewrite pipeline on \p ElfData / \p ElfSize.
