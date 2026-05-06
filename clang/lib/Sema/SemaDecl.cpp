@@ -3145,11 +3145,10 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       // Older compilers and language modes would require the use of selectany
       // to make such variables inline, and it would have no effect if we
       // honored it.
-      if (auto *VD = dyn_cast<VarDecl>(New)) {
-        if (VD->isInline() && !VD->isInlineSpecified()) {
-          ++I;
-          continue;
-        }
+      if (const auto *VD = dyn_cast<VarDecl>(New);
+          VD && VD->isInline() && !VD->isInlineSpecified()) {
+        ++I;
+        continue;
       }
     } else if (isa<OMPDeclareVariantAttr>(NewAttribute)) {
       // We allow to add OMP[Begin]DeclareVariantAttr to be added to
@@ -7152,9 +7151,9 @@ static void checkSelectAnyAttr(Sema &S, NamedDecl &ND) {
   if (!Attr)
     return;
 
-  if (auto *VD = dyn_cast<VarDecl>(&ND))
-    if (!VD->isStaticDataMember() && VD->isExternallyVisible())
-      return;
+  if (const auto *VD = dyn_cast<VarDecl>(&ND);
+      VD && !VD->isStaticDataMember() && VD->isExternallyVisible())
+    return;
 
   S.Diag(Attr->getLocation(), diag::err_attribute_selectany_non_extern_var);
   ND.dropAttr<SelectAnyAttr>();
