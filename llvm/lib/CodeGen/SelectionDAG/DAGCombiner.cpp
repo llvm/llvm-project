@@ -2108,7 +2108,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
-  case ISD::VECREDUCE_FMINIMUM:     return visitVECREDUCE(N);
+  case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM: return visitVECREDUCE(N);
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
@@ -20601,6 +20603,7 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
   }
 
   // There are no VECREDUCE variants of FMINIMUMNUM or FMAXIMUMNUM
+  // FIXME: There are now.
   if (Opc == ISD::FMINIMUMNUM || Opc == ISD::FMAXIMUMNUM)
     return SDValue();
 

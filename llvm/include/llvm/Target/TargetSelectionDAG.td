@@ -563,6 +563,10 @@ def vecreduce_fmin  : SDNode<"ISD::VECREDUCE_FMIN", SDTFPVecReduce>;
 def vecreduce_fmax  : SDNode<"ISD::VECREDUCE_FMAX", SDTFPVecReduce>;
 def vecreduce_fminimum : SDNode<"ISD::VECREDUCE_FMINIMUM", SDTFPVecReduce>;
 def vecreduce_fmaximum : SDNode<"ISD::VECREDUCE_FMAXIMUM", SDTFPVecReduce>;
+def vecreduce_fminimumnum : SDNode<"ISD::VECREDUCE_FMINIMUMNUM",
+                                   SDTFPVecReduce>;
+def vecreduce_fmaximumnum : SDNode<"ISD::VECREDUCE_FMAXIMUMNUM",
+                                   SDTFPVecReduce>;
 
 def partial_reduce_umla : SDNode<"ISD::PARTIAL_REDUCE_UMLA",
                                  SDTPartialReduceMLA>;
