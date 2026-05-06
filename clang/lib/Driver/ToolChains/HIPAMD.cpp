@@ -40,8 +40,7 @@ void AMDGCN::Linker::constructLLVMLinkCommand(
   ArgStringList LinkerInputs;
 
   for (auto Input : Inputs)
-    if (Input.isFilename())
-      LinkerInputs.push_back(Input.getFilename());
+    LinkerInputs.push_back(Input.getFilename());
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
