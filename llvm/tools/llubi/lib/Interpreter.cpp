@@ -1450,9 +1450,8 @@ public:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum: {
       const auto DenormMode = getCurrentDenormalMode(RetTy);
-      const bool HasStart =
-          IID == Intrinsic::vector_reduce_fadd ||
-          IID == Intrinsic::vector_reduce_fmul;
+      const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
+                            IID == Intrinsic::vector_reduce_fmul;
       const AnyValue &Vector = HasStart ? Args[1] : Args[0];
       std::optional<APFloat> Res;
       if (HasStart) {
@@ -1470,8 +1469,7 @@ public:
           Res.reset();
           break;
         }
-        const AnyValue ValidatedOp =
-            handleFMFFlags(V, FMF, /*IsInput=*/true);
+        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
         if (ValidatedOp.isPoison()) {
           Res.reset();
           break;
@@ -1505,13 +1503,24 @@ public:
           llvm_unreachable("Unexpected intrinsic ID");
         }
       }
-      return Res.has_value()
-                 ? handleDenormal(handleFMFFlags(std::move(*Res), FMF,
-                                                 /*IsInput=*/false)
-                                      .asFloat(),
-                                  DenormMode.Output,
-                                  /*IsInput=*/false)
-                 : AnyValue::poison();
+      if (Res.has_value()) {
+        const AnyValue ValidatedRes =
+            handleFMFFlags(*Res, FMF, /*IsInput=*/false);
+        if (ValidatedRes.isPoison()) {
+          Res.reset();
+        }
+        const APFloat FRes =
+            handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
+                           /*IsInput=*/false);
+        std::vector<AnyValue> RawInputVec = Vector.asAggregate();
+        std::vector<const APFloat *> InputVec;
+        InputVec.reserve(RawInputVec.size());
+        transform(
+            RawInputVec, std::back_inserter(InputVec),
+            [](const AnyValue &V) -> const APFloat * { return &V.asFloat(); });
+        return applyNaNPropagation(FRes, InputVec);
+      }
+      return AnyValue::poison();
     }
     case Intrinsic::fabs: {
       return visitFPUnOpWithResult(
@@ -1553,7 +1562,24 @@ public:
             static_cast<bool>(Op.asFloat().classify() & Mask));
       });
     }
-    case Intrinsic::copysign:
+    case Intrinsic::copysign: {
+      return computeBinOp(
+          RetTy, Args[0], Args[1],
+          [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+            if (LHS.isPoison() || RHS.isPoison())
+              return AnyValue::poison();
+            const AnyValue ValidatedLHS =
+                handleFMFFlags(LHS, FMF, /*IsInput=*/true);
+            const AnyValue ValidatedRHS =
+                handleFMFFlags(RHS, FMF, /*IsInput=*/true);
+            if (ValidatedLHS.isPoison() || ValidatedRHS.isPoison())
+              return AnyValue::poison();
+
+            return handleFMFFlags(APFloat::copySign(ValidatedLHS.asFloat(),
+                                                    ValidatedRHS.asFloat()),
+                                  FMF, /*IsInput=*/false);
+          });
+    }
     case Intrinsic::maxnum:
     case Intrinsic::minnum:
     case Intrinsic::maximum:
@@ -1564,8 +1590,6 @@ public:
           RetTy, FMF, Args[0], Args[1],
           [IID](const APFloat &LHS, const APFloat &RHS) -> APFloat {
             switch (IID) {
-            case Intrinsic::copysign:
-              return APFloat::copySign(LHS, RHS);
             case Intrinsic::maxnum:
               return maxnum(LHS, RHS);
             case Intrinsic::minnum:
