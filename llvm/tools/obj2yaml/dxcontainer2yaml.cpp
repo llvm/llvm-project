@@ -103,6 +103,20 @@ dumpDXContainer(MemoryBufferRef Source) {
                    std::get_if<dxbc::PSV::v3::RuntimeInfo>(&PSVInfo->getInfo()))
         NewPart.Info = DXContainerYAML::PSVInfo(P, PSVInfo->getStringTable());
       NewPart.Info->ResourceStride = PSVInfo->getResourceStride();
+      NewPart.Info->RuntimeInfoSize = PSVInfo->getSize();
+      if (PSVInfo->getVersion() > 0) {
+        StringRef ST = PSVInfo->getStringTable();
+        size_t Pos = 0;
+        while (Pos < ST.size()) {
+          size_t End = ST.find('\0', Pos);
+          if (End == StringRef::npos)
+            End = ST.size();
+          if (End > Pos)
+            NewPart.Info->StringTable.push_back(
+                {ST.slice(Pos, End), static_cast<uint32_t>(Pos)});
+          Pos = End + 1;
+        }
+      }
       for (auto Res : PSVInfo->getResources())
         NewPart.Info->Resources.push_back(Res);
 

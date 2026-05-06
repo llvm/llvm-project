@@ -539,7 +539,8 @@ def ResultIsDoubleSourceVectorType : TypesMatchWith<
 
 def Vector_InterleaveOp :
   Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
-    ResultIsDoubleSourceVectorType]> {
+    ResultIsDoubleSourceVectorType,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -615,7 +616,8 @@ def Vector_DeinterleaveOp :
   Vector_Op<"deinterleave", [Pure,
     SourceVectorEvenElementCount,
     ResultIsHalfSourceVectorType<"res1">,
-    AllTypesMatch<["res1", "res2"]>
+    AllTypesMatch<["res1", "res2"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]> {
       let summary = "constructs two vectors by deinterleaving an input vector";
       let description = [{
@@ -2470,7 +2472,8 @@ def Vector_ShapeCastOp :
 }
 
 def Vector_BitCastOp :
-  Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>]>,
+  Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>]>,
     Arguments<(ins AnyVectorOfNonI0Elem:$source)>,
     Results<(outs AnyVectorOfNonI0Elem:$result)>{
   let summary = "bitcast casts between vectors";
