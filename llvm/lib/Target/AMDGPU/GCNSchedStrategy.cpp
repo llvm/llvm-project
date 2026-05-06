@@ -1029,8 +1029,13 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   if (Regions[RegionIdx].first == Regions[RegionIdx].second)
     return llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
   GCNDownwardRPTracker RPTracker(*LIS);
-  RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
-                    &LiveIns[RegionIdx]);
+  if (!RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
+                         &LiveIns[RegionIdx])) {
+    // Advance can produce false on a non-empty region if all MIs in the region
+    // are debug values; in such cases the maintained max pressure is invalid
+    // and the only source of pressure are the region's live-ins.
+    return llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
+  }
   return RPTracker.moveMaxPressure();
 }
 
@@ -2025,8 +2030,7 @@ GCNSchedStage::getScheduleMetrics(const std::vector<SUnit> &InputSchedule) {
 #ifndef NDEBUG
   LLVM_DEBUG(
       printScheduleModel(ReadyCyclesSorted);
-      dbgs() << "\n\t"
-             << "Metric: "
+      dbgs() << "\n\t" << "Metric: "
              << (SumBubbles
                      ? (SumBubbles * ScheduleMetrics::ScaleFactor) / CurrCycle
                      : 1)

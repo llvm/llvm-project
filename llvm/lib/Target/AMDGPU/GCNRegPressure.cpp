@@ -621,13 +621,14 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 // GCNDownwardRPTracker
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
-                                 const LiveRegSet *LiveRegsCopy) {
+                                 MachineBasicBlock::const_iterator End,
+                                 const LiveRegSet *LiveRegsCopy) {                                 
   MRI = &MI.getMF()->getRegInfo();
   LastTrackedMI = nullptr;
   MBBEnd = MI.getParent()->end();
   NextMI = &MI;
-  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
-  if (NextMI == MBBEnd)
+  NextMI = skipDebugInstructionsForward(NextMI, End);
+  if (NextMI == End)
     return false;
   GCNRPTracker::reset(*NextMI, LiveRegsCopy, false);
   return true;
@@ -746,7 +747,8 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator End) {
 bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
                                    MachineBasicBlock::const_iterator End,
                                    const LiveRegSet *LiveRegsCopy) {
-  reset(*Begin, LiveRegsCopy);
+  if (!reset(*Begin, End, LiveRegsCopy))
+    return false;
   return advance(End);
 }
 
