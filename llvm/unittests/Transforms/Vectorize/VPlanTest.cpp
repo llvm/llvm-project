@@ -1858,40 +1858,52 @@ using VPUtilsTest = VPlanTestBase;
 
 TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("vector.header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("vector.latch");
+  VPValue *UF = &Plan.getUF();
+  Type *IVTy = UF->getScalarType();
+  VPRegionBlock *LoopRegion = Plan.createLoopRegion(
+      IVTy, DebugLoc::getUnknown(), "vector.loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
+  VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
 
   // isSingleScalar opcode without operands.
-  std::unique_ptr<VPInstruction> VScale(new VPInstructionWithType(
-      VPInstruction::VScale, {}, IntegerType::get(C, 32)));
-  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
+  auto *VScale = new VPInstructionWithType(VPInstruction::VScale, {},
+                                           IntegerType::get(C, 32));
+  Latch->appendRecipe(VScale);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale));
 
   // isSingleScalar opcode with a uniform operand.
-  std::unique_ptr<VPInstruction> EVL(
-      new VPInstruction(VPInstruction::ExplicitVectorLength, {&Plan.getVF()}));
-  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL.get()));
+  auto *EVL =
+      new VPInstruction(VPInstruction::ExplicitVectorLength, &Plan.getVF());
+  Latch->appendRecipe(EVL);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL));
 
   // isVectorToScalar opcode with a uniform operand.
-  std::unique_ptr<VPInstruction> FirstActiveLane(
-      new VPInstructionWithType(VPInstruction::FirstActiveLane, {&Plan.getVF()},
-                                IntegerType::get(C, 32)));
-  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane.get()));
+  auto *FirstActiveLane = new VPInstructionWithType(
+      VPInstruction::FirstActiveLane, &Plan.getVF(), IntegerType::get(C, 32));
+  Latch->appendRecipe(FirstActiveLane);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane));
 
   // StepVector produces a distinct value per lane and is non-uniform; use it
   // as the non-single-scalar operand in the negative cases below.
-  std::unique_ptr<VPInstruction> StepVector(new VPInstructionWithType(
-      VPInstruction::StepVector, {}, IntegerType::get(C, 32)));
-  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector.get()));
+  auto *StepVector = new VPInstructionWithType(VPInstruction::StepVector, {},
+                                               IntegerType::get(C, 32));
+  Latch->appendRecipe(StepVector);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector));
 
   // isSingleScalar opcode with a non-single-scalar operand.
-  std::unique_ptr<VPInstruction> EVLNonUniform(new VPInstruction(
-      VPInstruction::ExplicitVectorLength, {StepVector.get()}));
-  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(EVLNonUniform.get()));
+  auto *EVLNonUniform =
+      new VPInstruction(VPInstruction::ExplicitVectorLength, StepVector);
+  Latch->appendRecipe(EVLNonUniform);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(EVLNonUniform));
 
   // isVectorToScalar opcode with a non-single-scalar operand.
-  std::unique_ptr<VPInstruction> FirstActiveLaneNonUniform(
-      new VPInstructionWithType(VPInstruction::FirstActiveLane,
-                                {StepVector.get()}, IntegerType::get(C, 32)));
-  EXPECT_FALSE(
-      vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
+  auto *FirstActiveLaneNonUniform = new VPInstructionWithType(
+      VPInstruction::FirstActiveLane, StepVector, IntegerType::get(C, 32));
+  Latch->appendRecipe(FirstActiveLaneNonUniform);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform));
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
