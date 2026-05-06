@@ -3545,8 +3545,6 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
   Op<1>() = RHS;
   setPredicate(predicate);
   setName(Name);
-  if (FlagsSource && op == OtherOps::ICmp)
-    copyIRFlags(FlagsSource);
 }
 
 CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
@@ -4504,14 +4502,10 @@ CallInst *CallInst::cloneImpl() const {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
         getNumOperands(),
         getNumOperandBundles() * unsigned(sizeof(BundleOpInfo))};
-    auto *I = new (AllocMarker) CallInst(*this, AllocMarker);
-    I->FMF = FMF;
-    return I;
+    return new (AllocMarker) CallInst(*this, AllocMarker);
   }
   IntrusiveOperandsAllocMarker AllocMarker{getNumOperands()};
-  auto *I = new (AllocMarker) CallInst(*this, AllocMarker);
-  I->FMF = FMF;
-  return I;
+  return new (AllocMarker) CallInst(*this, AllocMarker);
 }
 
 SelectInst *SelectInst::cloneImpl() const {
