@@ -116,13 +116,13 @@ void test_oob_rhs(void) {
 
 // Array bounds - out-of-bounds access (LHS)
 
-// C-LABEL: define {{.*}}@test_oob_lhs(
-// C: br i1 {{(true|false)}}, label %cont, label %handler.out_of_bounds
-// C: handler.out_of_bounds:
-// C-NEXT: call void @__ubsan_handle_out_of_bounds_abort
+// CHECK-LABEL: define {{.*}}@test_oob_lhs(
+// CHECK: br i1 {{(true|false)}}, label %cont, label %handler.out_of_bounds
+// CHECK: handler.out_of_bounds:
+// CHECK-NEXT: call void @__ubsan_handle_out_of_bounds_abort
 // C: handler.type_mismatch:
 // C-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// C: call void @llvm.memcpy
+// CHECK: call void @llvm.memcpy
 void test_oob_lhs(void) {
   AGG arr[4];
   AGG local = {0};
