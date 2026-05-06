@@ -6820,10 +6820,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                               m_SpecificLoop(&L))))
         continue;
 
-      // TODO: Support the base pointer that requires SCEV expander.
-      if (!isa<SCEVUnknown, SCEVConstant>(Start))
-        continue;
-
       Type *LoadTy = TypeInfo.inferScalarType(LoadR);
       Align Alignment = LoadR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
