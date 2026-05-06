@@ -24762,9 +24762,13 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
           // Computed value: store into the incoming indirect pointer for the
           // same-position formal parameter (musttail guarantees matching
           // prototypes, so types match). The pointer survives the tail call
-          // since it points to the caller's caller's frame. Use the
-          // CopyFromReg output chain so the store is sequenced after the
-          // copy that produced IncomingPtr.
+          // since it points to the caller's caller's frame.
+          //
+          // The data-flow edge through IncomingPtr already prevents the
+          // store from being scheduled before the CopyFromReg. Threading
+          // CopyOp.getValue(1) (the copy's output chain) into the store
+          // makes that ordering explicit on the chain edge as well, which
+          // is the convention for memory ops chaining off their producers.
           MemOpChains.push_back(
               DAG.getStore(CopyOp.getValue(1), DL, ArgValue, IncomingPtr,
                            MachinePointerInfo::getUnknownStack(MF)));
