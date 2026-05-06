@@ -13,8 +13,8 @@ llvm.func @simd_nontemporal() {
   //CHECK: store i64 %[[B]], ptr %[[A_ADDR]], align 4, !nontemporal !1, !llvm.access.group !2
   omp.simd nontemporal(%2, %3 : !llvm.ptr, !llvm.ptr) {
     omp.loop_nest (%arg0) : i64 = (%1) to (%0) inclusive step (%1) {
-      %4 = llvm.load %3 {nontemporal}: !llvm.ptr -> i64
-      llvm.store %4, %2 {nontemporal} : i64, !llvm.ptr
+      %4 = llvm.load %3  nontemporal: !llvm.ptr -> i64
+      llvm.store %4, %2  nontemporal : i64, !llvm.ptr
       omp.yield
     }
   }
@@ -60,9 +60,9 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
         // CHECK:  %[[LOAD_A:.*]] = load float, ptr %[[VAL1]], align 4, !nontemporal 
         // CHECK:  %[[RES:.*]] = fadd contract float %[[LOAD_A]], 2.000000e+01
         %25 = llvm.getelementptr %11[%23] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-        %26 = llvm.load %25 {nontemporal} : !llvm.ptr -> f32
+        %26 = llvm.load %25  nontemporal : !llvm.ptr -> f32
         %27 = llvm.mlir.constant(2.000000e+01 : f32) : f32
-        %28 = llvm.fadd %26, %27 {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %28 = llvm.fadd %26, %27 fastmath<contract> : f32
         // CHECK:  call void @llvm.memcpy.p0.p0.i32(ptr %[[A_VAL1]], ptr %1, i32 48, i1 false)
         %29 = llvm.mlir.constant(48 : i32) : i32
         "llvm.intr.memcpy"(%1, %arg1, %29) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
@@ -85,7 +85,7 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
         // CHECK:  %[[VAL2:.*]] = getelementptr float, ptr %{{.*}}, i64 %{{.*}}
         // CHECK:  store float %[[RES]], ptr %[[VAL2]], align 4, !nontemporal 
         %46 = llvm.getelementptr %33[%44] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-        llvm.store %28, %46 {nontemporal} : f32, !llvm.ptr
+        llvm.store %28, %46  nontemporal : f32, !llvm.ptr
         omp.yield
       }
     }

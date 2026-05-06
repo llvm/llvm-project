@@ -4,15 +4,15 @@
 // CHECK-LABEL: @reduce_add_f32(
 // CHECK-SAME: %[[A:.*]]: vector<16xf32>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
-//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
-// CHECK-SAME: <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<16xf32>) -> f32
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fadd(%[[C]], %[[A]])
+// CHECK-SAME: : (f32, vector<16xf32>) -> f32
 //      CHECK: return %[[V]] : f32
 //
 // REASSOC-LABEL: @reduce_add_f32(
 // REASSOC-SAME: %[[A:.*]]: vector<16xf32>)
 //      REASSOC: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
-//      REASSOC: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
-// REASSOC-SAME: <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<16xf32>) -> f32
+//      REASSOC: %[[V:.*]] = llvm.intr.vector.reduce.fadd(%[[C]], %[[A]])
+// REASSOC-SAME: fastmath<reassoc> : (f32, vector<16xf32>) -> f32
 //      REASSOC: return %[[V]] : f32
 //
 func.func @reduce_add_f32(%arg0: vector<16xf32>) -> f32 {
@@ -25,17 +25,17 @@ func.func @reduce_add_f32(%arg0: vector<16xf32>) -> f32 {
 // CHECK-LABEL: @reduce_add_f32_always_reassoc(
 // CHECK-SAME: %[[A:.*]]: vector<16xf32>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
-//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fadd(%[[C]], %[[A]])
 /// Note: the reassoc flag remains even though the pass sets reassociate-fp-reduction to false.
 /// Ponder whether this flag really is a property of the pass / pattern..
-// CHECK-SAME: <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<16xf32>) -> f32
+// CHECK-SAME: fastmath<reassoc> : (f32, vector<16xf32>) -> f32
 //      CHECK: return %[[V]] : f32
 //
 // REASSOC-LABEL: @reduce_add_f32_always_reassoc(
 // REASSOC-SAME: %[[A:.*]]: vector<16xf32>)
 //      REASSOC: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
-//      REASSOC: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
-// REASSOC-SAME: <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<16xf32>) -> f32
+//      REASSOC: %[[V:.*]] = llvm.intr.vector.reduce.fadd(%[[C]], %[[A]])
+// REASSOC-SAME: fastmath<reassoc> : (f32, vector<16xf32>) -> f32
 //      REASSOC: return %[[V]] : f32
 //
 func.func @reduce_add_f32_always_reassoc(%arg0: vector<16xf32>) -> f32 {
@@ -48,15 +48,15 @@ func.func @reduce_add_f32_always_reassoc(%arg0: vector<16xf32>) -> f32 {
 // CHECK-LABEL: @reduce_mul_f32(
 // CHECK-SAME: %[[A:.*]]: vector<16xf32>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fmul"(%[[C]], %[[A]])
-// CHECK-SAME: <{fastmathFlags = #llvm.fastmath<nnan, ninf>}> : (f32, vector<16xf32>) -> f32
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmul(%[[C]], %[[A]])
+// CHECK-SAME: fastmath<nnan, ninf> : (f32, vector<16xf32>) -> f32
 //      CHECK: return %[[V]] : f32
 //
 // REASSOC-LABEL: @reduce_mul_f32(
 // REASSOC-SAME: %[[A:.*]]: vector<16xf32>)
 //      REASSOC: %[[C:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-//      REASSOC: %[[V:.*]] = "llvm.intr.vector.reduce.fmul"(%[[C]], %[[A]])
-// REASSOC-SAME: <{fastmathFlags = #llvm.fastmath<nnan, ninf, reassoc>}> : (f32, vector<16xf32>) -> f32
+//      REASSOC: %[[V:.*]] = llvm.intr.vector.reduce.fmul(%[[C]], %[[A]])
+// REASSOC-SAME: fastmath<nnan, ninf, reassoc> : (f32, vector<16xf32>) -> f32
 //      REASSOC: return %[[V]] : f32
 //
 func.func @reduce_mul_f32(%arg0: vector<16xf32>) -> f32 {
@@ -389,5 +389,4 @@ func.func @masked_reduce_xor_i8_scalable(%arg0: vector<[32]xi8>, %mask : vector<
 // CHECK:           %[[CAST_I32:.*]] = arith.index_cast %[[CAST_IDX]] : index to i32
 // CHECK:           %[[VL_MUL:.*]] = arith.muli %[[VL_BASE]], %[[CAST_I32]] : i32
 // CHECK:           "llvm.intr.vp.reduce.xor"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL_MUL]]) : (i8, vector<[32]xi8>, vector<[32]xi1>, i32) -> i8
-
 

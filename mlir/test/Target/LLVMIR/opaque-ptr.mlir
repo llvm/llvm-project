@@ -46,13 +46,13 @@ llvm.func @opaque_ptr_gep_struct(%arg0: !llvm.ptr, %arg1: i32) -> !llvm.ptr {
 llvm.func @opaque_ptr_matrix_load_store(%ptr: !llvm.ptr, %stride: i64) -> vector<48 x f32> {
   // CHECK: call <48 x float> @llvm.matrix.column.major.load.v48f32.i64
   // CHECK: (ptr {{.*}}, i64 %{{.*}}
-  %0 = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>
-    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
+  %0 = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>,
+    is_volatile = false, rows = 3, columns = 16 :
     vector<48 x f32> from !llvm.ptr stride i64
   // CHECK: call void @llvm.matrix.column.major.store.v48f32.i64
   // CHECK: <48 x float> %{{.*}}, ptr {{.*}}, i64
-  llvm.intr.matrix.column.major.store %0, %ptr, <stride=%stride>
-    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
+  llvm.intr.matrix.column.major.store %0, %ptr, <stride=%stride>,
+    is_volatile = false, rows = 3, columns = 16 :
     vector<48 x f32> to !llvm.ptr stride i64
   llvm.return %0 : vector<48 x f32>
 }
@@ -60,7 +60,7 @@ llvm.func @opaque_ptr_matrix_load_store(%ptr: !llvm.ptr, %stride: i64) -> vector
 // CHECK-LABEL: @opaque_ptr_masked_load
 llvm.func @opaque_ptr_masked_load(%arg0: !llvm.ptr, %arg1: vector<7xi1>) -> vector<7xf32> {
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr
-  %0 = llvm.intr.masked.load %arg0, %arg1 { alignment = 1: i32} :
+  %0 = llvm.intr.masked.load(%arg0, %arg1), alignment(1) :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   llvm.return %0 : vector<7 x f32>
 }
@@ -68,7 +68,7 @@ llvm.func @opaque_ptr_masked_load(%arg0: !llvm.ptr, %arg1: vector<7xi1>) -> vect
 // CHECK-LABEL: @opaque_ptr_gather
 llvm.func @opaque_ptr_gather(%M: vector<7 x !llvm.ptr>, %mask: vector<7xi1>) -> vector<7xf32> {
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 {{.*}},
-  %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
+  %a = llvm.intr.masked.gather(%M, %mask), alignment(1) :
       (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   llvm.return %a : vector<7xf32>
 }

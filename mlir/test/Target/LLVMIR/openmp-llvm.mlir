@@ -1756,8 +1756,8 @@ llvm.func @_QPomp_atomic_update_complex() {
       %9 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
       %10 = llvm.extractvalue %7[0] : !llvm.struct<(f32, f32)>
       %11 = llvm.extractvalue %7[1] : !llvm.struct<(f32, f32)>
-      %12 = llvm.fadd %8, %10  {fastmathFlags = #llvm.fastmath<contract>} : f32
-      %13 = llvm.fadd %9, %11  {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %12 = llvm.fadd %8, %10 fastmath<contract> : f32
+      %13 = llvm.fadd %9, %11 fastmath<contract> : f32
       %14 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
       %15 = llvm.insertvalue %12, %14[0] : !llvm.struct<(f32, f32)>
       %16 = llvm.insertvalue %13, %15[1] : !llvm.struct<(f32, f32)>
@@ -1816,8 +1816,8 @@ llvm.func @_QPomp_atomic_capture_complex() {
         %13 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
         %14 = llvm.extractvalue %11[0] : !llvm.struct<(f32, f32)>
         %15 = llvm.extractvalue %11[1] : !llvm.struct<(f32, f32)>
-        %16 = llvm.fadd %12, %14  {fastmathFlags = #llvm.fastmath<contract>} : f32
-        %17 = llvm.fadd %13, %15  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %16 = llvm.fadd %12, %14 fastmath<contract> : f32
+        %17 = llvm.fadd %13, %15 fastmath<contract> : f32
         %18 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
         %19 = llvm.insertvalue %16, %18[0] : !llvm.struct<(f32, f32)>
         %20 = llvm.insertvalue %17, %19[1] : !llvm.struct<(f32, f32)>

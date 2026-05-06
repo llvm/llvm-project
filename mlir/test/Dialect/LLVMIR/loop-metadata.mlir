@@ -117,8 +117,8 @@ llvm.func @loop_annotation() {
 
 // CHECK: llvm.func @loop_annotation_with_locs
 llvm.func @loop_annotation_with_locs() {
-  // CHECK: llvm.br ^bb1 {loop_annotation = #[[LOOP_ANNOT]]
-  llvm.br ^bb1 {loop_annotation = #loopMD}
+  // CHECK: llvm.br ^bb1 loop_annotation = #[[LOOP_ANNOT]]
+  llvm.br ^bb1 loop_annotation = #loopMD
 ^bb1:
   llvm.return
 }

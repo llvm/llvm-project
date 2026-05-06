@@ -37,7 +37,7 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
     llvm.store %11, %arg1 : i32, !llvm.ptr
     %12 = llvm.load %arg1 : !llvm.ptr -> i32
     %13 = llvm.sitofp %12 : i32 to f32
-    %14 = llvm.fadd %13, %8  {fastmathFlags = #llvm.fastmath<contract>} : f32
+    %14 = llvm.fadd %13, %8 fastmath<contract> : f32
     llvm.store %14, %arg2 : f32, !llvm.ptr
     omp.terminator
   }
@@ -172,7 +172,7 @@ llvm.func @target_firstprivate_() attributes {fir.internal_name = "_QPtarget_fir
     llvm.store %11, %arg2 : i32, !llvm.ptr
     %12 = llvm.load %arg3 : !llvm.ptr -> f32
     %13 = llvm.fpext %12 : f32 to f64
-    %14 = llvm.fadd %13, %8 {fastmathFlags = #llvm.fastmath<contract>} : f64
+    %14 = llvm.fadd %13, %8 fastmath<contract> : f64
     %15 = llvm.fptrunc %14 : f64 to f32
     llvm.store %15, %arg3 : f32, !llvm.ptr
     omp.terminator

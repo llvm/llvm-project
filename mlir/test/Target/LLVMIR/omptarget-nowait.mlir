@@ -15,7 +15,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
       %7 = llvm.load %6 : !llvm.ptr -> !llvm.ptr
       %8 = llvm.getelementptr %7[%one_i] : (!llvm.ptr, i64) -> !llvm.ptr, i8
       %9 = llvm.load %8 : !llvm.ptr -> f64
-      %10 = llvm.fmul %9, %two_f {fastmathFlags = #llvm.fastmath<contract>} : f64
+      %10 = llvm.fmul %9, %two_f fastmath<contract> : f64
       llvm.store %10, %8 : f64, !llvm.ptr
       omp.terminator
     }

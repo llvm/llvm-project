@@ -16,7 +16,7 @@ func.func @load(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
+// ALL: llvm.load %[[GEP]] alignment = 4 : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -31,7 +31,7 @@ func.func @load_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) 
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<[8]xf32>
+// ALL: llvm.load %[[GEP]] alignment = 4 : !llvm.ptr -> vector<[8]xf32>
 
 // -----
 
@@ -46,7 +46,7 @@ func.func @load_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : inde
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.load %[[GEP]] {alignment = 4 : i64, nontemporal} : !llvm.ptr -> vector<8xf32>
+// ALL: llvm.load %[[GEP]] nontemporal, alignment = 4 : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -61,7 +61,7 @@ func.func @load_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index, 
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.load %[[GEP]] {alignment = 4 : i64, nontemporal} : !llvm.ptr -> vector<[8]xf32>
+// ALL: llvm.load %[[GEP]] nontemporal, alignment = 4 : !llvm.ptr -> vector<[8]xf32>
 
 // -----
 
@@ -70,7 +70,7 @@ func.func @load_index(%memref : memref<200x100xindex>, %i : index, %j : index) -
   return %0 : vector<8xindex>
 }
 // ALL-LABEL: func @load_index
-// ALL: %[[T0:.*]] = llvm.load %{{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xi64>
+// ALL: %[[T0:.*]] = llvm.load %{{.*}} alignment = 8 : !llvm.ptr -> vector<8xi64>
 // ALL: %[[T1:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<8xi64> to vector<8xindex>
 // ALL: return %[[T1]] : vector<8xindex>
 
@@ -81,7 +81,7 @@ func.func @load_index_scalable(%memref : memref<200x100xindex>, %i : index, %j :
   return %0 : vector<[8]xindex>
 }
 // ALL-LABEL: func @load_index_scalable
-// ALL: %[[T0:.*]] = llvm.load %{{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<[8]xi64>
+// ALL: %[[T0:.*]] = llvm.load %{{.*}} alignment = 8 : !llvm.ptr -> vector<[8]xi64>
 // ALL: %[[T1:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<[8]xi64> to vector<[8]xindex>
 // ALL: return %[[T1]] : vector<[8]xindex>
 
@@ -102,7 +102,7 @@ func.func @load_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vec
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]]
 // DEFAULT: %[[ADDR:.*]] = llvm.getelementptr %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[ADDR:.*]] = llvm.getelementptr inbounds|nuw %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: %[[LOAD:.*]] = llvm.load %[[ADDR]] {alignment = 4 : i64} : !llvm.ptr -> vector<1xf32>
+// ALL: %[[LOAD:.*]] = llvm.load %[[ADDR]] alignment = 4 : !llvm.ptr -> vector<1xf32>
 // ALL: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[LOAD]] : vector<1xf32> to vector<f32>
 // ALL: return %[[RES]] : vector<f32>
 
@@ -114,7 +114,7 @@ func.func @load_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : i
 }
 
 // ALL-LABEL: func @load_with_alignment
-// ALL: llvm.load {{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xf32>
+// ALL: llvm.load {{.*}} alignment = 8 : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -134,7 +134,7 @@ func.func @store(%memref : memref<200x100xf32>, %i : index, %j : index) {
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64} :  vector<4xf32>, !llvm.ptr
+// ALL: llvm.store %{{.*}}, %[[GEP]] alignment = 4 :  vector<4xf32>, !llvm.ptr
 
 // -----
 
@@ -150,7 +150,7 @@ func.func @store_scalable(%memref : memref<200x100xf32>, %i : index, %j : index)
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64} :  vector<[4]xf32>, !llvm.ptr
+// ALL: llvm.store %{{.*}}, %[[GEP]] alignment = 4 :  vector<[4]xf32>, !llvm.ptr
 
 // -----
 
@@ -166,7 +166,7 @@ func.func @store_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : ind
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64, nontemporal} :  vector<4xf32>, !llvm.ptr
+// ALL: llvm.store %{{.*}}, %[[GEP]] nontemporal, alignment = 4 :  vector<4xf32>, !llvm.ptr
 
 // -----
 
@@ -182,7 +182,7 @@ func.func @store_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index,
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64, nontemporal} :  vector<[4]xf32>, !llvm.ptr
+// ALL: llvm.store %{{.*}}, %[[GEP]] nontemporal, alignment = 4 :  vector<[4]xf32>, !llvm.ptr
 
 // -----
 
@@ -192,7 +192,7 @@ func.func @store_index(%memref : memref<200x100xindex>, %i : index, %j : index) 
   return
 }
 // ALL-LABEL: func @store_index
-// ALL: llvm.store %{{.*}}, %{{.*}} {alignment = 8 : i64} : vector<4xi64>, !llvm.ptr
+// ALL: llvm.store %{{.*}}, %{{.*}} alignment = 8 : vector<4xi64>, !llvm.ptr
 
 // -----
 
@@ -202,7 +202,7 @@ func.func @store_index_scalable(%memref : memref<200x100xindex>, %i : index, %j 
   return
 }
 // ALL-LABEL: func @store_index_scalable
-// ALL: llvm.store %{{.*}}, %{{.*}} {alignment = 8 : i64} : vector<[4]xi64>, !llvm.ptr
+// ALL: llvm.store %{{.*}}, %{{.*}} alignment = 8 : vector<[4]xi64>, !llvm.ptr
 
 // -----
 
@@ -224,7 +224,7 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]]
 // DEFAULT: %[[ADDR:.*]] = llvm.getelementptr %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // INBOUNDS: %[[ADDR:.*]] = llvm.getelementptr inbounds|nuw %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// ALL: llvm.store %[[VAL]], %[[ADDR]] {alignment = 4 : i64} : vector<1xf32>, !llvm.ptr
+// ALL: llvm.store %[[VAL]], %[[ADDR]] alignment = 4 : vector<1xf32>, !llvm.ptr
 // ALL: return
 
 // -----
@@ -235,4 +235,4 @@ func.func @store_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : 
 }
 
 // ALL-LABEL: func @store_with_alignment
-// ALL: llvm.store %{{.*}} {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
+// ALL: llvm.store %{{.*}} alignment = 8 :  vector<4xf32>, !llvm.ptr

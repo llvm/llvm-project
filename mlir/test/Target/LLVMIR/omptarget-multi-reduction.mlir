@@ -11,7 +11,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     omp.yield(%0 : f32)
   } combiner {
   ^bb0(%arg0: f32, %arg1: f32):
-    %0 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<contract>} : f32
+    %0 = llvm.fadd %arg0, %arg1 fastmath<contract> : f32
     omp.yield(%0 : f32)
   }
   omp.declare_reduction @add_reduction_f64 : f64 init {
@@ -20,7 +20,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     omp.yield(%0 : f64)
   } combiner {
   ^bb0(%arg0: f64, %arg1: f64):
-    %0 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<contract>} : f64
+    %0 = llvm.fadd %arg0, %arg1 fastmath<contract> : f64
     omp.yield(%0 : f64)
   }
   llvm.func @_QQmain() attributes {fir.bindc_name = "reduction", frame_pointer = #llvm.framePointerKind<all>, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, target_cpu = "gfx1030", target_features = #llvm.target_features<["+16-bit-insts", "+ci-insts", "+dl-insts", "+dot1-insts", "+dot10-insts", "+dot2-insts", "+dot5-insts", "+dot6-insts", "+dot7-insts", "+dpp", "+gfx10-3-insts", "+gfx10-insts", "+gfx8-insts", "+gfx9-insts", "+gws", "+image-insts", "+s-memrealtime", "+s-memtime-inst", "+vmem-to-lds-load-insts", "+wavefrontsize32"]>} {
@@ -76,16 +76,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
                 omp.loop_nest (%arg18) : i32 = (%38) to (%37) inclusive step (%38) {
                   llvm.store %arg18, %arg13 : i32, !llvm.ptr
                   %39 = llvm.load %arg14 : !llvm.ptr -> f64
-                  %40 = llvm.fadd %39, %36 {fastmathFlags = #llvm.fastmath<contract>} : f64
+                  %40 = llvm.fadd %39, %36 fastmath<contract> : f64
                   llvm.store %40, %arg14 : f64, !llvm.ptr
                   %41 = llvm.load %arg15 : !llvm.ptr -> f64
-                  %42 = llvm.fadd %41, %36 {fastmathFlags = #llvm.fastmath<contract>} : f64
+                  %42 = llvm.fadd %41, %36 fastmath<contract> : f64
                   llvm.store %42, %arg15 : f64, !llvm.ptr
                   %43 = llvm.load %arg16 : !llvm.ptr -> f32
-                  %44 = llvm.fadd %43, %35 {fastmathFlags = #llvm.fastmath<contract>} : f32
+                  %44 = llvm.fadd %43, %35 fastmath<contract> : f32
                   llvm.store %44, %arg16 : f32, !llvm.ptr
                   %45 = llvm.load %arg17 : !llvm.ptr -> f32
-                  %46 = llvm.fadd %45, %35 {fastmathFlags = #llvm.fastmath<contract>} : f32
+                  %46 = llvm.fadd %45, %35 fastmath<contract> : f32
                   llvm.store %46, %arg17 : f32, !llvm.ptr
                   omp.yield
                 }

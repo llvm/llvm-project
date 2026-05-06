@@ -359,13 +359,13 @@ define ptr @alloca(i64 %size) {
 ; CHECK-LABEL: @load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @load_store(ptr %ptr) {
-  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] {alignment = 8 : i64} : !llvm.ptr -> f64
-  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] {alignment = 16 : i64, nontemporal} : !llvm.ptr -> f64
+  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]]  alignment = 8 : !llvm.ptr -> f64
+  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]]  nontemporal, alignment = 16 : !llvm.ptr -> f64
   %1 = load double, ptr %ptr
   %2 = load volatile double, ptr %ptr, align 16, !nontemporal !0
 
-  ; CHECK:  llvm.store %[[V1]], %[[PTR]] {alignment = 8 : i64} : f64, !llvm.ptr
-  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] {alignment = 16 : i64, nontemporal} : f64, !llvm.ptr
+  ; CHECK:  llvm.store %[[V1]], %[[PTR]]  alignment = 8 : f64, !llvm.ptr
+  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]]  nontemporal, alignment = 16 : f64, !llvm.ptr
   store double %1, ptr %ptr
   store volatile double %2, ptr %ptr, align 16, !nontemporal !0
   ret void
@@ -378,7 +378,7 @@ define void @load_store(ptr %ptr) {
 ; CHECK-LABEL: @invariant_load
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define float @invariant_load(ptr %ptr) {
-  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] invariant {alignment = 4 : i64} : !llvm.ptr -> f32
+  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] invariant  alignment = 4 : !llvm.ptr -> f32
   %1 = load float, ptr %ptr, align 4, !invariant.load !0
   ; CHECK:  llvm.return %[[V]]
   ret float %1
@@ -391,7 +391,7 @@ define float @invariant_load(ptr %ptr) {
 ; CHECK-LABEL: @invariant_group_load
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define float @invariant_group_load(ptr %ptr) {
-  ; CHECK:  %[[VAL:.+]] = llvm.load %[[PTR]] invariant_group {alignment = 4 : i64} : !llvm.ptr -> f32
+  ; CHECK:  %[[VAL:.+]] = llvm.load %[[PTR]] invariant_group  alignment = 4 : !llvm.ptr -> f32
   %1 = load float, ptr %ptr, align 4, !invariant.group !0
   ; CHECK:  llvm.return %[[VAL]]
   ret float %1
@@ -405,7 +405,7 @@ define float @invariant_group_load(ptr %ptr) {
 ; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @invariant_group_store(float %val, ptr %ptr) {
-  ; CHECK:  llvm.store %[[VAL]], %[[PTR]] invariant_group {alignment = 4 : i64} : f32, !llvm.ptr
+  ; CHECK:  llvm.store %[[VAL]], %[[PTR]] invariant_group  alignment = 4 : f32, !llvm.ptr
   store float %val, ptr %ptr, align 4, !invariant.group !0
   ; CHECK:  llvm.return
   ret void
@@ -418,13 +418,13 @@ define void @invariant_group_store(float %val, ptr %ptr) {
 ; CHECK-LABEL: @atomic_load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @atomic_load_store(ptr %ptr) {
-  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
-  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] atomic syncscope("singlethreaded") acquire {alignment = 16 : i64} : !llvm.ptr -> f64
+  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] atomic acquire  alignment = 8 : !llvm.ptr -> f64
+  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] atomic syncscope("singlethreaded") acquire  alignment = 16 : !llvm.ptr -> f64
   %1 = load atomic double, ptr %ptr acquire, align 8
   %2 = load atomic volatile double, ptr %ptr syncscope("singlethreaded") acquire, align 16
 
-  ; CHECK:  llvm.store %[[V1]], %[[PTR]] atomic release {alignment = 8 : i64} : f64, !llvm.ptr
-  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] atomic syncscope("singlethreaded") release {alignment = 16 : i64} : f64, !llvm.ptr
+  ; CHECK:  llvm.store %[[V1]], %[[PTR]] atomic release  alignment = 8 : f64, !llvm.ptr
+  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] atomic syncscope("singlethreaded") release  alignment = 16 : f64, !llvm.ptr
   store atomic double %1, ptr %ptr release, align 8
   store atomic volatile double %2, ptr %ptr syncscope("singlethreaded") release, align 16
   ret void
@@ -483,7 +483,7 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
 
   ; CHECK:  llvm.atomicrmw volatile
   ; CHECK-SAME:  syncscope("singlethread")
-  ; CHECK-SAME:  {alignment = 8 : i64}
+  ; CHECK-SAME:  alignment = 8
   %22 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
   ret void
 }
@@ -502,7 +502,7 @@ define void @atomic_cmpxchg(ptr %ptr1, i32 %val1, i32 %val2) {
 
   ; CHECK:  llvm.cmpxchg weak volatile
   ; CHECK-SAME:  syncscope("singlethread")
-  ; CHECK-SAME:  {alignment = 8 : i64}
+  ; CHECK-SAME:  alignment = 8
   %3 = cmpxchg weak volatile ptr %ptr1, i32 %val1, i32 %val2 syncscope("singlethread") monotonic seq_cst, align 8
   ret void
 }

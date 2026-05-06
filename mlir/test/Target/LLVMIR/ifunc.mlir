@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir %s --split-input-file | FileCheck %s
 
 // CHECK: @foo = dso_local ifunc void (ptr, i32), ptr @resolve_foo
-llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
 llvm.func @call_foo(%arg0: !llvm.ptr {llvm.noundef}, %arg1: i32 {llvm.noundef}) attributes {dso_local} {
 // CHECK: call void @foo
   llvm.call @foo(%arg0, %arg1) : (!llvm.ptr {llvm.noundef}, i32 {llvm.noundef}) -> ()
@@ -42,7 +42,7 @@ llvm.func @resolver() -> !llvm.ptr {
 // -----
 
 // CHECK: @ifunc = linkonce_odr hidden ifunc
-llvm.mlir.ifunc linkonce_odr hidden @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver {dso_local}
+llvm.mlir.ifunc linkonce_odr hidden @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver dso_local
 llvm.func @resolver() -> !llvm.ptr {
   %0 = llvm.mlir.constant(333 : i64) : i64
   %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
@@ -52,7 +52,7 @@ llvm.func @resolver() -> !llvm.ptr {
 // -----
 
 // CHECK: @ifunc = private ifunc
-llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver {dso_local}
+llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver dso_local
 llvm.func @resolver() -> !llvm.ptr {
   %0 = llvm.mlir.constant(333 : i64) : i64
   %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
