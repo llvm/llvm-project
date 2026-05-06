@@ -15,7 +15,7 @@ namespace llvm {
 
 class TargetMachine;
 
-class SafeStackPass : public OptionalPassInfoMixin<SafeStackPass> {
+class SafeStackPass : public RequiredPassInfoMixin<SafeStackPass> {
   const TargetMachine *TM;
 
 public:
