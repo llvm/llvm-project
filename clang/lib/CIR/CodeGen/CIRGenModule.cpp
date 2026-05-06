@@ -34,8 +34,10 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
@@ -815,6 +817,7 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       features = getFeatureDeltaFromDefault(*this, targetCPU, featureMap);
     } else {
       // Produce the canonical string for this set of features.
+      features.reserve(features.size() + featureMap.size());
       for (const auto &entry : featureMap)
         features.push_back((entry.getValue() ? "+" : "-") +
                            entry.getKey().str());
@@ -873,9 +876,9 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       // Sort features and remove duplicates.
       std::set<llvm::StringRef> orderedFeats(feats.begin(), feats.end());
       std::string fmvFeatures;
-      for (llvm::StringRef f : orderedFeats)
-        fmvFeatures.append("," + f.str());
-      attrs["cir.fmv-features"] = fmvFeatures.substr(1);
+      llvm::raw_string_ostream os(fmvFeatures);
+      llvm::interleaveComma(orderedFeats, os);
+      attrs["cir.fmv-features"] = fmvFeatures;
       addedAttr = true;
     }
   }

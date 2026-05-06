@@ -1,0 +1,35 @@
+// Verify that the AArch64 Function Multi Versioning attribute "cir.fmv-features"
+// is propagated end-to-end:
+
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+module attributes {cir.triple = "aarch64-unknown-linux-gnu"} {
+  // Default version: empty fmv-features string (matches OGCG's value-less attr).
+  // MLIR:      llvm.func @fmv_default()
+  // MLIR-SAME: "cir.fmv-features" = ""
+  // LLVM:      define void @fmv_default(){{.*}} #[[ATTR_DEFAULT:[0-9]+]]
+  cir.func @fmv_default() attributes {"cir.fmv-features" = ""} {
+    cir.return
+  }
+
+  // Single-feature version.
+  // MLIR:      llvm.func @fmv_sve()
+  // MLIR-SAME: "cir.fmv-features" = "sve"
+  // LLVM:      define void @fmv_sve(){{.*}} #[[ATTR_SVE:[0-9]+]]
+  cir.func @fmv_sve() attributes {"cir.fmv-features" = "sve"} {
+    cir.return
+  }
+
+  // Multi-feature version: features are sorted and comma-separated.
+  // MLIR:      llvm.func @fmv_aes_sve()
+  // MLIR-SAME: "cir.fmv-features" = "aes,sve"
+  // LLVM:      define void @fmv_aes_sve(){{.*}} #[[ATTR_AES_SVE:[0-9]+]]
+  cir.func @fmv_aes_sve() attributes {"cir.fmv-features" = "aes,sve"} {
+    cir.return
+  }
+}
+
+// LLVM-DAG: attributes #[[ATTR_DEFAULT]] = {{.*}}"fmv-features"
+// LLVM-DAG: attributes #[[ATTR_SVE]] = {{.*}}"fmv-features"="sve"
+// LLVM-DAG: attributes #[[ATTR_AES_SVE]] = {{.*}}"fmv-features"="aes,sve"
