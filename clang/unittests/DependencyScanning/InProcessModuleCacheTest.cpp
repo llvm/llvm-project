@@ -36,7 +36,6 @@ TEST(InProcessModuleCache, ReadWriteInvalidation) {
   EXPECT_EQ(Buf->getBuffer(), "original\n");
 }
 
-
 TEST(InProcessModuleCache, ReadReadInvalidation) {
   ModuleCacheEntries Entries;
   std::shared_ptr<ModuleCache> ModCache = makeInProcessModuleCache(Entries);
