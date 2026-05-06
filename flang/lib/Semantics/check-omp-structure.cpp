@@ -777,7 +777,12 @@ void OmpStructureChecker::CheckMultListItems() {
   for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_nontemporal)) {
     const auto &nontempClause{
         std::get<parser::OmpClause::Nontemporal>(clause->u)};
-    const auto &nontempNameList{nontempClause.v};
+    std::list<parser::Name> nontempNameList;
+    for (auto &ompObject : nontempClause.v.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        nontempNameList.push_back(*name);
+      }
+    }
     CheckMultipleOccurrence(
         listVars, nontempNameList, clause->source, "NONTEMPORAL");
   }
@@ -864,22 +869,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::DynGroupprivate &x) {
   OmpVerifyModifiers(x.v, llvm::omp::OMPC_dyn_groupprivate, source, context_);
 }
 
-void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
-  // OmpDirectiveSpecification exists on its own only in METADIRECTIVE.
-  // In other cases it's a part of other constructs that handle directive
-  // context stack by themselves.
-  if (GetDirectiveNest(MetadirectiveNest)) {
-    PushContextAndClauseSets(
-        std::get<parser::OmpDirectiveName>(x.t).source, x.DirId());
-  }
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &) {
-  if (GetDirectiveNest(MetadirectiveNest)) {
-    dirContext_.pop_back();
-  }
-}
-
 template <typename Checker> struct DirectiveSpellingVisitor {
   using Directive = llvm::omp::Directive;
 
@@ -962,11 +951,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
-  for (const auto &[sym, source] : deferredNonVariables_) {
-    context_.SayWithDecl(
-        *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
-  }
-  deferredNonVariables_.clear();
   if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
     dirStack_.pop_back();
   }
@@ -1396,11 +1380,26 @@ void OmpStructureChecker::ChecksOnOrderedAsBlock() {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OmpBeginDirective &) {
-  switch (GetContext().directive) {
+void OmpStructureChecker::Enter(const parser::OmpBeginDirective &x) {
+  switch (x.DirId()) {
+  case llvm::omp::Directive::OMPD_metadirective:
+    // Delimited METADIRECTIVE
+    EnterDirectiveNest(MetadirectiveNest);
+    break;
+  default:
+    break;
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OmpBeginDirective &x) {
+  switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_ordered:
     // [5.1] 2.19.9 Ordered Construct Restriction
     ChecksOnOrderedAsBlock();
+    break;
+  case llvm::omp::Directive::OMPD_metadirective:
+    // Delimited METADIRECTIVE
+    ExitDirectiveNest(MetadirectiveNest);
     break;
   default:
     break;
@@ -3114,7 +3113,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
 
   auto getNameFromArg{[](const parser::OmpArgument &arg) {
     if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-      if (auto *designator{omp::GetDesignatorFromObj(*object)}) {
+      if (auto *designator{GetDesignatorFromObj(*object)}) {
         return parser::GetDesignatorNameIfDataRef(*designator);
       }
     }
@@ -3433,7 +3432,7 @@ void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
 // 2. Checks on clauses which fall under 'struct OmpClause' from parse-tree.h.
 // 3. Checks on clauses which are not in 'struct OmpClause' from parse-tree.h.
 
-void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
+void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
   unsigned version{context_.langOptions().OpenMPVersion};
 
   // 2.7.1 Loop Construct Restriction
@@ -3693,7 +3692,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     for (const auto &[symbol, source] : symbols) {
       if (!IsVariableListItem(*symbol) &&
           !(IsNamedConstant(*symbol) && SharedOrFirstprivate)) {
-        deferredNonVariables_.insert({symbol, source});
+        context_.SayWithDecl(*symbol, source,
+            "'%s' must be a variable"_err_en_US, symbol->name());
       }
     }
   }
@@ -4286,7 +4286,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckCrayPointee(x.v, "FIRSTPRIVATE");
-  CheckIsLoopIvPartOfClause(llvm::omp::Clause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
@@ -4322,20 +4321,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_firstprivate);
-}
-
-void OmpStructureChecker::CheckIsLoopIvPartOfClause(
-    llvm::omp::Clause clause, const parser::OmpObjectList &ompObjectList) {
-  unsigned version{context_.langOptions().OpenMPVersion};
-  for (const auto &ompObject : ompObjectList.v) {
-    if (const parser::Name *name{parser::Unwrap<parser::Name>(ompObject)}) {
-      if (name->symbol == GetContext().loopIV) {
-        context_.Say(name->source,
-            "DO iteration variable %s is not allowed in %s clause."_err_en_US,
-            name->ToString(), parser::omp::GetUpperName(clause, version));
-      }
-    }
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Align &x) {
@@ -4735,8 +4720,20 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   const parser::OmpDeviceClause &deviceClause{x.v};
   const auto &device{std::get<parser::ScalarIntExpr>(deviceClause.t)};
   unsigned version{context_.langOptions().OpenMPVersion};
-  RequiresPositiveParameter(
-      llvm::omp::Clause::OMPC_device, device, "device expression");
+  // The predefined identifiers omp_initial_device (-1) and omp_invalid_device
+  // (-2) were introduced in OpenMP 5.2. Under earlier versions the device
+  // expression must be a non-negative integer.
+  if (version >= 52) {
+    if (const auto v{GetIntValue(device)}) {
+      if (*v < -2) {
+        context_.Say(GetContext().clauseSource,
+            "The device expression of the DEVICE clause must be a non-negative integer expression, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)"_err_en_US);
+      }
+    }
+  } else {
+    RequiresPositiveParameter(
+        llvm::omp::Clause::OMPC_device, device, "device expression");
+  }
   llvm::omp::Directive dir{GetContext().directive};
 
   if (OmpVerifyModifiers(deviceClause, llvm::omp::OMPC_device,
@@ -5590,6 +5587,12 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
         parser::Unwrap<parser::WhereStmt>(*it) ||
         parser::Unwrap<parser::WhereConstruct>(*it)) {
       parser::Walk(*it, ompWorkshareBlockChecker);
+    } else if (const auto *blockConstruct{
+                   parser::Unwrap<parser::BlockConstruct>(*it)}) {
+      // Fortran BLOCK construct is a transparent scoping wrapper.
+      // Recursively check the statements inside it.
+      const auto &nestedBlock{std::get<parser::Block>(blockConstruct->t)};
+      CheckWorkshareBlockStmts(nestedBlock, source);
     } else if (const auto *ompConstruct{
                    parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
       if (const auto *ompAtomicConstruct{
@@ -5957,8 +5960,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
 
   const auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
   for (const parser::OmpObject &object : objects.v) {
-    if (const parser::Designator *designator{
-            omp::GetDesignatorFromObj(object)}) {
+    if (const parser::Designator *designator{GetDesignatorFromObj(object)}) {
       if (const auto *dataRef{GetDataRefFromObj(object)}) {
         if (const auto *arrayElement{GetArrayElementFromObj(object)}) {
           CheckArraySection(*arrayElement, GetLastName(*dataRef),

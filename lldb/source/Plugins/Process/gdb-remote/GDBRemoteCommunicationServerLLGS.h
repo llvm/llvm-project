@@ -276,6 +276,8 @@ protected:
 
   PacketResult Handle_T(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jMultiBreakpoint(StringExtractorGDBRemote &packet);
+
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;

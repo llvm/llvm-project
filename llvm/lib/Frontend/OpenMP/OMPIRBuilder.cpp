@@ -1187,10 +1187,8 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(DebugLoc DL,
   DILocation *DIL = DL.get();
   if (!DIL)
     return getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-  StringRef FileName = M.getName();
-  if (DIFile *DIF = DIL->getFile())
-    if (std::optional<StringRef> Source = DIF->getSource())
-      FileName = *Source;
+  StringRef FileName =
+      !DIL->getFilename().empty() ? DIL->getFilename() : M.getName();
   StringRef Function = DIL->getScope()->getSubprogram()->getName();
   if (Function.empty() && F)
     Function = F->getName();
@@ -1622,6 +1620,9 @@ static void targetParallelCallback(
   Value *Cond =
       IfCondition ? Builder.CreateSExtOrTrunc(IfCondition, OMPIRBuilder->Int32)
                   : Builder.getInt32(1);
+  Value *NumThreadsArg =
+      NumThreads ? Builder.CreateZExtOrTrunc(NumThreads, OMPIRBuilder->Int32)
+                 : Builder.getInt32(-1);
 
   // If this is not a Generic kernel, we can skip generating the wrapper.
   Value *WrapperFn;
@@ -1635,7 +1636,7 @@ static void targetParallelCallback(
       /* identifier*/ Ident,
       /* global thread num*/ ThreadID,
       /* if expression */ Cond,
-      /* number of threads */ NumThreads ? NumThreads : Builder.getInt32(-1),
+      /* number of threads */ NumThreadsArg,
       /* Proc bind */ Builder.getInt32(-1),
       /* outlined function */ &OutlinedFn,
       /* wrapper function */ WrapperFn,
@@ -7602,6 +7603,34 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSingle(
   return Builder.saveIP();
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createScope(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB,
+                             FinalizeCallbackTy FiniCB, bool IsNowait) {
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // All threads execute the scope body — no conditional entry.
+  InsertPointOrErrorTy AfterIP = EmitOMPInlinedRegion(
+      Directive::OMPD_scope, /*EntryCall=*/nullptr, /*ExitCall=*/nullptr,
+      BodyGenCB, FiniCB, /*Conditional=*/false, /*HasFinalize=*/true,
+      /*IsCancellable=*/false);
+  if (!AfterIP)
+    return AfterIP.takeError();
+
+  Builder.restoreIP(*AfterIP);
+  if (!IsNowait) {
+    AfterIP = createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+                            omp::Directive::OMPD_unknown,
+                            /*ForceSimpleCall=*/false,
+                            /*CheckCancelFlag=*/false);
+    if (!AfterIP)
+      return AfterIP.takeError();
+  }
+  return Builder.saveIP();
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createCritical(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
     FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
@@ -8318,11 +8347,12 @@ OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
 
 void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
                                           int32_t LB, int32_t UB) {
-  if (T.isNVPTX())
-    if (UB > 0)
+  if (UB > 0) {
+    if (T.isNVPTX())
       Kernel.addFnAttr(NVVMAttr::MaxClusterRank, llvm::utostr(UB));
-  if (T.isAMDGPU())
-    Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
+    if (T.isAMDGPU())
+      Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(UB) + ",1,1");
+  }
 
   Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }

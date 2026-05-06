@@ -1686,6 +1686,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                  {IntrId, Vgpr32, Vgpr32, SgprB32_ReadFirstLane,
                   SgprB32_ReadFirstLane, Imm, Imm}});
 
+  addRulesForIOpcs({amdgcn_permlane_bcast, amdgcn_permlane_up,
+                    amdgcn_permlane_down, amdgcn_permlane_xor},
+                   Standard)
+      .Div(S32,
+           {{Vgpr32},
+            {IntrId, Vgpr32, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}});
+
+  addRulesForIOpcs({amdgcn_permlane_idx_gen}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});
+
   addRulesForIOpcs({amdgcn_perm}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
@@ -1715,6 +1725,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_rsq, amdgcn_rsq_clamp}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}});
+
   addRulesForIOpcs({amdgcn_mul_u24, amdgcn_mul_i24}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}})
@@ -1727,6 +1745,20 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                    Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_cvt_sr_bf8_f32, amdgcn_cvt_sr_fp8_f32,
+                    amdgcn_cvt_pk_bf8_f32, amdgcn_cvt_pk_fp8_f32},
+                   Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_cvt_f32_bf8, amdgcn_cvt_f32_fp8}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_cvt_pk_f32_bf8, amdgcn_cvt_pk_f32_fp8})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {IntrId, Vgpr32}}})
+      .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, Vgpr32}}});
 
   addRulesForIOpcs({amdgcn_cubesc, amdgcn_cubetc, amdgcn_cubema, amdgcn_cubeid,
                     amdgcn_fma_legacy},
@@ -1840,6 +1872,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
 
+  addRulesForIOpcs({amdgcn_cluster_load_async_to_lds_b8,
+                    amdgcn_cluster_load_async_to_lds_b32,
+                    amdgcn_cluster_load_async_to_lds_b64,
+                    amdgcn_cluster_load_async_to_lds_b128})
+      .Any({{}, {{}, {IntrId, VgprP1, VgprP3, Imm, Imm, SgprB32_M0}}});
+
   addRulesForIOpcs({amdgcn_perm_pk16_b4_u4}, StandardB)
       .Uni(B64, {{UniInVgprB64}, {IntrId, Vgpr32, Vgpr32, VgprV2S32}})
       .Div(B64, {{VgprB64}, {IntrId, Vgpr32, Vgpr32, VgprV2S32}});
@@ -1906,6 +1944,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST);
+
+  addRulesForIOpcs({amdgcn_sqrt}, Standard)
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
+      .Uni(S16, {{Sgpr16}, {IntrId, Sgpr16}}, hasPST)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}}, !hasPST)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST)
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}});
 
   addRulesForIOpcs({amdgcn_ds_atomic_async_barrier_arrive_b64})
       .Any({{}, {{}, {IntrId, VgprP3}}});

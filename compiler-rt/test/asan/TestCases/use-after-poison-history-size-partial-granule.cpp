@@ -1,42 +1,51 @@
 // Check that __asan_poison_memory_region and ASAN_OPTIONS=poison_history_size work for partial granules.
 //
-// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 20 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 20 10 2>&1 | FileCheck %s --check-prefixes=CHECK,POISON
 //
 // Partial granule
-// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t    2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 20 20 2>&1 | FileCheck %s --check-prefixes=CHECK,POISON
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 6 11  2>&1 | FileCheck %s --check-prefixes=CHECK,UNKNOWN
 
 // TODO
 // REQUIRES: linux
 // UNSUPPORTED: android
 
+#include <cassert>
 #include <stdio.h>
 #include <stdlib.h>
 
-extern "C" void __asan_poison_memory_region(void *, size_t);
-extern "C" void __asan_unpoison_memory_region(void *, size_t);
+#include <sanitizer/asan_interface.h>
 
-void honey_ive_poisoned_the_memory(char *x) {
-  __asan_poison_memory_region(x + 10, 20);
+void honey_ive_poisoned_the_memory(char *x, size_t poison_offset,
+                                   size_t poison_size) {
+  __asan_poison_memory_region(x + poison_offset, poison_size);
 }
 
-void foo(char *x) { honey_ive_poisoned_the_memory(x); }
+void foo(char *x, size_t poison_offset, size_t poison_size) {
+  honey_ive_poisoned_the_memory(x, poison_offset, poison_size);
+}
 
 int main(int argc, char **argv) {
+  assert(argc > 3);
+  size_t poison_offset = atoi(argv[1]);
+  size_t poison_size = atoi(argv[2]);
+  size_t access_offset = atoi(argv[3]);
   char *x = new char[64];
   x[10] = 0;
-  foo(x);
+  foo(x, poison_offset, poison_size);
   // Bytes [0,   9]: addressable
   // Bytes [10,  31]: poisoned by A
   // Bytes [32,  63]: addressable
 
-  int res = x[argc * 10]; // BOOOM
-  // CHECK: ERROR: AddressSanitizer: use-after-poison
-  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-2]]
+  int res = x[access_offset]; // BOOOM
+  // POISON: ERROR: AddressSanitizer: use-after-poison
+  // UNKNOWN: ERROR: AddressSanitizer: unknown-crash
+  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-3]]
 
   // CHECK: Memory was manually poisoned by thread T0:
-  // CHECK: honey_ive_poisoned_the_memory{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-18]]
-  // CHECK: foo{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-16]]
-  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-12]]
+  // CHECK: honey_ive_poisoned_the_memory{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-25]]
+  // CHECK: foo{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-22]]
+  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-13]]
 
   delete[] x;
 

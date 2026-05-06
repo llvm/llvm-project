@@ -70,14 +70,14 @@ struct MissingFeatures {
   static bool opFuncArmNewAttr() { return false; }
   static bool opFuncArmStreamingAttr() { return false; }
   static bool opFuncAstDeclAttr() { return false; }
-  static bool opFuncCallingConv() { return false; }
   static bool opFuncColdHotAttr() { return false; }
-  static bool opFuncCPUAndFeaturesAttributes() { return false; }
   static bool opFuncExceptions() { return false; }
   static bool opFuncExtraAttrs() { return false; }
+  static bool opFuncCallingConv() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
   static bool opFuncMinSizeAttr() { return false; }
   static bool opFuncMultipleReturnVals() { return false; }
+  static bool opFuncMultiVersioning() { return false; }
   static bool opFuncNakedAttr() { return false; }
   static bool opFuncNoDuplicateAttr() { return false; }
   static bool opFuncOpenCLKernelMetadata() { return false; }
@@ -97,7 +97,6 @@ struct MissingFeatures {
   static bool opCallABIIndirectArg() { return false; }
   static bool opCallWidenArg() { return false; }
   static bool opCallBitcastArg() { return false; }
-  static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
@@ -113,9 +112,6 @@ struct MissingFeatures {
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
   static bool opCallChain() { return false; }
   static bool opCallExceptionAttr() { return false; }
-
-  // CXXNewExpr
-  static bool exprNewNullCheck() { return false; }
 
   // FnInfoOpts -- This is used to track whether calls are chain calls or
   // instance methods. Classic codegen uses chain call to track and extra free
@@ -173,6 +169,7 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
+  static bool atomicInitTailPadding() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
@@ -250,7 +247,6 @@ struct MissingFeatures {
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
-  static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehScopeFilter() { return false; }
@@ -287,7 +283,6 @@ struct MissingFeatures {
   static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
-  static bool lambdaCaptures() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
