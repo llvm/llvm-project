@@ -14,6 +14,7 @@
 #include "DWARFLinkerTypeUnit.h"
 #include "StringEntryToDwarfStringPoolEntryMap.h"
 #include "llvm/ADT/AddressRanges.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DWARFLinker/StringPool.h"
@@ -244,6 +245,35 @@ protected:
       return Size;
     }
 
+    /// Result of scanning one LinkContext's input .debug_frame. Produced
+    /// by scanFrameData() and consumed by cloneAndEmitDebugFrame. Owns a
+    /// copy of the raw frame bytes so the StringRef views below remain
+    /// valid after the input DWARFContext is unloaded.
+    struct FrameScanResult {
+      /// Owning copy of the input .debug_frame bytes. The CIEBytes and
+      /// Instructions StringRefs below view into this buffer.
+      SmallString<0> FrameData;
+
+      /// Address size of the input object, used by emitFDE to size the
+      /// FDE's initial_location field.
+      unsigned AddressSize = 0;
+
+      /// FDEs retained for emission. CIEBytes points at the matching CIE
+      /// inside FrameData; Instructions is the FDE body after the
+      /// initial_length / CIE_pointer / initial_location fields.
+      struct FDE {
+        StringRef CIEBytes;
+        uint64_t Address = 0;
+        StringRef Instructions;
+      };
+      SmallVector<FDE> FDEs;
+    };
+
+    /// Populated by scanFrameData() when this context has frame data to
+    /// emit. Consumed by cloneAndEmitDebugFrame, which resets this
+    /// pointer once emission ends.
+    std::unique_ptr<FrameScanResult> FrameScan;
+
     /// Link compile units for this context.
     Error link(TypeUnit *ArtificialTypeUnit);
 
@@ -254,6 +284,9 @@ protected:
 
     /// Emit invariant sections.
     Error emitInvariantSections();
+
+    /// Parse this context's input .debug_frame into FrameScan.
+    Error scanFrameData();
 
     /// Clone and emit .debug_frame.
     Error cloneAndEmitDebugFrame();

@@ -752,7 +752,7 @@ Error DWARFLinkerImpl::LinkContext::emitInvariantSections() {
   return Error::success();
 }
 
-Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
+Error DWARFLinkerImpl::LinkContext::scanFrameData() {
   if (!GlobalData.getTargetTriple().has_value())
     return Error::success();
 
@@ -765,41 +765,50 @@ Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
   if (OrigFrameData.empty())
     return Error::success();
 
+  auto Scan = std::make_unique<FrameScanResult>();
+  Scan->FrameData = OrigFrameData;
+  Scan->AddressSize = InputDWARFObj.getAddressSize();
+
   RangesTy AllUnitsRanges;
   for (std::unique_ptr<CompileUnit> &Unit : CompileUnits) {
     for (auto CurRange : Unit->getFunctionRanges())
       AllUnitsRanges.insert(CurRange.Range, CurRange.Value);
   }
 
-  unsigned SrcAddrSize = InputDWARFObj.getAddressSize();
-
-  SectionDescriptor &OutSection =
-      getOrCreateSectionDescriptor(DebugSectionKind::DebugFrame);
-
-  DataExtractor Data(OrigFrameData, InputDWARFObj.isLittleEndian(), 0);
+  StringRef FrameBytes = Scan->FrameData;
+  DataExtractor Data(FrameBytes, InputDWARFObj.isLittleEndian(), 0);
   uint64_t InputOffset = 0;
+  const unsigned SrcAddrSize = Scan->AddressSize;
+  // Width of the CIE_pointer field at the start of every FDE (and of the
+  // CIE_id sentinel at the start of every CIE) in DWARF32 .debug_frame.
+  constexpr unsigned CIEPointerSize = 4;
 
-  // Store the data of the CIEs defined in this object, keyed by their
-  // offsets.
-  DenseMap<uint64_t, StringRef> LocalCIES;
-
-  /// The CIEs that have been emitted in the output section. The actual CIE
-  /// data serves a the key to this StringMap.
-  StringMap<uint32_t> EmittedCIEs;
+  // CIEs defined in this input, keyed by their input offsets, so FDEs
+  // can resolve their CIE_pointer field to the matching CIE bytes.
+  DenseMap<uint64_t, StringRef> LocalCIEs;
 
   while (Data.isValidOffset(InputOffset)) {
     uint64_t EntryOffset = InputOffset;
     uint32_t InitialLength = Data.getU32(&InputOffset);
     if (InitialLength == 0xFFFFFFFF)
-      return createFileError(InputDWARFObj.getFileName(),
+      return createFileError(InputDWARFFile.FileName,
                              createStringError(std::errc::invalid_argument,
-                                               "Dwarf64 bits no supported"));
+                                               "Dwarf64 bits not supported"));
+
+    // Reject lengths that don't fit in the input section. substr() saturates
+    // silently, which would otherwise let a malformed length poison the
+    // CIE bytes used as the registry key.
+    if (InitialLength > FrameBytes.size() - InputOffset)
+      return createFileError(
+          InputDWARFFile.FileName,
+          createStringError(std::errc::invalid_argument,
+                            "Truncated .debug_frame entry."));
 
     uint32_t CIEId = Data.getU32(&InputOffset);
     if (CIEId == 0xFFFFFFFF) {
       // This is a CIE, store it.
-      StringRef CIEData = OrigFrameData.substr(EntryOffset, InitialLength + 4);
-      LocalCIES[EntryOffset] = CIEData;
+      StringRef CIEData = FrameBytes.substr(EntryOffset, InitialLength + 4);
+      LocalCIEs[EntryOffset] = CIEData;
       // The -4 is to account for the CIEId we just read.
       InputOffset += InitialLength - 4;
       continue;
@@ -820,25 +829,58 @@ Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
     }
 
     // This is an FDE, and we have a mapping.
-    // Have we already emitted a corresponding CIE?
-    StringRef CIEData = LocalCIES[CIEId];
+    StringRef CIEData = LocalCIEs.lookup(CIEId);
     if (CIEData.empty())
       return createFileError(
-          InputDWARFObj.getFileName(),
+          InputDWARFFile.FileName,
           createStringError(std::errc::invalid_argument,
                             "Inconsistent debug_frame content. Dropping."));
 
+    // Reject FDEs whose length doesn't even cover the CIE_pointer and
+    // initial_location fields; otherwise the unsigned subtraction below
+    // would wrap and substr() would saturate to a giant garbage blob.
+    if (InitialLength < CIEPointerSize + SrcAddrSize)
+      return createFileError(
+          InputDWARFFile.FileName,
+          createStringError(std::errc::invalid_argument,
+                            "Truncated .debug_frame FDE."));
+
+    unsigned FDERemainingBytes = InitialLength - (CIEPointerSize + SrcAddrSize);
+    Scan->FDEs.push_back({CIEData, Loc + Range->Value,
+                          FrameBytes.substr(InputOffset, FDERemainingBytes)});
+    InputOffset += FDERemainingBytes;
+  }
+
+  FrameScan = std::move(Scan);
+  return Error::success();
+}
+
+Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
+  if (Error Err = scanFrameData())
+    return Err;
+  if (!FrameScan)
+    return Error::success();
+
+  SectionDescriptor &OutSection =
+      getOrCreateSectionDescriptor(DebugSectionKind::DebugFrame);
+  const unsigned SrcAddrSize = FrameScan->AddressSize;
+
+  /// The CIEs that have been emitted in the output section. The actual CIE
+  /// data serves a the key to this StringMap.
+  StringMap<uint32_t> EmittedCIEs;
+
+  for (const FrameScanResult::FDE &FDE : FrameScan->FDEs) {
     uint64_t OffsetToCIERecord = OutSection.OS.tell();
 
     // Look if we already emitted a CIE that corresponds to the
     // referenced one (the CIE data is the key of that lookup).
     auto IteratorInserted =
-        EmittedCIEs.insert(std::make_pair(CIEData, OffsetToCIERecord));
+        EmittedCIEs.insert(std::make_pair(FDE.CIEBytes, OffsetToCIERecord));
     OffsetToCIERecord = IteratorInserted.first->getValue();
 
     // Emit CIE for this ID if it is not emitted yet.
     if (IteratorInserted.second)
-      OutSection.OS << CIEData;
+      OutSection.OS << FDE.CIEBytes;
 
     // Remember offset to the FDE record, so that we might update
     // field referencing CIE record(containing OffsetToCIERecord),
@@ -849,14 +891,11 @@ Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
         DebugOffsetPatch{OutSection.OS.tell() + 4, &OutSection, true});
 
     // Emit the FDE with updated address and CIE pointer.
-    // (4 + AddrSize) is the size of the CIEId + initial_location
-    // fields that will get reconstructed by emitFDE().
-    unsigned FDERemainingBytes = InitialLength - (4 + SrcAddrSize);
-    emitFDE(OffsetToCIERecord, SrcAddrSize, Loc + Range->Value,
-            OrigFrameData.substr(InputOffset, FDERemainingBytes), OutSection);
-    InputOffset += FDERemainingBytes;
+    emitFDE(OffsetToCIERecord, SrcAddrSize, FDE.Address, FDE.Instructions,
+            OutSection);
   }
 
+  FrameScan.reset();
   return Error::success();
 }
 
