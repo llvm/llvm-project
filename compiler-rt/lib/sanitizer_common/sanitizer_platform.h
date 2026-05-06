@@ -320,9 +320,9 @@
 
 #if defined(__SPIRV__)
 #  define SANITIZER_SPIRV 1
-#else // defined(__SPIRV__)
+#else
 #  define SANITIZER_SPIRV 0
-#endif // defined(__SPIRV__)
+#endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases SizeClassAllocator64 does not work well and we need to
