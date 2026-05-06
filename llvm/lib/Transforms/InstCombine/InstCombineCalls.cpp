@@ -3103,61 +3103,56 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     copysign(Mag, B & (A < 0.0) ? -TC : TC) -> copysign(Mag, A) B->true, A>0. // no sign change
     copysign(Mag, B & (A < 0.0) ? -TC : TC) -> copysign(Mag, A) B->false, A>0. // no sign change
     copysign(Mag, B & (A < 0.0) ? -TC : TC) -> copysign(Mag, -A) B->false, A<0.
-*/
+    */
 
-// Value *A, *B;
-// CmpPredicate Pred;
-// const APFloat *TC, *FC;
+    // Value *A, *B;
+    // Value *SignVal = nullptr;
+    // CmpPredicate Pred;
+    // const APFloat *TC, *FC;
+    // auto *SelInst = cast<Instruction>(Sign);
 
-//     if (!match(
-//             Sign,
-//             m_Select(
-//                 m_CombineOr(
-//                     m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()), m_Value(B)),
-//                     m_Select(m_Value(B),
-//                              m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
-//                              m_Zero())),
-//                 m_APFloat(TC), m_APFloat(FC))))
-//       return nullptr;
+    // if (!match(
+    //         Sign,
+    //         m_Select(
+    //             m_CombineOr(
+    //                 m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()), m_Value(B)),
+    //                 m_Select(m_Value(B),
+    //                          m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+    //                          m_Zero())),
+    //             m_APFloat(TC), m_APFloat(FC))))
+    //   return nullptr;
 
-//     bool IsStandard = TC->isNegative() && !FC->isNegative() &&
-//                       abs(*TC).bitwiseIsEqual(abs(*FC));
-//     bool IsInverse = !TC->isNegative() && FC->isNegative() &&
-//                      abs(*TC).bitwiseIsEqual(abs(*FC));
+    // bool IsStandard = TC->isNegative() && !FC->isNegative() &&
+    //                   abs(*TC).bitwiseIsEqual(abs(*FC));
+    // bool IsInverse = !TC->isNegative() && FC->isNegative() &&
+    //                  abs(*TC).bitwiseIsEqual(abs(*FC));
 
-//     if (IsStandard || IsInverse) {
-//       auto *SelInst = cast<Instruction>(Sign);
-//       bool nsz = SelInst->hasNoSignedZeros();
-//       bool nnan = SelInst->hasNoNaNs();
-//         FCmpInst::Predicate P = static_cast<FCmpInst::Predicate>(Pred);
+    // if (IsStandard || IsInverse) {
+    //   FCmpInst::Predicate Predicate = static_cast<FCmpInst::Predicate>(Pred);
+    //     if (Predicate == FCmpInst::FCMP_OLT || (SelInst->hasNoNaNs() && Predicate == FCmpInst::FCMP_ULT)) {
+    //       if (IsStandard)
+    //         SignVal = A;
+    //       else if (SelInst->hasNoSignedZeros())
+    //         SignVal = Builder.CreateFNeg(A);
+    //     } else if (Predicate == FCmpInst::FCMP_OGT || (SelInst->hasNoNaNs() && Predicate == FCmpInst::FCMP_UGT)) {
+    //       if (IsInverse)
+    //         SignVal = A;
+    //       else
+    //         SignVal = Builder.CreateFNeg(A);
+    //     } else if (Predicate == FCmpInst::FCMP_ULE) {
+    //       if (IsStandard)
+    //         SignVal = Builder.CreateFNeg(A);
+    //     } else if (Predicate == FCmpInst::FCMP_UGE) {
+    //       if (IsStandard)
+    //         SignVal = Builder.CreateFNeg(A);
+    //     }
 
-//         Value *SignVal = nullptr;
-
-//         if (P == FCmpInst::FCMP_OLT || (nnan && P == FCmpInst::FCMP_ULT)) {
-//           if (IsStandard)
-//             SignVal = A;
-//           else if (nsz)
-//             SignVal = Builder.CreateFNeg(A);
-//         } else if (P == FCmpInst::FCMP_OGT || (nnan && P == FCmpInst::FCMP_UGT)) {
-//           if (IsInverse)
-//             SignVal = A;
-//           else
-//             SignVal = Builder.CreateFNeg(A);
-//         } else if (P == FCmpInst::FCMP_ULE) {
-//           if (IsStandard)
-//             SignVal = Builder.CreateFNeg(A);
-//         } else if (P == FCmpInst::FCMP_UGE) {
-//           if (IsStandard)
-//             SignVal = Builder.CreateFNeg(A);
-//         }
-
-//         if (SignVal) {
-//           if (auto *NewInst = dyn_cast<Instruction>(SignVal))
-//             NewInst->copyFastMathFlags(SelInst);
-//           return replaceOperand(*II, 1, SignVal);
-//         }
-//       }
-//     }
+    //     if (SignVal) {
+    //       if (auto *NewInst = dyn_cast<Instruction>(SignVal))
+    //         NewInst->copyFastMathFlags(SelInst);
+    //       return replaceOperand(*II, 1, SignVal);
+    //     }
+    //   }
 
     Type *SignEltTy = Sign->getType()->getScalarType();
 
@@ -3172,7 +3167,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                SQ))
         return II;
     }
-
     break;
   }
   case Intrinsic::fabs: {
