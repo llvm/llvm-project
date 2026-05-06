@@ -184,9 +184,11 @@ template <class T> [[nodiscard]] T g();
 
 void h() {
   f();
-  g<void>();
+  (void)f();
   g<int>();
   // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  g<void>();
+  (void)g<void>();
 }
 #endif
 } // namespace cwg2943
