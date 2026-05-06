@@ -2523,7 +2523,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
         // Deduce the size parameter of _BitInt as std::size_t
         QualType T = S.Context.getSizeType();
-        llvm::APSInt ArgSize(S.Context.getTypeSize(T), false);
+        llvm::APSInt ArgSize(S.Context.getTypeSize(T), true);
         ArgSize = IA->getNumBits();
 
         return DeduceNonTypeTemplateArgument(
