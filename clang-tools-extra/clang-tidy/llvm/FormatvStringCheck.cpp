@@ -104,7 +104,7 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
     Input = Rest;
     if (Entry.empty())
       continue;
-    auto [Name, IdxStr] = Entry.rsplit(':');
+    const auto [Name, IdxStr] = Entry.rsplit(':');
     unsigned Idx = 0;
     if (Name.empty() || IdxStr.empty() || IdxStr.getAsInteger(10, Idx)) {
       configurationDiag("invalid entry '%0' in option AdditionalFunctions, "
