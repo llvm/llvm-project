@@ -1041,8 +1041,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       case TypeSpecifierWidth::LongLong:
         Result = Context.LongLongTy;
 
-        // 'long long' is a C99 or C++11 feature.
-        if (!S.getLangOpts().C99) {
+        if (S.getLangOpts().OpenCL) {
+          S.Diag(DS.getTypeSpecWidthLoc(), diag::warn_opencl_longlong);
+        } else if (!S.getLangOpts().C99) {
+          // 'long long' is a C99 or C++11 feature.
           if (S.getLangOpts().CPlusPlus)
             S.Diag(DS.getTypeSpecWidthLoc(),
                    S.getLangOpts().CPlusPlus11 ?
@@ -1066,8 +1068,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       case TypeSpecifierWidth::LongLong:
         Result = Context.UnsignedLongLongTy;
 
-        // 'long long' is a C99 or C++11 feature.
-        if (!S.getLangOpts().C99) {
+        if (S.getLangOpts().OpenCL) {
+          S.Diag(DS.getTypeSpecWidthLoc(), diag::warn_opencl_longlong);
+        } else if (!S.getLangOpts().C99) {
+          // 'long long' is a C99 or C++11 feature.
           if (S.getLangOpts().CPlusPlus)
             S.Diag(DS.getTypeSpecWidthLoc(),
                    S.getLangOpts().CPlusPlus11 ?
