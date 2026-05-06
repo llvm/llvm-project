@@ -1763,7 +1763,32 @@ namespace {
           if (TA.isDependent())
             return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       }
+      if (auto *CD = dyn_cast_if_present<ImplicitConceptSpecializationDecl>(
+              LSI->Lambda->getLambdaContextDecl())) {
+        if (llvm::any_of(CD->getTemplateArguments(),
+                         [](const auto &TA) { return TA.isDependent(); }))
+          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
+      }
       return inherited::ComputeLambdaDependency(LSI);
+    }
+
+    AssociatedConstraint TransformConstraint(AssociatedConstraint AC) {
+      // If the concept refers to any outer parameter packs, we track the
+      // SubstIndex for evaluation.
+      if (AC && AC.ConstraintExpr->containsUnexpandedParameterPack() &&
+          !AC.ArgPackSubstIndex)
+        AC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
+
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      if (AC && SemaRef.inConstraintSubstitution()) {
+        ExprResult E = TransformExpr(const_cast<Expr *>(AC.ConstraintExpr));
+        if (E.isInvalid())
+          return {};
+        AC.ConstraintExpr = E.get();
+      }
+
+      return AC;
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
@@ -1876,11 +1901,25 @@ namespace {
                               TemplateParameterList *OrigTPL)  {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
 
+      std::optional<MultiLevelTemplateArgumentList> OldMLTAL;
+      // We need to preserve the lambda depth in parameter mapping.
+      // Otherwise the template argument deduction would fail, if we reduced the
+      // depth too early.
+      if (SemaRef.inParameterMappingSubstitution() &&
+          getDepthAndIndex(OrigTPL->getParam(0)).first >=
+              TemplateArgs.getNumSubstitutedLevels())
+        OldMLTAL = ForgetSubstitution();
+
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-      TemplateDeclInstantiator  DeclInstantiator(getSema(),
-                        /* DeclContext *Owner */ Owner, TemplateArgs);
-      DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
-      return DeclInstantiator.SubstTemplateParams(OrigTPL);
+      TemplateDeclInstantiator DeclInstantiator(getSema(), Owner, TemplateArgs);
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      DeclInstantiator.setEvaluateConstraints(
+          SemaRef.inConstraintSubstitution() || EvaluateConstraints);
+      auto *Transformed = DeclInstantiator.SubstTemplateParams(OrigTPL);
+      if (OldMLTAL)
+        RememberSubstitution(std::move(*OldMLTAL));
+      return Transformed;
     }
 
     concepts::TypeRequirement *
