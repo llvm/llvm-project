@@ -2,7 +2,7 @@
 
 func.func @const_attribute_str() {
     // expected-error @+1 {{'emitc.constant' op string attributes are not supported, use #emitc.opaque instead}}                 
-    %c0 = "emitc.constant"(){value = "NULL"} : () -> !emitc.ptr<i32>
+    %c0 = "emitc.constant"() <{value = "NULL"}> : () -> !emitc.ptr<i32>
     return
 }
 
@@ -10,7 +10,7 @@ func.func @const_attribute_str() {
 
 func.func @const_attribute_return_type_1() {
     // expected-error @+1 {{'emitc.constant' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
-    %c0 = "emitc.constant"(){value = 42: i64} : () -> i32
+    %c0 = "emitc.constant"() <{value = 42: i64}> : () -> i32
     return
 }
 
@@ -18,7 +18,7 @@ func.func @const_attribute_return_type_1() {
 
 func.func @const_attribute_return_type_2() {
     // expected-error @+1 {{'emitc.constant' op attribute 'value' failed to satisfy constraint: An opaque attribute or TypedAttr instance}}
-    %c0 = "emitc.constant"(){value = unit} : () -> i32
+    %c0 = "emitc.constant"() <{value = unit}> : () -> i32
     return
 }
 
@@ -26,7 +26,7 @@ func.func @const_attribute_return_type_2() {
 
 func.func @empty_constant() {
     // expected-error @+1 {{'emitc.constant' op value must not be empty}}
-    %c0 = "emitc.constant"(){value = #emitc.opaque<"">} : () -> i32
+    %c0 = "emitc.constant"() <{value = #emitc.opaque<"">}> : () -> i32
     return
 }
 
@@ -130,7 +130,7 @@ func.func @member_call_dense_template_argument(%arg0 : !emitc.opaque<"MyClass">)
 
 func.func @var_attribute_return_type_1() {
     // expected-error @+1 {{'emitc.variable' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
-    %c0 = "emitc.variable"(){value = 42: i64} : () -> !emitc.lvalue<i32>
+    %c0 = "emitc.variable"() <{value = 42: i64}> : () -> !emitc.lvalue<i32>
     return
 }
 
@@ -138,7 +138,7 @@ func.func @var_attribute_return_type_1() {
 
 func.func @var_attribute_return_type_2() {
     // expected-error @+1 {{'emitc.variable' op attribute 'value' failed to satisfy constraint: An opaque attribute or TypedAttr instance}}
-    %c0 = "emitc.variable"(){value = unit} : () -> !emitc.lvalue<i32>
+    %c0 = "emitc.variable"() <{value = unit}> : () -> !emitc.lvalue<i32>
     return
 }
 
@@ -313,7 +313,7 @@ func.func @test_assign_to_array(%arg1: !emitc.array<4xi32>) {
 func.func @test_expression_no_yield() -> i32 {
   // expected-error @+1 {{'emitc.expression' op must yield a value at termination}}
   %r = emitc.expression : () -> i32 {
-    %c7 = "emitc.constant"(){value = 7 : i32} : () -> i32
+    %c7 = "emitc.constant"() <{value = 7 : i32}> : () -> i32
   }
   return %r : i32
 }
@@ -603,14 +603,14 @@ func.func @member_of_value_array(%arg0: !emitc.opaque<"mystruct">) {
 
 func.func @member_of_ptr(%arg0: !emitc.lvalue<i32>) {
   // expected-error @+1 {{'emitc.member_of_ptr' op operand #0 must be emitc.lvalue of EmitC opaque type or EmitC pointer type values, but got '!emitc.lvalue<i32>'}}
-  %0 = "emitc.member_of_ptr" (%arg0) {member = "a"} : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
+  %0 = "emitc.member_of_ptr" (%arg0) <{member = "a"}> : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
   return
 }
 
 // -----
 
 func.func @emitc_switch() {
-  %0 = "emitc.constant"(){value = 1 : i16} : () -> i16
+  %0 = "emitc.constant"() <{value = 1 : i16}> : () -> i16
 
   // expected-error@+1 {{'emitc.switch' op expected region to end with emitc.yield, but got emitc.call_opaque}}
   emitc.switch %0 : i16
@@ -622,7 +622,7 @@ func.func @emitc_switch() {
     emitc.yield
   }
   default {
-    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    %3 = "emitc.constant"() <{value = 42.0 : f32}> : () -> f32
     emitc.call_opaque "func2" (%3) : (f32) -> ()
     emitc.yield
   }
@@ -632,7 +632,7 @@ func.func @emitc_switch() {
 // -----
 
 func.func @emitc_switch() {
-  %0 = "emitc.constant"(){value = 1 : i32} : () -> i32
+  %0 = "emitc.constant"() <{value = 1 : i32}> : () -> i32
 
   emitc.switch %0 : i32
   case 2 {
@@ -645,7 +645,7 @@ func.func @emitc_switch() {
     emitc.yield
   }
   default {
-    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    %3 = "emitc.constant"() <{value = 42.0 : f32}> : () -> f32
     emitc.call_opaque "func2" (%3) : (f32) -> ()
     emitc.yield
   }
@@ -655,7 +655,7 @@ func.func @emitc_switch() {
 // -----
 
 func.func @emitc_switch() {
-  %0 = "emitc.constant"(){value = 1 : i8} : () -> i8
+  %0 = "emitc.constant"() <{value = 1 : i8}> : () -> i8
 
   emitc.switch %0 : i8
   case 2 {
@@ -673,7 +673,7 @@ func.func @emitc_switch() {
 // -----
 
 func.func @emitc_switch() {
-  %0 = "emitc.constant"(){value = 1 : i64} : () -> i64
+  %0 = "emitc.constant"() <{value = 1 : i64}> : () -> i64
 
   // expected-error@+1 {{'emitc.switch' op has duplicate case value: 2}}
   emitc.switch %0 : i64
@@ -686,7 +686,7 @@ func.func @emitc_switch() {
     emitc.yield
   }
   default {
-    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    %3 = "emitc.constant"() <{value = 42.0 : f32}> : () -> f32
     emitc.call_opaque "func2" (%3) : (f32) -> ()
     emitc.yield
   }

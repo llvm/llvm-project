@@ -32,6 +32,16 @@ emitc.func @call() -> i32 {
   emitc.return %0 : i32
 }
 
+// CHECK-LABEL: emitc.func @call_with_attrs
+// CHECK: %0 = call @callee_with_attrs(%{{.*}}) arg_attrs = [{}], res_attrs = [{}] : (i32) -> i32
+emitc.func @call_with_attrs(%arg0: i32) -> i32 {
+  %0 = emitc.call @callee_with_attrs(%arg0)
+      res_attrs = [{}], arg_attrs = [{}] : (i32) -> i32
+  emitc.return %0 : i32
+}
+
+emitc.func private @callee_with_attrs(i32) -> i32
+
 emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
 
 func.func @cast(%arg0: i32) {
@@ -45,10 +55,10 @@ func.func @cast_array_to_pointer(%arg0: !emitc.array<3xi32>) {
 }
 
 func.func @c() {
-  %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
-  %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
-  %3 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ssize_t
-  %4 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ptrdiff_t
+  %1 = "emitc.constant"() <{value = 42 : i32}> : () -> i32
+  %2 = "emitc.constant"() <{value = 42 : index}> : () -> !emitc.size_t
+  %3 = "emitc.constant"() <{value = 42 : index}> : () -> !emitc.ssize_t
+  %4 = "emitc.constant"() <{value = 42 : index}> : () -> !emitc.ptrdiff_t
   return
 }
 
@@ -118,19 +128,19 @@ func.func @sub_pointer(%arg0: !emitc.ptr<f32>, %arg1: i32, %arg2: !emitc.opaque<
 }
 
 func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emitc.opaque<"unsigned">, %arg5 : !emitc.opaque<"std::valarray<int>">, %arg6 : !emitc.opaque<"custom">) {
-  %1 = "emitc.cmp" (%arg0, %arg0) {predicate = 0} : (i32, i32) -> i1
+  %1 = "emitc.cmp" (%arg0, %arg0) <{predicate = 0}> : (i32, i32) -> i1
   %2 = emitc.cmp eq, %arg0, %arg0 : (i32, i32) -> i1
-  %3 = "emitc.cmp" (%arg1, %arg1) {predicate = 1} : (f32, f32) -> i1
+  %3 = "emitc.cmp" (%arg1, %arg1) <{predicate = 1}> : (f32, f32) -> i1
   %4 = emitc.cmp ne, %arg1, %arg1 : (f32, f32) -> i1
-  %5 = "emitc.cmp" (%arg2, %arg2) {predicate = 2} : (i64, i64) -> i1
+  %5 = "emitc.cmp" (%arg2, %arg2) <{predicate = 2}> : (i64, i64) -> i1
   %6 = emitc.cmp lt, %arg2, %arg2 : (i64, i64) -> i1
-  %7 = "emitc.cmp" (%arg3, %arg3) {predicate = 3} : (f64, f64) -> i1
+  %7 = "emitc.cmp" (%arg3, %arg3) <{predicate = 3}> : (f64, f64) -> i1
   %8 = emitc.cmp le, %arg3, %arg3 : (f64, f64) -> i1
-  %9 = "emitc.cmp" (%arg4, %arg4) {predicate = 4} : (!emitc.opaque<"unsigned">, !emitc.opaque<"unsigned">) -> i1
+  %9 = "emitc.cmp" (%arg4, %arg4) <{predicate = 4}> : (!emitc.opaque<"unsigned">, !emitc.opaque<"unsigned">) -> i1
   %10 = emitc.cmp gt, %arg4, %arg4 : (!emitc.opaque<"unsigned">, !emitc.opaque<"unsigned">) -> i1
-  %11 = "emitc.cmp" (%arg5, %arg5) {predicate = 5} : (!emitc.opaque<"std::valarray<int>">, !emitc.opaque<"std::valarray<int>">) -> !emitc.opaque<"std::valarray<bool>">
+  %11 = "emitc.cmp" (%arg5, %arg5) <{predicate = 5}> : (!emitc.opaque<"std::valarray<int>">, !emitc.opaque<"std::valarray<int>">) -> !emitc.opaque<"std::valarray<bool>">
   %12 = emitc.cmp ge, %arg5, %arg5 : (!emitc.opaque<"std::valarray<int>">, !emitc.opaque<"std::valarray<int>">) -> !emitc.opaque<"std::valarray<bool>">
-  %13 = "emitc.cmp" (%arg6, %arg6) {predicate = 6} : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
+  %13 = "emitc.cmp" (%arg6, %arg6) <{predicate = 6}> : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
   %14 = emitc.cmp three_way, %arg6, %arg6 : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
   return
 }
@@ -205,7 +215,7 @@ func.func @compound_assign(%arg0: i32, %arg1: !emitc.opaque<"number">) {
 }
 
 func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
-  %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
+  %c7 = "emitc.constant"() <{value = 7 : i32}> : () -> i32
   %q = emitc.expression %arg1, %c7 : (i32, i32) -> i32 {
     %a = emitc.rem %arg1, %c7 : (i32, i32) -> i32
     emitc.yield %a : i32
@@ -309,7 +319,7 @@ func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32, %arg2: !emitc.arr
 
   // Check there is no ambiguity whether %b is the argument to the emitc.verbatim op.
   emitc.verbatim "b"
-  %b = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %b = "emitc.constant"() <{value = 42 : i32}> : () -> i32
 
   return
 }
@@ -347,7 +357,7 @@ func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1:
 }
 
 func.func @switch() {
-  %0 = "emitc.constant"(){value = 1 : index} : () -> !emitc.ptrdiff_t
+  %0 = "emitc.constant"() <{value = 1 : index}> : () -> !emitc.ptrdiff_t
 
   emitc.switch %0 : !emitc.ptrdiff_t
   case 1 {
@@ -359,7 +369,7 @@ func.func @switch() {
     emitc.yield
   }
   default {
-    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    %3 = "emitc.constant"() <{value = 42.0 : f32}> : () -> f32
     emitc.call_opaque "func2" (%3) : (f32) -> ()
   }
 

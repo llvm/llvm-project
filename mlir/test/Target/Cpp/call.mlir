@@ -61,14 +61,14 @@ func.func @emitc_member_call_args(%arg0 : !emitc.opaque<"MyClass">, %arg1 : i32)
 // CPP-DEFAULT-NEXT: int32_t [[V2:[^ ]*]] = [[V0]].method([[V1]]);
 
 func.func @emitc_member_call_args_reorder(%arg0 : !emitc.opaque<"MyClass">, %arg1 : i32, %arg2 : i32) {
-  %0 = emitc.member_call_opaque %arg0 "method" (%arg1, %arg2) {args = [1 : index, 0 : index]} : !emitc.opaque<"MyClass">, (i32, i32) -> i32
+  %0 = emitc.member_call_opaque %arg0 "method" (%arg1, %arg2) <{args = [1 : index, 0 : index]}> : !emitc.opaque<"MyClass">, (i32, i32) -> i32
   return
 }
 // CPP-DEFAULT: void emitc_member_call_args_reorder(MyClass [[V0:[^ ]*]], int32_t [[V1:[^ ]*]], int32_t [[V2:[^ ]*]]) {
 // CPP-DEFAULT-NEXT: int32_t [[V3:[^ ]*]] = [[V0]].method([[V2]], [[V1]]);
 
 func.func @emitc_member_call_template_args(%arg0 : !emitc.opaque<"MyClass">) {
-  %0 = emitc.member_call_opaque %arg0 "method" () {template_args = [i32]} : !emitc.opaque<"MyClass">, () -> i32
+  %0 = emitc.member_call_opaque %arg0 "method" () <{template_args = [i32]}> : !emitc.opaque<"MyClass">, () -> i32
   return
 }
 // CPP-DEFAULT: void emitc_member_call_template_args(MyClass [[V0:[^ ]*]]) {

@@ -332,7 +332,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
     %0 = emitc.call_opaque "foo" () : () -> i32
 
     // Generic form of the same operation.
-    %0 = "emitc.call_opaque"() {callee = "foo"} : () -> i32
+    %0 = "emitc.call_opaque"() <{callee = "foo"}> : () -> i32
     ```
   }];
   let arguments = (ins
@@ -435,7 +435,8 @@ def EmitC_CastOp : EmitC_Op<"cast",
   );
 
   let results = (outs EmitCType:$dest);
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+  let assemblyFormat =
+      "$source (`pure` $pure^)? attr-dict `:` type($source) `to` type($dest)";
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
@@ -502,10 +503,10 @@ def EmitC_ConstantOp
 
     ```mlir
     // Integer constant
-    %0 = "emitc.constant"(){value = 42 : i32} : () -> i32
+    %0 = "emitc.constant"() <{value = 42 : i32}> : () -> i32
 
     // Constant emitted as `char = CHAR_MIN;`
-    %1 = "emitc.constant"() {value = #emitc.opaque<"CHAR_MIN">}
+    %1 = "emitc.constant"() <{value = #emitc.opaque<"CHAR_MIN">}>
       : () -> !emitc.opaque<"char">
     ```
   }];
@@ -808,7 +809,10 @@ def EmitC_CallOp : EmitC_Op<"call",
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)`
+    oilist<`,`>(`arg_attrs` `=` $arg_attrs
+               | `res_attrs` `=` $res_attrs) attr-dict `:`
+    functional-type($operands, results)
   }];
 }
 
@@ -978,13 +982,13 @@ def EmitC_IncludeOp
     emitc.include <"myheader.h">
 
     // Generic form of the same operation.
-    "emitc.include" (){include = "myheader.h", is_standard_include} : () -> ()
+    "emitc.include" () <{include = "myheader.h", is_standard_include}> : () -> ()
 
     // Custom form defining the inclusion of `"myheader"`.
     emitc.include "myheader.h"
 
     // Generic form of the same operation.
-    "emitc.include" (){include = "myheader.h"} : () -> ()
+    "emitc.include" () <{include = "myheader.h"}> : () -> ()
     ```
   }];
   let arguments = (ins
@@ -1205,7 +1209,7 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
         : (!emitc.opaque<"mystruct">) -> i32
     %0 = "emitc.member" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
-    %1 = "emitc.member" (%arg0) {member = "b"}
+    %1 = "emitc.member" (%arg0) <{member = "b"}>
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
     ```
   }];
@@ -1237,10 +1241,10 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr", [CExpressionInterface]> {
     Example:
 
     ```mlir
-    %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
+    %0 = "emitc.member_of_ptr" (%arg0) <{member = "a"}>
         : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
         -> !emitc.lvalue<i32>
-    %1 = "emitc.member_of_ptr" (%arg0) {member = "b"}
+    %1 = "emitc.member_of_ptr" (%arg0) <{member = "b"}>
         : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
         -> !emitc.array<2xi32>
     ```
@@ -1274,8 +1278,8 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
     ```mlir
     %0 = emitc.cmp gt, %arg0, %arg1 : (i32, i32) -> i1
 
-    %c0 = "emitc.constant"() {value = 10 : i32} : () -> i32
-    %c1 = "emitc.constant"() {value = 11 : i32} : () -> i32
+    %c0 = "emitc.constant"() <{value = 10 : i32}> : () -> i32
+    %c1 = "emitc.constant"() <{value = 11 : i32}> : () -> i32
 
     %1 = emitc.conditional %0, %c0, %c1 : i32
     ```
@@ -1401,7 +1405,7 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
+    %0 = "emitc.variable"() <{value = 42 : i32}> : () -> !emitc.lvalue<i32>
 
     // Variable emitted as `int32_t* = NULL;`
     %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">}
@@ -1593,7 +1597,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
+    %0 = "emitc.variable"() <{value = 42 : i32}> : () -> !emitc.lvalue<i32>
     %1 = emitc.call_opaque "foo"() : () -> (i32)
 
     // Assign emitted as `... = ...;`
@@ -1862,7 +1866,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
       emitc.yield
     }
     default {
-      %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+      %3 = "emitc.constant"() <{value = 42.0 : f32}> : () -> f32
       emitc.call_opaque "func2" (%3) : (f32) -> ()
     }
     ```

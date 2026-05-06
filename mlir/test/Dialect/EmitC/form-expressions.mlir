@@ -13,7 +13,7 @@
 // CHECK:       }
 
 func.func @single_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i1 {
-  %c42 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %c42 = "emitc.constant"() <{value = 42 : i32}> : () -> i32
   %a = emitc.mul %arg0, %c42 : (i32, i32) -> i32
   %b = emitc.sub %a, %arg2 : (i32, i32) -> i32
   %c = emitc.cmp lt, %b, %arg3 :(i32, i32) -> i1
@@ -131,7 +131,7 @@ func.func @single_result_requirement() -> (i32, i32) {
 // CHECK:         }
 
 func.func @expression_with_load(%arg0: i32, %arg1: !emitc.ptr<i32>) -> i1 {
-  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %c0 = "emitc.constant"() <{value = 0 : i64}> : () -> i64
   %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
   %a = emitc.load %0 : !emitc.lvalue<i32>
   %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
@@ -163,7 +163,7 @@ func.func @expression_with_load(%arg0: i32, %arg1: !emitc.ptr<i32>) -> i1 {
 
 
 func.func @opaque_type_expression(%arg0: i32,  %arg1: !emitc.opaque<"T0">, %arg2: i32) -> i1 {
-  %c42 = "emitc.constant"(){value = #emitc.opaque<"V">} : () -> !emitc.opaque<"T1">
+  %c42 = "emitc.constant"() <{value = #emitc.opaque<"V">}> : () -> !emitc.opaque<"T1">
   %a = emitc.mul %arg0, %c42 : (i32, !emitc.opaque<"T1">) -> i32
   %b = emitc.sub %a, %arg1 : (i32, !emitc.opaque<"T0">) -> i32
   %c = emitc.cmp lt, %b, %arg2 :(i32, i32) -> i1
@@ -181,7 +181,7 @@ func.func @opaque_type_expression(%arg0: i32,  %arg1: !emitc.opaque<"T0">, %arg2
 // CHECK:         }
 
 func.func @expression_with_constant(%arg0: i32) -> i32 {
-  %c42 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %c42 = "emitc.constant"() <{value = 42 : i32}> : () -> i32
   %a = emitc.mul %arg0, %c42 : (i32, i32) -> i32
   return %a : i32
 }
@@ -274,20 +274,20 @@ func.func @member(%arg0: !emitc.opaque<"mystruct">, %arg1: i32, %arg2: index) {
   %var0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"mystruct">>
   emitc.assign %arg0 : !emitc.opaque<"mystruct"> to %var0 : !emitc.lvalue<!emitc.opaque<"mystruct">>
 
-  %0 = "emitc.member" (%var0) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+  %0 = "emitc.member" (%var0) <{member = "a"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
   emitc.assign %arg1 : i32 to %0 : !emitc.lvalue<i32>
 
-  %1 = "emitc.member" (%var0) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+  %1 = "emitc.member" (%var0) <{member = "b"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
   %2 = emitc.load %1 : !emitc.lvalue<i32>
   %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.assign %2 : i32 to %3 : !emitc.lvalue<i32>
 
-  %4 = "emitc.member" (%var0) {member = "c"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+  %4 = "emitc.member" (%var0) <{member = "c"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
   %5 = emitc.subscript %4[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
   %6 = emitc.load %5 : <i32>
   emitc.assign %6 : i32 to %3 : !emitc.lvalue<i32>
 
-  %7 = "emitc.member" (%var0) {member = "d"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+  %7 = "emitc.member" (%var0) <{member = "d"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
   %8 = emitc.subscript %7[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
   emitc.assign %arg1 : i32 to %8 : !emitc.lvalue<i32>
 
@@ -332,20 +332,20 @@ func.func @member_of_pointer(%arg0: !emitc.ptr<!emitc.opaque<"mystruct">>, %arg1
   %var0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>
   emitc.assign %arg0 : !emitc.ptr<!emitc.opaque<"mystruct">> to %var0 : !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>
 
-  %0 = "emitc.member_of_ptr" (%var0) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %0 = "emitc.member_of_ptr" (%var0) <{member = "a"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
   emitc.assign %arg1 : i32 to %0 : !emitc.lvalue<i32>
 
-  %1 = "emitc.member_of_ptr" (%var0) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %1 = "emitc.member_of_ptr" (%var0) <{member = "b"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
   %2 = emitc.load %1 : !emitc.lvalue<i32>
   %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.assign %2 : i32 to %3 : !emitc.lvalue<i32>
 
-  %4 = "emitc.member_of_ptr" (%var0) {member = "c"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+  %4 = "emitc.member_of_ptr" (%var0) <{member = "c"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
   %5 = emitc.subscript %4[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
   %6 = emitc.load %5 : <i32>
   emitc.assign %6 : i32 to %3 : !emitc.lvalue<i32>
 
-  %7 = "emitc.member_of_ptr" (%var0) {member = "d"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+  %7 = "emitc.member_of_ptr" (%var0) <{member = "d"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
   %8 = emitc.subscript %7[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
   emitc.assign %arg1 : i32 to %8 : !emitc.lvalue<i32>
 
