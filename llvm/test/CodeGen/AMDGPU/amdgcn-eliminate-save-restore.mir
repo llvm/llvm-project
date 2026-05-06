@@ -33,7 +33,7 @@ body:             |
 
     %other:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
     %orig:vgpr_32 = V_ADD_U32_e32 %tmp, %other, implicit $exec
-    %2:vgpr_32 = V_MUL_LO_U32_e64 %orig, %orig, implicit $exec
+    %unused:vgpr_32 = V_MUL_LO_U32_e64 %orig, %orig, implicit $exec
     %orig_next:vgpr_32 = COPY %tmp, implicit $exec
 
     S_BRANCH %bb.1
