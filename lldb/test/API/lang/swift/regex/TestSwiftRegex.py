@@ -26,7 +26,6 @@ class TestSwiftRegex(TestBase):
 
     @swiftTest
     @skipIf(macos_version=["<", "13"])
-    @expectedFailureWindows
     def test_swift_regex_frame_var(self):
         """Test frame variable support for Swift regexes."""
         self.build()
@@ -63,7 +62,6 @@ class TestSwiftRegex(TestBase):
 
     @swiftTest
     @skipIf(macos_version=["<", "13"])
-    @expectedFailureWindows
     def test_swift_regex_expr(self):
         """Test expression support for Swift regexes."""
         self.build()

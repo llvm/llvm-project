@@ -43,6 +43,8 @@ func main() {
     var myResult: Result<Int, Error> = .success(42)
     var myBox: Box<Int32> = Box(value: 99)
     var myPair: Pair<Int, String> = .first(7)
+    var myDictionary: [Int: String] = [1: "one", 2: "two"]
+    var mySet: Set<Int32> = [1, 2, 3]
     let constInt: Int = 100
     let constInt8: Int8 = -42
     let constUInt16: UInt16 = 1000
@@ -50,14 +52,14 @@ func main() {
     let constString: String = "world"
     print(myInt32, myBool, myUInt64, myFloat, myDouble,
           myString, myPoint, myDirection, myOptional, myNestedOptional, myArray,
-          myOptionalArray, myResult, myBox, myPair,
+          myOptionalArray, myResult, myBox, myPair, myDictionary, mySet,
           constInt, constInt8, constUInt16, constBool, constString)
 }
 
 main()
 
 #--- commands.input
-b main.swift:41
+b main.swift:43
 run
 frame variable
 
@@ -78,6 +80,8 @@ frame variable
 # CHECK: (Result<Int, Error>) myResult = success
 # CHECK: (main.Box<Int32>) myBox = (value = 99)
 # CHECK: (main.Pair<Int, String>) myPair = first
+# CHECK: ([Int : String]) myDictionary = 2 key/value pairs
+# CHECK: (Set<Int32>) mySet = 3 values
 # Local constants
 # CHECK: (Int) constInt = 100
 # CHECK: (Int8) constInt8 = -42

@@ -8,7 +8,6 @@ class TestSwiftObservation(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
-    @expectedFailureWindows
     def test(self):
         """Test that types with private discriminators read from the file cache work"""
         self.build()
