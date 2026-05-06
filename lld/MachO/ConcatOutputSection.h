@@ -141,6 +141,9 @@ struct ThunkKey {
   Symbol *sym;
   int64_t addend;
 
+  ThunkKey(Symbol *sym, int64_t addend) : sym(sym), addend(addend) {}
+  ThunkKey(Relocation &r) : ThunkKey(cast<Symbol *>(r.referent), r.addend) {}
+
   static ThunkKey getEmptyKey() {
     return {llvm::DenseMapInfo<Symbol *>::getEmptyKey(), 0};
   }

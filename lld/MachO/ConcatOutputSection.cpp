@@ -225,8 +225,7 @@ void TextOutputSection::finalize() {
     while (!branchesToProcess.empty()) {
       auto [callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
-      auto *funcSym = cast<Symbol *>(r->referent);
-      auto &thunkInfo = thunkMap[{funcSym, r->addend}];
+      auto &thunkInfo = thunkMap[*r];
       if (isTargetKnownInRange(*callerIsec, *r)) {
         branchesToProcess.pop_front();
         continue;
@@ -271,8 +270,7 @@ void TextOutputSection::finalize() {
         continue;
       if (isTargetKnownInRange(*isec, r))
         continue;
-      auto *funcSym = cast<Symbol *>(r.referent);
-      auto &thunkInfo = thunkMap[{funcSym, r.addend}];
+      auto &thunkInfo = thunkMap[r];
       if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
@@ -290,8 +288,7 @@ void TextOutputSection::finalize() {
   // when estimating where __stubs / __objc_stubs could end up.
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
   for (auto [callerIsec, r] : branchesToProcess) {
-    auto *funcSym = cast<Symbol *>(r->referent);
-    ThunkKey thunkKey{funcSym, r->addend};
+    ThunkKey thunkKey(*r);
     auto &thunkInfo = thunkMap[thunkKey];
     if (!getThunkInRange(*callerIsec, *r, thunkInfo))
       branchTargets.insert(thunkKey);
@@ -317,8 +314,7 @@ void TextOutputSection::finalize() {
   for (auto [isec, r] : branchesToProcess) {
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
-    auto *funcSym = cast<Symbol *>(r->referent);
-    auto &thunkInfo = thunkMap[{funcSym, r->addend}];
+    auto &thunkInfo = thunkMap[*r];
     if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
       updateBranchTargetToThunk(*r, thunk);
       continue;
