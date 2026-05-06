@@ -7343,9 +7343,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
   clang::Expr *bit_width = nullptr;
   if (bitfield_bit_size != 0) {
     if (clang_ast.IntTy.isNull()) {
-      LLDB_LOG(
-          GetLog(LLDBLog::Expressions),
-          "{0} failed: builtin ASTContext types have not been initialized");
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "builtin ASTContext types have not been initialized");
       return nullptr;
     }
 
