@@ -45,16 +45,4 @@ Options
   For example, to check `mylib::log(Level, const char *Fmt, ...)` where the
   format string is the second parameter (index 1):
 
-  .. code-block:: yaml
-
-    CheckOptions:
-      llvm-formatv-string.AdditionalFunctions: "mylib::log:1"
-
-  Multiple entries are separated by semicolons:
-
-  .. code-block:: yaml
-
-    CheckOptions:
-      llvm-formatv-string.AdditionalFunctions: "mylib::log:1;lldb_private::Log::Format:2"
-
   Default is empty string.
