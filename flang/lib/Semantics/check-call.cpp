@@ -345,6 +345,15 @@ static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
     "allocated", "associated", "kind", "lbound", "loc", "present", "shape",
     "size", "sizeof", "ubound"};
 
+static bool IsCudaAddressSpaceAgnostic(
+    const characteristics::DummyDataObject &dummy) {
+  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
+      (dummy.type.attrs().test(
+           characteristics::TypeAndShape::Attr::AssumedSize) ||
+          dummy.type.attrs().test(
+              characteristics::TypeAndShape::Attr::AssumedRank));
+}
+
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
     characteristics::TypeAndShape &actualType, bool isElemental,
@@ -1166,7 +1175,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     bool isHostDeviceProc{procedure.cudaSubprogramAttrs &&
         *procedure.cudaSubprogramAttrs ==
             common::CUDASubprogramAttrs::HostDevice};
-    if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
+    // TYPE(*) assumed-size/rank dummies are opaque buffers (e.g. MPI) and do
+    // not impose a CUDA address space on their actual argument.
+    bool skipCudaDataAttrCheck{IsCudaAddressSpaceAgnostic(dummy)};
+    if (!skipCudaDataAttrCheck &&
+        !common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
             dummy.ignoreTKR, /*allowUnifiedMatchingRule=*/true,
             isHostDeviceProc, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
