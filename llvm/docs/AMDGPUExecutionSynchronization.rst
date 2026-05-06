@@ -47,8 +47,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
         and the *arrive count* is reset to zero.
 
 * Barrier *objects* exist within a *scope* (see :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`),
-  and each instance of a barrier *object* can only be accessed by threads in the *scope* where
-  the instance lives.
+  and each instance of a barrier *object* can only be accessed by threads in the same *scope* instance.
 * *Barrier-mutually-exclusive* is a symmetric relation between barrier *objects* that share resources
   in a way that restricts how a thread can use them at the same time.
 * Barrier operations are performed on barrier *objects*. A barrier operation is a dynamic instance
