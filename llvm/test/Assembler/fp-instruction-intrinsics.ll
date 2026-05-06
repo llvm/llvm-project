@@ -114,21 +114,3 @@ define void @test_fcmps(float %a, float %b) {
 ; fcmps has memory(inaccessiblemem: readwrite) + willreturn
 ; CHECK-DAG: declare i1 @llvm.fcmps.f32(float, float, metadata) #[[ATTR:[0-9]+]]
 ; CHECK-DAG: attributes #[[ATTR]] = { nocreateundeforpoison nounwind willreturn memory(inaccessiblemem: readwrite) }
-
-declare float @llvm.fadd.f32(float, float)
-declare float @llvm.fsub.f32(float, float)
-declare float @llvm.fmul.f32(float, float)
-declare float @llvm.fdiv.f32(float, float)
-declare float @llvm.frem.f32(float, float)
-declare double @llvm.fadd.f64(double, double)
-declare double @llvm.fsub.f64(double, double)
-declare double @llvm.fmul.f64(double, double)
-declare double @llvm.fdiv.f64(double, double)
-declare float @llvm.fptrunc.f32.f64(double)
-declare double @llvm.fpext.f64.f32(float)
-declare float @llvm.sitofp.f32.i32(i32)
-declare float @llvm.uitofp.f32.i32(i32)
-declare i32 @llvm.fptosi.i32.f32(float)
-declare i32 @llvm.fptoui.i32.f32(float)
-declare i1 @llvm.fcmp.f32(float, float, metadata)
-declare i1 @llvm.fcmps.f32(float, float, metadata)

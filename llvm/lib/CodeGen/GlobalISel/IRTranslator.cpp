@@ -2706,7 +2706,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
 
   // FP instruction intrinsics: call-form equivalents of FP instructions.
-  // These have no operand bundles in PR A and always lower to plain G_* nodes.
+  // Without operand bundles these lower to plain G_* nodes.
   case Intrinsic::fadd:
     return translateBinaryOp(TargetOpcode::G_FADD, CI, MIRBuilder);
   case Intrinsic::fsub:

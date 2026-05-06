@@ -1156,11 +1156,11 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   def int_fptrunc : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyfloat_ty]>;
   def int_fpext   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyfloat_ty]>;
 
-  // Integer/FP conversions
+  // Integer/FP conversions.  fptosi/fptoui yield poison when the value doesn't
+  // fit in the integer type, so they are defined separately below without
+  // IntrNoCreateUndefOrPoison.
   def int_sitofp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty]>;
   def int_uitofp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty]>;
-  def int_fptosi : DefaultAttrsIntrinsic<[llvm_anyint_ty],   [llvm_anyfloat_ty]>;
-  def int_fptoui : DefaultAttrsIntrinsic<[llvm_anyint_ty],   [llvm_anyfloat_ty]>;
 
   // fcmp: quiet FP compare; predicate passed as metadata string (e.g. !"oeq")
   def int_fcmp : DefaultAttrsIntrinsic<
@@ -1240,6 +1240,13 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   // TODO: Should constrain all element counts to match
   def int_frexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty, llvm_anyint_ty], [LLVMMatchType<0>]>;
 }
+
+// fptosi/fptoui: yield poison when the FP value doesn't fit in the integer
+// type, so they cannot have IntrNoCreateUndefOrPoison.
+def int_fptosi : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
+def int_fptoui : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty],
+                                       [IntrNoMem, IntrSpeculatable]>;
 
 // fcmps: signaling FP compare.  Unlike the quiet llvm.fcmp, this raises an
 // Invalid Operation exception for *any* NaN operand (not just sNaN).
