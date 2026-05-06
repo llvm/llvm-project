@@ -163,6 +163,10 @@ static bool isNByteElemShuffleMask(ShuffleVectorSDNode *, unsigned, int);
 
 static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
 
+static void signExtendOperandIfUnknown(MachineInstr &MI, MachineBasicBlock *BB,
+                                       unsigned OpIdx, bool IsByte,
+                                       const PPCInstrInfo *TII);
+
 // A faster local-[exec|dynamic] TLS access sequence (enabled with the
 // -maix-small-local-[exec|dynamic]-tls option) can be produced for TLS
 // variables; consistent with the IBM XL compiler, we apply a max size of
@@ -13013,7 +13017,7 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   // BinOpcode != 0: Handles atomic load with binary operator, e.g. NAND.
   // CmpOpcode != 0: Handles atomic load with MIN/MAX etc.
   // BinOpcode == 0 && CmpOpcode == 0: Handles ATOMIC_SWAP.
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const PPCInstrInfo *TII = Subtarget.getInstrInfo();
   unsigned AtomicSize = MI.getOperand(3).getImm();
 
   auto LoadMnemonic = PPC::LDARX;
@@ -13044,6 +13048,9 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
   MachineFunction *F = BB->getParent();
   MachineFunction::iterator It = ++BB->getIterator();
+
+  if (CmpOpcode == PPC::CMPW && (AtomicSize == 1 || AtomicSize == 2))
+    signExtendOperandIfUnknown(MI, BB, 4, /*IsByte=*/AtomicSize == 1, TII);
 
   Register dest = MI.getOperand(0).getReg();
   Register ptrA = MI.getOperand(1).getReg();
@@ -13185,12 +13192,35 @@ static bool isSignExtended(MachineInstr &MI, const PPCInstrInfo *TII) {
   return false;
 }
 
+// Sign extend operand OpIdx if the value is not known to be sign extended.
+// Assumes the operand is a register. The flag IsByte controls which intruction
+// is used for the sign extension.
+static void signExtendOperandIfUnknown(MachineInstr &MI, MachineBasicBlock *BB,
+                                       unsigned OpIdx, bool IsByte,
+                                       const PPCInstrInfo *TII) {
+  MachineFunction *F = MI.getMF();
+  MachineRegisterInfo &RegInfo = F->getRegInfo();
+  Register Reg = MI.getOperand(OpIdx).getReg();
+  bool IsSignExtended =
+      Reg.isVirtual() && isSignExtended(*RegInfo.getVRegDef(Reg), TII);
+
+  if (!IsSignExtended) {
+    Register ValueReg = RegInfo.createVirtualRegister(&PPC::GPRCRegClass);
+    BuildMI(*BB, MI, MI.getDebugLoc(),
+            TII->get(IsByte ? PPC::EXTSB : PPC::EXTSH), ValueReg)
+        .addReg(Reg);
+    MI.getOperand(OpIdx).setReg(ValueReg);
+  }
+}
+
 MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
     MachineInstr &MI, MachineBasicBlock *BB, unsigned BinOpcode,
     unsigned CmpOpcode, unsigned CmpPred) const {
   // BinOpcode != 0: Handles atomic load with binary operator, e.g. NAND.
   // CmpOpcode != 0: Handles atomic load with MIN/MAX etc.
   // BinOpcode == 0 && CmpOpcode == 0: Handles ATOMIC_SWAP.
+  assert(!Subtarget.hasPartwordAtomics() &&
+         "Assumes that part-word atomics are not available");
   const PPCInstrInfo *TII = Subtarget.getInstrInfo();
 
   // If this is a signed comparison and the value being compared is not known
@@ -13198,21 +13228,10 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
   DebugLoc dl = MI.getDebugLoc();
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RegInfo = F->getRegInfo();
-  Register incr = MI.getOperand(4).getReg();
-  bool IsSignExtended =
-      incr.isVirtual() && isSignExtended(*RegInfo.getVRegDef(incr), TII);
-
   const bool is8bit = MI.getOperand(3).getImm() == 1;
-  if (CmpOpcode == PPC::CMPW && !IsSignExtended) {
-    Register ValueReg = RegInfo.createVirtualRegister(&PPC::GPRCRegClass);
-    BuildMI(*BB, MI, dl, TII->get(is8bit ? PPC::EXTSB : PPC::EXTSH), ValueReg)
-        .addReg(MI.getOperand(4).getReg());
-    MI.getOperand(4).setReg(ValueReg);
-    incr = ValueReg;
-  }
-  // If we support part-word atomic mnemonics, just use them
-  if (Subtarget.hasPartwordAtomics())
-    return EmitAtomicBinary(MI, BB, BinOpcode, CmpOpcode, CmpPred);
+  if (CmpOpcode == PPC::CMPW)
+    signExtendOperandIfUnknown(MI, BB, 4, is8bit, TII);
+  Register incr = MI.getOperand(4).getReg();
 
   // In 64 bit mode we have to use 64 bits for addresses, even though the
   // lwarx/stwcx are 32 bits.  With the 32-bit atomics we can use address
@@ -14040,92 +14059,80 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     BB->addSuccessor(readMBB);
     BB->addSuccessor(sinkMBB);
-  } else if (MI.getOpcode() == PPC::ATOMIC_LOAD_ADD_I8 ||
-             MI.getOpcode() == PPC::ATOMIC_LOAD_ADD_I16)
+  } else if (MI.getOpcode() == PPC::ATOMIC_LOAD_ADD_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::ADD4);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_ADD_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_ADD)
     BB = EmitAtomicBinary(MI, BB, PPC::ADD4);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_ADD_I64)
     BB = EmitAtomicBinary(MI, BB, PPC::ADD8);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_AND_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_AND_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_AND_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::AND);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_AND_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_AND)
     BB = EmitAtomicBinary(MI, BB, PPC::AND);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_AND_I64)
     BB = EmitAtomicBinary(MI, BB, PPC::AND8);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_OR_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_OR_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_OR_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::OR);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_OR_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_OR)
     BB = EmitAtomicBinary(MI, BB, PPC::OR);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_OR_I64)
     BB = EmitAtomicBinary(MI, BB, PPC::OR8);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_XOR_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_XOR_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_XOR_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::XOR);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_XOR_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_XOR)
     BB = EmitAtomicBinary(MI, BB, PPC::XOR);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_XOR_I64)
     BB = EmitAtomicBinary(MI, BB, PPC::XOR8);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_NAND_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_NAND_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_NAND_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::NAND);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_NAND_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_NAND)
     BB = EmitAtomicBinary(MI, BB, PPC::NAND);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_NAND_I64)
     BB = EmitAtomicBinary(MI, BB, PPC::NAND8);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_SUB_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_SUB_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_SUB_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::SUBF);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_SUB_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_SUB)
     BB = EmitAtomicBinary(MI, BB, PPC::SUBF);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_SUB_I64)
     BB = EmitAtomicBinary(MI, BB, PPC::SUBF8);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MIN_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_MIN_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MIN_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, 0, PPC::CMPW, PPC::PRED_LT);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MIN_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MIN)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPW, PPC::PRED_LT);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MIN_I64)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPD, PPC::PRED_LT);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MAX_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_MAX_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MAX_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, 0, PPC::CMPW, PPC::PRED_GT);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MAX_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MAX)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPW, PPC::PRED_GT);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_MAX_I64)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPD, PPC::PRED_GT);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMIN_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_UMIN_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMIN_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, 0, PPC::CMPLW, PPC::PRED_LT);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMIN_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMIN)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPLW, PPC::PRED_LT);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMIN_I64)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPLD, PPC::PRED_LT);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMAX_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_LOAD_UMAX_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMAX_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, 0, PPC::CMPLW, PPC::PRED_GT);
-  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMAX_I32)
+  else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMAX)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPLW, PPC::PRED_GT);
   else if (MI.getOpcode() == PPC::ATOMIC_LOAD_UMAX_I64)
     BB = EmitAtomicBinary(MI, BB, 0, PPC::CMPLD, PPC::PRED_GT);
 
-  else if (MI.getOpcode() == PPC::ATOMIC_SWAP_I8 ||
-           MI.getOpcode() == PPC::ATOMIC_SWAP_I16)
+  else if (MI.getOpcode() == PPC::ATOMIC_SWAP_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, 0);
-  else if (MI.getOpcode() == PPC::ATOMIC_SWAP_I32)
-    BB = EmitAtomicBinary(MI, BB, 0);
-  else if (MI.getOpcode() == PPC::ATOMIC_SWAP_I64)
+  else if (MI.getOpcode() == PPC::ATOMIC_SWAP ||
+           MI.getOpcode() == PPC::ATOMIC_SWAP_I64)
     BB = EmitAtomicBinary(MI, BB, 0);
   else if (MI.getOpcode() == PPC::ATOMIC_CMP_SWAP_I32 ||
            MI.getOpcode() == PPC::ATOMIC_CMP_SWAP_I64 ||

@@ -963,8 +963,7 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
   SmallVector<mlir::Type, 8> argTypes;
   bool isVarArg = false;
   while (!tableRef.empty()) {
-    llvm::Intrinsic::IITDescriptor::IITDescriptorKind kind =
-        tableRef.front().Kind;
+    IITDescriptor::IITDescriptorKind kind = tableRef.front().Kind;
     if (kind == IITDescriptor::VarArg) {
       isVarArg = true;
       break; // VarArg is last
@@ -2437,12 +2436,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   StringRef prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!prefix.empty()) {
-    intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix.data(), name);
+    intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix, name);
     // NOTE we don't need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
     // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
     if (intrinsicID == Intrinsic::not_intrinsic)
-      intrinsicID = Intrinsic::getIntrinsicForMSBuiltin(prefix.data(), name);
+      intrinsicID = Intrinsic::getIntrinsicForMSBuiltin(prefix, name);
   }
 
   if (intrinsicID != Intrinsic::not_intrinsic) {
@@ -2451,7 +2450,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     getContext().GetBuiltinType(builtinID, error, &iceArguments);
     assert(error == ASTContext::GE_None && "Should not codegen an error");
 
-    llvm::StringRef name = llvm::Intrinsic::getName(intrinsicID);
+    StringRef name = Intrinsic::getName(intrinsicID);
     // cir::LLVMIntrinsicCallOp expects intrinsic name to not have prefix
     // "llvm." For example, `llvm.nvvm.barrier0` should be passed as
     // `nvvm.barrier0`.

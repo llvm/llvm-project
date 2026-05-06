@@ -6506,3 +6506,49 @@ void VPlanTransforms::makeMemOpWideningDecisions(
     ReplaceWith(Recipe);
   }
 }
+
+void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
+  if (LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) { return VF.isScalar(); }, Range))
+    return;
+
+  PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI)
+        continue;
+
+      auto *I = cast_or_null<Instruction>(VPI->getUnderlyingValue());
+      // Wouldn't be able to create a `VPReplicateRecipe` anyway.
+      if (!I)
+        continue;
+
+      // If executing other lanes produces side-effects we can't avoid them.
+      if (VPI->mayHaveSideEffects())
+        continue;
+
+      // We want to drop the mask operand, verify we can safely do that.
+      if (VPI->isMasked() && !VPI->isSafeToSpeculativelyExecute())
+        continue;
+
+      // Avoid rewriting IV increment as that interferes with
+      // `removeRedundantCanonicalIVs`.
+      if (VPI->getOpcode() == Instruction::Add &&
+          any_of(VPI->operands(), IsaPred<VPWidenIntOrFpInductionRecipe>))
+        continue;
+
+      // Other lanes are needed - can't drop them.
+      if (!vputils::onlyFirstLaneUsed(VPI))
+        continue;
+
+      auto *Recipe = new VPReplicateRecipe(
+          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
+          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
+      Recipe->insertBefore(VPI);
+      VPI->replaceAllUsesWith(Recipe);
+      VPI->eraseFromParent();
+    }
+  }
+}
