@@ -245,33 +245,57 @@ protected:
       return Size;
     }
 
+    /// Section + local offset of a .debug_frame CIE that has been (or will
+    /// be) emitted by some LinkContext. Stored in CIERegistry so that any
+    /// FDE referencing the same CIE bytes can resolve its CIE_pointer to
+    /// OwnerSection->StartOffset + LocalOffset at output time, even when
+    /// the FDE lives in a different LinkContext's section.
+    struct CIELocation {
+      SectionDescriptor *OwnerSection;
+      uint32_t LocalOffset;
+    };
+
+    /// Linker-wide registry for .debug_frame CIEs. The key is the raw CIE
+    /// bytes. Populated by a serial pass over ObjectContexts (so ownership
+    /// is deterministic — first LinkContext wins) and then consumed
+    /// read-only by a parallel emission pass that writes each context's
+    /// .debug_frame section. SectionDescriptor pointers remain valid until
+    /// linking completes because they live in std::map-held shared_ptrs.
+    using CIERegistry = StringMap<CIELocation>;
+
     /// Result of scanning one LinkContext's input .debug_frame. Produced
-    /// by scanFrameData() and consumed by cloneAndEmitDebugFrame. Owns a
+    /// by scanFrameData() during the parallel link phase and consumed by
+    /// the serial CIE-registry merge and parallel emission passes. Owns a
     /// copy of the raw frame bytes so the StringRef views below remain
     /// valid after the input DWARFContext is unloaded.
     struct FrameScanResult {
-      /// Owning copy of the input .debug_frame bytes. The CIEBytes and
-      /// Instructions StringRefs below view into this buffer.
+      /// Owning copy of the input .debug_frame bytes.
       SmallString<0> FrameData;
 
       /// Address size of the input object, used by emitFDE to size the
       /// FDE's initial_location field.
       unsigned AddressSize = 0;
 
-      /// FDEs retained for emission. CIEBytes points at the matching CIE
-      /// inside FrameData; Instructions is the FDE body after the
-      /// initial_length / CIE_pointer / initial_location fields.
+      /// Unique CIEs referenced by at least one retained FDE in this
+      /// context, in first-reference order. Each element is a view into
+      /// FrameData and is a key into the linker-wide CIERegistry.
+      SmallVector<StringRef> CIEs;
+
+      /// FDEs retained for emission. CIEBytes is the registry key;
+      /// Instructions is the FDE body after the initial_length /
+      /// CIE_pointer / initial_location fields.
       struct FDE {
         StringRef CIEBytes;
         uint64_t Address = 0;
         StringRef Instructions;
       };
       SmallVector<FDE> FDEs;
-    };
 
-    /// Populated by scanFrameData() when this context has frame data to
-    /// emit. Consumed by cloneAndEmitDebugFrame, which resets this
-    /// pointer once emission ends.
+      /// CIEs this context owns, set during the serial CIE-registry
+      /// merge. Emission writes these at local offsets 0,
+      /// OwnedCIEs[0].size(), ... in order.
+      SmallVector<StringRef> OwnedCIEs;
+    };
     std::unique_ptr<FrameScanResult> FrameScan;
 
     /// Link compile units for this context.
@@ -285,11 +309,21 @@ protected:
     /// Emit invariant sections.
     Error emitInvariantSections();
 
-    /// Parse this context's input .debug_frame into FrameScan.
+    /// Unload the input DWARFContext after scanning the input .debug_frame into
+    /// FrameScan.
+    Error unloadInput();
+
+    /// Parse this context's input .debug_frame into FrameScan. Deferred
+    /// CIE/FDE emission happens later against the scan result alone.
     Error scanFrameData();
 
-    /// Clone and emit .debug_frame.
-    Error cloneAndEmitDebugFrame();
+    /// Register this context's CIEs with the linker-wide registry.
+    void registerCIEs(CIERegistry &CIEs);
+
+    /// Emit this context's .debug_frame section. Safe to call in parallel
+    /// across contexts because each call writes only to its own
+    /// SectionDescriptor.
+    Error emitDebugFrame(const CIERegistry &CIEs);
 
     /// Emit FDE record.
     void emitFDE(uint32_t CIEOffset, uint32_t AddrSize, uint64_t Address,
