@@ -2505,6 +2505,51 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   return true;
 }
 
+static Register stripCopy(Register Reg, MachineRegisterInfo &MRI) {
+  return getDefSrcRegIgnoringCopies(Reg, MRI)->Reg;
+}
+
+static Register stripBitCast(Register Reg, MachineRegisterInfo &MRI) {
+  Register BitcastSrc;
+  if (mi_match(Reg, MRI, m_GBitcast(m_Reg(BitcastSrc))))
+    Reg = BitcastSrc;
+  return Reg;
+}
+
+static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
+                           Register &Out) {
+  Register Trunc;
+  if (!mi_match(In, MRI, m_GTrunc(m_Reg(Trunc))))
+    return false;
+
+  Register LShlSrc;
+  Register Cst;
+  if (mi_match(Trunc, MRI, m_GLShr(m_Reg(LShlSrc), m_Reg(Cst)))) {
+    Cst = stripCopy(Cst, MRI);
+    if (mi_match(Cst, MRI, m_SpecificICst(16))) {
+      Out = stripBitCast(LShlSrc, MRI);
+      return true;
+    }
+  }
+
+  MachineInstr *Shuffle = MRI.getVRegDef(Trunc);
+  if (Shuffle->getOpcode() != AMDGPU::G_SHUFFLE_VECTOR)
+    return false;
+
+  assert(MRI.getType(Shuffle->getOperand(0).getReg()) ==
+         LLT::fixed_vector(2, 16));
+
+  ArrayRef<int> Mask = Shuffle->getOperand(3).getShuffleMask();
+  assert(Mask.size() == 2);
+
+  if (Mask[0] == 1 && Mask[1] <= 1) {
+    Out = Shuffle->getOperand(0).getReg();
+    return true;
+  }
+
+  return false;
+}
+
 bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
@@ -2546,8 +2591,16 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     assert(STI.useRealTrue16Insts());
     const DebugLoc &DL = I.getDebugLoc();
     MachineBasicBlock *MBB = I.getParent();
-    BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), DstReg)
-        .addReg(SrcReg, {}, AMDGPU::lo16);
+    // G_TRUNC(G_LSHR(src32, 16)) -> COPY DstReg, src32.hi16
+    Register HiSrc;
+    if (isExtractHiElt(*MRI, DstReg, HiSrc) &&
+        RBI.constrainGenericRegister(HiSrc, *SrcRC, *MRI)) {
+      BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), DstReg)
+          .addReg(HiSrc, {}, AMDGPU::hi16);
+    } else {
+      BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), DstReg)
+          .addReg(SrcReg, {}, AMDGPU::lo16);
+    }
     I.eraseFromParent();
     return true;
   }
@@ -2811,51 +2864,6 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
     I.eraseFromParent();
     return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, *MRI);
-  }
-
-  return false;
-}
-
-static Register stripCopy(Register Reg, MachineRegisterInfo &MRI) {
-  return getDefSrcRegIgnoringCopies(Reg, MRI)->Reg;
-}
-
-static Register stripBitCast(Register Reg, MachineRegisterInfo &MRI) {
-  Register BitcastSrc;
-  if (mi_match(Reg, MRI, m_GBitcast(m_Reg(BitcastSrc))))
-    Reg = BitcastSrc;
-  return Reg;
-}
-
-static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
-                           Register &Out) {
-  Register Trunc;
-  if (!mi_match(In, MRI, m_GTrunc(m_Reg(Trunc))))
-    return false;
-
-  Register LShlSrc;
-  Register Cst;
-  if (mi_match(Trunc, MRI, m_GLShr(m_Reg(LShlSrc), m_Reg(Cst)))) {
-    Cst = stripCopy(Cst, MRI);
-    if (mi_match(Cst, MRI, m_SpecificICst(16))) {
-      Out = stripBitCast(LShlSrc, MRI);
-      return true;
-    }
-  }
-
-  MachineInstr *Shuffle = MRI.getVRegDef(Trunc);
-  if (Shuffle->getOpcode() != AMDGPU::G_SHUFFLE_VECTOR)
-    return false;
-
-  assert(MRI.getType(Shuffle->getOperand(0).getReg()) ==
-         LLT::fixed_vector(2, 16));
-
-  ArrayRef<int> Mask = Shuffle->getOperand(3).getShuffleMask();
-  assert(Mask.size() == 2);
-
-  if (Mask[0] == 1 && Mask[1] <= 1) {
-    Out = Shuffle->getOperand(0).getReg();
-    return true;
   }
 
   return false;

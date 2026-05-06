@@ -479,9 +479,7 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_v_hi(<2 x i16> %a) {
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_f16_fp8_v_hi:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-REAL16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_f16_fp8 v0, v0.l
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_f16_fp8 v0, v0.h
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_f16_fp8_v_hi:
