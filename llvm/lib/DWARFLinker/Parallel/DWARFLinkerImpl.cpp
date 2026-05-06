@@ -851,10 +851,9 @@ Error DWARFLinkerImpl::LinkContext::scanFrameData() {
     // initial_location fields; otherwise the unsigned subtraction below
     // would wrap and substr() would saturate to a giant garbage blob.
     if (InitialLength < CIEPointerSize + SrcAddrSize)
-      return createFileError(
-          InputDWARFFile.FileName,
-          createStringError(std::errc::invalid_argument,
-                            "Truncated .debug_frame FDE."));
+      return createFileError(InputDWARFFile.FileName,
+                             createStringError(std::errc::invalid_argument,
+                                               "Truncated .debug_frame FDE."));
 
     // Promote each CIE on first reference; CIEs no FDE references are
     // dropped from the output.
