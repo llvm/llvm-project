@@ -265,10 +265,11 @@ def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
 // clean this up in PPCMIPeephole with calls to
 // PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
 // in the first place.
-foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
-              "umin"] in {
-  defvar pat = !cast<PatFrag>("atomic_load_"#op#"_i64");
-  defvar pseudo = "ATOMIC_LOAD_"#!toupper(op)#"_I64";
+foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
+              "load_nand", "load_min", "load_max", "load_umax", "load_umin",
+              "swap"] in {
+  defvar pat = !cast<PatFrag>("atomic_"#op#"_i64");
+  defvar pseudo = "ATOMIC_"#!toupper(op)#"_I64";
   let Defs = [CR0] in
     def pseudo : PPCCustomInserterPseudo<
         (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$incr),
@@ -277,20 +278,13 @@ foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
           (!cast<Instruction>(pseudo) memrr:$ptr, 8, g8rc:$incr)>;
 }
 
-let Defs = [CR0] in {
+let Defs = [CR0] in
   def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new),
     "#" # NAME, []>;
 
-  def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$new),
-    "#" # NAME, []>;
-}
-
 def : Pat<(i64 (atomic_cmp_swap_i64 ForceXForm:$ptr, g8rc:$old, g8rc:$new)),
           (ATOMIC_CMP_SWAP_I64 memrr:$ptr, i64:$old, i64:$new)>;
-def : Pat<(i64 (atomic_swap_i64 ForceXForm:$ptr, g8rc:$new)),
-          (ATOMIC_SWAP_I64 memrr:$ptr, 8, i64:$new)>;
 
 // Instructions to support atomic operations
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
@@ -642,6 +636,9 @@ defm ORC8 : XForm_6r<31, 412, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                      "orc", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i64:$RA, (or i64:$RST, (not i64:$RB)))]>;
 let isCommutable = 1 in {
+defm EQV8 : XForm_6r<31, 284, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
+                     "eqv", "$RA, $RST, $RB", IIC_IntSimple,
+                     [(set i64:$RA, (not (xor i64:$RST, i64:$RB)))]>;
 defm XOR8 : XForm_6r<31, 316, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                      "xor", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i64:$RA, (xor i64:$RST, i64:$RB))]>;

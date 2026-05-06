@@ -17,6 +17,7 @@
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
@@ -148,9 +149,7 @@ struct VPlanTransforms {
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
   /// VPReductionRecipe instances.
-  static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
-      ElementCount MinVF);
+  static void createInLoopReductionRecipes(VPlan &Plan, ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits. If \p Style is not
   /// NoUncountableExit, handles uncountable early exits and checks that all
@@ -326,7 +325,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed);
+      const bool &EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
@@ -503,6 +502,14 @@ struct VPlanTransforms {
   /// \p Plan.
   static void introduceMasksAndLinearize(VPlan &Plan);
 
+  /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
+  /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
+  /// spills for \p VF at unroll factor \p UF.
+  static void replaceWideCanonicalIVWithWideIV(
+      VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+      TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
+      unsigned UF, const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
   static void
@@ -532,6 +539,11 @@ struct VPlanTransforms {
   /// recipes. Non load/store input instructions are left unchanged.
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder);
+
+  /// Make VPlan-based scalarization decision prior to delegating to the ones
+  /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
+  /// enabled by prior widening of consecutive memory operations for now.
+  static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 };
 
 } // namespace llvm

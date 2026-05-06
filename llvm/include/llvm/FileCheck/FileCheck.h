@@ -14,10 +14,12 @@
 #define LLVM_FILECHECK_FILECHECK_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include <bitset>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -110,24 +112,29 @@ public:
 };
 } // namespace Check
 
-/// Summary of a FileCheck diagnostic.
-struct FileCheckDiag {
-  /// What is the FileCheck directive for this diagnostic?
-  Check::FileCheckType CheckTy;
-  /// Where is the FileCheck directive for this diagnostic?
-  SMLoc CheckLoc;
+class MatchResultDiag;
+
+/// Abstract base class for recording a FileCheck diagnostic for a pattern
+/// (e.g., \c CHECK-NEXT directive or \c --implicit-check-not).
+///
+/// \c FileCheckDiag has two direct derived classes:
+/// - \c MatchResultDiag records a match result for a pattern.  There might be
+///   more than one for a single pattern.  For example, for \c CHECK-DAG there
+///   might be several discarded matches before either a good match or a failure
+///   to match.
+/// - \c MatchNoteDiag provides an additional note about the most recent
+///   \c MatchResultDiag emitted by a FileCheck invocation.  For example, there
+///   might be a fuzzy match after a failure to match.
+class FileCheckDiag {
+public:
+  enum FileCheckDiagKind { FCDK_MatchResultDiag, FCDK_MatchNoteDiag };
+
   /// What type of match result does this diagnostic describe?
   ///
   /// A directive's supplied pattern is said to be either expected or excluded
   /// depending on whether the pattern must have or must not have a match in
   /// order for the directive to succeed.  For example, a CHECK directive's
   /// pattern is expected, and a CHECK-NOT directive's pattern is excluded.
-  ///
-  /// There might be more than one match result for a single pattern.  For
-  /// example, there might be several discarded matches
-  /// (MatchFoundButDiscarded) before either a good match
-  /// (MatchFoundAndExpected) or a failure to match (MatchNoneButExpected),
-  /// and there might be a fuzzy match (MatchFuzzy) after the latter.
   enum MatchType {
     /// Indicates a good match for an expected pattern.
     MatchFoundAndExpected,
@@ -158,20 +165,160 @@ struct FileCheckDiag {
     /// Indicates a fuzzy match that serves as a suggestion for the next
     /// intended match for an expected pattern with too few or no good matches.
     MatchFuzzy,
-  } MatchTy;
+  };
+
+private:
+  const FileCheckDiagKind Kind;
+  MatchType MatchTy;
+  SMRange InputRange;
+
+public:
+  FileCheckDiag(FileCheckDiagKind Kind, MatchType MatchTy, SMRange InputRange)
+      : Kind(Kind), MatchTy(MatchTy), InputRange(InputRange) {}
+  /// Destructor is purely virtual to ensure this remains an abstract class.
+  virtual ~FileCheckDiag() = 0;
+  /// Of what derived class is this an instance?
+  FileCheckDiagKind getKind() const { return Kind; }
+  /// If this is a \c MatchResultDiag, return itself.  If this is a
+  /// \c MatchNoteDiag, return its associated \c MatchResultDiag.
+  virtual const MatchResultDiag &getMatchResultDiag() const = 0;
+  /// Adjust the match type.
+  void adjustMatchType(MatchType MatchTy) { this->MatchTy = MatchTy; }
+  /// Get the match type.
+  MatchType getMatchType() const { return MatchTy; }
   /// The search range if MatchTy starts with MatchNone, or the match range
   /// otherwise.
-  unsigned InputStartLine;
-  unsigned InputStartCol;
-  unsigned InputEndLine;
-  unsigned InputEndCol;
-  /// A note to replace the one normally indicated by MatchTy, or the empty
-  /// string if none.
-  std::string Note;
-  LLVM_ABI FileCheckDiag(const SourceMgr &SM,
-                         const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
-                         MatchType MatchTy, SMRange InputRange,
-                         StringRef Note = "");
+  SMRange getInputRange() const { return InputRange; }
+};
+
+/// Class for recording a FileCheck diagnostic that reports a match result for a
+/// pattern.
+class MatchResultDiag : public FileCheckDiag {
+private:
+  Check::FileCheckType CheckTy;
+  SMLoc CheckLoc;
+
+public:
+  MatchResultDiag(const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
+                  MatchType MatchTy, SMRange InputRange)
+      : FileCheckDiag(FCDK_MatchResultDiag, MatchTy, InputRange),
+        CheckTy(CheckTy), CheckLoc(CheckLoc) {}
+  /// Is \p FCD an instance of \c MatchResultDiag?
+  static bool classof(const FileCheckDiag *FCD) {
+    return FCD->getKind() == FCDK_MatchResultDiag;
+  }
+  /// Get itself.
+  const MatchResultDiag &getMatchResultDiag() const override { return *this; }
+  /// What is the type of pattern for this match result?
+  Check::FileCheckType getCheckTy() const { return CheckTy; }
+  /// Where is the pattern for this match result?
+  SMLoc getCheckLoc() const { return CheckLoc; }
+};
+
+/// Class for recording a FileCheck diagnostic that provides an additional note
+/// (possibly an additional error) about the most recent \c MatchResultDiag.
+class MatchNoteDiag : public FileCheckDiag {
+private:
+  MatchResultDiag *MRD;
+  std::optional<std::string> CustomNote;
+
+public:
+  MatchNoteDiag(MatchType MatchTy, SMRange InputRange,
+                std::optional<StringRef> CustomNote = std::nullopt)
+      : FileCheckDiag(FCDK_MatchNoteDiag, MatchTy, InputRange), MRD(nullptr),
+        CustomNote(CustomNote) {}
+  /// Is \p FCD an instance of \c MatchNoteDiag?
+  static bool classof(const FileCheckDiag *FCD) {
+    return FCD->getKind() == FCDK_MatchNoteDiag;
+  }
+  /// Get the note's associated \c MatchResultDiag.
+  const MatchResultDiag &getMatchResultDiag() const override { return *MRD; }
+  /// Set the note's associated \c MatchResultDiag.
+  void setMatchResultDiag(MatchResultDiag *MRDNew) {
+    assert(!MRD && "expected setMatchResultDiag to be called only once");
+    MRD = MRDNew;
+  }
+  /// A note to replace the one normally indicated by the match type, or the
+  /// empty string if none.
+  const std::optional<std::string> &getCustomNote() const { return CustomNote; }
+};
+
+/// A \c FileCheckDiag series emitted by the FileCheck library.
+class FileCheckDiagList {
+private:
+  MatchResultDiag *CurMatchResultDiag = nullptr;
+  using vector_type = std::vector<std::unique_ptr<FileCheckDiag>>;
+  vector_type DiagList;
+
+public:
+  /// Emplace a new \c FileCheckDiag of type \c DiagTy.  If it's a
+  /// \c MatchNoteDiag, associate it with its \c MatchResultDiag.
+  ///
+  /// \c FileCheckTest.cpp calls \c Pattern::printVariableDefs directly, so it
+  /// can add a \c MatchNoteDiag without a previous \c MatchResultDiag.
+  /// Otherwise, there should always be a previous \c MatchResultDiag.
+  template <typename DiagTy, typename... ArgTys>
+  void emplace(ArgTys &&...Args) {
+    DiagList.emplace_back(
+        std::make_unique<DiagTy>(std::forward<ArgTys>(Args)...));
+    FileCheckDiag *Diag = DiagList.back().get();
+    if (MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(Diag)) {
+      CurMatchResultDiag = MRD;
+      return;
+    }
+    MatchNoteDiag *Note = cast<MatchNoteDiag>(Diag);
+    if (!CurMatchResultDiag)
+      return;
+    Note->setMatchResultDiag(CurMatchResultDiag);
+  }
+  /// Adjust the most recent \c MatchResultDiag, which must exist, and every
+  /// \c MatchResultNote after it to have the match type \c MatchTy.
+  void adjustPrevDiags(FileCheckDiag::MatchType MatchTy) {
+    assert(CurMatchResultDiag && "expected previous MatchResultDiag");
+    for (auto I = DiagList.rbegin(), E = DiagList.rend();
+         I != E && &**I != CurMatchResultDiag; ++I)
+      (*I)->adjustMatchType(MatchTy);
+    CurMatchResultDiag->adjustMatchType(MatchTy);
+  }
+  class const_iterator {
+    friend FileCheckDiagList;
+
+  public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = FileCheckDiag;
+    using pointer = const FileCheckDiag *;
+    using reference = const FileCheckDiag &;
+    using iterator_category = std::forward_iterator_tag;
+
+  private:
+    vector_type::const_iterator Itr;
+    const_iterator(vector_type::const_iterator Itr) : Itr(Itr) {}
+
+  public:
+    reference operator*() const { return **Itr; }
+    pointer operator->() const { return &operator*(); }
+    const_iterator &operator++() {
+      ++Itr;
+      return *this;
+    }
+    const_iterator operator++(int) {
+      const_iterator Old = *this;
+      ++Itr;
+      return Old;
+    }
+    bool operator==(const const_iterator &Other) const {
+      return Itr == Other.Itr;
+    }
+    bool operator!=(const const_iterator &Other) const {
+      return Itr != Other.Itr;
+    }
+  };
+
+  using size_type = vector_type::size_type;
+  const_iterator begin() const { return const_iterator(DiagList.begin()); }
+  const_iterator end() const { return const_iterator(DiagList.end()); }
+  const FileCheckDiag &operator[](size_type I) const { return *DiagList[I]; }
+  size_type size() const { return DiagList.size(); }
 };
 
 class FileCheckPatternContext;
@@ -211,7 +358,7 @@ public:
   ///
   /// \returns false if the input fails to satisfy the checks.
   LLVM_ABI bool checkInput(SourceMgr &SM, StringRef Buffer,
-                           std::vector<FileCheckDiag> *Diags = nullptr);
+                           FileCheckDiagList *Diags = nullptr);
 };
 
 } // namespace llvm

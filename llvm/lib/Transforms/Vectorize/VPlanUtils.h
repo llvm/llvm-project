@@ -62,7 +62,7 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
-bool isUniformAcrossVFsAndUFs(VPValue *V);
+bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
@@ -154,6 +154,10 @@ template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
 /// Find the canonical IV increment of \p Plan's vector loop region. Returns
 /// nullptr if not found.
 VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
+
+/// Returns the GEP nowrap flags for \p Ptr, looking through pointer casts
+/// mirroring Value::stripPointerCasts.
+GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.

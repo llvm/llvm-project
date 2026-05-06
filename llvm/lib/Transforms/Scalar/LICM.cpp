@@ -2328,11 +2328,19 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
     auto *Accesses = MSSA->getBlockAccesses(BB);
     if (!Accesses)
       continue;
-    for (const auto &MA : *Accesses)
+    for (const auto &MA : *Accesses) {
+      if (!Flags.getIsSink() && MSSA->dominates(IMD, &MA))
+        continue;
       if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
         auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
                                              const_cast<MemoryUse *>(MU));
         if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock()))
+          return false;
+        // Disable hoisting past potentially interfering loads. Optimized
+        // Uses may point to an access outside the loop, as getClobbering
+        // checks the previous iteration when walking the backedge.
+        // FIXME: More precise: no Uses that alias I.
+        if (!Flags.getIsSink() && !MSSA->dominates(IMD, MU))
           return false;
       } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
         if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
@@ -2361,6 +2369,7 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
           }
         }
       }
+    }
   }
   return true;
 }

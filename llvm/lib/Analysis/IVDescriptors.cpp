@@ -393,6 +393,8 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   StoreInst *IntermediateStore = nullptr;
   const SCEV *StorePtrSCEV = nullptr;
   for (StoreInst *SI : Stores) {
+    if (!SE)
+      return {};
     const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
     if (!SE->isLoopInvariant(Ptr, TheLoop) ||
         (StorePtrSCEV && StorePtrSCEV != Ptr))
@@ -1384,6 +1386,12 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
 
   if (Casts)
     llvm::append_range(RedundantCasts, *Casts);
+}
+
+InductionDescriptor
+InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
+  return InductionDescriptor(Constant::getNullValue(Ty), IK_IntInduction,
+                             SE.getOne(Ty));
 }
 
 ConstantInt *InductionDescriptor::getConstIntStepValue() const {

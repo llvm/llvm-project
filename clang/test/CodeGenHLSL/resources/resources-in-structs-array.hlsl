@@ -79,22 +79,22 @@ B bArray[2];
 void main() {
 // CHECK-NEXT: %[[TMP:.*]] = alloca %"class.hlsl::RWStructuredBuffer", align 4
 
-// CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @arrayOfA.1.Buf, i32 noundef 0)
+// CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @arrayOfA.1.Buf, i32 noundef 0)
 // CHECK-NEXT: store float 1.000000e+00, ptr %[[PTR1]]
   arrayOfA[1].Buf[0] = 1.0f;
 
-// CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @gArray.1.multiArray.1.0.Buf, i32 noundef 0)
+// CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @gArray.1.multiArray.1.0.Buf, i32 noundef 0)
 // CHECK-NEXT: store float 2.000000e+00, ptr %[[PTR2]]
   gArray[1].multiArray[1][0].Buf[0] = 2.0f;
 
-// CHECK-NEXT: %[[PTR3:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @gArray.0.multiArray.0.1.Buf, i32 noundef 0)
+// CHECK-NEXT: %[[PTR3:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @gArray.0.multiArray.0.1.Buf, i32 noundef 0)
 // CHECK-NEXT: store float 3.000000e+00, ptr %[[PTR3]]
   gArray[0].multiArray[0][1].Buf[0] = 3.0f;
 
 // Resource array access - first create the resource from binding, then access the element and store to it.
 // CHECK-NEXT: call void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align 4 %[[TMP]], i32 noundef 2, i32 noundef 0, i32 noundef 2, i32 noundef 1, ptr noundef @bArray.1.ManyBufs.str, i32 noundef 3)
-// CHECK-NEXT: %[[PTR4:.*]] = call {{.*}} ptr @hlsl::RWStructuredBuffer<float>::operator[](unsigned int)(ptr {{.*}} %[[TMP]], i32 noundef 0)
+// CHECK-NEXT: %[[PTR4:.*]] = call {{.*}} ptr @hlsl::RWStructuredBuffer<float>::operator[](unsigned int) const(ptr {{.*}} %[[TMP]], i32 noundef 0)
 // CHECK-NEXT: store float 4.000000e+00, ptr %[[PTR4]], align 4
   bArray[1].ManyBufs[1][0] = 4.0f;
 }

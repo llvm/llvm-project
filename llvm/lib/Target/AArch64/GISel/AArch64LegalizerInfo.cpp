@@ -98,6 +98,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   const LLT i128 = LLT::integer(128);
 
+  const LLT nxv16i8 = LLT::scalable_vector(16, i8);
+  const LLT nxv8i16 = LLT::scalable_vector(8, i16);
+  const LLT nxv4i32 = LLT::scalable_vector(4, i32);
+  const LLT nxv2i64 = LLT::scalable_vector(2, i64);
+
   std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
                                                         v16s8, v8s16, v4s32,
                                                         v2s64, v2p0,
@@ -177,7 +182,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
-      .legalFor(HasSVE, {nxv16s8, nxv8s16, nxv4s32, nxv2s64})
+      .legalFor(HasSVE, {nxv16i8, nxv8i16, nxv4i32, nxv2i64})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampMaxNumElements(0, s8, 16)
@@ -289,7 +294,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
-      .legalFor({s64, v16s8, v8s16, v4s32})
+      .legalFor({i64, v16i8, v8i16, v4i32})
       .lower();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
@@ -303,7 +308,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // FIXME: Legal vector types are only legal with NEON.
   getActionDefinitionsBuilder(G_ABS)
-      .legalFor(HasCSSC, {s32, s64})
+      .legalFor(HasCSSC, {i32, i64})
       .legalFor({v16i8, v8i16, v4i32, v2i64, v2p0, v8i8, v4i16, v2i32})
       .customIf([=](const LegalityQuery &Q) {
         // TODO: Fix suboptimal codegen for 128+ bit types.
@@ -325,12 +330,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(
       {G_ABDS, G_ABDU, G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL})
-      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+      .legalFor({v8i8, v16i8, v4i16, v8i16, v2i32, v4i32})
       .lower();
 
   getActionDefinitionsBuilder(
       {G_SADDE, G_SSUBE, G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
-      .legalFor({{s32, s32}, {s64, s32}})
+      .legalFor({{i32, i32}, {i64, i32}})
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0);
@@ -352,8 +357,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   auto always = [=](const LegalityQuery &Q) { return true; };
   getActionDefinitionsBuilder(G_CTPOP)
-      .legalFor(HasCSSC, {{s32, s32}, {s64, s64}})
-      .legalFor({{v8s8, v8s8}, {v16s8, v16s8}})
+      .legalFor(HasCSSC, {{i32, i32}, {i64, i64}})
+      .legalFor({{v8i8, v8i8}, {v16i8, v16i8}})
       .customFor(!HasCSSC, {{s32, s32}, {s64, s64}})
       .customFor({{s128, s128},
                   {v4s16, v4s16},
@@ -374,14 +379,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder({G_CTLZ, G_CTLS})
-      .legalFor({{s32, s32},
-                 {s64, s64},
-                 {v8s8, v8s8},
-                 {v16s8, v16s8},
-                 {v4s16, v4s16},
-                 {v8s16, v8s16},
-                 {v2s32, v2s32},
-                 {v4s32, v4s32}})
+      .legalFor({{i32, i32},
+                 {i64, i64},
+                 {v8i8, v8i8},
+                 {v16i8, v16i8},
+                 {v4i16, v4i16},
+                 {v8i16, v8i16},
+                 {v2i32, v2i32},
+                 {v4i32, v4i32}})
       .widenScalarToNextPow2(1, /*Min=*/32)
       .clampScalar(1, s32, s64)
       .widenScalarOrEltToNextPow2OrMinSize(1, /*Min=*/8)
@@ -405,7 +410,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE)
-      .legalFor({s32, s64, v8s8, v16s8})
+      .legalFor({i32, i64, v8i8, v16i8})
       .widenScalarToNextPow2(0, /*Min = */ 32)
       .widenScalarOrEltToNextPow2OrMinSize(0, 8)
       .clampScalar(0, s32, s64)
@@ -418,7 +423,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_BSWAP)
-      .legalFor({s32, s64, v4s16, v8s16, v2s32, v4s32, v2s64})
+      .legalFor({i32, i64, v4i16, v8i16, v2i32, v4i32, v2i64})
       .widenScalarOrEltToNextPow2(0, 16)
       .clampScalar(0, s32, s64)
       .clampNumElements(0, v4s16, v8s16)
@@ -427,8 +432,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
-      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32, v2s64})
-      .legalFor(HasSVE, {nxv16s8, nxv8s16, nxv4s32, nxv2s64})
+      .legalFor({v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
+      .legalFor(HasSVE, {nxv16i8, nxv8i16, nxv4i32, nxv2i64})
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -482,14 +487,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .libcallFor({{f32, i32}, {f64, i32}, {f128, i32}});
 
   getActionDefinitionsBuilder({G_LROUND, G_INTRINSIC_LRINT})
-      .legalFor({{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
-      .legalFor(HasFP16, {{s32, s16}, {s64, s16}})
+      .legalFor({{i32, f32}, {i32, f64}, {i64, f32}, {i64, f64}})
+      .legalFor(HasFP16, {{i32, f16}, {i64, f16}})
       .minScalar(1, s32)
       .libcallFor({{s64, s128}})
       .lower();
   getActionDefinitionsBuilder({G_LLROUND, G_INTRINSIC_LLRINT})
-      .legalFor({{s64, s32}, {s64, s64}})
-      .legalFor(HasFP16, {{s64, s16}})
+      .legalFor({{i64, f32}, {i64, f64}})
+      .legalFor(HasFP16, {{i64, f16}})
       .minScalar(0, s64)
       .minScalar(1, s32)
       .libcallFor({{s64, s128}})
@@ -759,12 +764,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
-      .legalFor({{s32, f32},
-                 {s32, f64},
-                 {v4s32, v4f32},
-                 {v2s32, v2f32},
-                 {v2s64, v2f64}})
-      .legalFor(HasFP16, {{s32, f16}, {v4s16, v4f16}, {v8s16, v8f16}})
+      .legalFor({{i32, f32},
+                 {i32, f64},
+                 {v4i32, v4f32},
+                 {v2i32, v2f32},
+                 {v2i64, v2f64}})
+      .legalFor(HasFP16, {{i32, f16}, {v4i16, v4f16}, {v8i16, v8f16}})
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(0, s32, s32)
       .minScalarOrElt(1, MinFPScalar)
@@ -845,12 +850,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .alwaysLegal();
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
-      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .legalFor({{v8i8, v8i16}, {v4i16, v4i32}, {v2i32, v2i64}})
       .clampNumElements(0, v2s32, v2s32);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
-      .legalFor({s32, s64})
-      .legalFor(PackedVectorAllTypeList)
+      .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
       .maxScalar(0, s64)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
@@ -862,15 +866,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(
           {{f16, f32}, {f16, f64}, {f32, f64}, {v4f16, v4f32}, {v2f32, v2f64}})
+      .legalFor(ST.hasBF16(), {{bf16, f32}, {v4bf16, v4f32}})
       .libcallFor({{f16, f128}, {f32, f128}, {f64, f128}})
       .moreElementsToNextPow2(1)
       .customIf([](const LegalityQuery &Q) {
         LLT DstTy = Q.Types[0];
         LLT SrcTy = Q.Types[1];
         return SrcTy.isFixedVector() && DstTy.isFixedVector() &&
-               SrcTy.getScalarSizeInBits() == 64 &&
-               DstTy.getScalarSizeInBits() == 16;
+               SrcTy.getScalarType().isFloat64() &&
+               DstTy.getScalarType().isFloat16();
       })
+      .lowerFor({{bf16, f32}, {v4bf16, v4f32}})
       // Clamp based on input
       .clampNumElements(1, v4s32, v4s32)
       .clampNumElements(1, v2s64, v2s64)
@@ -998,6 +1004,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v2f64, v2i64}})
       .legalFor(HasFP16,
                 {{f16, i32}, {f16, i64}, {v4f16, v4i16}, {v8f16, v8i16}})
+      .unsupportedIf([&](const LegalityQuery &Query) {
+        return Query.Types[0].getScalarType().isBFloat16();
+      })
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(1)
@@ -1008,11 +1017,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                Query.Types[1].getScalarSizeInBits() == 64 &&
                Query.Types[0].getScalarSizeInBits() == 16;
       })
-      .widenScalarIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].getScalarType() == bf16;
-          },
-          changeElementTo(0, f32))
       .widenScalarOrEltToNextPow2OrMinSize(0, /*MinSize=*/HasFP16 ? 16 : 32)
       .scalarizeIf(
           // v2i64->v2f32 needs to scalarize to avoid double-rounding issues.

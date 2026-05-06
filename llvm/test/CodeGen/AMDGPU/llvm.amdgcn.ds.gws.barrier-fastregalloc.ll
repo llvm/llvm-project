@@ -13,7 +13,7 @@ define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
   ; MIR-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr4, implicit $exec, implicit $exec
   ; MIR-NEXT:   BUNDLE implicit killed renamable $vgpr0, implicit $m0, implicit $exec :: (load (s32) from custom "GWSResource") {
   ; MIR-NEXT:     DS_GWS_BARRIER renamable $vgpr0, 0, implicit $m0, implicit $exec :: (load (s32) from custom "GWSResource")
-  ; MIR-NEXT:     S_WAITCNT 0
+  ; MIR-NEXT:     S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; MIR-NEXT:   }
   ; MIR-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 0)
