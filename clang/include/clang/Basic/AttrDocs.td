@@ -10055,3 +10055,31 @@ different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
   }];
 }
+
+def SentinelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sentinel`` attribute can only be applied to variadic functions to
+diagnose each function call that do not pass a sentinel value at the end of the
+argument list. It checks if a null pointer constant exists at the end of the
+argument list by default, or at the (N+1)th position starting from the end when
+an argument is provided.
+
+.. code-block:: c
+
+  #include <stddef.h>
+
+  void foo(const char*, ...) __attribute__((sentinel));
+  void bar(int, ...) __attribute__((sentinel(1)));
+
+  void example() {
+    foo("Example", (void*)0);
+    foo("Another", "example", NULL);
+    foo("Missing", "sentinel"); // Not OK
+
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
+    bar(1, 2, 3, 4, NULL);      // Not OK
+  }
+  }];
+}
