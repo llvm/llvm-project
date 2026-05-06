@@ -69,7 +69,7 @@ class BasicBlock;
 class TargetTransformInfo;
 
 class SpeculativeExecutionPass
-    : public PassInfoMixin<SpeculativeExecutionPass> {
+    : public OptionalPassInfoMixin<SpeculativeExecutionPass> {
 public:
   SpeculativeExecutionPass(bool OnlyIfDivergentTarget = false);
 

@@ -228,14 +228,14 @@ define i32 @extract_last_active_v4i32_penryn(<4 x i32> %a, <4 x i1> %c) "target-
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $31, %xmm1
 ; CHECK-NEXT:    psrad $31, %xmm1
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; CHECK-NEXT:    pmaxud %xmm1, %xmm2
-; CHECK-NEXT:    pextrd $1, %xmm2, %eax
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    cmpl %eax, %ecx
-; CHECK-NEXT:    cmoval %ecx, %eax
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    pmaxud %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    pmaxud %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    andl $3, %eax
 ; CHECK-NEXT:    movl -24(%rsp,%rax,4), %eax
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> %a, <4 x i1> %c, i32 poison)

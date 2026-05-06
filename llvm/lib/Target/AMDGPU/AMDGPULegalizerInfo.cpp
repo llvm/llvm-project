@@ -1030,11 +1030,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
 
-  getActionDefinitionsBuilder({G_FNEG, G_FABS})
-    .legalFor(FPTypesPK16)
-    .clampMaxNumElementsStrict(0, S16, 2)
-    .scalarize(0)
-    .clampScalar(0, S16, S64);
+  auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
+  FNegAbs.legalFor(FPTypesPK16)
+      .legalFor(ST.hasPackedFP32Ops(), {V2S32})
+      .clampMaxNumElementsStrict(0, S16, 2);
+  if (ST.hasPackedFP32Ops())
+    FNegAbs.clampMaxNumElementsStrict(0, S32, 2);
+  FNegAbs.scalarize(0).clampScalar(0, S16, S64);
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_FSQRT)
@@ -1131,6 +1133,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // Must use fadd + fneg
       .lowerFor({S64, S16, V2S16});
   }
+
+  if (ST.hasPackedFP32Ops())
+    FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
 
   FSubActions
     .scalarize(0)
