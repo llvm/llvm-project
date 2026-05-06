@@ -317,7 +317,7 @@ def : InstRW<[P10W_BR_2C, P10W_DISP_ANY, P10BR_Read],
     BCLR, BCLRn, BDNZLR, BDNZLR8, BDNZLRm, BDNZLRp, BDZLR, BDZLR8, BDZLRm, BDZLRp, gBCLR,
     BCLRL, BCLRLn, BDNZLRL, BDNZLRLm, BDNZLRLp, BDZLRL, BDZLRLm, BDZLRLp, gBCLRL,
     BL, BL8, BL8_NOP, BL8_NOP_RM, BL8_NOP_TLS, BL8_NOTOC, BL8_NOTOC_RM, BL8_NOTOC_TLS, BL8_RM, BL8_TLS, BL8_TLS_, BLR, BLR8, BLRL, BL_NOP, BL_NOP_RM, BL_RM, BL_TLS,
-    BLA, BLA8, BLA8_NOP, BLA8_NOP_RM, BLA8_RM, BLA_RM, BL_RESTORE, BL8_RESTORE, BL_RESTORE_RM, BL8_RESTORE_RM
+    BLA, BLA8, BLA8_NOP, BLA8_NOP_RM, BLA8_RM, BLA_RM
 )>;
 
 // 2 Cycles Branch operations, 2 input operands
@@ -1231,6 +1231,16 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_EVEN, P10W_PM_4C, P10W_DISP_ANY],
 def : InstRW<[P10W_FX_3C, P10W_DISP_PAIR, P10W_FX_3C, P10FX_Read],
       (instrs
     MTCRF, MTCRF8
+)>;
+
+// 2 Cycle Branch operation, 1 input operand followed by a
+// 6 cycle Load operation, 0 input operands.
+def : InstRW<[P10W_BR_2C, P10W_DISP_ANY, P10BR_Read, P10W_LD_6C, P10W_DISP_ANY],
+      (instrs
+    BL_RESTORE,
+    BL_RESTORE_RM,
+    BL8_RESTORE,
+    BL8_RESTORE_RM
 )>;
 
 // 6 Cycles Load operations, 0 input operands
