@@ -3199,7 +3199,7 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
 }
 
 std::optional<ExprResult>
-SemaHLSL::performConstantBufferConversion(ExprResult &BaseExpr) {
+SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
   QualType BaseType = BaseExpr.get()->getType();
   const HLSLAttributedResourceType *ResTy =
       HLSLAttributedResourceType::findHandleTypeOnResource(

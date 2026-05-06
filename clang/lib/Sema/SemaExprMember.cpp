@@ -1296,9 +1296,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   // through the handle in the ConstantBuffer<T>. If BaseType is a
   // ConstantBuffer, the conversion function to type T is called before trying
   // to access the member.
-  if (S.getLangOpts().HLSL) {
+  if (S.getLangOpts().HLSL && BaseType->isHLSLResourceRecord()) {
     if (std::optional<ExprResult> ConvBase =
-            S.HLSL().performConstantBufferConversion(BaseExpr)) {
+            S.HLSL().tryPerformConstantBufferConversion(BaseExpr)) {
       assert(!ConvBase->isInvalid());
       BaseExpr = *ConvBase;
       BaseType = BaseExpr.get()->getType();

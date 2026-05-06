@@ -1060,7 +1060,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSamplerHandle() {
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConversionToType() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addConstantBufferConversionToType() {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;

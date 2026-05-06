@@ -83,7 +83,7 @@ public:
   addTextureHandle(ResourceClass RC, bool IsROV, ResourceDimension RD,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
-  BuiltinTypeDeclBuilder &addConversionToType();
+  BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
   BuiltinTypeDeclBuilder &addArraySubscriptOperators(
       ResourceDimension Dim = ResourceDimension::Unknown);
 
