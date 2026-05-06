@@ -1937,7 +1937,8 @@ static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
   if (!I.maySynchronize())
     return false;
 
-  // Speculatively assume nosync in SCC.
+  // Optimistically assume calls within the SCC are nosync: if nothing else in
+  // the SCC synchronizes, the assumption holds.
   if (auto *CB = dyn_cast<CallBase>(&I))
     if (Function *Callee = CB->getCalledFunction())
       if (SCCNodes.contains(Callee))
