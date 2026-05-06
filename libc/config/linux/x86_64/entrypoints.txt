@@ -1476,7 +1476,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # libc.src.wchar.getwc
     # libc.src.wchar.getwchar
     # libc.src.wchar.putwc
-    # libc.src.wchar.putwchar
+    libc.src.wchar.putwchar
     # libc.src.wchar.ungetwc
 
     # nl_types.h entrypoints
