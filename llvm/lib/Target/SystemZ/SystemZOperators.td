@@ -679,6 +679,9 @@ def z_atomic_cmp_swap_128 : SDNode<"SystemZISD::ATOMIC_CMP_SWAP_128",
 def z_mvc               : SDNode<"SystemZISD::MVC", SDT_ZMemMemLength,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
+def z_memmove           : SDNode<"SystemZISD::MEMMOVE", SDT_ZMemMemLength,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+
 // Similar to MVC, but for logic operations (AND, OR, XOR).
 def z_nc                : SDNode<"SystemZISD::NC", SDT_ZMemMemLength,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;

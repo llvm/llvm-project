@@ -131,12 +131,14 @@ private:
   // memcpy only
   bool MemcpyStrSrc; // Indicates whether the memcpy source is an in-register
                      // constant so it does not need to be loaded.
-  Align SrcAlign;    // Inferred alignment of the source or default value if the
-                     // memory operation does not need to load the value.
+  bool SrcDstMayOverlap; // True if the source and destination memory regions
+                         // may overlap (memmove).
+  Align SrcAlign;  // Inferred alignment of the source or default value if the
+                   // memory operation does not need to load the value.
 public:
   static MemOp Copy(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
-                    Align SrcAlign, bool IsVolatile,
-                    bool MemcpyStrSrc = false) {
+                    Align SrcAlign, bool IsVolatile, bool MemcpyStrSrc = false,
+                    bool SrcDstMayOverlap = false) {
     MemOp Op;
     Op.Size = Size;
     Op.DstAlignCanChange = DstAlignCanChange;
@@ -144,6 +146,7 @@ public:
     Op.AllowOverlap = !IsVolatile;
     Op.IsMemset = false;
     Op.ZeroMemset = false;
+    Op.SrcDstMayOverlap = SrcDstMayOverlap;
     Op.MemcpyStrSrc = MemcpyStrSrc;
     Op.SrcAlign = SrcAlign;
     return Op;
@@ -171,6 +174,7 @@ public:
   bool allowOverlap() const { return AllowOverlap; }
   bool isMemset() const { return IsMemset; }
   bool isMemcpy() const { return !IsMemset; }
+  bool isMemmove() const { return isMemcpy() && SrcDstMayOverlap; }
   bool isMemcpyWithFixedDstAlign() const {
     return isMemcpy() && !DstAlignCanChange;
   }

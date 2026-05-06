@@ -88,6 +88,23 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
   return emitMemMemReg(DAG, DL, SystemZISD::MVC, Chain, Dst, Src, Size);
 }
 
+SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemmove(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, Align Alignment, bool IsVolatile,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+  if (IsVolatile)
+    return SDValue();
+
+  // XXX VLL FeatureVector
+  // XXX MVCRL FeatureMiscellaneousExtensions3
+  if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
+    if (CSize->getZExtValue() <= 256)
+      return DAG.getNode(SystemZISD::MEMMOVE, DL, MVT::Other,
+                         { Chain, Dst, Src, Size });
+
+  return SDValue();
+}
+
 // Handle a memset of 1, 2, 4 or 8 bytes with the operands given by
 // Chain, Dst, ByteVal and Size.  These cases are expected to use
 // MVI, MVHHI, MVHI and MVGHI respectively.

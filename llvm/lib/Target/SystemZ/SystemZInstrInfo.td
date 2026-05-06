@@ -591,6 +591,13 @@ let Predicates = [FeatureMiscellaneousExtensions3],
     mayLoad = 1, mayStore = 1, Uses = [R0L] in
   def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
 
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, mayLoad = 1, mayStore = 1 in
+  def MemmoveImm : Pseudo<(outs),
+                          (ins bdaddr12only:$dest, bdaddr12only:$src,
+                               imm64:$length),
+                          [(z_memmove bdaddr12only:$dest, bdaddr12only:$src,
+                                      imm64:$length)]>;
+
 // String moves.
 let mayLoad = 1, mayStore = 1, Defs = [CC] in
   defm MVST : StringRRE<"mvst", 0xB255, z_stpcpy>;

@@ -43,6 +43,10 @@ static cl::opt<bool> EnableIntArgExtCheck(
     cl::desc("Verify that narrow int args are properly extended per the "
              "SystemZ ABI."));
 
+// EXPERIMENTAL
+static cl::opt<unsigned> MEMMOVESTORES("memmove-stores", cl::init(1));
+static cl::opt<bool> MEMMOVEVLL("memmove-vll", cl::init(true));
+
 namespace {
 // Represents information about a comparison.
 struct Comparison {
@@ -815,7 +819,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemcpyOptSize = 0;
 
   // Same with memmove.
-  MaxStoresPerMemmove = Subtarget.hasVector() ? 2 : 0;
+  MaxStoresPerMemmove = Subtarget.hasVector() ? MEMMOVESTORES : 0;
   MaxStoresPerMemmoveOptSize = 0;
 
   // The main memset sequence is a byte store followed by an MVC.
@@ -1465,6 +1469,14 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
 
   assert(Limit != ~0U &&
          "Expected EmitTargetCodeForMemXXX() to handle AlwaysInline cases.");
+
+  if (Op.isMemmove()) {
+    if (Op.size() >= 16 &&
+        (!Op.isAligned(Align(8)) || (Op.size() >= 25 && Op.size() <= 31)))
+      return false;
+    return TargetLowering::findOptimalMemOpLowering(
+            Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
+  }
 
   if (Op.isZeroMemset())
     return false; // Memset zero: Use XC.
@@ -10869,6 +10881,90 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
   return MBB;
 }
 
+MachineBasicBlock *SystemZTargetLowering::emitMemmoveImm(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  DebugLoc DL = MI.getDebugLoc();
+  MachineOperand DstBase = earlyUseOperand(MI.getOperand(0));
+  uint64_t DstDisp = MI.getOperand(1).getImm();
+  MachineOperand SrcBase = earlyUseOperand(MI.getOperand(2));
+  uint64_t SrcDisp = MI.getOperand(3).getImm();
+  uint64_t Len = MI.getOperand(4).getImm();
+  assert(Len >= 1 && Len <=256 && "Memmove of of unsupported constant length.");
+  assert(isUInt<12>(DstDisp) && isUInt<12>(SrcDisp) &&
+         "Unexpected large displacement.");
+
+  // Fold any displacement (or frame index reference) into a new register.
+  auto foldAddressIfNeeded = [&](MachineOperand &Base, uint64_t &Disp) -> void {
+    if (Disp || Base.isFI()) {
+      Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+      unsigned Opcode = TII->getOpcodeForOffset(SystemZ::LA, Disp);
+      BuildMI(*MBB, MI, DL, TII->get(Opcode), Reg)
+        .add(Base).addImm(Disp).addReg(0);
+      Base = MachineOperand::CreateReg(Reg, false);
+      Disp = 0;
+    }
+  };
+
+  if (Len <= 15 && MEMMOVEVLL) {
+    Register HighByteReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+    BuildMI(*MBB, MI, DL, TII->get(SystemZ::LHI), HighByteReg)
+      .addImm(Len - 1);
+
+    Register VecReg = MRI.createVirtualRegister(&SystemZ::VR128BitRegClass);
+    BuildMI(*MBB, MI, DL, TII->get(SystemZ::VLL), VecReg)
+      .addReg(HighByteReg)
+      .add(SrcBase).addImm(SrcDisp);
+
+    BuildMI(*MBB, MI, DL, TII->get(SystemZ::VSTL))
+      .addReg(VecReg)
+      .addReg(HighByteReg)
+      .add(DstBase).addImm(DstDisp);
+
+    MI.eraseFromParent();
+    return MBB;
+  }
+
+  // Use MVC or MVCRL after comparing the addresses.
+  MachineBasicBlock *DoneMBB = SystemZ::splitBlockAfter(MI, MBB);
+  MachineBasicBlock *MvcMBB = SystemZ::emitBlockAfter(MBB);
+  MachineBasicBlock *MvcrlMBB = SystemZ::emitBlockAfter(MvcMBB);
+  MBB->addSuccessor(MvcMBB);
+  MBB->addSuccessor(MvcrlMBB);
+  MvcMBB->addSuccessor(DoneMBB);
+  MvcrlMBB->addSuccessor(DoneMBB);
+
+  // Fold any displacements in order to do the compare.
+  foldAddressIfNeeded(SrcBase, SrcDisp);
+  foldAddressIfNeeded(DstBase, DstDisp);
+
+  BuildMI(MBB, DL, TII->get(SystemZ::CLGR))
+    .add(SrcBase)
+    .add(DstBase);
+  BuildMI(MBB, DL, TII->get(SystemZ::BRC))
+    .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_LT)
+    .addMBB(MvcrlMBB);
+
+  BuildMI(MvcMBB, DL, TII->get(SystemZ::MVC))
+    .add(DstBase).addImm(DstDisp).addImm(Len)
+    .add(SrcBase).addImm(SrcDisp)
+    .setMemRefs(MI.memoperands());
+  BuildMI(MvcMBB, DL, TII->get(SystemZ::J)).addMBB(DoneMBB);
+
+  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::LHI), SystemZ::R0L)
+    .addImm(Len - 1);
+  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::MVCRL))
+    .add(DstBase).addImm(DstDisp)
+    .add(SrcBase).addImm(SrcDisp)
+    .setMemRefs(MI.memoperands());
+
+  MI.eraseFromParent();
+  return DoneMBB;
+}
+
 // Decompose string pseudo-instruction MI into a loop that continually performs
 // Opcode until CC != 3.
 MachineBasicBlock *SystemZTargetLowering::emitStringWrapper(
@@ -11240,6 +11336,8 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::MemsetRegImm:
   case SystemZ::MemsetRegReg:
     return emitMemMemWrapper(MI, MBB, SystemZ::MVC, true/*IsMemset*/);
+  case SystemZ::MemmoveImm:
+    return emitMemmoveImm(MI, MBB);
   case SystemZ::CLSTLoop:
     return emitStringWrapper(MI, MBB, SystemZ::CLST);
   case SystemZ::MVSTLoop:

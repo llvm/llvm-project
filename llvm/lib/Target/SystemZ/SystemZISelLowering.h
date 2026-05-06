@@ -464,6 +464,8 @@ private:
   MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode,
                                        bool IsMemset = false) const;
+  MachineBasicBlock *emitMemmoveImm(MachineInstr &MI,
+                                    MachineBasicBlock *BB) const;
   MachineBasicBlock *emitStringWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
   MachineBasicBlock *emitTransactionBegin(MachineInstr &MI,

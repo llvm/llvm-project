@@ -51,6 +51,13 @@ public:
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
 
+  SDValue EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &DL,
+                                   SDValue Chain, SDValue Dst, SDValue Src,
+                                   SDValue Size, Align Alignment,
+                                   bool IsVolatile,
+                                   MachinePointerInfo DstPtrInfo,
+                                   MachinePointerInfo SrcPtrInfo) const override;
+
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &DL,
                                   SDValue Chain, SDValue Dst, SDValue Byte,
                                   SDValue Size, Align Alignment,

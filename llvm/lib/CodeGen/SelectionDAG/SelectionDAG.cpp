@@ -9563,6 +9563,8 @@ static SDValue getMemmoveLoadsAndStores(
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit,
           MemOp::Copy(Size, DstAlignCanChange, DstAlign, SrcAlign, isVol),
+          MemOp::Copy(Size, DstAlignCanChange, DstAlign, SrcAlign, isVol,
+                      /*SrcDstMayOverlap*/ true),  XXX
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes(), nullptr))
     return SDValue();
