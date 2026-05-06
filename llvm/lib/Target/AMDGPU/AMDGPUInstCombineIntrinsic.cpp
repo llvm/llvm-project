@@ -749,6 +749,86 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     return std::nullopt;
   }
+  case Intrinsic::amdgcn_dispatch_ptr: {
+    const Function *Fn = II.getFunction();
+    if (AMDGPU::isEntryFunctionCC(Fn->getCallingConv()))
+      return std::nullopt;
+    if (Fn->hasFnAttribute("amdgpu-no-dispatch-ptr"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_queue_ptr: {
+    const Function *Fn = II.getFunction();
+    if (AMDGPU::isEntryFunctionCC(Fn->getCallingConv()))
+      return std::nullopt;
+    if (Fn->hasFnAttribute("amdgpu-no-queue-ptr"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_dispatch_id: {
+    const Function *Fn = II.getFunction();
+    if (AMDGPU::isEntryFunctionCC(Fn->getCallingConv()))
+      return std::nullopt;
+    if (Fn->hasFnAttribute("amdgpu-no-dispatch-id"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_workgroup_id_x:
+  case Intrinsic::amdgcn_workgroup_id_y:
+  case Intrinsic::amdgcn_workgroup_id_z: {
+    // These attributes are only for non-kernel functions and don't-cares for
+    // kernels. Thus, a kernel having one attr and calling the corresponding
+    // intrinsic is allowed.
+    const Function *Fn = II.getFunction();
+    if (AMDGPU::isEntryFunctionCC(Fn->getCallingConv()))
+      return std::nullopt;
+
+    StringRef Attr =
+        IID == Intrinsic::amdgcn_workgroup_id_x   ? "amdgpu-no-workgroup-id-x"
+        : IID == Intrinsic::amdgcn_workgroup_id_y ? "amdgpu-no-workgroup-id-y"
+                                                  : "amdgpu-no-workgroup-id-z";
+    if (Fn->hasFnAttribute(Attr))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_workitem_id_x:
+  case Intrinsic::amdgcn_workitem_id_y:
+  case Intrinsic::amdgcn_workitem_id_z: {
+    const Function *Fn = II.getFunction();
+    if (AMDGPU::isEntryFunctionCC(Fn->getCallingConv()))
+      return std::nullopt;
+
+    StringRef Attr =
+        IID == Intrinsic::amdgcn_workitem_id_x   ? "amdgpu-no-workitem-id-x"
+        : IID == Intrinsic::amdgcn_workitem_id_y ? "amdgpu-no-workitem-id-y"
+                                                 : "amdgpu-no-workitem-id-z";
+    if (Fn->hasFnAttribute(Attr))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_lds_kernel_id: {
+    const Function *Fn = II.getFunction();
+    if (AMDGPU::isEntryFunctionCC(Fn->getCallingConv()))
+      return std::nullopt;
+    if (Fn->hasFnAttribute("amdgpu-no-lds-kernel-id"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_cluster_id_x:
+  case Intrinsic::amdgcn_cluster_id_y:
+  case Intrinsic::amdgcn_cluster_id_z: {
+    const Function *Fn = II.getFunction();
+    if (AMDGPU::isEntryFunctionCC(Fn->getCallingConv()))
+      return std::nullopt;
+
+    StringRef Attr =
+        IID == Intrinsic::amdgcn_cluster_id_x   ? "amdgpu-no-cluster-id-x"
+        : IID == Intrinsic::amdgcn_cluster_id_y ? "amdgpu-no-cluster-id-y"
+                                                : "amdgpu-no-cluster-id-z";
+    if (Fn->hasFnAttribute(Attr))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    return std::nullopt;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
