@@ -1244,7 +1244,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
       }
     } else {
       LLDB_LOG(log,
-               "error: {0}, posix_spawnattr_set_use_sec_transition_shims_np "
+               "error: {}, posix_spawnattr_set_use_sec_transition_shims_np "
                "not available",
                error);
     }
@@ -1290,8 +1290,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
             eErrorTypePOSIX);
         if (error.Fail())
           LLDB_LOG(log,
-                   "error: {}, ::posix_spawnattr_setbinpref_np ( &attr, 1, "
-                   "cpu_type = {:x}, count => {} )",
+                   "error: {0}, ::posix_spawnattr_setbinpref_np ( &attr, 1, "
+                   "cpu_type = {1:x}, count => {2} )",
                    error, cpu_type, ocount);
         if (error.Fail() || ocount != 1)
           return error;
