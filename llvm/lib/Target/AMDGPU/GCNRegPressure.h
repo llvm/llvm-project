@@ -428,10 +428,20 @@ public:
     return Res;
   }
 
-  /// Reset tracker to the point before the \p MI
-  /// filling \p LiveRegs upon this point using LIS.
-  /// \p returns false if block is empty except debug values.
-  bool reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr);
+  /// Reset tracker to the point before the \p MI filling \p LiveRegs upon this
+  /// point using LIS. \p End must be between the MI and the end of its parent
+  /// block (inclusive). \p returns false if the range [MI, End) is empty except
+  /// debug values, in which case the current/maximum pressure are not changed.
+  bool reset(const MachineInstr &MI, MachineBasicBlock::const_iterator End,
+             const LiveRegSet *LiveRegs = nullptr);
+
+  /// Reset tracker to the point before the \p MI filling \p LiveRegs upon this
+  /// point using LIS. \p returns false if there are only debug values between
+  /// \p MI (inclusive) and end of its parent block, in which case the
+  /// current/maximum pressure are not changed.
+  bool reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr) {
+    return reset(MI, MI.getParent()->end(), LiveRegs);
+  }
 
   /// Move to the state right before the next MI or after the end of MBB.
   /// \p returns false if reached end of the block.
@@ -462,10 +472,16 @@ public:
   /// \p MI and use LIS for RP calculations.
   bool advance(MachineInstr *MI = nullptr, bool UseInternalIterator = true);
 
-  /// Advance instructions until before \p End.
+  /// Advance instructions until before \p End using internal iterators to
+  /// process instructions in program order. Returns whether iterators actually
+  /// had to advance to reach \p End.
   bool advance(MachineBasicBlock::const_iterator End);
 
-  /// Reset to \p Begin and advance to \p End.
+  /// Reset tracker to \p Begin (filling \p LiveRegs upon this point using LIS)
+  /// and advance to \p End, which must be between \p Begin and the end of its
+  /// parent block (inclusive). \p returns false if the range [Begin, End) is
+  /// empty except debug values, in which case the current/maximum pressure are
+  /// not changed.
   bool advance(MachineBasicBlock::const_iterator Begin,
                MachineBasicBlock::const_iterator End,
                const LiveRegSet *LiveRegsCopy = nullptr);
