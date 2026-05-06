@@ -266,6 +266,8 @@ Thank you for submitting a Pull Request (PR) to the LLVM Project. Since this is 
 * The [LLVM Code-Review Policy and Practices](https://llvm.org/docs/CodeReview.html) document contains practical information about the PR process, including how patches are reviewed and accepted, and who can review a PR.
 * Our [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html) describes our expectations for code quality and commit summaries, your GitHub settings (see e.g. [Email Addresses](https://llvm.org/docs/DeveloperPolicy.html#email-addresses)) and also includes notes on our CI system.
 
+Please reply to this message to confirm that you have read these policies, especially the LLVM AI Tool Use Policy, and that any AI tool usage has been noted in the PR description.
+
 If you have questions, feel free to leave a comment on this PR, or ask on [LLVM Discord](https://discord.com/invite/xS7Z362) or [LLVM Discourse](https://discourse.llvm.org/).
 
 Thank you,
