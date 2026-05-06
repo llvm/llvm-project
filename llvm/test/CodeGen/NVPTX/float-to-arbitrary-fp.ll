@@ -21,7 +21,7 @@ define i8 @to_f8e5m2_dynamic(float %x) {
 ; CHECK-LABEL: to_f8e5m2_dynamic(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<15>;
-; CHECK-NEXT:    .reg .b32 %r<63>;
+; CHECK-NEXT:    .reg .b32 %r<64>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [to_f8e5m2_dynamic_param_0];
@@ -94,13 +94,14 @@ define i8 @to_f8e5m2_dynamic(float %x) {
 ; CHECK-NEXT:    selp.b32 %r58, %r57, %r55, %p10;
 ; CHECK-NEXT:    setp.gt.s32 %p11, %r51, 30;
 ; CHECK-NEXT:    selp.b32 %r59, %r56, %r58, %p11;
-; CHECK-NEXT:    setp.eq.b32 %p12, %r3, 0;
+; CHECK-NEXT:    setp.eq.f32 %p12, %r1, 0f00000000;
 ; CHECK-NEXT:    selp.b32 %r60, %r37, %r59, %p12;
-; CHECK-NEXT:    setp.eq.b32 %p13, %r3, 2139095040;
-; CHECK-NEXT:    selp.b32 %r61, %r56, %r60, %p13;
-; CHECK-NEXT:    setp.gt.s32 %p14, %r3, 2139095040;
-; CHECK-NEXT:    selp.b32 %r62, 126, %r61, %p14;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r62;
+; CHECK-NEXT:    abs.f32 %r61, %r1;
+; CHECK-NEXT:    setp.eq.f32 %p13, %r61, 0f7F800000;
+; CHECK-NEXT:    selp.b32 %r62, %r56, %r60, %p13;
+; CHECK-NEXT:    setp.nan.f32 %p14, %r1, %r1;
+; CHECK-NEXT:    selp.b32 %r63, 126, %r62, %p14;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r63;
 ; CHECK-NEXT:    ret;
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
@@ -113,7 +114,7 @@ define i8 @to_f8e5m2_round_towardzero(float %x) {
 ; CHECK-LABEL: to_f8e5m2_round_towardzero(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<12>;
-; CHECK-NEXT:    .reg .b32 %r<41>;
+; CHECK-NEXT:    .reg .b32 %r<42>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [to_f8e5m2_round_towardzero_param_0];
@@ -161,13 +162,14 @@ define i8 @to_f8e5m2_round_towardzero(float %x) {
 ; CHECK-NEXT:    selp.b32 %r36, %r35, %r33, %p7;
 ; CHECK-NEXT:    setp.gt.s32 %p8, %r18, 30;
 ; CHECK-NEXT:    selp.b32 %r37, %r34, %r36, %p8;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r3, 0;
+; CHECK-NEXT:    setp.eq.f32 %p9, %r1, 0f00000000;
 ; CHECK-NEXT:    selp.b32 %r38, %r21, %r37, %p9;
-; CHECK-NEXT:    setp.eq.b32 %p10, %r3, 2139095040;
-; CHECK-NEXT:    selp.b32 %r39, %r34, %r38, %p10;
-; CHECK-NEXT:    setp.gt.s32 %p11, %r3, 2139095040;
-; CHECK-NEXT:    selp.b32 %r40, 126, %r39, %p11;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r40;
+; CHECK-NEXT:    abs.f32 %r39, %r1;
+; CHECK-NEXT:    setp.eq.f32 %p10, %r39, 0f7F800000;
+; CHECK-NEXT:    selp.b32 %r40, %r34, %r38, %p10;
+; CHECK-NEXT:    setp.nan.f32 %p11, %r1, %r1;
+; CHECK-NEXT:    selp.b32 %r41, 126, %r40, %p11;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r41;
 ; CHECK-NEXT:    ret;
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float %x, metadata !"Float8E5M2", metadata !"round.towardzero", i1 false)
   ret i8 %r
@@ -242,7 +244,7 @@ define <4 x i4> @to_f4e2m1fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    or.b32 %r55, %r54, %r50;
 ; CHECK-NEXT:    setp.lt.s32 %p8, %r52, 1;
 ; CHECK-NEXT:    selp.b32 %r56, %r42, %r55, %p8;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r6, 0;
+; CHECK-NEXT:    setp.eq.f32 %p9, %r4, 0f00000000;
 ; CHECK-NEXT:    selp.b32 %r57, %r40, %r56, %p9;
 ; CHECK-NEXT:    mul.rn.f32 %r58, %r3, 0f4C000000;
 ; CHECK-NEXT:    and.b32 %r59, %r3, 2147483647;
@@ -303,7 +305,7 @@ define <4 x i4> @to_f4e2m1fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    or.b32 %r107, %r106, %r102;
 ; CHECK-NEXT:    setp.lt.s32 %p17, %r104, 1;
 ; CHECK-NEXT:    selp.b32 %r108, %r94, %r107, %p17;
-; CHECK-NEXT:    setp.eq.b32 %p18, %r59, 0;
+; CHECK-NEXT:    setp.eq.f32 %p18, %r3, 0f00000000;
 ; CHECK-NEXT:    selp.b32 %r109, %r92, %r108, %p18;
 ; CHECK-NEXT:    prmt.b32 %r110, %r109, %r57, 0x3340U;
 ; CHECK-NEXT:    mul.rn.f32 %r111, %r2, 0f4C000000;
@@ -365,7 +367,7 @@ define <4 x i4> @to_f4e2m1fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    or.b32 %r160, %r159, %r155;
 ; CHECK-NEXT:    setp.lt.s32 %p26, %r157, 1;
 ; CHECK-NEXT:    selp.b32 %r161, %r147, %r160, %p26;
-; CHECK-NEXT:    setp.eq.b32 %p27, %r112, 0;
+; CHECK-NEXT:    setp.eq.f32 %p27, %r2, 0f00000000;
 ; CHECK-NEXT:    selp.b32 %r162, %r145, %r161, %p27;
 ; CHECK-NEXT:    mul.rn.f32 %r163, %r1, 0f4C000000;
 ; CHECK-NEXT:    and.b32 %r164, %r1, 2147483647;
@@ -426,7 +428,7 @@ define <4 x i4> @to_f4e2m1fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    or.b32 %r212, %r211, %r207;
 ; CHECK-NEXT:    setp.lt.s32 %p35, %r209, 1;
 ; CHECK-NEXT:    selp.b32 %r213, %r199, %r212, %p35;
-; CHECK-NEXT:    setp.eq.b32 %p36, %r164, 0;
+; CHECK-NEXT:    setp.eq.f32 %p36, %r1, 0f00000000;
 ; CHECK-NEXT:    selp.b32 %r214, %r197, %r213, %p36;
 ; CHECK-NEXT:    prmt.b32 %r215, %r214, %r162, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r216, %r215, %r110, 0x5410U;
@@ -443,8 +445,8 @@ define i8 @to_f8e5m2_from_f16(half %x) {
 ; CHECK-LABEL: to_f8e5m2_from_f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<15>;
-; CHECK-NEXT:    .reg .b16 %rs<61>;
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b16 %rs<64>;
+; CHECK-NEXT:    .reg .b32 %r<11>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [to_f8e5m2_from_f16_param_0];
@@ -522,14 +524,19 @@ define i8 @to_f8e5m2_from_f16(half %x) {
 ; CHECK-NEXT:    selp.b16 %rs56, %rs55, %rs53, %p10;
 ; CHECK-NEXT:    setp.gt.s16 %p11, %rs49, 30;
 ; CHECK-NEXT:    selp.b16 %rs57, %rs54, %rs56, %p11;
-; CHECK-NEXT:    setp.eq.b16 %p12, %rs4, 0;
-; CHECK-NEXT:    selp.b16 %rs58, %rs35, %rs57, %p12;
-; CHECK-NEXT:    setp.eq.b16 %p13, %rs4, 31744;
-; CHECK-NEXT:    selp.b16 %rs59, %rs54, %rs58, %p13;
-; CHECK-NEXT:    setp.gt.s16 %p14, %rs4, 31744;
-; CHECK-NEXT:    selp.b16 %rs60, 126, %rs59, %p14;
-; CHECK-NEXT:    cvt.u32.u16 %r8, %rs60;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    mov.b16 %rs58, 0x0000;
+; CHECK-NEXT:    setp.eq.f16 %p12, %rs1, %rs58;
+; CHECK-NEXT:    selp.b16 %rs59, %rs35, %rs57, %p12;
+; CHECK-NEXT:    cvt.f32.f16 %r8, %rs1;
+; CHECK-NEXT:    abs.f32 %r9, %r8;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs60, %r9;
+; CHECK-NEXT:    mov.b16 %rs61, 0x7C00;
+; CHECK-NEXT:    setp.eq.f16 %p13, %rs60, %rs61;
+; CHECK-NEXT:    selp.b16 %rs62, %rs54, %rs59, %p13;
+; CHECK-NEXT:    setp.nan.f16 %p14, %rs1, %rs1;
+; CHECK-NEXT:    selp.b16 %rs63, 126, %rs62, %p14;
+; CHECK-NEXT:    cvt.u32.u16 %r10, %rs63;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-NEXT:    ret;
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
@@ -539,9 +546,9 @@ define i8 @to_f8e5m2_from_f16(half %x) {
 define i8 @to_f8e5m2_from_bf16(bfloat %x) {
 ; CHECK-LABEL: to_f8e5m2_from_bf16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<16>;
+; CHECK-NEXT:    .reg .pred %p<17>;
 ; CHECK-NEXT:    .reg .b16 %rs<60>;
-; CHECK-NEXT:    .reg .b32 %r<17>;
+; CHECK-NEXT:    .reg .b32 %r<24>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [to_f8e5m2_from_bf16_param_0];
@@ -627,14 +634,22 @@ define i8 @to_f8e5m2_from_bf16(bfloat %x) {
 ; CHECK-NEXT:    selp.b16 %rs55, %rs54, %rs52, %p11;
 ; CHECK-NEXT:    setp.gt.s16 %p12, %rs48, 30;
 ; CHECK-NEXT:    selp.b16 %rs56, %rs53, %rs55, %p12;
-; CHECK-NEXT:    setp.eq.b16 %p13, %rs3, 0;
+; CHECK-NEXT:    setp.eq.f32 %p13, %r2, 0f00000000;
 ; CHECK-NEXT:    selp.b16 %rs57, %rs34, %rs56, %p13;
-; CHECK-NEXT:    setp.eq.b16 %p14, %rs3, 32640;
-; CHECK-NEXT:    selp.b16 %rs58, %rs53, %rs57, %p14;
-; CHECK-NEXT:    setp.gt.s16 %p15, %rs3, 32640;
-; CHECK-NEXT:    selp.b16 %rs59, 126, %rs58, %p15;
-; CHECK-NEXT:    cvt.u32.u16 %r16, %rs59;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r16;
+; CHECK-NEXT:    abs.f32 %r16, %r2;
+; CHECK-NEXT:    bfe.u32 %r17, %r16, 16, 1;
+; CHECK-NEXT:    or.b32 %r18, %r17, %r16;
+; CHECK-NEXT:    add.s32 %r19, %r18, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p14, %r16, %r16;
+; CHECK-NEXT:    or.b32 %r20, %r16, 4194304;
+; CHECK-NEXT:    selp.b32 %r21, %r20, %r19, %p14;
+; CHECK-NEXT:    and.b32 %r22, %r21, 2147418112;
+; CHECK-NEXT:    setp.eq.f32 %p15, %r22, 0f7F800000;
+; CHECK-NEXT:    selp.b16 %rs58, %rs53, %rs57, %p15;
+; CHECK-NEXT:    setp.nan.f32 %p16, %r2, %r2;
+; CHECK-NEXT:    selp.b16 %rs59, 126, %rs58, %p16;
+; CHECK-NEXT:    cvt.u32.u16 %r23, %rs59;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r23;
 ; CHECK-NEXT:    ret;
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.bf16(bfloat %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
@@ -646,7 +661,7 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<15>;
 ; CHECK-NEXT:    .reg .b32 %r<8>;
-; CHECK-NEXT:    .reg .b64 %rd<60>;
+; CHECK-NEXT:    .reg .b64 %rd<61>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [to_f8e5m2_from_f64_param_0];
@@ -723,13 +738,14 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-NEXT:    selp.b64 %rd55, %rd54, %rd52, %p10;
 ; CHECK-NEXT:    setp.gt.s64 %p11, %rd48, 30;
 ; CHECK-NEXT:    selp.b64 %rd56, %rd53, %rd55, %p11;
-; CHECK-NEXT:    setp.eq.b64 %p12, %rd3, 0;
+; CHECK-NEXT:    setp.eq.f64 %p12, %rd1, 0d0000000000000000;
 ; CHECK-NEXT:    selp.b64 %rd57, %rd34, %rd56, %p12;
-; CHECK-NEXT:    setp.eq.b64 %p13, %rd3, 9218868437227405312;
-; CHECK-NEXT:    selp.b64 %rd58, %rd53, %rd57, %p13;
-; CHECK-NEXT:    setp.gt.s64 %p14, %rd3, 9218868437227405312;
-; CHECK-NEXT:    selp.b64 %rd59, 126, %rd58, %p14;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %rd59;
+; CHECK-NEXT:    abs.f64 %rd58, %rd1;
+; CHECK-NEXT:    setp.eq.f64 %p13, %rd58, 0d7FF0000000000000;
+; CHECK-NEXT:    selp.b64 %rd59, %rd53, %rd57, %p13;
+; CHECK-NEXT:    setp.nan.f64 %p14, %rd1, %rd1;
+; CHECK-NEXT:    selp.b64 %rd60, 126, %rd59, %p14;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %rd60;
 ; CHECK-NEXT:    ret;
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
