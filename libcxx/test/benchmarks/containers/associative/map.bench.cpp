@@ -118,54 +118,6 @@ static void BM_map_at_string_constructed_from_view(benchmark::State& state) {
 
 BENCHMARK(BM_map_at_string_constructed_from_view);
 
-static void BM_map_lower_bound_string_view(benchmark::State& state) {
-  auto map            = make_test_map();
-  std::string_view sv = kLongKey;
-
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(map);
-    benchmark::DoNotOptimize(map.lower_bound(sv));
-  }
-}
-
-BENCHMARK(BM_map_lower_bound_string_view);
-
-static void BM_map_lower_bound_string_constructed_from_view(benchmark::State& state) {
-  auto map            = make_test_map();
-  std::string_view sv = kLongKey;
-
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(map);
-    benchmark::DoNotOptimize(map.lower_bound(std::string(sv)));
-  }
-}
-
-BENCHMARK(BM_map_lower_bound_string_constructed_from_view);
-
-static void BM_map_upper_bound_string_view(benchmark::State& state) {
-  auto map            = make_test_map();
-  std::string_view sv = kLongKey;
-
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(map);
-    benchmark::DoNotOptimize(map.upper_bound(sv));
-  }
-}
-
-BENCHMARK(BM_map_upper_bound_string_view);
-
-static void BM_map_upper_bound_string_constructed_from_view(benchmark::State& state) {
-  auto map            = make_test_map();
-  std::string_view sv = kLongKey;
-
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(map);
-    benchmark::DoNotOptimize(map.upper_bound(std::string(sv)));
-  }
-}
-
-BENCHMARK(BM_map_upper_bound_string_constructed_from_view);
-
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
   using ValueType = typename std::map<K, V>::value_type;
