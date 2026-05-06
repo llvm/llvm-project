@@ -136,10 +136,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
-  if (auto tdescTy =
-          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
-    return tdescTy.getLayoutAttr();
-
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
@@ -162,9 +158,13 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
-        return getDistributeLayoutAttr(tiedInit->get());
+        return getTemporaryLayout(*tiedInit);
     }
   }
+
+  if (auto tdescTy =
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
 
   return nullptr;
 }
