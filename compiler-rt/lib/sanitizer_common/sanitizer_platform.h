@@ -318,6 +318,12 @@
 #  define SANITIZER_NVPTX 0
 #endif
 
+#if defined(__SPIRV__)
+#  define SANITIZER_SPIRV 1
+#else // defined(__SPIRV__)
+#  define SANITIZER_SPIRV 0
+#endif // defined(__SPIRV__)
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases SizeClassAllocator64 does not work well and we need to
 // fallback to SizeClassAllocator32.
