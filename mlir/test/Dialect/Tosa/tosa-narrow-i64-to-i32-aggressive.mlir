@@ -3,8 +3,8 @@
 
 // CHECK-LABEL: test_i64_argmax_large_axis_dim
 func.func @test_i64_argmax_large_axis_dim(%arg0: tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64> {
-  // DEFAULT: tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi32>
-  %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64>
+  // DEFAULT: tosa.argmax %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi32>
+  %0 = tosa.argmax %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64>
   return %0 : tensor<1x513x513xi64>
 }
 
@@ -17,10 +17,10 @@ func.func @test_convert_input_parameters(%arg0: tensor<1x513x513x3xi64>) -> tens
   // DEFAULT: %[[FUNC_BOUND_CAST:.*]] = tosa.cast %[[IN]] : (tensor<1x513x513x3xi64>) -> tensor<1x513x513x3xi32>
   // DEFAULT: %[[CAST1:.*]] = tosa.cast %[[FUNC_BOUND_CAST]] : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xi32>
   // FUNCBOUND: %[[CAST1:.*]] = tosa.cast %[[IN]] : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xi32>
-  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<1x513x513x3xi64>) -> tensor<1x513x513x3xi32>
+  %0 = tosa.cast %arg0 : (tensor<1x513x513x3xi64>) -> tensor<1x513x513x3xi32>
 
   // COMMON: %[[CAST2:.*]] = tosa.cast %[[CAST1]] : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xf32>
-  %1 = tosa.cast %0 {input_unsigned = false} : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xf32>
+  %1 = tosa.cast %0 : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xf32>
   return %1 : tensor<1x513x513x3xf32>
 }
 
@@ -84,8 +84,8 @@ func.func @test_const() -> tensor<2xi64> {
 
 // CHECK-LABEL: test_clamp_trunc
 func.func @test_clamp_trunc(%arg0: tensor<100xi64>) -> tensor<100xi64> {
-  // COMMON: tosa.clamp %{{.*}} {max_val = 2147483647 : i32, min_val = -2147483648 : i32} : (tensor<100xi32>) -> tensor<100xi32>
-  %1 = tosa.clamp %arg0 {max_val = 3000000000 : i64, min_val = -2147483648 : i64} : (tensor<100xi64>) -> tensor<100xi64>
+  // COMMON: tosa.clamp %{{.*}} min_val(-2147483648 : i32) max_val(2147483647 : i32) : (tensor<100xi32>) -> tensor<100xi32>
+  %1 = tosa.clamp %arg0 min_val(-2147483648 : i64) max_val(3000000000 : i64) : (tensor<100xi64>) -> tensor<100xi64>
   return %1 : tensor<100xi64>
 }
 

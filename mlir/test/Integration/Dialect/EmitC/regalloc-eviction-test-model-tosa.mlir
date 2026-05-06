@@ -66,7 +66,7 @@
 module attributes {tf_saved_model.semantics, tfl.description = "MLIR Converted.", tfl.schema_version = 3 : i32} {
   func.func @mock_model(%arg0: tensor<33xi64> {tf_saved_model.index_path = ["mask"]}) -> (tensor<i64> {tf_saved_model.index_path = ["index_to_evict"]}) attributes {tf.entry_function = {inputs = "action_mask:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["action"]} {
     %0 = tosa.cast %arg0 : (tensor<33xi64>) -> tensor<33xi32>
-    %1 = tosa.argmax %0 {axis = 0 : i32} : (tensor<33xi32>) -> tensor<i64>
+    %1 = tosa.argmax %0 axis(0) : (tensor<33xi32>) -> tensor<i64>
     return %1 : tensor<i64>
   }
 }

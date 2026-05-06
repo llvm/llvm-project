@@ -112,6 +112,10 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let assemblyFormat =
+      "operands `values` `(` $values `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -134,6 +138,10 @@ def Tosa_DimOp : Tosa_ShapeOp<"dim", [Pure]> {
   let hasVerifier = 1;
 
   let hasFolder = 1;
+
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -372,6 +380,11 @@ def Tosa_AssertEqualShapeOp
       BoolAttr:$allow_broadcast);
 
   let results = (outs);
+
+  let assemblyFormat =
+      "operands `allow_broadcast` `(` $allow_broadcast "
+      "`)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 #endif // TOSA_SHAPE_OPS
