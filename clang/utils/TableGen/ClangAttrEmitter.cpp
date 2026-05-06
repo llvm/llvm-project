@@ -416,8 +416,8 @@ namespace {
 
   public:
     DefaultSimpleArgument(const Record &Arg, StringRef Attr,
-                          const std::string &T, int64_t Default)
-        : SimpleArgument(Arg, Attr, T), Default(Default) {}
+                          std::string T, int64_t Default)
+        : SimpleArgument(Arg, Attr, std::move(T)), Default(Default) {}
 
     void writeAccessors(raw_ostream &OS) const override {
       SimpleArgument::writeAccessors(OS);
