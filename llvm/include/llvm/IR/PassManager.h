@@ -57,6 +57,19 @@
 
 namespace llvm {
 
+namespace detail {
+template <typename DerivedT> struct InfoMixin {
+  /// Gets the name of the pass we are mixed into.
+  static StringRef name() {
+    static_assert(std::is_base_of<InfoMixin, DerivedT>::value,
+                  "Must pass the derived type as the template argument!");
+    StringRef Name = getTypeName<DerivedT>();
+    Name.consume_front("llvm::");
+    return Name;
+  }
+};
+} // namespace detail
+
 class Function;
 class Module;
 
@@ -72,16 +85,8 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 /// OptionalPassInfoMixin.
 ///
 /// TODO: move to a detail namespace once we've branched for LLVM 23.
-template <typename DerivedT> struct PassInfoMixin {
-  /// Gets the name of the pass we are mixed into.
-  static StringRef name() {
-    static_assert(std::is_base_of<PassInfoMixin, DerivedT>::value,
-                  "Must pass the derived type as the template argument!");
-    StringRef Name = getTypeName<DerivedT>();
-    Name.consume_front("llvm::");
-    return Name;
-  }
-
+template <typename DerivedT>
+struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     StringRef ClassName = DerivedT::name();
@@ -110,7 +115,7 @@ struct OptionalPassInfoMixin : PassInfoMixin<DerivedT> {
 /// This provides some boilerplate for types that are analysis passes. It
 /// automatically mixes in \c PassInfoMixin.
 template <typename DerivedT>
-struct AnalysisInfoMixin : OptionalPassInfoMixin<DerivedT> {
+struct AnalysisInfoMixin : detail::InfoMixin<DerivedT> {
   /// Returns an opaque, unique ID for this analysis type.
   ///
   /// This ID is a pointer type that is guaranteed to be 8-byte aligned and thus
