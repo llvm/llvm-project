@@ -796,6 +796,12 @@ inline BinaryOpc_match<LHS, RHS> m_BinOp(unsigned Opc, const LHS &L,
                                          SDNodeFlags Flgs = SDNodeFlags()) {
   return BinaryOpc_match<LHS, RHS>(Opc, L, R, Flgs);
 }
+
+template <unsigned ReqFlags, typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_BinOp(unsigned Opc, const LHS &L,
+                                         const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(Opc, L, R, SDNodeFlags(ReqFlags));
+}
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true>
 m_c_BinOp(unsigned Opc, const LHS &L, const RHS &R,
@@ -1222,6 +1228,17 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_FNeg(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::FNEG, Op);
 }
 
+template <unsigned ReqFlags = 0, typename Opnd>
+inline UnaryOpc_match<Opnd> m_FSqrt(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FSQRT, Op, SDNodeFlags(ReqFlags));
+}
+
+template <unsigned ReqFlags = 0, typename Opnd, typename Opnd2>
+inline BinaryOpc_match<Opnd, Opnd2> m_FPRound(const Opnd &Op, const Opnd2 &Rm) {
+  return BinaryOpc_match<Opnd, Opnd2>(ISD::FP_ROUND, Op, Rm,
+                                      SDNodeFlags(ReqFlags));
+}
+
 // === Constants ===
 struct ConstantInt_match {
   APInt *BindVal;
@@ -1394,6 +1411,13 @@ struct NonZero_match {
   }
 };
 
+template <unsigned ReqFlags> struct Flags_match {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    SDNodeFlags Required(ReqFlags);
+    return (N->getFlags() & Required) == Required;
+  }
+};
+
 struct Zero_match {
   bool AllowUndefs;
 
@@ -1455,6 +1479,10 @@ inline Zero_match m_Zero(bool AllowUndefs = false) {
 }
 inline AllOnes_match m_AllOnes(bool AllowUndefs = false) {
   return AllOnes_match(AllowUndefs);
+}
+
+template <unsigned ReqFlags> inline Flags_match<ReqFlags> m_Flags() {
+  return Flags_match<ReqFlags>();
 }
 
 /// Match true boolean value based on the information provided by
