@@ -17,7 +17,7 @@ func.func @parallel_independent_loop(%buf: memref<16xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<16xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<16xi32>) to varPtr(%buf : memref<16xi32>)
@@ -46,7 +46,7 @@ func.func @parallel_loop_multi_block_body(%buf: memref<4xi32>) {
       cf.br ^bb1
     ^bb1:
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -74,7 +74,7 @@ func.func @parallel_loop_auto_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 :
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {auto_ = [#acc.device_type<none>]}
+    } auto_
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -102,7 +102,7 @@ func.func @parallel_loop_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 : inde
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -121,7 +121,7 @@ func.func @serial_loop_normalized(%buf: memref<1xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
   // CHECK-NOT: acc.serial
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+  // CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK-DAG: arith.muli
@@ -132,7 +132,7 @@ func.func @serial_loop_normalized(%buf: memref<1xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -154,7 +154,7 @@ func.func @orphan_loop(%buf: memref<8xi32>) {
   acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -177,7 +177,7 @@ func.func @device_routine_with_loop(%buf: memref<8xi32>) attributes {acc.special
   acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -197,10 +197,10 @@ func.func @device_routine_vector_with_loop(%buf: memref<8xi32>) attributes {acc.
   %c8 = arith.constant 8 : index
   %c0_i32 = arith.constant 0 : i32
 
-  acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
+  acc.loop vector control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -217,7 +217,7 @@ func.func @parallel_loop_auto_gang(%buf: memref<1xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
   // CHECK-NOT: acc.parallel
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {{.*}} {par_dim = #acc.par_dim<block_x>}
+  // CHECK: acc.par_width {{.*}} par_dim(#acc.par_dim<block_x>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK-NOT: scf.parallel
@@ -226,7 +226,7 @@ func.func @parallel_loop_auto_gang(%buf: memref<1xi32>) {
     acc.loop gang control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
       memref.store %arg0, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {auto_ = [#acc.device_type<none>]}
+    } auto_
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)

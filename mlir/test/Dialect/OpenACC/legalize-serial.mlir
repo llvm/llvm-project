@@ -80,7 +80,7 @@ acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator<
 // CHECK:           %[[VAL_9:.*]] = acc.private varPtr(%[[VAL_2]] : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
 // CHECK:           acc.parallel firstprivate(%[[VAL_6]] : memref<10xf32>) num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) private(%[[VAL_9]] : memref<10x10xf32>) vector_length(%[[VAL_4]] : i32) {
 // CHECK:           }
-// CHECK:           %[[VAL_7:.*]] = acc.copyin varPtr(%[[VAL_0]] : memref<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+// CHECK:           %[[VAL_7:.*]] = acc.copyin varPtr(%[[VAL_0]] : memref<10xf32>) dataClause(acc_copy) -> memref<10xf32>
 // CHECK:           acc.parallel dataOperands(%[[VAL_7]] : memref<10xf32>) num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
 // CHECK:           }
 // CHECK:           %[[I64MEM:.*]] = memref.alloca() : memref<i64>
@@ -91,22 +91,22 @@ acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator<
 // CHECK:           acc.parallel combined(loop) num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
 // CHECK:             acc.loop combined(serial) control(%{{.*}} : index) = (%[[VAL_5]] : index) to (%[[VAL_5]] : index) step (%[[VAL_5]] : index) {
 // CHECK:               acc.yield
-// CHECK:             } attributes {seq = [#acc.device_type<none>]}
+// CHECK:             } seq
 // CHECK:             acc.terminator
 // CHECK:           }
 // CHECK:           acc.parallel num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
-// CHECK:           } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK:           } defaultAttr(none)
 // CHECK:           acc.parallel num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
-// CHECK:           } attributes {defaultAttr = #acc<defaultvalue present>}
-// CHECK:           acc.parallel num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
+// CHECK:           } defaultAttr(present)
+// CHECK:           acc.parallel async num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
+// CHECK:           }
+// CHECK:           acc.parallel num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) wait {
 // CHECK:           }
 // CHECK:           acc.parallel num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
-// CHECK:           }
-// CHECK:           acc.parallel num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
-// CHECK:           } attributes {selfAttr}
+// CHECK:           } selfAttr
 // CHECK:           acc.parallel num_gangs({%[[VAL_4]] : i32}) num_workers(%[[VAL_4]] : i32) vector_length(%[[VAL_4]] : i32) {
 // CHECK:             acc.yield
-// CHECK:           } attributes {selfAttr}
+// CHECK:           } selfAttr
 // CHECK:           return
 // CHECK:         }
 
@@ -132,7 +132,7 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   %c_private = acc.private varPtr(%c : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
   acc.serial private(%c_private : memref<10x10xf32>) firstprivate(%firstprivate : memref<10xf32>) {
   }
-  %copyinfromcopy = acc.copyin varPtr(%a : memref<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+  %copyinfromcopy = acc.copyin varPtr(%a : memref<10xf32>) dataClause(acc_copy) -> memref<10xf32>
   acc.serial dataOperands(%copyinfromcopy : memref<10xf32>) {
   }
   %i64mem = memref.alloca() : memref<i64>
@@ -143,22 +143,21 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   acc.serial combined(loop) {
     acc.loop combined(serial) control(%arg3 : index) = (%idxValue : index) to (%idxValue : index) step (%idxValue : index) {
       acc.yield
-    } attributes {seq = [#acc.device_type<none>]}
+    } seq
     acc.terminator
   }
   acc.serial {
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   acc.serial {
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
+  acc.serial async {
+  }
+  acc.serial wait {
+  }
   acc.serial {
-  } attributes {asyncAttr}
-  acc.serial {
-  } attributes {waitAttr}
-  acc.serial {
-  } attributes {selfAttr}
+  } selfAttr
   acc.serial {
     acc.yield
-  } attributes {selfAttr}
+  } selfAttr
   return
 }
-

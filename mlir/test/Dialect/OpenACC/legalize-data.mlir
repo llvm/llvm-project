@@ -96,7 +96,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   return
@@ -109,7 +109,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[CREATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   } attributes {independent = [#acc.device_type<none>]}
+// CHECK:   } independent
 // CHECK:   acc.yield
 // CHECK: }
 
@@ -134,7 +134,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   return
@@ -147,7 +147,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   } attributes {independent = [#acc.device_type<none>]}
+// CHECK:   } independent
 // CHECK:   acc.yield
 // CHECK: }
 
@@ -172,7 +172,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop private(%p1 : memref<10xf32>) control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   return
@@ -185,7 +185,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop private(%[[PRIVATE]] : memref<10xf32>) control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   } attributes {independent = [#acc.device_type<none>]}
+// CHECK:   } independent
 // CHECK:   acc.yield
 // CHECK: }
 
@@ -210,7 +210,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    } attributes {seq = [#acc.device_type<none>]}
+    } seq
     acc.yield
   }
   return
@@ -223,7 +223,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   } attributes {seq = [#acc.device_type<none>]}
+// CHECK:   } seq
 // CHECK:   acc.yield
 // CHECK: }
 
@@ -250,7 +250,7 @@ func.func private @foo(memref<10xf32>)
 // -----
 
 func.func @test(%a: memref<10xf32>) {
-  %declare = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {name = "arr"}
+  %declare = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) name("arr") -> memref<10xf32>
   %token = acc.declare_enter dataOperands(%declare : memref<10xf32>)
   acc.kernels dataOperands(%declare : memref<10xf32>) {
     %c0 = arith.constant 0 : index
@@ -264,7 +264,7 @@ func.func @test(%a: memref<10xf32>) {
 
 // CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
-// CHECK: %[[DECLARE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {name = "arr"}
+// CHECK: %[[DECLARE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) name("arr") -> memref<10xf32>
 // CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DECLARE]] : memref<10xf32>)
 // CHECK: acc.kernels dataOperands(%[[DECLARE]] : memref<10xf32>) {
 // DEVICE:   memref.store %{{.*}}, %[[DECLARE]][%{{.*}}] : memref<10xf32>

@@ -27,50 +27,50 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}{{$}}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent  {{$}}
 
  !$acc loop seq
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) seq
 
   !$acc loop auto
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) auto_
 
   !$acc loop independent
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop gang
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop gang private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop gang(num: 8)
   DO i = 1, n
@@ -78,10 +78,10 @@ program acc_loop
   END DO
 
 ! CHECK:      [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop gang({num=[[GANGNUM1]] : i32}) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop gang(num: gangNum)
   DO i = 1, n
@@ -89,30 +89,30 @@ program acc_loop
   END DO
 
 ! CHECK:      [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop gang({num=[[GANGNUM2]] : i32}) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
  !$acc loop gang(num: gangNum, static: gangStatic)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop vector
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop vector private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop vector(128)
   DO i = 1, n
@@ -120,10 +120,10 @@ program acc_loop
   END DO
 
 ! CHECK:      [[CONSTANT128:%.*]] = arith.constant 128 : i32
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop vector([[CONSTANT128]] : i32) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop vector(vectorLength)
   DO i = 1, n
@@ -131,20 +131,20 @@ program acc_loop
   END DO
 
 ! CHECK:      [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop vector([[VECTORLENGTH]] : i32) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
 !$acc loop worker
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop worker private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop worker(128)
   DO i = 1, n
@@ -152,21 +152,21 @@ program acc_loop
   END DO
 
 ! CHECK:      [[WORKER128:%.*]] = arith.constant 128 : i32
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop worker([[WORKER128]] : i32) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop private(c)
   DO i = 1, n
     c(:,i) = d(:,i)
   END DO
 
-! CHECK:      %[[PRIVATE_C:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_C:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) name("c") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_C]], %[[PRIVATE_I]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   ! When the induction variable is explicitly private - only a single private entry should be created.
   !$acc loop private(i)
@@ -174,34 +174,34 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "i"}
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop private(c, d)
   DO i = 1, n
     c(:,i) = d(:,i)
   END DO
 
-! CHECK:      %[[PRIVATE_C:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
-! CHECK:      %[[PRIVATE_D:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) -> !fir.ref<!fir.array<10x10xf32>> {name = "d"}
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_C:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) name("c") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[PRIVATE_D:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) name("d") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_C]], %[[PRIVATE_D]], %[[PRIVATE_I]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop private(c) private(d)
   DO i = 1, n
     c(:,i) = d(:,i)
   END DO
 
-! CHECK:      %[[PRIVATE_C:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
-! CHECK:      %[[PRIVATE_D:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) -> !fir.ref<!fir.array<10x10xf32>> {name = "d"}
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[PRIVATE_C:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) name("c") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[PRIVATE_D:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) name("d") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_C]], %[[PRIVATE_D]], %[[PRIVATE_I]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop tile(2)
   DO i = 1, n
@@ -211,7 +211,7 @@ program acc_loop
 ! CHECK:      [[TILESIZE:%.*]] = arith.constant 2 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
  !$acc loop tile(*)
   DO i = 1, n
@@ -220,7 +220,7 @@ program acc_loop
 ! CHECK:      [[TILESIZEM1:%.*]] = arith.constant -1 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZEM1]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop tile(2, 2)
   DO i = 1, n
@@ -233,7 +233,7 @@ program acc_loop
 ! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true, true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true, true>) independent
 
   !$acc loop tile(tileSize)
   DO i = 1, n
@@ -242,7 +242,7 @@ program acc_loop
 
 ! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop tile(tileSize, tileSize)
   DO i = 1, n
@@ -253,7 +253,7 @@ program acc_loop
 
 ! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true, true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true, true>) independent
 
   !$acc loop collapse(2)
   DO i = 1, n
@@ -266,7 +266,7 @@ program acc_loop
 ! CHECK:        fir.store %arg0 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+! CHECK-NEXT: } {{.*}}collapse([2]) collapseDeviceType([#acc.device_type<none>]){{.*}}
 
   !$acc loop collapse(2) tile(tileSize)
   DO i = 1, n
@@ -279,7 +279,7 @@ program acc_loop
 ! CHECK:        fir.store %arg0 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+! CHECK-NEXT: } {{.*}}collapse([2]){{.*}}collapseDeviceType([#acc.device_type<none>]){{.*}}
 
   !$acc loop collapse(2) tile(tileSize, tileSize, tileSize)
   DO i = 1, n
@@ -295,7 +295,7 @@ program acc_loop
 ! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        fir.store %arg2 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+! CHECK-NEXT: } {{.*}}collapse([2]){{.*}}collapseDeviceType([#acc.device_type<none>]){{.*}}
 
 !$acc loop collapse(3) tile(tileSize, tileSize)
   DO i = 1, n
@@ -311,7 +311,7 @@ program acc_loop
 ! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        fir.store %arg2 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+! CHECK-NEXT: } {{.*}}collapse([3]){{.*}}collapseDeviceType([#acc.device_type<none>]){{.*}}
 
   !$acc loop
   DO i = 1, n
@@ -324,9 +324,9 @@ program acc_loop
 ! CHECK:      acc.loop {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:          acc.loop {{.*}} control(%arg1 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:            acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop reduction(+:reduction_r) reduction(*:reduction_i)
   do i = 1, n
@@ -334,12 +334,12 @@ program acc_loop
     reduction_i = 1
   end do
 
-! CHECK:      %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "reduction_r"}
-! CHECK:      %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) -> !fir.ref<i32> {name = "reduction_i"}
-! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:      %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) name("reduction_r") -> !fir.ref<f32>
+! CHECK:      %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) name("reduction_i") -> !fir.ref<i32>
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:      acc.loop private(%[[PRIVATE_I]] : !fir.ref<i32>) reduction(%[[REDUCTION_R]], %[[REDUCTION_I]] : !fir.ref<f32>, !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
  !$acc loop gang(dim: gangDim, static: gangStatic)
   DO i = 1, n
@@ -348,7 +348,7 @@ program acc_loop
 
 ! CHECK: acc.loop gang({dim=%{{.*}}, static=%{{.*}} : i32}) {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop gang(dim: 1)
   DO i = 1, n
@@ -357,7 +357,7 @@ program acc_loop
 
 ! CHECK:      acc.loop gang({dim={{.*}} : i32}) {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
   !$acc loop
   do 100 i=0, n
@@ -395,8 +395,8 @@ end subroutine
 ! CHECK-DAG: %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i"}
 ! CHECK-DAG: %[[ALLOCA_J:.*]] = fir.alloca i32 {bindc_name = "j"}
 ! CHECK-DAG: %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k"}
-! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[ALLOCA_I]] : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[ALLOCA_J]] : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
-! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[ALLOCA_K]] : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "k"}
+! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[ALLOCA_I]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[ALLOCA_J]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
+! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[ALLOCA_K]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("k") -> !fir.ref<i32>
 ! CHECK: acc.loop combined(parallel) private(%[[P_I]], %[[P_J]], %[[P_K]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
+! CHECK: } inclusiveUpperbound(array<i1: true, true, true>) independent
