@@ -23,6 +23,7 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/e3.s -o %t/e3.o
 
 # RUN: %lld -arch arm64 -lSystem --icf=all -dylib %t/m.o %t/e1.o %t/e2.o %t/e3.o %t/o.o -o %t/out.dylib
+# RUN: llvm-nm --defined-only %t/out.dylib | count 0
 
 #--- m.s
 ## Master: `l005` / `l007` at the SAME offset on a single __objc_selrefs record

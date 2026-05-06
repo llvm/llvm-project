@@ -13,6 +13,7 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/p.s -o %t/p.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/n.s -o %t/n.o
 # RUN: %lld -arch arm64 -lSystem --icf=all -dylib %t/p.o %t/n.o -o %t/out.dylib
+# RUN: llvm-nm --defined-only %t/out.dylib | count 0
 
 #--- p.s
 ## `l_LIT` on an __objc_methname cstring piece, referenced by a
