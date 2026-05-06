@@ -329,6 +329,8 @@ func.func @fpclassify(%f: f32, %d: f64, %v: vector<4xf32>, %t: tensor<4x?xf32>) 
   math.isfinite %d : f64
   math.isfinite %v : vector<4xf32>
   math.isfinite %t : tensor<4x?xf32>
+  // CHECK: math.isfinite %[[F]] fastmath<nnan> : f32
+  math.isfinite %f fastmath<nnan> : f32
   // CHECK: math.isinf %[[F]] : f32
   // CHECK: math.isinf %[[D]] : f64
   // CHECK: math.isinf %[[V]] : vector<4xf32>
@@ -337,6 +339,8 @@ func.func @fpclassify(%f: f32, %d: f64, %v: vector<4xf32>, %t: tensor<4x?xf32>) 
   math.isinf %d : f64
   math.isinf %v : vector<4xf32>
   math.isinf %t : tensor<4x?xf32>
+  // CHECK: math.isinf %[[D]] fastmath<ninf> : f64
+  math.isinf %d fastmath<ninf> : f64
   // CHECK: math.isnan %[[F]] : f32
   // CHECK: math.isnan %[[D]] : f64
   // CHECK: math.isnan %[[V]] : vector<4xf32>
@@ -345,6 +349,8 @@ func.func @fpclassify(%f: f32, %d: f64, %v: vector<4xf32>, %t: tensor<4x?xf32>) 
   math.isnan %d : f64
   math.isnan %v : vector<4xf32>
   math.isnan %t : tensor<4x?xf32>
+  // CHECK: math.isnan %[[V]] fastmath<nnan> : vector<4xf32>
+  math.isnan %v fastmath<nnan> : vector<4xf32>
   // CHECK: math.isnormal %[[F]] : f32
   // CHECK: math.isnormal %[[D]] : f64
   // CHECK: math.isnormal %[[V]] : vector<4xf32>
@@ -353,6 +359,8 @@ func.func @fpclassify(%f: f32, %d: f64, %v: vector<4xf32>, %t: tensor<4x?xf32>) 
   math.isnormal %d : f64
   math.isnormal %v : vector<4xf32>
   math.isnormal %t : tensor<4x?xf32>
+  // CHECK: math.isnormal %[[T]] fastmath<fast> : tensor<4x?xf32>
+  math.isnormal %t fastmath<fast> : tensor<4x?xf32>
   return
 }
 
