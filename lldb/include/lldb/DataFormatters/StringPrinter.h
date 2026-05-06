@@ -26,7 +26,7 @@ public:
 
   enum class EscapeStyle { CXX, Swift };
 
-  enum class ZeroTermination : uint8_t {
+  enum class ZeroTermination {
     /// Don't look for a terminator - print the whole buffer.
     Ignore,
     /// Stop printing at the first zero terminator.
