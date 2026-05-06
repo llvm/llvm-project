@@ -5668,11 +5668,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_prefetch:
     case Intrinsic::amdgcn_global_prefetch:
       return getDefaultMappingVOP(MI);
-    case Intrinsic::amdgcn_av_global_load_b128:
-    case Intrinsic::amdgcn_av_global_store_b128:
-    case Intrinsic::amdgcn_av_flat_load_b128:
-    case Intrinsic::amdgcn_av_flat_store_b128:
-      return getDefaultMappingAllVGPR(MI);
     default:
       return getInvalidInstructionMapping();
     }

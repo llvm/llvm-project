@@ -71,7 +71,7 @@ define <4 x i32> @global_load_wavefront(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.global.load.b128(ptr addrspace(1) %p, metadata !0)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !0)
   ret <4 x i32> %v
 }
 
@@ -134,7 +134,7 @@ define <4 x i32> @global_load_workgroup(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.global.load.b128(ptr addrspace(1) %p, metadata !1)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !1)
   ret <4 x i32> %v
 }
 
@@ -197,7 +197,7 @@ define <4 x i32> @global_load_agent(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.global.load.b128(ptr addrspace(1) %p, metadata !2)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !2)
   ret <4 x i32> %v
 }
 
@@ -260,7 +260,7 @@ define <4 x i32> @global_load_system(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.global.load.b128(ptr addrspace(1) %p, metadata !3)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !3)
   ret <4 x i32> %v
 }
 
@@ -323,7 +323,7 @@ define <4 x i32> @global_load_singlethread(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.global.load.b128(ptr addrspace(1) %p, metadata !4)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !4)
   ret <4 x i32> %v
 }
 
@@ -386,7 +386,7 @@ define <4 x i32> @global_load_cluster(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.global.load.b128(ptr addrspace(1) %p, metadata !5)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !5)
   ret <4 x i32> %v
 }
 
@@ -443,7 +443,7 @@ define void @global_store_wavefront(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.global.store.b128(ptr addrspace(1) %p, <4 x i32> %v, metadata !0)
+  call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !0)
   ret void
 }
 
@@ -500,7 +500,7 @@ define void @global_store_workgroup(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.global.store.b128(ptr addrspace(1) %p, <4 x i32> %v, metadata !1)
+  call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !1)
   ret void
 }
 
@@ -557,7 +557,7 @@ define void @global_store_agent(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.global.store.b128(ptr addrspace(1) %p, <4 x i32> %v, metadata !2)
+  call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !2)
   ret void
 }
 
@@ -614,7 +614,7 @@ define void @global_store_system(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.global.store.b128(ptr addrspace(1) %p, <4 x i32> %v, metadata !3)
+  call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !3)
   ret void
 }
 
@@ -671,7 +671,7 @@ define void @global_store_singlethread(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.global.store.b128(ptr addrspace(1) %p, <4 x i32> %v, metadata !4)
+  call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !4)
   ret void
 }
 
@@ -728,7 +728,7 @@ define void @global_store_cluster(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.global.store.b128(ptr addrspace(1) %p, <4 x i32> %v, metadata !5)
+  call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !5)
   ret void
 }
 
@@ -791,7 +791,7 @@ define <4 x i32> @flat_load_wavefront(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.flat.load.b128(ptr %p, metadata !0)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !0)
   ret <4 x i32> %v
 }
 
@@ -854,7 +854,7 @@ define <4 x i32> @flat_load_workgroup(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.flat.load.b128(ptr %p, metadata !1)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !1)
   ret <4 x i32> %v
 }
 
@@ -917,7 +917,7 @@ define <4 x i32> @flat_load_agent(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.flat.load.b128(ptr %p, metadata !2)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !2)
   ret <4 x i32> %v
 }
 
@@ -980,7 +980,7 @@ define <4 x i32> @flat_load_system(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.flat.load.b128(ptr %p, metadata !3)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !3)
   ret <4 x i32> %v
 }
 
@@ -1043,7 +1043,7 @@ define <4 x i32> @flat_load_singlethread(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.flat.load.b128(ptr %p, metadata !4)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !4)
   ret <4 x i32> %v
 }
 
@@ -1106,7 +1106,7 @@ define <4 x i32> @flat_load_cluster(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %v = call <4 x i32> @llvm.amdgcn.av.flat.load.b128(ptr %p, metadata !5)
+  %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !5)
   ret <4 x i32> %v
 }
 
@@ -1169,7 +1169,7 @@ define void @flat_store_wavefront(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.flat.store.b128(ptr %p, <4 x i32> %v, metadata !0)
+  call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !0)
   ret void
 }
 
@@ -1232,7 +1232,7 @@ define void @flat_store_workgroup(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.flat.store.b128(ptr %p, <4 x i32> %v, metadata !1)
+  call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !1)
   ret void
 }
 
@@ -1295,7 +1295,7 @@ define void @flat_store_agent(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.flat.store.b128(ptr %p, <4 x i32> %v, metadata !2)
+  call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !2)
   ret void
 }
 
@@ -1358,7 +1358,7 @@ define void @flat_store_system(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.flat.store.b128(ptr %p, <4 x i32> %v, metadata !3)
+  call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !3)
   ret void
 }
 
@@ -1421,7 +1421,7 @@ define void @flat_store_singlethread(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.flat.store.b128(ptr %p, <4 x i32> %v, metadata !4)
+  call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !4)
   ret void
 }
 
@@ -1484,7 +1484,7 @@ define void @flat_store_cluster(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
-  call void @llvm.amdgcn.av.flat.store.b128(ptr %p, <4 x i32> %v, metadata !5)
+  call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !5)
   ret void
 }
 

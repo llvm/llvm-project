@@ -1833,27 +1833,27 @@ the system. They take a *scope* argument as a string metadata, which indicates
 the scope within which these side-effects are guaranteed to be observable.
 [TODO: The exact semantics as a memory consistency model is a work in progress.]
 
-The ``av.global`` variants take a global pointer (``addrspace(1)``) and select
-``global_load``/``global_store`` instructions. The ``av.flat`` variants take a
-flat pointer (``addrspace(0)``) and select ``flat_load``/``flat_store``
-instructions. The cache policy bits are the same in both cases.
+The pointer argument can be a global pointer (``addrspace(1)``) or a flat
+pointer (``addrspace(0)``). Global pointers select ``global_load``/
+``global_store`` instructions; flat pointers select ``flat_load``/
+``flat_store`` instructions. The cache policy bits are the same in both cases.
 
 .. code-block:: llvm
 
-   <4 x i32> @llvm.amdgcn.av.global.load.b128(
+   <4 x i32> @llvm.amdgcn.av.load.b128.p1(
        ptr addrspace(1), ; source (global)
        metadata)         ; scope    - e.g. '!0' where '!0 = !{!"workgroup"}'
 
-   void @llvm.amdgcn.av.global.store.b128(
+   <4 x i32> @llvm.amdgcn.av.load.b128.p0(
+       ptr,              ; source (flat)
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p1(
        ptr addrspace(1), ; destination (global)
        <4 x i32>,        ; value
        metadata)         ; scope
 
-   <4 x i32> @llvm.amdgcn.av.flat.load.b128(
-       ptr,              ; source (flat)
-       metadata)         ; scope
-
-   void @llvm.amdgcn.av.flat.store.b128(
+   void @llvm.amdgcn.av.store.b128.p0(
        ptr,              ; destination (flat)
        <4 x i32>,        ; value
        metadata)         ; scope
@@ -1866,8 +1866,8 @@ not rely on the expansions described below. The only reliable user-level
 guarantees are those provided by the memory consistency model, which is
 currently a work in progress.
 
-The tables below show the cache policy bits for the ``av.global`` variants.
-The ``av.flat`` variants use the corresponding ``flat_load``/``flat_store``
+The tables below show the cache policy bits for global pointer variants.
+Flat pointer variants use the corresponding ``flat_load``/``flat_store``
 instructions with the same cache policy bits.
 
 .. table:: AMDGPU Load-Visible Implementation

@@ -904,9 +904,9 @@ def int_amdgcn_bitop3 :
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                         [ImmArg<ArgIndex<3>>]>;
 
-class AMDGPUAVGlobalStore : Intrinsic <
+class AMDGPUAVStore : Intrinsic <
   [],
-  [global_ptr_ty,          // Base global pointer to store to
+  [llvm_anyptr_ty,         // Pointer to store to (flat or global)
    llvm_v4i32_ty,          // Data to store
    llvm_metadata_ty],      // Scope
   [ IntrWriteMem, WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
@@ -915,11 +915,11 @@ class AMDGPUAVGlobalStore : Intrinsic <
   [SDNPMemOperand, SDNPMayStore]
 >;
 
-def int_amdgcn_av_global_store_b128 : AMDGPUAVGlobalStore;
+def int_amdgcn_av_store_b128 : AMDGPUAVStore;
 
-class AMDGPUAVGlobalLoad : Intrinsic <
+class AMDGPUAVLoad : Intrinsic <
   [llvm_v4i32_ty],
-  [global_ptr_ty,          // Base global pointer to load from
+  [llvm_anyptr_ty,         // Pointer to load from (flat or global)
    llvm_metadata_ty],      // Scope
   [ IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
     NonNull<ArgIndex<0>>, IntrWillReturn, IntrNoCallback, IntrNoFree ],
@@ -927,32 +927,7 @@ class AMDGPUAVGlobalLoad : Intrinsic <
   [SDNPMemOperand, SDNPMayLoad]
 >;
 
-def int_amdgcn_av_global_load_b128 : AMDGPUAVGlobalLoad;
-
-class AMDGPUAVFlatStore : Intrinsic <
-  [],
-  [flat_ptr_ty,            // Base flat pointer to store to
-   llvm_v4i32_ty,          // Data to store
-   llvm_metadata_ty],      // Scope
-  [ IntrWriteMem, WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-    NonNull<ArgIndex<0>>, IntrWillReturn, IntrNoCallback, IntrNoFree ],
-  "",
-  [SDNPMemOperand, SDNPMayStore]
->;
-
-def int_amdgcn_av_flat_store_b128 : AMDGPUAVFlatStore;
-
-class AMDGPUAVFlatLoad : Intrinsic <
-  [llvm_v4i32_ty],
-  [flat_ptr_ty,            // Base flat pointer to load from
-   llvm_metadata_ty],      // Scope
-  [ IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-    NonNull<ArgIndex<0>>, IntrWillReturn, IntrNoCallback, IntrNoFree ],
-  "",
-  [SDNPMemOperand, SDNPMayLoad]
->;
-
-def int_amdgcn_av_flat_load_b128 : AMDGPUAVFlatLoad;
+def int_amdgcn_av_load_b128 : AMDGPUAVLoad;
 
 } // TargetPrefix = "amdgcn"
 

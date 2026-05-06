@@ -1827,27 +1827,6 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   }
 }
 
-def av_global_load_b128_intrin_pat : PatFrag<
-  (ops node:$ptr),
-  (int_amdgcn_av_global_load_b128 $ptr, srcvalue)>;
-
-def av_global_store_b128_intrin_pat : PatFrag<
-  (ops node:$data, node:$ptr),
-  (int_amdgcn_av_global_store_b128 $ptr, $data, srcvalue)>;
-
-let SubtargetPredicate = HasFlatGlobalInsts in {
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX4, av_global_load_b128_intrin_pat, v4i32>;
-defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX4, av_global_store_b128_intrin_pat, v4i32>;
-}
-
-def av_flat_load_b128_intrin_pat : PatFrag<
-  (ops node:$ptr),
-  (int_amdgcn_av_flat_load_b128 $ptr, srcvalue)>;
-
-def av_flat_store_b128_intrin_pat : PatFrag<
-  (ops node:$data, node:$ptr),
-  (int_amdgcn_av_flat_store_b128 $ptr, $data, srcvalue)>;
-
 multiclass GlobalFLATStorePats_D16_t16<string inst, SDPatternOperator node, ValueType vt> {
   def : FlatStoreSignedPat<!cast<FLAT_Pseudo>(inst#"_t16"), node, vt> {
     let AddedComplexity = 10;
@@ -2145,9 +2124,6 @@ foreach vt = VReg_128.RegTypes in {
 defm : FlatLoadPats <FLAT_LOAD_DWORDX4, load_flat, vt>;
 defm : FlatStorePats <FLAT_STORE_DWORDX4, store_flat, vt>;
 }
-
-defm : FlatLoadPats <FLAT_LOAD_DWORDX4, av_flat_load_b128_intrin_pat, v4i32>;
-defm : FlatStorePats <FLAT_STORE_DWORDX4, av_flat_store_b128_intrin_pat, v4i32>;
 
 defm : FlatStorePats <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;

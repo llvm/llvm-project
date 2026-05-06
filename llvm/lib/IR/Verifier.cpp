@@ -7237,15 +7237,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call, Op);
     break;
   }
-  case Intrinsic::amdgcn_av_global_load_b128:
-  case Intrinsic::amdgcn_av_global_store_b128:
-  case Intrinsic::amdgcn_av_flat_load_b128:
-  case Intrinsic::amdgcn_av_flat_store_b128: {
+  case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b128: {
     // Last argument must be a MD string
     auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
     auto *MD = dyn_cast<MDNode>(Op->getMetadata());
     Check(MD && (MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
-          "av load/store intrinsics require that the last argument is a "
+          "the last argument to av load/store intrinsics must be a "
           "metadata string",
           &Call, Op);
     break;
