@@ -188,6 +188,32 @@ int main(int, char**) {
       (void)cc.at(key);
       assert(globalMemCounter.checkNewCalledEq(0));
     }
+
+    // lower_bound
+    {
+      globalMemCounter.reset();
+      (void)c.lower_bound(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.lower_bound(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+
+    // upper_bound
+    {
+      globalMemCounter.reset();
+      (void)c.upper_bound(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.upper_bound(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
   }
 
   // string_view lookups with std::greater
@@ -234,6 +260,32 @@ int main(int, char**) {
       const std::map<std::string, int, std::greater<std::string>>& cc = c;
       globalMemCounter.reset();
       (void)cc.at(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+
+    // lower_bound
+    {
+      globalMemCounter.reset();
+      (void)c.lower_bound(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int, std::greater<std::string>>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.lower_bound(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+
+    // upper_bound
+    {
+      globalMemCounter.reset();
+      (void)c.upper_bound(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int, std::greater<std::string>>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.upper_bound(key);
       assert(globalMemCounter.checkNewCalledEq(0));
     }
   }
