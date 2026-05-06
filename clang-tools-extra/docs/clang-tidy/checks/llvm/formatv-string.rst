@@ -57,4 +57,4 @@ Options
     CheckOptions:
       llvm-formatv-string.AdditionalFunctions: "mylib::log:1;lldb_private::Log::Format:2"
 
-  Default: empty.
+  Default is empty string.
