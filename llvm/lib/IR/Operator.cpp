@@ -301,7 +301,7 @@ void FastMathFlags::print(raw_ostream &O) const {
   }
 }
 
-FastMathFlags &FPMathOperator::getFMF() {
+FastMathFlags &FPMathOperator::getFastMathFlagsImpl() {
   Value *V = this;
   auto *I = cast<Instruction>(V);
 

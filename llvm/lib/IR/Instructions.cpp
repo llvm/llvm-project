@@ -133,7 +133,7 @@ PHINode::PHINode(const PHINode &PN)
   allocHungoffUses(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
-  SubclassOptionalData = PN.SubclassOptionalData;
+  FMF = PN.FMF;
 }
 
 // removeIncomingValue - Remove an incoming value.  This is useful if a
@@ -801,7 +801,6 @@ CallInst::CallInst(const CallInst &CI, AllocInfo AllocInfo)
   std::copy(CI.op_begin(), CI.op_end(), op_begin());
   std::copy(CI.bundle_op_info_begin(), CI.bundle_op_info_end(),
             bundle_op_info_begin());
-  SubclassOptionalData = CI.SubclassOptionalData;
   FMF = CI.FMF;
 }
 
@@ -813,7 +812,6 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
                                  Args, OpB, CI->getName(), InsertPt);
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
-  NewCI->SubclassOptionalData = CI->SubclassOptionalData;
   NewCI->FMF = CI->FMF;
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
@@ -4538,11 +4536,7 @@ ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {
   return new ShuffleVectorInst(getOperand(0), getOperand(1), getShuffleMask());
 }
 
-PHINode *PHINode::cloneImpl() const {
-  auto *I = new (AllocMarker) PHINode(*this);
-  I->FMF = FMF;
-  return I;
-}
+PHINode *PHINode::cloneImpl() const { return new (AllocMarker) PHINode(*this); }
 
 LandingPadInst *LandingPadInst::cloneImpl() const {
   return new LandingPadInst(*this);
