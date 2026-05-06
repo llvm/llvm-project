@@ -93,7 +93,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
     %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
-    transform.loop.unroll %2 {factor = 3} : !transform.op<"scf.for">
+    transform.loop.unroll %2 factor = 3 : !transform.op<"scf.for">
     transform.yield
   }
 }

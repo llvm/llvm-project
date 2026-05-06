@@ -67,7 +67,7 @@ func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 { use_alloca } : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 use_alloca : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -184,7 +184,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<workgroup>] } : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.promote %1 operands_to_promote = [0, 1] mapping = [#gpu.memory_space<workgroup>] : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -228,7 +228,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<private>] } : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.promote %1 operands_to_promote = [0, 1] mapping = [#gpu.memory_space<private>] : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -386,7 +386,7 @@ func.func @linalg_generic_update_all_function_inputs_outputs(%arg0: memref<8x4xf
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 { memory_space = #gpu.address_space<workgroup> } : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 memory_space(#gpu.address_space<workgroup>) : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }

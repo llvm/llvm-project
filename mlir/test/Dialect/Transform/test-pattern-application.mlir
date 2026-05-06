@@ -48,7 +48,7 @@ module attributes {transform.with_named_sequence} {
       %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
       transform.apply_patterns to %0 {
         transform.apply_patterns.transform.test_patterns
-      }  {max_num_rewrites = 1} : !transform.any_op
+      }  max_num_rewrites = 1 : !transform.any_op
     }
     transform.yield
   }
@@ -271,7 +271,7 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %1 {
       transform.apply_patterns.canonicalization
-    } {apply_cse} : !transform.any_op
+    } apply_cse : !transform.any_op
     transform.yield
   }
 }
@@ -294,7 +294,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.transform.test_conversion_patterns
     } with type_converter {
       transform.apply_conversion_patterns.transform.test_type_converter
-    } {legal_ops = ["func.func", "func.return", "test.new_op"]}
+    } legal_ops = ["func.func", "func.return", "test.new_op"]
         : !transform.any_op
     transform.yield
   }
@@ -320,7 +320,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.transform.test_conversion_patterns
     } with type_converter {
       transform.apply_conversion_patterns.transform.test_type_converter
-    } {legal_ops = ["func.func", "func.return", "test.new_op"]}
+    } legal_ops = ["func.func", "func.return", "test.new_op"]
         : !transform.any_op
     transform.yield
   }
@@ -349,8 +349,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.transform.test_conversion_patterns
     } with type_converter {
       transform.apply_conversion_patterns.transform.test_type_converter
-    } {legal_ops = ["func.func", "func.return", "test.new_op"],
-       partial_conversion} : !transform.any_op
+    } legal_ops = ["func.func", "func.return", "test.new_op"] partial_conversion : !transform.any_op
     transform.yield
   }
 }
@@ -364,7 +363,7 @@ module attributes {transform.with_named_sequence} {
     transform.apply_conversion_patterns to %0 {
       // expected-note @below{{pattern descriptor op}}
       transform.apply_conversion_patterns.transform.test_conversion_patterns
-    } {illegal_ops = ["test.foo"]} : !transform.any_op
+    } illegal_ops = ["test.foo"] : !transform.any_op
     transform.yield
   }
 }
@@ -379,8 +378,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.dialect_to_llvm "test"
     } with type_converter {
       transform.apply_conversion_patterns.transform.test_type_converter
-    } {illegal_ops = ["test.foo"],
-       legal_ops = ["func.func", "func.return", "test.new_op"]}
+    } illegal_ops = ["test.foo"] legal_ops = ["func.func", "func.return", "test.new_op"]
         : !transform.any_op
     transform.yield
   }
@@ -396,8 +394,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.dialect_to_llvm "this_dialect_does_not_exist"
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-    } {illegal_ops = ["test.foo"],
-       legal_ops = ["func.func", "func.return", "test.new_op"]}
+    } illegal_ops = ["test.foo"] legal_ops = ["func.func", "func.return", "test.new_op"]
         : !transform.any_op
     transform.yield
   }
@@ -413,8 +410,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.dialect_to_llvm "transform"
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-    } {illegal_ops = ["test.foo"],
-       legal_ops = ["func.func", "func.return", "test.new_op"]}
+    } illegal_ops = ["test.foo"] legal_ops = ["func.func", "func.return", "test.new_op"]
         : !transform.any_op
     transform.yield
   }
@@ -470,7 +466,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.transform.test_conversion_patterns
     } with type_converter {
       transform.apply_conversion_patterns.transform.test_type_converter
-    } {legal_ops = ["func.func", "func.return", "test.new_op"], preserve_handles}
+    } legal_ops = ["func.func", "func.return", "test.new_op"] preserve_handles
         : !transform.any_op
     // Add an attribute to %1, which is now mapped to a new op.
     transform.annotate %1 "annotated" : !transform.any_op

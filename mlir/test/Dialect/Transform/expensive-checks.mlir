@@ -21,7 +21,7 @@ module attributes {transform.with_named_sequence} {
       ^bb1(%arg1: !transform.any_op):
         // expected-note @below {{handle to invalidated ops}}
         %0 = pdl_match @return in %arg1 : (!transform.any_op) -> !transform.any_op
-        %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+        %1 = get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
         // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
         test_consume_operand %1 : !transform.any_op
         // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
@@ -119,7 +119,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%0: !transform.any_op) {
     %1 = transform.test_copy_payload %0 : (!transform.any_op) -> !transform.any_op
     %2 = transform.test_copy_payload %0 : (!transform.any_op) -> !transform.any_op
-    transform.merge_handles %1, %2 { deduplicate } : !transform.any_op
+    transform.merge_handles deduplicate %1, %2 : !transform.any_op
     transform.yield
   }
 }
@@ -392,7 +392,7 @@ module attributes {transform.with_named_sequence}  {
     // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them}}
     transform.test_consume_operand %arg0 : !transform.any_op
     // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
-    transform.test_consume_operand %0 { allow_repeated_handles } : !transform.any_op
+    transform.test_consume_operand %0 allow_repeated_handles : !transform.any_op
     transform.yield
   }
 }

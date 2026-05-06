@@ -210,7 +210,7 @@ func.func @transfer_read_with_mask_dynamic_rank_reducing_1_constant_mask(
 //  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
 //   CHECK-NOT:   vector.constant_mask
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [{{.*}}, 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
-//       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : memref<?xi8, {{.*}}>, vector<[16]xi8>
+//       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : memref<?xi8, {{.*}}, vector<[16]xi8>
 
 func.func @transfer_read_with_mask_dynamic_rank_reducing_2_create_mask(
       %arg : memref<1x?x3x1x?x1xi8, strided<[?, ?, ?, ?, ?, ?], offset: ?>>,
@@ -332,7 +332,7 @@ func.func @transfer_write_with_mask_dynamic_rank_reducing_constant_mask(
 //  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
 //   CHECK-NOT:   vector.constant_mask
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [{{.*}}, 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
-//       CHECK:   vector.transfer_write {{.*}}, %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : vector<[16]xi8>, memref<?xi8, {{.*}}>
+//       CHECK:   vector.transfer_write {{.*}}, %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : vector<[16]xi8>, memref<?xi8, {{.*}}
 
 /// Only vector.create_mask and vector.constant_mask masks are supported.
 func.func @transfer_read_with_unsupported_mask_dynamic_rank_reducing_1(

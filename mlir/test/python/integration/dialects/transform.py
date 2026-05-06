@@ -48,8 +48,8 @@ def test_named_sequence(module_):
     # CHECK-LABEL:   module attributes {transform.with_named_sequence} {
     # CHECK:           transform.named_sequence @__transform_main(%[[VAL_0:.*]]: !transform.any_op) {
     # CHECK:             %[[VAL_1:.*]] = transform.structured.match ops{["arith.addi"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
-    # CHECK:             %[[VAL_2:.*]] = transform.get_parent_op %[[VAL_1]] {op_name = "scf.for"} : (!transform.any_op) -> !pdl.operation
-    # CHECK:             transform.loop.unroll %[[VAL_2]] {factor = 4 : i64} : !pdl.operation
+    # CHECK:             %[[VAL_2:.*]] = transform.get_parent_op %[[VAL_1]] op_name = "scf.for" : (!transform.any_op) -> !pdl.operation
+    # CHECK:             transform.loop.unroll %[[VAL_2]] factor = 4 : !pdl.operation
     # CHECK:             transform.yield
     # CHECK:           }
     # CHECK:         }
@@ -121,7 +121,7 @@ def test_apply_patterns(module_):
     # CHECK-LABEL:   module attributes {transform.with_named_sequence} {
     # CHECK:           transform.named_sequence @__transform_main(%[[VAL_0:.*]]: !transform.any_op) {
     # CHECK:             %[[VAL_1:.*]] = transform.structured.match ops{["linalg.batch_reduce_matmul"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
-    # CHECK:             %[[VAL_2:.*]] = transform.get_parent_op %[[VAL_1]] {op_name = "func.func"} : (!transform.any_op) -> !pdl.operation
+    # CHECK:             %[[VAL_2:.*]] = transform.get_parent_op %[[VAL_1]] op_name = "func.func" : (!transform.any_op) -> !pdl.operation
     # CHECK:             transform.apply_patterns to %[[VAL_2]] {
     # CHECK:               transform.apply_patterns.canonicalization
     # CHECK:             } : !pdl.operation

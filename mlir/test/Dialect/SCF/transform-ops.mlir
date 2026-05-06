@@ -33,9 +33,9 @@ func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
     // CHECK: = transform.loop.outline %{{.*}}
-    transform.loop.outline %1 {func_name = "foo"} : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
+    transform.loop.outline %1 func_name = "foo" : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -66,7 +66,7 @@ func.func @loop_peel_op() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
     %main_loop, %remainder = transform.loop.peel %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
     // Make sure 
     transform.debug.emit_remark_at %main_loop, "main loop" : !transform.op<"scf.for">
@@ -99,8 +99,8 @@ func.func @loop_peel_first_iter_op() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
-    %main_loop, %remainder = transform.loop.peel %1 {peel_front = true} : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
+    %main_loop, %remainder = transform.loop.peel %1 peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
     transform.yield
   }
 }
@@ -134,7 +134,7 @@ func.func @loop_pipeline_op(%A: memref<?xf32>, %result: memref<?xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
     %2 = transform.loop.pipeline %1 : (!transform.op<"scf.for">) -> !transform.any_op
     // Verify that the returned handle is usable.
     transform.debug.emit_remark_at %2, "transformed" : !transform.any_op
@@ -160,8 +160,8 @@ func.func @loop_unroll_op() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
-    transform.loop.unroll %1 { factor = 4 } : !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll %1 factor = 4 : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -247,8 +247,8 @@ func.func @loop_unroll_and_jam_op() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
-    transform.loop.unroll_and_jam %1 { factor = 4 } : !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %1 factor = 4 : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -320,8 +320,8 @@ func.func private @loop_unroll_and_jam_op(%arg0: memref<96x128xi8, 3>, %arg1: me
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.store"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
-    transform.loop.unroll_and_jam %1 { factor = 4 } : !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %1 factor = 4 : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -351,8 +351,8 @@ func.func @loop_unroll_and_jam_op() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
-    transform.loop.unroll_and_jam %1 { factor = 4 } : !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %1 factor = 4 : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -377,8 +377,8 @@ func.func @loop_unroll_and_jam_op() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
-    transform.loop.unroll_and_jam %1 { factor = 2 } : !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %1 factor = 2 : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -423,9 +423,9 @@ func.func @loop_unroll_and_jam_op(%arg0: memref<21x30xf32, 1>, %init : f32, %ini
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "affine.for"} : (!transform.any_op) -> !transform.op<"affine.for">
-    %2 = transform.get_parent_op %1 {op_name = "affine.for"} : (!transform.op<"affine.for">) -> !transform.op<"affine.for">
-    transform.loop.unroll_and_jam %2 { factor = 2 } : !transform.op<"affine.for">
+    %1 = transform.get_parent_op %0 op_name = "affine.for" : (!transform.any_op) -> !transform.op<"affine.for">
+    %2 = transform.get_parent_op %1 op_name = "affine.for" : (!transform.op<"affine.for">) -> !transform.op<"affine.for">
+    transform.loop.unroll_and_jam %2 factor = 2 : !transform.op<"affine.for">
     transform.yield
   }
 }
@@ -448,9 +448,9 @@ func.func @loop_unroll_op() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "affine.for"} : (!transform.any_op) -> !transform.op<"affine.for">
+    %1 = transform.get_parent_op %0 op_name = "affine.for" : (!transform.any_op) -> !transform.op<"affine.for">
     transform.debug.emit_remark_at %1, "affine for loop" : !transform.op<"affine.for">
-    transform.loop.unroll %1 { factor = 4, affine = true } : !transform.op<"affine.for">
+    transform.loop.unroll %1 factor = 4 {affine = true} : !transform.op<"affine.for">
     transform.yield
   }
 }
@@ -475,9 +475,9 @@ func.func @test_mixed_loops() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "affine.for"} : (!transform.any_op) -> !transform.op<"affine.for">
+    %1 = transform.get_parent_op %0 op_name = "affine.for" : (!transform.any_op) -> !transform.op<"affine.for">
     transform.debug.emit_remark_at %1, "affine for loop" : !transform.op<"affine.for">
-    transform.loop.unroll %1 { factor = 4 } : !transform.op<"affine.for">
+    transform.loop.unroll %1 factor = 4 : !transform.op<"affine.for">
     transform.yield
   }
 }
@@ -544,7 +544,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.scf.structural_conversions
     } with type_converter {
       transform.apply_conversion_patterns.transform.test_type_converter
-    } {  partial_conversion  } : !transform.any_op
+    } partial_conversion : !transform.any_op
     transform.yield
   }
 }
@@ -613,7 +613,7 @@ func.func @loop_pipeline(%arg0: memref<4x16xf32>, %arg1: vector<16xf32>) -> vect
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.for">
-    %1 = transform.loop.pipeline %0 {iteration_interval = 1 : i64, read_latency = 5 : i64,  scheduling_type = "full-loops"} : (!transform.op<"scf.for">) -> !transform.any_op
+    %1 = transform.loop.pipeline %0 iteration_interval = 1 read_latency = 5 {scheduling_type = "full-loops"} : (!transform.op<"scf.for">) -> !transform.any_op
      transform.yield
  }
 }
@@ -640,7 +640,7 @@ func.func @loop_pipeline_lb_gt_0(%arg0: memref<4x16xf32>, %arg1: vector<16xf32>)
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.for">
-    %1 = transform.loop.pipeline %0 {iteration_interval = 1 : i64, read_latency = 5 : i64,  scheduling_type = "full-loops"} : (!transform.op<"scf.for">) -> !transform.any_op
+    %1 = transform.loop.pipeline %0 iteration_interval = 1 read_latency = 5 {scheduling_type = "full-loops"} : (!transform.op<"scf.for">) -> !transform.any_op
      transform.yield
  }
 }
@@ -665,8 +665,8 @@ func.func @loop_unroll_and_jam_zero_trip_count() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
-    transform.loop.unroll_and_jam %1 {factor = 3 : i64} : !transform.op<"scf.for">
+    %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %1 factor = 3 : !transform.op<"scf.for">
     transform.yield
   }
 }

@@ -46,7 +46,7 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
       OptionalAttr<StrAttr>:$data_layout);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def ApplyAllocToAllocaOp : Op<Transform_Dialect,
@@ -313,7 +313,7 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
+    "$target prop-dict attr-dict `:` functional-type(operands, results)";
 }
 
 def MemRefEraseDeadAllocAndStoresOp
@@ -385,7 +385,7 @@ def MemRefMakeLoopIndependentOp
   let arguments = (ins TransformHandleTypeInterface:$target, I64Attr:$num_loops);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat =
-      "$target attr-dict `:` functional-type($target, $transformed)";
+      "$target `num_loops` `=` $num_loops attr-dict `:` functional-type($target, $transformed)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

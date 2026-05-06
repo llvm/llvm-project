@@ -15,7 +15,7 @@
 // CHECK-NOT: @__transform_main
 module attributes {transform.with_named_sequence} {
   transform.named_sequence private @__transform_main(%root: !transform.any_op) {
-    transform.print %root { name = "in self-contained" } : !transform.any_op
+    transform.print %root name = "in self-contained" : !transform.any_op
     transform.yield
   }
 }

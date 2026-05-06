@@ -112,11 +112,8 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.func.func_to_llvm
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-        {use_bare_ptr_call_conv = true, use_opaque_pointers = true}
-    } {
-      legal_dialects = ["llvm"],
-      partial_conversion
-    } : !transform.any_op
+        <{use_bare_ptr_call_conv = true}> {use_opaque_pointers = true}
+    } legal_dialects = ["llvm"] partial_conversion : !transform.any_op
     transform.yield
   }
 }

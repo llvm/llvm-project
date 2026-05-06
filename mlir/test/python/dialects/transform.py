@@ -238,8 +238,8 @@ def testGetParentOp(module: Module):
     # CHECK-LABEL: TEST: testGetParentOp
     # CHECK: transform.sequence
     # CHECK: ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
-    # CHECK:   = get_parent_op %[[ARG1]] {isolated_from_above, nth_parent = 2 : i64}
-    # CHECK:   = get_parent_op %[[ARG1]] {allow_empty_results, deduplicate, isolated_from_above, nth_parent = 2 : i64, op_name = "func.func"}
+    # CHECK:   = get_parent_op %[[ARG1]] isolated_from_above nth_parent = 2
+    # CHECK:   = get_parent_op %[[ARG1]] isolated_from_above allow_empty_results op_name = "func.func" deduplicate nth_parent = 2
 
 
 @run
@@ -282,7 +282,7 @@ def testApplyPatternsOpCompact(module: Module):
         # CHECK: } : !transform.any_op
         # CHECK: apply_patterns to
         # CHECK: transform.apply_patterns.canonicalization
-        # CHECK: } {apply_cse, max_iterations = 3 : i64, max_num_rewrites = 5 : i64} : !transform.any_op
+        # CHECK: } apply_cse max_iterations = 3 max_num_rewrites = 5 : !transform.any_op
 
 
 @run

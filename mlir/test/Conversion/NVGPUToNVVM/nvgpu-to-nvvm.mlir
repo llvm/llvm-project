@@ -1389,8 +1389,8 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-        {use_opaque_pointers = true}
-    } {legal_dialects = ["arith", "func", "llvm", "memref", "nvvm", "vector", "scf"], partial_conversion} : !transform.any_op
+         {use_opaque_pointers = true}
+    } legal_dialects = ["arith", "func", "llvm", "memref", "nvvm", "vector", "scf"] partial_conversion : !transform.any_op
     transform.yield
   }
 }

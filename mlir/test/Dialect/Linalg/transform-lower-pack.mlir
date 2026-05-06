@@ -116,7 +116,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %pack = transform.structured.match ops{["linalg.pack"]} in %module_op
       : (!transform.any_op) -> !transform.op<"linalg.pack">
-    transform.structured.lower_pack %pack {lowerPadLikeWithInsertSlice = false}: (!transform.op<"linalg.pack">)
+    transform.structured.lower_pack %pack lowerPadLikeWithInsertSlice = false: (!transform.op<"linalg.pack">)
       -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
       transform.yield
   }
@@ -285,7 +285,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %unpack = transform.structured.match ops{["linalg.unpack"]} in %module_op
       : (!transform.any_op) -> !transform.op<"linalg.unpack">
-    transform.structured.lower_unpack %unpack {lowerUnpadLikeWithExtractSlice = false}: (!transform.op<"linalg.unpack">)
+    transform.structured.lower_unpack %unpack lowerUnpadLikeWithExtractSlice = false: (!transform.op<"linalg.unpack">)
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,

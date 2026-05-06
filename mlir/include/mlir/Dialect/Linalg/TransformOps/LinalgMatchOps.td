@@ -71,7 +71,7 @@ def MatchStructuredOp : Op<Transform_Dialect, "match.structured", [
   let assemblyFormat =
     "(`failures` `(` $failure_propagation_mode^ `)`)?"
     "$current `:` custom<SemiFunctionType>(type($current), type($outputs))"
-    "attr-dict-with-keyword regions";
+    " attr-dict-with-keyword regions";
   let hasVerifier = 1;
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration # [{
@@ -128,7 +128,7 @@ def MatchStructuredBodyOp : Op<Transform_Dialect, "match.structured.body", [
                        UnitAttr:$passthrough,
                        UnitAttr:$elementwise,
                        OptionalAttr<StrArrayAttr>:$contraction);
-  let assemblyFormat = "$operand_handle attr-dict `:` type($operand_handle)";
+  let assemblyFormat = "$operand_handle oilist(`reduction_position` `=` $reduction_position | `passthrough` $passthrough | `elementwise` $elementwise | `contraction` `=` $contraction) attr-dict `:` type($operand_handle)";
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
   let hasVerifier = 1;
 }
@@ -148,7 +148,7 @@ def MatchStructuredClassifyContractionDimsOp
       C(batch, m, n) += A(batch, m, k) * B(batch, k, n)
 
     That is:
-    
+
       - 'batch' are parallel dimensions used in inputs and result;
       - 'm' are parallel dimensions used in the LHS and result;
       - 'n' are parallel dimensions used in rhe RHS and result;
@@ -256,7 +256,7 @@ def MatchStructuredDimOp : Op<Transform_Dialect, "match.structured.dim", [
     the criteria specified as attributes. May capture the numeric value of the
     dimension into a parameter that it returns.
 
-    }], 
+    }],
     StructuredDimDescription<"dimension">.description,
     [{
 
@@ -272,7 +272,7 @@ def MatchStructuredDimOp : Op<Transform_Dialect, "match.structured.dim", [
     parameter will be associated with the value of the second-to-last dimension
     followed by the last dimension. If the dimension is dynamic, the parameter
     will contain a negative value corresponding to kDynamic in C++.
-    
+
     }], StructuredPredicate.extraDescription, [{
 
     #### Return modes
@@ -293,7 +293,7 @@ def MatchStructuredDimOp : Op<Transform_Dialect, "match.structured.dim", [
   let assemblyFormat =
       "$operand_handle `[`"
       "custom<TransformMatchDims>($raw_dim_list, $is_inverted, $is_all)"
-      "`]` attr-dict `:` "
+      "`]` oilist(`parallel` $parallel | `reduction` $reduction) attr-dict `:` "
       "custom<SemiFunctionType>(type($operand_handle), type($result))";
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration # [{
@@ -335,7 +335,7 @@ class MatchStructuredOperandOp<string opname> : Op<Transform_Dialect, opname, [
     SingleOpMatcher,
     MatchOpInterface,
     MemoryEffectsOpInterface]> {
-      
+
   // TODO: consider an attribute controlling whether to fail or succeed on
   // out-of-bounds accesses.
   let arguments = (ins TransformHandleTypeInterface:$operand_handle,
@@ -352,7 +352,8 @@ class MatchStructuredOperandOp<string opname> : Op<Transform_Dialect, opname, [
   let assemblyFormat =
       "$operand_handle `[`"
       "custom<TransformMatchDims>($raw_position_list, $is_inverted, $is_all)"
-      "`]` attr-dict "
+      "`]` oilist(`permutation` $permutation | "
+      "`projected_permutation` $projected_permutation) attr-dict "
       "`:` custom<SemiFunctionType>(type($operand_handle), type($result))";
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration # [{
@@ -369,7 +370,7 @@ def MatchStructuredInputOp : MatchStructuredOperandOp<"match.structured.input"> 
     "Captures input operand(s) of a structured operation";
   let description = !strconcat([{
     Produces a transform dialect value depending on the result type:
-    
+
       - If the result type is a value handle, it will be associated with the input
         operand(s) of the payload operation associated with the operand handle.
       - If the result type is an operation handle, it will be associated with the
@@ -397,7 +398,7 @@ def MatchStructuredInputOp : MatchStructuredOperandOp<"match.structured.input"> 
 
     The match succeeds if the conditions specified as attributes succeed.
 
-    }], 
+    }],
     StructuredDimDescription<"input">.description,
     [{
 
@@ -446,7 +447,7 @@ def MatchStructuredInitOp : MatchStructuredOperandOp<"match.structured.init"> {
 
     The match succeeds if the conditions specified as attributes succeed.
 
-    }], 
+    }],
     StructuredDimDescription<"init">.description,
     [{
 
@@ -488,7 +489,7 @@ def MatchStructuredNumInputsOp
   let arguments = (ins TransformHandleTypeInterface:$operand_handle);
   let results = (outs TransformParamTypeInterface:$result);
   let assemblyFormat =
-    "$operand_handle attr-dict `:` functional-type(operands, results)";  
+    "$operand_handle attr-dict `:` functional-type(operands, results)";
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
 }
 
@@ -516,7 +517,7 @@ def MatchStructuredNumInitsOp
   let arguments = (ins TransformHandleTypeInterface:$operand_handle);
   let results = (outs TransformParamTypeInterface:$result);
   let assemblyFormat =
-    "$operand_handle attr-dict `:` functional-type(operands, results)";  
+    "$operand_handle attr-dict `:` functional-type(operands, results)";
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
 }
 
@@ -587,9 +588,9 @@ def MatchStructuredResultOp : Op<Transform_Dialect, "match.structured.result", [
                        UnitAttr:$any,
                        UnitAttr:$single);
   let results = (outs TransformAnyHandle:$result);
-  let assemblyFormat = 
+  let assemblyFormat =
       "$operand_handle `[` $position `]` (`any` $any^)? (`single` $single^)?"
-      "attr-dict `:` functional-type(operands, results)";
+      " attr-dict `:` functional-type(operands, results)";
   let hasVerifier = 1;
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration # [{

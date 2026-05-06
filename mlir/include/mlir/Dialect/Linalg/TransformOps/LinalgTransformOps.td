@@ -110,7 +110,7 @@ def ApplyPadVectorizationPatternsOp : Op<Transform_Dialect,
     These patterns rewrite tensor.pad Ops using vector.transfer_read and
     vector.transfer_write operations. This is done either by:
       1. Folding tensor.pad with an existing vector.transfer_read /
-      vector.transfer_write Op (generated prior to running these patterns). 
+      vector.transfer_write Op (generated prior to running these patterns).
       2. Rewriting it (when matched together with q tensor.insert_slice
       consumer Op) as a vector.transfer_read + vector.transfer_write pair.
 
@@ -140,7 +140,7 @@ def ApplyFoldPackUnpackIntoEmptyPatternsOp : Op<Transform_Dialect,
   }];
 
   let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "oilist(`fold_single_use_only` `=` $fold_single_use_only) attr-dict";
 }
 
 def ApplyDataLayoutPropagationPatternsOp : Op<Transform_Dialect,
@@ -152,7 +152,7 @@ def ApplyDataLayoutPropagationPatternsOp : Op<Transform_Dialect,
   }];
 
   let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$poison_padding);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "oilist(`poison_padding` `=` $poison_padding) attr-dict";
 }
 
 def ApplyExtractSliceSinkingPatternsOp : Op<Transform_Dialect,
@@ -261,7 +261,7 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                        UnitAttr:$emit_dealloc);
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
-  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let assemblyFormat = "$target oilist(`memory_space` `=` qualified($memory_space) | `memcpy_op` `=` $memcpy_op | `alloc_op` `=` $alloc_op | `bufferize_destination_only` $bufferize_destination_only | `emit_dealloc` $emit_dealloc) attr-dict `:` type($target)";
   let hasVerifier = 1;
 }
 
@@ -493,7 +493,9 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
       `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
                                                     $tile_sizes,
                                                     $static_tile_sizes) |
-      `interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)
+      `interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange) |
+      `apply_cleanup` $apply_cleanup |
+      `use_forall` $use_forall
     )
     (`inner_tile_alignments` `=`
         custom<InnerTileAlignmentArray>($inner_tile_alignments)^)?
@@ -605,7 +607,7 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat = [{
-      $target attr-dict `:` 
+      $target attr-dict `:`
       custom<SemiFunctionType>(type($target), type($transformed), "false")
   }];
 
@@ -645,7 +647,7 @@ def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
                        DefaultValuedAttr<BoolAttr, "false">:$emit_category);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat = [{
-      $target attr-dict `:` 
+      $target oilist(`emit_category` `=` $emit_category) attr-dict `:`
       custom<SemiFunctionType>(type($target), type($transformed), "false")
   }];
 
@@ -761,7 +763,7 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
                       Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op);
   let assemblyFormat = [{
-    $target attr-dict `:` functional-type(operands, results)
+    $target oilist(`lowerPadLikeWithInsertSlice` `=` $lowerPadLikeWithInsertSlice) attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
@@ -803,7 +805,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
                       Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op,
                       Transform_ConcreteOpType<"linalg.copy">:$copy_op);
   let assemblyFormat = [{
-    $target attr-dict `:` functional-type(operands, results)
+    $target oilist(`lowerUnpadLikeWithExtractSlice` `=` $lowerUnpadLikeWithExtractSlice) attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
@@ -956,7 +958,7 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
                       TransformAnyParamTypeOrAnyHandle:$split_point);
   let hasVerifier = 1;
   let assemblyFormat =
-    "$target attr-dict `:` custom<MultitileSizesTypes>("
+    "$target `dimension` `=` $dimension `target_size` `=` $target_size oilist(`divisor` `=` $divisor) attr-dict `:` custom<MultitileSizesTypes>("
     "type($target), type($low_size), type($high_size), type($split_point))";
 
   let extraClassDeclaration = [{
@@ -1043,8 +1045,7 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
   let assemblyFormat = [{
     $target
     `packed_sizes` `=` custom<DynamicIndexList>($packed_sizes,
-                                                $static_packed_sizes)
-    attr-dict
+                                                $static_packed_sizes) attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -1146,8 +1147,7 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
       (`matmul_padded_sizes_next_multiple_of` `=`
         $matmul_padded_sizes_next_multiple_of^)?
       `matmul_inner_dims_order` `=` $matmul_inner_dims_order
-    )
-    attr-dict
+    ) attr-dict
     `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
@@ -1216,8 +1216,7 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
     $target_pack_or_un_pack_op
     `with_compute_op` `(` $target_linalg_op `)`
     (`outer_perm` `=` $outer_perm^ )?
-    (`inner_perm` `=` $inner_perm^ )?
-    attr-dict
+    (`inner_perm` `=` $inner_perm^ )? attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -1276,10 +1275,9 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
                       TransformHandleTypeInterface:$copy);
 
   let assemblyFormat = [{
-    $target 
+    $target
     (`pad_to_multiple_of` custom<DynamicIndexList>($pad_to_multiple_of, $static_pad_to_multiple_of)^)?
-    (`use_prescribed_tensor_shapes` $use_prescribed_tensor_shapes^)?
-    attr-dict
+    (`use_prescribed_tensor_shapes` $use_prescribed_tensor_shapes^)? oilist(`padding_values` `=` $padding_values | `padding_dimensions` `=` $padding_dimensions | `nofold_flags` `=` $nofold_flags | `transpose_paddings` `=` $transpose_paddings | `copy_back_op` `=` $copy_back_op) attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -1336,12 +1334,12 @@ def PadTilingInterfaceOp : Op<Transform_Dialect, "structured.pad_tiling_interfac
     across the op semantics and, unlike for simple elementwise ops, may not be
     trivially deducible or specifiable on operands only (e.g. convolutions).
     Currently, only a limited set of projected permutation maps are supported.
-    
+
     The specification of `padding_sizes` follows that of `tile_sizes` during
     tiling: the value "0" on a particular iterator encode "no padding". Like in
     the case of tiling, an automatic completion by 0 to the operation rank
     occurs.
-    
+
     This transformation returns a handle to the padded operation and to the
     padding operation ("tensor.pad").
 
@@ -1352,8 +1350,8 @@ def PadTilingInterfaceOp : Op<Transform_Dialect, "structured.pad_tiling_interfac
 
     This operation ignores non-IndexingMapOpInterface ops and drops them in the
     return. In the future, this operation will support all TilingInterfaceOps
-    for which the contract between iteration domain and operands can be 
-    reified.    
+    for which the contract between iteration domain and operands can be
+    reified.
 
     This operation may produce a definite failure if the padding fails for any
     reason.
@@ -1378,8 +1376,7 @@ def PadTilingInterfaceOp : Op<Transform_Dialect, "structured.pad_tiling_interfac
     $target
     `to`
     (`padding_sizes` custom<DynamicIndexList>($padding_sizes, $static_padding_sizes)^)?
-    (`pad_to_multiple_of` $pad_to_multiple_of^)?
-    attr-dict
+    (`pad_to_multiple_of` $pad_to_multiple_of^)? oilist(`padding_values` `=` $padding_values) attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -1448,8 +1445,7 @@ def HoistPadBuildPackingLoopNestOp :
   let assemblyFormat = [{
     $target
     `above` $loop
-    (`,` `transpose` `by` $transpose^)?
-    attr-dict
+    (`,` `transpose` `by` $transpose^)? attr-dict
     `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
@@ -1491,8 +1487,7 @@ def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
   let assemblyFormat = [{
     $target
     `by` $num_loops `loops`
-    (`,` `transpose` `by` $transpose^)?
-    attr-dict
+    (`,` `transpose` `by` $transpose^)? attr-dict
     `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
@@ -1545,7 +1540,7 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat = [{
-    $target attr-dict `:`
+    $target oilist(`operands_to_promote` `=` $operands_to_promote | `use_full_tile_buffers` `=` $use_full_tile_buffers | `use_full_tiles_by_default` $use_full_tiles_by_default | `use_original_subview_size` $use_original_subview_size | `use_alloca` $use_alloca | `memory_space` `(` qualified($memory_space) `)` | `mapping` `=` $mapping | `alignment` `=` $alignment) attr-dict `:`
     custom<SemiFunctionType>(type($target), type($transformed), "false")
   }];
 
@@ -1960,7 +1955,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
                       TransformHandleTypeInterface:$combining_linalg_op);
 
   let assemblyFormat =
-      "$target attr-dict `:`"
+      "$target oilist(`split_factor` `=` $split_factor | `insert_split_dimension` `=` $insert_split_dimension | `inner_parallel` $inner_parallel | `use_scaling_algorithm` $use_scaling_algorithm | `use_alloc` $use_alloc) attr-dict `:`"
       "functional-type(operands, results)";
 
   let builders = [
@@ -2079,8 +2074,7 @@ def TileReductionUsingForOp : Op<Transform_Dialect, "structured.tile_reduction_u
   let assemblyFormat = [{
     $target
     (`reduction_dims` `=` $reduction_dims^)?
-    `by` `tile_sizes` `=` $tile_sizes
-    attr-dict
+    `by` `tile_sizes` `=` $tile_sizes attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -2192,8 +2186,7 @@ def TileReductionUsingForallOp :
     `by`
     (`num_threads` `=` $num_threads^)?
     (`tile_sizes` `=` $tile_sizes^)?
-    (`mapping` `=` $mapping^)?
-    attr-dict
+    (`mapping` `=` $mapping^)? attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -2247,7 +2240,7 @@ def ContinuousTileSizesOp : Op<Transform_Dialect, "structured.continuous_tile_si
                       TransformAnyParamTypeOrAnyHandle:$chunk_sizes);
   let hasVerifier = 1;
   let assemblyFormat =
-    "$target attr-dict `:` custom<ContinuousTileSizeTypes>("
+    "$target `dimension` `=` $dimension `target_size` `=` $target_size attr-dict `:` custom<ContinuousTileSizeTypes>("
     "type($target), type($tile_sizes), type($chunk_sizes))";
 
 }
@@ -2578,7 +2571,7 @@ def VectorizeChildrenAndApplyPatternsOp :
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
-      "$target attr-dict `:`"
+      "$target oilist(`fold_type_extensions_into_contract` $fold_type_extensions_into_contract | `vectorize_padding` $vectorize_padding | `vectorize_nd_extract` $vectorize_nd_extract | `flatten_1d_depthwise_conv` $flatten_1d_depthwise_conv | `disable_multi_reduction_to_contract_patterns` $disable_multi_reduction_to_contract_patterns | `disable_transfer_permutation_map_lowering_patterns` $disable_transfer_permutation_map_lowering_patterns) attr-dict `:`"
       "functional-type(operands, results)";
 
   let builders = [
@@ -2651,9 +2644,8 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
       `vector_sizes` custom<DynamicIndexList>(
         $vector_sizes,
         $static_vector_sizes,
-        $scalable_sizes))
-    attr-dict
-    `:` type($target)(`,`type($vector_sizes)^)? 
+        $scalable_sizes)) oilist(`vectorize_nd_extract` $vectorize_nd_extract | `assume_dynamic_dims_match_vec_sizes` $assume_dynamic_dims_match_vec_sizes | `create_named_contraction` $create_named_contraction) attr-dict
+    `:` type($target)(`,`type($vector_sizes)^)?
   }];
 
   let hasVerifier = 1;
@@ -2701,7 +2693,7 @@ def HoistRedundantVectorTransfersOp :
                    UnitAttr:$verify_non_zero_trip);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
+  let assemblyFormat = "$target oilist(`verify_non_zero_trip` $verify_non_zero_trip) attr-dict `:` functional-type(operands, results) ";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -2932,8 +2924,7 @@ def TransposeMatmulOp : Op<Transform_Dialect,
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat = [{
-    $target (`<` $inputToTranspose^ `>`)?
-    attr-dict `:` functional-type($target, results)
+    $target (`<` $inputToTranspose^ `>`)? attr-dict `:` functional-type($target, results)
   }];
 
   let extraClassDeclaration = [{
@@ -3022,8 +3013,7 @@ def MapCopyToThreadsOp :
   let assemblyFormat = [{
     $target
     `total_num_threads` `=` $total_num_threads
-    `desired_bit_alignment` `=` $desired_bit_alignment
-    attr-dict
+    `desired_bit_alignment` `=` $desired_bit_alignment attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -3073,7 +3063,7 @@ def WinogradConv2DOp : Op<Transform_Dialect,
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
-    "$target attr-dict `:` functional-type($target, results)";
+    "$target `fmr` `(` $fmr `)` attr-dict `:` functional-type($target, results)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

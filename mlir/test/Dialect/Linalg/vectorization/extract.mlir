@@ -50,7 +50,7 @@ func.func @masked_static_vectorize_nd_tensor_extract_with_affine_apply_contiguou
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, 4] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, 4] vectorize_nd_extract : !transform.any_op
      transform.yield
    }
 }
@@ -111,7 +111,7 @@ func.func @masked_static_vectorize_nd_tensor_extract_with_affine_apply_contiguou
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, [4]] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, [4]] vectorize_nd_extract : !transform.any_op
      transform.yield
    }
 }
@@ -169,7 +169,7 @@ func.func @masked_dynamic_vectorize_nd_tensor_extract_with_affine_apply_contiguo
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, 4] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, 4] vectorize_nd_extract : !transform.any_op
      transform.yield
   }
 }
@@ -227,7 +227,7 @@ func.func @masked_dynamic_vectorize_nd_tensor_extract_with_affine_apply_contiguo
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, [4]] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, [4]] vectorize_nd_extract : !transform.any_op
      transform.yield
   }
 }
@@ -267,7 +267,7 @@ func.func @masked_vectorize_nd_tensor_extract_with_affine_apply_gather(%6: tenso
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, 4] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, 4] vectorize_nd_extract : !transform.any_op
      transform.yield
    }
 }
@@ -324,7 +324,7 @@ func.func @masked_dynamic_vectorize_nd_tensor_extract_with_affine_apply_gather(%
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, 4] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, 4] vectorize_nd_extract : !transform.any_op
      transform.yield
    }
 }
@@ -376,7 +376,7 @@ func.func @extract_masked_vectorize(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [3, 3] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [3, 3] vectorize_nd_extract : !transform.any_op
      transform.yield
    }
 }
@@ -421,7 +421,7 @@ func.func @tensor_extract_dynamic_shape(%arg1: tensor<123x321xf32>, %arg2: tenso
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, 3, 8] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, 3, 8] vectorize_nd_extract : !transform.any_op
      transform.yield
   }
 }
@@ -473,7 +473,7 @@ func.func @scalar_broadcast(%init : tensor<1x1x3xi32>, %src: tensor<1x3x2x4xi32>
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %module : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 vector_sizes [1, 1, 4] {vectorize_nd_extract} : !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [1, 1, 4] vectorize_nd_extract : !transform.any_op
     transform.yield
   }
 }
@@ -522,7 +522,7 @@ func.func @masked_contiguous_extract_rank_reducing_mask(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-     transform.structured.vectorize %0 vector_sizes [1, 4] {vectorize_nd_extract} : !transform.any_op
+     transform.structured.vectorize %0 vector_sizes [1, 4] vectorize_nd_extract : !transform.any_op
      transform.yield
    }
 }

@@ -56,9 +56,7 @@ module attributes {transform.with_named_sequence} {
 
     // Pad linalg.matmul.
     %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op
-        {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-         padding_dimensions=[0, 1, 2], nofold_flags=[1, 1, 1],
-         copy_back_op = "linalg.copy"}
+        padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32] padding_dimensions=[0, 1, 2] nofold_flags=[1, 1, 1] copy_back_op = "linalg.copy"
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // Map and tile tensor.pad.
@@ -85,7 +83,7 @@ module attributes {transform.with_named_sequence} {
 
     // Assign shared memory buffer to padding.
     %buffer, %new_ops = transform.structured.bufferize_to_allocation
-        %pad_forall_op {memory_space = 3, bufferize_destination_only, emit_dealloc}
+        %pad_forall_op memory_space = 3 bufferize_destination_only emit_dealloc
         : !transform.any_op
 
     // Bufferize.
@@ -95,7 +93,7 @@ module attributes {transform.with_named_sequence} {
     transform.apply_dce to %func_op_1 : !transform.any_op
     transform.apply_cse to %func_op_1 : !transform.any_op
     %bufferized = transform.bufferization.one_shot_bufferize
-        layout{IdentityLayoutMap} %arg1 {bufferize_function_boundaries=true}
+        layout{IdentityLayoutMap} %arg1 <{bufferize_function_boundaries = true}>
         : (!transform.any_op) -> !transform.any_op
 
     // Apply vectorization to copy back from shared memory.
@@ -113,7 +111,7 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %func_op_2 {
       transform.apply_patterns.canonicalization
       transform.apply_patterns.vector.lower_masked_transfers
-    } {apply_cse} : !transform.any_op
+    } apply_cse : !transform.any_op
     transform.yield
   }
 }
@@ -175,9 +173,7 @@ module attributes {transform.with_named_sequence} {
 
     // Pad linalg.matmul.
     %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op
-        {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-         padding_dimensions=[0, 1, 2], nofold_flags=[1, 1, 1],
-         copy_back_op = "linalg.copy"}
+        padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32] padding_dimensions=[0, 1, 2] nofold_flags=[1, 1, 1] copy_back_op = "linalg.copy"
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // Map and tile tensor.pad.
@@ -199,7 +195,7 @@ module attributes {transform.with_named_sequence} {
 
     // Assign shared memory buffer to padding.
     %buffer, %new_ops = transform.structured.bufferize_to_allocation
-        %pad_forall_op {memory_space = 3, bufferize_destination_only, emit_dealloc}
+        %pad_forall_op memory_space = 3 bufferize_destination_only emit_dealloc
         : !transform.any_op
 
     // Bufferize.
@@ -209,7 +205,7 @@ module attributes {transform.with_named_sequence} {
     transform.apply_dce to %func_op_1 : !transform.any_op
     transform.apply_cse to %func_op_1 : !transform.any_op
     %bufferized = transform.bufferization.one_shot_bufferize
-        layout{IdentityLayoutMap} %arg1 {bufferize_function_boundaries=true}
+        layout{IdentityLayoutMap} %arg1 <{bufferize_function_boundaries = true}>
         : (!transform.any_op) -> !transform.any_op
 
     // Apply vectorization to copy back from shared memory.
@@ -227,7 +223,7 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %func_op_2 {
       transform.apply_patterns.canonicalization
       transform.apply_patterns.vector.lower_masked_transfers
-    } {apply_cse} : !transform.any_op
+    } apply_cse : !transform.any_op
     transform.yield
   }
 }
