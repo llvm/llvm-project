@@ -31,6 +31,7 @@ public:
 class OverloadedAutoLambdaTest : public BaseOverloadedAutoLambdaTest {
 public:
   void CallFunVar();
+  // CHECK-FIXES: static void CallFunVar();
   void LambdaUsesThis1(int a);
   void LambdaUsesThis2(int a);
   void LambdaUsesThis3(int a);
@@ -38,10 +39,15 @@ public:
   void LambdaUsesThis5();
 
   void LambdaNoThis1(int a);
+  // CHECK-FIXES: static void LambdaNoThis1(int a);
   void LambdaNoThis2(int a);
+  // CHECK-FIXES: static void LambdaNoThis2(int a);
   void LambdaNoThis3(int a);
+  // CHECK-FIXES: static void LambdaNoThis3(int a);
   void LambdaNoThis4(int a);
+  // CHECK-FIXES: static void LambdaNoThis4(int a);
   void LambdaNoThis5(int a);
+  // CHECK-FIXES: static void LambdaNoThis5(int a);
 
   void OverloadedMethod();
   void OverloadedMethod(int a) { };
