@@ -30,7 +30,7 @@ import struct
 import sys
 import os
 
-# EBCDIC / ASCII conversion table
+# EBCDIC / ASCII conversion table.
 # fmt: off
 ASCII_TO_EBCDIC_TABLE = (
     0x00,0x01,0x02,0x03,0x37,0x2D,0x2E,0x2F,0x16,0x05,0x15,0x0B,0x0C,0x0D,0x0E,0x0F,
@@ -58,13 +58,13 @@ def ebcdic_pad(s, width, pad_char=" "):
     return ascii_to_ebcdic(ascii_padded)
 
 
-# z/OS archive magic: "!<arch>\n" in EBCDIC
+# z/OS archive magic: "!<arch>\n" in EBCDIC.
 ZOS_MAGIC = b"\x5a\x4c\x81\x99\x83\x88\x6e\x15"
 
-# Terminator: "`\n" in EBCDIC
+# Terminator: "`\n" in EBCDIC.
 ZOS_TERMINATOR = b"\x79\x15"
 
-# EBCDIC newline for padding
+# EBCDIC newline for padding.
 EBCDIC_NEWLINE = b"\x15"
 
 
@@ -94,7 +94,7 @@ def make_member_header(
       ar_fmag:   2 bytes (terminator)
     Total: 60 bytes
     """
-    # Handle long names
+    # Handle long names.
     long_name_ext = b""
     if len(name) > 16:
         name_ebcdic = ascii_to_ebcdic(name)
@@ -210,7 +210,7 @@ def build_archive(args):
     if args.empty:
         return bytes(output)
 
-    # Parse members
+    # Parse members.
     members = []
     if args.member:
         for m in args.member:
@@ -219,10 +219,10 @@ def build_archive(args):
             if len(parts) > 1:
                 data = parse_member_data(parts[1])
             else:
-                data = b"\x00" * 16  # Dummy content
+                data = b"\x00" * 16  # Dummy content.
             members.append((name, data))
 
-    # Parse symbols
+    # Parse symbols.
     symbols = []
     if args.symtab:
         for s in args.symtab:
@@ -243,11 +243,11 @@ def build_archive(args):
             )
         symtab_hdr_kwargs[_SYMTAB_HDR_MALFORMATIONS[key]] = True
 
-    # Phase 1: Compute member offsets
-    # Start after magic
+    # Phase 1: Compute member offsets.
+    # Start after magic.
     pos = len(ZOS_MAGIC)
 
-    # If we have a symbol table, it comes first
+    # If we have a symbol table, it comes first.
     symtab_body = None
     has_symtab = (
         symbols
@@ -265,19 +265,19 @@ def build_archive(args):
         elif args.symtab_bad_count:
             symtab_body = make_symtab([], [], bad_count=True)
         elif args.symtab_no_symbols:
-            symtab_body = struct.pack(">I", 0)  # 0 symbols
+            symtab_body = struct.pack(">I", 0)  # 0 symbols.
         else:
             placeholder_offsets = [0] * (len(members) + 1)
             symtab_body = make_symtab(symbols, placeholder_offsets)
 
-        symtab_hdr_size = 60  # Fixed header for __.SYMDEF
+        symtab_hdr_size = 60  # Fixed header for __.SYMDEF.
         symtab_total = symtab_hdr_size + len(symtab_body)
-        # Padding to even boundary
+        # Padding to even boundary.
         if symtab_total % 2 != 0:
             symtab_total += 1
         pos += symtab_total
 
-    # Compute member offsets
+    # Compute member offsets.
     member_offsets = []
     for name, data in members:
         member_offsets.append(pos)
@@ -294,14 +294,14 @@ def build_archive(args):
     if symbols and not args.symtab_truncated and not args.symtab_bad_count:
         symtab_body = make_symtab(symbols, member_offsets)
 
-    # Phase 2: Write output
+    # Phase 2: Write output.
     if symtab_body is not None:
         symtab_hdr = make_member_header(
             "__.SYMDEF", 0, 0, 0, 0, len(symtab_body), **symtab_hdr_kwargs
         )
         output += symtab_hdr
         output += symtab_body
-        # Pad to even boundary
+        # Pad to even boundary.
         if len(output) % 2 != 0:
             output += EBCDIC_NEWLINE
 

@@ -1638,14 +1638,18 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
     StringRef EbcdicSymbolTable = BufOrErr.get();
     if (EbcdicSymbolTable.size() < sizeof(uint32_t)) {
       Err = malformedError(
-          "z/OS symbol table is too small to read the symbol count");
+          "z/OS archive symbol table is too small to read the symbol count, "
+          "size is " + Twine(EbcdicSymbolTable.size()));       
       return;
     }
     uint64_t EbcdicSymbolCount = read32be(EbcdicSymbolTable.data());
     uint64_t OffsetToEbcdicNames =
         sizeof(uint32_t) + (EbcdicSymbolCount * (sizeof(uint64_t)));
     if (OffsetToEbcdicNames > EbcdicSymbolTable.size()) {
-      Err = malformedError("z/OS symbol table count exceeds buffer size");
+      Err = malformedError("z/OS archive symbol table names offset " +
+                     Twine(OffsetToEbcdicNames) +
+                     " exceeds symbol table size " +
+                     Twine(EbcdicSymbolTable.size()));
       return;
     }
     uint64_t EbcdicNamesSize = EbcdicSymbolTable.size() - OffsetToEbcdicNames;
