@@ -453,6 +453,12 @@ public:
     return llvm::computeKnownBits(V, SQ.getWithInstruction(CxtI), Depth);
   }
 
+  KnownBits computeKnownBits(const Value *V, const Instruction *CtxI,
+                             bool AllowEphemerals) const {
+    return llvm::computeKnownBits(
+        V, SQ.getWithInstruction(CtxI).allowEphemerals(AllowEphemerals));
+  }
+
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
                               const Instruction *CxtI = nullptr,
                               unsigned Depth = 0) {

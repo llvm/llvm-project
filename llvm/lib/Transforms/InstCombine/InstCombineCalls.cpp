@@ -3677,10 +3677,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Compute known bits for the pointer, passing nullptr as context to
         // avoid computeKnownBits using the assumption we are about to remove
         // for reasoning.
-        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
-        unsigned TZ = std::min(Known.countMinTrailingZeros(),
-                               Value::MaxAlignmentExponent);
-        if ((1ULL << TZ) < RK.ArgValue)
+        KnownBits Known =
+            computeKnownBits(RK.WasOn, II, /*AllowEphemerals=*/false);
+        if ((1ULL << Known.countMinTrailingZeros()) < RK.ArgValue)
           continue;
         return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
