@@ -260,3 +260,27 @@ func.func @test_rb_optional_ref_outside_target(%arg0: !fir.ref<i32> {fir.bindc_n
   %join = fir.convert %slot {test.ptr = "opt_join_tgt"} : (!fir.ref<i32>) -> !fir.ref<i32>
   return
 }
+
+// -----
+
+// Add loop test whose result is based on BlockArguments to ensure
+// no cycle.
+// CHECK-LABEL: Testing : "test_rb_do_loop_iter_carry_ref"
+// CHECK-DAG: carry_init#0 <-> outside_loop#0: NoAlias
+// CHECK-DAG: carry_init#0 <-> loop_join_ref#0: MayAlias
+// CHECK-DAG: outside_loop#0 <-> loop_join_ref#0: MayAlias
+
+func.func @test_rb_do_loop_iter_carry_ref() {
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 2 : index
+  %st = arith.constant 1 : index
+  %a_carry = fir.alloca f32 {uniq_name = "_QFEcarry"}
+  %d_carry = fir.declare %a_carry {uniq_name = "_QFEcarry", test.ptr = "carry_init"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %a_out = fir.alloca f32 {uniq_name = "_QFEoutside"}
+  %d_out = fir.declare %a_out {uniq_name = "_QFEoutside", test.ptr = "outside_loop"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %loop_res = fir.do_loop %iv = %lb to %ub step %st iter_args(%carry = %d_carry) -> (!fir.ref<f32>) {
+    fir.result %carry : !fir.ref<f32>
+  }
+  %join = fir.convert %loop_res {test.ptr = "loop_join_ref"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  return
+}
