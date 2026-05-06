@@ -49,5 +49,4 @@ body:             |
     %orig_next:vgpr_32 = COPY %tmp, implicit $exec
 
     S_BRANCH %bb.1
-
 ...
