@@ -183,6 +183,32 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
         return dpasOp.getLayoutCdAttr();
       }
     }
+    if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
+      // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional
+      // scale_b Use AttrSizedOperandSegments to determine which operand this is
+      auto segmentSizesAttr = dpasMxOp->getAttrOfType<DenseI32ArrayAttr>(
+          dpasMxOp.getOperandSegmentSizesAttrName());
+      if (!segmentSizesAttr)
+        return nullptr;
+
+      auto segmentSizes = segmentSizesAttr.asArrayRef();
+      unsigned aSize = segmentSizes[0];
+      unsigned bSize = segmentSizes[1];
+      unsigned accSize = segmentSizes[2];
+      unsigned scaleASize = segmentSizes[3];
+
+      if (idx < aSize) {
+        return dpasMxOp.getLayoutAAttr();
+      } else if (idx < aSize + bSize) {
+        return dpasMxOp.getLayoutBAttr();
+      } else if (idx < aSize + bSize + accSize) {
+        return dpasMxOp.getLayoutCdAttr();
+      } else if (idx < aSize + bSize + accSize + scaleASize) {
+        return dpasMxOp.getLayoutAScaleAttr();
+      } else {
+        return dpasMxOp.getLayoutBScaleAttr();
+      }
+    }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
       return convertOp.getInputLayoutAttr();
     }
@@ -191,13 +217,27 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (idx == 0)
       return layout;
 
-    // For store operations (StoreScatterOp, StoreNdOp, StoreMatrixOp),
+    // For StoreNdOp and StoreMatrixOp,
     // the layout is valid for the first two operands: value and memref/tdesc.
-    // For other operations, the layout applies to the first operand only.
-    if (isa<xegpu::StoreScatterOp, xegpu::StoreNdOp, xegpu::StoreMatrixOp>(
-            op) &&
-        (idx < 2))
+    if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
+
+    if (isa<xegpu::StoreScatterOp>(op)) {
+      xegpu::StoreScatterOp store(op);
+      int chunkSize = store.getChunkSize().value_or(1);
+      if (layout && idx >= 2 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
+    if (isa<xegpu::LoadGatherOp>(op)) {
+      xegpu::LoadGatherOp load(op);
+      int chunkSize = load.getChunkSize().value_or(1);
+      if (layout && idx >= 1 && chunkSize > 1)
+        return layout.dropDims(llvm::to_vector(
+            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+      return layout;
+    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);

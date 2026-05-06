@@ -1,4 +1,4 @@
-//===- EntityPointerLevel.cpp ----------------------------------*- C++ -*-===//
+//===- EntityPointerLevel.cpp -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,36 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
+#include "SSAFAnalysesCommon.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
+#include <map>
+#include <optional>
 
 using namespace clang;
 using namespace ssaf;
-
-static bool hasPointerType(const Expr *E) {
-  auto Ty = E->getType();
-  return !Ty.isNull() && !Ty->isFunctionPointerType() &&
-         (Ty->isPointerType() || Ty->isArrayType());
-}
-
-static llvm::Error makeUnsupportedStmtKindError(const Stmt *Unsupported) {
-  return llvm::createStringError(
-      "unsupported expression kind for translation to "
-      "EntityPointerLevel: %s",
-      Unsupported->getStmtClassName());
-}
-
-static llvm::Error makeCreateEntityNameError(const NamedDecl *FailedDecl,
-                                             ASTContext &Ctx) {
-  std::string LocStr = FailedDecl->getSourceRange().getBegin().printToString(
-      Ctx.getSourceManager());
-  return llvm::createStringError(
-      "failed to create entity name for %s declared at %s",
-      FailedDecl->getNameAsString().c_str(), LocStr.c_str());
-}
 
 namespace clang::ssaf {
 // Translate a pointer type expression 'E' to a (set of) EntityPointerLevel(s)
@@ -65,26 +46,19 @@ class EntityPointerLevelTranslator
 
   // Fallback method for all unsupported expression kind:
   llvm::Error fallback(const Stmt *E) {
-    return makeUnsupportedStmtKindError(E);
-  }
-
-  static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
-    return EntityPointerLevel(E.getEntity(), E.getPointerLevel() + 1);
-  }
-
-  static EntityPointerLevel decrementPointerLevel(const EntityPointerLevel &E) {
-    assert(E.getPointerLevel() > 0);
-    return EntityPointerLevel(E.getEntity(), E.getPointerLevel() - 1);
+    return makeErrAtNode(Ctx, E,
+                         "attempt to translate %s to EntityPointerLevels",
+                         E->getStmtClassName());
   }
 
   EntityPointerLevel createEntityPointerLevelFor(const EntityName &Name) {
-    return EntityPointerLevel(AddEntity(Name), 1);
+    return EntityPointerLevel({AddEntity(Name), 1});
   }
 
   // The common helper function for Translate(*base):
   // Translate(*base) -> Translate(base) with .pointerLevel + 1
   Expected<EntityPointerLevelSet> translateDereferencePointer(const Expr *Ptr) {
-    assert(hasPointerType(Ptr));
+    assert(hasPtrOrArrType(Ptr));
 
     Expected<EntityPointerLevelSet> SubResult = Visit(Ptr);
     if (!SubResult)
@@ -103,6 +77,29 @@ public:
       : AddEntity(AddEntity), Ctx(Ctx) {}
 
   Expected<EntityPointerLevelSet> translate(const Expr *E) { return Visit(E); }
+  Expected<EntityPointerLevel> translate(const NamedDecl *D, bool IsRet) {
+    if (IsRet && !isa<FunctionDecl>(D))
+      return makeErrAtNode(
+          Ctx, D,
+          "attempt to call getEntityNameForReturn on a NamedDecl of %s kind",
+          D->getDeclKindName());
+
+    std::optional<EntityName> EN =
+        IsRet ? getEntityNameForReturn(cast<FunctionDecl>(D))
+              : getEntityName(D);
+    if (EN)
+      return createEntityPointerLevelFor(*EN);
+    return makeEntityNameErr(Ctx, D);
+  }
+
+  static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
+    return EntityPointerLevel({E.getEntity(), E.getPointerLevel() + 1});
+  }
+
+  static EntityPointerLevel decrementPointerLevel(const EntityPointerLevel &E) {
+    assert(E.getPointerLevel() > 0);
+    return EntityPointerLevel({E.getEntity(), E.getPointerLevel() - 1});
+  }
 
 private:
   Expected<EntityPointerLevelSet> VisitStmt(const Stmt *E) {
@@ -117,7 +114,7 @@ private:
   Expected<EntityPointerLevelSet> VisitBinaryOperator(const BinaryOperator *E) {
     switch (E->getOpcode()) {
     case clang::BO_Add:
-      if (hasPointerType(E->getLHS()))
+      if (hasPtrOrArrType(E->getLHS()))
         return Visit(E->getLHS());
       return Visit(E->getRHS());
     case clang::BO_Sub:
@@ -159,10 +156,10 @@ private:
     }
   }
 
-  // Translate((T*)base) -> Translate(p) if p has pointer type
+  // Translate((T*)base) -> Translate(base) if base has pointer type
   //                     -> {} otherwise
   Expected<EntityPointerLevelSet> VisitCastExpr(const CastExpr *E) {
-    if (hasPointerType(E->getSubExpr()))
+    if (hasPtrOrArrType(E->getSubExpr()))
       return Visit(E->getSubExpr());
     return EntityPointerLevelSet{};
   }
@@ -215,14 +212,20 @@ private:
   Expected<EntityPointerLevelSet> VisitDeclRefExpr(const DeclRefExpr *E) {
     if (auto EntityName = getEntityName(E->getDecl()))
       return EntityPointerLevelSet{createEntityPointerLevelFor(*EntityName)};
-    return makeCreateEntityNameError(E->getDecl(), Ctx);
+    return makeEntityNameErr(Ctx, E->getDecl());
   }
 
   // Translate({., ->}f) -> {(MemberDecl, 1)}
   Expected<EntityPointerLevelSet> VisitMemberExpr(const MemberExpr *E) {
     if (auto EntityName = getEntityName(E->getMemberDecl()))
       return EntityPointerLevelSet{createEntityPointerLevelFor(*EntityName)};
-    return makeCreateEntityNameError(E->getMemberDecl(), Ctx);
+    return makeEntityNameErr(Ctx, E->getMemberDecl());
+  }
+
+  // Translate(`DefaultArg`) -> Translate(`DefaultArg->getExpr()`)
+  Expected<EntityPointerLevelSet>
+  VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
+    return Visit(E->getExpr());
   }
 
   Expected<EntityPointerLevelSet>
@@ -234,10 +237,24 @@ private:
 
 Expected<EntityPointerLevelSet> clang::ssaf::translateEntityPointerLevel(
     const Expr *E, ASTContext &Ctx,
-    std::function<EntityId(EntityName EN)> AddEntity) {
+    llvm::function_ref<EntityId(EntityName EN)> AddEntity) {
   EntityPointerLevelTranslator Translator(AddEntity, Ctx);
 
   return Translator.translate(E);
+}
+
+/// Create an EntityPointerLevel from a ValueDecl of a pointer type.
+Expected<EntityPointerLevel> clang::ssaf::createEntityPointerLevel(
+    const NamedDecl *ND, llvm::function_ref<EntityId(EntityName EN)> AddEntity,
+    bool IsFunRet) {
+  EntityPointerLevelTranslator Translator(AddEntity, ND->getASTContext());
+
+  return Translator.translate(ND, IsFunRet);
+}
+
+EntityPointerLevel
+clang::ssaf::incrementPointerLevel(const EntityPointerLevel &E) {
+  return EntityPointerLevelTranslator::incrementPointerLevel(E);
 }
 
 EntityPointerLevel clang::ssaf::buildEntityPointerLevel(EntityId Id,

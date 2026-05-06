@@ -106,15 +106,6 @@ add_header_library(
 )
 
 add_header_library(
-  bit
-  HDRS
-    bit.h
-  DEPENDS
-    libc.src.__support.macros.attributes
-    libc.src.__support.CPP.type_traits
-)
-
-add_header_library(
   math_extras
   HDRS
     math_extras.h
@@ -149,6 +140,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
 )
 
 add_header_library(

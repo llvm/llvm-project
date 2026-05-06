@@ -13,6 +13,23 @@
 
 #pragma clang riscv intrinsic sifive_vector
 
+#define __riscv_intrinsic_xsfmm32a16f 1
+#define __riscv_intrinsic_xsfmm32a32f 1
+#define __riscv_intrinsic_xsfmm32a8f 1
+#define __riscv_intrinsic_xsfmm32a8i 1
+#define __riscv_intrinsic_xsfmm64a64f 1
+#define __riscv_intrinsic_xsfmmbase 1
+#define __riscv_intrinsic_xsfvcp 1
+#define __riscv_intrinsic_xsfvfbfexp16e 1
+#define __riscv_intrinsic_xsfvfexp16e 1
+#define __riscv_intrinsic_xsfvfexp32e 1
+#define __riscv_intrinsic_xsfvfexpa 1
+#define __riscv_intrinsic_xsfvfexpa64e 1
+#define __riscv_intrinsic_xsfvfnrclipxfqf 1
+#define __riscv_intrinsic_xsfvfwmaccqqq 1
+#define __riscv_intrinsic_xsfvqmaccdod 1
+#define __riscv_intrinsic_xsfvqmaccqoq 1
+
 #define __riscv_sf_vc_x_se_u8mf4(p27_26, p24_20, p11_7, rs1, vl)               \
   __riscv_sf_vc_x_se(p27_26, p24_20, p11_7, (uint8_t)rs1, 8, 6, vl)
 #define __riscv_sf_vc_x_se_u8mf2(p27_26, p24_20, p11_7, rs1, vl)               \

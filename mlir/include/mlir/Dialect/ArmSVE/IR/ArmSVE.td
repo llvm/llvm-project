@@ -81,10 +81,11 @@ class ArmSVE_IntrOp<string mnemonic,
                     list<int> overloadedResults = [],
                     int numResults = 1,
                     list<int> immArgPositions = [],
-                    list<string> immArgAttrNames = []> :
+                    list<string> immArgAttrNames = [],
+                    string enumName = "aarch64_sve_" # !subst(".", "_", mnemonic) > :
   LLVM_IntrOpBase</*Dialect dialect=*/ArmSVE_Dialect,
                   /*string opName=*/"intr." # mnemonic,
-                  /*string enumName=*/"aarch64_sve_" # !subst(".", "_", mnemonic),
+                  /*string enumName=*/enumName,
                   /*list<int> overloadedResults=*/overloadedResults,
                   /*list<int> overloadedOperands=*/overloadedOperands,
                   /*list<Trait> traits=*/traits,
@@ -297,7 +298,13 @@ def UsmmlaOp : ArmSVE_Op<"usmmla", [Pure,
 def BfmmlaOp : ArmSVE_IntrOp<"bfmmla", [Pure,
                                         AllTypesMatch<["src1", "src2"]>,
                                         AllTypesMatch<["acc", "res"]>,
-                                        ]> {
+                                        ],
+                                        /*overloadedOperands=*/[1],
+                                        /*overloadedResults=*/[0],
+                                        /*numResults=*/1,
+                                        /*immArgPositions=*/[],
+                                        /*immArgAttrNames=*/[],
+                                        /*enumName=*/"aarch64_sve_fmmla"> {
   let summary = "BFloat16 matrix multiply-accumulate";
   let description = [{
     BFMMLA: BFloat16 matrix multiply-accumulate into 2×2 matrices";

@@ -152,16 +152,15 @@ typedef struct user_fpregs elf_fpregset_t;
 #if defined(__mips64)
 # include <sys/procfs.h>
 #endif
-#include <sys/user.h>
-#include <linux/if_eql.h>
-#include <linux/if_plip.h>
-#include <linux/lp.h>
-#include <linux/mroute.h>
-#include <linux/mroute6.h>
-#include <linux/scc.h>
-#include <linux/serial.h>
-#include <sys/msg.h>
-#include <sys/ipc.h>
+#      include <linux/if_eql.h>
+#      include <linux/if_plip.h>
+#      include <linux/lp.h>
+#      include <linux/mroute.h>
+#      include <linux/mroute6.h>
+#      include <linux/serial.h>
+#      include <sys/ipc.h>
+#      include <sys/msg.h>
+#      include <sys/user.h>
 #endif  // SANITIZER_ANDROID
 
 #include <link.h>
@@ -537,8 +536,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_kbsentry_sz = sizeof(struct kbsentry);
   unsigned struct_mtconfiginfo_sz = sizeof(struct mtconfiginfo);
   unsigned struct_nr_parms_struct_sz = sizeof(struct nr_parms_struct);
-  unsigned struct_scc_modem_sz = sizeof(struct scc_modem);
-  unsigned struct_scc_stat_sz = sizeof(struct scc_stat);
   unsigned struct_serial_multiport_struct_sz
       = sizeof(struct serial_multiport_struct);
   unsigned struct_serial_struct_sz = sizeof(struct serial_struct);

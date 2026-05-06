@@ -222,6 +222,71 @@ def OpenACC_FirstprivateMapInitialOp
 }
 
 //===----------------------------------------------------------------------===//
+// acc.privatize
+//===----------------------------------------------------------------------===//
+
+def OpenACC_PrivatizeOp : OpenACC_Op<"privatize", []> {
+  let summary = "Create a handle for privatized storage along parallel dimensions";
+  let description = [{
+    Introduces a privatization handle for storage that varies across the active
+    parallel dimensions (for example OpenACC `private` / `firstprivate` after
+    recipe materialization). The handle type is `acc.private_type<T>` where
+    `T` is the logical storage type (commonly a `memref`).
+
+    Optional `index` operands supply dynamic sizes when the privatized shape
+    depends on SSA values (for example `memref<?xi32>` row lengths).
+
+    The optional `acc.par_dims` attribute records which GPU parallel dimensions
+    participate in the privatization.
+  }];
+  let arguments = (ins Variadic<Index>:$dynamicSizes,
+                       OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
+  let results = (outs OpenACC_PrivateType:$result);
+  let assemblyFormat = [{
+    (`(` $dynamicSizes^ `)`)? (`[` qualified($par_dims)^ `]`)? attr-dict `:` functional-type(operands, results)
+  }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$resultType,
+                   CArg<"::mlir::ValueRange", "{}">:$dynamicSizes), [{
+      $_state.addTypes(resultType);
+      $_state.addOperands(dynamicSizes);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.private_local
+//===----------------------------------------------------------------------===//
+
+def OpenACC_PrivateLocalOp
+    : OpenACC_Op<"private_local", [NoMemoryEffect, AlwaysSpeculatable]> {
+  let summary = "Materialize privatized storage for the current parallelism context";
+  let description = [{
+    Given a value of type `acc.private_type<T>`, materializes the underlying
+    storage (typically a `memref`) for the current thread / iteration. Which
+    slice of the privatized allocation is selected is determined by surrounding
+    parallelism assigned in the context.
+
+    The result type is usually `T` (often a `memref` that matches the logical
+    storage type). The result may instead use a different surface type that
+    still aliases the same underlying storage as `T`; in that case passes that
+    consume this operation must treat the handle type and the result type as
+    describing the same storage layout.
+  }];
+  let arguments = (ins OpenACC_PrivateType:$privatized);
+  let results = (outs AnyType:$output);
+  let assemblyFormat = [{
+    $privatized attr-dict `:` functional-type(operands, results)
+  }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$resultType, "::mlir::Value":$privatized), [{
+      $_state.addOperands(privatized);
+      $_state.addTypes(resultType);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // acc.par_width
 //===----------------------------------------------------------------------===//
 

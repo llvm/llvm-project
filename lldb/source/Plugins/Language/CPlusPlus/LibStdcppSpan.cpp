@@ -42,7 +42,7 @@ public:
     uint64_t offset = (static_cast<uint64_t>(idx) * m_element_size);
     offset += m_start->GetValueAsUnsigned(0);
     const std::string name = llvm::formatv("[{0}]", idx);
-    return CreateValueObjectFromAddress(
+    return CreateChildValueObjectFromAddress(
         name, offset, m_backend.GetExecutionContextRef(), m_element_type);
   }
 

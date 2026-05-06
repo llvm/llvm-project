@@ -17,16 +17,16 @@ define void @_Z3foov() !dbg !9 {
 !5 = distinct !{}
 !6 = distinct !{}
 
-; CHECK: !7 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !8)
-!7 = distinct !DISubprogram(unit: !8)
+; CHECK: !7 = distinct !DISubprogram(scope: null, type: !3, spFlags: DISPFlagDefinition, unit: !8)
+!7 = distinct !DISubprogram(unit: !8, type: !3)
 
 !8 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !2,
                              isOptimized: true, flags: "-O2",
                              splitDebugFilename: "abc.debug", emissionKind: 2)
 
-; CHECK: !9 = distinct !DISubprogram(scope: null, spFlags: 0)
-!9 = distinct !DISubprogram(isDefinition: false)
+; CHECK: !9 = distinct !DISubprogram(scope: null, type: !3, spFlags: 0)
+!9 = distinct !DISubprogram(isDefinition: false, type: !3)
 
 ; CHECK: !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1, file: !2, line: 7, type: !3, scopeLine: 8, containingType: !4, virtualIndex: 10, thisAdjustment: 3, flags: DIFlagPrototyped | DIFlagNoReturn, spFlags: DISPFlagPureVirtual | DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !8, templateParams: !5, declaration: !9, retainedNodes: !6)
 !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,

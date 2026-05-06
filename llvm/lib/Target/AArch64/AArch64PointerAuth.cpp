@@ -184,32 +184,33 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     }
     MBB.erase(TI);
-  } else {
-    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-      assert(PACSym && "No PAC instruction to refer to");
-      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
-      BuildMI(MBB, MBBI, DL,
-              TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
-          .addSym(PACSym)
-          .setMIFlag(MachineInstr::FrameDestroy);
-    } else {
-      if (MFnI->branchProtectionPAuthLR()) {
-        emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
-            .setMIFlag(MachineInstr::FrameDestroy);
-        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
-      }
-      BuildMI(MBB, MBBI, DL,
-              TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
-          .setMIFlag(MachineInstr::FrameDestroy);
-      if (!MFnI->branchProtectionPAuthLR())
-        emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
-    }
+    return;
+  }
 
-    if (NeedsWinCFI) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
+  if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+    assert(PACSym && "No PAC instruction to refer to");
+    emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+    BuildMI(MBB, MBBI, DL,
+            TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
+        .addSym(PACSym)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  } else {
+    if (MFnI->branchProtectionPAuthLR()) {
+      emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
           .setMIFlag(MachineInstr::FrameDestroy);
+      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
     }
+    BuildMI(MBB, MBBI, DL,
+            TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
+        .setMIFlag(MachineInstr::FrameDestroy);
+    if (!MFnI->branchProtectionPAuthLR())
+      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+  }
+
+  if (NeedsWinCFI) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 }
 
