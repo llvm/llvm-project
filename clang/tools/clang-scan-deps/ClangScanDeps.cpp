@@ -108,6 +108,7 @@ static constexpr bool DoRoundTripDefault = false;
 #endif
 
 static bool RoundTripArgs = DoRoundTripDefault;
+static bool NoFlushModuleCache = false;
 static bool VerbatimArgs = false;
 
 static void ParseArgs(int argc, char **argv) {
@@ -241,6 +242,8 @@ static void ParseArgs(int argc, char **argv) {
   AsyncScanModules = Args.hasArg(OPT_async_scan_modules);
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
+
+  NoFlushModuleCache = Args.hasArg(OPT_no_flush_module_cache);
 
   VerbatimArgs = Args.hasArg(OPT_verbatim_args);
 
@@ -1157,29 +1160,34 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   // Within P1689 format, we don't want all the paths to be absolute path
   // since it may violate the traditional make style dependencies info.
   Opts.ReportAbsolutePaths = Format != ScanningOutputFormat::P1689;
+  Opts.ReportVisibleModules = EmitVisibleModules;
   Opts.EagerLoadModules = EagerLoadModules;
   Opts.TraceVFS = Verbose;
   Opts.AsyncScanModules = AsyncScanModules;
-  DependencyScanningService Service(std::move(Opts));
+  Opts.FlushModuleCache = !NoFlushModuleCache;
 
   llvm::Timer T;
   T.startTimer();
 
-  if (Inputs.size() == 1) {
-    ScanningTask(Service);
-  } else {
-    llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+  {
+    DependencyScanningService Service(std::move(Opts));
 
-    if (Verbose) {
-      llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                   << " files using " << Pool.getMaxConcurrency()
-                   << " workers\n";
+    if (Inputs.size() == 1) {
+      ScanningTask(Service);
+    } else {
+      llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+
+      if (Verbose) {
+        llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
+                     << " files using " << Pool.getMaxConcurrency()
+                     << " workers\n";
+      }
+
+      for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
+        Pool.async([ScanningTask, &Service]() { ScanningTask(Service); });
+
+      Pool.wait();
     }
-
-    for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
-      Pool.async([ScanningTask, &Service]() { ScanningTask(Service); });
-
-    Pool.wait();
   }
 
   T.stopTimer();

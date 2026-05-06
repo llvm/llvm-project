@@ -98,7 +98,14 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
             });
       });
 
-  auto vec1 = vector::LoadOp::create(rewriter, loc, flatTy, srcBuff, indexVals);
+  int64_t srcRank = (dyn_cast<ShapedType>(srcBuff.getType())).getRank();
+  Value padding = ub::PoisonOp::create(rewriter, loc, elemTy);
+  auto map = AffineMap::getMinorIdentityMap(srcRank, flatTy.getRank(),
+                                            rewriter.getContext());
+  SmallVector<bool> inBounds(flatTy.getRank(), true);
+
+  auto vec1 = vector::TransferReadOp::create(rewriter, loc, flatTy, srcBuff,
+                                             indexVals, padding, map, inBounds);
 
   unsigned int offset = 1;
   if (elemTy.isSignlessInteger(8))
@@ -110,7 +117,8 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
                             indexVals[indexVals.size() - 2]);
   indexVals[indexVals.size() - 2] = nextIndx;
 
-  auto vec2 = vector::LoadOp::create(rewriter, loc, flatTy, srcBuff, indexVals);
+  auto vec2 = vector::TransferReadOp::create(rewriter, loc, flatTy, srcBuff,
+                                             indexVals, padding, map, inBounds);
 
   static constexpr int64_t maskLo_bf16[] = {
       0,  32, 1,  33, 2,  34, 3,  35, 8,  40, 9,  41, 10, 42, 11, 43,

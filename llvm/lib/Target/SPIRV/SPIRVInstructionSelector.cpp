@@ -200,6 +200,9 @@ private:
   bool selectBitreverse16(Register ResVReg, SPIRVTypeInst ResType,
                           MachineInstr &I, Register Op) const;
 
+  bool selectBitreverse64(Register ResVReg, SPIRVTypeInst ResType,
+                          MachineInstr &I, Register SrcReg) const;
+
   bool selectBitreverseNative(Register ResVReg, SPIRVTypeInst ResType,
                               MachineInstr &I, Register Op) const;
 
@@ -345,6 +348,8 @@ private:
 
   bool diagnoseUnsupported(const MachineInstr &I, const Twine &Msg) const;
 
+  bool selectAbort(MachineInstr &I) const;
+  bool selectTrap(MachineInstr &I) const;
   bool selectFrameIndex(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
   bool selectAllocaArray(Register ResVReg, SPIRVTypeInst ResType,
@@ -454,6 +459,8 @@ private:
   // Utilities
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             SPIRVTypeInst ResType = nullptr) const;
+  Register buildI32ConstantInEntryBlock(uint32_t Val, MachineInstr &I,
+                                        SPIRVTypeInst ResType = nullptr) const;
 
   Register buildZerosVal(SPIRVTypeInst ResType, MachineInstr &I) const;
   bool isScalarOrVectorIntConstantZero(Register Reg) const;
@@ -1372,11 +1379,13 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(I);
 
+  case TargetOpcode::G_TRAP:
+  case TargetOpcode::G_UBSANTRAP:
+    return selectTrap(I);
+
   // Discard gen opcodes for intrinsics which we do not expect to actually
   // represent code after lowering or intrinsics which are not implemented but
   // should not crash when found in a customer's LLVM IR input.
-  case TargetOpcode::G_TRAP:
-  case TargetOpcode::G_UBSANTRAP:
   case TargetOpcode::DBG_LABEL:
     return true;
   case TargetOpcode::G_DEBUGTRAP:
@@ -1704,29 +1713,29 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
       I32Type, 2 * ComponentCount, MIRBuilder, /*IsSigned=*/false);
 
-  // ---- Stage 1: 64-bit → 2x32-bit ----
+  // Converts 64 bit into and array of 32 bit, containing 2 elements.
   Register Vec32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
   if (!selectOpWithSrcs(Vec32, VecI32Type, I, {SrcReg}, SPIRV::OpBitcast))
     return false;
 
-  // ---- Stage 2: popcount per 32-bit lane ----
+  // Apply popcount on each 32 bit lane
   Register Pop32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
   if (!selectPopCount32(Pop32, VecI32Type, I, Vec32, Opcode))
     return false;
 
-  // ---- Stage 3: split even (low) / odd (high) lanes ----
+  // Splits result into highbit lane and lowbit lane
   auto MaybeParts = splitEvenOddLanes(Pop32, ComponentCount, I, I32Type);
   if (!MaybeParts)
     return false;
   SplitParts &Parts = *MaybeParts;
 
-  // ---- Stage 4: sum high + low ----
+  // Sum high part and low part
   unsigned OpAdd = Parts.IsScalar ? SPIRV::OpIAddS : SPIRV::OpIAddV;
   Register Sum = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
   if (!selectOpWithSrcs(Sum, Parts.Type, I, {Parts.High, Parts.Low}, OpAdd))
     return false;
 
-  // ---- Stage 5: convert i32 sum to the final result type ----
+  // Convert 32 bit sum into 64 bit scalar
   bool IsSigned = GR.isScalarOrVectorSigned(ResType);
   unsigned ConvOp = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectOpWithSrcs(ResVReg, ResType, I, {Sum}, ConvOp);
@@ -1736,9 +1745,9 @@ bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
                                               SPIRVTypeInst ResType,
                                               MachineInstr &I,
                                               unsigned Opcode) const {
-  // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit 
-  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintaince9 
-  // is core we will not generate OpBitCount with any other types when 
+  // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit
+  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintenance9
+  // is core we will not generate OpBitCount with any other types when
   // targeting Vulkan.
   if (!STI.getTargetTriple().isVulkanOS())
     return selectUnOp(ResVReg, ResType, I, Opcode);
@@ -3651,6 +3660,51 @@ bool SPIRVInstructionSelector::handle64BitOverflow(
                           SPIRV::OpCompositeConstruct);
 }
 
+bool SPIRVInstructionSelector::selectBitreverse64(Register ResVReg,
+                                                  SPIRVTypeInst ResType,
+                                                  MachineInstr &I,
+                                                  Register SrcReg) const {
+  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
+  if (ComponentCount > 2)
+    return handle64BitOverflow(
+        ResVReg, ResType, I, SrcReg, SPIRV::OpBitReverse,
+        [this](Register R, SPIRVTypeInst T, MachineInstr &I, Register S,
+               unsigned O) { return this->selectBitreverse64(R, T, I, S); });
+
+  MachineIRBuilder MIRBuilder(I);
+
+  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
+  SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
+      I32Type, 2 * ComponentCount, MIRBuilder, /*IsSigned=*/false);
+
+  // Converts 64 bit into and array of 32 bit, containing 2 elements.
+  Register Vec32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(Vec32, VecI32Type, I, {SrcReg}, SPIRV::OpBitcast))
+    return false;
+
+  // Apply bitreverse  on each 32 bit lane
+  Register Reverse32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectBitreverseNative(Reverse32, VecI32Type, I, Vec32))
+    return false;
+
+  // Splits result into highbit lane and lowbit lane
+  auto MaybeParts = splitEvenOddLanes(Reverse32, ComponentCount, I, I32Type);
+  if (!MaybeParts)
+    return false;
+  SplitParts &Parts = *MaybeParts;
+
+  // Reversing a 64-bit value = reverse each 32-bit half AND swap them,
+  // so the old High word becomes lane 0 (low) and old Low becomes lane 1
+  // (high).
+  Register SwappedVec = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(SwappedVec, VecI32Type, I, {Parts.High, Parts.Low},
+                        SPIRV::OpCompositeConstruct))
+    return false;
+
+  // Groups 32 bit vector back to 64 bit scalar.
+  return selectOpWithSrcs(ResVReg, ResType, I, {SwappedVec}, SPIRV::OpBitcast);
+}
+
 bool SPIRVInstructionSelector::selectBitreverseNative(Register ResVReg,
                                                       SPIRVTypeInst ResType,
                                                       MachineInstr &I,
@@ -3673,11 +3727,16 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
   if (STI.isShader()) {
     SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpReg);
     switch (GR.getScalarOrVectorBitWidth(OpType)) {
+    case 8:
     case 16:
       return selectBitreverse16(ResVReg, ResType, I, OpReg);
-    default:
+    case 32:
       return selectBitreverseNative(ResVReg, ResType, I, OpReg);
+    case 64:
+      return selectBitreverse64(ResVReg, ResType, I, OpReg);
     }
+    return SPIRVInstructionSelector::diagnoseUnsupported(
+        I, "G_BITREVERSE only support 16,32,64 bits.");
   }
 
   if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions))
@@ -3939,6 +3998,39 @@ SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
                   .addDef(NewReg)
                   .addUse(GR.getSPIRVTypeID(SpvI32Ty))
                   .addImm(APInt(32, Val).getZExtValue());
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    GR.add(ConstInt, MI);
+  }
+  return NewReg;
+}
+
+// Like buildI32Constant, but always inserts the constant definition in the
+// entry block so it dominates all uses regardless of block ordering.
+Register SPIRVInstructionSelector::buildI32ConstantInEntryBlock(
+    uint32_t Val, MachineInstr &I, SPIRVTypeInst ResType) const {
+  Type *LLVMTy = IntegerType::get(GR.CurMF->getFunction().getContext(), 32);
+  SPIRVTypeInst SpvI32Ty =
+      ResType ? ResType : GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  auto *ConstInt = ConstantInt::get(LLVMTy, Val);
+  Register NewReg = GR.find(ConstInt, GR.CurMF);
+  if (!NewReg.isValid()) {
+    NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+    auto InsertIt = getOpVariableMBBIt(*I.getMF());
+    MachineBasicBlock &EntryBB = *InsertIt->getParent();
+    MachineInstr *MI = nullptr;
+    Register TypeReg = GR.getSPIRVTypeID(SpvI32Ty);
+    DebugLoc DbgLoc = I.getDebugLoc();
+    if (Val == 0) {
+      MI = BuildMI(EntryBB, InsertIt, DbgLoc, TII.get(SPIRV::OpConstantNull))
+               .addDef(NewReg)
+               .addUse(TypeReg);
+    } else {
+      uint64_t ImmVal = APInt(32, Val).getZExtValue();
+      MI = BuildMI(EntryBB, InsertIt, DbgLoc, TII.get(SPIRV::OpConstantI))
+               .addDef(NewReg)
+               .addUse(TypeReg)
+               .addImm(ImmVal);
+    }
     constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
     GR.add(ConstInt, MI);
   }
@@ -4707,6 +4799,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUnreachable))
         .constrainAllUses(TII, TRI, RBI);
     return true;
+  case Intrinsic::spv_abort:
+    return selectAbort(I);
   case Intrinsic::spv_alloca:
     return selectFrameIndex(ResVReg, ResType, I);
   case Intrinsic::spv_alloca_array:
@@ -5083,6 +5177,15 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       return selectMaskedScatter(I);
     return diagnoseUnsupported(
         I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
+  case Intrinsic::returnaddress:
+  case Intrinsic::frameaddress: {
+    // SPIR-V does not have a stack or return address. Lower to null.
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+                   .addDef(ResVReg)
+                   .addUse(GR.getSPIRVTypeID(ResType));
+    MIB.constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -6270,6 +6373,87 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
     unsigned Alignment = I.getOperand(3).getImm();
     buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::Alignment, {Alignment});
   }
+  return true;
+}
+
+// Returns true iff `Ty` is a concrete SPIR-V type per the SPV_KHR_abort
+// definition: a numerical scalar (int/float), a (physical) pointer, a vector,
+// matrix or any aggregate (array/struct) recursively containing only such
+// types. OpTypeBool, OpTypeVoid, opaque handles and similar abstract
+// non-concrete types are rejected.
+static bool isConcreteSPIRVType(SPIRVTypeInst Ty,
+                                const SPIRVGlobalRegistry &GR) {
+  SmallVector<SPIRVTypeInst, 4> Worklist{Ty};
+  while (!Worklist.empty()) {
+    SPIRVTypeInst T = Worklist.pop_back_val();
+    switch (T->getOpcode()) {
+    case SPIRV::OpTypeInt:
+    case SPIRV::OpTypeFloat:
+    case SPIRV::OpTypePointer:
+      break;
+    case SPIRV::OpTypeVector:
+    case SPIRV::OpTypeMatrix:
+    case SPIRV::OpTypeArray: {
+      Register OperandReg = T->getOperand(1).getReg();
+      SPIRVTypeInst ElementT = GR.getSPIRVTypeForVReg(OperandReg);
+      Worklist.push_back(ElementT);
+    } break;
+    case SPIRV::OpTypeStruct:
+      for (unsigned Idx = 1, E = T->getNumOperands(); Idx < E; ++Idx) {
+        Register OperandReg = T->getOperand(Idx).getReg();
+        SPIRVTypeInst ElementT = GR.getSPIRVTypeForVReg(OperandReg);
+        Worklist.push_back(ElementT);
+      }
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
+  assert(I.getNumExplicitOperands() == 2);
+
+  Register MsgReg = I.getOperand(1).getReg();
+  SPIRVTypeInst MsgType = GR.getSPIRVTypeForVReg(MsgReg);
+  assert(MsgType && "Message argument of llvm.spv.abort has no SPIR-V type");
+
+  if (!isConcreteSPIRVType(MsgType, GR))
+    return diagnoseUnsupported(
+        I,
+        "llvm.spv.abort message type must be a concrete SPIR-V type (numerical "
+        "scalar, pointer, vector, matrix, or aggregate of such types)");
+
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAbortKHR))
+      .addUse(GR.getSPIRVTypeID(MsgType))
+      .addUse(MsgReg)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectTrap(MachineInstr &I) const {
+  // When the SPV_KHR_abort extension is disabled, drop the G_TRAP and
+  // G_UBSANTRAP silently.
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+    return true;
+
+  // Use the 32-bit integer constant for the abort "message" argument:
+  // - G_UBSANTRAP operand is zero-extended to 32 bits.
+  // - "All ones" constant is used for G_TRAP.
+  uint32_t MsgVal = ~0u;
+  if (I.getOpcode() == TargetOpcode::G_UBSANTRAP)
+    MsgVal = static_cast<uint32_t>(I.getOperand(0).getImm());
+
+  SPIRVTypeInst MsgType = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  Register MsgReg = buildI32ConstantInEntryBlock(MsgVal, I, MsgType);
+
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAbortKHR))
+      .addUse(GR.getSPIRVTypeID(MsgType))
+      .addUse(MsgReg)
+      .constrainAllUses(TII, TRI, RBI);
   return true;
 }
 

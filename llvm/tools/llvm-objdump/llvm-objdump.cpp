@@ -1186,8 +1186,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!InstrInfo)
     reportError(Obj.getFileName(),
                 "no instruction info for target " + TripleName);
-  Context = std::make_shared<MCContext>(
-      TheTriple, AsmInfo.get(), RegisterInfo.get(), SubtargetInfo.get());
+  Context = std::make_shared<MCContext>(TheTriple, *AsmInfo, *RegisterInfo,
+                                        *SubtargetInfo);
 
   // FIXME: for now initialize MCObjectFileInfo with default values
   ObjectFileInfo.reset(
@@ -2251,13 +2251,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           do {
             StringRef Line;
             std::tie(Line, ErrMsg) = ErrMsg.split('\n');
-            OS << DT->Context->getAsmInfo()->getCommentString()
+            OS << DT->Context->getAsmInfo().getCommentString()
                << " error decoding " << SymNamesHere[SHI] << ": " << Line
                << '\n';
           } while (!ErrMsg.empty());
 
           if (Size) {
-            OS << DT->Context->getAsmInfo()->getCommentString()
+            OS << DT->Context->getAsmInfo().getCommentString()
                << " decoding failed region as bytes\n";
             for (uint64_t I = 0; I < Size; ++I)
               OS << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
@@ -2621,8 +2621,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           }
         }
 
-        assert(DT->Context->getAsmInfo());
-        DT->Printer->emitPostInstructionInfo(FOS, *DT->Context->getAsmInfo(),
+        DT->Printer->emitPostInstructionInfo(FOS, DT->Context->getAsmInfo(),
                                              *DT->SubtargetInfo,
                                              CommentStream.str(), LEP);
         Comments.clear();

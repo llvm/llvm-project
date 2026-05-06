@@ -151,7 +151,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfrcmple)
         mov r0, r1
         mov r1, ip
 
+#if defined(USE_THUMB_1)
+        push {r0, lr}
+        bl __aeabi_cfcmple
+        pop {r0, pc}
+#else
         b __aeabi_cfcmple
+#endif
 END_COMPILERRT_FUNCTION(__aeabi_cfrcmple)
 
 NO_EXEC_STACK_DIRECTIVE

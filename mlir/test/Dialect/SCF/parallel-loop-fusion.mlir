@@ -1223,3 +1223,29 @@ func.func @reductions_use_res_between(%A: memref<2x2xf32>, %B: memref<2x2xf32>) 
 // CHECK-LABEL: func @reductions_use_res_between
 // CHECK:      scf.parallel
 // CHECK:      scf.parallel
+
+// -----
+
+func.func @test_fuse_interchanged_loops(%arg0: memref<1x64xf32>) {
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %alloc_0 = memref.alloc() : memref<1x8x8xf32>
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<8x8x1xf32>
+  scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%c8, %c8) step (%c1, %c1) {
+    %0 = memref.load %alloc_0[%c0, %arg2, %arg3] : memref<1x8x8xf32>
+    memref.store %0, %alloc[%arg3, %arg2, %c0] : memref<8x8x1xf32>
+    scf.reduce
+  }
+  scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%c8, %c8) step (%c1, %c1) {
+    %0 = memref.load %alloc[%arg2, %arg3, %c0] : memref<8x8x1xf32>
+    %1 = affine.apply affine_map<(d0, d1) -> (d0 * 8 + d1)>(%arg2, %arg3)
+    memref.store %0, %arg0[%c0, %1] : memref<1x64xf32>
+    scf.reduce
+  }
+  return
+}
+
+// CHECK-LABEL: func @test_fuse_interchanged_loops
+// CHECK:      scf.parallel
+// CHECK-NOT:      scf.parallel

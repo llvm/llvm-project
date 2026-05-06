@@ -138,6 +138,25 @@ static bool poisonGuaranteesUB(const VPValue *V) {
   return false;
 }
 
+GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
+  // Like IR stripPointerCasts, look through GEPs with all-zero indices and
+  // casts to find a root GEP VPInstruction.
+  while (auto *PtrVPI = dyn_cast<VPInstruction>(Ptr)) {
+    unsigned Opcode = PtrVPI->getOpcode();
+    if (Opcode == Instruction::GetElementPtr) {
+      if (any_of(drop_begin(PtrVPI->operands()),
+                 [](VPValue *Op) { return !match(Op, m_ZeroInt()); }))
+        return PtrVPI->getGEPNoWrapFlags();
+      Ptr = PtrVPI->getOperand(0);
+      continue;
+    }
+    if (Opcode != Instruction::BitCast && Opcode != Instruction::AddrSpaceCast)
+      break;
+    Ptr = PtrVPI->getOperand(0);
+  }
+  return GEPNoWrapFlags::none();
+}
+
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
@@ -396,14 +415,14 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
+bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   // Live-ins and region values are uniform.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
     return true;
 
-  VPRecipeBase *R = V->getDefiningRecipe();
-  VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
-  VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
+  const VPRecipeBase *R = V->getDefiningRecipe();
+  const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
+  const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
   if (VPBB) {
     if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
       if (match(V->getDefiningRecipe(),
@@ -464,6 +483,21 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
                                      VPInstruction::ReductionStartVector) &&
       "getting scaling factor of reduction-start-vector not implemented yet");
   return 1;
+}
+
+bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
+  // Assumes don't alias anything or throw; as long as they're guaranteed to
+  // execute, they're safe to hoist. They should however not be sunk, as it
+  // would destroy information.
+  if (match(&R, m_Intrinsic<Intrinsic::assume>()))
+    return Sinking;
+  // TODO: Relax checks in the future, e.g. we could also hoist reads, if their
+  // memory location is not modified in the vector loop.
+  if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi())
+    return true;
+  // Allocas cannot be hoisted.
+  auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+  return RepR && RepR->getOpcode() == Instruction::Alloca;
 }
 
 std::optional<VPValue *>
@@ -579,17 +613,13 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *FoundWidenCanonicalIVUser = find_if(
-      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
+      LoopRegion->getCanonicalIV());
   assert(count_if(LoopRegion->getCanonicalIV()->users(),
                   IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
-  if (FoundWidenCanonicalIVUser !=
-      LoopRegion->getCanonicalIV()->users().end()) {
-    auto *WideCanonicalIV =
-        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+  if (WideCanonicalIV)
     WideCanonicalIVs.push_back(WideCanonicalIV);
-  }
 
   // Also include VPWidenIntOrFpInductionRecipes that represent a widened
   // version of the canonical induction.
@@ -718,7 +748,8 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   VPInstruction *Increment = nullptr;
   for (VPUser *U : CanIV->users()) {
     VPValue *Step;
-    if (match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
+    if (isa<VPInstruction>(U) &&
+        match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
         IsIncrementStep(Step)) {
       assert(!Increment && "There must be a unique increment");
       Increment = cast<VPInstruction>(U);
