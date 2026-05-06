@@ -9,12 +9,11 @@
 define i32 @callee_fp128_in_fpr(i32 %a, fp128 %b) nounwind {
   ; RV32-ILP32Q-LABEL: name: callee_fp128_in_fpr
   ; RV32-ILP32Q: bb.1 (%ir-block.0):
-  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11
+  ; RV32-ILP32Q-NEXT:   liveins: $x10, $f10_q
   ; RV32-ILP32Q-NEXT: {{  $}}
   ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-  ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD]](s128)
+  ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY1]](s128)
   ; RV32-ILP32Q-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[FPTOSI]]
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[ADD]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
@@ -30,11 +29,9 @@ define i32 @caller_fp128_in_fpr() nounwind {
   ; RV32-ILP32Q-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; RV32-ILP32Q-NEXT:   [[FPEXT:%[0-9]+]]:_(s128) = G_FPEXT [[C]](s64)
   ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[C1]](s32)
-  ; RV32-ILP32Q-NEXT:   $x11 = COPY [[FRAME_INDEX]](p0)
-  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_fpr, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; RV32-ILP32Q-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_fpr, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $f10_q, implicit-def $x10
   ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -48,7 +45,7 @@ define i32 @caller_fp128_in_fpr() nounwind {
 define i32 @callee_fp128_in_fpr_exhausted_gprs(i64 %a, i64 %b, i64 %c, i64 %d, i32 %e, fp128 %f) nounwind {
   ; RV32-ILP32Q-LABEL: name: callee_fp128_in_fpr_exhausted_gprs
   ; RV32-ILP32Q: bb.1 (%ir-block.0):
-  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_q
   ; RV32-ILP32Q-NEXT: {{  $}}
   ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -62,12 +59,10 @@ define i32 @callee_fp128_in_fpr_exhausted_gprs(i64 %a, i64 %b, i64 %c, i64 %d, i
   ; RV32-ILP32Q-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
   ; RV32-ILP32Q-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
   ; RV32-ILP32Q-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.1, align 16)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-ILP32Q-NEXT:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
-  ; RV32-ILP32Q-NEXT:   [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[LOAD1]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD2]](s128)
+  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 16)
+  ; RV32-ILP32Q-NEXT:   [[COPY8:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY8]](s128)
   ; RV32-ILP32Q-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[FPTOSI]]
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[ADD]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
@@ -86,7 +81,7 @@ define i32 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
   ; RV32-ILP32Q-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; RV32-ILP32Q-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
   ; RV32-ILP32Q-NEXT:   [[FPEXT:%[0-9]+]]:_(s128) = G_FPEXT [[C]](s64)
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32Q-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C1]](s64)
   ; RV32-ILP32Q-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C2]](s64)
   ; RV32-ILP32Q-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C3]](s64)
@@ -95,11 +90,6 @@ define i32 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
   ; RV32-ILP32Q-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-ILP32Q-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C6]](s32)
   ; RV32-ILP32Q-NEXT:   G_STORE [[C5]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack, align 16)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
-  ; RV32-ILP32Q-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C7]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 4)
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32-ILP32Q-NEXT:   $x11 = COPY [[UV1]](s32)
   ; RV32-ILP32Q-NEXT:   $x12 = COPY [[UV2]](s32)
@@ -108,8 +98,9 @@ define i32 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
   ; RV32-ILP32Q-NEXT:   $x15 = COPY [[UV5]](s32)
   ; RV32-ILP32Q-NEXT:   $x16 = COPY [[UV6]](s32)
   ; RV32-ILP32Q-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_fpr_exhausted_gprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_fpr_exhausted_gprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_q, implicit-def $x10
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[COPY1]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
@@ -123,29 +114,20 @@ define i32 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
 define i32 @callee_fp128_in_gpr_exhausted_fprs(fp128 %a, fp128 %b, fp128 %c, fp128 %d, fp128 %e, fp128 %f, fp128 %g, fp128 %h, fp128 %i) nounwind {
   ; RV32-ILP32Q-LABEL: name: callee_fp128_in_gpr_exhausted_fprs
   ; RV32-ILP32Q: bb.1 (%ir-block.0):
-  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV32-ILP32Q-NEXT:   liveins: $x10, $f10_q, $f11_q, $f12_q, $f13_q, $f14_q, $f15_q, $f16_q, $f17_q
   ; RV32-ILP32Q-NEXT: {{  $}}
-  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV32-ILP32Q-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
-  ; RV32-ILP32Q-NEXT:   [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[COPY2]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x13
-  ; RV32-ILP32Q-NEXT:   [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[COPY3]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x14
-  ; RV32-ILP32Q-NEXT:   [[LOAD4:%[0-9]+]]:_(s128) = G_LOAD [[COPY4]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x15
-  ; RV32-ILP32Q-NEXT:   [[LOAD5:%[0-9]+]]:_(s128) = G_LOAD [[COPY5]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY6:%[0-9]+]]:_(p0) = COPY $x16
-  ; RV32-ILP32Q-NEXT:   [[LOAD6:%[0-9]+]]:_(s128) = G_LOAD [[COPY6]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY7:%[0-9]+]]:_(p0) = COPY $x17
-  ; RV32-ILP32Q-NEXT:   [[LOAD7:%[0-9]+]]:_(s128) = G_LOAD [[COPY7]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-ILP32Q-NEXT:   [[LOAD8:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 16)
-  ; RV32-ILP32Q-NEXT:   [[LOAD9:%[0-9]+]]:_(s128) = G_LOAD [[LOAD8]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD7]](s128)
-  ; RV32-ILP32Q-NEXT:   [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD9]](s128)
+  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s128) = COPY $f11_q
+  ; RV32-ILP32Q-NEXT:   [[COPY2:%[0-9]+]]:_(s128) = COPY $f12_q
+  ; RV32-ILP32Q-NEXT:   [[COPY3:%[0-9]+]]:_(s128) = COPY $f13_q
+  ; RV32-ILP32Q-NEXT:   [[COPY4:%[0-9]+]]:_(s128) = COPY $f14_q
+  ; RV32-ILP32Q-NEXT:   [[COPY5:%[0-9]+]]:_(s128) = COPY $f15_q
+  ; RV32-ILP32Q-NEXT:   [[COPY6:%[0-9]+]]:_(s128) = COPY $f16_q
+  ; RV32-ILP32Q-NEXT:   [[COPY7:%[0-9]+]]:_(s128) = COPY $f17_q
+  ; RV32-ILP32Q-NEXT:   [[COPY8:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY8]](p0) :: (load (s128))
+  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY7]](s128)
+  ; RV32-ILP32Q-NEXT:   [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD]](s128)
   ; RV32-ILP32Q-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[FPTOSI]], [[FPTOSI1]]
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[ADD]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
@@ -176,41 +158,23 @@ define i32 @caller_fp128_in_gpr_exhausted_fprs() nounwind {
   ; RV32-ILP32Q-NEXT:   [[FPEXT6:%[0-9]+]]:_(s128) = G_FPEXT [[C6]](s64)
   ; RV32-ILP32Q-NEXT:   [[FPEXT7:%[0-9]+]]:_(s128) = G_FPEXT [[C7]](s64)
   ; RV32-ILP32Q-NEXT:   [[FPEXT8:%[0-9]+]]:_(s128) = G_FPEXT [[C8]](s64)
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.2
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT2]](s128), [[FRAME_INDEX2]](p0) :: (store (s128) into %stack.2)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.3
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT3]](s128), [[FRAME_INDEX3]](p0) :: (store (s128) into %stack.3)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.4
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT4]](s128), [[FRAME_INDEX4]](p0) :: (store (s128) into %stack.4)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.5
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT5]](s128), [[FRAME_INDEX5]](p0) :: (store (s128) into %stack.5)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.6
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT6]](s128), [[FRAME_INDEX6]](p0) :: (store (s128) into %stack.6)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.7
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT7]](s128), [[FRAME_INDEX7]](p0) :: (store (s128) into %stack.7)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.8
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT8]](s128), [[FRAME_INDEX8]](p0) :: (store (s128) into %stack.8)
-  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; RV32-ILP32Q-NEXT:   [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX8]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
-  ; RV32-ILP32Q-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; RV32-ILP32Q-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; RV32-ILP32Q-NEXT:   $x12 = COPY [[FRAME_INDEX2]](p0)
-  ; RV32-ILP32Q-NEXT:   $x13 = COPY [[FRAME_INDEX3]](p0)
-  ; RV32-ILP32Q-NEXT:   $x14 = COPY [[FRAME_INDEX4]](p0)
-  ; RV32-ILP32Q-NEXT:   $x15 = COPY [[FRAME_INDEX5]](p0)
-  ; RV32-ILP32Q-NEXT:   $x16 = COPY [[FRAME_INDEX6]](p0)
-  ; RV32-ILP32Q-NEXT:   $x17 = COPY [[FRAME_INDEX7]](p0)
-  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_gpr_exhausted_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
-  ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
-  ; RV32-ILP32Q-NEXT:   $x10 = COPY [[COPY1]](s32)
+  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT8]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
+  ; RV32-ILP32Q-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV32-ILP32Q-NEXT:   $f11_q = COPY [[FPEXT1]](s128)
+  ; RV32-ILP32Q-NEXT:   $f12_q = COPY [[FPEXT2]](s128)
+  ; RV32-ILP32Q-NEXT:   $f13_q = COPY [[FPEXT3]](s128)
+  ; RV32-ILP32Q-NEXT:   $f14_q = COPY [[FPEXT4]](s128)
+  ; RV32-ILP32Q-NEXT:   $f15_q = COPY [[FPEXT5]](s128)
+  ; RV32-ILP32Q-NEXT:   $f16_q = COPY [[FPEXT6]](s128)
+  ; RV32-ILP32Q-NEXT:   $f17_q = COPY [[FPEXT7]](s128)
+  ; RV32-ILP32Q-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p0)
+  ; RV32-ILP32Q-NEXT:   $x10 = COPY [[PTRTOINT]](s32)
+  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_gpr_exhausted_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $f10_q, implicit $f11_q, implicit $f12_q, implicit $f13_q, implicit $f14_q, implicit $f15_q, implicit $f16_q, implicit $f17_q, implicit $x10, implicit-def $x10
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-ILP32Q-NEXT:   $x10 = COPY [[COPY]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
   %1 = fpext double 1.0 to fp128
   %2 = fpext double 2.0 to fp128
@@ -231,46 +195,30 @@ define i32 @caller_fp128_in_gpr_exhausted_fprs() nounwind {
 define i32 @callee_fp128_in_gpr_and_stack_almost_exhausted_gprs_fprs(i64 %a, fp128 %b, i64 %c, fp128 %d, i64 %e, fp128 %f, i32 %g, fp128 %h, fp128 %i, fp128 %j, fp128 %k, fp128 %l, fp128 %m) nounwind {
   ; RV32-ILP32Q-LABEL: name: callee_fp128_in_gpr_and_stack_almost_exhausted_gprs_fprs
   ; RV32-ILP32Q: bb.1 (%ir-block.0):
-  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_q, $f11_q, $f12_q, $f13_q, $f14_q, $f15_q, $f16_q, $f17_q
   ; RV32-ILP32Q-NEXT: {{  $}}
   ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
   ; RV32-ILP32Q-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; RV32-ILP32Q-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
-  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY2]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-ILP32Q-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-ILP32Q-NEXT:   [[COPY2:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV32-ILP32Q-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x12
+  ; RV32-ILP32Q-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x13
   ; RV32-ILP32Q-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
-  ; RV32-ILP32Q-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x15
-  ; RV32-ILP32Q-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY5]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-ILP32Q-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
+  ; RV32-ILP32Q-NEXT:   [[COPY5:%[0-9]+]]:_(s128) = COPY $f11_q
+  ; RV32-ILP32Q-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-ILP32Q-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x15
   ; RV32-ILP32Q-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; RV32-ILP32Q-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.7, align 16)
-  ; RV32-ILP32Q-NEXT:   [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[LOAD2]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-ILP32Q-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.6)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-ILP32Q-NEXT:   [[LOAD5:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (p0) from %fixed-stack.5, align 8)
-  ; RV32-ILP32Q-NEXT:   [[LOAD6:%[0-9]+]]:_(s128) = G_LOAD [[LOAD5]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-ILP32Q-NEXT:   [[LOAD7:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX3]](p0) :: (load (p0) from %fixed-stack.4)
-  ; RV32-ILP32Q-NEXT:   [[LOAD8:%[0-9]+]]:_(s128) = G_LOAD [[LOAD7]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-ILP32Q-NEXT:   [[LOAD9:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (p0) from %fixed-stack.3, align 16)
-  ; RV32-ILP32Q-NEXT:   [[LOAD10:%[0-9]+]]:_(s128) = G_LOAD [[LOAD9]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-ILP32Q-NEXT:   [[LOAD11:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (p0) from %fixed-stack.2)
-  ; RV32-ILP32Q-NEXT:   [[LOAD12:%[0-9]+]]:_(s128) = G_LOAD [[LOAD11]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-ILP32Q-NEXT:   [[LOAD13:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (p0) from %fixed-stack.1, align 8)
-  ; RV32-ILP32Q-NEXT:   [[LOAD14:%[0-9]+]]:_(s128) = G_LOAD [[LOAD13]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-ILP32Q-NEXT:   [[LOAD15:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX7]](p0) :: (load (p0) from %fixed-stack.0)
-  ; RV32-ILP32Q-NEXT:   [[LOAD16:%[0-9]+]]:_(s128) = G_LOAD [[LOAD15]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD16]](s128)
-  ; RV32-ILP32Q-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD4]], [[FPTOSI]]
+  ; RV32-ILP32Q-NEXT:   [[COPY8:%[0-9]+]]:_(s128) = COPY $f12_q
+  ; RV32-ILP32Q-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $x16
+  ; RV32-ILP32Q-NEXT:   [[COPY10:%[0-9]+]]:_(s128) = COPY $f13_q
+  ; RV32-ILP32Q-NEXT:   [[COPY11:%[0-9]+]]:_(s128) = COPY $f14_q
+  ; RV32-ILP32Q-NEXT:   [[COPY12:%[0-9]+]]:_(s128) = COPY $f15_q
+  ; RV32-ILP32Q-NEXT:   [[COPY13:%[0-9]+]]:_(s128) = COPY $f16_q
+  ; RV32-ILP32Q-NEXT:   [[COPY14:%[0-9]+]]:_(s128) = COPY $f17_q
+  ; RV32-ILP32Q-NEXT:   [[COPY15:%[0-9]+]]:_(p0) = COPY $x17
+  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY15]](p0) :: (load (s128))
+  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD]](s128)
+  ; RV32-ILP32Q-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY9]], [[FPTOSI]]
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[ADD]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
   %m_fptosi = fptosi fp128 %m to i32
@@ -303,65 +251,33 @@ define i32 @caller_fp128_in_gpr_and_stack_almost_exhausted_gprs_fprs() nounwind 
   ; RV32-ILP32Q-NEXT:   [[FPEXT6:%[0-9]+]]:_(s128) = G_FPEXT [[C6]](s64)
   ; RV32-ILP32Q-NEXT:   [[FPEXT7:%[0-9]+]]:_(s128) = G_FPEXT [[C7]](s64)
   ; RV32-ILP32Q-NEXT:   [[FPEXT8:%[0-9]+]]:_(s128) = G_FPEXT [[C8]](s64)
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 32, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32Q-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C9]](s64)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
   ; RV32-ILP32Q-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C10]](s64)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
   ; RV32-ILP32Q-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C11]](s64)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.2
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT2]](s128), [[FRAME_INDEX2]](p0) :: (store (s128) into %stack.2)
-  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; RV32-ILP32Q-NEXT:   [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX2]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
-  ; RV32-ILP32Q-NEXT:   [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C14]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[C12]](s32), [[PTR_ADD1]](p0) :: (store (s32) into stack + 4)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.3
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT3]](s128), [[FRAME_INDEX3]](p0) :: (store (s128) into %stack.3)
-  ; RV32-ILP32Q-NEXT:   [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX3]](p0), [[PTR_ADD2]](p0) :: (store (p0) into stack + 8, align 8)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.4
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT4]](s128), [[FRAME_INDEX4]](p0) :: (store (s128) into %stack.4)
-  ; RV32-ILP32Q-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C16]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX4]](p0), [[PTR_ADD3]](p0) :: (store (p0) into stack + 12)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.5
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT5]](s128), [[FRAME_INDEX5]](p0) :: (store (s128) into %stack.5)
-  ; RV32-ILP32Q-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C17]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX5]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 16, align 16)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.6
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT6]](s128), [[FRAME_INDEX6]](p0) :: (store (s128) into %stack.6)
-  ; RV32-ILP32Q-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C18]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX6]](p0), [[PTR_ADD5]](p0) :: (store (p0) into stack + 20)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.7
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT7]](s128), [[FRAME_INDEX7]](p0) :: (store (s128) into %stack.7)
-  ; RV32-ILP32Q-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C19]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX7]](p0), [[PTR_ADD6]](p0) :: (store (p0) into stack + 24, align 8)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.8
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT8]](s128), [[FRAME_INDEX8]](p0) :: (store (s128) into %stack.8)
-  ; RV32-ILP32Q-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C20]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX8]](p0), [[PTR_ADD7]](p0) :: (store (p0) into stack + 28)
+  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT8]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32-ILP32Q-NEXT:   $x11 = COPY [[UV1]](s32)
-  ; RV32-ILP32Q-NEXT:   $x12 = COPY [[FRAME_INDEX]](p0)
-  ; RV32-ILP32Q-NEXT:   $x13 = COPY [[UV2]](s32)
-  ; RV32-ILP32Q-NEXT:   $x14 = COPY [[UV3]](s32)
-  ; RV32-ILP32Q-NEXT:   $x15 = COPY [[FRAME_INDEX1]](p0)
-  ; RV32-ILP32Q-NEXT:   $x16 = COPY [[UV4]](s32)
-  ; RV32-ILP32Q-NEXT:   $x17 = COPY [[UV5]](s32)
-  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_gpr_and_stack_almost_exhausted_gprs_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def $x2, implicit $x2
-  ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
-  ; RV32-ILP32Q-NEXT:   $x10 = COPY [[COPY1]](s32)
+  ; RV32-ILP32Q-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV32-ILP32Q-NEXT:   $x12 = COPY [[UV2]](s32)
+  ; RV32-ILP32Q-NEXT:   $x13 = COPY [[UV3]](s32)
+  ; RV32-ILP32Q-NEXT:   $f11_q = COPY [[FPEXT1]](s128)
+  ; RV32-ILP32Q-NEXT:   $x14 = COPY [[UV4]](s32)
+  ; RV32-ILP32Q-NEXT:   $x15 = COPY [[UV5]](s32)
+  ; RV32-ILP32Q-NEXT:   $f12_q = COPY [[FPEXT2]](s128)
+  ; RV32-ILP32Q-NEXT:   $x16 = COPY [[C12]](s32)
+  ; RV32-ILP32Q-NEXT:   $f13_q = COPY [[FPEXT3]](s128)
+  ; RV32-ILP32Q-NEXT:   $f14_q = COPY [[FPEXT4]](s128)
+  ; RV32-ILP32Q-NEXT:   $f15_q = COPY [[FPEXT5]](s128)
+  ; RV32-ILP32Q-NEXT:   $f16_q = COPY [[FPEXT6]](s128)
+  ; RV32-ILP32Q-NEXT:   $f17_q = COPY [[FPEXT7]](s128)
+  ; RV32-ILP32Q-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p0)
+  ; RV32-ILP32Q-NEXT:   $x17 = COPY [[PTRTOINT]](s32)
+  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_gpr_and_stack_almost_exhausted_gprs_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $f10_q, implicit $x12, implicit $x13, implicit $f11_q, implicit $x14, implicit $x15, implicit $f12_q, implicit $x16, implicit $f13_q, implicit $f14_q, implicit $f15_q, implicit $f16_q, implicit $f17_q, implicit $x17, implicit-def $x10
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-ILP32Q-NEXT:   $x10 = COPY [[COPY]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
   %2 = fpext double 2.0 to fp128
   %4 = fpext double 4.0 to fp128
@@ -383,49 +299,33 @@ define i32 @caller_fp128_in_gpr_and_stack_almost_exhausted_gprs_fprs() nounwind 
 define i32 @callee_fp128_on_stack_exhausted_gprs_fprs(i64 %a, fp128 %b, i64 %c, fp128 %d, i64 %e, fp128 %f, i64 %g, fp128 %h, fp128 %i, fp128 %j, fp128 %k, fp128 %l, fp128 %m) nounwind {
   ; RV32-ILP32Q-LABEL: name: callee_fp128_on_stack_exhausted_gprs_fprs
   ; RV32-ILP32Q: bb.1 (%ir-block.0):
-  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV32-ILP32Q-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_q, $f11_q, $f12_q, $f13_q, $f14_q, $f15_q, $f16_q, $f17_q
   ; RV32-ILP32Q-NEXT: {{  $}}
   ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
   ; RV32-ILP32Q-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; RV32-ILP32Q-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
-  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY2]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-ILP32Q-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-ILP32Q-NEXT:   [[COPY2:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV32-ILP32Q-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x12
+  ; RV32-ILP32Q-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x13
   ; RV32-ILP32Q-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
-  ; RV32-ILP32Q-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x15
-  ; RV32-ILP32Q-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY5]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-ILP32Q-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
+  ; RV32-ILP32Q-NEXT:   [[COPY5:%[0-9]+]]:_(s128) = COPY $f11_q
+  ; RV32-ILP32Q-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-ILP32Q-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x15
   ; RV32-ILP32Q-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
-  ; RV32-ILP32Q-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.8, align 16)
-  ; RV32-ILP32Q-NEXT:   [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[LOAD2]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; RV32-ILP32Q-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.7, align 8)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-ILP32Q-NEXT:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s32) from %fixed-stack.6)
-  ; RV32-ILP32Q-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-ILP32Q-NEXT:   [[LOAD6:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX3]](p0) :: (load (p0) from %fixed-stack.5, align 16)
-  ; RV32-ILP32Q-NEXT:   [[LOAD7:%[0-9]+]]:_(s128) = G_LOAD [[LOAD6]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-ILP32Q-NEXT:   [[LOAD8:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (p0) from %fixed-stack.4)
-  ; RV32-ILP32Q-NEXT:   [[LOAD9:%[0-9]+]]:_(s128) = G_LOAD [[LOAD8]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-ILP32Q-NEXT:   [[LOAD10:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (p0) from %fixed-stack.3, align 8)
-  ; RV32-ILP32Q-NEXT:   [[LOAD11:%[0-9]+]]:_(s128) = G_LOAD [[LOAD10]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-ILP32Q-NEXT:   [[LOAD12:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (p0) from %fixed-stack.2)
-  ; RV32-ILP32Q-NEXT:   [[LOAD13:%[0-9]+]]:_(s128) = G_LOAD [[LOAD12]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-ILP32Q-NEXT:   [[LOAD14:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX7]](p0) :: (load (p0) from %fixed-stack.1, align 16)
-  ; RV32-ILP32Q-NEXT:   [[LOAD15:%[0-9]+]]:_(s128) = G_LOAD [[LOAD14]](p0) :: (load (s128))
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-ILP32Q-NEXT:   [[LOAD16:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (load (p0) from %fixed-stack.0)
-  ; RV32-ILP32Q-NEXT:   [[LOAD17:%[0-9]+]]:_(s128) = G_LOAD [[LOAD16]](p0) :: (load (s128))
+  ; RV32-ILP32Q-NEXT:   [[COPY8:%[0-9]+]]:_(s128) = COPY $f12_q
+  ; RV32-ILP32Q-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $x16
+  ; RV32-ILP32Q-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $x17
+  ; RV32-ILP32Q-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY9]](s32), [[COPY10]](s32)
+  ; RV32-ILP32Q-NEXT:   [[COPY11:%[0-9]+]]:_(s128) = COPY $f13_q
+  ; RV32-ILP32Q-NEXT:   [[COPY12:%[0-9]+]]:_(s128) = COPY $f14_q
+  ; RV32-ILP32Q-NEXT:   [[COPY13:%[0-9]+]]:_(s128) = COPY $f15_q
+  ; RV32-ILP32Q-NEXT:   [[COPY14:%[0-9]+]]:_(s128) = COPY $f16_q
+  ; RV32-ILP32Q-NEXT:   [[COPY15:%[0-9]+]]:_(s128) = COPY $f17_q
+  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 16)
+  ; RV32-ILP32Q-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[LOAD]](p0) :: (load (s128))
   ; RV32-ILP32Q-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[MV3]](s64)
-  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD17]](s128)
+  ; RV32-ILP32Q-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[LOAD1]](s128)
   ; RV32-ILP32Q-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[FPTOSI]]
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[ADD]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
@@ -460,67 +360,36 @@ define i32 @caller_fp128_on_stack_exhausted_gprs_fprs() nounwind {
   ; RV32-ILP32Q-NEXT:   [[FPEXT6:%[0-9]+]]:_(s128) = G_FPEXT [[C6]](s64)
   ; RV32-ILP32Q-NEXT:   [[FPEXT7:%[0-9]+]]:_(s128) = G_FPEXT [[C7]](s64)
   ; RV32-ILP32Q-NEXT:   [[FPEXT8:%[0-9]+]]:_(s128) = G_FPEXT [[C8]](s64)
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 40, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32Q-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C9]](s64)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
   ; RV32-ILP32Q-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C10]](s64)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
   ; RV32-ILP32Q-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C11]](s64)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.2
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT2]](s128), [[FRAME_INDEX2]](p0) :: (store (s128) into %stack.2)
+  ; RV32-ILP32Q-NEXT:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C12]](s64)
+  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT8]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0)
   ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; RV32-ILP32Q-NEXT:   [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-ILP32Q-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX2]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
-  ; RV32-ILP32Q-NEXT:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C12]](s64)
-  ; RV32-ILP32Q-NEXT:   [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C14]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[UV6]](s32), [[PTR_ADD1]](p0) :: (store (s32) into stack + 8, align 8)
-  ; RV32-ILP32Q-NEXT:   [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[UV7]](s32), [[PTR_ADD2]](p0) :: (store (s32) into stack + 12)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.3
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT3]](s128), [[FRAME_INDEX3]](p0) :: (store (s128) into %stack.3)
-  ; RV32-ILP32Q-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C16]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX3]](p0), [[PTR_ADD3]](p0) :: (store (p0) into stack + 16, align 16)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.4
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT4]](s128), [[FRAME_INDEX4]](p0) :: (store (s128) into %stack.4)
-  ; RV32-ILP32Q-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C17]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX4]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 20)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.5
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT5]](s128), [[FRAME_INDEX5]](p0) :: (store (s128) into %stack.5)
-  ; RV32-ILP32Q-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C18]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX5]](p0), [[PTR_ADD5]](p0) :: (store (p0) into stack + 24, align 8)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.6
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT6]](s128), [[FRAME_INDEX6]](p0) :: (store (s128) into %stack.6)
-  ; RV32-ILP32Q-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C19]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX6]](p0), [[PTR_ADD6]](p0) :: (store (p0) into stack + 28)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.7
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT7]](s128), [[FRAME_INDEX7]](p0) :: (store (s128) into %stack.7)
-  ; RV32-ILP32Q-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C20]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX7]](p0), [[PTR_ADD7]](p0) :: (store (p0) into stack + 32, align 16)
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.8
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT8]](s128), [[FRAME_INDEX8]](p0) :: (store (s128) into %stack.8)
-  ; RV32-ILP32Q-NEXT:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 36
-  ; RV32-ILP32Q-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C21]](s32)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FRAME_INDEX8]](p0), [[PTR_ADD8]](p0) :: (store (p0) into stack + 36)
+  ; RV32-ILP32Q-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p0)
+  ; RV32-ILP32Q-NEXT:   G_STORE [[PTRTOINT]](s32), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32-ILP32Q-NEXT:   $x11 = COPY [[UV1]](s32)
-  ; RV32-ILP32Q-NEXT:   $x12 = COPY [[FRAME_INDEX]](p0)
-  ; RV32-ILP32Q-NEXT:   $x13 = COPY [[UV2]](s32)
-  ; RV32-ILP32Q-NEXT:   $x14 = COPY [[UV3]](s32)
-  ; RV32-ILP32Q-NEXT:   $x15 = COPY [[FRAME_INDEX1]](p0)
-  ; RV32-ILP32Q-NEXT:   $x16 = COPY [[UV4]](s32)
-  ; RV32-ILP32Q-NEXT:   $x17 = COPY [[UV5]](s32)
-  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_on_stack_exhausted_gprs_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
-  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 40, 0, implicit-def $x2, implicit $x2
+  ; RV32-ILP32Q-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV32-ILP32Q-NEXT:   $x12 = COPY [[UV2]](s32)
+  ; RV32-ILP32Q-NEXT:   $x13 = COPY [[UV3]](s32)
+  ; RV32-ILP32Q-NEXT:   $f11_q = COPY [[FPEXT1]](s128)
+  ; RV32-ILP32Q-NEXT:   $x14 = COPY [[UV4]](s32)
+  ; RV32-ILP32Q-NEXT:   $x15 = COPY [[UV5]](s32)
+  ; RV32-ILP32Q-NEXT:   $f12_q = COPY [[FPEXT2]](s128)
+  ; RV32-ILP32Q-NEXT:   $x16 = COPY [[UV6]](s32)
+  ; RV32-ILP32Q-NEXT:   $x17 = COPY [[UV7]](s32)
+  ; RV32-ILP32Q-NEXT:   $f13_q = COPY [[FPEXT3]](s128)
+  ; RV32-ILP32Q-NEXT:   $f14_q = COPY [[FPEXT4]](s128)
+  ; RV32-ILP32Q-NEXT:   $f15_q = COPY [[FPEXT5]](s128)
+  ; RV32-ILP32Q-NEXT:   $f16_q = COPY [[FPEXT6]](s128)
+  ; RV32-ILP32Q-NEXT:   $f17_q = COPY [[FPEXT7]](s128)
+  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_on_stack_exhausted_gprs_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $f10_q, implicit $x12, implicit $x13, implicit $f11_q, implicit $x14, implicit $x15, implicit $f12_q, implicit $x16, implicit $x17, implicit $f13_q, implicit $f14_q, implicit $f15_q, implicit $f16_q, implicit $f17_q, implicit-def $x10
+  ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32Q-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[COPY1]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
@@ -542,13 +411,10 @@ define i32 @caller_fp128_on_stack_exhausted_gprs_fprs() nounwind {
 define fp128 @callee_fp128_ret() nounwind {
   ; RV32-ILP32Q-LABEL: name: callee_fp128_ret
   ; RV32-ILP32Q: bb.1 (%ir-block.0):
-  ; RV32-ILP32Q-NEXT:   liveins: $x10
-  ; RV32-ILP32Q-NEXT: {{  $}}
-  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV32-ILP32Q-NEXT:   [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
   ; RV32-ILP32Q-NEXT:   [[FPEXT:%[0-9]+]]:_(s128) = G_FPEXT [[C]](s64)
-  ; RV32-ILP32Q-NEXT:   G_STORE [[FPEXT]](s128), [[COPY]](p0) :: (store (s128))
-  ; RV32-ILP32Q-NEXT:   PseudoRET
+  ; RV32-ILP32Q-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV32-ILP32Q-NEXT:   PseudoRET implicit $f10_q
   %1 = fpext double 1.0 to fp128
   ret fp128 %1
 }
@@ -556,13 +422,11 @@ define fp128 @callee_fp128_ret() nounwind {
 define i32 @caller_fp128_ret() nounwind {
   ; RV32-ILP32Q-LABEL: name: caller_fp128_ret
   ; RV32-ILP32Q: bb.1 (%ir-block.0):
-  ; RV32-ILP32Q-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; RV32-ILP32Q-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV32-ILP32Q-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_ret, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10
+  ; RV32-ILP32Q-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_ret, csr_ilp32q_lp64q, implicit-def $x1, implicit-def $f10_q
   ; RV32-ILP32Q-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; RV32-ILP32Q-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s128) from %stack.0)
-  ; RV32-ILP32Q-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LOAD]](s128)
+  ; RV32-ILP32Q-NEXT:   [[COPY:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV32-ILP32Q-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s128)
   ; RV32-ILP32Q-NEXT:   $x10 = COPY [[TRUNC]](s32)
   ; RV32-ILP32Q-NEXT:   PseudoRET implicit $x10
   %1 = call fp128 @callee_fp128_ret()

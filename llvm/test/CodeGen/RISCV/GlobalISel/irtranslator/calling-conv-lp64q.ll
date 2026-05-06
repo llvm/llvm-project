@@ -9,13 +9,11 @@
 define i64 @callee_fp128_in_regs(i64 %a, fp128 %b) nounwind {
   ; RV64I-LABEL: name: callee_fp128_in_regs
   ; RV64I: bb.1 (%ir-block.0):
-  ; RV64I-NEXT:   liveins: $x10, $x11, $x12
+  ; RV64I-NEXT:   liveins: $x10, $f10_q
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY1]](s64), [[COPY2]](s64)
-  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[MV]](s128)
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[COPY1]](s128)
   ; RV64I-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[FPTOSI]]
   ; RV64I-NEXT:   $x10 = COPY [[ADD]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -31,11 +29,9 @@ define i64 @caller_fp128_in_regs() nounwind {
   ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; RV64I-NEXT:   [[FPEXT:%[0-9]+]]:_(s128) = G_FPEXT [[C]](s64)
   ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT]](s128)
   ; RV64I-NEXT:   $x10 = COPY [[C1]](s64)
-  ; RV64I-NEXT:   $x11 = COPY [[UV]](s64)
-  ; RV64I-NEXT:   $x12 = COPY [[UV1]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_regs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; RV64I-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_regs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $f10_q, implicit-def $x10
   ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   $x10 = COPY [[COPY]](s64)
@@ -49,7 +45,7 @@ define i64 @caller_fp128_in_regs() nounwind {
 define i64 @callee_fp128_in_fpr_exhausted_gprs(i128 %a, i128 %b, i128 %c, i128 %d, i64 %e, fp128 %f) nounwind {
   ; RV64I-LABEL: name: callee_fp128_in_fpr_exhausted_gprs
   ; RV64I: bb.1 (%ir-block.0):
-  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_q
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
@@ -63,14 +59,10 @@ define i64 @callee_fp128_in_fpr_exhausted_gprs(i128 %a, i128 %b, i128 %c, i128 %
   ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
   ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
   ; RV64I-NEXT:   [[MV3:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY6]](s64), [[COPY7]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.2, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s64) from %fixed-stack.1, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s64) from %fixed-stack.0)
-  ; RV64I-NEXT:   [[MV4:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD1]](s64), [[LOAD2]](s64)
-  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[MV4]](s128)
+  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.0, align 16)
+  ; RV64I-NEXT:   [[COPY8:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[COPY8]](s128)
   ; RV64I-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[FPTOSI]]
   ; RV64I-NEXT:   $x10 = COPY [[ADD]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -89,7 +81,7 @@ define i64 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
   ; RV64I-NEXT:   [[C4:%[0-9]+]]:_(s128) = G_CONSTANT i128 4
   ; RV64I-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
   ; RV64I-NEXT:   [[FPEXT:%[0-9]+]]:_(s128) = G_FPEXT [[C]](s64)
-  ; RV64I-NEXT:   ADJCALLSTACKDOWN 32, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C1]](s128)
   ; RV64I-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C2]](s128)
   ; RV64I-NEXT:   [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C3]](s128)
@@ -98,13 +90,6 @@ define i64 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
   ; RV64I-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C6]](s64)
   ; RV64I-NEXT:   G_STORE [[C5]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
-  ; RV64I-NEXT:   [[UV8:%[0-9]+]]:_(s64), [[UV9:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT]](s128)
-  ; RV64I-NEXT:   [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C7]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV8]](s64), [[PTR_ADD1]](p0) :: (store (s64) into stack + 16, align 16)
-  ; RV64I-NEXT:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C8]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV9]](s64), [[PTR_ADD2]](p0) :: (store (s64) into stack + 24)
   ; RV64I-NEXT:   $x10 = COPY [[UV]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[UV1]](s64)
   ; RV64I-NEXT:   $x12 = COPY [[UV2]](s64)
@@ -113,8 +98,9 @@ define i64 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
   ; RV64I-NEXT:   $x15 = COPY [[UV5]](s64)
   ; RV64I-NEXT:   $x16 = COPY [[UV6]](s64)
   ; RV64I-NEXT:   $x17 = COPY [[UV7]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_fpr_exhausted_gprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
-  ; RV64I-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_fpr_exhausted_gprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_q, implicit-def $x10
+  ; RV64I-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   $x10 = COPY [[COPY1]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -128,47 +114,21 @@ define i64 @caller_fp128_in_fpr_exhausted_gprs() nounwind {
 define i32 @callee_fp128_in_gpr_exhausted_fprs(fp128 %a, fp128 %b, fp128 %c, fp128 %d, fp128 %e, fp128 %f, fp128 %g, fp128 %h, fp128 %i) nounwind {
   ; RV64I-LABEL: name: callee_fp128_in_gpr_exhausted_fprs
   ; RV64I: bb.1 (%ir-block.0):
-  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV64I-NEXT:   liveins: $x10, $x11, $f10_q, $f11_q, $f12_q, $f13_q, $f14_q, $f15_q, $f16_q, $f17_q
   ; RV64I-NEXT: {{  $}}
-  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
-  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64I-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
-  ; RV64I-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64I-NEXT:   [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY4]](s64), [[COPY5]](s64)
-  ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64I-NEXT:   [[MV3:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY6]](s64), [[COPY7]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.9
-  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.9, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s64) from %fixed-stack.8)
-  ; RV64I-NEXT:   [[MV4:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s64), [[LOAD1]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s64) from %fixed-stack.7, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX3]](p0) :: (load (s64) from %fixed-stack.6)
-  ; RV64I-NEXT:   [[MV5:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD2]](s64), [[LOAD3]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64I-NEXT:   [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (s64) from %fixed-stack.5, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64I-NEXT:   [[LOAD5:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (s64) from %fixed-stack.4)
-  ; RV64I-NEXT:   [[MV6:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD4]](s64), [[LOAD5]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64I-NEXT:   [[LOAD6:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (s64) from %fixed-stack.3, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64I-NEXT:   [[LOAD7:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX7]](p0) :: (load (s64) from %fixed-stack.2)
-  ; RV64I-NEXT:   [[MV7:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD6]](s64), [[LOAD7]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64I-NEXT:   [[LOAD8:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX8]](p0) :: (load (s64) from %fixed-stack.1, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX9:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64I-NEXT:   [[LOAD9:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX9]](p0) :: (load (s64) from %fixed-stack.0)
-  ; RV64I-NEXT:   [[MV8:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD8]](s64), [[LOAD9]](s64)
-  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[MV7]](s128)
-  ; RV64I-NEXT:   [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[MV8]](s128)
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s128) = COPY $f11_q
+  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s128) = COPY $f12_q
+  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s128) = COPY $f13_q
+  ; RV64I-NEXT:   [[COPY4:%[0-9]+]]:_(s128) = COPY $f14_q
+  ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s128) = COPY $f15_q
+  ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s128) = COPY $f16_q
+  ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s128) = COPY $f17_q
+  ; RV64I-NEXT:   [[COPY8:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64I-NEXT:   [[COPY9:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY8]](s64), [[COPY9]](s64)
+  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY7]](s128)
+  ; RV64I-NEXT:   [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[MV]](s128)
   ; RV64I-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[FPTOSI]], [[FPTOSI1]]
   ; RV64I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
   ; RV64I-NEXT:   $x10 = COPY [[ANYEXT]](s64)
@@ -200,59 +160,22 @@ define i32 @caller_fp128_in_gpr_exhausted_fprs() nounwind {
   ; RV64I-NEXT:   [[FPEXT6:%[0-9]+]]:_(s128) = G_FPEXT [[C6]](s64)
   ; RV64I-NEXT:   [[FPEXT7:%[0-9]+]]:_(s128) = G_FPEXT [[C7]](s64)
   ; RV64I-NEXT:   [[FPEXT8:%[0-9]+]]:_(s128) = G_FPEXT [[C8]](s64)
-  ; RV64I-NEXT:   ADJCALLSTACKDOWN 80, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT]](s128)
-  ; RV64I-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT1]](s128)
-  ; RV64I-NEXT:   [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT2]](s128)
-  ; RV64I-NEXT:   [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT3]](s128)
-  ; RV64I-NEXT:   [[UV8:%[0-9]+]]:_(s64), [[UV9:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT4]](s128)
-  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; RV64I-NEXT:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
-  ; RV64I-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV9]](s64), [[PTR_ADD1]](p0) :: (store (s64) into stack + 8)
-  ; RV64I-NEXT:   [[UV10:%[0-9]+]]:_(s64), [[UV11:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT5]](s128)
-  ; RV64I-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV10]](s64), [[PTR_ADD2]](p0) :: (store (s64) into stack + 16, align 16)
-  ; RV64I-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; RV64I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV11]](s64), [[PTR_ADD3]](p0) :: (store (s64) into stack + 24)
-  ; RV64I-NEXT:   [[UV12:%[0-9]+]]:_(s64), [[UV13:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT6]](s128)
-  ; RV64I-NEXT:   [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; RV64I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV12]](s64), [[PTR_ADD4]](p0) :: (store (s64) into stack + 32, align 16)
-  ; RV64I-NEXT:   [[C14:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; RV64I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C14]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV13]](s64), [[PTR_ADD5]](p0) :: (store (s64) into stack + 40)
-  ; RV64I-NEXT:   [[UV14:%[0-9]+]]:_(s64), [[UV15:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT7]](s128)
-  ; RV64I-NEXT:   [[C15:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-  ; RV64I-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV14]](s64), [[PTR_ADD6]](p0) :: (store (s64) into stack + 48, align 16)
-  ; RV64I-NEXT:   [[C16:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
-  ; RV64I-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C16]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV15]](s64), [[PTR_ADD7]](p0) :: (store (s64) into stack + 56)
-  ; RV64I-NEXT:   [[UV16:%[0-9]+]]:_(s64), [[UV17:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT8]](s128)
-  ; RV64I-NEXT:   [[C17:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-  ; RV64I-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C17]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV16]](s64), [[PTR_ADD8]](p0) :: (store (s64) into stack + 64, align 16)
-  ; RV64I-NEXT:   [[C18:%[0-9]+]]:_(s64) = G_CONSTANT i64 72
-  ; RV64I-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C18]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV17]](s64), [[PTR_ADD9]](p0) :: (store (s64) into stack + 72)
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT8]](s128)
+  ; RV64I-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV64I-NEXT:   $f11_q = COPY [[FPEXT1]](s128)
+  ; RV64I-NEXT:   $f12_q = COPY [[FPEXT2]](s128)
+  ; RV64I-NEXT:   $f13_q = COPY [[FPEXT3]](s128)
+  ; RV64I-NEXT:   $f14_q = COPY [[FPEXT4]](s128)
+  ; RV64I-NEXT:   $f15_q = COPY [[FPEXT5]](s128)
+  ; RV64I-NEXT:   $f16_q = COPY [[FPEXT6]](s128)
+  ; RV64I-NEXT:   $f17_q = COPY [[FPEXT7]](s128)
   ; RV64I-NEXT:   $x10 = COPY [[UV]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[UV1]](s64)
-  ; RV64I-NEXT:   $x12 = COPY [[UV2]](s64)
-  ; RV64I-NEXT:   $x13 = COPY [[UV3]](s64)
-  ; RV64I-NEXT:   $x14 = COPY [[UV4]](s64)
-  ; RV64I-NEXT:   $x15 = COPY [[UV5]](s64)
-  ; RV64I-NEXT:   $x16 = COPY [[UV6]](s64)
-  ; RV64I-NEXT:   $x17 = COPY [[UV7]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_gpr_exhausted_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
-  ; RV64I-NEXT:   ADJCALLSTACKUP 80, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_in_gpr_exhausted_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $f10_q, implicit $f11_q, implicit $f12_q, implicit $f13_q, implicit $f14_q, implicit $f15_q, implicit $f16_q, implicit $f17_q, implicit $x10, implicit $x11, implicit-def $x10
+  ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
   ; RV64I-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -275,67 +198,32 @@ define i32 @caller_fp128_in_gpr_exhausted_fprs() nounwind {
 define i64 @callee_fp128_on_stack_exhausted_gprs_fprs(i128 %a, fp128 %b, i128 %c, fp128 %d, i128 %e, fp128 %f, i128 %g, fp128 %h, fp128 %i, fp128 %j, fp128 %k, fp128 %l, fp128 %m) nounwind {
   ; RV64I-LABEL: name: callee_fp128_on_stack_exhausted_gprs_fprs
   ; RV64I: bb.1 (%ir-block.0):
-  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_q, $f11_q, $f12_q, $f13_q, $f14_q, $f15_q, $f16_q, $f17_q
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
-  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64I-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
-  ; RV64I-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64I-NEXT:   [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY4]](s64), [[COPY5]](s64)
-  ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64I-NEXT:   [[MV3:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY6]](s64), [[COPY7]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.17
-  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.17, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.16
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s64) from %fixed-stack.16)
-  ; RV64I-NEXT:   [[MV4:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s64), [[LOAD1]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.15
-  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s64) from %fixed-stack.15, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.14
-  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX3]](p0) :: (load (s64) from %fixed-stack.14)
-  ; RV64I-NEXT:   [[MV5:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD2]](s64), [[LOAD3]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.13
-  ; RV64I-NEXT:   [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (s64) from %fixed-stack.13, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.12
-  ; RV64I-NEXT:   [[LOAD5:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (s64) from %fixed-stack.12)
-  ; RV64I-NEXT:   [[MV6:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD4]](s64), [[LOAD5]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.11
-  ; RV64I-NEXT:   [[LOAD6:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (s64) from %fixed-stack.11, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.10
-  ; RV64I-NEXT:   [[LOAD7:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX7]](p0) :: (load (s64) from %fixed-stack.10)
-  ; RV64I-NEXT:   [[MV7:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD6]](s64), [[LOAD7]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.9
-  ; RV64I-NEXT:   [[LOAD8:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX8]](p0) :: (load (s64) from %fixed-stack.9, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX9:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
-  ; RV64I-NEXT:   [[LOAD9:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX9]](p0) :: (load (s64) from %fixed-stack.8)
-  ; RV64I-NEXT:   [[MV8:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD8]](s64), [[LOAD9]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX10:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; RV64I-NEXT:   [[LOAD10:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX10]](p0) :: (load (s64) from %fixed-stack.7, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX11:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64I-NEXT:   [[LOAD11:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX11]](p0) :: (load (s64) from %fixed-stack.6)
-  ; RV64I-NEXT:   [[MV9:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD10]](s64), [[LOAD11]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX12:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64I-NEXT:   [[LOAD12:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX12]](p0) :: (load (s64) from %fixed-stack.5, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX13:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64I-NEXT:   [[LOAD13:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX13]](p0) :: (load (s64) from %fixed-stack.4)
-  ; RV64I-NEXT:   [[MV10:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD12]](s64), [[LOAD13]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX14:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64I-NEXT:   [[LOAD14:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX14]](p0) :: (load (s64) from %fixed-stack.3, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX15:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64I-NEXT:   [[LOAD15:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX15]](p0) :: (load (s64) from %fixed-stack.2)
-  ; RV64I-NEXT:   [[MV11:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD14]](s64), [[LOAD15]](s64)
-  ; RV64I-NEXT:   [[FRAME_INDEX16:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64I-NEXT:   [[LOAD16:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX16]](p0) :: (load (s64) from %fixed-stack.1, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX17:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64I-NEXT:   [[LOAD17:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX17]](p0) :: (load (s64) from %fixed-stack.0)
-  ; RV64I-NEXT:   [[MV12:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD16]](s64), [[LOAD17]](s64)
-  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV6]](s128)
-  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[MV12]](s128)
+  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x12
+  ; RV64I-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x13
+  ; RV64I-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY3]](s64), [[COPY4]](s64)
+  ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s128) = COPY $f11_q
+  ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x14
+  ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x15
+  ; RV64I-NEXT:   [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY6]](s64), [[COPY7]](s64)
+  ; RV64I-NEXT:   [[COPY8:%[0-9]+]]:_(s128) = COPY $f12_q
+  ; RV64I-NEXT:   [[COPY9:%[0-9]+]]:_(s64) = COPY $x16
+  ; RV64I-NEXT:   [[COPY10:%[0-9]+]]:_(s64) = COPY $x17
+  ; RV64I-NEXT:   [[MV3:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY9]](s64), [[COPY10]](s64)
+  ; RV64I-NEXT:   [[COPY11:%[0-9]+]]:_(s128) = COPY $f13_q
+  ; RV64I-NEXT:   [[COPY12:%[0-9]+]]:_(s128) = COPY $f14_q
+  ; RV64I-NEXT:   [[COPY13:%[0-9]+]]:_(s128) = COPY $f15_q
+  ; RV64I-NEXT:   [[COPY14:%[0-9]+]]:_(s128) = COPY $f16_q
+  ; RV64I-NEXT:   [[COPY15:%[0-9]+]]:_(s128) = COPY $f17_q
+  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s128) from %fixed-stack.0)
+  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV3]](s128)
+  ; RV64I-NEXT:   [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[LOAD]](s128)
   ; RV64I-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[TRUNC]], [[FPTOSI]]
   ; RV64I-NEXT:   $x10 = COPY [[ADD]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -370,85 +258,33 @@ define i64 @caller_fp128_on_stack_exhausted_gprs_fprs() nounwind {
   ; RV64I-NEXT:   [[FPEXT6:%[0-9]+]]:_(s128) = G_FPEXT [[C6]](s64)
   ; RV64I-NEXT:   [[FPEXT7:%[0-9]+]]:_(s128) = G_FPEXT [[C7]](s64)
   ; RV64I-NEXT:   [[FPEXT8:%[0-9]+]]:_(s128) = G_FPEXT [[C8]](s64)
-  ; RV64I-NEXT:   ADJCALLSTACKDOWN 144, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C9]](s128)
-  ; RV64I-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT]](s128)
-  ; RV64I-NEXT:   [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C10]](s128)
-  ; RV64I-NEXT:   [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT1]](s128)
-  ; RV64I-NEXT:   [[UV8:%[0-9]+]]:_(s64), [[UV9:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C11]](s128)
+  ; RV64I-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C10]](s128)
+  ; RV64I-NEXT:   [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C11]](s128)
+  ; RV64I-NEXT:   [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C12]](s128)
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; RV64I-NEXT:   [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
-  ; RV64I-NEXT:   [[C14:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C14]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV9]](s64), [[PTR_ADD1]](p0) :: (store (s64) into stack + 8)
-  ; RV64I-NEXT:   [[UV10:%[0-9]+]]:_(s64), [[UV11:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT2]](s128)
-  ; RV64I-NEXT:   [[C15:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV10]](s64), [[PTR_ADD2]](p0) :: (store (s64) into stack + 16, align 16)
-  ; RV64I-NEXT:   [[C16:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; RV64I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C16]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV11]](s64), [[PTR_ADD3]](p0) :: (store (s64) into stack + 24)
-  ; RV64I-NEXT:   [[UV12:%[0-9]+]]:_(s64), [[UV13:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C12]](s128)
-  ; RV64I-NEXT:   [[C17:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; RV64I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C17]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV12]](s64), [[PTR_ADD4]](p0) :: (store (s64) into stack + 32, align 16)
-  ; RV64I-NEXT:   [[C18:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; RV64I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C18]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV13]](s64), [[PTR_ADD5]](p0) :: (store (s64) into stack + 40)
-  ; RV64I-NEXT:   [[UV14:%[0-9]+]]:_(s64), [[UV15:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT3]](s128)
-  ; RV64I-NEXT:   [[C19:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-  ; RV64I-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C19]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV14]](s64), [[PTR_ADD6]](p0) :: (store (s64) into stack + 48, align 16)
-  ; RV64I-NEXT:   [[C20:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
-  ; RV64I-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C20]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV15]](s64), [[PTR_ADD7]](p0) :: (store (s64) into stack + 56)
-  ; RV64I-NEXT:   [[UV16:%[0-9]+]]:_(s64), [[UV17:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT4]](s128)
-  ; RV64I-NEXT:   [[C21:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-  ; RV64I-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C21]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV16]](s64), [[PTR_ADD8]](p0) :: (store (s64) into stack + 64, align 16)
-  ; RV64I-NEXT:   [[C22:%[0-9]+]]:_(s64) = G_CONSTANT i64 72
-  ; RV64I-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C22]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV17]](s64), [[PTR_ADD9]](p0) :: (store (s64) into stack + 72)
-  ; RV64I-NEXT:   [[UV18:%[0-9]+]]:_(s64), [[UV19:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT5]](s128)
-  ; RV64I-NEXT:   [[C23:%[0-9]+]]:_(s64) = G_CONSTANT i64 80
-  ; RV64I-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C23]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV18]](s64), [[PTR_ADD10]](p0) :: (store (s64) into stack + 80, align 16)
-  ; RV64I-NEXT:   [[C24:%[0-9]+]]:_(s64) = G_CONSTANT i64 88
-  ; RV64I-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C24]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV19]](s64), [[PTR_ADD11]](p0) :: (store (s64) into stack + 88)
-  ; RV64I-NEXT:   [[UV20:%[0-9]+]]:_(s64), [[UV21:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT6]](s128)
-  ; RV64I-NEXT:   [[C25:%[0-9]+]]:_(s64) = G_CONSTANT i64 96
-  ; RV64I-NEXT:   [[PTR_ADD12:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C25]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV20]](s64), [[PTR_ADD12]](p0) :: (store (s64) into stack + 96, align 16)
-  ; RV64I-NEXT:   [[C26:%[0-9]+]]:_(s64) = G_CONSTANT i64 104
-  ; RV64I-NEXT:   [[PTR_ADD13:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C26]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV21]](s64), [[PTR_ADD13]](p0) :: (store (s64) into stack + 104)
-  ; RV64I-NEXT:   [[UV22:%[0-9]+]]:_(s64), [[UV23:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT7]](s128)
-  ; RV64I-NEXT:   [[C27:%[0-9]+]]:_(s64) = G_CONSTANT i64 112
-  ; RV64I-NEXT:   [[PTR_ADD14:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C27]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV22]](s64), [[PTR_ADD14]](p0) :: (store (s64) into stack + 112, align 16)
-  ; RV64I-NEXT:   [[C28:%[0-9]+]]:_(s64) = G_CONSTANT i64 120
-  ; RV64I-NEXT:   [[PTR_ADD15:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C28]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV23]](s64), [[PTR_ADD15]](p0) :: (store (s64) into stack + 120)
-  ; RV64I-NEXT:   [[UV24:%[0-9]+]]:_(s64), [[UV25:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT8]](s128)
-  ; RV64I-NEXT:   [[C29:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
-  ; RV64I-NEXT:   [[PTR_ADD16:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C29]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV24]](s64), [[PTR_ADD16]](p0) :: (store (s64) into stack + 128, align 16)
-  ; RV64I-NEXT:   [[C30:%[0-9]+]]:_(s64) = G_CONSTANT i64 136
-  ; RV64I-NEXT:   [[PTR_ADD17:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C30]](s64)
-  ; RV64I-NEXT:   G_STORE [[UV25]](s64), [[PTR_ADD17]](p0) :: (store (s64) into stack + 136)
+  ; RV64I-NEXT:   G_STORE [[FPEXT8]](s128), [[PTR_ADD]](p0) :: (store (s128) into stack)
   ; RV64I-NEXT:   $x10 = COPY [[UV]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[UV1]](s64)
+  ; RV64I-NEXT:   $f10_q = COPY [[FPEXT]](s128)
   ; RV64I-NEXT:   $x12 = COPY [[UV2]](s64)
   ; RV64I-NEXT:   $x13 = COPY [[UV3]](s64)
+  ; RV64I-NEXT:   $f11_q = COPY [[FPEXT1]](s128)
   ; RV64I-NEXT:   $x14 = COPY [[UV4]](s64)
   ; RV64I-NEXT:   $x15 = COPY [[UV5]](s64)
+  ; RV64I-NEXT:   $f12_q = COPY [[FPEXT2]](s128)
   ; RV64I-NEXT:   $x16 = COPY [[UV6]](s64)
   ; RV64I-NEXT:   $x17 = COPY [[UV7]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_on_stack_exhausted_gprs_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
-  ; RV64I-NEXT:   ADJCALLSTACKUP 144, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   $f13_q = COPY [[FPEXT3]](s128)
+  ; RV64I-NEXT:   $f14_q = COPY [[FPEXT4]](s128)
+  ; RV64I-NEXT:   $f15_q = COPY [[FPEXT5]](s128)
+  ; RV64I-NEXT:   $f16_q = COPY [[FPEXT6]](s128)
+  ; RV64I-NEXT:   $f17_q = COPY [[FPEXT7]](s128)
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_on_stack_exhausted_gprs_fprs, csr_ilp32q_lp64q, implicit-def $x1, implicit $x10, implicit $x11, implicit $f10_q, implicit $x12, implicit $x13, implicit $f11_q, implicit $x14, implicit $x15, implicit $f12_q, implicit $x16, implicit $x17, implicit $f13_q, implicit $f14_q, implicit $f15_q, implicit $f16_q, implicit $f17_q, implicit-def $x10
+  ; RV64I-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   $x10 = COPY [[COPY1]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -472,10 +308,8 @@ define fp128 @callee_fp128_ret() nounwind {
   ; RV64I: bb.1 (%ir-block.0):
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
   ; RV64I-NEXT:   [[FPEXT:%[0-9]+]]:_(s128) = G_FPEXT [[C]](s64)
-  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT]](s128)
-  ; RV64I-NEXT:   $x10 = COPY [[UV]](s64)
-  ; RV64I-NEXT:   $x11 = COPY [[UV1]](s64)
-  ; RV64I-NEXT:   PseudoRET implicit $x10, implicit $x11
+  ; RV64I-NEXT:   $f10_q = COPY [[FPEXT]](s128)
+  ; RV64I-NEXT:   PseudoRET implicit $f10_q
   %1 = fpext double 1.0 to fp128
   ret fp128 %1
 }
@@ -484,12 +318,10 @@ define i128 @caller_fp128_ret() nounwind {
   ; RV64I-LABEL: name: caller_fp128_ret
   ; RV64I: bb.1 (%ir-block.0):
   ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_ret, csr_ilp32q_lp64q, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_ret, csr_ilp32q_lp64q, implicit-def $x1, implicit-def $f10_q
   ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
-  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV]](s128)
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s128) = COPY $f10_q
+  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
   ; RV64I-NEXT:   $x10 = COPY [[UV]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[UV1]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10, implicit $x11
