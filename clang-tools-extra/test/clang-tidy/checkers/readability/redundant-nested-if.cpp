@@ -1,4 +1,10 @@
-// RUN: %check_clang_tidy -check-suffixes=BASE -std=c++11 %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
+// Use exact standards because this file has version-specific FileCheck
+// suffixes. `check_clang_tidy.py` expands `-std=c++17-or-later` into separate
+// C++17, C++20, ... runs, but reuses the same suffix list for each run. A
+// suffix list for one language mode would either miss warnings from later
+// `#if __cplusplus` blocks, or look for CHECK lines from blocks preprocessed
+// away in earlier modes.
+// RUN: %check_clang_tidy -check-suffixes=BASE -std=c++98,c++11,c++14 %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=BASE,CXX17 -std=c++17 %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=BASE,CXX17,CXX20 -std=c++20 %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=BASE,CXX17,CXX20,CXX23 -std=c++23 %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
@@ -12,7 +18,7 @@ void sink();
 void bar();
 
 struct BoolLike {
-  explicit operator bool() const;
+  operator bool() const;
 };
 
 BoolLike make_bool_like();
@@ -328,6 +334,7 @@ template <bool B> void dependent_constexpr_outer_is_fixable() {
 }
 
 template <bool B> void dependent_constexpr_outer_is_unsafe_when_nested_false() {
+  // CHECK-MESSAGES-CXX17-NOT: :[[@LINE+2]]:3: warning: nested if statements can be merged
   // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:3: warning: nested instantiation-dependent if constexpr statements can be merged
   if constexpr (B) {
     // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:5: note: nested if statement to merge is here
@@ -337,6 +344,7 @@ template <bool B> void dependent_constexpr_outer_is_unsafe_when_nested_false() {
 }
 
 template <typename T> void dependent_constexpr_operand_warn_only_under_option() {
+  // CHECK-MESSAGES-CXX17-NOT: :[[@LINE+2]]:3: warning: nested if statements can be merged
   // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:3: warning: nested instantiation-dependent if constexpr statements can be merged
   if constexpr (true) {
     // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:5: note: nested if statement to merge is here

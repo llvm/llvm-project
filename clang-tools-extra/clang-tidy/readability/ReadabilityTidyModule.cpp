@@ -149,6 +149,8 @@ public:
         "readability-redundant-lambda-parameter-list");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
+    CheckFactories.registerCheck<RedundantNestedIfCheck>(
+        "readability-redundant-nested-if");
     CheckFactories.registerCheck<RedundantParenthesesCheck>(
         "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
@@ -181,8 +183,6 @@ public:
         "readability-redundant-string-cstr");
     CheckFactories.registerCheck<RedundantStringInitCheck>(
         "readability-redundant-string-init");
-    CheckFactories.registerCheck<RedundantNestedIfCheck>(
-        "readability-redundant-nested-if");
     CheckFactories.registerCheck<SimplifyBooleanExprCheck>(
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<SuspiciousCallArgumentCheck>(

@@ -15,6 +15,9 @@ namespace clang::tidy::readability {
 
 /// Detects nested ``if`` statements that can be merged into one by
 /// concatenating conditions with ``&&``.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-nested-if.html
 class RedundantNestedIfCheck : public ClangTidyCheck {
 public:
   RedundantNestedIfCheck(StringRef Name, ClangTidyContext *Context);
@@ -22,6 +25,9 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 
 private:
   const bool WarnOnDependentConstexprIf;

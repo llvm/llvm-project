@@ -189,6 +189,10 @@ canRewriteOuterConditionVariable(const IfStmt *If,
   assert(If);
   assert(If->hasVarStorage());
 
+  // `if (init; bool X = cond())` cannot generally become 
+  // `if (init; bool X = cond(); X)`.
+  // Same-type declaration merging, like `if (bool Y = init(), X = cond(); X)`,
+  // is possible but too narrow to be worth supporting.
   if (If->hasInitStorage())
     return false;
 
@@ -219,22 +223,17 @@ static const IfStmt *getOnlyNestedIf(const Stmt *Then) {
   return dyn_cast<IfStmt>(Compound->body_front());
 }
 
-static bool hasMergeableStructure(const IfStmt *If, bool AllowInitStorage,
-                                  bool RequireConstexpr) {
-  assert(If);
-
-  return If->getThen() && !If->isConsteval() && !If->getElse() &&
-         (AllowInitStorage || !If->hasInitStorage()) &&
-         If->isConstexpr() == RequireConstexpr;
-}
-
 static bool isMergeCandidate(const IfStmt *If, bool AllowInitStorage,
                              bool RequireConstexpr, bool AllowConditionVariable,
                              bool AllowUserDefinedBoolConversion,
                              const LangOptions &LangOpts) {
   assert(If);
 
-  if (!hasMergeableStructure(If, AllowInitStorage, RequireConstexpr))
+  const bool IsMergeableStructure =
+      If->getThen() && !If->isConsteval() && !If->getElse() &&
+      (AllowInitStorage || !If->hasInitStorage()) &&
+      If->isConstexpr() == RequireConstexpr;
+  if (!IsMergeableStructure)
     return false;
 
   if (If->hasVarStorage())
@@ -256,8 +255,6 @@ static bool isAttributedIf(const IfStmt *If, ASTContext &Context) {
 
 static IfChain getMergeChain(const IfStmt *Root, ASTContext &Context,
                              bool AllowUserDefinedBoolConversion) {
-  assert(Root);
-
   IfChain Chain;
   const LangOptions &LangOpts = Context.getLangOpts();
   const bool RequireConstexpr = Root->isConstexpr();
@@ -265,9 +262,8 @@ static IfChain getMergeChain(const IfStmt *Root, ASTContext &Context,
                         /*RequireConstexpr=*/RequireConstexpr,
                         /*AllowConditionVariable=*/true,
                         AllowUserDefinedBoolConversion, LangOpts) ||
-      isAttributedIf(Root, Context)) {
+      isAttributedIf(Root, Context))
     return Chain;
-  }
 
   Chain.push_back(Root);
   const IfStmt *Current = Root;
@@ -276,9 +272,8 @@ static IfChain getMergeChain(const IfStmt *Root, ASTContext &Context,
                           /*RequireConstexpr=*/RequireConstexpr,
                           /*AllowConditionVariable=*/false,
                           AllowUserDefinedBoolConversion, LangOpts) ||
-        isAttributedIf(Nested, Context)) {
+        isAttributedIf(Nested, Context))
       break;
-    }
 
     Chain.push_back(Nested);
     Current = Nested;
@@ -551,8 +546,6 @@ static void diagnoseChildChain(RedundantNestedIfCheck &Check,
 static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
                           ASTContext &Context, bool WarnOnDependentConstexprIf,
                           bool AllowUserDefinedBoolConversion) {
-  assert(If);
-
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
   const IfChain Chain =
@@ -622,9 +615,11 @@ void RedundantNestedIfCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void RedundantNestedIfCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      ifStmt(unless(anyOf(hasParent(ifStmt()),
-                          hasParent(compoundStmt(statementCountIs(1),
-                                                 hasParent(ifStmt()))))))
+      ifStmt(unless(hasElse(stmt())),
+             unless(anyOf(hasParent(ifStmt(unless(hasElse(stmt())))),
+                          hasParent(compoundStmt(
+                              statementCountIs(1),
+                              hasParent(ifStmt(unless(hasElse(stmt())))))))))
           .bind("if"),
       this);
 }

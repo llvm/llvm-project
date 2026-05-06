@@ -119,6 +119,4 @@ Options
 
    When set to `true`, the check also emits diagnostics for remaining unsafe
    ``if constexpr`` chains, for example with instantiation-dependent nested
-   conditions, but does not provide a fix-it for them.
-
-   Default is `false`.
+   conditions, but does not provide a fix-it for them. Default is `false`.
