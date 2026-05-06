@@ -6558,7 +6558,9 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
         CtxI = I;
     }
     unsigned Known =
-        computeKnownBits(U->getValue(), getDataLayout(), &AC, CtxI, &DT)
+        computeKnownBits(U->getValue(),
+                         SimplifyQuery(getDataLayout(), &DT, &AC, CtxI)
+                             .allowEphemerals(true))
             .countMinTrailingZeros();
     return GetShiftedByZeros(Known);
   }

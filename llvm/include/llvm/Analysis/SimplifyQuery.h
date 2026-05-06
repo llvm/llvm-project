@@ -86,7 +86,7 @@ struct SimplifyQuery {
   /// possible values for uses of undef. If it is false, simplifications are not
   /// allowed to assume a particular value for a use of undef for example.
   bool CanUseUndef = true;
-  bool AllowEphemerals = true;
+  bool AllowEphemerals = false;
 
   SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
       : DL(DL), CxtI(CXTI) {}
