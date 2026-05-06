@@ -255,13 +255,31 @@ struct FormatStyle {
     ///   bbb >>= 2;
     /// \endcode
     bool PadOperators;
+    /// Whether to consider trailing comments going over the column limit a
+    /// cause to separate alignment groups.
+    /// \code
+    ///   true:
+    ///   /*                            column limit -> | */
+    ///   int                 a = 3; // a long trailing comment
+    ///   int                 b = 4; // short comment 1
+    ///   AReallyLongTypeName c = 5; // short comment 2
+    ///   short comment 2
+    ///
+    ///   false:
+    ///   /*                            column limit -> | */
+    ///   int a = 3; // a long trailing comment
+    ///   int b = 4; // short comment 1
+    ///   AReallyLongTypeName c = 5; // short comment 2
+    /// \endcode
+    bool IgnoreTrailingCommentLength;
     bool operator==(const AlignConsecutiveStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
              AlignCompound == R.AlignCompound &&
              AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
-             PadOperators == R.PadOperators;
+             PadOperators == R.PadOperators &&
+             IgnoreTrailingCommentLength == R.IgnoreTrailingCommentLength;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
       return !(*this == R);

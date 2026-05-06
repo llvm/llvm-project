@@ -1913,6 +1913,229 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
                "void f2(void);\n"
                "size_t f3(void);",
                Alignment);
+
+  Style = getLLVMStyleWithColumns(47);
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  verifyFormat("int a = 3; // a long trailing comment\n"
+               "int b = 4; // short comment 1\n"
+               "AReallyLongTypeName c = 5; // short comment 2\n",
+               Style);
+
+  Style.AlignConsecutiveDeclarations.IgnoreTrailingCommentLength = true;
+  verifyFormat("int                 a = 3; // a long trailing comment\n"
+               "int                 b = 4; // short comment 1\n"
+               "AReallyLongTypeName c = 5; // short comment 2\n",
+               Style);
+
+  Style = getLLVMStyleWithColumns(120);
+  Style.IndentWidth = 4;
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AcrossComments = true;
+  verifyFormat(
+      "struct ATestingTypeABCDEF {\n"
+      "    uint8 member1ABCDEFGHI; // Lorem ipsum dolor sit amet, consectetur "
+      "adipiscing elit. Aliquam ullamcorper in leo in\n"
+      "                            // lobortis. In ac fermentum enim. Duis "
+      "ullamcorper ac lectus suscipit interdum. Phasellus\n"
+      "                            // id condimentum lorem. Ut ac convallis "
+      "ligula. Maecenas quis interdum nisl. In vel\n"
+      "                            // molestie eros. Curabitur lobortis dui "
+      "vitae purus interdum\n"
+      "    uint8 member2ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ; // Lorem ipsum "
+      "dolor sit amet, consectetur adipiscing\n"
+      "    int8  member3ABCDEFGHIJ;\n"
+      "    int8  member4ABCDEFGHIJKLMNOPQRSTU; // Lorem ipsum dolor sit amet, "
+      "consectetur amet\n"
+      "    uint8 aaa;\n"
+      "    int8  bbbbb;\n"
+      "    uint8 member7ABCDEFGHIJKLMNO;\n"
+      "    ALongTypeNameV1ABCDE *member8ABCDEFGHIJKLMNO;\n"
+      "    int8  member9ABCDEF; // Lorem ipsum dolor sit amet, consectetur "
+      "adipiscing elit. Aliquam ullamcorper in leo\n"
+      "    uint8 member10ABCDEFGHIJKLMNO; // Lorem ipsum dolor sit amet, "
+      "consectetur elit\n"
+      "    uint8 member11ABC;\n"
+      "    uint8 member12ABCDEF;\n"
+      "    uint8 member13ABC;\n"
+      "    int8  member14ABCDEFGH;\n"
+      "    AnotherLongTypeNameV1ABCDEFGH           *member15ABCDEFGH;\n"
+      "    int8                                     member16ABCDEF;\n"
+      "    int8                                     member17;\n"
+      "    int8                                     member18;\n"
+      "    AThirdReallyLongTypeNameV1ABCDEFGHIJK    member19ABCDEFGHIJK;    // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "    TheLastReallyLongTypeNameV1ABCDEFGHIJKLM member20ABCDEFGHIJKLMN; // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "    uint8                                    member21ABCDEFGHIJKLM;  // "
+      "Lorem ipsum dolor sit amet, "
+      "consectetur\n"
+      "};\n",
+      "struct ATestingTypeABCDEF {\n"
+      "    uint8 member1ABCDEFGHI; // Lorem ipsum dolor sit amet, consectetur "
+      "adipiscing elit. Aliquam ullamcorper in leo in lobortis. In ac "
+      "fermentum enim. Duis ullamcorper ac lectus suscipit interdum. Phasellus "
+      "id condimentum lorem. Ut ac convallis ligula. Maecenas quis interdum "
+      "nisl. In vel molestie eros. Curabitur lobortis dui vitae purus "
+      "interdum\n"
+      "    uint8 member2ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ; // Lorem ipsum "
+      "dolor sit amet, consectetur adipiscing\n"
+      "    int8 member3ABCDEFGHIJ;\n"
+      "    int8 member4ABCDEFGHIJKLMNOPQRSTU; // Lorem ipsum dolor sit amet, "
+      "consectetur amet\n"
+      "    uint8 aaa;\n"
+      "    int8 bbbbb;\n"
+      "    uint8 member7ABCDEFGHIJKLMNO;\n"
+      "    ALongTypeNameV1ABCDE * member8ABCDEFGHIJKLMNO;\n"
+      "    int8 member9ABCDEF; // Lorem ipsum dolor sit amet, consectetur "
+      "adipiscing elit. Aliquam ullamcorper in leo\n"
+      "    uint8 member10ABCDEFGHIJKLMNO; // Lorem ipsum dolor sit amet, "
+      "consectetur elit\n"
+      "    uint8 member11ABC;\n"
+      "    uint8 member12ABCDEF;\n"
+      "    uint8 member13ABC;\n"
+      "    int8 member14ABCDEFGH;\n"
+      "    AnotherLongTypeNameV1ABCDEFGH * member15ABCDEFGH;\n"
+      "    int8 member16ABCDEF;\n"
+      "    int8 member17;\n"
+      "    int8 member18;\n"
+      "    AThirdReallyLongTypeNameV1ABCDEFGHIJK member19ABCDEFGHIJK; // Lorem "
+      "ipsum dolor sit amet, consectetur elit\n"
+      "    TheLastReallyLongTypeNameV1ABCDEFGHIJKLM member20ABCDEFGHIJKLMN; // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "    uint8 member21ABCDEFGHIJKLM; // Lorem ipsum dolor sit amet, "
+      "consectetur\n"
+      "};\n",
+      Style);
+
+  Style.AlignConsecutiveDeclarations.IgnoreTrailingCommentLength = true;
+  // This one tests proper alignment of the reflowed comment
+  verifyFormat(
+      "struct ATestingTypeABCDEF {\n"
+      "    uint8                                    member1ABCDEFGHI; // Lorem "
+      "ipsum dolor sit amet, consectetur adipiscing elit. Aliquam ullamcorper "
+      "in leo in\n"
+      "                                                               // "
+      "lobortis. In ac fermentum enim. Duis ullamcorper ac lectus suscipit "
+      "interdum. Phasellus\n"
+      "                                                               // id "
+      "condimentum lorem. Ut ac convallis ligula. Maecenas quis interdum nisl. "
+      "In vel\n"
+      "                                                               // "
+      "molestie eros. Curabitur lobortis dui vitae purus interdum\n"
+      "    uint8                                    "
+      "member2ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ; // Lorem ipsum dolor sit "
+      "amet, consectetur adipiscing\n"
+      "    int8                                     member3ABCDEFGHIJ;\n"
+      "    int8                                     "
+      "member4ABCDEFGHIJKLMNOPQRSTU; // Lorem ipsum dolor sit amet, "
+      "consectetur amet\n"
+      "    uint8                                    aaa;\n"
+      "    int8                                     bbbbb;\n"
+      "    uint8                                    member7ABCDEFGHIJKLMNO;\n"
+      "    ALongTypeNameV1ABCDE                    *member8ABCDEFGHIJKLMNO;\n"
+      "    int8                                     member9ABCDEF; // Lorem "
+      "ipsum dolor sit amet, consectetur adipiscing elit. Aliquam ullamcorper "
+      "in leo\n"
+      "    uint8                                    member10ABCDEFGHIJKLMNO; "
+      "// Lorem ipsum dolor sit amet, consectetur elit\n"
+      "    uint8                                    member11ABC;\n"
+      "    uint8                                    member12ABCDEF;\n"
+      "    uint8                                    member13ABC;\n"
+      "    int8                                     member14ABCDEFGH;\n"
+      "    AnotherLongTypeNameV1ABCDEFGH           *member15ABCDEFGH;\n"
+      "    int8                                     member16ABCDEF;\n"
+      "    int8                                     member17;\n"
+      "    int8                                     member18;\n"
+      "    AThirdReallyLongTypeNameV1ABCDEFGHIJK    member19ABCDEFGHIJK;    // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "    TheLastReallyLongTypeNameV1ABCDEFGHIJKLM member20ABCDEFGHIJKLMN; // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "    uint8                                    member21ABCDEFGHIJKLM;  // "
+      "Lorem ipsum dolor sit amet, consectetur\n"
+      "};\n",
+      "struct ATestingTypeABCDEF {\n"
+      "    uint8 member1ABCDEFGHI; // Lorem ipsum dolor sit amet, consectetur "
+      "adipiscing elit. Aliquam ullamcorper in leo in lobortis. In ac "
+      "fermentum enim. Duis ullamcorper ac lectus suscipit interdum. Phasellus "
+      "id condimentum lorem. Ut ac convallis ligula. Maecenas quis interdum "
+      "nisl. In vel molestie eros. Curabitur lobortis dui vitae purus "
+      "interdum\n"
+      "    uint8 member2ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ; // Lorem ipsum "
+      "dolor sit amet, consectetur adipiscing\n"
+      "    int8 member3ABCDEFGHIJ;\n"
+      "    int8 member4ABCDEFGHIJKLMNOPQRSTU; // Lorem ipsum dolor sit amet, "
+      "consectetur amet\n"
+      "    uint8 aaa;\n"
+      "    int8 bbbbb;\n"
+      "    uint8 member7ABCDEFGHIJKLMNO;\n"
+      "    ALongTypeNameV1ABCDE * member8ABCDEFGHIJKLMNO;\n"
+      "    int8 member9ABCDEF; // Lorem ipsum dolor sit amet, consectetur "
+      "adipiscing elit. Aliquam ullamcorper in leo\n"
+      "    uint8 member10ABCDEFGHIJKLMNO; // Lorem ipsum dolor sit amet, "
+      "consectetur elit\n"
+      "    uint8 member11ABC;\n"
+      "    uint8 member12ABCDEF;\n"
+      "    uint8 member13ABC;\n"
+      "    int8 member14ABCDEFGH;\n"
+      "    AnotherLongTypeNameV1ABCDEFGH * member15ABCDEFGH;\n"
+      "    int8 member16ABCDEF;\n"
+      "    int8 member17;\n"
+      "    int8 member18;\n"
+      "    AThirdReallyLongTypeNameV1ABCDEFGHIJK member19ABCDEFGHIJK; // Lorem "
+      "ipsum dolor sit amet, consectetur elit\n"
+      "    TheLastReallyLongTypeNameV1ABCDEFGHIJKLM member20ABCDEFGHIJKLMN; // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "    uint8 member21ABCDEFGHIJKLM; // Lorem ipsum dolor sit amet, "
+      "consectetur\n"
+      "};\n",
+      Style);
+
+  // This one tests proper alignment of the trailing comments after the first
+  // member
+  verifyFormat(
+      "struct ATestingTypeABCDEF {\n"
+      "    uint8                                    member1ABCDEFGHI; // Lorem "
+      "ipsum dolor sit amet, consectetur adipiscing elit. Aliquam ullamcorper "
+      "in leo in\n"
+      "                                                               // "
+      "lobortis. In ac fermentum enim. Duis ullamcorper ac lectus suscipit "
+      "interdum. Phasellus\n"
+      "                                                               // id "
+      "condimentum lorem. Ut ac convallis ligula. Maecenas quis interdum nisl. "
+      "In vel\n"
+      "                                                               // "
+      "molestie eros. Curabitur lobortis dui vitae purus interdum\n"
+      "    uint8                                    "
+      "member2ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ; // Lorem ipsum dolor sit "
+      "amet, consectetur adipiscing\n"
+      "    int8                                     member3ABCDEFGHIJ;\n"
+      "    int8                                     "
+      "member4ABCDEFGHIJKLMNOPQRSTU; // Lorem ipsum dolor sit amet, "
+      "consectetur amet\n"
+      "    TheLastReallyLongTypeNameV1ABCDEFGHIJKLM member5ABCDEFGHIJKLMN; // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "};\n",
+      "struct ATestingTypeABCDEF {\n"
+      "    uint8 member1ABCDEFGHI; // Lorem ipsum dolor sit amet, consectetur "
+      "adipiscing elit. Aliquam ullamcorper in leo in\n"
+      "                            // lobortis. In ac fermentum enim. Duis "
+      "ullamcorper ac lectus suscipit interdum. Phasellus\n"
+      "                            // id condimentum lorem. Ut ac convallis "
+      "ligula. Maecenas quis interdum nisl. In vel\n"
+      "                            // molestie eros. Curabitur lobortis dui "
+      "vitae purus interdum\n"
+      "    uint8                                    "
+      "member2ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ; // Lorem ipsum dolor sit "
+      "amet, consectetur adipiscing\n"
+      "    int8                                     member3ABCDEFGHIJ;\n"
+      "    int8                                     "
+      "member4ABCDEFGHIJKLMNOPQRSTU; // Lorem ipsum dolor sit amet, "
+      "consectetur amet\n"
+      "TheLastReallyLongTypeNameV1ABCDEFGHIJKLM member5ABCDEFGHIJKLMN; // "
+      "Lorem ipsum dolor sit amet, consectetur elit\n"
+      "};\n",
+      Style);
 }
 
 TEST_F(AlignmentTest, ConsecutiveDeclarationsAcrossEmptyLinesAndComments) {
@@ -2363,14 +2586,16 @@ TEST_F(AlignmentTest, AlignWithLineBreaks) {
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/false,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/true}));
+                 /*PadOperators=*/true,
+                 /*IgnoreTrailingCommentLength=*/false}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/true,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/false}));
+                 /*PadOperators=*/false,
+                 /*IgnoreTrailingCommentLength=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"

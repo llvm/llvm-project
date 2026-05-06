@@ -422,6 +422,24 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool IgnoreTrailingCommentLength`` Whether to consider trailing comments going over the column limit a
+    cause to separate alignment groups.
+
+    .. code-block:: c++
+
+      true:
+      /*                            column limit -> | */
+      int                 a = 3; // a long trailing comment
+      int                 b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+      short comment 2
+
+      false:
+      /*                            column limit -> | */
+      int a = 3; // a long trailing comment
+      int b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+
 
 .. _AlignConsecutiveBitFields:
 
@@ -579,6 +597,24 @@ the configuration (without a prefix: ``Auto``).
 
       a     = 2;
       bbb >>= 2;
+
+  * ``bool IgnoreTrailingCommentLength`` Whether to consider trailing comments going over the column limit a
+    cause to separate alignment groups.
+
+    .. code-block:: c++
+
+      true:
+      /*                            column limit -> | */
+      int                 a = 3; // a long trailing comment
+      int                 b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+      short comment 2
+
+      false:
+      /*                            column limit -> | */
+      int a = 3; // a long trailing comment
+      int b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
 
 
 .. _AlignConsecutiveDeclarations:
@@ -738,6 +774,24 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool IgnoreTrailingCommentLength`` Whether to consider trailing comments going over the column limit a
+    cause to separate alignment groups.
+
+    .. code-block:: c++
+
+      true:
+      /*                            column limit -> | */
+      int                 a = 3; // a long trailing comment
+      int                 b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+      short comment 2
+
+      false:
+      /*                            column limit -> | */
+      int a = 3; // a long trailing comment
+      int b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+
 
 .. _AlignConsecutiveMacros:
 
@@ -896,6 +950,24 @@ the configuration (without a prefix: ``Auto``).
 
       a     = 2;
       bbb >>= 2;
+
+  * ``bool IgnoreTrailingCommentLength`` Whether to consider trailing comments going over the column limit a
+    cause to separate alignment groups.
+
+    .. code-block:: c++
+
+      true:
+      /*                            column limit -> | */
+      int                 a = 3; // a long trailing comment
+      int                 b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+      short comment 2
+
+      false:
+      /*                            column limit -> | */
+      int a = 3; // a long trailing comment
+      int b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
 
 
 .. _AlignConsecutiveShortCaseStatements:
@@ -1175,6 +1247,24 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool IgnoreTrailingCommentLength`` Whether to consider trailing comments going over the column limit a
+    cause to separate alignment groups.
+
+    .. code-block:: c++
+
+      true:
+      /*                            column limit -> | */
+      int                 a = 3; // a long trailing comment
+      int                 b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+      short comment 2
+
+      false:
+      /*                            column limit -> | */
+      int a = 3; // a long trailing comment
+      int b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+
 
 .. _AlignConsecutiveTableGenCondOperatorColons:
 
@@ -1331,6 +1421,24 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool IgnoreTrailingCommentLength`` Whether to consider trailing comments going over the column limit a
+    cause to separate alignment groups.
+
+    .. code-block:: c++
+
+      true:
+      /*                            column limit -> | */
+      int                 a = 3; // a long trailing comment
+      int                 b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+      short comment 2
+
+      false:
+      /*                            column limit -> | */
+      int a = 3; // a long trailing comment
+      int b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+
 
 .. _AlignConsecutiveTableGenDefinitionColons:
 
@@ -1486,6 +1594,24 @@ the configuration (without a prefix: ``Auto``).
 
       a     = 2;
       bbb >>= 2;
+
+  * ``bool IgnoreTrailingCommentLength`` Whether to consider trailing comments going over the column limit a
+    cause to separate alignment groups.
+
+    .. code-block:: c++
+
+      true:
+      /*                            column limit -> | */
+      int                 a = 3; // a long trailing comment
+      int                 b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
+      short comment 2
+
+      false:
+      /*                            column limit -> | */
+      int a = 3; // a long trailing comment
+      int b = 4; // short comment 1
+      AReallyLongTypeName c = 5; // short comment 2
 
 
 .. _AlignEscapedNewlines:

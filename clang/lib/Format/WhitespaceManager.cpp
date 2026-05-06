@@ -340,10 +340,12 @@ IncrementChangeSpaces(unsigned Start, int Delta,
 // Column - The tokens indexed in Matches are moved to this column.
 // RightJustify - Whether it is the token's right end or left end that gets
 // moved to that column.
+// ForceAlignTrailingComments - whether trailing comments should be aligned
+// even if they have newlines before them
 static void
 AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                    unsigned Column, bool RightJustify,
-                   ArrayRef<unsigned> Matches,
+                   bool ForceAlignTrailingComments, ArrayRef<unsigned> Matches,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
   unsigned OriginalMatchColumn = 0;
   int Shift = 0;
@@ -396,8 +398,12 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
          (CurrentChange.indentAndNestingLevel() == ScopeStack[0] &&
           CurrentChange.IndentedFromColumn >= OriginalMatchColumn));
 
-    if (CurrentChange.NewlinesBefore > 0 && !InsideNestedScope)
+    bool IsForceAlignedTrailingComment =
+        ForceAlignTrailingComments && CurrentChange.IsTrailingComment;
+    if (CurrentChange.NewlinesBefore > 0 && !InsideNestedScope &&
+        !IsForceAlignedTrailingComment) {
       Shift = 0;
+    }
 
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
@@ -417,7 +423,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     // not in a scope that should not move.
     if ((!Matches.empty() && Matches[0] == i) ||
         (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
-         InsideNestedScope)) {
+         (InsideNestedScope || IsForceAlignedTrailingComment))) {
       CurrentChange.IndentedFromColumn += Shift;
       IncrementChangeSpaces(i, Shift, Changes);
     }
@@ -559,7 +565,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   auto AlignCurrentSequence = [&] {
     if (StartOfSequence > 0 && StartOfSequence < EndOfSequence) {
       AlignTokenSequence(Style, StartOfSequence, EndOfSequence,
-                         WidthLeft + WidthAnchor, RightJustify, MatchedIndices,
+                         WidthLeft + WidthAnchor, RightJustify,
+                         ACS.IgnoreTrailingCommentLength, MatchedIndices,
                          Changes);
     }
     WidthLeft = 0;
@@ -695,6 +702,10 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
                       MatchingParenToEncounter || Changes[J].AlignedTo);
            ++J) {
         const auto &Change = Changes[J];
+
+        if (ACS.IgnoreTrailingCommentLength && Change.IsTrailingComment)
+          continue;
+
         const auto *Tok = Change.Tok;
 
         if (Tok->MatchingParen) {
