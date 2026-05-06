@@ -1,22 +1,5 @@
+#include "ubsan_minimal_common.h"
 #include "sanitizer_common/sanitizer_atomic.h"
-
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
-#if defined(KERNEL_USE)
-extern "C" void ubsan_message(const char *msg);
-static void message(const char *msg) { ubsan_message(msg); }
-#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
-#include <stdio.h>
-template <typename... Args>
-static void message(const char *msg, Args &&...args) {
-  fprintf(stderr, msg, args...);
-}
-#else
-#include <unistd.h>
-static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
-#endif
 
 // If for some reason we cannot build the runtime with preserve_all, don't
 // emit any symbol. Programs that need them will fail to link, but that is
@@ -39,45 +22,6 @@ static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // Number of elements in caller_pcs. A special value of kMaxCallerPcs + 1 means
 // that "too many errors" has already been reported.
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
-
-static char *append_str(const char *s, char *buf, const char *end) {
-  for (const char *p = s; (buf < end) && (*p != '\0'); ++p, ++buf)
-    *buf = *p;
-  return buf;
-}
-
-static char *append_hex(uintptr_t d, char *buf, const char *end) {
-  // Print the address by nibbles.
-  for (unsigned shift = sizeof(uintptr_t) * 8; shift && buf < end;) {
-    shift -= 4;
-    unsigned nibble = (d >> shift) & 0xf;
-    *(buf++) = nibble < 10 ? nibble + '0' : nibble - 10 + 'a';
-  }
-  return buf;
-}
-
-static void format_msg(const char *kind, uintptr_t caller, char *buf,
-                       const char *end) {
-  buf = append_str("ubsan: ", buf, end);
-  buf = append_str(kind, buf, end);
-  buf = append_str(" by 0x", buf, end);
-  buf = append_hex(caller, buf, end);
-  buf = append_str("\n", buf, end);
-  if (buf == end)
-    --buf; // Make sure we don't cause a buffer overflow.
-  *buf = '\0';
-}
-
-static void format(const char *kind, uintptr_t caller) {
-#if SANITIZER_AMDGPU || SANITIZER_NVPTX
-  (void)format_msg;
-  message("ubsan: %s by %p\n", kind, reinterpret_cast<void *>(caller));
-#else
-  char msg_buf[128];
-  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
-  message(msg_buf);
-#endif
-}
 
 [[gnu::cold]] static void report_error(const char *kind, uintptr_t caller) {
   if (caller == 0)
@@ -106,12 +50,12 @@ static void format(const char *kind, uintptr_t caller) {
       continue; // Concurrent update! Try again from the start.
 
     if (sz == kMaxCallerPcs) {
-      message("ubsan: too many errors\n");
+      __ubsan_message("ubsan: too many errors\n");
       return;
     }
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
 
-    format(kind, caller);
+    __ubsan_message(kind, caller);
   }
 }
 
@@ -138,32 +82,19 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
   __ubsan_report_error(kind, caller);
 }
 
-#if defined(__ANDROID__)
-extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
 static void abort_with_message(const char *kind, uintptr_t caller) {
-  char msg_buf[128];
-  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
-  if (&android_set_abort_message)
-    android_set_abort_message(msg_buf);
-  abort();
+  __ubsan_abort_with_message(kind, caller);
 }
-#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
-static void abort_with_message(const char *kind, uintptr_t caller) {
-  __builtin_verbose_trap("ubsan", "unrecoverable error");
-}
-#else
-static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
-#endif
 
 #if SANITIZER_DEBUG
 namespace __sanitizer {
 // The DCHECK macro needs this symbol to be defined.
 void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
-  message("Sanitizer CHECK failed: ");
-  message(file);
-  message(":?? : "); // FIXME: Show line number.
-  message(cond);
-  abort();
+  __ubsan_message("Sanitizer CHECK failed: ");
+  __ubsan_message(file);
+  __ubsan_message(":?? : "); // FIXME: Show line number.
+  __ubsan_message(cond);
+  __ubsan_abort();
 }
 } // namespace __sanitizer
 #endif

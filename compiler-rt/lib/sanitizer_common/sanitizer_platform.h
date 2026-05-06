@@ -12,10 +12,14 @@
 #ifndef SANITIZER_PLATFORM_H
 #define SANITIZER_PLATFORM_H
 
+#if !defined(SANITIZER_GPU)
+#  define SANITIZER_GPU 0
+#endif // !defined(SANITIZER_GPU)
+
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
     !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__) &&      \
-    !defined(__wasi__) && !defined(__NVPTX__) && !defined(__AMDGPU__)
+    !defined(__wasi__) && !(SANITIZER_GPU)
 #  error "This operating system is not supported"
 #endif
 

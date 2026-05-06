@@ -370,7 +370,7 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
   list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
   string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -fno-emulated-tls")
 endif()
-if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+if(COMPILER_RT_GPU_BUILD)
   append_list_if(UBSAN_COMMON_SUPPORTED_ARCH -ffreestanding SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto SANITIZER_COMMON_CFLAGS)
@@ -378,6 +378,8 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
     append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                    "SHELL:-Xclang -mcode-object-version=none" SANITIZER_COMMON_CFLAGS)
   endif()
+else()
+  append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 endif()
 
 if(NOT WIN32)
@@ -394,9 +396,6 @@ append_list_if(COMPILER_RT_HAS_FNO_SANITIZE_SAFE_STACK_FLAG -fno-sanitize=safe-s
 append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANITIZER_COMMON_CFLAGS)
 if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
   append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
-endif()
-if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
-  append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 endif()
 
 # By default do not instrument or use profdata for compiler-rt.
