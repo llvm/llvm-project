@@ -84,8 +84,8 @@ getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
     return llvm::opt::InputArgList();
 
   for (const auto &KV : *Root) {
-    const Array *ArgList = KV.getSecond().getAsArray();
-    std::string Label = "-X" + KV.getFirst().str();
+    const Array *ArgList = KV.second.getAsArray();
+    std::string Label = "-X" + KV.first.str();
     if (!ArgList)
       return make_error<TextAPIError>(TextAPIErrorCode::InvalidInputFormat);
     for (auto Arg : *ArgList) {
