@@ -1702,7 +1702,11 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
     if (!maybeIntrinsic.has_value())
       return op.emitOpError(
           "no intrinsic matching sparse MFMA on the given chipset");
-    bool isGfx942BF16 = (*maybeIntrinsic == ROCDL::smfmac_f32_16x16x32_bf16::getOperationName() || *maybeIntrinsic == ROCDL::smfmac_f32_32x32x16_bf16::getOperationName());
+    bool isGfx942BF16 =
+        (*maybeIntrinsic ==
+             ROCDL::smfmac_f32_16x16x32_bf16::getOperationName() ||
+         *maybeIntrinsic ==
+             ROCDL::smfmac_f32_32x32x16_bf16::getOperationName());
     bool isGfx950 = (chipset >= kGfx950) && !isGfx942BF16;
 
     Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA(),
@@ -1710,7 +1714,6 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
     Value b = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceB(),
                                          isGfx950);
     Value c = adaptor.getDestC();
-
 
     // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
     // gfx950 8-bit variants already carry the index as i32; skip the bitcast.
