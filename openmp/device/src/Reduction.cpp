@@ -20,8 +20,6 @@
 
 using namespace ompx;
 
-namespace {
-
 [[clang::always_inline]]
 static void gpu_regular_warp_reduce(void *reduce_data,
                                     ShuffleReductFnTy shflFct) {
@@ -171,8 +169,6 @@ static uint32_t roundToWarpsize(uint32_t s) {
 static constexpr uint32_t kmpcMin(uint32_t x, uint32_t y) {
   return x < y ? x : y;
 }
-
-} // namespace
 
 extern "C" {
 [[clang::always_inline]]
