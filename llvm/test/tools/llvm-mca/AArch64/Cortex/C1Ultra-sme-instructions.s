@@ -58,86 +58,98 @@
 # CHECK-NEXT: [0.0] - C1UUnitB
 # CHECK-NEXT: [0.1] - C1UUnitB
 # CHECK-NEXT: [0.2] - C1UUnitB
-# CHECK-NEXT: [1.0] - C1UUnitCME2X
-# CHECK-NEXT: [1.1] - C1UUnitCME2X
-# CHECK-NEXT: [2.0] - C1UUnitCME3X
-# CHECK-NEXT: [2.1] - C1UUnitCME3X
-# CHECK-NEXT: [2.2] - C1UUnitCME3X
-# CHECK-NEXT: [3.0] - C1UUnitCME4X
-# CHECK-NEXT: [3.1] - C1UUnitCME4X
-# CHECK-NEXT: [3.2] - C1UUnitCME4X
-# CHECK-NEXT: [3.3] - C1UUnitCME4X
-# CHECK-NEXT: [4.0] - C1UUnitD
-# CHECK-NEXT: [4.1] - C1UUnitD
-# CHECK-NEXT: [5.0] - C1UUnitFlg
-# CHECK-NEXT: [5.1] - C1UUnitFlg
-# CHECK-NEXT: [5.2] - C1UUnitFlg
-# CHECK-NEXT: [5.3] - C1UUnitFlg
-# CHECK-NEXT: [6.0] - C1UUnitL23
-# CHECK-NEXT: [6.1] - C1UUnitL23
-# CHECK-NEXT: [7]   - C1UUnitLS0
-# CHECK-NEXT: [8]   - C1UUnitLS1
-# CHECK-NEXT: [9]   - C1UUnitM0
-# CHECK-NEXT: [10]  - C1UUnitM1
-# CHECK-NEXT: [11]  - C1UUnitS0
-# CHECK-NEXT: [12]  - C1UUnitS1
-# CHECK-NEXT: [13]  - C1UUnitS2
-# CHECK-NEXT: [14]  - C1UUnitS3
-# CHECK-NEXT: [15]  - C1UUnitS4
-# CHECK-NEXT: [16]  - C1UUnitS5
-# CHECK-NEXT: [17]  - C1UUnitV0
-# CHECK-NEXT: [18]  - C1UUnitV1
-# CHECK-NEXT: [19]  - C1UUnitV2
-# CHECK-NEXT: [20]  - C1UUnitV3
-# CHECK-NEXT: [21]  - C1UUnitV4
-# CHECK-NEXT: [22]  - C1UUnitV5
+# CHECK-NEXT: [1]   - C1UUnitCMELD
+# CHECK-NEXT: [2]   - C1UUnitCMEMC
+# CHECK-NEXT: [3.0] - C1UUnitCMEMML0
+# CHECK-NEXT: [3.1] - C1UUnitCMEMML0
+# CHECK-NEXT: [4]   - C1UUnitCMEMML1
+# CHECK-NEXT: [5.0] - C1UUnitCMEPERMF
+# CHECK-NEXT: [5.1] - C1UUnitCMEPERMF
+# CHECK-NEXT: [5.2] - C1UUnitCMEPERMF
+# CHECK-NEXT: [6.0] - C1UUnitCMEPERMS
+# CHECK-NEXT: [6.1] - C1UUnitCMEPERMS
+# CHECK-NEXT: [7]   - C1UUnitCMEPF
+# CHECK-NEXT: [8.0] - C1UUnitCMERNMRET
+# CHECK-NEXT: [8.1] - C1UUnitCMERNMRET
+# CHECK-NEXT: [8.2] - C1UUnitCMERNMRET
+# CHECK-NEXT: [9]   - C1UUnitCMEST
+# CHECK-NEXT: [10]  - C1UUnitCMEVX0ALU
+# CHECK-NEXT: [11]  - C1UUnitCMEVX0FPDOT
+# CHECK-NEXT: [12]  - C1UUnitCMEVX0MUL
+# CHECK-NEXT: [13]  - C1UUnitCMEVX1ALU
+# CHECK-NEXT: [14]  - C1UUnitCMEVX1FPDOT
+# CHECK-NEXT: [15]  - C1UUnitCMEVX1MUL
+# CHECK-NEXT: [16.0] - C1UUnitD
+# CHECK-NEXT: [16.1] - C1UUnitD
+# CHECK-NEXT: [17.0] - C1UUnitFlg
+# CHECK-NEXT: [17.1] - C1UUnitFlg
+# CHECK-NEXT: [17.2] - C1UUnitFlg
+# CHECK-NEXT: [17.3] - C1UUnitFlg
+# CHECK-NEXT: [18.0] - C1UUnitL23
+# CHECK-NEXT: [18.1] - C1UUnitL23
+# CHECK-NEXT: [19]  - C1UUnitLS0
+# CHECK-NEXT: [20]  - C1UUnitLS1
+# CHECK-NEXT: [21]  - C1UUnitM0
+# CHECK-NEXT: [22]  - C1UUnitM1
+# CHECK-NEXT: [23]  - C1UUnitS0
+# CHECK-NEXT: [24]  - C1UUnitS1
+# CHECK-NEXT: [25]  - C1UUnitS2
+# CHECK-NEXT: [26]  - C1UUnitS3
+# CHECK-NEXT: [27]  - C1UUnitS4
+# CHECK-NEXT: [28]  - C1UUnitS5
+# CHECK-NEXT: [29]  - C1UUnitV0
+# CHECK-NEXT: [30]  - C1UUnitV1
+# CHECK-NEXT: [31]  - C1UUnitV2
+# CHECK-NEXT: [32]  - C1UUnitV3
+# CHECK-NEXT: [33]  - C1UUnitV4
+# CHECK-NEXT: [34]  - C1UUnitV5
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]  [6.0]  [6.1]  [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     11.63  11.63  0.63   0.63   0.63   0.63   0.63   0.63   4.17   4.17   2.17   2.17   2.17   2.17
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     11.63  11.63  0.63   0.63   0.63   0.63   0.63   0.63   4.17   4.17   2.17   2.17   2.17   2.17
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]  [6.0]  [6.1]  [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addspl	x0, x1, #10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addspl	x0, sp, #10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addsvl	x0, x1, #10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addsvl	x0, sp, #10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     rdsvl	x1, #10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     cntp	x0, pn0.h, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     pext	p0.h, pn8[0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     pext	{ p0.h, p1.h }, pn8[0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     ptrue	pn8.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilege	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilegt	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehi	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehs	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilele	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelo	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilels	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelt	pn8.h, x0, x0, vlx2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslb	z0.s, z1.h, z2.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslb	z0.s, z1.h, z2.h[0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslt	z0.s, z1.h, z2.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslt	z0.s, z1.h, z2.h[0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fclamp	z0.s, z1.s, z2.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fdot	z0.s, z1.h, z2.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fdot	z0.s, z1.h, z2.h[0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     psel	p0, p0, p0.b[w12, 0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   revd	z0.q, p0/m, z0.q
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sclamp	z0.s, z1.s, z2.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uclamp	z0.s, z1.s, z2.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     sdot	z0.s, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     sdot	z0.s, z0.h, z0.h[0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     udot	z0.s, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     udot	z0.s, z0.h, z0.h[0]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sqcvtn	z0.h, { z0.s, z1.s }
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sqcvtun	z0.h, { z0.s, z1.s }
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uqcvtn	z0.h, { z0.s, z1.s }
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilege	{ p0.h, p1.h }, x0, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilegt	{ p0.h, p1.h }, x0, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehi	{ p0.h, p1.h }, x0, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehs	{ p0.h, p1.h }, x0, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilele	{ p0.h, p1.h }, x0, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelo	{ p0.h, p1.h }, x0, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilels	{ p0.h, p1.h }, x0, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelt	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addspl	x0, x1, #10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addspl	x0, sp, #10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addsvl	x0, x1, #10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     addsvl	x0, sp, #10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     rdsvl	x1, #10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     cntp	x0, pn0.h, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     pext	p0.h, pn8[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     pext	{ p0.h, p1.h }, pn8[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     ptrue	pn8.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilege	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilegt	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehi	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehs	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilele	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelo	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilels	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelt	pn8.h, x0, x0, vlx2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslb	z0.s, z1.h, z2.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslb	z0.s, z1.h, z2.h[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslt	z0.s, z1.h, z2.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfmlslt	z0.s, z1.h, z2.h[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fclamp	z0.s, z1.s, z2.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fdot	z0.s, z1.h, z2.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fdot	z0.s, z1.h, z2.h[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     psel	p0, p0, p0.b[w12, 0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   revd	z0.q, p0/m, z0.q
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sclamp	z0.s, z1.s, z2.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uclamp	z0.s, z1.s, z2.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     sdot	z0.s, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     sdot	z0.s, z0.h, z0.h[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     udot	z0.s, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     udot	z0.s, z0.h, z0.h[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sqcvtn	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sqcvtun	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uqcvtn	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilege	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilegt	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehi	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilehs	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilele	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelo	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilels	{ p0.h, p1.h }, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     whilelt	{ p0.h, p1.h }, x0, x0
