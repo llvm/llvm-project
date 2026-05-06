@@ -188,7 +188,6 @@ int main(int, char**) {
       (void)cc.at(key);
       assert(globalMemCounter.checkNewCalledEq(0));
     }
-
   }
 
   // string_view lookups with std::greater
@@ -237,7 +236,6 @@ int main(int, char**) {
       (void)cc.at(key);
       assert(globalMemCounter.checkNewCalledEq(0));
     }
-
   }
 
   return 0;
