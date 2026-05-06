@@ -8,8 +8,8 @@ llvm.func @mbarrier_complete_tx_shared(%barrier: !llvm.ptr<3>, %tx_count : i32) 
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   nvvm.mbarrier.complete_tx %barrier, %tx_count : !llvm.ptr<3>, i32
-  nvvm.mbarrier.complete_tx %barrier, %tx_count {scope = #nvvm.mem_scope<cta>} : !llvm.ptr<3>, i32
-  nvvm.mbarrier.complete_tx %barrier, %tx_count {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<3>, i32
+  nvvm.mbarrier.complete_tx %barrier, %tx_count <{scope = #nvvm.mem_scope<cta>}> : !llvm.ptr<3>, i32
+  nvvm.mbarrier.complete_tx %barrier, %tx_count <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<3>, i32
 
   llvm.return
 }
@@ -22,8 +22,8 @@ llvm.func @mbarrier_complete_tx_shared_cluster(%barrier: !llvm.ptr<7>, %tx_count
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   nvvm.mbarrier.complete_tx %barrier, %tx_count : !llvm.ptr<7>, i32
-  nvvm.mbarrier.complete_tx %barrier, %tx_count {scope = #nvvm.mem_scope<cta>} : !llvm.ptr<7>, i32
-  nvvm.mbarrier.complete_tx %barrier, %tx_count {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<7>, i32
+  nvvm.mbarrier.complete_tx %barrier, %tx_count <{scope = #nvvm.mem_scope<cta>}> : !llvm.ptr<7>, i32
+  nvvm.mbarrier.complete_tx %barrier, %tx_count <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<7>, i32
 
   llvm.return
 }

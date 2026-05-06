@@ -13,10 +13,10 @@ llvm.func @mbarrier_test_wait_state(%barrier: !llvm.ptr, %state : i64) {
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %0 = nvvm.mbarrier.test.wait %barrier, %state : !llvm.ptr, i64 -> i1
-  %1 = nvvm.mbarrier.test.wait %barrier, %state {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr, i64 -> i1
+  %1 = nvvm.mbarrier.test.wait %barrier, %state <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr, i64 -> i1
 
-  %2 = nvvm.mbarrier.test.wait %barrier, %state {relaxed = true} : !llvm.ptr, i64 -> i1
-  %3 = nvvm.mbarrier.test.wait %barrier, %state {relaxed = true, scope = #nvvm.mem_scope<cluster>} : !llvm.ptr, i64 -> i1
+  %2 = nvvm.mbarrier.test.wait %barrier, %state <{relaxed = true}> : !llvm.ptr, i64 -> i1
+  %3 = nvvm.mbarrier.test.wait %barrier, %state <{relaxed = true, scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr, i64 -> i1
   llvm.return
 }
 
@@ -29,10 +29,10 @@ llvm.func @mbarrier_test_wait_shared_state(%barrier: !llvm.ptr<3>, %state : i64)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %0 = nvvm.mbarrier.test.wait %barrier, %state : !llvm.ptr<3>, i64 -> i1
-  %1 = nvvm.mbarrier.test.wait %barrier, %state {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<3>, i64 -> i1
+  %1 = nvvm.mbarrier.test.wait %barrier, %state <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<3>, i64 -> i1
 
-  %2 = nvvm.mbarrier.test.wait %barrier, %state {relaxed = true} : !llvm.ptr<3>, i64 -> i1
-  %3 = nvvm.mbarrier.test.wait %barrier, %state {relaxed = true, scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<3>, i64 -> i1
+  %2 = nvvm.mbarrier.test.wait %barrier, %state <{relaxed = true}> : !llvm.ptr<3>, i64 -> i1
+  %3 = nvvm.mbarrier.test.wait %barrier, %state <{relaxed = true, scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<3>, i64 -> i1
   llvm.return
 }
 
@@ -49,10 +49,10 @@ llvm.func @mbarrier_test_wait_phase(%barrier: !llvm.ptr, %phase : i32) {
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %0 = nvvm.mbarrier.test.wait %barrier, %phase : !llvm.ptr, i32 -> i1
-  %1 = nvvm.mbarrier.test.wait %barrier, %phase {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr, i32 -> i1
+  %1 = nvvm.mbarrier.test.wait %barrier, %phase <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr, i32 -> i1
 
-  %2 = nvvm.mbarrier.test.wait %barrier, %phase {relaxed = true} : !llvm.ptr, i32 -> i1
-  %3 = nvvm.mbarrier.test.wait %barrier, %phase {relaxed = true, scope = #nvvm.mem_scope<cluster>} : !llvm.ptr, i32 -> i1
+  %2 = nvvm.mbarrier.test.wait %barrier, %phase <{relaxed = true}> : !llvm.ptr, i32 -> i1
+  %3 = nvvm.mbarrier.test.wait %barrier, %phase <{relaxed = true, scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr, i32 -> i1
   llvm.return
 }
 
@@ -65,9 +65,9 @@ llvm.func @mbarrier_test_wait_shared_phase(%barrier: !llvm.ptr<3>, %phase : i32)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %0 = nvvm.mbarrier.test.wait %barrier, %phase : !llvm.ptr<3>, i32 -> i1
-  %1 = nvvm.mbarrier.test.wait %barrier, %phase {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<3>, i32 -> i1
+  %1 = nvvm.mbarrier.test.wait %barrier, %phase <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<3>, i32 -> i1
 
-  %2 = nvvm.mbarrier.test.wait %barrier, %phase {relaxed = true} : !llvm.ptr<3>, i32 -> i1
-  %3 = nvvm.mbarrier.test.wait %barrier, %phase {relaxed = true, scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<3>, i32 -> i1
+  %2 = nvvm.mbarrier.test.wait %barrier, %phase <{relaxed = true}> : !llvm.ptr<3>, i32 -> i1
+  %3 = nvvm.mbarrier.test.wait %barrier, %phase <{relaxed = true, scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<3>, i32 -> i1
   llvm.return
 }

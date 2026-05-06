@@ -2,7 +2,7 @@
 
 llvm.func @fence_sync_restrict() {
   // expected-error @below {{attribute 'order' failed to satisfy constraint: NVVM Memory Ordering kind whose value is one of {acquire, release}}}
-  nvvm.fence.sync_restrict {order = #nvvm.mem_order<weak>}
+  nvvm.fence.sync_restrict <{order = #nvvm.mem_order<weak>}>
   llvm.return
 }
 
@@ -10,7 +10,7 @@ llvm.func @fence_sync_restrict() {
 
 llvm.func @fence_sync_restrict() {
   // expected-error @below {{attribute 'order' failed to satisfy constraint: NVVM Memory Ordering kind whose value is one of {acquire, release}}}
-  nvvm.fence.sync_restrict {order = #nvvm.mem_order<mmio>}
+  nvvm.fence.sync_restrict <{order = #nvvm.mem_order<mmio>}>
   llvm.return
 }
 
@@ -18,7 +18,7 @@ llvm.func @fence_sync_restrict() {
 
 llvm.func @fence_proxy() {
   // expected-error @below {{attribute 'kind' failed to satisfy constraint: Proxy kind whose value is none of {tensormap, generic}}}
-  nvvm.fence.proxy {kind = #nvvm.proxy_kind<tensormap>}
+  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<tensormap>}>
   llvm.return
 }
 
@@ -26,7 +26,7 @@ llvm.func @fence_proxy() {
 
 llvm.func @fence_proxy() {
   // expected-error @below {{attribute 'kind' failed to satisfy constraint: Proxy kind whose value is none of {tensormap, generic}}}
-  nvvm.fence.proxy {kind = #nvvm.proxy_kind<generic>}
+  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<generic>}>
   llvm.return
 }
 
@@ -34,7 +34,7 @@ llvm.func @fence_proxy() {
 
 llvm.func @fence_proxy() {
   // expected-error @below {{async_shared fence requires space attribute}}
-  nvvm.fence.proxy {kind = #nvvm.proxy_kind<async.shared>}
+  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<async.shared>}>
   llvm.return
 }
 
@@ -42,7 +42,7 @@ llvm.func @fence_proxy() {
 
 llvm.func @fence_proxy() {
   // expected-error @below {{only async_shared fence can have space attribute}}
-  nvvm.fence.proxy {kind = #nvvm.proxy_kind<alias>, space = #nvvm.shared_space<cta>}
+  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<alias>, space = #nvvm.shared_space<cta>}>
   llvm.return
 }
 
@@ -66,7 +66,7 @@ llvm.func @fence_proxy_release() {
 
 llvm.func @fence_proxy_sync_restrict() {
   // expected-error @below {{attribute 'order' failed to satisfy constraint: NVVM Memory Ordering kind whose value is one of {acquire, release}}}
-  nvvm.fence.proxy.sync_restrict {order = #nvvm.mem_order<mmio>}
+  nvvm.fence.proxy.sync_restrict <{order = #nvvm.mem_order<mmio>}>
   llvm.return
 }
 
@@ -74,8 +74,8 @@ llvm.func @fence_proxy_sync_restrict() {
 
 llvm.func @fence_proxy_sync_restrict() {
   // expected-error @below {{only async is supported for to_proxy attribute}}
-  nvvm.fence.proxy.sync_restrict {order = #nvvm.mem_order<acquire>, toProxy = #nvvm.proxy_kind<alias>,
-                                  fromProxy = #nvvm.proxy_kind<generic>}
+  nvvm.fence.proxy.sync_restrict <{order = #nvvm.mem_order<acquire>, toProxy = #nvvm.proxy_kind<alias>,
+                                  fromProxy = #nvvm.proxy_kind<generic>}>
   llvm.return
 }
 
@@ -83,7 +83,7 @@ llvm.func @fence_proxy_sync_restrict() {
 
 llvm.func @fence_proxy_sync_restrict() {
   // expected-error @below {{only generic is support for from_proxy attribute}}
-  nvvm.fence.proxy.sync_restrict {order = #nvvm.mem_order<acquire>, toProxy = #nvvm.proxy_kind<async>,
-                                  fromProxy = #nvvm.proxy_kind<tensormap>}
+  nvvm.fence.proxy.sync_restrict <{order = #nvvm.mem_order<acquire>, toProxy = #nvvm.proxy_kind<async>,
+                                  fromProxy = #nvvm.proxy_kind<tensormap>}>
   llvm.return
 }

@@ -12,14 +12,14 @@ llvm.func @fma_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: vector<2xf16>) -> v
   // CHECK-NEXT: %11 = call <2 x half> @llvm.nvvm.fma.rn.oob.relu.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %10)
   // CHECK-NEXT: ret <2 x half> %11
   // CHECK-NEXT: }
-  %f0 = nvvm.fma %a, %b, %c {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>
-  %f1 = nvvm.fma %a, %b, %f0 {rnd = #nvvm.fp_rnd_mode<rn>, ftz = true} : vector<2xf16>
-  %f2 = nvvm.fma %a, %b, %f1 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>
-  %f3 = nvvm.fma %a, %b, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz = true} : vector<2xf16>
-  %f4 = nvvm.fma %a, %b, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, relu = true} : vector<2xf16>
-  %f5 = nvvm.fma %a, %b, %f4 {rnd = #nvvm.fp_rnd_mode<rn>, relu = true, ftz = true} : vector<2xf16>
-  %f6 = nvvm.fma %a, %b, %f5 {rnd = #nvvm.fp_rnd_mode<rn>, oob = true} : vector<2xf16>
-  %f7 = nvvm.fma %a, %b, %f6 {rnd = #nvvm.fp_rnd_mode<rn>, oob = true, relu = true} : vector<2xf16>
+  %f0 = nvvm.fma %a, %b, %c <{rnd = #nvvm.fp_rnd_mode<rn>}> : vector<2xf16>
+  %f1 = nvvm.fma %a, %b, %f0 <{rnd = #nvvm.fp_rnd_mode<rn>, ftz = true}> : vector<2xf16>
+  %f2 = nvvm.fma %a, %b, %f1 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>}> : vector<2xf16>
+  %f3 = nvvm.fma %a, %b, %f2 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz = true}> : vector<2xf16>
+  %f4 = nvvm.fma %a, %b, %f3 <{rnd = #nvvm.fp_rnd_mode<rn>, relu = true}> : vector<2xf16>
+  %f5 = nvvm.fma %a, %b, %f4 <{rnd = #nvvm.fp_rnd_mode<rn>, relu = true, ftz = true}> : vector<2xf16>
+  %f6 = nvvm.fma %a, %b, %f5 <{rnd = #nvvm.fp_rnd_mode<rn>, oob = true}> : vector<2xf16>
+  %f7 = nvvm.fma %a, %b, %f6 <{rnd = #nvvm.fp_rnd_mode<rn>, oob = true, relu = true}> : vector<2xf16>
   llvm.return %f7 : vector<2xf16>
 }
 
@@ -31,10 +31,10 @@ llvm.func @fma_bf16(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: vector<2xbf16>) 
   // CHECK-NEXT: %7 = call <2 x bfloat> @llvm.nvvm.fma.rn.oob.relu.v2bf16(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %6)
   // CHECK-NEXT: ret <2 x bfloat> %7
   // CHECK-NEXT: }
-  %f0 = nvvm.fma %a, %b, %c {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16>
-  %f1 = nvvm.fma %a, %b, %f0 {rnd = #nvvm.fp_rnd_mode<rn>, relu = true} : vector<2xbf16>
-  %f2 = nvvm.fma %a, %b, %f1 {rnd = #nvvm.fp_rnd_mode<rn>, oob = true} : vector<2xbf16>
-  %f3 = nvvm.fma %a, %b, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, oob = true, relu = true} : vector<2xbf16>
+  %f0 = nvvm.fma %a, %b, %c <{rnd = #nvvm.fp_rnd_mode<rn>}> : vector<2xbf16>
+  %f1 = nvvm.fma %a, %b, %f0 <{rnd = #nvvm.fp_rnd_mode<rn>, relu = true}> : vector<2xbf16>
+  %f2 = nvvm.fma %a, %b, %f1 <{rnd = #nvvm.fp_rnd_mode<rn>, oob = true}> : vector<2xbf16>
+  %f3 = nvvm.fma %a, %b, %f2 <{rnd = #nvvm.fp_rnd_mode<rn>, oob = true, relu = true}> : vector<2xbf16>
   llvm.return %f3 : vector<2xbf16>
 }
 
@@ -82,10 +82,10 @@ llvm.func @fma_f32_rn(%a: vector<2xf32>, %b: vector<2xf32>, %c: vector<2xf32>) -
   // CHECK-NEXT: %43 = insertelement <2 x float> %38, float %42, i32 1
   // CHECK-NEXT: ret <2 x float> %43
   // CHECK-NEXT: }
-  %f0 = nvvm.fma %a, %b, %c {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf32>
-  %f1 = nvvm.fma %a, %b, %f0 {rnd = #nvvm.fp_rnd_mode<rn>, ftz = true} : vector<2xf32>
-  %f2 = nvvm.fma %a, %b, %f1 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xf32>
-  %f3 = nvvm.fma %a, %b, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz = true} : vector<2xf32>
+  %f0 = nvvm.fma %a, %b, %c <{rnd = #nvvm.fp_rnd_mode<rn>}> : vector<2xf32>
+  %f1 = nvvm.fma %a, %b, %f0 <{rnd = #nvvm.fp_rnd_mode<rn>, ftz = true}> : vector<2xf32>
+  %f2 = nvvm.fma %a, %b, %f1 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>}> : vector<2xf32>
+  %f3 = nvvm.fma %a, %b, %f2 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz = true}> : vector<2xf32>
   llvm.return %f3 : vector<2xf32>
 }
 
@@ -133,10 +133,10 @@ llvm.func @fma_f32_rm(%a: vector<2xf32>, %b: vector<2xf32>, %c: vector<2xf32>) -
   // CHECK-NEXT: %43 = insertelement <2 x float> %38, float %42, i32 1
   // CHECK-NEXT: ret <2 x float> %43
   // CHECK-NEXT: }
-  %f0 = nvvm.fma %a, %b, %c {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf32>
-  %f1 = nvvm.fma %a, %b, %f0 {rnd = #nvvm.fp_rnd_mode<rm>, ftz = true} : vector<2xf32>
-  %f2 = nvvm.fma %a, %b, %f1 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : vector<2xf32>
-  %f3 = nvvm.fma %a, %b, %f2 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz = true} : vector<2xf32>
+  %f0 = nvvm.fma %a, %b, %c <{rnd = #nvvm.fp_rnd_mode<rm>}> : vector<2xf32>
+  %f1 = nvvm.fma %a, %b, %f0 <{rnd = #nvvm.fp_rnd_mode<rm>, ftz = true}> : vector<2xf32>
+  %f2 = nvvm.fma %a, %b, %f1 <{rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>}> : vector<2xf32>
+  %f3 = nvvm.fma %a, %b, %f2 <{rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz = true}> : vector<2xf32>
   llvm.return %f3 : vector<2xf32>
 }
 
@@ -184,10 +184,10 @@ llvm.func @fma_f32_rp(%a: vector<2xf32>, %b: vector<2xf32>, %c: vector<2xf32>) -
   // CHECK-NEXT: %43 = insertelement <2 x float> %38, float %42, i32 1
   // CHECK-NEXT: ret <2 x float> %43
   // CHECK-NEXT: }
-  %f0 = nvvm.fma %a, %b, %c {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf32>
-  %f1 = nvvm.fma %a, %b, %f0 {rnd = #nvvm.fp_rnd_mode<rp>, ftz = true} : vector<2xf32>
-  %f2 = nvvm.fma %a, %b, %f1 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : vector<2xf32>
-  %f3 = nvvm.fma %a, %b, %f2 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz = true} : vector<2xf32>
+  %f0 = nvvm.fma %a, %b, %c <{rnd = #nvvm.fp_rnd_mode<rp>}> : vector<2xf32>
+  %f1 = nvvm.fma %a, %b, %f0 <{rnd = #nvvm.fp_rnd_mode<rp>, ftz = true}> : vector<2xf32>
+  %f2 = nvvm.fma %a, %b, %f1 <{rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>}> : vector<2xf32>
+  %f3 = nvvm.fma %a, %b, %f2 <{rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz = true}> : vector<2xf32>
   llvm.return %f3 : vector<2xf32>
 }
 
@@ -235,10 +235,10 @@ llvm.func @fma_f32_rz(%a: vector<2xf32>, %b: vector<2xf32>, %c: vector<2xf32>) -
   // CHECK-NEXT: %43 = insertelement <2 x float> %38, float %42, i32 1
   // CHECK-NEXT: ret <2 x float> %43
   // CHECK-NEXT: }
-  %f0 = nvvm.fma %a, %b, %c {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf32>
-  %f1 = nvvm.fma %a, %b, %f0 {rnd = #nvvm.fp_rnd_mode<rz>, ftz = true} : vector<2xf32>
-  %f2 = nvvm.fma %a, %b, %f1 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : vector<2xf32>
-  %f3 = nvvm.fma %a, %b, %f2 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz = true} : vector<2xf32>
+  %f0 = nvvm.fma %a, %b, %c <{rnd = #nvvm.fp_rnd_mode<rz>}> : vector<2xf32>
+  %f1 = nvvm.fma %a, %b, %f0 <{rnd = #nvvm.fp_rnd_mode<rz>, ftz = true}> : vector<2xf32>
+  %f2 = nvvm.fma %a, %b, %f1 <{rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>}> : vector<2xf32>
+  %f3 = nvvm.fma %a, %b, %f2 <{rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz = true}> : vector<2xf32>
   llvm.return %f3 : vector<2xf32>
 }
 
@@ -286,9 +286,9 @@ llvm.func @fma_f64(%a: vector<2xf64>, %b: vector<2xf64>, %c: vector<2xf64>) -> v
   // CHECK-NEXT: %43 = insertelement <2 x double> %38, double %42, i32 1
   // CHECK-NEXT: ret <2 x double> %43
   // CHECK-NEXT: }
-  %f0 = nvvm.fma %a, %b, %c {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf64>
-  %f1 = nvvm.fma %a, %b, %f0 {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf64>
-  %f2 = nvvm.fma %a, %b, %f1 {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf64>
-  %f3 = nvvm.fma %a, %b, %f2 {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf64>
+  %f0 = nvvm.fma %a, %b, %c <{rnd = #nvvm.fp_rnd_mode<rn>}> : vector<2xf64>
+  %f1 = nvvm.fma %a, %b, %f0 <{rnd = #nvvm.fp_rnd_mode<rm>}> : vector<2xf64>
+  %f2 = nvvm.fma %a, %b, %f1 <{rnd = #nvvm.fp_rnd_mode<rp>}> : vector<2xf64>
+  %f3 = nvvm.fma %a, %b, %f2 <{rnd = #nvvm.fp_rnd_mode<rz>}> : vector<2xf64>
   llvm.return %f3 : vector<2xf64>
 }

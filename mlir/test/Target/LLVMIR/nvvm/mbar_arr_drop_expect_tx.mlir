@@ -17,12 +17,12 @@ llvm.func @mbarrier_arrive_drop_expect_tx_generic(%barrier: !llvm.ptr, %txcount 
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %0 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount : !llvm.ptr, i32 -> i64
-  %1 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cta>} : !llvm.ptr, i32 -> i64
-  %2 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr, i32 -> i64
+  %1 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cta>}> : !llvm.ptr, i32 -> i64
+  %2 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr, i32 -> i64
 
-  %3 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {relaxed = true} : !llvm.ptr, i32 -> i64
-  %4 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cta>, relaxed = true} : !llvm.ptr, i32 -> i64
-  %5 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cluster>, relaxed = true} : !llvm.ptr, i32 -> i64
+  %3 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{relaxed = true}> : !llvm.ptr, i32 -> i64
+  %4 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cta>, relaxed = true}> : !llvm.ptr, i32 -> i64
+  %5 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cluster>, relaxed = true}> : !llvm.ptr, i32 -> i64
   llvm.return
 }
 
@@ -37,12 +37,12 @@ llvm.func @mbarrier_arrive_drop_expect_tx_shared(%barrier: !llvm.ptr<3>, %txcoun
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %0 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount : !llvm.ptr<3>, i32 -> i64
-  %1 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cta>} : !llvm.ptr<3>, i32 -> i64
-  %2 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<3>, i32 -> i64
+  %1 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cta>}> : !llvm.ptr<3>, i32 -> i64
+  %2 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<3>, i32 -> i64
 
-  %3 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {relaxed = true} : !llvm.ptr<3>, i32 -> i64
-  %4 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cta>, relaxed = true} : !llvm.ptr<3>, i32 -> i64
-  %5 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cluster>, relaxed = true} : !llvm.ptr<3>, i32 -> i64
+  %3 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{relaxed = true}> : !llvm.ptr<3>, i32 -> i64
+  %4 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cta>, relaxed = true}> : !llvm.ptr<3>, i32 -> i64
+  %5 = nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cluster>, relaxed = true}> : !llvm.ptr<3>, i32 -> i64
   llvm.return
 }
 
@@ -57,12 +57,12 @@ llvm.func @mbarrier_arrive_drop_expect_tx_shared_cluster(%barrier: !llvm.ptr<7>,
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount : !llvm.ptr<7>, i32
-  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cta>} : !llvm.ptr<7>, i32
-  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cluster>} : !llvm.ptr<7>, i32
+  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cta>}> : !llvm.ptr<7>, i32
+  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cluster>}> : !llvm.ptr<7>, i32
 
-  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {relaxed = true} : !llvm.ptr<7>, i32
-  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cta>, relaxed = true} : !llvm.ptr<7>, i32
-  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount {scope = #nvvm.mem_scope<cluster>, relaxed = true} : !llvm.ptr<7>, i32
+  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{relaxed = true}> : !llvm.ptr<7>, i32
+  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cta>, relaxed = true}> : !llvm.ptr<7>, i32
+  nvvm.mbarrier.arrive_drop.expect_tx %barrier, %txcount <{scope = #nvvm.mem_scope<cluster>, relaxed = true}> : !llvm.ptr<7>, i32
   llvm.return
 }
 

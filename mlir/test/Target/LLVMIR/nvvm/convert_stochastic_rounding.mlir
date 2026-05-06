@@ -10,7 +10,7 @@ gpu.module @valid_f16x2_rs_sm_100a [#nvvm.target<chip = "sm_100a">] {
     %f1 = llvm.mlir.constant(1.0 : f32) : f32
     %f2 = llvm.mlir.constant(2.0 : f32) : f32
     %rbits = llvm.mlir.constant(0x12345678 : i32) : i32
-    %res = nvvm.convert.f32x2.to.f16x2 %f1, %f2, %rbits {rnd = #nvvm.fp_rnd_mode<rs>} : vector<2xf16>
+    %res = nvvm.convert.f32x2.to.f16x2 %f1, %f2, %rbits <{rnd = #nvvm.fp_rnd_mode<rs>}> : vector<2xf16>
     return
   }
 }
@@ -21,7 +21,7 @@ gpu.module @valid_bf16x2_rs_sm_103a [#nvvm.target<chip = "sm_103a">] {
     %f1 = llvm.mlir.constant(1.0 : f32) : f32
     %f2 = llvm.mlir.constant(2.0 : f32) : f32
     %rbits = llvm.mlir.constant(0 : i32) : i32
-    %res = nvvm.convert.f32x2.to.bf16x2 %f1, %f2, %rbits {rnd = #nvvm.fp_rnd_mode<rs>} : vector<2xbf16>
+    %res = nvvm.convert.f32x2.to.bf16x2 %f1, %f2, %rbits <{rnd = #nvvm.fp_rnd_mode<rs>}> : vector<2xbf16>
     return
   }
 }
@@ -40,7 +40,7 @@ llvm.func @convert_f32x4_to_f8x4_e4m3_rs(%src : vector<4xf32>, %rbits : i32) -> 
 // CHECK-LABEL: @convert_f32x4_to_f8x4_e4m3_rs_relu
 llvm.func @convert_f32x4_to_f8x4_e4m3_rs_relu(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
   // CHECK: %{{.*}} = call <4 x i8> @llvm.nvvm.f32x4.to.e4m3x4.rs.relu.satfinite(<4 x float> %{{.*}}, i32 %{{.*}})
-  %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits {relu = true} : vector<4xf32> -> vector<4xi8> (f8E4M3FN)
+  %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits <{relu = true}> : vector<4xf32> -> vector<4xi8> (f8E4M3FN)
   llvm.return %res : vector<4xi8>
 }
 
@@ -58,7 +58,7 @@ llvm.func @convert_f32x4_to_f8x4_e5m2_rs(%src : vector<4xf32>, %rbits : i32) -> 
 // CHECK-LABEL: @convert_f32x4_to_f8x4_e5m2_rs_relu
 llvm.func @convert_f32x4_to_f8x4_e5m2_rs_relu(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
   // CHECK: %{{.*}} = call <4 x i8> @llvm.nvvm.f32x4.to.e5m2x4.rs.relu.satfinite(<4 x float> %{{.*}}, i32 %{{.*}})
-  %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits {relu = true} : vector<4xf32> -> vector<4xi8> (f8E5M2)
+  %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits <{relu = true}> : vector<4xf32> -> vector<4xi8> (f8E5M2)
   llvm.return %res : vector<4xi8>
 }
 
@@ -76,7 +76,7 @@ llvm.func @convert_f32x4_to_f6x4_e2m3_rs(%src : vector<4xf32>, %rbits : i32) -> 
 // CHECK-LABEL: @convert_f32x4_to_f6x4_e2m3_rs_relu
 llvm.func @convert_f32x4_to_f6x4_e2m3_rs_relu(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
   // CHECK: %{{.*}} = call <4 x i8> @llvm.nvvm.f32x4.to.e2m3x4.rs.relu.satfinite(<4 x float> %{{.*}}, i32 %{{.*}})
-  %res = nvvm.convert.f32x4.to.f6x4 %src, %rbits {relu = true} : vector<4xf32> -> vector<4xi8> (f6E2M3FN)
+  %res = nvvm.convert.f32x4.to.f6x4 %src, %rbits <{relu = true}> : vector<4xf32> -> vector<4xi8> (f6E2M3FN)
   llvm.return %res : vector<4xi8>
 }
 
@@ -94,7 +94,7 @@ llvm.func @convert_f32x4_to_f6x4_e3m2_rs(%src : vector<4xf32>, %rbits : i32) -> 
 // CHECK-LABEL: @convert_f32x4_to_f6x4_e3m2_rs_relu
 llvm.func @convert_f32x4_to_f6x4_e3m2_rs_relu(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
   // CHECK: %{{.*}} = call <4 x i8> @llvm.nvvm.f32x4.to.e3m2x4.rs.relu.satfinite(<4 x float> %{{.*}}, i32 %{{.*}})
-  %res = nvvm.convert.f32x4.to.f6x4 %src, %rbits {relu = true} : vector<4xf32> -> vector<4xi8> (f6E3M2FN)
+  %res = nvvm.convert.f32x4.to.f6x4 %src, %rbits <{relu = true}> : vector<4xf32> -> vector<4xi8> (f6E3M2FN)
   llvm.return %res : vector<4xi8>
 }
 
@@ -112,7 +112,7 @@ llvm.func @convert_f32x4_to_f4x4_e2m1_rs(%src : vector<4xf32>, %rbits : i32) -> 
 // CHECK-LABEL: @convert_f32x4_to_f4x4_e2m1_rs_relu
 llvm.func @convert_f32x4_to_f4x4_e2m1_rs_relu(%src : vector<4xf32>, %rbits : i32) -> i16 {
   // CHECK: %{{.*}} = call i16 @llvm.nvvm.f32x4.to.e2m1x4.rs.relu.satfinite(<4 x float> %{{.*}}, i32 %{{.*}})
-  %res = nvvm.convert.f32x4.to.f4x4 %src, %rbits {relu = true} : vector<4xf32> -> i16 (f4E2M1FN)
+  %res = nvvm.convert.f32x4.to.f4x4 %src, %rbits <{relu = true}> : vector<4xf32> -> i16 (f4E2M1FN)
   llvm.return %res : i16
 }
 

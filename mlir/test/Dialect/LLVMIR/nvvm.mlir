@@ -62,8 +62,8 @@ llvm.func @llvm_nvvm_barrier_arrive(%barId : i32, %numberOfThreads : i32) {
 func.func @llvm_nvvm_cluster_arrive() {
   // CHECK: nvvm.cluster.arrive
   nvvm.cluster.arrive
-  // CHECK: nvvm.cluster.arrive {aligned}
-  nvvm.cluster.arrive {aligned}
+  // CHECK: nvvm.cluster.arrive <{aligned}>
+  nvvm.cluster.arrive <{aligned}>
   llvm.return
 }
 
@@ -71,8 +71,8 @@ func.func @llvm_nvvm_cluster_arrive() {
 func.func @llvm_nvvm_cluster_arrive_relaxed() {
   // CHECK: nvvm.cluster.arrive.relaxed
   nvvm.cluster.arrive.relaxed
-  // CHECK: nvvm.cluster.arrive.relaxed {aligned}
-  nvvm.cluster.arrive.relaxed {aligned}
+  // CHECK: nvvm.cluster.arrive.relaxed <{aligned}>
+  nvvm.cluster.arrive.relaxed <{aligned}>
   llvm.return
 }
 
@@ -80,8 +80,8 @@ func.func @llvm_nvvm_cluster_arrive_relaxed() {
 func.func @llvm_nvvm_cluster_wait() {
   // CHECK: nvvm.cluster.wait
   nvvm.cluster.wait
-  // CHECK: nvvm.cluster.wait {aligned}
-  nvvm.cluster.wait {aligned}
+  // CHECK: nvvm.cluster.wait <{aligned}>
+  nvvm.cluster.wait <{aligned}>
   llvm.return
 }
 
@@ -106,10 +106,10 @@ func.func @nvvm_shfl(
 func.func @nvvm_shfl_pred(
     %arg0 : i32, %arg1 : i32, %arg2 : i32,
     %arg3 : i32, %arg4 : f32) -> !llvm.struct<(i32, i1)> {
-  // CHECK: nvvm.shfl.sync bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
-  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
-  // CHECK: nvvm.shfl.sync bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
-  %1 = nvvm.shfl.sync bfly %arg0, %arg4, %arg1, %arg2 {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+  // CHECK: nvvm.shfl.sync bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} <{return_value_and_is_valid}> : i32 -> !llvm.struct<(i32, i1)>
+  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 <{return_value_and_is_valid}> : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: nvvm.shfl.sync bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} <{return_value_and_is_valid}> : f32 -> !llvm.struct<(f32, i1)>
+  %1 = nvvm.shfl.sync bfly %arg0, %arg4, %arg1, %arg2 <{return_value_and_is_valid}> : f32 -> !llvm.struct<(f32, i1)>
   llvm.return %0 : !llvm.struct<(i32, i1)>
 }
 
@@ -128,9 +128,9 @@ func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
 
 // CHECK-LABEL: @nvvm_movmatrix
 func.func @nvvm_movmatrix(%src : i32) -> i32 {
-  // CHECK: nvvm.movmatrix %{{.*}} {eltType = #nvvm.ld_st_matrix_elt_type<b16>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>} : i32
-  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
-                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  // CHECK: nvvm.movmatrix %{{.*}} <{eltType = #nvvm.ld_st_matrix_elt_type<b16>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>}> : i32
+  %dst = nvvm.movmatrix %src <{shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>}> : i32
   llvm.return %dst : i32
 }
 
@@ -322,9 +322,9 @@ func.func @nvvm_mma_m16n8k32_s4_s4(%a0 : i32, %a1 : i32,
 
 // CHECK-LABEL: @nvvm_wmma_load_tf32
 func.func @nvvm_wmma_load_tf32(%arg0: !llvm.ptr, %arg1 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
-  // CHECK: nvvm.wmma.load {{.*}} {eltype = #nvvm.mma_type<tf32>, frag = #nvvm.mma_frag<a>, k = 8 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+  // CHECK: nvvm.wmma.load {{.*}} <{eltype = #nvvm.mma_type<tf32>, frag = #nvvm.mma_frag<a>, k = 8 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}>
   %0 = nvvm.wmma.load %arg0, %arg1
-    {eltype = #nvvm.mma_type<tf32>, frag = #nvvm.mma_frag<a>, k = 8 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    <{eltype = #nvvm.mma_type<tf32>, frag = #nvvm.mma_frag<a>, k = 8 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}>
     : (!llvm.ptr) -> !llvm.struct<(i32, i32, i32, i32)>
   llvm.return %0 : !llvm.struct<(i32, i32, i32, i32)>
 }
@@ -334,9 +334,9 @@ func.func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : 
                     %6 : i32, %7 : i32, %8 : f32, %9 : f32, %10 : f32,
                     %11 : f32, %12 : f32, %13 : f32, %14 : f32, %15 : f32)
                    -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
-  // CHECK: nvvm.wmma.mma {{.*}} {eltypeA = #nvvm.mma_type<tf32>, eltypeB = #nvvm.mma_type<f32>, k = 8 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+  // CHECK: nvvm.wmma.mma {{.*}} <{eltypeA = #nvvm.mma_type<tf32>, eltypeB = #nvvm.mma_type<f32>, k = 8 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}>
   %r = nvvm.wmma.mma %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15
-    {eltypeA = #nvvm.mma_type<tf32>, eltypeB = #nvvm.mma_type<f32>, k = 8 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    <{eltypeA = #nvvm.mma_type<tf32>, eltypeB = #nvvm.mma_type<f32>, k = 8 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}>
     : (i32, i32, i32, i32, i32, i32, i32, i32, f32, f32, f32, f32, f32, f32, f32, f32)
     -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %r : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
@@ -380,19 +380,19 @@ llvm.func @redux_sync_f32(%value: f32, %offset: i32) -> f32 {
   // CHECK: nvvm.redux.sync fmin %{{.*}}
   %r1 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
   // CHECK: nvvm.redux.sync fmin %{{.*}}
-  %r2 = nvvm.redux.sync fmin %value, %offset {abs = true}: f32 -> f32
+  %r2 = nvvm.redux.sync fmin %value, %offset <{abs = true}>: f32 -> f32
   // CHECK: nvvm.redux.sync fmin %{{.*}}
-  %r3 = nvvm.redux.sync fmin %value, %offset {NaN = true}: f32 -> f32
+  %r3 = nvvm.redux.sync fmin %value, %offset <{nan = true}>: f32 -> f32
   // CHECK: nvvm.redux.sync fmin %{{.*}}
-  %r4 = nvvm.redux.sync fmin %value, %offset {abs = true, NaN = true}: f32 -> f32
+  %r4 = nvvm.redux.sync fmin %value, %offset <{abs = true, nan = true}>: f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
   %r5 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
-  %r6 = nvvm.redux.sync fmax %value, %offset {abs = true}: f32 -> f32
+  %r6 = nvvm.redux.sync fmax %value, %offset <{abs = true}>: f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
-  %r7 = nvvm.redux.sync fmax %value, %offset {NaN = true}: f32 -> f32
+  %r7 = nvvm.redux.sync fmax %value, %offset <{nan = true}>: f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
-  %r8 = nvvm.redux.sync fmax %value, %offset {abs = true, NaN = true}: f32 -> f32
+  %r8 = nvvm.redux.sync fmax %value, %offset <{abs = true, nan = true}>: f32 -> f32
   llvm.return %r1 : f32
 }
 
@@ -542,10 +542,10 @@ func.func @dot_accumulate_4way(%a_vec: vector<4xi8>, %b_vec: vector<4xi8>, %c: i
 
 // CHECK-LABEL: @dot_accumulate_2way
 func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: i32) {
-  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = false} : vector<2xi16>, vector<4xi8>
-  %1 = nvvm.dot.accumulate.2way %a_vec <unsigned>, %b_vec <unsigned>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
-  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = true} : vector<2xi16>, vector<4xi8>
-  %3 = nvvm.dot.accumulate.2way %a_vec <signed>, %b_vec <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} <{b_hi = false}> : vector<2xi16>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.2way %a_vec <unsigned>, %b_vec <unsigned>, %c <{b_hi = false}>: vector<2xi16>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} <{b_hi = true}> : vector<2xi16>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.2way %a_vec <signed>, %b_vec <signed>, %c <{b_hi = true}>: vector<2xi16>, vector<4xi8>
   return
 }
 
