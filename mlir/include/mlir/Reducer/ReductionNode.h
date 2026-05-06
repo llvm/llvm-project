@@ -78,6 +78,9 @@ public:
   /// Return the generated variants(the child nodes).
   ArrayRef<ReductionNode *> getVariants() const { return variants; }
 
+  /// Add a variant to Node's variants
+  void addVariant(ReductionNode *node) { variants.push_back(node); }
+
   /// Split the ranges and generate new variants.
   ArrayRef<ReductionNode *> generateNewVariants();
 
@@ -88,7 +91,7 @@ public:
   /// patterns. In addition, we only apply rewrite patterns in a certain region.
   /// In init(), we will duplicate the module from parent node and locate the
   /// corresponding region.
-  LogicalResult initialize(ModuleOp parentModule, Region &parentRegion);
+  LogicalResult initialize(ModuleOp parentModule, Region &targetRegion);
 
 private:
   /// A custom BFS iterator. The difference between

@@ -32,64 +32,11 @@ namespace mlir {
 
 using namespace mlir;
 
-/// We implicitly number each operation in the region and if an operation's
-/// number falls into rangeToKeep, we need to keep it and apply the given
-/// rewrite patterns on it.
-static void applyPatterns(Region &region,
-                          const FrozenRewritePatternSet &patterns,
-                          ArrayRef<ReductionNode::Range> rangeToKeep,
-                          bool eraseOpNotInRange) {
-  std::vector<Operation *> opsNotInRange;
-  std::vector<Operation *> opsInRange;
-  size_t keepIndex = 0;
-  for (const auto &op : enumerate(region.getOps())) {
-    int index = op.index();
-    if (keepIndex < rangeToKeep.size() &&
-        index == rangeToKeep[keepIndex].second)
-      ++keepIndex;
-    if (keepIndex == rangeToKeep.size() || index < rangeToKeep[keepIndex].first)
-      opsNotInRange.push_back(&op.value());
-    else
-      opsInRange.push_back(&op.value());
-  }
-
-  // `applyOpPatternsGreedily` with folding may erase the ops so we can't do the
-  // pattern matching in above iteration. Besides, erase op not-in-range may end
-  // up in invalid module, so `applyOpPatternsGreedily` with folding should come
-  // before that transform.
-  for (Operation *op : opsInRange) {
-    // `applyOpPatternsGreedily` with folding returns whether the op is
-    // converted. Omit it because we don't have expectation this reduction will
-    // be success or not.
-    (void)applyOpPatternsGreedily(op, patterns,
-                                  GreedyRewriteConfig().setStrictness(
-                                      GreedyRewriteStrictness::ExistingOps));
-  }
-
-  if (eraseOpNotInRange)
-    for (Operation *op : opsNotInRange) {
-      op->dropAllUses();
-      op->erase();
-    }
-}
-
-/// We will apply the reducer patterns to the operations in the ranges specified
-/// by ReductionNode. Note that we are not able to remove an operation without
-/// replacing it with another valid operation. However, The validity of module
-/// reduction is based on the Tester provided by the user and that means certain
-/// invalid module is still interested by the use. Thus we provide an
-/// alternative way to remove operations, which is using `eraseOpNotInRange` to
-/// erase the operations not in the range specified by ReductionNode.
-template <typename IteratorType>
-static LogicalResult findOptimal(ModuleOp module, Region &region,
-                                 const FrozenRewritePatternSet &patterns,
-                                 const Tester &test, bool eraseOpNotInRange) {
-  std::pair<Tester::Interestingness, size_t> initStatus =
-      test.isInteresting(module);
-  // While exploring the reduction tree, we always branch from an interesting
-  // node. Thus the root node must be interesting.
-  if (initStatus.first != Tester::Interestingness::True)
-    return module.emitError() << "uninterested module will not be reduced";
+/// We will apply `applyFn` to the operations in the ranges specified by
+/// ReductionNode.
+template <typename IteratorType, typename ApplyFn>
+static LogicalResult findOptimalUsing(ModuleOp module, Region &region,
+                                      const Tester &test, ApplyFn applyFn) {
 
   llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
 
@@ -101,17 +48,20 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
   // Duplicate the module for root node and locate the region in the copy.
   if (failed(root->initialize(module, region)))
     llvm_unreachable("unexpected initialization failure");
-  root->update(initStatus);
+
+  // Create a duplicate of the root node as the first variant of the root.
+  // This will keep the root intact when applying `applyFn`.
+  ReductionNode *firstVariant = allocator.Allocate();
+  new (firstVariant) ReductionNode(root, ranges, allocator);
+  root->addVariant(firstVariant);
 
   ReductionNode *smallestNode = root;
-  IteratorType iter(root);
+  IteratorType iter(firstVariant);
 
   while (iter != IteratorType::end()) {
     ReductionNode &currentNode = *iter;
-    Region &curRegion = currentNode.getRegion();
 
-    applyPatterns(curRegion, patterns, currentNode.getRanges(),
-                  eraseOpNotInRange);
+    applyFn(currentNode.getRegion(), currentNode.getRanges());
     currentNode.update(test.isInteresting(currentNode.getModule()));
 
     if (currentNode.isInteresting() == Tester::Interestingness::True &&
@@ -125,86 +75,121 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
   // the path and apply the reducer to it.
   SmallVector<ReductionNode *> trace;
   ReductionNode *curNode = smallestNode;
-  trace.push_back(curNode);
   while (curNode != root) {
-    curNode = curNode->getParent();
     trace.push_back(curNode);
+    curNode = curNode->getParent();
   }
+
+  if (trace.empty())
+    // If trace is empty, then the smallestNode == root and therefore we were
+    // not successful in reducing the module
+    return failure();
 
   // Reduce the region through the optimal path.
   while (!trace.empty()) {
     ReductionNode *top = trace.pop_back_val();
-    applyPatterns(region, patterns, top->getStartRanges(), eraseOpNotInRange);
+    applyFn(region, top->getStartRanges());
   }
 
-  if (test.isInteresting(module).first != Tester::Interestingness::True)
+  std::pair<Tester::Interestingness, size_t> finalStatus =
+      test.isInteresting(module);
+
+  if (finalStatus.first != Tester::Interestingness::True)
     llvm::report_fatal_error("Reduced module is not interesting");
-  if (test.isInteresting(module).second != smallestNode->getSize())
+  if (finalStatus.second != smallestNode->getSize())
     llvm::report_fatal_error(
         "Reduced module doesn't have consistent size with smallestNode");
   return success();
 }
 
-/// This function attempts to erase all operations within the region currently
-/// being processed.
-static LogicalResult eraseAllOpsInRegion(ModuleOp module, Region &region,
-                                         const Tester &test) {
-  std::pair<Tester::Interestingness, size_t> initStatus =
-      test.isInteresting(module);
-
-  // While exploring the reduction tree, we always branch from an interesting
-  // node. Thus the root node must be interesting.
-  if (initStatus.first != Tester::Interestingness::True)
-    return module.emitError() << "uninterested module will not be reduced";
-  llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
-
-  // Setting the ranges to {{0, 0}} will result in the deletion of all ops
-  // within the region.
-  std::vector<ReductionNode::Range> ranges{{0, 0}};
-
-  // We allocate memory on the stack, and the 'allocator' is only used to
-  // construct the 'root node'. Since we won't be constructing any child nodes
-  // for emptyRegionNode, it is only used within the current scope.
-  ReductionNode emptyRegionNode(nullptr, ranges, allocator);
-  ReductionNode *root = &emptyRegionNode;
-
-  // Create a copy of the current IR.
-  if (failed(root->initialize(module, region)))
-    llvm_unreachable("unexpected initialization failure");
-
-  // Erase all operations within the corresponding region of the clone.
-  applyPatterns(root->getRegion(), {}, root->getRanges(), true);
-  root->update(test.isInteresting(root->getModule()));
-  if (root->isInteresting() == Tester::Interestingness::True) {
-    // If we can successfully remove all ops in the region, we apply the same
-    // transformation to the original IR and return success.
-    applyPatterns(region, {}, root->getRanges(), true);
-    return success();
+/// We implicitly number each operation in the region and if an operation's
+/// number falls into rangeToKeep, we'll keep it.
+static void eliminateOperations(Region &region,
+                                ArrayRef<ReductionNode::Range> rangeToKeep) {
+  std::vector<Operation *> opsNotInRange;
+  size_t keepIndex = 0;
+  for (const auto &op : enumerate(region.getOps())) {
+    int index = op.index();
+    if (keepIndex < rangeToKeep.size() &&
+        index == rangeToKeep[keepIndex].second)
+      ++keepIndex;
+    if (keepIndex == rangeToKeep.size() || index < rangeToKeep[keepIndex].first)
+      opsNotInRange.push_back(&op.value());
   }
-  return failure();
+
+  for (Operation *op : opsNotInRange) {
+    op->dropAllUses();
+    op->erase();
+  }
+}
+
+/// We implicitly number each operation in the region and if an operation's
+/// number falls into rangeToApply, we'll apply the given rewrite patterns on
+/// it.
+static void applyPatterns(Region &region,
+                          const FrozenRewritePatternSet &patterns,
+                          ArrayRef<ReductionNode::Range> rangeToApply) {
+  size_t rangeIndex = 0;
+  std::vector<Operation *> opsInRange;
+  for (const auto &op : enumerate(region.getOps())) {
+    int index = op.index();
+    if (rangeIndex < rangeToApply.size() &&
+        index == rangeToApply[rangeIndex].second)
+      ++rangeIndex;
+    if (rangeIndex < rangeToApply.size() &&
+        index >= rangeToApply[rangeIndex].first)
+      opsInRange.push_back(&op.value());
+  }
+
+  for (auto *op : opsInRange)
+    // `applyOpPatternsGreedily` with folding returns whether the op is
+    // converted. Omit it because we don't have expectation this reduction
+    // will be success or not.
+    (void)applyOpPatternsGreedily(op, patterns,
+                                  GreedyRewriteConfig().setStrictness(
+                                      GreedyRewriteStrictness::ExistingOps));
 }
 
 template <typename IteratorType>
 static LogicalResult findOptimal(ModuleOp module, Region &region,
                                  const FrozenRewritePatternSet &patterns,
                                  const Tester &test) {
-  // We separate the reduction process into 3 steps, the first one is to erase
-  // redundant operations and the second one is to apply the reducer patterns.
 
-  // In the first phase, we attempt to erase all operations within the entire
-  // region.
-  if (succeeded(eraseAllOpsInRegion(module, region, test)))
+  // We first test the interstingness of the module passed to findOptimal.
+  std::pair<Tester::Interestingness, size_t> initStatus =
+      test.isInteresting(module);
+  if (initStatus.first != Tester::Interestingness::True)
+    // If the module is not interesting, we can return failure
+    return module.emitError() << "uninterested module will not be reduced";
+
+  // We separate the reduction process into 3 steps:
+  // In the first step, we attempt to erase all operations within the
+  // entire region.
+  if (succeeded(findOptimalUsing<IteratorType>(
+          module, region, test, [](auto &region, auto) {
+            for (auto &block : region.getBlocks())
+              block.clear();
+          })))
+    // If clearing the entire region kept the module interesting
+    // we will return success.
     return success();
 
-  // In the second phase, we don't apply any patterns so that we only select the
-  // range of operations to keep to the module stay interesting.
-  if (failed(findOptimal<IteratorType>(module, region, /*patterns=*/{}, test,
-                                       /*eraseOpNotInRange=*/true)))
-    return failure();
-  // In the third phase, we suppose that no operation is redundant, so we try
-  // to rewrite the operation into simpler form.
-  return findOptimal<IteratorType>(module, region, patterns, test,
-                                   /*eraseOpNotInRange=*/false);
+  // In the second step, we eliminate redundant operations from the region to
+  // select those that keep the module interesting
+  auto eliminationResult =
+      findOptimalUsing<IteratorType>(module, region, test, eliminateOperations);
+
+  // In the third step, we suppose that no operation is redundant, so we try
+  // to rewrite the operation into simpler form by applying patterns.
+  auto applyPatternsResult = findOptimalUsing<IteratorType>(
+      module, region, test, [&](auto &region, auto ranges) {
+        applyPatterns(region, patterns, ranges);
+      });
+
+  if (succeeded(eliminationResult) || succeeded(applyPatternsResult))
+    // if step 2 or 3 was successful, then we return success.
+    return success();
+  return failure();
 }
 
 namespace {
