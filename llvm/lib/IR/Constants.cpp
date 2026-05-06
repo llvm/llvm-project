@@ -90,11 +90,10 @@ bool Constant::isNullValue() const {
   if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
     return CB->isZero();
 
-  // +0.0 is null.
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     // ppc_fp128 determine isZero using high order double only
-    // Should check the bitwise value to make sure all bits are zero.
-    return CFP->isExactlyValue(+0.0);
+    // so check the bitwise value to make sure all bits are zero.
+    return CFP->getValue().bitcastToAPInt().isZero();
 
   // constant zero is zero for aggregates, cpnull is null for pointers, none for
   // tokens.
