@@ -14386,7 +14386,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BB->addSuccessor(sinkMBB);
     break;
   }
-  case PPC::ATOMIC_LOAD_ADD_NOWP
+  case PPC::ATOMIC_LOAD_ADD_NOWP:
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::ADD4);
     break;
   case PPC::ATOMIC_LOAD_ADD:
