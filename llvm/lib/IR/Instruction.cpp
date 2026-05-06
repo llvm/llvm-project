@@ -1170,7 +1170,7 @@ bool Instruction::isVolatile() const {
   }
 }
 
-bool Instruction::canSynchronize() const {
+bool Instruction::maySynchronize() const {
   // FIXME: This currently treats atomics with monotonic ordering as
   // synchronizing. This is unnecessarily conservative and does not match
   // our LangRef definition of the property.

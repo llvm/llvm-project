@@ -1934,10 +1934,10 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
 }
 
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
-  if (!I.canSynchronize())
+  if (!I.maySynchronize())
     return false;
 
-  // Speculatively assume in nosync in SCC.
+  // Speculatively assume nosync in SCC.
   if (auto *CB = dyn_cast<CallBase>(&I))
     if (Function *Callee = CB->getCalledFunction())
       if (SCCNodes.contains(Callee))
