@@ -2570,9 +2570,7 @@ SDValue SelectionDAG::getFreeze(SDValue V) {
 }
 
 SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
-                                bool PoisonOnly) {
-  UndefPoisonKind Kind =
-      PoisonOnly ? UndefPoisonKind::PoisonOnly : UndefPoisonKind::UndefOrPoison;
+                                UndefPoisonKind Kind) {
   if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, Kind))
     return V;
   return getFreeze(V);

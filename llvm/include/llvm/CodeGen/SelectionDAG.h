@@ -1772,9 +1772,10 @@ public:
   LLVM_ABI SDValue getFreeze(SDValue V);
 
   /// Return a freeze of V if any of the demanded elts may be undef or poison.
-  /// If \p PoisonOnly is true, then only check for poison elements.
-  LLVM_ABI SDValue getFreeze(SDValue V, const APInt &DemandedElts,
-                             bool PoisonOnly = false);
+  /// \p Kind can be used to selectively freeze poison and/or undef bits only.
+  LLVM_ABI SDValue
+  getFreeze(SDValue V, const APInt &DemandedElts,
+            UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison);
 
   /// Return an AssertAlignSDNode.
   LLVM_ABI SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
