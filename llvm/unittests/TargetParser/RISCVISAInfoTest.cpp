@@ -326,8 +326,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
 }
 
 TEST(RISCVISAInfoTest, CanonicalExtensionOrderVP) {
-  auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv64ipv", true);
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64ipv", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
 
   RISCVISAInfo &Info = **MaybeISAInfo;
