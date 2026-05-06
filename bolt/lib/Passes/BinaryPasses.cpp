@@ -1959,7 +1959,8 @@ std::set<size_t> SpecializeMemcpy1::getCallSitesToOptimize(
 
 Error SpecializeMemcpy1::runOnFunctions(BinaryContext &BC) {
   if (!BC.isX86()) {
-    BC.errs() << "BOLT-ERROR: " << getName() << " is currently supported only on X86\n";
+    BC.errs() << "BOLT-ERROR: " << getName()
+              << " is currently supported only on X86\n";
     exit(1);
   }
 
