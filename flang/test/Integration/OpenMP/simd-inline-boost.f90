@@ -1,7 +1,14 @@
-! Test that function calls inside !$omp simd loops get boosted inline thresholds.
-!RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
+! Test that function calls to declare simd functions inside !$omp simd loops
+! get the omp.simd_inline_boost attribute when -openmp-simd-inline-boost is set.
+!RUN: %flang_fc1 -emit-mlir -fopenmp -mmlir -openmp-simd-inline-boost %s -o - | FileCheck %s
 
-! CHECK-LABEL: define {{.*}} @test_simd_
+real function foo(v)
+  !$omp declare simd
+  real, intent(in) :: v
+  foo = v * v
+end function
+
+! CHECK-LABEL: func.func @_QPtest_simd
 subroutine test_simd(x, n)
   implicit none
   integer, intent(in) :: n
@@ -9,30 +16,30 @@ subroutine test_simd(x, n)
   integer :: i
   interface
     real function foo(v)
+      !$omp declare simd
       real, intent(in) :: v
     end function
   end interface
   !$omp simd
   do i = 1, n
-    ! CHECK: call {{.*}}@foo_({{.*}}) #[[BOOST:[0-9]+]]
+    ! CHECK: fir.call @_QPfoo({{.*}}) {{.*}}omp.simd_inline_boost
     x(i) = foo(x(i))
   end do
   !$omp end simd
 end subroutine
 
-! Calls outside !$omp simd should NOT get the attribute.
-! CHECK-LABEL: define {{.*}} @no_simd_
+! Calls to declare simd functions outside !$omp simd should NOT get the attribute.
+! CHECK-LABEL: func.func @_QPno_simd
 subroutine no_simd(x)
   implicit none
   real, intent(inout) :: x
   interface
     real function foo(v)
+      !$omp declare simd
       real, intent(in) :: v
     end function
   end interface
-  ! CHECK: call {{.*}}@foo_({{.*}})
-  ! CHECK-NOT: call {{.*}}@foo_({{.*}}) #[[BOOST]]
+  ! CHECK: fir.call @_QPfoo({{.*}})
+  ! CHECK-NOT: omp.simd_inline_boost
   x = foo(x)
 end subroutine
-
-! CHECK: attributes #[[BOOST]] = {{{.*}}"function-inline-threshold-bonus"="2000"{{.*}}}
