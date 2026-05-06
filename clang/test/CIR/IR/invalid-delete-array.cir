@@ -1,0 +1,15 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!void = !cir.void
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @_ZdaPvm(!cir.ptr<!void>)
+
+  cir.func @bad_delete_array_throw_without_dtor(%p: !cir.ptr<!rec_S>) {
+    // expected-error@+1 {{'cir.delete_array' op 'dtor_may_throw' requires an 'element_dtor' to be present}}
+    cir.delete_array %p : !cir.ptr<!rec_S> dtor_may_throw {delete_fn = @_ZdaPvm, delete_params = #cir.usual_delete_params<size = true>}
+    cir.return
+  }
+}

@@ -127,9 +127,10 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
 // For regular operations: First the result layouts are propagated from uses.
 // Then the result layouts are propagated to uses (operands).
 static void propagateResultsToRegularOperands(Operation *op) {
-  if (op->getNumResults() == 0 || op->getNumResults() > 1)
+  if (op->getNumResults() == 0)
     return;
-
+  if (op->getNumResults() > 1 && !isa<vector::DeinterleaveOp>(op))
+    return;
   OpResult result = op->getResult(0);
   xegpu::DistributeLayoutAttr resLayout = getLayoutFromUsePoints(result);
   Type resultType = result.getType();
