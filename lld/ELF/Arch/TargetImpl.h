@@ -45,7 +45,7 @@ inline void applyBranchToBranchOptImpl(
         [&getBranchInfoAtTarget](
             Relocation &r,
             uint64_t addend) -> std::pair<Relocation *, uint64_t> {
-      auto *target = dyn_cast_or_null<Defined>(r.sym);
+      auto *target = dyn_cast<Defined>(r.sym);
       // We don't allow preemptible symbols or ifuncs (may go somewhere else),
       // absolute symbols (runtime behavior unknown), non-executable or writable
       // memory (ditto) or non-regular sections (no section data).

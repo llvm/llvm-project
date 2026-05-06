@@ -2011,18 +2011,37 @@ def : Pat<(int_ppc_dcbtst_with_hint xoaddr:$dst, i32:$TH),
 // clean this up in PPCMIPeephole with calls to
 // PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
 // in the first place.
-foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
-              "umin"] in {
-  foreach bitsz = [8, 16, 32] in {
-    defvar pseudo = "ATOMIC_LOAD_"#!toupper(op)#"_I"#bitsz;
-    defvar pat = !cast<PatFrag>(!tolower(pseudo));
-    let Defs = [CR0] in
-      def pseudo : PPCCustomInserterPseudo<
-          (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
-          "#" # NAME,[]>;
-    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
-            (!cast<Instruction>(pseudo) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>;
+
+// For each operation, 2 pseudo instructions are generated. Which one is matched
+// depends on the size and and if the word-part feature is available.
+// For example for operation AND, ATOMIC_LOAD_AND_NOWP is only matched for sizes
+// 8 and 16 bit if the word part feature is not available. In all other cases,
+// ATOMIC_LOAD_AND is matched.
+foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
+              "load_nand", "load_min", "load_max", "load_umax", "load_umin",
+              "swap"] in {
+  defvar atomic_load = "ATOMIC_"#!toupper(op);
+  defvar atomic_load_nowp = "ATOMIC_"#!toupper(op)#"_NOWP";
+  let Defs = [CR0] in {
+    def atomic_load : PPCCustomInserterPseudo<
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
+        "#" # NAME,[]>;
+    def atomic_load_nowp : PPCCustomInserterPseudo<
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
+        "#" # NAME,[]>;
   }
+
+  foreach bitsz = [8, 16] in {
+    defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i"#bitsz);
+    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+            (!cast<Instruction>(atomic_load) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>,
+            Requires<[HasPartwordAtomics]>;
+    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+            (!cast<Instruction>(atomic_load_nowp) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>;
+  }
+  defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i32");
+  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+          (!cast<Instruction>(atomic_load) memrr:$ptr, 4, gprc:$incr)>;
 }
 
 foreach bitsz = [8, 16, 32] in {
@@ -2034,17 +2053,6 @@ foreach bitsz = [8, 16, 32] in {
       "#" # NAME,[]>;
   def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$old, gprc:$new)),
           (!cast<Instruction>(pseudo) memrr:$ptr, gprc:$old, gprc:$new)>;
-}
-
-foreach bitsz = [8, 16, 32] in {
-  defvar pseudo = "ATOMIC_SWAP_I"#bitsz;
-  defvar pat = !cast<PatFrag>(!tolower(pseudo));
-  let Defs = [CR0] in
-    def pseudo : PPCCustomInserterPseudo<
-      (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$new),
-      "#" # NAME,[]>;
-  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$new)),
-          (!cast<Instruction>(pseudo) memrr:$ptr, !div(bitsz, 8), gprc:$new)>;
 }
 
 def : Pat<(PPCatomicCmpSwap_8 ForceXForm:$ptr, i32:$old, i32:$new),
@@ -2599,9 +2607,9 @@ defm ORC  : XForm_6r<31, 412, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
                      "orc", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i32:$RA, (or i32:$RST, (not i32:$RB)))]>;
 let isCommutable = 1 in {
-defm EQV  : XForm_6r<31, 284, (outs gprc:$RA), (ins gxrc:$RST, gxrc:$RB),
+defm EQV  : XForm_6r<31, 284, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
                      "eqv", "$RA, $RST, $RB", IIC_IntSimple,
-                     [(set XLenVT:$RA, (not (xor XLenVT:$RST, XLenVT:$RB)))]>;
+                     [(set i32:$RA, (not (xor i32:$RST, i32:$RB)))]>;
 defm XOR  : XForm_6r<31, 316, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
                      "xor", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i32:$RA, (xor i32:$RST, i32:$RB))]>;

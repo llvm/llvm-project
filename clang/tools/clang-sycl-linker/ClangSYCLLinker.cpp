@@ -19,9 +19,11 @@
 #include "clang/Basic/Version.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
@@ -35,6 +37,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -46,6 +49,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/SplitModuleByCategory.h"
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -240,14 +244,19 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
   return DeviceLibFiles;
 }
 
+struct LinkResult {
+  std::unique_ptr<Module> LinkedModule;
+  SmallString<256> BitcodeFile;
+};
+
 /// Following tasks are performed:
 /// 1. Link all SYCL device bitcode images into one image. Device linking is
 /// performed using the linkInModule API.
 /// 2. Gather all SYCL device library bitcode images.
 /// 3. Link all the images gathered in Step 2 with the output of Step 1 using
 /// linkInModule API. LinkOnlyNeeded flag is used.
-Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
-                                   const ArgList &Args, LLVMContext &C) {
+Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
+                                    const ArgList &Args, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("SYCL link device code");
 
   assert(InputFiles.size() && "No inputs to link");
@@ -307,7 +316,7 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
         LibInputs, *BitcodeOutput);
   }
 
-  return *BitcodeOutput;
+  return LinkResult{std::move(LinkerOutput), SmallString<256>(*BitcodeOutput)};
 }
 
 /// Run Code Generation using LLVM backend.
@@ -459,6 +468,109 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
 }
 
+/// SYCL device code module split mode.
+enum class IRSplitMode {
+  SPLIT_PER_KERNEL, // one module per kernel
+  SPLIT_NONE        // no splitting
+};
+
+/// Parses the value of \p -module-split-mode.
+static std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
+  return StringSwitch<std::optional<IRSplitMode>>(S)
+      .Case("kernel", IRSplitMode::SPLIT_PER_KERNEL)
+      .Case("none", IRSplitMode::SPLIT_NONE)
+      .Default(std::nullopt);
+}
+
+/// Result of splitting a device module: the bitcode file path and the
+/// serialized symbol table for each device image.
+struct SplitModule {
+  SmallString<256> ModuleFilePath;
+  SmallString<0> Symbols;
+};
+
+static bool isEntryPoint(const Function &F) {
+  return !F.isDeclaration() && F.hasKernelCallingConv();
+}
+
+/// Collect kernel names from \p M and serialize them into a symbol table.
+static SmallString<0> collectSymbols(const Module &M) {
+  SmallVector<StringRef> KernelNames;
+  for (const Function &F : M)
+    if (isEntryPoint(F))
+      KernelNames.push_back(F.getName());
+  SmallString<0> SymbolData;
+  llvm::offloading::sycl::writeSymbolTable(KernelNames, SymbolData);
+  return SymbolData;
+}
+
+/// Splits the fully linked device \p M into one bitcode file per device image
+/// according to \p Mode and returns the list of split images with their symbol
+/// tables.
+///
+/// For SPLIT_NONE, \p LinkedBitcodeFile is returned as-is.
+/// For SPLIT_PER_KERNEL, the module is split into parts such that each part
+/// contains exactly one kernel entry point and its transitive dependencies;
+/// each part is written to a fresh temporary bitcode file.
+static Expected<SmallVector<SplitModule, 0>>
+splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
+                IRSplitMode Mode, const ArgList &Args) {
+  SmallVector<SplitModule, 0> SplitModules;
+
+  if (Mode == IRSplitMode::SPLIT_NONE) {
+    SplitModules.push_back(
+        {SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
+    return SplitModules;
+  }
+
+  assert(Mode == IRSplitMode::SPLIT_PER_KERNEL);
+
+  // splitModuleTransitiveFromEntryPoints asserts that at least one entry point
+  // was categorized. If the linked module contains no kernel definitions at
+  // all, there is nothing to split; fall back to shipping the linked module
+  // as a single image.
+  bool HasKernel = llvm::any_of(M->functions(), isEntryPoint);
+  if (!HasKernel) {
+    SplitModules.push_back(
+        {SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
+    return SplitModules;
+  }
+
+  // Categorize each kernel function into its own group. Non-kernels and
+  // declarations return std::nullopt so they are pulled into whichever split
+  // transitively needs them.
+  int NextCategory = 0;
+  auto EntryPointCategorizer =
+      [&NextCategory](const Function &F) -> std::optional<int> {
+    if (!isEntryPoint(F))
+      return std::nullopt;
+    return NextCategory++;
+  };
+
+  auto SplitCallback = [&](std::unique_ptr<Module> Part) -> Error {
+    Expected<StringRef> BitcodeFileOrErr =
+        createTempFile(Args, sys::path::filename(OutputFile), "bc");
+    if (!BitcodeFileOrErr)
+      return BitcodeFileOrErr.takeError();
+
+    int FD = -1;
+    if (std::error_code EC = sys::fs::openFileForWrite(*BitcodeFileOrErr, FD))
+      return errorCodeToError(EC);
+    raw_fd_ostream OS(FD, /*shouldClose=*/true);
+    WriteBitcodeToFile(*Part, OS);
+
+    SplitModules.push_back(
+        {SmallString<256>(*BitcodeFileOrErr), collectSymbols(*Part)});
+    return Error::success();
+  };
+
+  if (Error Err = splitModuleTransitiveFromEntryPoints(
+          std::move(M), EntryPointCategorizer, SplitCallback))
+    return Err;
+
+  return SplitModules;
+}
+
 /// Performs the following steps:
 /// 1. Link input device code (user code and SYCL device library code).
 /// 2. Run SPIR-V code generation.
@@ -468,34 +580,36 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   LLVMContext C;
 
   // Link all input bitcode files and SYCL device library files, if any.
-  auto LinkedFile = linkDeviceCode(Files, Args, C);
-  if (!LinkedFile)
-    return LinkedFile.takeError();
+  Expected<LinkResult> LinkedOrErr = linkDeviceCode(Files, Args, C);
+  if (!LinkedOrErr)
+    return LinkedOrErr.takeError();
+  auto &[LinkedModule, LinkedFile] = *LinkedOrErr;
 
-  // TODO: SYCL post link functionality involves device code splitting and will
-  // result in multiple bitcode codes.
-  // The following lines are placeholders to represent multiple files and will
-  // be refactored once SYCL post link support is available.
-  SmallVector<std::string> SplitModules;
-  SplitModules.emplace_back(*LinkedFile);
+  // Determine the requested module split mode.
+  IRSplitMode SplitMode = IRSplitMode::SPLIT_NONE;
+  if (Arg *A = Args.getLastArg(OPT_module_split_mode_EQ)) {
+    std::optional<IRSplitMode> ModeOrNone =
+        convertStringToSplitMode(A->getValue());
+    if (!ModeOrNone)
+      return createStringError(formatv(
+          "module-split-mode value isn't recognized: {0}", A->getValue()));
+    SplitMode = *ModeOrNone;
+  }
 
-  // Generate symbol table.
-  SmallVector<SmallString<0>> SymbolTable;
-  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    Expected<std::unique_ptr<Module>> ModOrErr =
-        getBitcodeModule(SplitModules[I], C);
-    if (!ModOrErr)
-      return ModOrErr.takeError();
-
-    SmallString<0> SymbolData;
-    for (Function &F : **ModOrErr) {
-      // TODO: Consider using LLVM-IR metadata to identify globals of interest
-      if (F.hasKernelCallingConv()) {
-        SymbolData.append(F.getName());
-        SymbolData.push_back('\0');
-      }
-    }
-    SymbolTable.emplace_back(std::move(SymbolData));
+  // Split the linked module into one or more device images.
+  Expected<SmallVector<SplitModule, 0>> SplitModulesOrErr =
+      splitDeviceCode(std::move(LinkedModule), LinkedFile, SplitMode, Args);
+  if (!SplitModulesOrErr)
+    return SplitModulesOrErr.takeError();
+  SmallVector<SplitModule, 0> &SplitModules = *SplitModulesOrErr;
+  if (Verbose) {
+    SmallVector<StringRef> SplitFiles;
+    for (const SplitModule &SI : SplitModules)
+      SplitFiles.push_back(SI.ModuleFilePath);
+    errs() << formatv("sycl-module-split: input: {0}, output: {1}, mode: {2}\n",
+                      LinkedFile, llvm::join(SplitFiles, ", "),
+                      SplitMode == IRSplitMode::SPLIT_PER_KERNEL ? "kernel"
+                                                                 : "none");
   }
 
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
@@ -508,33 +622,31 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     StringRef Stem = OutputFile.rsplit('.').first;
     std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
 
-    if (Error Err = runCodeGen(SplitModules[I], Args, CodeGenFile, C))
+    if (Error Err =
+            runCodeGen(SplitModules[I].ModuleFilePath, Args, CodeGenFile, C))
       return Err;
 
-    SplitModules[I] = CodeGenFile;
+    SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
       std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
       if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
         return Err;
-      SplitModules[I] = AOTFile;
+      SplitModules[I].ModuleFilePath = AOTFile;
     }
   }
 
-  // Write the final output into file.
-  int FD = -1;
-  if (std::error_code EC = sys::fs::openFileForWrite(OutputFile, FD))
-    return errorCodeToError(EC);
-  llvm::raw_fd_ostream FS(FD, /*shouldClose=*/true);
-
-  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    auto File = SplitModules[I];
+  // Collect all images to be packed into a single OffloadBinary.
+  SmallVector<OffloadingImage> Images;
+  for (SplitModule &SI : SplitModules) {
+    if (SI.Symbols.empty())
+      continue;
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
-        llvm::MemoryBuffer::getFileOrSTDIN(File);
+        llvm::MemoryBuffer::getFileOrSTDIN(SI.ModuleFilePath);
     if (std::error_code EC = FileOrErr.getError()) {
       if (DryRun)
         FileOrErr = MemoryBuffer::getMemBuffer("");
       else
-        return createFileError(File, EC);
+        return createFileError(SI.ModuleFilePath, EC);
     }
     OffloadingImage TheImage{};
     TheImage.TheImageKind = IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;
@@ -543,15 +655,20 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
         Args.MakeArgString(Args.getLastArgValue(OPT_triple_EQ));
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
-    TheImage.StringData["symbols"] = SymbolTable[I];
+    TheImage.StringData["symbols"] = SI.Symbols;
     TheImage.Image = std::move(*FileOrErr);
-
-    llvm::SmallString<0> Buffer = OffloadBinary::write(TheImage);
-    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-      return createStringError("Offload binary has invalid size alignment");
-    FS << Buffer;
+    Images.emplace_back(std::move(TheImage));
   }
-  return Error::success();
+
+  llvm::SmallString<0> Buffer = OffloadBinary::write(Images);
+  if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+    return createStringError("Offload binary has invalid size alignment");
+
+  auto OutputOrErr = FileOutputBuffer::create(OutputFile, Buffer.size());
+  if (!OutputOrErr)
+    return OutputOrErr.takeError();
+  llvm::copy(Buffer, (*OutputOrErr)->getBufferStart());
+  return (*OutputOrErr)->commit();
 }
 
 } // namespace

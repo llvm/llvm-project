@@ -643,6 +643,9 @@ namespace std {
                                     // both-note {{used to delete a null pointer}} \
                                     // both-note {{delete of pointer '&no_deallocate_nonalloc' that does not point to a heap-allocated object}}
     }
+    constexpr void deallocate(void *p, size_t N) {
+       __builtin_operator_delete(p, sizeof(T) * N);
+     }
   };
   template<typename T, typename ...Args>
   constexpr void construct_at(void *p, Args &&...args) { // #construct
@@ -729,31 +732,30 @@ namespace OperatorNewDelete {
     constexpr ~S() { }
   };
 
-  /// FIXME: This is broken in the current interpreter.
   constexpr bool structAlloc() {
-    S *s = std::allocator<S>().allocate(1); // ref-note {{heap allocation performed here}}
+    S *s = std::allocator<S>().allocate(1); // both-note {{heap allocation performed here}}
 
-    s->i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    s->i = 12; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
 
     bool Res = (s->i == 12);
     std::allocator<S>().deallocate(s);
 
     return Res;
   }
-  static_assert(structAlloc()); // ref-error {{not an integral constant expression}} \
-                                // ref-note {{in call to}}
+  static_assert(structAlloc()); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
 
   constexpr bool structAllocArray() {
-    S *s = std::allocator<S>().allocate(9); // ref-note {{heap allocation performed here}}
+    S *s = std::allocator<S>().allocate(9); // both-note {{heap allocation performed here}}
 
-    s[2].i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    s[2].i = 12; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     bool Res = (s[2].i == 12);
     std::allocator<S>().deallocate(s);
 
     return Res;
   }
-  static_assert(structAllocArray()); // ref-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+  static_assert(structAllocArray()); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
 
   constexpr bool alloc_from_user_code() {
     void *p = __builtin_operator_new(sizeof(int)); // both-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
@@ -768,6 +770,13 @@ namespace OperatorNewDelete {
                                                                                         // both-note {{in call}}
 
   static_assert((std::allocator<float>().deallocate(std::allocator<float>().allocate(10)), 1) == 1);
+
+  constexpr bool sizedDeallocate() {
+    int *p = std::allocator<int>().allocate(1);
+    std::allocator<int>().deallocate(p, 1);
+    return true;
+  }
+  static_assert(sizedDeallocate());
 }
 
 namespace Limits {

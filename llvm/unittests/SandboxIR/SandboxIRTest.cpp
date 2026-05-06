@@ -3224,6 +3224,13 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_FALSE(NewLd->isVolatile());
   EXPECT_EQ(NewLd->getType(), Ld->getType());
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
+  // Check getPointerOperandType()
+  EXPECT_EQ(NewLd->getPointerOperandType(), Arg1->getType());
+  // Check getPointerAddressSpace()
+  EXPECT_EQ(NewLd->getPointerAddressSpace(),
+            Arg1->getType()->getPointerAddressSpace());
+  // Check helper function getLoadStoreAddressSpace()
+  EXPECT_EQ(getLoadStoreAddressSpace(NewLd), NewLd->getPointerAddressSpace());
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
   // Check create(InsertBefore, IsVolatile=true)
@@ -3289,6 +3296,20 @@ define void @foo(i8 %val, ptr %ptr) {
   // Check getPointerOperand()
   EXPECT_EQ(St->getValueOperand(), Val);
   EXPECT_EQ(St->getPointerOperand(), Ptr);
+  // Check getPointerOperandType()
+  EXPECT_EQ(St->getPointerOperandType(), Ptr->getType());
+  // Check getPointerAddressSpace()
+  EXPECT_EQ(St->getPointerAddressSpace(),
+            Ptr->getType()->getPointerAddressSpace());
+  // Check helper function getLoadStoreAddressSpace(St)
+  EXPECT_EQ(getLoadStoreAddressSpace(St), St->getPointerAddressSpace());
+  EXPECT_EQ(
+      getLoadStoreAddressSpace(const_cast<const sandboxir::StoreInst *>(St)),
+      St->getPointerAddressSpace());
+#ifndef NDEBUG
+  // Check the assertion in getLoadStoreAddressSpace(Ret) if not a load or store
+  EXPECT_DEATH(getLoadStoreAddressSpace(Ret), ".*Expected.*");
+#endif
   // Check getAlign()
   EXPECT_EQ(St->getAlign(), 64);
   // Check create(InsertBefore)
@@ -6219,6 +6240,7 @@ define void @foo() {
 
 /// Makes sure that all Instruction sub-classes have a classof().
 TEST_F(SandboxIRTest, CheckClassof) {
+#define DEF_ENABLE_AUTO_UNDEF
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
 #include "llvm/SandboxIR/Values.def"

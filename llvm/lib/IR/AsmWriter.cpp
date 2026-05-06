@@ -1672,6 +1672,11 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     Type *Ty = CFP->getType();
 
     if (Ty->isVectorTy()) {
+      if (CFP->isPosZero()) {
+        Out << "zeroinitializer";
+        return;
+      }
+
       Out << "splat (";
       WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
       Out << " ";
@@ -1813,7 +1818,16 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (isa<ConstantPointerNull>(CV)) {
+  if (const auto *CPN = dyn_cast<ConstantPointerNull>(CV)) {
+    if (auto *VT = dyn_cast<VectorType>(CPN->getType())) {
+      Out << "splat (";
+      writeAsOperandInternal(Out,
+                             ConstantPointerNull::get(VT->getElementType()),
+                             WriterCtx, /*PrintType=*/true);
+      Out << ')';
+      return;
+    }
+
     Out << "null";
     return;
   }
@@ -2238,6 +2252,9 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("dataSize", N->getDataSizeInBits());
@@ -2255,6 +2272,9 @@ static void writeDIFixedPointType(raw_ostream &Out, const DIFixedPointType *N,
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
@@ -4468,8 +4488,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ' ' << CI->getPredicate();
 
   // Print out the atomicrmw operation
-  if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&I))
+  if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&I)) {
+    if (RMWI->isElementwise())
+      Out << " elementwise";
     Out << ' ' << AtomicRMWInst::getOperationName(RMWI->getOperation());
+  }
 
   // Print out the type of the operands...
   const Value *Operand = I.getNumOperands() ? I.getOperand(0) : nullptr;
