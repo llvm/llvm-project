@@ -255,9 +255,9 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   return success();
 }
 
-LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
-                                                   ForOp &lastIteration) {
-  RewriterBase::InsertionGuard guard(b);
+LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &rewriter, ForOp forOp,
+                                                   ForOp &partialIteration) {
+  RewriterBase::InsertionGuard guard(rewriter);
   auto lbInt = getConstantIntValue(forOp.getLowerBound());
   auto ubInt = getConstantIntValue(forOp.getUpperBound());
   auto stepInt = getConstantIntValue(forOp.getStep());
@@ -267,31 +267,45 @@ LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
     return failure();
 
   AffineExpr ubSymbol, stepSymbol;
-  bindSymbols(b.getContext(), ubSymbol, stepSymbol);
+  bindSymbols(rewriter.getContext(), ubSymbol, stepSymbol);
 
   // New upper bound for main loop: %ub - %step
   auto ubMap = AffineMap::get(0, 2, {ubSymbol - stepSymbol});
-  b.setInsertionPoint(forOp);
+  rewriter.setInsertionPoint(forOp);
   auto loc = forOp.getLoc();
-  Value splitBound = b.createOrFold<AffineApplyOp>(
+  Value splitBound = rewriter.createOrFold<AffineApplyOp>(
       loc, ubMap, ValueRange{forOp.getUpperBound(), forOp.getStep()});
 
-  b.setInsertionPointAfter(forOp);
+  rewriter.setInsertionPointAfter(forOp);
 
   // Peel the last iteration.
-  lastIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
-  b.replaceAllUsesWith(forOp.getResults(), lastIteration->getResults());
+  partialIteration = cast<ForOp>(rewriter.clone(*forOp.getOperation()));
+  rewriter.replaceAllUsesWith(forOp.getResults(), partialIteration->getResults());
   // This has to be done after the replace above, so that replace does not change it
-  lastIteration.getInitArgsMutable().assign(forOp->getResults());
-  lastIteration.getLowerBoundMutable().assign(splitBound);
+  rewriter.modifyOpInPlace(partialIteration, [&]() {
+    partialIteration.getInitArgsMutable().assign(forOp->getResults());
+    partialIteration.getLowerBoundMutable().assign(splitBound);
+  });
 
   // Update main loop with new upper bound.
-  b.modifyOpInPlace(forOp, [&]() {
+  rewriter.modifyOpInPlace(forOp, [&]() {
     forOp.getUpperBoundMutable().assign(splitBound);
   });
 
   // Rewrite affine.min and affine.max ops.
-  rewriteAffineOpAfterPeeling(b, forOp, lastIteration, lastIteration.getUpperBound());
+  forOp.walk([&](Operation *affineOp) {
+      if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+          return WalkResult::advance();
+      (void)canonicalizeMinMaxOpInLoop(rewriter, affineOp, matchForLikeLoop);
+      return WalkResult::advance();
+  });
+
+  partialIteration.walk([&](Operation *affineOp) {
+      if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+          return WalkResult::advance();
+      (void)canonicalizeMinMaxOpInLoop(rewriter, affineOp, matchForLikeLoop);
+      return WalkResult::advance();
+  });
 
   return success();
 }
