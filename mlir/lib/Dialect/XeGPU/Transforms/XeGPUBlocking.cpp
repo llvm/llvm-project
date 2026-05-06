@@ -488,6 +488,13 @@ void XeGPUBlockingPass::runOnOperation() {
       }
     }
 
+    // Drop inst_data from operation attributes (e.g., layout, layout_a,
+    // layout_b, etc.) This is necessary for anchor operations that don't get
+    // unrolled because their inst_data already matches their shape.
+    SmallVector<NamedAttribute> newAttrs =
+        xegpu::dropInstDataOnAttrs(op->getAttrs());
+    op->setAttrs(newAttrs);
+
     // Resolve unrealized conversion cast ops emulating pack/unpack
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
