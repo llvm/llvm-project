@@ -879,8 +879,7 @@ private:
 
   /// Get column number for the location. If location is
   /// invalid then use current location.
-  /// \param Force  Assume DebugColumnInfo option is true.
-  unsigned getColumnNumber(SourceLocation Loc, bool Force = false);
+  unsigned getColumnNumber(SourceLocation Loc);
 
   /// Clear the current location and its derived metadata.
   void clearCurLoc() {

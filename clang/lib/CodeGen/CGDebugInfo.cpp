@@ -377,7 +377,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
     return;
 
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  if (Scope->getFile() == CurLocFile)
+  if (!CurLocFile || Scope->getFile() == CurLocFile)
     return;
 
   if (auto *LBF = dyn_cast<llvm::DILexicalBlockFile>(Scope)) {
@@ -688,9 +688,9 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   return SM.getPresumedLoc(DebugLoc).getLine();
 }
 
-unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
+unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
   // We may not want column information at all.
-  if (!Force && !CGM.getCodeGenOpts().DebugColumnInfo)
+  if (!CGM.getCodeGenOpts().DebugColumnInfo)
     return 0;
 
   // If the location is invalid then use the current column.
