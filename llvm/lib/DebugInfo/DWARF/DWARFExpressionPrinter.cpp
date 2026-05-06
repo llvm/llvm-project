@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
@@ -29,21 +30,20 @@ typedef Op::Description Desc;
 /// uint64_t (see NVPTXRegisterInfo::encodeRegisterForDwarf). When the object
 /// file is not the target backend, MCRegisterInfo cannot map these numbers, so
 /// recover the string for dumping.
+/// Returns true if the register name was decoded successfully, false otherwise.
 static bool decodeVirtualRegisterName(uint64_t DwarfRegNum,
-                                      SmallString<32> &Out) {
+                                      SmallString<8> &Out) {
   if (DwarfRegNum == 0)
     return false;
 
-  SmallString<32> Tmp;
-  for (uint64_t V = DwarfRegNum; V; V >>= 8)
-    Tmp.push_back(static_cast<char>(V & 0xFF));
+  uint64_t DwarfRegNumBE =
+      support::endian::byte_swap<uint64_t>(DwarfRegNum, endianness::big);
+  const char *Data = reinterpret_cast<const char *>(&DwarfRegNumBE);
+  const char *Begin = std::find_if(Data, Data + sizeof(DwarfRegNumBE),
+                                   [](char c) { return c != '\0'; });
+  SmallString<8> Tmp(Begin, Data + sizeof(DwarfRegNumBE));
 
-  // Encoding builds the uint64_t as (result << 8) | byte per character (MSB of
-  // the value is the first character). Unpacking with >>= 8 yields bytes LSB
-  // first, so reverse to restore the original register name (e.g. %rd2).
-  std::reverse(Tmp.begin(), Tmp.end());
-
-  if (Tmp.empty() || Tmp.size() < 2)
+  if (Tmp.size() < 2)
     return false;
 
   if (!llvm::isAlnum(Tmp[0]) && Tmp[0] != '%')
@@ -69,7 +69,7 @@ static std::string resolveRegName(
     if (!R.empty())
       return std::string(R);
   }
-  SmallString<32> Decoded;
+  SmallString<8> Decoded;
   if (decodeVirtualRegisterName(DwarfRegNum, Decoded))
     return std::string(Decoded);
   return {};
