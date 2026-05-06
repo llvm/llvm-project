@@ -10,7 +10,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-LINKER-MLLVM
 //
 // CHECK-LINKER-OPT: "{{.*}}llvm-link"
-// CHECK-LINKER-OPT-SAME: "-o" "{{.*}}" "{{.*}}"{{$}}
+// CHECK-LINKER-OPT-SAME: "-o" "{{.*}}.bc" "{{.*}}.bc"{{$}}
 //
 // CHECK-LINKER-MLLVM: "{{.*}}llvm-link"
-// CHECK-LINKER-MLLVM-SAME: "-o" "{{.*}}" "{{.*}}"{{$}}
+// CHECK-LINKER-MLLVM-SAME: "-o" "{{.*}}.bc" "{{.*}}.bc"{{$}}
