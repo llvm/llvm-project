@@ -964,11 +964,11 @@ define i128 @icmp_select_fold_eq_imm_i128(i128 %arg, i128 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
-; GFX900-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
 ; GFX900-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
-; GFX900-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
 ; GFX900-NEXT:    v_or_b32_e32 v9, v9, v8
-; GFX900-NEXT:    v_or_b32_e32 v8, v11, v10
+; GFX900-NEXT:    v_xor_b32_e32 v8, 0xb0b0b0b0, v2
+; GFX900-NEXT:    v_xor_b32_e32 v10, 0xd0d0d0d0, v0
+; GFX900-NEXT:    v_or_b32_e32 v8, v10, v8
 ; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GFX900-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
@@ -980,8 +980,8 @@ define i128 @icmp_select_fold_eq_imm_i128(i128 %arg, i128 %other) {
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
-; GFX1010-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
 ; GFX1010-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
+; GFX1010-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
 ; GFX1010-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
 ; GFX1010-NEXT:    v_or_b32_e32 v9, v9, v8
 ; GFX1010-NEXT:    v_or_b32_e32 v8, v11, v10
@@ -1003,11 +1003,11 @@ define i128 @icmp_select_fold_ne_imm_i128(i128 %arg, i128 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
-; GFX900-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
 ; GFX900-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
-; GFX900-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
 ; GFX900-NEXT:    v_or_b32_e32 v9, v9, v8
-; GFX900-NEXT:    v_or_b32_e32 v8, v11, v10
+; GFX900-NEXT:    v_xor_b32_e32 v8, 0xb0b0b0b0, v2
+; GFX900-NEXT:    v_xor_b32_e32 v10, 0xd0d0d0d0, v0
+; GFX900-NEXT:    v_or_b32_e32 v8, v10, v8
 ; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
@@ -1019,8 +1019,8 @@ define i128 @icmp_select_fold_ne_imm_i128(i128 %arg, i128 %other) {
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
-; GFX1010-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
 ; GFX1010-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
+; GFX1010-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
 ; GFX1010-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
 ; GFX1010-NEXT:    v_or_b32_e32 v9, v9, v8
 ; GFX1010-NEXT:    v_or_b32_e32 v8, v11, v10

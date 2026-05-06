@@ -127,8 +127,8 @@ define <2 x i32> @v_or3_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-NEXT:    v_or_b32_e32 v1, v1, v5
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v4
+; VI-NEXT:    v_or_b32_e32 v1, v1, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_or3_v2i32:
@@ -156,8 +156,8 @@ define <2 x i32> @v_or3_v2i32_b(<2 x i32> inreg %a, <2 x i32> %b, <2 x i32> inre
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_or_b32_e32 v1, s17, v1
 ; VI-NEXT:    v_or_b32_e32 v0, s16, v0
-; VI-NEXT:    v_or_b32_e32 v1, s19, v1
 ; VI-NEXT:    v_or_b32_e32 v0, s18, v0
+; VI-NEXT:    v_or_b32_e32 v1, s19, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_or3_v2i32_b:
@@ -185,8 +185,8 @@ define <2 x i32> @v_or3_v2i32_ab(<2 x i32> %a, <2 x i32> %b, <2 x i32> inreg %c)
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-NEXT:    v_or_b32_e32 v1, s17, v1
 ; VI-NEXT:    v_or_b32_e32 v0, s16, v0
+; VI-NEXT:    v_or_b32_e32 v1, s17, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_or3_v2i32_ab:
@@ -212,8 +212,8 @@ define <2 x i32> @v_or3_v2i32_const(<2 x i32> %a, <2 x i32> %b) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-NEXT:    v_or_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_or_b32_e32 v0, 4, v0
+; VI-NEXT:    v_or_b32_e32 v1, 16, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_or3_v2i32_const:
@@ -240,8 +240,8 @@ define <2 x i32> @v_or3_v2i32_inline_const(<2 x i32> %a, <2 x i32> %b) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-NEXT:    v_or_b32_e32 v1, 0x809, v1
 ; VI-NEXT:    v_or_b32_e32 v0, 0x808, v0
+; VI-NEXT:    v_or_b32_e32 v1, 0x809, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_or3_v2i32_inline_const:
@@ -268,8 +268,8 @@ define <2 x i32> @v_or3_v2i32_multi_use(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c
 ; VI-LABEL: v_or3_v2i32_multi_use:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
+; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_or_b32_e32 v2, v1, v5
 ; VI-NEXT:    v_or_b32_e32 v3, v0, v4
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v3
@@ -279,8 +279,8 @@ define <2 x i32> @v_or3_v2i32_multi_use(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c
 ; GFX9-LABEL: v_or3_v2i32_multi_use:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX9-NEXT:    v_or_b32_e32 v2, v1, v5
 ; GFX9-NEXT:    v_or_b32_e32 v3, v0, v4
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v3

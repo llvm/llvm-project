@@ -1013,8 +1013,8 @@ define i32 @v_not_or_and_or(<2 x i32> %a, <2 x i32> %b) {
 ; GFX950-SDAG-LABEL: v_not_or_and_or:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX950-SDAG-NEXT:    v_not_b32_e32 v1, v1
+; GFX950-SDAG-NEXT:    v_not_b32_e32 v0, v0
 ; GFX950-SDAG-NEXT:    v_and_or_b32 v1, v3, 8, v1
 ; GFX950-SDAG-NEXT:    v_and_or_b32 v0, v2, 16, v0
 ; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
@@ -1034,8 +1034,8 @@ define i32 @v_not_or_and_or(<2 x i32> %a, <2 x i32> %b) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX1250-SDAG-NEXT:    v_not_b32_e32 v1, v1
+; GFX1250-SDAG-NEXT:    v_not_b32_e32 v0, v0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-NEXT:    v_and_or_b32 v1, v3, 8, v1
 ; GFX1250-SDAG-NEXT:    v_and_or_b32 v0, v2, 16, v0

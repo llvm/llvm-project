@@ -14269,47 +14269,30 @@ static uint32_t getPermuteMask(SDValue V) {
   return ~0;
 }
 
-static SDValue performAndOrXorv2i32Combine(SDNode *N, SelectionDAG &DAG) {
+static SDValue splitAndOrXorv2i32Toi32(SDNode *N, SelectionDAG &DAG,
+                                       const GCNSubtarget *Subtarget) {
   EVT VT = N->getValueType(0);
+  assert(VT == MVT::v2i32 && N->isDivergent());
   const unsigned Opc = N->getOpcode();
-  assert(VT == MVT::v2i32);
-  if (!N->isDivergent())
-    return SDValue();
-
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  // Reject v2i32 ops that would be handled by v2i32-v2i32 patterns
-  auto matchV2I32Patterns = [](const unsigned Opc,
-                               const unsigned userOpc) -> bool {
-    return (Opc == ISD::AND || Opc == ISD::OR) && userOpc == ISD::OR;
-  };
-  if (matchV2I32Patterns(LHS.getOpcode(), Opc) ||
-      matchV2I32Patterns(RHS.getOpcode(), Opc))
-    return SDValue();
-
-  bool foundi32LogicalOp = false;
-  for (SDUse &use : N->uses()) {
-    SDNode *user = use.getUser();
-    if (user->getValueType(0) == MVT::v2i32 &&
-        matchV2I32Patterns(Opc, user->getOpcode()))
+  if (AMDGPU::isGFX9Plus(*Subtarget)) {
+    // Do not split v2i32-v2i32 patterns e.g., and_or/or3 as they will be
+    // handled by ThreeOp_v2i32_Pats in VOP3instructions.td
+    auto matchV2I32Patterns = [](const unsigned Opc,
+                                 const unsigned userOpc) -> bool {
+      return (Opc == ISD::AND || Opc == ISD::OR) && userOpc == ISD::OR;
+    };
+    if (matchV2I32Patterns(LHS.getOpcode(), Opc) ||
+        matchV2I32Patterns(RHS.getOpcode(), Opc))
       return SDValue();
 
-    SDNode *peek = user->getOpcode() == ISD::EXTRACT_VECTOR_ELT
-                       ? user->use_begin()->getUser()
-                       : user;
-    const unsigned peekOpc = peek->getOpcode();
-    if (peek->getValueType(0) == MVT::i32 &&
-        (peekOpc == ISD::OR || peekOpc == ISD::AND || peekOpc == ISD::XOR))
-      foundi32LogicalOp = true;
+    if (N->hasOneUse() &&
+        matchV2I32Patterns(Opc, N->user_begin()->getOpcode()))
+      return SDValue();
   }
 
-  if (!foundi32LogicalOp)
-    return SDValue();
-
-  // If the v2i32 op has a following i32 operation, break v2i32 into two i32
-  // ops before instruction selection such that the broken i32 ops can be
-  // naturally optimized, e.g., into vop3 op.
   SDLoc DL(N);
   SmallVector<SDValue, 2> LhsValues;
   SmallVector<SDValue, 2> RhsValues;
@@ -14502,10 +14485,9 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
     }
   }
 
-  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32) {
-    if (SDValue RV = performAndOrXorv2i32Combine(N, DAG))
+  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32 && N->isDivergent())
+    if (SDValue RV = splitAndOrXorv2i32Toi32(N, DAG, getSubtarget()))
       return RV;
-  }
 
   return SDValue();
 }
@@ -15260,10 +15242,9 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
   }
 
-  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32) {
-    if (SDValue RV = performAndOrXorv2i32Combine(N, DAG))
+  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32 && N->isDivergent())
+    if (SDValue RV = splitAndOrXorv2i32Toi32(N, DAG, getSubtarget()))
       return RV;
-  }
 
   if (VT != MVT::i64 || DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -15360,10 +15341,9 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
     }
   }
 
-  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32) {
-    if (SDValue RV = performAndOrXorv2i32Combine(N, DAG))
+  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32 && N->isDivergent())
+    if (SDValue RV = splitAndOrXorv2i32Toi32(N, DAG, getSubtarget()))
       return RV;
-  }
 
   return SDValue();
 }
