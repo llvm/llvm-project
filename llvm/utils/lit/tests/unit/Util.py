@@ -76,7 +76,6 @@ class TestCommandCache(unittest.TestCase):
     def test_cache(self):
         lit_config = self._lit_config()
 
-        # Check the date (with nanoseconds)
         date = lit_config.run_command_cached("date", shell=True)
         self.assertNotEqual(date, None)
 
