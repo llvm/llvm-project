@@ -40,3 +40,27 @@ class OverrideExample:
         if type == "FileAndLine":
             return True
         return False
+
+class TrivialExample:
+    def __init__(
+        self, bkpt: lldb.SBBreakpoint, extra_args: lldb.SBStructuredData, dict
+    ):
+        self.bkpt = bkpt
+        self.extra_args = extra_args
+        self.set_bkpt = False
+
+    def __callback__(self, sym_ctx: lldb.SBSymbolContext):
+        """This one's trivial, it does nothing"""
+        return
+
+    def get_short_help(self):
+        return f"I am an triial resolver, doing nothing."
+
+    def set_breakpoint(self, bkpt: lldb.SBBreakpoint):
+        self.bkpt = bkpt
+
+    def overrides_resolver(
+        self, target: lldb.SBTarget, initial_resolver: lldb.SBStructuredData
+    ):
+        """Trivial - overrides nothing"""
+        return False

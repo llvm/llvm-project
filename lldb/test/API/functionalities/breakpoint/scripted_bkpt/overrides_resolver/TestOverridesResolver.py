@@ -50,9 +50,12 @@ class TestOverridesResolver(TestBase):
             extra_args = lldb.SBStructuredData()
             json_str = '{"' + key + '":"' + value + '"}'
             extra_args.SetFromJSON(json_str)
+            error = lldb.SBError()
             override_id = target.AddBreakpointOverride(
-                class_name, help_text, extra_args
+                class_name, help_text, extra_args, error
             )
+            self.assertError(error, "Made the override successfully")
+
         # Check the override listing, make sure our new entry is present:
         self.expect("breakpoint override list", substrs=[str(override_id), help_text])
 

@@ -3645,11 +3645,16 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target =
         m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
-    uint64_t id = target.AddBreakpointResolverOverride(
+    llvm::Expected<lldb::user_id_t> id = target.AddBreakpointResolverOverride(
         m_python_class_options.GetName(),
         m_python_class_options.GetStructuredData(), m_options.m_description);
-    result.AppendMessageWithFormatv("{0}", id);
-    result.SetStatus(eReturnStatusSuccessFinishResult);
+    if (id) {
+      result.AppendMessageWithFormatv("{0}", *id);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else {
+      result.AppendErrorWithFormatv("could not add resolver: {0}.", 
+          llvm::toString(id.takeError()));
+    }
   }
 
 private:

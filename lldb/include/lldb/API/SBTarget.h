@@ -638,9 +638,12 @@ public:
   size_t ReadMemory(const SBAddress addr, void *buf, size_t size,
                     lldb::SBError &error);
 
+  /// Adds a breakpoint override implemented by class_name.  Returns the ID
+  /// of the new override or LLDB_INVALID_INDEX64 on error.
   uint64_t AddBreakpointOverride(const char *class_name,
                                  const char *description,
-                                 SBStructuredData &args_data);
+                                 SBStructuredData &args_data,
+                                 SBError &status);
 
   bool RemoveBreakpointOverride(uint64_t id);
 

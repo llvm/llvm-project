@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 
@@ -18,5 +18,11 @@ lldb::BreakpointResolverSP ScriptedBreakpointResolverOverride::CheckForOverride(
   if (candidate_sp->OverridesResolver(target, initial_sp))
     return candidate_sp;
   return {};
+}
+
+llvm::Error ScriptedBreakpointResolverOverride::Validate() {
+  // FIXME: we should make sure the module and class exist, though that will
+  // to happen in a scripting language specific function.
+  return llvm::Error::success();
 }
 } // namespace lldb_private

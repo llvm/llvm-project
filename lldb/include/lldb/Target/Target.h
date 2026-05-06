@@ -1019,9 +1019,9 @@ public:
 
     virtual ~BreakpointResolverOverride() {}
     virtual lldb::BreakpointResolverSP
-    CheckForOverride(Target &target, lldb::BreakpointResolverSP initial_sp) {
-      return {};
-    }
+    CheckForOverride(Target &target, lldb::BreakpointResolverSP initial_sp) = 0;
+    // Return whether constructing this resolver was successful.
+    virtual llvm::Error Validate() = 0;
     const std::string &GetDescription() { return m_desc; }
 
   protected:
@@ -1029,6 +1029,7 @@ public:
     std::string m_desc;
   };
 
+  /// Add a breakpoint override resolver.  This version can't fail.
   lldb::user_id_t
   AddBreakpointResolverOverride(BreakpointResolverOverride *override) {
     lldb::user_id_t id_used = m_override_id;
@@ -1038,7 +1039,8 @@ public:
     return id_used;
   }
 
-  lldb::user_id_t
+  /// Add a breakpoint override resolver.  Return the ID or an error:
+  llvm::Expected<lldb::user_id_t>
   AddBreakpointResolverOverride(llvm::StringRef class_name,
                                 StructuredData::DictionarySP args_data_sp,
                                 llvm::StringRef description);

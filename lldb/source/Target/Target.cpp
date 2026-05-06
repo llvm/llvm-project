@@ -16,6 +16,7 @@
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -944,16 +945,23 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
   llvm::sort(names);
 }
 
-lldb::user_id_t
+llvm::Expected<lldb::user_id_t>
 Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
                                       StructuredData::DictionarySP args_data_sp,
                                       llvm::StringRef description) {
+  if (class_name.empty())
+    return LLDB_INVALID_INDEX64;
+
   StructuredDataImpl impl;
   impl.SetObjectSP(args_data_sp);
 
   ScriptedBreakpointResolverOverride *new_override =
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
                                              std::string(class_name), impl);
+  llvm::Error error = new_override->Validate();
+  if (error)
+    return error;
+
   return AddBreakpointResolverOverride(new_override);
 }
 
