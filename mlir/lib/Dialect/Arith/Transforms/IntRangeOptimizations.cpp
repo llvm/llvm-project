@@ -137,11 +137,11 @@ struct MaterializeKnownConstantValues : public RewritePattern {
     if (matchPattern(op, m_Constant()))
       return failure();
 
-    // We need to check isIntOrIndex() here as well to avoid infinite loops in the
-    // greedy pattern rewriter. If we only check it in maybeReplaceWithConstant,
-    // this lambda might still return true for non-integral types, causing the
-    // pattern to match and claim success without making any changes, leading to
-    // non-convergence.
+    // We need to check isIntOrIndex() here as well to avoid infinite loops in
+    // the greedy pattern rewriter. If we only check it in
+    // maybeReplaceWithConstant, this lambda might still return true for
+    // non-integral types, causing the pattern to match and claim success
+    // without making any changes, leading to non-convergence.
     auto needsReplacing = [&](Value v) {
       return getElementTypeOrSelf(v.getType()).isIntOrIndex() &&
              getMaybeConstantValue(solver, v).has_value() && !v.use_empty();
