@@ -1184,7 +1184,7 @@ class MapInfoFinalizationPass
         // this pass to support multiple users, as we may wish to have a map
         // be re-used by multiple users (e.g. across multiple targets that map
         // the variable and have identical map properties).
-        auto assertCheck = [&](mlir::omp::MapInfoOp op) {
+        [[maybe_unused]] auto assertCheck = [&](mlir::omp::MapInfoOp op) {
           if (llvm::hasSingleElement(op->getUsers()))
             return true;
 

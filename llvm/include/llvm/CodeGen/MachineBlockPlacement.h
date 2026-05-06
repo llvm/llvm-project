@@ -14,7 +14,7 @@
 namespace llvm {
 
 class MachineBlockPlacementPass
-    : public PassInfoMixin<MachineBlockPlacementPass> {
+    : public RequiredPassInfoMixin<MachineBlockPlacementPass> {
 
   bool AllowTailMerge = true;
 
@@ -23,7 +23,6 @@ public:
       : AllowTailMerge(AllowTailMerge) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 
   void
   printPipeline(raw_ostream &OS,
@@ -31,12 +30,11 @@ public:
 };
 
 class MachineBlockPlacementStatsPass
-    : public PassInfoMixin<MachineBlockPlacementStatsPass> {
+    : public RequiredPassInfoMixin<MachineBlockPlacementStatsPass> {
 
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm
