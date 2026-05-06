@@ -222,6 +222,28 @@ class AddressRegisterIndirect(EffectiveAddressingMode):
         return self.register
 
 
+# https://m680x0.github.io/ref/M68000PM_AD_Rev_1_Programmers_Reference_Manual_1992.html#pf2f
+# (An)+
+@dataclass
+class AddressRegisterIndirectWithPostincrement(EffectiveAddressingMode):
+    """Represents the contents of memory, with address in a particular address register. The address register is incremented by size after dereferencing."""
+
+    register: AddressRegister
+
+    def permutations() -> Generator[EffectiveAddressingMode, None, None]:
+        for register in AddressRegister.permutations():
+            yield AddressRegisterIndirectWithPostincrement(register)
+
+    def asm(self) -> str:
+        return f"({self.register.asm()})+"
+
+    def modeField(self) -> int:
+        return 0b011
+
+    def registerField(self) -> int:
+        return self.register
+
+
 # Instructions
 
 
@@ -259,8 +281,13 @@ class MOVE(Instruction):
             DataRegisterDirect,
             AddressRegisterDirect,
             AddressRegisterIndirect,
+            AddressRegisterIndirectWithPostincrement,
         ]
-        destinationModes = [DataRegisterDirect, AddressRegisterIndirect]
+        destinationModes = [
+            DataRegisterDirect,
+            AddressRegisterIndirect,
+            AddressRegisterIndirectWithPostincrement,
+        ]
 
         for size in [Byte, Word, Long]:
             for sourceMode in sourceModes:
