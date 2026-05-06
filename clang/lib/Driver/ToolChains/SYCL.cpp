@@ -27,7 +27,8 @@ SYCLInstallationDetector::SYCLInstallationDetector(
   if (HostTriple.isOSWindows()) {
     // Windows: Check for LLVMSYCL.lib
     // NOTE: Only checks for LLVMSYCL.lib existence (release variant).
-    // Debug vs release library selection happens at link time based on CRT flags.
+    // Debug vs release library selection happens at link time based on CRT
+    // flags.
     if (DriverDir.starts_with(SysRoot) &&
         Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
       SmallString<128> LibDir(DriverDir);
