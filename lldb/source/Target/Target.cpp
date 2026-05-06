@@ -2690,7 +2690,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
     return ts->GetPersistentExpressionState();
 
   LLDB_LOG(GetLog(LLDBLog::Target),
-           "Unable to get persistent expression state for language {0}:",
+           "Unable to get persistent expression state for language {}:",
            Language::GetNameForLanguageType(language));
   return nullptr;
 }
