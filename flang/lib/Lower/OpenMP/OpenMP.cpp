@@ -4642,6 +4642,41 @@ struct MetadirectiveCandidate {
 };
 } // namespace
 
+static void appendConstructTraits(
+    llvm::omp::Directive dir,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  // Record compound directives inside-out so callers can reverse the final
+  // sequence into the outermost-to-innermost order required by OMPContext.
+  if (llvm::omp::allSimdSet.test(dir))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
+  if (llvm::omp::allDoSet.test(dir))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+  if (llvm::omp::allParallelSet.test(dir))
+    constructTraits.push_back(
+        llvm::omp::TraitProperty::construct_parallel_parallel);
+  if (llvm::omp::allTeamsSet.test(dir))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_teams_teams);
+  if (llvm::omp::allTargetSet.test(dir))
+    constructTraits.push_back(
+        llvm::omp::TraitProperty::construct_target_target);
+}
+
+static void appendConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  if (mlir::isa<mlir::omp::SimdOp>(op))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
+  if (mlir::isa<mlir::omp::WsloopOp>(op))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+  if (mlir::isa<mlir::omp::ParallelOp>(op))
+    constructTraits.push_back(
+        llvm::omp::TraitProperty::construct_parallel_parallel);
+  if (mlir::isa<mlir::omp::TeamsOp>(op))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_teams_teams);
+  if (mlir::isa<mlir::omp::TargetOp>(op))
+    constructTraits.push_back(
+        llvm::omp::TraitProperty::construct_target_target);
+}
 static void genMetadirective(lower::AbstractConverter &converter,
                              lower::SymMap &symTable,
                              semantics::SemanticsContext &semaCtx,
@@ -4657,21 +4692,12 @@ static void genMetadirective(lower::AbstractConverter &converter,
       continue;
     llvm::omp::Directive dir =
         parser::omp::GetOmpDirectiveName(*ompConstruct).v;
-    // Record compound directives inside-out so the final reverse yields the
-    // outermost-to-innermost order.
-    if (llvm::omp::allSimdSet.test(dir))
-      constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
-    if (llvm::omp::allDoSet.test(dir))
-      constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
-    if (llvm::omp::allParallelSet.test(dir))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_parallel_parallel);
-    if (llvm::omp::allTeamsSet.test(dir))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_teams_teams);
-    if (llvm::omp::allTargetSet.test(dir))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_target_target);
+    appendConstructTraits(dir, constructTraits);
+  }
+  if (constructTraits.empty()) {
+    for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp(); op;
+         op = op->getParentOp())
+      appendConstructTraits(op, constructTraits);
   }
   std::reverse(constructTraits.begin(), constructTraits.end());
   TargetOMPContext ompCtx(builder.getModule(), constructTraits);
