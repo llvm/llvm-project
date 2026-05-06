@@ -3538,8 +3538,7 @@ AddrSpaceCastInst::AddrSpaceCastInst(Value *S, Type *Ty, const Twine &Name,
 //===----------------------------------------------------------------------===//
 
 CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
-                 Value *RHS, const Twine &Name, InsertPosition InsertBefore,
-                 Instruction *FlagsSource)
+                 Value *RHS, const Twine &Name, InsertPosition InsertBefore)
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
   Op<1>() = RHS;

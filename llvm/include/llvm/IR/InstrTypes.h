@@ -792,8 +792,7 @@ public:
 protected:
   LLVM_ABI CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
                    Value *LHS, Value *RHS, const Twine &Name = "",
-                   InsertPosition InsertBefore = nullptr,
-                   Instruction *FlagsSource = nullptr);
+                   InsertPosition InsertBefore = nullptr);
 
 public:
   // allocate space for exactly two operands
