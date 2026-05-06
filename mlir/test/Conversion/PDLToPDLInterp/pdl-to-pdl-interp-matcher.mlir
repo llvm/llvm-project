@@ -137,7 +137,7 @@ module @negated_constraint {
   // CHECK: pdl_interp.record_match @rewriters::@pdl_generated_rewriter(%[[ROOT]] : !pdl.operation)
   pdl.pattern : benefit(1) {
     %root = operation
-    pdl.apply_native_constraint "constraint"(%root : !pdl.operation) {isNegated = true}
+    pdl.apply_native_constraint "constraint"(%root : !pdl.operation) is_negated = true
     rewrite %root with "rewriter"
   }
 }
