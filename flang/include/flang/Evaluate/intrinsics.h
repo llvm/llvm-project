@@ -115,15 +115,13 @@ public:
   static const inline std::string InvalidName{
       "(invalid intrinsic function call)"};
 
+  // Name of intrinsics used in various locations.
+  static inline const char *const BuiltinIntName{"__builtin_int"};
+
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   std::unique_ptr<Implementation> impl_;
-};
-
-class Intrinsics {
-public:
-  static inline const char *const BuiltinInt{"__builtin_int"};
 };
 
 // Check if an intrinsic explicitly allows its INTENT(OUT) arguments to be
