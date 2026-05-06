@@ -6615,6 +6615,11 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
                                                ElementCount VF,
                                                VPCostContext &CostCtx) {
   auto *CI = cast<CallInst>(VPI.getUnderlyingInstr());
+
+  // Scalar VFs and calls forced or known to scalarize always replicate.
+  if (VF.isScalar() || CostCtx.willBeScalarized(CI, VF))
+    return {};
+
   auto *CalledFn = cast<Function>(
       VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1)->getLiveInIRValue());
   Type *ResultTy = CostCtx.Types.inferScalarType(&VPI);
@@ -6655,69 +6660,52 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
 void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                                 VPRecipeBuilder &RecipeBuilder,
                                                 VPCostContext &CostCtx) {
-  bool IsScalarVPlan = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [](ElementCount VF) { return VF.isScalar(); }, Range);
-
   SmallVector<VPInstruction *, 8> ToErase;
-  for (VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
-           Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI || !VPI->getUnderlyingValue() ||
           VPI->getOpcode() != Instruction::Call)
         continue;
 
-      // Scalar VPlans and known-scalarized calls fall through to replication.
       auto *CI = cast<CallInst>(VPI->getUnderlyingInstr());
-      bool KeepScalar =
-          IsScalarVPlan ||
-          LoopVectorizationPlanner::getDecisionAndClampRange(
-              [&](ElementCount VF) { return CostCtx.willBeScalarized(CI, VF); },
-              Range);
+      SmallVector<VPValue *, 4> Ops(VPI->op_begin(),
+                                    VPI->op_begin() + CI->arg_size());
+
+      CallWideningDecision Decision =
+          decideCallWidening(*VPI, Ops, Range.Start, CostCtx);
+      LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) {
+            CallWideningDecision D = decideCallWidening(*VPI, Ops, VF, CostCtx);
+            return D.Kind == Decision.Kind && D.Variant == Decision.Variant;
+          },
+          Range);
 
       VPSingleDefRecipe *Recipe = nullptr;
-      CallWideningDecision Decision;
-      if (!KeepScalar) {
-        SmallVector<VPValue *, 4> Ops(VPI->op_begin(),
-                                      VPI->op_begin() + CI->arg_size());
-
-        // Pick the cheapest widening at Range.Start, then clamp the range.
-        Decision = decideCallWidening(*VPI, Ops, Range.Start, CostCtx);
-        LoopVectorizationPlanner::getDecisionAndClampRange(
-            [&](ElementCount VF) {
-              CallWideningDecision D =
-                  decideCallWidening(*VPI, Ops, VF, CostCtx);
-              return D.Kind == Decision.Kind && D.Variant == Decision.Variant;
-            },
-            Range);
-
-        switch (Decision.Kind) {
-        case CallWideningDecision::KindTy::Intrinsic: {
-          Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
-          Type *ResultTy = CostCtx.Types.inferScalarType(VPI);
-          Recipe = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI,
-                                              *VPI, VPI->getDebugLoc());
-          break;
-        }
-        case CallWideningDecision::KindTy::VectorVariant: {
-          if (Decision.MaskPos) {
-            VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
-            Ops.insert(Ops.begin() + *Decision.MaskPos, Mask);
-          }
-          Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-          Recipe =
-              new VPWidenCallRecipe(VPI->getUnderlyingValue(), Decision.Variant,
-                                    Ops, *VPI, *VPI, VPI->getDebugLoc());
-          break;
-        }
-        case CallWideningDecision::KindTy::Scalarize:
-          break;
-        }
+      switch (Decision.Kind) {
+      case CallWideningDecision::KindTy::Intrinsic: {
+        Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
+        Type *ResultTy = CostCtx.Types.inferScalarType(VPI);
+        Recipe = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI, *VPI,
+                                            VPI->getDebugLoc());
+        break;
       }
-
-      if (!Recipe)
+      case CallWideningDecision::KindTy::VectorVariant: {
+        if (Decision.MaskPos) {
+          VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
+          Ops.insert(Ops.begin() + *Decision.MaskPos, Mask);
+        }
+        Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
+        Recipe =
+            new VPWidenCallRecipe(VPI->getUnderlyingValue(), Decision.Variant,
+                                  Ops, *VPI, *VPI, VPI->getDebugLoc());
+        break;
+      }
+      case CallWideningDecision::KindTy::Scalarize:
         Recipe = RecipeBuilder.handleReplication(VPI, Range);
+        break;
+      }
 
       assert(all_of(Range,
                     [&](ElementCount VF) {

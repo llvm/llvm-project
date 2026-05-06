@@ -1878,6 +1878,8 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
+  assert(getVectorizedTypeVF(Variant->getReturnType()) == VF &&
+         "Variant return type must match VF");
   return computeVectorCallCost(Variant, Ctx);
 }
 
@@ -3630,6 +3632,8 @@ InstructionCost VPReplicateRecipe::computeScalarCallCost(
 
   Intrinsic::ID IntrinID = CalledFn->getIntrinsicID();
   auto GetIntrinsicCost = [&] {
+    if (!IntrinID)
+      return InstructionCost::getInvalid();
     return Ctx.TTI.getIntrinsicInstrCost(
         IntrinsicCostAttributes(IntrinID, ResultTy, Tys), Ctx.CostKind);
   };
@@ -3642,8 +3646,7 @@ InstructionCost VPReplicateRecipe::computeScalarCallCost(
   InstructionCost ScalarCallCost =
       Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
   if (IsSingleScalar) {
-    if (IntrinID)
-      ScalarCallCost = std::min(ScalarCallCost, GetIntrinsicCost());
+    ScalarCallCost = std::min(ScalarCallCost, GetIntrinsicCost());
     return ScalarCallCost;
   }
 

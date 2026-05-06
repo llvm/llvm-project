@@ -24,11 +24,11 @@ define void @pick_wide_call(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
+; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%in.gep>
 ; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
-; CHECK-NEXT:      WIDEN-CALL ir<%call> = call @acos(ir<%in>) (using library function: _ZGVnN2v_acos)
-; CHECK-NEXT:      EMIT ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
+; CHECK-NEXT:      WIDEN-CALL ir<%call> = call  @acos(ir<%in>) (using library function: _ZGVnN2v_acos)
+; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%out.gep>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -76,11 +76,11 @@ define void @pick_intrinsic_call(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
+; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%in.gep>
 ; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%call> = call llvm.umin(ir<100>, ir<%in>)
-; CHECK-NEXT:      EMIT ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
+; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%out.gep>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
