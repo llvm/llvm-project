@@ -36,16 +36,3 @@ define void @ctpop_scalable() {
   ret void
 }
 
-declare <vscale x 4 x i8>   @llvm.ctpop.nxv4i8  (<vscale x 4 x i8>)
-declare <vscale x 8 x i8>   @llvm.ctpop.nxv8i8  (<vscale x 8 x i8>)
-declare <vscale x 16 x i8>  @llvm.ctpop.nxv16i8 (<vscale x 16 x i8>)
-declare <vscale x 32 x i8>  @llvm.ctpop.nxv32i8 (<vscale x 32 x i8>)
-declare <vscale x 2 x i16>  @llvm.ctpop.nxv2i16 (<vscale x 2 x i16>)
-declare <vscale x 4 x i16>  @llvm.ctpop.nxv4i16 (<vscale x 4 x i16>)
-declare <vscale x 8 x i16>  @llvm.ctpop.nxv8i16 (<vscale x 8 x i16>)
-declare <vscale x 16 x i16> @llvm.ctpop.nxv16i16(<vscale x 16 x i16>)
-declare <vscale x 2 x i32>  @llvm.ctpop.nxv2i32 (<vscale x 2 x i32>)
-declare <vscale x 4 x i32>  @llvm.ctpop.nxv4i32 (<vscale x 4 x i32>)
-declare <vscale x 8 x i32>  @llvm.ctpop.nxv8i32 (<vscale x 8 x i32>)
-declare <vscale x 2 x i64>  @llvm.ctpop.nxv2i64 (<vscale x 2 x i64>)
-declare <vscale x 4 x i64>  @llvm.ctpop.nxv4i64 (<vscale x 4 x i64>)

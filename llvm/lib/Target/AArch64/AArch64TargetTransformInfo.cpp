@@ -816,23 +816,17 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         {ISD::CTPOP, MVT::nxv2i64, 1},
         {ISD::CTPOP, MVT::nxv4i32, 1},
         {ISD::CTPOP, MVT::nxv8i16, 1},
-        {ISD::CTPOP, MVT::nxv2i32, 1},
-        {ISD::CTPOP, MVT::nxv4i16, 1},
     };
     auto LT = getTypeLegalizationCost(RetTy);
     MVT MTy = LT.second;
 
-    // When SVE is available, fixed-length vector ctpop is lowered using SVE
-    // (useSVEForFixedLengthVectorVT with OverrideNEON=true), so look up the
-    // scalable equivalent type for accurate costing.
-    // TODO: Handle type promotion case.
+    // When SVE is available CNT will be used for fixed and scalable vectors.
     if (ST->isSVEorStreamingSVEAvailable() && MTy.isFixedLengthVector() &&
-        MTy.getScalarSizeInBits() > 8 &&
-        MTy.getScalarSizeInBits() == RetTy->getScalarSizeInBits()) {
-      EVT ScalableVT = MVT::getScalableVectorVT(MTy.getVectorElementType(),
-                                                MTy.getVectorNumElements());
-      if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP,
-                                              ScalableVT.getSimpleVT()))
+        MTy.getScalarSizeInBits() > 8) {
+      EVT ScalableVT = MVT::getScalableVectorVT(
+        MTy.getVectorElementType(), 128 / MTy.getScalarSizeInBits());
+      if (const auto *Entry =
+              CostTableLookup(CtpopCostTbl, ISD::CTPOP, ScalableVT.getSimpleVT()))
         return LT.first * Entry->Cost;
     }
 
