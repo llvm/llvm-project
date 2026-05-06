@@ -10,10 +10,10 @@
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[B:.*]] = bufferization.alloc_tensor()
-// CHECK-DAG:     %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
-// CHECK-DAG:     %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
-// CHECK-DAG:     %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
-// CHECK-DAG:     %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
+// CHECK-DAG:     %[[P0:.*]] = sparse_tensor.positions %[[S]] level = 0
+// CHECK-DAG:     %[[I0:.*]] = sparse_tensor.coordinates %[[S]] level = 0
+// CHECK-DAG:     %[[P1:.*]] = sparse_tensor.positions %[[S]] level = 1
+// CHECK-DAG:     %[[I1:.*]] = sparse_tensor.coordinates %[[S]] level = 1
 // CHECK-DAG:     %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
