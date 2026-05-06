@@ -1536,10 +1536,28 @@ struct WgToSgVectorDeinterleaveOp
   LogicalResult
   matchAndRewrite(vector::DeinterleaveOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] ENTRY\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] deinterleave op: " << op
+                 << "\n";
+
     xegpu::DistributeLayoutAttr layout =
         xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getRes1()));
-    if (!layout || !layout.isForWorkgroup())
+    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] layout: " << layout
+                 << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] layout is null: "
+                 << (!layout) << "\n";
+    if (layout)
+      llvm::dbgs()
+          << "[DEBUG WgToSgVectorDeinterleaveOp] layout.isForWorkgroup(): "
+          << layout.isForWorkgroup() << "\n";
+
+    if (!layout || !layout.isForWorkgroup()) {
+      llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] FAILURE: no "
+                      "workgroup layout\n";
       return failure();
+    }
+    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] About to process "
+                 << adaptor.getSource().size() << " sources\n";
 
     SmallVector<Value> newRes1Ops;
     SmallVector<Value> newRes2Ops;
@@ -1736,9 +1754,17 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   target.addDynamicallyLegalOp<vector::DeinterleaveOp>(
       [=](vector::DeinterleaveOp op) -> bool {
         // DeinterleaveOp has two results, check the first one
+        llvm::dbgs()
+            << "[DEBUG Legality Check] Checking vector.deinterleave legality\n";
+        llvm::dbgs() << "[DEBUG Legality Check] deinterleave op: " << op
+                     << "\n";
         auto layout =
             xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getRes1()));
-        return isLegal(layout);
+        llvm::dbgs() << "[DEBUG Legality Check] layout: " << layout << "\n";
+        bool legal = isLegal(layout);
+        llvm::dbgs() << "[DEBUG Legality Check] isLegal(layout) = " << legal
+                     << "\n";
+        return legal;
       });
 
   target.addDynamicallyLegalOp<xegpu::LoadGatherOp>(
