@@ -81,4 +81,4 @@ int main() {
 }
 
 // CHECK: ERROR: AddressSanitizer: attempting double-free
-// CHECK: SUMMARY: AddressSanitizer: double-free
+// CHECK: SUMMARY: AddressSanitizer: double-free {{.*}}hsa_amd_memory_pool_allocate_double_free.cpp:77:{{[0-9]+}} in main
