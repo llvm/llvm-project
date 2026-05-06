@@ -367,8 +367,16 @@ struct AssertOpToAssertfailLowering
   }
 };
 
-/// Import the GPU Ops to NVVM Patterns.
-#include "GPUToNVVM.cpp.inc"
+/// Lowering of gpu.barrier to nvvm.barrier (defaults to barrier id 0).
+struct GPUBarrierToNVVMLowering : public OpRewritePattern<gpu::BarrierOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(gpu::BarrierOp op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op);
+    return success();
+  }
+};
 
 /// A pass that replaces all occurrences of GPU device operations with their
 /// corresponding NVVM equivalent.
@@ -503,9 +511,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
 
-  // TODO: Pass benefit to generated patterns.
-  populateWithGenerated(patterns);
-
+  patterns.add<GPUBarrierToNVVMLowering>(patterns.getContext(), benefit);
   patterns.add<GPUPrintfOpToVPrintfLowering, AssertOpToAssertfailLowering>(
       converter, benefit);
   patterns.add<

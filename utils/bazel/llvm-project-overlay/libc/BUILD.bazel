@@ -444,6 +444,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_sys_stat_macros",
+    hdrs = [
+        "include/llvm-libc-macros/linux/sys-stat-macros.h",
+        "include/llvm-libc-macros/sys-stat-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "hdr_sys_stat_macros",
+    hdrs = ["hdr/sys_stat_macros.h"],
+    deps = [
+        ":llvm_libc_macros_sys_stat_macros",
+    ],
+)
+
+libc_support_library(
     name = "hdr_errno_macros",
     hdrs = ["hdr/errno_macros.h"],
 )
@@ -985,6 +1001,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_scope",
+    hdrs = ["src/__support/CPP/scope.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_cpp_utility",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_simd",
     hdrs = ["src/__support/CPP/simd.h"],
     deps = [
@@ -1122,6 +1149,7 @@ libc_support_library(
     hdrs = ["src/__support/c_string.h"],
     deps = [
         ":__support_cpp_string",
+        ":__support_cpp_string_view",
         ":__support_macros_attributes",
         ":__support_macros_config",
     ],
@@ -1427,16 +1455,23 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":__support_threads_mutex",
+        ":__support_wchar_character_converter",
+        ":__support_wchar_mbstate",
+        ":__support_wchar_wcrtomb",
         ":errno",
         ":func_aligned_alloc",
         ":func_free",
         ":func_malloc",
         ":func_realloc",
+        ":hdr_errno_macros",
         ":hdr_stdint_proxy",
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
+        ":hdr_wchar_macros",
         ":string_memory_utils",
         ":types_off_t",
+        ":types_wchar_t",
+        ":types_wint_t",
     ],
 )
 
@@ -1974,6 +2009,39 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_sanitizer",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_mkdir",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/mkdir.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_mkdirat",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/mkdirat.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_mode_t",
     ],
 )
 
@@ -15010,6 +15078,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_mkdir",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
@@ -15025,8 +15094,10 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_mkdirat",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_mode_t",
     ],
 )
 

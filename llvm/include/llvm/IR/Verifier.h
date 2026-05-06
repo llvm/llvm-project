@@ -131,7 +131,7 @@ public:
 ///
 /// Note that this creates a pass suitable for the legacy pass manager. It has
 /// nothing to do with \c VerifierPass.
-class VerifierPass : public PassInfoMixin<VerifierPass> {
+class VerifierPass : public RequiredPassInfoMixin<VerifierPass> {
   bool FatalErrors;
 
 public:
@@ -139,7 +139,6 @@ public:
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

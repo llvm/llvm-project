@@ -461,7 +461,6 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -613,31 +612,38 @@ define void @nonnull_only_ephemeral_use(ptr %p) {
   ret void
 }
 
-define ptr @nonnull_gep(ptr %p, i64 %i) {
-; DEFAULT-LABEL: @nonnull_gep(
-; DEFAULT-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[I:%.*]]
-; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P2]]) ]
-; DEFAULT-NEXT:    ret ptr [[P2]]
-;
-; BUNDLES-LABEL: @nonnull_gep(
-; BUNDLES-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[I:%.*]]
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
-; BUNDLES-NEXT:    ret ptr [[P2]]
-;
-  %p2 = getelementptr i8, ptr %p, i64 %i
-  call void @llvm.assume(i1 true) ["nonnull"(ptr %p2)]
-  ret ptr %p2
-}
-
-define ptr @nonnull_gep_inbounds(ptr %p, i64 %i) {
-; CHECK-LABEL: @nonnull_gep_inbounds(
+define void @nonnull_gep_inbounds_bundle(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_inbounds_bundle(
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[I:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
   %p2 = getelementptr inbounds i8, ptr %p, i64 %i
   call void @llvm.assume(i1 true) ["nonnull"(ptr %p2)]
-  ret ptr %p2
+  ret void
+}
+
+define void @nonnull_gep_inbounds(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_inbounds(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  %p2 = getelementptr inbounds i8, ptr %p, i64 %i
+  %cmp = icmp ne ptr %p2, null
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @nonnull_gep_not_inbounds(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_not_inbounds(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[P1:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
+; CHECK-NEXT:    ret void
+;
+  %p2 = getelementptr i8, ptr %p, i64 %i
+  %cmp = icmp ne ptr %p2, null
+  call void @llvm.assume(i1 %cmp)
+  ret void
 }
 
 define void @always_true_assumption() {
@@ -1085,7 +1091,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, producer: "Me", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: null, retainedTypes: null, imports: null)
 !1 = !DILocalVariable(name: "", arg: 1, scope: !2, file: null, line: 1, type: null)
-!2 = distinct !DISubprogram(name: "debug", linkageName: "debug", scope: null, file: null, line: 0, type: null, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+!2 = distinct !DISubprogram(name: "debug", linkageName: "debug", scope: null, file: null, line: 0, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
 !3 = !DIFile(filename: "consecutive-fences.ll", directory: "")
 !5 = !{i32 2, !"Dwarf Version", i32 4}
 !6 = !{i32 2, !"Debug Info Version", i32 3}
@@ -1096,3 +1102,5 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
+!10 = !DISubroutineType(types: !11)
+!11 = !{null}

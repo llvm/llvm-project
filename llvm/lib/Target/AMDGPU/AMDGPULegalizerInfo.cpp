@@ -1134,6 +1134,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lowerFor({S64, S16, V2S16});
   }
 
+  if (ST.hasPackedFP32Ops())
+    FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
+
   FSubActions
     .scalarize(0)
     .clampScalar(0, S32, S64);

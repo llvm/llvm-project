@@ -30,7 +30,8 @@ class Loop;
 class LPMUpdater;
 
 /// Performs Loop Strength Reduce Pass.
-class LoopStrengthReducePass : public PassInfoMixin<LoopStrengthReducePass> {
+class LoopStrengthReducePass
+    : public OptionalPassInfoMixin<LoopStrengthReducePass> {
 public:
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);

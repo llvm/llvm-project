@@ -19,6 +19,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_ring_buffer.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -45,19 +46,20 @@ void AddPoisonRecord(const PoisonRecord &new_record) {
   poison_records->push(new_record);
 }
 
-bool FindPoisonRecord(uptr addr, PoisonRecord &match) {
+bool FindPoisonRecord(uptr addr, PoisonRecord& match, bool& is_full) {
   if (flags()->poison_history_size <= 0)
     return false;
 
   GenericScopedLock<Mutex> l(&poison_records_mutex);
 
-  if (poison_records) {
-    for (unsigned int i = 0; i < poison_records->size(); i++) {
-      PoisonRecord record = (*poison_records)[i];
-      if (record.begin <= addr && addr < record.end) {
-        internal_memcpy(&match, &record, sizeof(record));
-        return true;
-      }
+  const uptr records_count = poison_records ? poison_records->size() : 0;
+  is_full = records_count >= static_cast<uptr>(flags()->poison_history_size);
+
+  for (uptr i = 0; i < records_count; i++) {
+    PoisonRecord record = (*poison_records)[i];
+    if (record.begin <= addr && addr < record.end) {
+      internal_memcpy(&match, &record, sizeof(record));
+      return true;
     }
   }
 
@@ -138,6 +140,22 @@ void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
+static void RecordPoison(uptr beg_addr, uptr end_addr) {
+  if (LIKELY(beg_addr >= end_addr || flags()->poison_history_size == 0))
+    return;
+  GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
+  u32 current_tid = GetCurrentTidOrInvalid();
+
+  u32 stack_id = StackDepotPut(stack);
+
+  PoisonRecord record;
+  record.stack_id = stack_id;
+  record.thread_id = current_tid;
+  record.begin = beg_addr;
+  record.end = end_addr;
+  AddPoisonRecord(record);
+}
+
 // Current implementation of __asan_(un)poison_memory_region doesn't check
 // that user program (un)poisons the memory it owns. It poisons memory
 // conservatively, and unpoisons progressively to make sure asan shadow
@@ -155,19 +173,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
 
-  if (flags()->poison_history_size > 0) {
-    GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
-    u32 current_tid = GetCurrentTidOrInvalid();
-
-    u32 stack_id = StackDepotPut(stack);
-
-    PoisonRecord record;
-    record.stack_id = stack_id;
-    record.thread_id = current_tid;
-    record.begin = beg_addr;
-    record.end = end_addr;
-    AddPoisonRecord(record);
-  }
+  RecordPoison(beg_addr, end_addr);
 
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
@@ -503,6 +509,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   if (old_end == new_end)
     return;  // Nothing to do here.
 
+  RecordPoison(new_end, old_end);
+
   FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
                       new_end);
 
@@ -577,6 +585,9 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   if ((old_beg == old_end && new_beg == new_end) ||
       (old_beg == new_beg && old_end == new_end))
     return;  // Nothing to do here.
+
+  RecordPoison(old_beg, new_beg);
+  RecordPoison(new_end, old_end);
 
   FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
                       new_end);
@@ -785,6 +796,9 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
 
   if (src_beg == src_end || src_beg == dst_beg)
     return;
+
+  // FIXME: Consider RecordPoison.
+
   // Due to support for overlapping buffers, we may have to copy elements
   // in reversed order, when destination buffer starts in the middle of
   // the source buffer (or shares first granule with it).

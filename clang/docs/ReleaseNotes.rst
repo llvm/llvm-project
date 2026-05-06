@@ -324,6 +324,14 @@ Attribute Changes in Clang
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
 
+- :doc:`ThreadSafetyAnalysis` attributes like ``acquire_capability``,
+  ``release_capability``, ``requires_capability``, ``locks_excluded``,
+  ``try_acquire_capability``, and ``assert_capability`` can now be applied to
+  function pointer variables and fields.  The analysis checks calls through
+  annotated function pointers the same way it checks direct function calls.
+  Only plain function pointers are supported; pointers-to-member functions,
+  blocks, or wrappers (e.g. ``std::function``) are not yet supported.
+
 - The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
   notes. For example:
   
@@ -344,6 +352,7 @@ Attribute Changes in Clang
   usage.
 
 - Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
+- Clang now disallows use of the ``selectany`` attribute on non-global-variable declarations. (#GH189141)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -736,6 +745,12 @@ Code Completion
 
 Static Analyzer
 ---------------
+
+Crash and bug fixes
+^^^^^^^^^^^^^^^^^^^
+
+- Fixed ``security.VAList`` checker producing false positives when analyzing
+  C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
 .. comment:
   This is for the Static Analyzer.
