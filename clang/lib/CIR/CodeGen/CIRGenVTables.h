@@ -56,6 +56,9 @@ class CIRGenVTables {
                      mlir::Attribute rtti, unsigned &nextVTableThunkIndex,
                      unsigned vtableAddressPoint, bool vtableHasLocalLinkage);
 
+  mlir::Attribute
+  getVTableIntegerOrNullComponent(const VTableComponent &component);
+
   mlir::Type getVTableComponentType();
 
 public:

@@ -700,7 +700,7 @@ LogicalResult cir::VTableAttr::verify(
     return failure();
 
   for (const auto &element : data.getAsRange<mlir::Attribute>()) {
-    const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(element);
+    auto constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(element);
     if (!constArrayAttr)
       return emitError() << "expected constant array subtype";
 
@@ -717,9 +717,11 @@ LogicalResult cir::VTableAttr::verify(
               << "expected GlobalViewAttr, ConstPtrAttr, or IntAttr";
         },
         [&](mlir::Type type) {});
+
     if (eltTypeCheck.failed())
       return eltTypeCheck;
   }
+
   return success();
 }
 

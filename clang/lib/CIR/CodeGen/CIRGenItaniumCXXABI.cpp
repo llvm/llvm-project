@@ -26,6 +26,7 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -479,20 +480,27 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   cir::GlobalOp vtable = getAddrOfVTable(rd, CharUnits());
   if (vtable.hasInitializer())
     return;
-
+  llvm::errs() << "vtable = ";
+  vtable->dump();
+  llvm::errs() << "";
   ItaniumVTableContext &vtContext = cgm.getItaniumVTableContext();
   const VTableLayout &vtLayout = vtContext.getVTableLayout(rd);
   cir::GlobalLinkageKind linkage = cgm.getVTableLinkage(rd);
   mlir::Attribute rtti =
       cgm.getAddrOfRTTIDescriptor(cgm.getLoc(rd->getBeginLoc()),
                                   cgm.getASTContext().getCanonicalTagType(rd));
-
+  llvm::errs() << "rtti = ";
+  rtti.dump();
+  llvm::errs() << "\n";
   // Classic codegen uses ConstantInitBuilder here, which is a very general
   // and feature-rich class to generate initializers for global values.
   // For now, this is using a simpler approach to create the initializer in CIR.
   cgvt.createVTableInitializer(vtable, vtLayout, rtti,
                                cir::isLocalLinkage(linkage));
-
+  llvm::errs() << "new vtable = ";
+  vtable->dump();
+  llvm::errs() << "\n";
+  llvm::errs() << "\n";
   // Set the correct linkage.
   vtable.setLinkage(linkage);
 
@@ -530,10 +538,11 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
                  "emitVTableDefinitions: WholeProgramVTables");
   }
 
-  assert(!cir::MissingFeatures::vtableRelativeLayout());
-  if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
-  }
+  // TODO: by @Elio
+  // assert(!cir::MissingFeatures::vtableRelativeLayout());
+  // if (cgm.getLangOpts().RelativeCXXABIVTables) {
+  //   cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
+  // }
 }
 
 mlir::Value CIRGenItaniumCXXABI::emitVirtualDestructorCall(
@@ -1223,11 +1232,6 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
   const char *vTableName = vTableClassNameForType(cgm, ty);
 
   // Check if the alias exists. If it doesn't, then get or create the global.
-  if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
-    return;
-  }
-
   mlir::Type vtableGlobalTy = builder.getPointerTo(builder.getUInt8PtrTy());
   llvm::Align align = cgm.getDataLayout().getABITypeAlign(vtableGlobalTy);
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
@@ -1235,13 +1239,17 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
       CharUnits::fromQuantity(align));
 
   // The vtable address point is 2.
+  SmallVector<mlir::Attribute, 4> offsets{
+      cgm.getBuilder().getI32IntegerAttr(2)};
+  auto indices = mlir::ArrayAttr::get(builder.getContext(), offsets);
   mlir::Attribute field{};
   if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
+    // TODO: by @Elio.
+    // For relative vtables, this needs special handling during lowering: the
+    // GlobalViewAttr target should be emitted as target - current slot.
+    auto symbol = mlir::FlatSymbolRefAttr::get(vTable.getSymNameAttr());
+    field = cir::GlobalViewAttr::get(builder.getSInt32Ty(), symbol, indices);
   } else {
-    SmallVector<mlir::Attribute, 4> offsets{
-        cgm.getBuilder().getI32IntegerAttr(2)};
-    auto indices = mlir::ArrayAttr::get(builder.getContext(), offsets);
     field = cgm.getBuilder().getGlobalViewAttr(cgm.getBuilder().getUInt8PtrTy(),
                                                vTable, indices);
   }
