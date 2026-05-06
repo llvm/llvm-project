@@ -13,6 +13,12 @@ template <typename... Args>
 static void message(const char *msg, Args &&...args) {
   fprintf(stderr, msg, args...);
 }
+#elif SANITIZER_SPIRV
+extern "C" int printf(const char *fmt, ...);
+template <typename... Args>
+static void message(const char *msg, Args &&...args) {
+  printf(msg, args...);
+}
 #else
 #include <unistd.h>
 static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
@@ -69,7 +75,7 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
 }
 
 static void format(const char *kind, uintptr_t caller) {
-#if SANITIZER_AMDGPU || SANITIZER_NVPTX
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
   (void)format_msg;
   message("ubsan: %s by %p\n", kind, reinterpret_cast<void *>(caller));
 #else
@@ -150,6 +156,19 @@ static void abort_with_message(const char *kind, uintptr_t caller) {
 #elif SANITIZER_AMDGPU || SANITIZER_NVPTX
 static void abort_with_message(const char *kind, uintptr_t caller) {
   __builtin_verbose_trap("ubsan", "unrecoverable error");
+}
+#elif SANITIZER_SPIRV
+struct __ubsan_abort_info_t {
+  const char *fmt;
+  const char *kind;
+  const void *caller;
+};
+[[noreturn]] void __spirv_AbortKHR(__ubsan_abort_info_t info);
+[[noreturn]] static void abort_with_message(const char *kind,
+                                            uintptr_t caller) {
+  __ubsan_abort_info_t info = {"ubsan: %s by %p\n", kind,
+                               reinterpret_cast<void *>(caller)};
+  __spirv_AbortKHR(info);
 }
 #else
 static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
