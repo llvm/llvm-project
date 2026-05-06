@@ -1635,7 +1635,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
   let Defs = [VXSAT] in {
   def PSAS_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b00, "psas.dhx">;
   def PSSA_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b10, "pssa.dhx">;
-  }
+  } // Defs = [VXSAT]
 
   def PAAS_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paas.dhx">;
   def PASA_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b10, "pasa.dhx">;
