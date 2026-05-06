@@ -3725,6 +3725,7 @@ ExprEngine::notifyCheckersOfPointerEscape(ProgramStateRef State,
 void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
                           ExplodedNode *Pred, SVal location, SVal Val,
                           bool AtDeclInit, const ProgramPoint *PP) {
+  assert(!isa<NonLoc>(location) && "evalBind location should not be NonLoc!");
   const LocationContext *LC = Pred->getLocationContext();
   PostStmt PS(StoreE, LC);
   if (!PP)
