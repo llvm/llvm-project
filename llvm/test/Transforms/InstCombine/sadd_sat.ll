@@ -824,11 +824,11 @@ entry:
 
 define i16 @or(i8 %X, i16 %Y) {
 ; CHECK-LABEL: @or(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], -16
-; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X:%.*]], i8 [[TMP2]])
-; CHECK-NEXT:    [[L12:%.*]] = sext i8 [[TMP3]] to i16
-; CHECK-NEXT:    ret i16 [[L12]]
+; CHECK-NEXT:    [[L12:%.*]] = sext i8 [[TMP3:%.*]] to i16
+; CHECK-NEXT:    [[CONV14:%.*]] = or i16 [[Y:%.*]], -16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[L12]], [[CONV14]]
+; CHECK-NEXT:    [[L13:%.*]] = call i16 @llvm.smin.i16(i16 [[SUB]], i16 127)
+; CHECK-NEXT:    ret i16 [[L13]]
 ;
   %conv10 = sext i8 %X to i16
   %conv14 = or i16 %Y, 65520

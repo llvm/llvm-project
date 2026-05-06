@@ -15,7 +15,7 @@ declare void @use16(i16)
 define i8 @divceil_i8_var_divisor(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor(
 ; CHECK-NEXT:    [[ROUND:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw i8 [[RESULT:%.*]], [[ROUND]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw i8 [[X:%.*]], [[ROUND]]
 ; CHECK-NEXT:    [[RESULT2:%.*]] = udiv i8 [[RESULT1]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RESULT2]]
 ;
@@ -31,7 +31,7 @@ define i8 @divceil_i8_var_divisor(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y)
 define i8 @divceil_i8_var_divisor_commuted(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_commuted(
 ; CHECK-NEXT:    [[ROUND:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw i8 [[RESULT:%.*]], [[ROUND]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw i8 [[X:%.*]], [[ROUND]]
 ; CHECK-NEXT:    [[RESULT2:%.*]] = udiv i8 [[RESULT1]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RESULT2]]
 ;

@@ -9981,10 +9981,13 @@ std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
   return std::nullopt;
 }
 
-static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
-                              APInt &Upper, const InstrInfoQuery &IIQ,
-                              bool PreferSignedRange) {
-  unsigned Width = Lower.getBitWidth();
+static ConstantRange getRangeForBinOp(const BinaryOperator &BO,
+                                      bool PreferSignedRange,
+                                      const SimplifyQuery &SQ, unsigned Depth) {
+  unsigned Width = BO.getType()->getScalarSizeInBits();
+  const InstrInfoQuery &IIQ = SQ.IIQ;
+  APInt Lower = APInt(Width, 0);
+  APInt Upper = APInt(Width, 0);
   const APInt *C;
   switch (BO.getOpcode()) {
   case Instruction::Sub:
@@ -10204,6 +10207,44 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
   default:
     break;
   }
+
+  ConstantRange CR = ConstantRange::getNonEmpty(Lower, Upper);
+  auto HasNonTrivialRange = [](const Value *V) {
+    if (isa<CastInst>(V) || isa<IntrinsicInst>(V) || isa<SelectInst>(V))
+      return true;
+    if (auto *BO = dyn_cast<BinaryOperator>(V))
+      return isa<Constant>(BO->getOperand(0)) ||
+             isa<Constant>(BO->getOperand(1));
+    return false;
+  };
+  bool IsDisjointOr = BO.getOpcode() == Instruction::Or &&
+                      cast<PossiblyDisjointInst>(&BO)->isDisjoint();
+  if ((BO.getOpcode() == Instruction::Add ||
+       BO.getOpcode() == Instruction::Sub || IsDisjointOr) &&
+      (HasNonTrivialRange(BO.getOperand(0)) ||
+       HasNonTrivialRange(BO.getOperand(1)))) {
+    // Limit recursion depth more aggressively for binary operations.
+    unsigned NewDepth = std::max(Depth + 1, MaxAnalysisRecursionDepth - 1);
+    ConstantRange LHS =
+        computeConstantRange(BO.getOperand(0), PreferSignedRange, SQ, NewDepth);
+    ConstantRange RHS =
+        computeConstantRange(BO.getOperand(1), PreferSignedRange, SQ, NewDepth);
+    unsigned NoWrapKind = 0;
+    // Only Add and Sub have no-wrap flags, not disjoint Or.
+    if (!IsDisjointOr) {
+      if (IIQ.hasNoUnsignedWrap(&BO))
+        NoWrapKind |= OverflowingBinaryOperator::NoUnsignedWrap;
+      if (IIQ.hasNoSignedWrap(&BO))
+        NoWrapKind |= OverflowingBinaryOperator::NoSignedWrap;
+    }
+    // Disjoint OR is semantically equivalent to Add.
+    ConstantRange OpCR = BO.getOpcode() == Instruction::Sub
+                             ? LHS.subWithNoWrap(RHS, NoWrapKind)
+                             : LHS.addWithNoWrap(RHS, NoWrapKind);
+    CR = CR.intersectWith(OpCR, PreferSignedRange ? ConstantRange::Signed
+                                                  : ConstantRange::Unsigned);
+  }
+  return CR;
 }
 
 static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
@@ -10397,11 +10438,24 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
-    APInt Lower = APInt(BitWidth, 0);
-    APInt Upper = APInt(BitWidth, 0);
-    // TODO: Return ConstantRange.
-    setLimitsForBinOp(*BO, Lower, Upper, SQ.IIQ, ForSigned);
-    CR = ConstantRange::getNonEmpty(Lower, Upper);
+    CR = getRangeForBinOp(*BO, ForSigned, SQ, Depth);
+  } else if (isa<SExtInst>(V) || isa<ZExtInst>(V) || isa<TruncInst>(V)) {
+    auto *CastOp = cast<CastInst>(V);
+    ConstantRange OpCR =
+        computeConstantRange(CastOp->getOperand(0), ForSigned, SQ, Depth + 1);
+    switch (CastOp->getOpcode()) {
+    case Instruction::SExt:
+      CR = OpCR.signExtend(BitWidth);
+      break;
+    case Instruction::ZExt:
+      CR = OpCR.zeroExtend(BitWidth);
+      break;
+    case Instruction::Trunc:
+      CR = OpCR.truncate(BitWidth);
+      break;
+    default:
+      llvm_unreachable("Unexpected cast opcode");
+    }
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
     CR = getRangeForIntrinsic(*II, SQ.IIQ.UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
