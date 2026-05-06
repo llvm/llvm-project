@@ -132,6 +132,12 @@ class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+
+  mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const override {
+    // CUDA surface is represented as a 64-bit handle on device
+    return cir::IntType::get(&getABIInfo().cgt.getMLIRContext(), 64,
+                             /*isSigned=*/true);
+  }
 };
 } // namespace
 
