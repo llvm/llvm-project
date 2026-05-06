@@ -66,7 +66,7 @@ public:
 };
 
 class MachineBranchProbabilityPrinterPass
-    : public OptionalPassInfoMixin<MachineBranchProbabilityPrinterPass> {
+    : public RequiredPassInfoMixin<MachineBranchProbabilityPrinterPass> {
   raw_ostream &OS;
 
 public:

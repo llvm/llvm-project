@@ -482,7 +482,7 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(LoopPassManager &&LPM,
 }
 
 /// Pass for printing a loop's contents as textual IR.
-class PrintLoopPass : public OptionalPassInfoMixin<PrintLoopPass> {
+class PrintLoopPass : public RequiredPassInfoMixin<PrintLoopPass> {
   raw_ostream &OS;
   std::string Banner;
 

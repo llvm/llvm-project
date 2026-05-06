@@ -113,7 +113,7 @@ public:
 };
 
 class DebugAssignmentTrackingPrinterPass
-    : public OptionalPassInfoMixin<DebugAssignmentTrackingPrinterPass> {
+    : public RequiredPassInfoMixin<DebugAssignmentTrackingPrinterPass> {
   raw_ostream &OS;
 
 public:
