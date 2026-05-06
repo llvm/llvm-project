@@ -409,7 +409,7 @@ public:
   void Refresh() override;
 
 private:
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   bool IsInputCompleteCallback(Editline *editline, StringList &lines);
 
   int FixIndentationCallback(Editline *editline, const StringList &lines,
@@ -423,7 +423,7 @@ private:
 #endif
 
 protected:
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   std::unique_ptr<Editline> m_editline_up;
 #endif
   IOHandlerDelegate &m_delegate;

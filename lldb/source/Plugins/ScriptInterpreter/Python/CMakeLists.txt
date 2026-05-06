@@ -14,10 +14,6 @@ if(NOT LLDB_PYTHON_EXE_RELATIVE_PATH)
 endif()
 add_definitions(-DLLDB_PYTHON_EXE_RELATIVE_PATH="${LLDB_PYTHON_EXE_RELATIVE_PATH}")
 
-if (LLDB_ENABLE_LIBEDIT)
-  list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
-endif()
-
 add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   PythonDataObjects.cpp
   PythonReadline.cpp
@@ -47,7 +43,6 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     lldbTarget
     lldbValueObject
     ${Python3_LIBRARIES}
-    ${LLDB_LIBEDIT_LIBS}
   )
 
 

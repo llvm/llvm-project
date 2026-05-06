@@ -9,10 +9,6 @@
 #ifndef LLDB_HOST_CONFIG_H
 #define LLDB_HOST_CONFIG_H
 
-#cmakedefine01 LLDB_EDITLINE_USE_WCHAR
-
-#cmakedefine01 LLDB_HAVE_EL_RFUNC_T
-
 #cmakedefine01 HAVE_SYS_EVENT_H
 
 #cmakedefine01 HAVE_PPOLL
@@ -37,7 +33,7 @@
 
 #cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H
 
-#cmakedefine01 LLDB_ENABLE_LIBEDIT
+#cmakedefine01 LLDB_ENABLE_REPLXX
 
 #cmakedefine01 LLDB_ENABLE_LIBXML2
 

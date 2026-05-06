@@ -55,7 +55,7 @@ add_host_subdirectory(common
   common/ZipFileResolver.cpp
   )
 
-if (LLDB_ENABLE_LIBEDIT)
+if (LLDB_ENABLE_REPLXX)
   add_host_subdirectory(common
     common/Editline.cpp
     )
@@ -164,21 +164,14 @@ endif()
 if (HAVE_LIBDL)
   list(APPEND EXTRA_LIBS ${CMAKE_DL_LIBS})
 endif()
-if (LLDB_ENABLE_LIBEDIT)
-  list(APPEND EXTRA_LIBS LibEdit::LibEdit)
+if (LLDB_ENABLE_REPLXX)
+  list(APPEND EXTRA_LIBS replxx::replxx)
 endif()
 if (LLDB_ENABLE_LZMA)
   list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
 endif()
 if (WIN32)
   list(APPEND LLDB_SYSTEM_LIBS psapi)
-endif()
-
-if (LLDB_ENABLE_LIBEDIT)
-  list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
-  if (LLVM_BUILD_STATIC)
-    list(APPEND LLDB_SYSTEM_LIBS gpm)
-  endif()
 endif()
 
 add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
@@ -193,6 +186,5 @@ add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
     lldbUtility
     ${EXTRA_LIBS}
     ${LLDBObjCLibs}
-    ${LLDB_LIBEDIT_LIBS}
   )
 

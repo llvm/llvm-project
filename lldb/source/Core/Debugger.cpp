@@ -2598,11 +2598,8 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       *config_up, "curses", LLDB_ENABLE_CURSES,
       "A boolean value that indicates if curses support is enabled in LLDB");
   AddBoolConfigEntry(
-      *config_up, "editline", LLDB_ENABLE_LIBEDIT,
+      *config_up, "editline", LLDB_ENABLE_REPLXX,
       "A boolean value that indicates if editline support is enabled in LLDB");
-  AddBoolConfigEntry(*config_up, "editline_wchar", LLDB_EDITLINE_USE_WCHAR,
-                     "A boolean value that indicates if editline wide "
-                     "characters support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "zlib", LLVM_ENABLE_ZLIB,
       "A boolean value that indicates if zlib support is enabled in LLDB");

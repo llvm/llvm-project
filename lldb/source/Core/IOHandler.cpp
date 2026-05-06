@@ -24,7 +24,7 @@
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
 
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
 #include "lldb/Host/Editline.h"
 #endif
 #include "lldb/Interpreter/CommandCompletions.h"
@@ -235,7 +235,7 @@ IOHandlerEditline::IOHandlerEditline(
     bool multi_line, bool color, uint32_t line_number_start,
     IOHandlerDelegate &delegate)
     : IOHandler(debugger, type, input_sp, output_sp, error_sp, flags),
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
       m_editline_up(),
 #endif
       m_delegate(delegate), m_prompt(), m_continuation_prompt(),
@@ -244,14 +244,9 @@ IOHandlerEditline::IOHandlerEditline(
       m_interrupt_exits(true) {
   SetPrompt(prompt);
 
-#if LLDB_ENABLE_LIBEDIT
-  // To use Editline, we need an input, output, and error stream. Not all valid
-  // files will have a FILE* stream. Don't use Editline if the input is not a
-  // real terminal.
-  const bool use_editline =
-      m_input_sp && m_input_sp->GetIsRealTerminal() &&             // Input
-      m_output_sp && m_output_sp->GetUnlockedFile().GetStream() && // Output
-      m_error_sp && m_error_sp->GetUnlockedFile().GetStream();     // Error
+#if LLDB_ENABLE_REPLXX
+  const bool use_editline = m_input_sp && m_output_sp && m_error_sp &&
+                            m_input_sp->GetIsRealTerminal();
   if (use_editline) {
     m_editline_up = std::make_unique<Editline>(
         editline_name, m_input_sp ? m_input_sp->GetStream() : nullptr,
@@ -295,7 +290,7 @@ IOHandlerEditline::IOHandlerEditline(
 }
 
 IOHandlerEditline::~IOHandlerEditline() {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   m_editline_up.reset();
 #endif
 }
@@ -311,7 +306,7 @@ void IOHandlerEditline::Deactivate() {
 }
 
 void IOHandlerEditline::TerminalSizeChanged() {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     m_editline_up->TerminalSizeChanged();
 #endif
@@ -339,7 +334,7 @@ static std::optional<std::string> SplitLineEOF(std::string &line_buffer) {
 }
 
 bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up) {
     return m_editline_up->GetLine(line, interrupted);
   }
@@ -426,7 +421,7 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   return (bool)got_line;
 }
 
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
 bool IOHandlerEditline::IsInputCompleteCallback(Editline *editline,
                                                 StringList &lines) {
   return m_delegate.IOHandlerIsInputComplete(*this, lines);
@@ -454,14 +449,14 @@ void IOHandlerEditline::RedrawCallback() {
 #endif
 
 const char *IOHandlerEditline::GetPrompt() {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up) {
     return m_editline_up->GetPrompt();
   } else {
 #endif
     if (m_prompt.empty())
       return nullptr;
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   }
 #endif
   return m_prompt.c_str();
@@ -470,7 +465,7 @@ const char *IOHandlerEditline::GetPrompt() {
 bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
   m_prompt = std::string(prompt);
 
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up) {
     m_editline_up->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
     m_editline_up->SetPromptAnsiPrefix(
@@ -485,7 +480,7 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
 bool IOHandlerEditline::SetUseColor(bool use_color) {
   m_color = use_color;
 
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up) {
     m_editline_up->UseColor(use_color);
     m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
@@ -505,7 +500,7 @@ const char *IOHandlerEditline::GetContinuationPrompt() {
 void IOHandlerEditline::SetContinuationPrompt(llvm::StringRef prompt) {
   m_continuation_prompt = std::string(prompt);
 
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     m_editline_up->SetContinuationPrompt(m_continuation_prompt.empty()
                                              ? nullptr
@@ -518,7 +513,7 @@ void IOHandlerEditline::SetBaseLineNumber(uint32_t line) {
 }
 
 uint32_t IOHandlerEditline::GetCurrentLineIndex() const {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     return m_editline_up->GetCurrentLine();
 #endif
@@ -526,7 +521,7 @@ uint32_t IOHandlerEditline::GetCurrentLineIndex() const {
 }
 
 StringList IOHandlerEditline::GetCurrentLines() const {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     return m_editline_up->GetInputAsStringList();
 #endif
@@ -544,7 +539,7 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
   m_current_lines_ptr = &lines;
 
   bool success = false;
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up) {
     return m_editline_up->GetLines(m_base_line_number, lines, interrupted);
   } else {
@@ -575,7 +570,7 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
       }
     }
     success = lines.GetSize() > 0;
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   }
 #endif
   return success;
@@ -615,7 +610,7 @@ void IOHandlerEditline::Run() {
 }
 
 void IOHandlerEditline::Cancel() {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     m_editline_up->Cancel();
 #endif
@@ -626,7 +621,7 @@ bool IOHandlerEditline::Interrupt() {
   if (m_delegate.IOHandlerInterrupt(*this))
     return true;
 
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     return m_editline_up->Interrupt();
 #endif
@@ -634,14 +629,14 @@ bool IOHandlerEditline::Interrupt() {
 }
 
 void IOHandlerEditline::GotEOF() {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     m_editline_up->Interrupt();
 #endif
 }
 
 void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up) {
     lldb::LockableStreamFileSP stream_sp = is_stdout ? m_output_sp : m_error_sp;
     m_editline_up->PrintAsync(stream_sp, s, len);
@@ -671,7 +666,7 @@ void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
 }
 
 void IOHandlerEditline::Refresh() {
-#if LLDB_ENABLE_LIBEDIT
+#if LLDB_ENABLE_REPLXX
   if (m_editline_up)
     m_editline_up->Refresh();
 #endif

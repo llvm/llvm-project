@@ -57,7 +57,6 @@ set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
 mark_as_advanced(LLDB_LIBXML2_VERSION)
 
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
-add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
@@ -145,23 +144,9 @@ if ((NOT MSVC) OR MSVC12)
   add_definitions( -DHAVE_ROUND )
 endif()
 
-# Check if we libedit capable of handling wide characters (built with
-# '--enable-widec').
-if (LLDB_ENABLE_LIBEDIT)
-  set(CMAKE_REQUIRED_LIBRARIES ${LibEdit_LIBRARIES})
-  set(CMAKE_REQUIRED_INCLUDES ${LibEdit_INCLUDE_DIRS})
-  check_symbol_exists(el_winsertstr histedit.h LLDB_EDITLINE_USE_WCHAR)
-  set(CMAKE_EXTRA_INCLUDE_FILES histedit.h)
-  check_type_size(el_rfunc_t LLDB_EL_RFUNC_T_SIZE)
-  if (LLDB_EL_RFUNC_T_SIZE STREQUAL "")
-    set(LLDB_HAVE_EL_RFUNC_T 0)
-  else()
-    set(LLDB_HAVE_EL_RFUNC_T 1)
-  endif()
-  set(CMAKE_REQUIRED_LIBRARIES)
-  set(CMAKE_REQUIRED_INCLUDES)
-  set(CMAKE_EXTRA_INCLUDE_FILES)
-endif()
+# replxx is vendored in third_party/replxx and always available.
+set(LLDB_ENABLE_REPLXX TRUE)
+message(STATUS "Enable replxx line editing support in LLDB: TRUE")
 
 if (APPLE)
   set(default_enable_mte OFF)
