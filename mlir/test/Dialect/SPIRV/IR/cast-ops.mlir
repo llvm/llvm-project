@@ -40,6 +40,12 @@ func.func @cast6(%arg0 : vector<4xf32>) {
   return
 }
 
+func.func @cast_coop_matrix(%arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>) {
+  // CHECK: {{%.*}} = spirv.Bitcast {{%.*}} : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> to !spirv.coopmatrix<4x4xi32, Subgroup, MatrixA>
+  %0 = spirv.Bitcast %arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> to !spirv.coopmatrix<4x4xi32, Subgroup, MatrixA>
+  return
+}
+
 // -----
 
 func.func @cast1(%arg0 : f32) {
@@ -77,6 +83,46 @@ func.func @cast3(%arg0 : !spirv.ptr<f32, Function>) {
 func.func @cast3(%arg0 : i64) {
   // expected-error @+1 {{unhandled bit cast conversion from non-pointer type to pointer type}}
   %0 = spirv.Bitcast %arg0 : i64 to !spirv.ptr<f32, Function>
+  return
+}
+
+// -----
+
+func.func @cast_coop_matrix_size_mismatch(%arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>) {
+  // expected-error @+1 {{cooperative matrix dimensions must match}}
+  %0 = spirv.Bitcast %arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> to !spirv.coopmatrix<4x2xi32, Subgroup, MatrixA>
+  return
+}
+
+// -----
+
+func.func @cast_coop_matrix_scope_mismatch(%arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>) {
+  // expected-error @+1 {{cooperative matrix scope must match}}
+  %0 = spirv.Bitcast %arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> to !spirv.coopmatrix<4x4xi32, Workgroup, MatrixA>
+  return
+}
+
+// -----
+
+func.func @cast_coop_matrix_use_mismatch(%arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>) {
+  // expected-error @+1 {{cooperative matrix use must match}}
+  %0 = spirv.Bitcast %arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> to !spirv.coopmatrix<4x4xi32, Subgroup, MatrixB>
+  return
+}
+
+// -----
+
+func.func @cast_coop_matrix_bitwidth_mismatch(%arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>) {
+  // expected-error @+1 {{mismatch in result and operand type bitwidth}}
+  %0 = spirv.Bitcast %arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> to !spirv.coopmatrix<4x4xi64, Subgroup, MatrixA>
+  return
+}
+
+// -----
+
+func.func @cast_coop_to_non_coop(%arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>) {
+  // expected-error @+1 {{unhandled bit cast conversion from cooperative matrix type to non-cooperative matrix type}}
+  %0 = spirv.Bitcast %arg0 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> to i32
   return
 }
 

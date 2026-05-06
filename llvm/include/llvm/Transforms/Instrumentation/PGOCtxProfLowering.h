@@ -16,7 +16,8 @@
 namespace llvm {
 class Type;
 
-class PGOCtxProfLoweringPass : public PassInfoMixin<PGOCtxProfLoweringPass> {
+class PGOCtxProfLoweringPass
+    : public OptionalPassInfoMixin<PGOCtxProfLoweringPass> {
 public:
   explicit PGOCtxProfLoweringPass() = default;
   // True if contextual instrumentation is enabled.
@@ -32,7 +33,8 @@ public:
 // functions by a (GUID, Hash) tuple, but since the ctxprof "use" waits for
 // thinlto to happen before performing any further optimizations, it's
 // unnecessary to collect profiles for non-prevailing copies.
-class NoinlineNonPrevailing : public PassInfoMixin<NoinlineNonPrevailing> {
+class NoinlineNonPrevailing
+    : public OptionalPassInfoMixin<NoinlineNonPrevailing> {
 public:
   explicit NoinlineNonPrevailing() = default;
 
