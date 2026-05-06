@@ -65,8 +65,7 @@ static bool hasNonScalableUnitLeadingDims(VectorType type, int64_t dropCount) {
   ArrayRef<int64_t> leadingShape = type.getShape().take_front(dropCount);
   ArrayRef<bool> leadingScalable = type.getScalableDims().take_front(dropCount);
   return llvm::all_of(leadingShape, [](int64_t dim) { return dim == 1; }) &&
-         llvm::none_of(leadingScalable,
-                       [](bool scalable) { return scalable; });
+         llvm::none_of(leadingScalable, [](bool scalable) { return scalable; });
 }
 
 static bool isNonScalableUnitDim(VectorType type, int64_t dim) {
@@ -195,8 +194,8 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector = shapeCastVector(rewriter, loc,
-                                         insertOp.getValueToStore(), newSrcType);
+    Value newSrcVector =
+        shapeCastVector(rewriter, loc, insertOp.getValueToStore(), newSrcType);
     Value newDstVector =
         shapeCastVector(rewriter, loc, insertOp.getDest(), newDstType);
 
@@ -371,8 +370,8 @@ struct CastAwayTransferWriteLeadingOneDim
         shapeCastVector(rewriter, write.getLoc(), write.getVector(), newType);
 
     if (write.getMask()) {
-      Value newMask = dropUnitDimsFromMask(
-          rewriter, write.getLoc(), write.getMask(), newType, newMap);
+      Value newMask = dropUnitDimsFromMask(rewriter, write.getLoc(),
+                                           write.getMask(), newType, newMap);
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
           write, newVector, write.getBase(), write.getIndices(),
           AffineMapAttr::get(newMap), newMask, inBoundsAttr);
@@ -592,8 +591,8 @@ public:
     SmallVector<Value, 4> newOperands;
     for (Value operand : op->getOperands()) {
       if (auto opVecType = dyn_cast<VectorType>(operand.getType()))
-        newOperands.push_back(shapeCastVector(
-            rewriter, op->getLoc(), operand, trimLeadingOneDims(opVecType)));
+        newOperands.push_back(shapeCastVector(rewriter, op->getLoc(), operand,
+                                              trimLeadingOneDims(opVecType)));
       else
         newOperands.push_back(operand);
     }
