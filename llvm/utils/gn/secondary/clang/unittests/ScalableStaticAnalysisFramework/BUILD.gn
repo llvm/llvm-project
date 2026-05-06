@@ -18,9 +18,9 @@ unittest("ClangScalableAnalysisTests") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "ASTEntityMappingTest.cpp",
     "Analyses/CallGraph/CallGraphExtractorTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
-    "ASTEntityMappingTest.cpp",
     "BuildNamespaceTest.cpp",
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",
@@ -29,6 +29,7 @@ unittest("ClangScalableAnalysisTests") {
     "EntityNameTest.cpp",
     "ErrorBuilderTest.cpp",
     "Frontend/TUSummaryExtractorFrontendActionTest.cpp",
+    "LUSummaryTest.cpp",
     "ModelStringConversionsTest.cpp",
     "Registries/FancyAnalysisData.cpp",
     "Registries/MockSerializationFormat.cpp",
