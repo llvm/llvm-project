@@ -17,11 +17,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 // op vd, vs2, vs1, vm
 class ZvdotVALUVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VR:$vd),
-                (ins VR:$vs2, VR:$vs1, VMaskOp:$vm),
-                opcodestr, "$vd, $vs2, $vs1$vm"> {
+               (ins VR:$vs2, VR:$vs1, VMaskOp:$vm),
+               opcodestr, "$vd, $vs2, $vs1$vm"> {
   let Inst{6-0} = OPC_OP_VE.Value;
+  let Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb";
+  let VS1VS2Constraint = WidenV;
 }
 }
+
 let Predicates = [HasStdExtZvqwdota8iOrZvqwdota16i],
     Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx4 in {
   def VQWDOTAU_VV  : ZvdotVALUVV<0b100110, OPIVV, "vqwdotau.vv">;

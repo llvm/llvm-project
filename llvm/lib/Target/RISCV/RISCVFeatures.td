@@ -691,22 +691,26 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                                         "'Zvabd' (Vector Absolute Difference)">;
 
 def FeatureStdExtZvqwdota8i
-    : RISCVExperimentalExtension<0, 2, "8-bit Integer Dot-Product", [FeatureStdExtZve32x]>;
-def HasStdExtZvqwdota8i : Predicate<"Subtarget->hasStdExtZvqwdota8i()">,
-                            AssemblerPredicate<(all_of FeatureStdExtZvqwdota8i),
-                            "'Zvqwdota8i' (8-bit Integer Dot-Product)">;
+    : RISCVExperimentalExtension<0, 2, "8-bit Integer Dot-Product",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvqwdota8i
+    : Predicate<"Subtarget->hasStdExtZvqwdota8i()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvqwdota8i),
+                          "'Zvqwdota8i' (8-bit Integer Dot-Product)">;
 
 def FeatureStdExtZvqwdota16i
-    : RISCVExperimentalExtension<0, 2, "16-bit Integer Dot-Product", [FeatureStdExtZve64x]>;
-def HasStdExtZvqwdota16i : Predicate<"Subtarget->hasStdExtZvqwdota16i()">,
-                            AssemblerPredicate<(all_of FeatureStdExtZvqwdota16i),
-                            "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
+    : RISCVExperimentalExtension<0, 2, "16-bit Integer Dot-Product",
+                                 [FeatureStdExtZve64x]>;
+def HasStdExtZvqwdota16i
+    : Predicate<"Subtarget->hasStdExtZvqwdota16i()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvqwdota16i),
+                          "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
 
 def HasStdExtZvqwdota8iOrZvqwdota16i
-    : Predicate<"Subtarget->hasStdExtZvqwdota8i() || Subtarget->hasStdExtZvqwdota16i() ">,
-                     AssemblerPredicate<(any_of FeatureStdExtZvqwdota8i, FeatureStdExtZvqwdota16i),
-                                        "'Zvqwdota8i' (8-bit Integer Dot-Product) or "
-                                        "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
+    : Predicate<"Subtarget->hasStdExtZvqwdota8i() || Subtarget->hasStdExtZvqwdota16i()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvqwdota8i, FeatureStdExtZvqwdota16i),
+                          "'Zvqwdota8i' (8-bit Integer Dot-Product) or "
+                          "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
 
 def FeatureStdExtZvfwdota16bf
     : RISCVExperimentalExtension<0, 2, "BF16 Dot-Product", [FeatureStdExtZve32f]>;
@@ -717,8 +721,8 @@ def HasStdExtZvfwdota16bf : Predicate<"Subtarget->hasStdExtZvfwdota16bf()">,
 def FeatureStdExtZvfqwdota8f
     : RISCVExperimentalExtension<0, 2, "OCP FP8 Dot-Product", [FeatureStdExtZve32f]>;
 def HasStdExtZvfqwdota8f : Predicate<"Subtarget->hasStdExtZvfqwdota8f()">,
-                            AssemblerPredicate<(all_of FeatureStdExtZvfqwdota8f),
-                            "'Zvfqwdota8f' (OCP FP8 Dot-Product)">;
+                           AssemblerPredicate<(all_of FeatureStdExtZvfqwdota8f),
+                           "'Zvfqwdota8f' (OCP FP8 Dot-Product)">;
 
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
