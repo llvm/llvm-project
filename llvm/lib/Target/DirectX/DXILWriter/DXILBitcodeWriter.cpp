@@ -1556,7 +1556,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
 void DXILBitcodeWriter::writeDISubprogram(const DISubprogram *N,
                                           SmallVectorImpl<uint64_t> &Record,
                                           unsigned Abbrev) {
-  Record.push_back(/*Distinct*/ false);
+  Record.push_back(N->isDistinct());
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawLinkageName()));
@@ -1569,7 +1569,7 @@ void DXILBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(VE.getMetadataOrNullID(N->getContainingType()));
   Record.push_back(N->getVirtuality());
   Record.push_back(N->getVirtualIndex());
-  Record.push_back(N->getFlags() & 0x7fff);
+  Record.push_back(N->getFlags());
   Record.push_back(N->isOptimized());
   Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getTemplateParams().get()));
