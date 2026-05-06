@@ -1246,14 +1246,14 @@ exit:
 !16 = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; MODULE: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_aligned_barrier" }
-; MODULE: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
+; MODULE: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback noduplicate nounwind }
 ; MODULE: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ; MODULE: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; MODULE: attributes #[[ATTR4]] = { "kernel" }
 ; MODULE: attributes #[[ATTR5]] = { nosync memory(none) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { "llvm.assume"="ompx_aligned_barrier" }
-; CGSCC: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
+; CGSCC: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback noduplicate nounwind }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ; CGSCC: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR4]] = { "kernel" }

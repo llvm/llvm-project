@@ -7,4 +7,4 @@
 declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32)
 
 ; CHECK: declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32) #[[ATTRNUM:[0-9]+]]
-; CHECK: attributes #[[ATTRNUM]] = { convergent nocallback nounwind }
+; CHECK: attributes #[[ATTRNUM]] = { convergent nocallback noduplicate nounwind }

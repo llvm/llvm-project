@@ -1930,8 +1930,13 @@ let TargetPrefix = "nvvm" in {
   multiclass BarrierCTAIntrinsic<list<LLVMType> ret_types = [],
                                  list<LLVMType> extra_param_types = [],
                                  bit has_all_variant = true> {
-    let IntrProperties = [IntrConvergent, IntrNoCallback] in {
-      foreach align = ["", "_aligned"] in {
+    foreach align = ["", "_aligned"] in {
+      // The .aligned variants require all threads in the warp to execute the
+      // same barrier with the same arguments, so they must not be duplicated.
+      defvar props = !if(!eq(align, "_aligned"),
+                         [IntrConvergent, IntrNoCallback, IntrNoDuplicate],
+                         [IntrConvergent, IntrNoCallback]);
+      let IntrProperties = props in {
         def align # _count :
           Intrinsic<ret_types, [llvm_i32_ty, llvm_i32_ty] # extra_param_types>;
         if has_all_variant then
@@ -1958,8 +1963,12 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_barrier_cluster_arrive : Intrinsic<[]>;
     def int_nvvm_barrier_cluster_arrive_relaxed : Intrinsic<[]>;
     def int_nvvm_barrier_cluster_wait : Intrinsic<[]>;
+  }
 
-    // 'aligned' versions of the above barrier.cluster.* intrinsics
+  // 'aligned' versions of the above barrier.cluster.* intrinsics. These require
+  // all threads in the warp to execute the same barrier and must not be
+  // duplicated.
+  let IntrProperties = [IntrConvergent, IntrNoCallback, IntrNoDuplicate] in {
     def int_nvvm_barrier_cluster_arrive_aligned : Intrinsic<[]>;
     def int_nvvm_barrier_cluster_arrive_relaxed_aligned : Intrinsic<[]>;
     def int_nvvm_barrier_cluster_wait_aligned : Intrinsic<[]>;
@@ -2597,15 +2606,19 @@ let IntrProperties = [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback] i
 // WGMMA fence instructions
 //
 // wgmma.fence.sync.aligned;
-def int_nvvm_wgmma_fence_sync_aligned : Intrinsic<[], [], [IntrConvergent]>;
+def int_nvvm_wgmma_fence_sync_aligned
+  : Intrinsic<[], [], [IntrConvergent, IntrNoDuplicate]>;
 
 // wgmma.commit_group.sync.aligned;
 def int_nvvm_wgmma_commit_group_sync_aligned
-  : Intrinsic<[], [], [IntrConvergent], "llvm.nvvm.wgmma.commit_group.sync.aligned">;
+  : Intrinsic<[], [], [IntrConvergent, IntrNoDuplicate],
+              "llvm.nvvm.wgmma.commit_group.sync.aligned">;
 
 // wgmma.wait_group.sync.aligned N;
 def int_nvvm_wgmma_wait_group_sync_aligned
-  : Intrinsic<[], [llvm_i64_ty], [IntrConvergent, ImmArg<ArgIndex<0>>], "llvm.nvvm.wgmma.wait_group.sync.aligned">;
+  : Intrinsic<[], [llvm_i64_ty],
+              [IntrConvergent, IntrNoDuplicate, ImmArg<ArgIndex<0>>],
+              "llvm.nvvm.wgmma.wait_group.sync.aligned">;
 
 //
 // WMMA instructions
@@ -2857,7 +2870,7 @@ def int_nvvm_is_explicit_cluster
 foreach op = ["dec", "inc"] in
   def int_nvvm_setmaxnreg_ # op # _sync_aligned_u32
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
-              [IntrConvergent, IntrNoMem, IntrHasSideEffects,
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects, IntrNoDuplicate,
                ImmArg<ArgIndex<0>>, Range<ArgIndex<0>, 24, 257>]>;
 
 // Exit

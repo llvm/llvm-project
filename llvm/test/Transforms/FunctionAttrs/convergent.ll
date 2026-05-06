@@ -162,7 +162,7 @@ declare token @llvm.experimental.convergence.entry() #1
 ; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR1]] = { convergent }
 ; CHECK: attributes #[[ATTR2]] = { norecurse }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback nounwind }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback noduplicate nounwind }
 ; CHECK: attributes #[[ATTR4]] = { convergent norecurse nounwind }
 ; CHECK: attributes #[[ATTR5]] = { nofree nosync nounwind memory(none) }
 ; CHECK: attributes #[[ATTR6]] = { convergent noinline optnone }
