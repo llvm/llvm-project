@@ -14288,8 +14288,7 @@ static SDValue splitAndOrXorv2i32Toi32(SDNode *N, SelectionDAG &DAG,
         matchV2I32Patterns(RHS.getOpcode(), Opc))
       return SDValue();
 
-    if (N->hasOneUse() &&
-        matchV2I32Patterns(Opc, N->user_begin()->getOpcode()))
+    if (N->hasOneUse() && matchV2I32Patterns(Opc, N->user_begin()->getOpcode()))
       return SDValue();
   }
 
