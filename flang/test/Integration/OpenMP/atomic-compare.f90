@@ -115,11 +115,10 @@ subroutine atomic_compare_gt(x, e)
   if (x > e) x = e
 end
 
-! Real "==" → bitcast + ±0.0 guard + cmpxchg
-! IEEE 754: -0.0 == +0.0, but cmpxchg is bitwise.  The emitted code checks
-! whether both x and e are ±0.0; if so, it uses x's loaded bit-pattern as the
-! cmpxchg expected value, then falls through to end.  Otherwise, the original
-! bitcast + cmpxchg path is taken.
+! Real "==" → NaN guard + ±0.0 guard + cmpxchg
+! IEEE 754 special cases for cmpxchg (which is bitwise):
+!   1. NaN != NaN but identical NaN bit patterns would match → skip cmpxchg
+!   2. -0.0 == +0.0 but different bit patterns → use loaded bit-pattern
 !CHECK-LABEL: define void @atomic_compare_real_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: %[[EVAL:.*]] = load float, ptr %[[E]], align 4
@@ -127,13 +126,20 @@ end
 !CHECK: %[[EBC:.*]] = bitcast float %[[EVAL]] to i32
 !CHECK: %[[DBC:.*]] = bitcast float %[[DVAL]] to i32
 !CHECK: load atomic i32, ptr %[[X]] monotonic
+!CHECK: %[[EISNAN:.*]] = fcmp uno float %[[EVAL]], %[[EVAL]]
+!CHECK: %[[XISNAN:.*]] = fcmp uno float %{{.*}}, %{{.*}}
+!CHECK: %[[EITHERNAN:.*]] = or i1 %[[EISNAN]], %[[XISNAN]]
+!CHECK: br i1 %[[EITHERNAN]], label %[[NANBB:[^,]+]], label %[[NOTNANBB:[^,]+]]
+!CHECK: [[NANBB]]:
+!CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+!CHECK: [[NOTNANBB]]:
 !CHECK: %[[XISZERO:.*]] = fcmp oeq float %{{.*}}, 0.000000e+00
 !CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EVAL]], 0.000000e+00
 !CHECK: %[[BOTH:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
 !CHECK: br i1 %[[BOTH]], label %[[ZERO:[^,]+]], label %[[NORMAL:[^,]+]]
 !CHECK: [[ZERO]]:
 !CHECK: cmpxchg ptr %[[X]], i32 %{{.*}}, i32 %[[DBC]] monotonic monotonic
-!CHECK: br label %[[EXIT:[^ ]+]]
+!CHECK: br label %[[EXIT]]
 !CHECK: [[NORMAL]]:
 !CHECK: cmpxchg ptr %[[X]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
 !CHECK: br label %[[EXIT]]

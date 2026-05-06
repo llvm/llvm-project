@@ -10825,15 +10825,22 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     Value *SuccessOrFail = nullptr;
 
     if (!IsInteger && HandleFPNegZero) {
-      // IEEE 754: -0.0 == +0.0, but cmpxchg is bitwise.
-      // If both X and E are ±0.0, use X's loaded bit-pattern as the expected
-      // value so cmpxchg succeeds.  Otherwise use the original bitcast path.
+      // IEEE 754 special cases for cmpxchg (which is bitwise):
+      //   1. -0.0 == +0.0 but they have different bit patterns.
+      //   2. NaN != NaN but identical NaN bit patterns would match.
       //
       //   CurBB:
       //     %e_int      = bitcast E to intN
       //     %d_int      = bitcast D to intN
       //     %x_curr     = load atomic intN, X
       //     %x_fp       = bitcast %x_curr to FP
+      //     %e_is_nan   = fcmp uno E, E
+      //     %x_is_nan   = fcmp uno %x_fp, %x_fp
+      //     %either_nan = or %e_is_nan, %x_is_nan
+      //     br %either_nan, NaNBB, NotNaNBB
+      //   NaNBB:            ; NaN == anything is always false
+      //     br ExitBB
+      //   NotNaNBB:
       //     %x_is_zero  = fcmp oeq %x_fp, 0.0
       //     %e_is_zero  = fcmp oeq E, 0.0
       //     %both_zero  = and %x_is_zero, %e_is_zero
@@ -10851,17 +10858,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
       Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
 
-      // Load X and check both X and E for ±0.0 in one go.
+      // Load X atomically.
       LoadInst *XCurr = Builder.CreateLoad(IntCastTy, X.Var,
                                            X.Var->getName() + ".atomic.load");
       XCurr->setAtomic(AtomicOrdering::Monotonic);
       Value *XFP = Builder.CreateBitCast(XCurr, X.ElemTy);
-      Value *XIsZero =
-          Builder.CreateFCmpOEQ(XFP, ConstantFP::getZero(X.ElemTy),
-                                X.Var->getName() + ".atomic.xiszero");
-      Value *EIsZero = Builder.CreateFCmpOEQ(E, ConstantFP::getZero(X.ElemTy),
-                                             "atomic.e.iszero");
-      Value *BothZero = Builder.CreateAnd(XIsZero, EIsZero, "atomic.both.zero");
+
+      // IEEE 754: NaN != NaN, but cmpxchg would succeed if E and X have
+      // the same NaN bit pattern.  Skip cmpxchg when either is NaN.
+      Value *EIsNaN = Builder.CreateFCmpUNO(E, E, "atomic.e.isnan");
+      Value *XIsNaN = Builder.CreateFCmpUNO(XFP, XFP, "atomic.x.isnan");
+      Value *EitherNaN = Builder.CreateOr(EIsNaN, XIsNaN, "atomic.either.nan");
 
       BasicBlock *CurBB = Builder.GetInsertBlock();
       Function *F = CurBB->getParent();
@@ -10869,14 +10876,32 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
       BasicBlock *ExitBB =
           CurBB->splitBasicBlock(CurBBTI, X.Var->getName() + ".atomic.exit");
+      BasicBlock *NaNBB = BasicBlock::Create(
+          M.getContext(), X.Var->getName() + ".atomic.nan", F, ExitBB);
+      BasicBlock *NotNaNBB = BasicBlock::Create(
+          M.getContext(), X.Var->getName() + ".atomic.notnan", F, ExitBB);
       BasicBlock *ZeroBB = BasicBlock::Create(
           M.getContext(), X.Var->getName() + ".atomic.zero", F, ExitBB);
       BasicBlock *NormalBB = BasicBlock::Create(
           M.getContext(), X.Var->getName() + ".atomic.normal", F, ExitBB);
 
-      // Single branch: both ±0.0 → ZeroBB, otherwise NormalBB.
+      // If either E or X is NaN → NaNBB (always fails), else check for ±0.0.
       CurBB->getTerminator()->eraseFromParent();
       Builder.SetInsertPoint(CurBB);
+      Builder.CreateCondBr(EitherNaN, NaNBB, NotNaNBB);
+
+      // NaNBB: NaN == anything is always false; skip cmpxchg.
+      Builder.SetInsertPoint(NaNBB);
+      Builder.CreateBr(ExitBB);
+
+      // NotNaNBB: check both X and E for ±0.0.
+      Builder.SetInsertPoint(NotNaNBB);
+      Value *XIsZero =
+          Builder.CreateFCmpOEQ(XFP, ConstantFP::getZero(X.ElemTy),
+                                X.Var->getName() + ".atomic.xiszero");
+      Value *EIsZero = Builder.CreateFCmpOEQ(E, ConstantFP::getZero(X.ElemTy),
+                                             "atomic.e.iszero");
+      Value *BothZero = Builder.CreateAnd(XIsZero, EIsZero, "atomic.both.zero");
       Builder.CreateCondBr(BothZero, ZeroBB, NormalBB);
 
       // ZeroBB: cmpxchg with X's loaded bit-pattern.
@@ -10895,14 +10920,16 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Value *OkNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/1);
       Builder.CreateBr(ExitBB);
 
-      // ExitBB: merge results.
+      // ExitBB: merge results from NaN, Zero, and Normal paths.
       Builder.SetInsertPoint(ExitBB, ExitBB->begin());
       PHINode *OldIntPHI =
-          Builder.CreatePHI(IntCastTy, 2, X.Var->getName() + ".atomic.old");
+          Builder.CreatePHI(IntCastTy, 3, X.Var->getName() + ".atomic.old");
+      OldIntPHI->addIncoming(XCurr, NaNBB);
       OldIntPHI->addIncoming(OldZero, ZeroBB);
       OldIntPHI->addIncoming(OldNormal, NormalBB);
-      PHINode *SuccessPHI = Builder.CreatePHI(Builder.getInt1Ty(), 2,
+      PHINode *SuccessPHI = Builder.CreatePHI(Builder.getInt1Ty(), 3,
                                               X.Var->getName() + ".atomic.ok");
+      SuccessPHI->addIncoming(Builder.getFalse(), NaNBB);
       SuccessPHI->addIncoming(OkZero, ZeroBB);
       SuccessPHI->addIncoming(OkNormal, NormalBB);
 

@@ -2468,11 +2468,22 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel0 : i32)
   }
 
-  // Float equality  →  check both x and e for ±0.0 in one branch.
-  // If both are ±0.0, cmpxchg uses x's bit-pattern; else original cmpxchg.
+  // Float equality  →  NaN guard + ±0.0 guard + cmpxchg.
+  // IEEE 754: NaN != NaN but same-bit-pattern NaN would match in cmpxchg;
+  // -0.0 == +0.0 but different bit patterns would mismatch.
   // CHECK: %[[EBC:.*]] = bitcast float %[[EF]] to i32
   // CHECK: %[[DBC:.*]] = bitcast float %[[DF]] to i32
   // CHECK: load atomic i32, ptr %[[XF]] monotonic
+  // NaN check: skip cmpxchg if either E or X is NaN.
+  // CHECK: %[[EISNAN:.*]] = fcmp uno float %[[EF]], %[[EF]]
+  // CHECK: %[[XISNAN:.*]] = fcmp uno float %{{.*}}, %{{.*}}
+  // CHECK: %[[EITHERNAN:.*]] = or i1 %[[EISNAN]], %[[XISNAN]]
+  // CHECK: br i1 %[[EITHERNAN]], label %[[NANBB:[^,]+]], label %[[NOTNANBB:[^,]+]]
+  // NaNBB: NaN == anything is always false; skip cmpxchg.
+  // CHECK: [[NANBB]]:
+  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // NotNaNBB: check ±0.0.
+  // CHECK: [[NOTNANBB]]:
   // CHECK: %[[XISZERO:.*]] = fcmp oeq float %{{.*}}, 0.000000e+00
   // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EF]], 0.000000e+00
   // CHECK: %[[BOTH:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
@@ -2482,17 +2493,17 @@ llvm.func @omp_atomic_compare(
   // CHECK: cmpxchg ptr %[[XF]], i32 %{{.*}}, i32 %[[DBC]] monotonic monotonic
   // CHECK-NEXT: extractvalue
   // CHECK-NEXT: extractvalue
-  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // CHECK-NEXT: br label %[[EXIT]]
   // NormalBB: original cmpxchg; goto end.
   // CHECK: [[NORMAL]]:
   // CHECK: cmpxchg ptr %[[XF]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
   // CHECK-NEXT: extractvalue
   // CHECK-NEXT: extractvalue
   // CHECK-NEXT: br label %[[EXIT]]
-  // ExitBB: phi merge.
+  // ExitBB: phi merge (3-way: NaN, Zero, Normal).
   // CHECK: [[EXIT]]:
-  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
-  // CHECK-NEXT: phi i1 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i1 [ false, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
   omp.atomic.compare %xf : !llvm.ptr {
   ^bb0(%xval : f32):
     %cmp1 = llvm.fcmp "oeq" %xval, %ef : f32
@@ -2590,12 +2601,21 @@ llvm.func @omp_atomic_compare(
 
 // CHECK-LABEL: @omp_atomic_compare_float_neg_zero
 // CHECK-SAME: (ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
-// Verify the ±0.0 handling: single branch on (x==±0.0 AND e==±0.0).
-// On zero-path failure, cmpxchg goes to end — no fallthrough to normal.
+// Verify NaN guard + ±0.0 handling.
 llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f32) {
   // CHECK: %[[EBC:.*]] = bitcast float %[[EF]] to i32
   // CHECK: %[[DBC:.*]] = bitcast float %[[DF]] to i32
   // CHECK: load atomic i32, ptr %[[XF]] monotonic
+  // NaN check: skip cmpxchg if either E or X is NaN.
+  // CHECK: %[[EISNAN:.*]] = fcmp uno float %[[EF]], %[[EF]]
+  // CHECK: %[[XISNAN:.*]] = fcmp uno float %{{.*}}, %{{.*}}
+  // CHECK: %[[EITHERNAN:.*]] = or i1 %[[EISNAN]], %[[XISNAN]]
+  // CHECK: br i1 %[[EITHERNAN]], label %[[NANBB:[^,]+]], label %[[NOTNANBB:[^,]+]]
+  // NaNBB: NaN == anything is always false; skip cmpxchg.
+  // CHECK: [[NANBB]]:
+  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // NotNaNBB: check ±0.0.
+  // CHECK: [[NOTNANBB]]:
   // CHECK: %[[XISZERO:.*]] = fcmp oeq float %{{.*}}, 0.000000e+00
   // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EF]], 0.000000e+00
   // CHECK: %[[BOTH:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
@@ -2605,17 +2625,17 @@ llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f
   // CHECK: cmpxchg ptr %[[XF]], i32 %{{.*}}, i32 %[[DBC]] monotonic monotonic
   // CHECK-NEXT: extractvalue
   // CHECK-NEXT: extractvalue
-  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // CHECK-NEXT: br label %[[EXIT]]
   // NormalBB: original bitwise cmpxchg; goto end.
   // CHECK: [[NORMAL]]:
   // CHECK: cmpxchg ptr %[[XF]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
   // CHECK-NEXT: extractvalue
   // CHECK-NEXT: extractvalue
   // CHECK-NEXT: br label %[[EXIT]]
-  // ExitBB: phi merge — ZeroBB flows here regardless of success/failure.
+  // ExitBB: phi merge (3-way: NaN, Zero, Normal).
   // CHECK: [[EXIT]]:
-  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
-  // CHECK-NEXT: phi i1 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i1 [ false, %[[NANBB]] ], [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
   omp.atomic.compare %xf : !llvm.ptr {
   ^bb0(%xval : f32):
     %cmp = llvm.fcmp "oeq" %xval, %ef : f32
