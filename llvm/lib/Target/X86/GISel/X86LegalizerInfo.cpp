@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86LegalizerInfo.h"
+#include "X86ShuffleMatch.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -581,6 +582,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                          {v8s64, v2s64},
                          {v8s64, v4s64}});
 
+  // G_SHUFFLE_VECTOR - Custom legalization to lower to X86-specific shuffles
+  getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
+      .customFor(HasSSE1, {{v16s8, v16s8}, {v8s16, v8s16}, {v4s32, v4s32},
+                           {v2s64, v2s64}, {v4s32, v4s32}, {v2s64, v2s64}})
+      .customFor(HasAVX, {{v32s8, v32s8}, {v16s16, v16s16}, {v8s32, v8s32},
+                          {v4s64, v4s64}, {v8s32, v8s32}, {v4s64, v4s64}})
+      .customFor(HasAVX512, {{v64s8, v64s8}, {v32s16, v32s16}, {v16s32, v16s32},
+                             {v8s64, v8s64}, {v16s32, v16s32}, {v8s64, v8s64}});
+
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{s16, s32}, {s32, s32}, {p0, s32}})
@@ -621,6 +631,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return false;
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, Helper);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return legalizeShuffleVector(MI, MRI, Helper);
   case TargetOpcode::G_FPTOUI:
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
@@ -1003,6 +1015,232 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool X86LegalizerInfo::legalizeShuffleVector(MachineInstr &MI,
+                                             MachineRegisterInfo &MRI,
+                                             LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const auto &ShuffleVec = cast<GShuffleVector>(MI);
+
+  Register Dst = ShuffleVec.getReg(0);
+  Register Src1 = ShuffleVec.getSrc1Reg();
+  Register Src2 = ShuffleVec.getSrc2Reg();
+  ArrayRef<int> Mask = ShuffleVec.getMask();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src1);
+
+  unsigned NumElts = DstTy.getNumElements();
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+  unsigned VecSize = DstTy.getSizeInBits();
+  unsigned NumSrcElts = SrcTy.getNumElements();
+
+  bool Src2IsUndef = getOpcodeDef<GImplicitDef>(Src2, MRI) != nullptr;
+  bool SingleSource = Src2IsUndef || (Src1 == Src2);
+
+  // 1. Try BROADCAST pattern first (simplest)
+  if (X86::isBroadcastMask(Mask)) {
+    // Find the broadcast source index
+    int BroadcastIdx = -1;
+    for (int M : Mask) {
+      if (M >= 0) {
+        BroadcastIdx = M;
+        break;
+      }
+    }
+
+    if (BroadcastIdx >= 0 && Subtarget.hasAVX()) {
+      Register SrcVec = ((unsigned)BroadcastIdx < NumSrcElts) ? Src1 : Src2;
+      unsigned Idx = ((unsigned)BroadcastIdx < NumSrcElts)
+                       ? BroadcastIdx
+                       : (BroadcastIdx - NumSrcElts);
+
+      // Extract the element
+      auto ExtractTy = LLT::scalar(EltSize);
+      auto Extract = MIRBuilder.buildExtractVectorElement(ExtractTy, SrcVec,
+                                                          MIRBuilder.buildConstant(LLT::scalar(64), Idx));
+
+      // Broadcast it
+      MIRBuilder.buildInstr(X86::G_X86_VBROADCAST, {Dst}, {Extract});
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // 2. Try SHUFPS/SHUFPD pattern (common for float shuffles)
+  if ((EltSize == 32 || EltSize == 64) && VecSize >= 128) {
+    unsigned Imm = 0;
+    bool Swap = false;
+
+    if (X86::matchShufpMask(Mask, NumElts, NumSrcElts, EltSize, SingleSource,
+                            Imm, Swap)) {
+      Register OpA = Swap ? Src2 : Src1;
+      Register OpB = SingleSource ? Src1 : (Swap ? Src1 : Src2);
+
+      MIRBuilder.buildInstr(X86::G_X86_SHUFP, {Dst}, {OpA, OpB}).addImm(Imm);
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // 3. Try UNPCKL/UNPCKH patterns (interleaving)
+  if (VecSize >= 128) {
+    bool Swap = false;
+    if (X86::matchUnpackLowMask(Mask, NumElts, NumSrcElts, EltSize, Swap)) {
+      Register OpA = Swap ? Src2 : Src1;
+      Register OpB = SingleSource ? Src1 : (Swap ? Src1 : Src2);
+
+      MIRBuilder.buildInstr(X86::G_X86_UNPCKL, {Dst}, {OpA, OpB});
+      MI.eraseFromParent();
+      return true;
+    }
+
+    if (X86::matchUnpackHighMask(Mask, NumElts, NumSrcElts, EltSize, Swap)) {
+      Register OpA = Swap ? Src2 : Src1;
+      Register OpB = SingleSource ? Src1 : (Swap ? Src1 : Src2);
+
+      MIRBuilder.buildInstr(X86::G_X86_UNPCKH, {Dst}, {OpA, OpB});
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // 4. Try PSHUFD pattern (32-bit element in-lane shuffles)
+  if (SingleSource && EltSize == 32 && Subtarget.hasSSE2()) {
+    unsigned Imm = 0;
+    if (X86::matchPshufdMask(Mask, NumElts, Imm)) {
+      MIRBuilder.buildInstr(X86::G_X86_PSHUFD, {Dst}, {Src1}).addImm(Imm);
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // 5. Try VPERMILPS/VPERMILPD (AVX in-lane permutes)
+  if (SingleSource && Subtarget.hasAVX() && (EltSize == 32 || EltSize == 64)) {
+    int Imm = 0;
+    if (X86::matchVPermilMask(Mask, NumElts, EltSize, Imm)) {
+      if (Imm >= 0) {
+        // Immediate form
+        MIRBuilder.buildInstr(X86::G_X86_VPERMILPI, {Dst}, {Src1}).addImm(Imm);
+      } else {
+        // Variable form - need to build mask vector
+        // For now, skip variable form (can be added later)
+        return false;
+      }
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // 6. Try VPERMQ/VPERMPD (AVX2 256-bit cross-lane)
+  if (SingleSource && Subtarget.hasAVX2() && VecSize == 256 && EltSize == 64) {
+    unsigned Imm = 0;
+    if (X86::matchVPermiMask(Mask, NumElts, Imm)) {
+      MIRBuilder.buildInstr(X86::G_X86_VPERMI, {Dst}, {Src1}).addImm(Imm);
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // 7. Try PSHUFB (byte-level shuffle with SSSE3+)
+  if (SingleSource && Subtarget.hasSSSE3() && VecSize >= 128) {
+    if (X86::matchPshufbMask(Mask, NumElts, EltSize)) {
+      // Build the PSHUFB control mask
+      unsigned NumBytes = VecSize / 8;
+      unsigned BytesPerElt = EltSize / 8;
+      SmallVector<Constant *, 64> MaskConsts;
+
+      LLVMContext &Ctx = MF.getFunction().getContext();
+      IntegerType *I8Ty = IntegerType::get(Ctx, 8);
+
+      for (unsigned i = 0; i < NumBytes; ++i) {
+        unsigned EltIdx = i / BytesPerElt;
+        unsigned ByteInElt = i % BytesPerElt;
+
+        int M = Mask[EltIdx];
+        if (M < 0) {
+          // Undef - use 0x80 to zero the byte
+          MaskConsts.push_back(ConstantInt::get(I8Ty, 0x80));
+        } else {
+          unsigned SrcByteIdx = M * BytesPerElt + ByteInElt;
+          MaskConsts.push_back(ConstantInt::get(I8Ty, SrcByteIdx));
+        }
+      }
+
+      Constant *MaskCV = ConstantVector::get(MaskConsts);
+      const DataLayout &DL = MIRBuilder.getDataLayout();
+      unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+      Align Alignment(DL.getABITypeAlign(MaskCV->getType()));
+
+      auto MaskAddr = MIRBuilder.buildConstantPool(
+          LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
+          MF.getConstantPool()->getConstantPoolIndex(MaskCV, Alignment));
+
+      LLT MaskVecTy = LLT::fixed_vector(NumBytes, 8);
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+          MaskVecTy, Alignment);
+
+      auto MaskReg = MIRBuilder.buildLoad(MaskVecTy, MaskAddr, *MMO);
+
+      // Bitcast source to byte vector
+      auto Src1Bytes = MIRBuilder.buildBitcast(MaskVecTy, Src1);
+
+      // Execute PSHUFB
+      auto Result = MIRBuilder.buildInstr(X86::G_X86_PSHUFB, {MaskVecTy},
+                                         {Src1Bytes, MaskReg});
+
+      // Bitcast result back
+      MIRBuilder.buildBitcast(Dst, Result);
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // 8. Try BLENDV (SSE4.1+ variable blend)
+  if (Subtarget.hasSSE41() && !SingleSource && VecSize >= 128) {
+    if (X86::matchBlendMask(Mask, NumElts, NumSrcElts)) {
+      // Build blend mask: all-ones for src2, all-zeros for src1
+      SmallVector<Constant *, 64> MaskConsts;
+
+      LLVMContext &Ctx = MF.getFunction().getContext();
+      IntegerType *EltTy = IntegerType::get(Ctx, EltSize);
+
+      for (unsigned i = 0; i < NumElts; ++i) {
+        if (Mask[i] < 0 || Mask[i] == (int)i) {
+          // Select from src1 (sign bit = 0)
+          MaskConsts.push_back(Constant::getNullValue(EltTy));
+        } else {
+          // Select from src2 (sign bit = 1)
+          MaskConsts.push_back(Constant::getAllOnesValue(EltTy));
+        }
+      }
+
+      Constant *MaskCV = ConstantVector::get(MaskConsts);
+      const DataLayout &DL = MIRBuilder.getDataLayout();
+      unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+      Align Alignment(DL.getABITypeAlign(MaskCV->getType()));
+
+      auto MaskAddr = MIRBuilder.buildConstantPool(
+          LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
+          MF.getConstantPool()->getConstantPoolIndex(MaskCV, Alignment));
+
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+          DstTy, Alignment);
+
+      auto MaskReg = MIRBuilder.buildLoad(DstTy, MaskAddr, *MMO);
+
+      MIRBuilder.buildInstr(X86::G_X86_BLENDV, {Dst}, {Src1, Src2, MaskReg});
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // If no pattern matched, let it fall through to default lowering
+  return false;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
