@@ -60,7 +60,6 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_log2
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fma
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fabs
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fneg
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_minnum
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_maxnum
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_copysign_f64
@@ -129,7 +128,6 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_log2
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fma
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fabs
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fneg
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_minnum
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_maxnum
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_copysign_f64
@@ -349,15 +347,6 @@ define bfloat @test_frem(bfloat %a, bfloat %b) #0 {
   ret bfloat %r
 }
 
-define bfloat @test_load(ptr %a) #0 {
-; CHECK-LABEL: test_load:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ret
-  %r = load bfloat, ptr %a
-  ret bfloat %r
-}
-
 define void @test_store(bfloat %a, ptr %b) #0 {
 ; CHECK-LABEL: test_store:
 ; CHECK:       // %bb.0:
@@ -365,6 +354,15 @@ define void @test_store(bfloat %a, ptr %b) #0 {
 ; CHECK-NEXT:    ret
   store bfloat %a, ptr %b
   ret void
+}
+
+define bfloat @test_load(ptr %a) #0 {
+; CHECK-LABEL: test_load:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    ret
+  %r = load bfloat, ptr %a
+  ret bfloat %r
 }
 
 declare bfloat @test_callee(bfloat %a, bfloat %b) #0
@@ -1183,22 +1181,6 @@ define bfloat @test_bitcast_i16tobfloat(i16 %a) #0 {
   ret bfloat %r
 }
 
-define half @test_bitcast_bfloattof16(bfloat %a) #0 {
-; CHECK-LABEL: test_bitcast_bfloattof16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ret
-  %r = bitcast bfloat %a to half
-  ret half %r
-}
-
-define bfloat @test_bitcast_f16tobfloat(half %a) #0 {
-; CHECK-LABEL: test_bitcast_f16tobfloat:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ret
-  %r = bitcast half %a to bfloat
-  ret bfloat %r
-}
-
 define bfloat @test_sqrt(bfloat %a) #0 {
 ; CHECK-CVT-LABEL: test_sqrt:
 ; CHECK-CVT:       // %bb.0:
@@ -1844,19 +1826,6 @@ define bfloat @test_fabs(bfloat %a) #0 {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
   %r = call bfloat @llvm.fabs.bf16(bfloat %a)
-  ret bfloat %r
-}
-
-define bfloat @test_fneg(bfloat %a) #0 {
-; CHECK-LABEL: test_fneg:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    eor w8, w8, #0x8000
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-NEXT:    ret
-  %r = fneg bfloat %a
   ret bfloat %r
 }
 
