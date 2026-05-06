@@ -9720,6 +9720,12 @@ def err_atomic_op_needs_atomic_int : Error<
 def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
+def err_atomic_op_hint_data_size : Error<
+  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+def err_atomic_hint_has_invalid_memory_order : Error<
+   "invalid memory order argument to atomic hint operation (%0 invalid)">;
+def err_atomic_hint_has_invalid_hint_type : Error<
+   "invalid hint type argument to atomic hint operation (%0 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
