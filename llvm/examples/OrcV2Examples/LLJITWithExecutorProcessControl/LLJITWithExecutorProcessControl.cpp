@@ -150,7 +150,8 @@ int main(int argc, char *argv[]) {
                                  .getExecutorProcessControl()
                                  .createDefaultMemoryAccess());
   auto EPCIU = ExitOnErr(EPCIndirectionUtils::Create(
-      J->getExecutionSession().getExecutorProcessControl(), *MemAccess));
+      J->getExecutionSession().getExecutorProcessControl(),
+      J->getMemoryManager(), *MemAccess));
   ExitOnErr(EPCIU->writeResolverBlock(ExecutorAddr::fromPtr(&reenter),
                                       ExecutorAddr::fromPtr(EPCIU.get())));
   EPCIU->createLazyCallThroughManager(

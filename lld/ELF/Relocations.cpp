@@ -1133,14 +1133,6 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     auto type = it->getType(false);
     rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
   }
-
-  // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20 and the branch-to-branch optimization.
-  if (ctx.arg.emachine == EM_RISCV || ctx.arg.branchToBranch)
-    llvm::stable_sort(sec.relocs(),
-                      [](const Relocation &lhs, const Relocation &rhs) {
-                        return lhs.offset < rhs.offset;
-                      });
 }
 
 template <class ELFT> void TargetInfo::scanSection1(InputSectionBase &sec) {

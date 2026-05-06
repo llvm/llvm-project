@@ -25,14 +25,18 @@ float2 test_lerp_vector_trunc_warn1(float3 p0) {
   // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
+// With implicit conversions, the float2 overload is selected and float3 args
+// are implicitly truncated to float2 (warnings instead of type-mismatch error).
 float2 test_lerp_vector_size_mismatch1(float3 p0, float2 p1) {
   return lerp(p0, p0, p1);
-  // expected-error@-1 {{all arguments to 'lerp' must have the same type}}
+  // expected-warning@-1 2{{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
+// With implicit conversions, the float2 overload is selected and float3 args
+// are implicitly truncated to float2 (warnings instead of type-mismatch error).
 float2 test_lerp_vector_size_mismatch2(float3 p0, float2 p1) {
   return lerp(p0, p1, p0);
-  // expected-error@-1 {{all arguments to 'lerp' must have the same type}}
+  // expected-warning@-1 2{{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
 float2 test_lerp_builtin_vector_size_mismatch_Arg1(float3 p0, float2 p1) {
