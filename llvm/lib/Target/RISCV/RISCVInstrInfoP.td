@@ -1100,7 +1100,7 @@ let Predicates = [HasStdExtP] in {
   let Defs = [VXSAT] in {
   def PSAS_HX  : RVPBinary_rr<0b0010, 0b00, 0b110, "psas.hx">;
   def PSSA_HX  : RVPBinary_rr<0b0010, 0b10, 0b110, "pssa.hx">;
-  }
+  } // Defs = [VXSAT]
 
   def PAAS_HX  : RVPBinary_rr<0b0011, 0b00, 0b110, "paas.hx">;
   def PASA_HX  : RVPBinary_rr<0b0011, 0b10, 0b110, "pasa.hx">;
