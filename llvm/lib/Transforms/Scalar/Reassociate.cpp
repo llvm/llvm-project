@@ -984,9 +984,9 @@ static bool ShouldBreakUpDistribution(Instruction *Mul) {
 
     // Sibling must be NonConst * C'.
     Value *SibNC;
-    if (match(Sibling, m_Mul(m_Value(SibNC), m_Constant())) && (SibNC == A || SibNC == B) && !isa<Constant>(SibNC))
-        return true;
-    
+    if (match(Sibling, m_Mul(m_Value(SibNC), m_Constant())) &&
+        (SibNC == A || SibNC == B) && !isa<Constant>(SibNC))
+      return true;
   }
   return false;
 }
