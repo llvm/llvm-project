@@ -93,6 +93,10 @@ cc_library(
             "LLVM_ENABLE_ZLIB=0",
         ],
     }),
+    includes = select({
+        ":llvm_zlib_enabled": ["."],
+        "//conditions:default": [],
+    }),
     # Clang includes zlib with angled instead of quoted includes, so we need
     # strip_include_prefix here.
     strip_include_prefix = ".",
