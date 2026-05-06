@@ -6310,7 +6310,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
   GlobalSubmoduleMapType::iterator It = GlobalSubmoduleMap.find(GlobalID);
   assert(It != GlobalSubmoduleMap.end());
   ModuleFile &F = *It->second;
-  unsigned Index = GlobalID - F.BaseSubmoduleID - NUM_PREDEF_SELECTOR_IDS;
+  unsigned Index = GlobalID - F.BaseSubmoduleID - NUM_PREDEF_SUBMODULE_IDS;
   unsigned LocalID = Index + F.LocalBaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS;
 
   BitstreamCursor &Cursor = F.SubmodulesCursor;
