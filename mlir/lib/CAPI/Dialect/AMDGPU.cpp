@@ -32,6 +32,10 @@ MlirType mlirAMDGPUTDMBaseTypeGet(MlirContext ctx, MlirType elementType) {
   return wrap(amdgpu::TDMBaseType::get(unwrap(ctx), unwrap(elementType)));
 }
 
+MlirStringRef mlirAMDGPUTDMBaseTypeGetName(void) {
+  return wrap(amdgpu::TDMBaseType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // TDMDescriptorType
 //===---------------------------------------------------------------------===//
@@ -46,6 +50,10 @@ MlirTypeID mlirAMDGPUTDMDescriptorTypeGetTypeID() {
 
 MlirType mlirAMDGPUTDMDescriptorTypeGet(MlirContext ctx) {
   return wrap(amdgpu::TDMDescriptorType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirAMDGPUTDMDescriptorTypeGetName(void) {
+  return wrap(amdgpu::TDMDescriptorType::name);
 }
 
 //===---------------------------------------------------------------------===//
@@ -64,4 +72,8 @@ MlirType mlirAMDGPUTDMGatherBaseTypeGet(MlirContext ctx, MlirType elementType,
                                         MlirType indexType) {
   return wrap(amdgpu::TDMGatherBaseType::get(unwrap(ctx), unwrap(elementType),
                                              unwrap(indexType)));
+}
+
+MlirStringRef mlirAMDGPUTDMGatherBaseTypeGetName(void) {
+  return wrap(amdgpu::TDMGatherBaseType::name);
 }

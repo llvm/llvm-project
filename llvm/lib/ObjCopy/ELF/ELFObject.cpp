@@ -2171,12 +2171,19 @@ Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
                              Data.size(), Sec->Name.c_str(), Sec->Size);
 
   if (!Sec->ParentSegment) {
-    Sec = std::make_unique<OwnedDataSection>(*Sec, Data);
-  } else {
-    // The segment writer will be in charge of updating these contents.
-    Sec->Size = Data.size();
-    UpdatedSections[Sec.get()] = Data;
+    // addSection modifies the container that Sec is stored in, potentially
+    // invalidating the Sec reference. We obtain the raw pointer Sec owns before
+    // calling addSection, so that it can be safely passed into replaceSections.
+    SectionBase *Replaced = Sec.get();
+    SectionBase *Modified = &addSection<OwnedDataSection>(*Sec, Data);
+    // replaceSections deletes the replaced section internally,
+    // so we don't need to do so here.
+    return replaceSections({{Replaced, Modified}});
   }
+
+  // The segment writer will be in charge of updating these contents.
+  Sec->Size = Data.size();
+  UpdatedSections[Sec.get()] = Data;
 
   return Error::success();
 }

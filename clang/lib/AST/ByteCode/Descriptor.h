@@ -54,6 +54,8 @@ static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
 
 enum class Lifetime : uint8_t {
   Started,
+  NotStarted,
+  Destroyed,
   Ended,
 };
 
@@ -203,6 +205,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
+  QualType getDataElemType() const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
@@ -226,6 +229,10 @@ public:
     return dyn_cast_if_present<RecordDecl>(asDecl());
   }
 
+  template <typename T> const T *getAs() const {
+    return dyn_cast_if_present<T>(asDecl());
+  }
+
   /// Returns the size of the object without metadata.
   unsigned getSize() const {
     assert(!isUnknownSizeArray() && "Array of unknown size");
@@ -241,6 +248,11 @@ public:
   unsigned getAllocSize() const { return AllocSize; }
   /// returns the size of an element when the structure is viewed as an array.
   unsigned getElemSize() const { return ElemSize; }
+  /// Returns the element data size, i.e. not what the size of
+  /// our primitive data type is, but what the data size of that is.
+  /// E.g., for PT_SInt32, that's 4 bytes.
+  unsigned getElemDataSize() const;
+
   /// Returns the size of the metadata.
   unsigned getMetadataSize() const { return MDSize; }
 
@@ -275,7 +287,6 @@ public:
   void dump(llvm::raw_ostream &OS) const;
   void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
 };
-
 } // namespace interp
 } // namespace clang
 

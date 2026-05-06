@@ -320,8 +320,9 @@ struct ScannedPreamble {
 /// running preprocessor over \p Contents. Returned includes do not contain
 /// resolved paths. \p Cmd is used to build the compiler invocation, which might
 /// stat/read files.
-llvm::Expected<ScannedPreamble>
-scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
+llvm::Expected<ScannedPreamble> scanPreamble(llvm::StringRef Contents,
+                                             const tooling::CompileCommand &Cmd,
+                                             bool SkipPreambleBuild) {
   class EmptyFS : public ThreadsafeFS {
   private:
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
@@ -345,7 +346,8 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   // This means we're scanning (though not preprocessing) the preamble section
   // twice. However, it's important to precisely follow the preamble bounds used
   // elsewhere.
-  auto Bounds = ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = computePreambleBounds(CI->getLangOpts(), *ContentsBuffer,
+                                      SkipPreambleBuild);
   auto PreambleContents = llvm::MemoryBuffer::getMemBufferCopy(
       llvm::StringRef(PI.Contents).take_front(Bounds.Size));
   auto Clang = prepareCompilerInstance(
@@ -576,7 +578,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // without those.
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
+                                      Inputs.Opts.SkipPreambleBuild);
 
   trace::Span Tracer("BuildPreamble");
   SPAN_ATTACH(Tracer, "File", FileName);
@@ -598,13 +601,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
-  const Config &Cfg = Config::current();
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
-    if (Cfg.Diagnostics.SuppressAll ||
-        isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
-                               CI.getLangOpts()))
-      return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
       // If the preamble doesn't span the whole file, drop the no newline at
@@ -689,7 +687,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
-    Result->StatCache = StatCache;
+    Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     // Move the options instead of copying them. The invocation doesn't need
     // them anymore.
@@ -727,7 +725,8 @@ bool isPreambleCompatible(const PreambleData &Preamble,
                           const CompilerInvocation &CI) {
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
+                                      Inputs.Opts.SkipPreambleBuild);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
@@ -790,13 +789,15 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   // - If scanning for Modified fails, cannot figure out newly added ones so
   //   there's nothing to do but generate an empty patch.
   auto BaselineScan =
-      scanPreamble(Baseline.Preamble.getContents(), Modified.CompileCommand);
+      scanPreamble(Baseline.Preamble.getContents(), Modified.CompileCommand,
+                   Modified.Opts.SkipPreambleBuild);
   if (!BaselineScan) {
     elog("Failed to scan baseline of {0}: {1}", FileName,
          BaselineScan.takeError());
     return PreamblePatch::unmodified(Baseline);
   }
-  auto ModifiedScan = scanPreamble(Modified.Contents, Modified.CompileCommand);
+  auto ModifiedScan = scanPreamble(Modified.Contents, Modified.CompileCommand,
+                                   Modified.Opts.SkipPreambleBuild);
   if (!ModifiedScan) {
     elog("Failed to scan modified contents of {0}: {1}", FileName,
          ModifiedScan.takeError());
@@ -961,6 +962,13 @@ OptionalFileEntryRef PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
                                                   const SourceManager &SM) {
   auto PatchFilePath = getPatchName(MainFilePath);
   return SM.getFileManager().getOptionalFileRef(PatchFilePath);
+}
+
+PreambleBounds computePreambleBounds(const LangOptions &LangOpts,
+                                     const llvm::MemoryBufferRef &Buffer,
+                                     bool SkipPreambleBuild) {
+  return SkipPreambleBuild ? PreambleBounds(0, false)
+                           : ComputePreambleBounds(LangOpts, Buffer, 0);
 }
 } // namespace clangd
 } // namespace clang

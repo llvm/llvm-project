@@ -1,19 +1,43 @@
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
+// RUN: %clang_cc1 -triple riscv32-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
 // RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=1 \
 // RUN:   -mvscale-max=1 | FileCheck %s --check-prefix=CHECK-64
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
+// RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=1 \
+// RUN:   -mvscale-max=1 | FileCheck %s --check-prefix=CHECK-64
+
+// RUN: %clang_cc1 -triple riscv32-none-linux-gnu %s -emit-llvm -o - \
+// RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
 // RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=2 \
 // RUN:  -mvscale-max=2 | FileCheck %s --check-prefix=CHECK-128
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
+// RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
+// RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=2 \
+// RUN:  -mvscale-max=2 | FileCheck %s --check-prefix=CHECK-128
+
+// RUN: %clang_cc1 -triple riscv32-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
 // RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=4 \
 // RUN:  -mvscale-max=4 | FileCheck %s --check-prefix=CHECK-256
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
+// RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=4 \
+// RUN:  -mvscale-max=4 | FileCheck %s --check-prefix=CHECK-256
+
+// RUN: %clang_cc1 -triple riscv32-none-linux-gnu %s -emit-llvm -o - \
+// RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
 // RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=8 \
 // RUN:  -mvscale-max=8 | FileCheck %s --check-prefix=CHECK-512
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
+// RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
+// RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=8 \
+// RUN:  -mvscale-max=8 | FileCheck %s --check-prefix=CHECK-512
+
+// RUN: %clang_cc1 -triple riscv32-none-linux-gnu %s -emit-llvm -o - \
+// RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
+// RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=16 \
+// RUN:  -mvscale-max=16 | FileCheck %s --check-prefix=CHECK-1024
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d -target-feature +zfh \
 // RUN:  -target-feature +zve64d -target-feature +zvfh -mvscale-min=16 \

@@ -65,12 +65,12 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
     with io.open(fileName, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    not_matching_lines = [l for l in lines if not re.search(pattern, l)]
+    not_matching_lines = [line for line in lines if not re.search(pattern, line)]
     if len(not_matching_lines) == len(lines):
         return False
 
     print("Removing lines matching '%s' in '%s'..." % (pattern, fileName))
-    print("  " + "  ".join([l for l in lines if re.search(pattern, l)]))
+    print("  " + "  ".join(line for line in lines if re.search(pattern, line)))
     with io.open(fileName, "w", encoding="utf8") as f:
         f.writelines(not_matching_lines)
 
@@ -307,7 +307,6 @@ def main() -> None:
         )
 
     for filename in getListOfFiles(clang_tidy_path):
-        originalName = filename
         filename = fileRename(
             filename, old_module + "/" + old_name, new_module + "/" + new_name
         )

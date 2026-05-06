@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include <functional>
 #include <stdint.h>
 
@@ -25,12 +26,18 @@ struct FileEntry {
 
   /// Offsets in the string table.
   /// @{
-  uint32_t Dir = 0;
-  uint32_t Base = 0;
+  gsym_strp_t Dir = 0;
+  gsym_strp_t Base = 0;
   /// @}
 
   FileEntry() = default;
-  FileEntry(uint32_t D, uint32_t B) : Dir(D), Base(B) {}
+  FileEntry(gsym_strp_t D, gsym_strp_t B) : Dir(D), Base(B) {}
+
+  /// Returns the on-disk encoded size of a FileEntry for the given string
+  /// offset size. It's different from sizeof(FileEntry) because of padding.
+  static constexpr uint64_t getEncodedSize(uint8_t StringOffsetSize) {
+    return 2 * StringOffsetSize;
+  }
 
   // Implement operator== so that FileEntry can be used as key in
   // unordered containers.
@@ -46,16 +53,17 @@ struct FileEntry {
 
 template <> struct DenseMapInfo<gsym::FileEntry> {
   static inline gsym::FileEntry getEmptyKey() {
-    uint32_t key = DenseMapInfo<uint32_t>::getEmptyKey();
+    gsym::gsym_strp_t key = DenseMapInfo<gsym::gsym_strp_t>::getEmptyKey();
     return gsym::FileEntry(key, key);
   }
   static inline gsym::FileEntry getTombstoneKey() {
-    uint32_t key = DenseMapInfo<uint32_t>::getTombstoneKey();
+    gsym::gsym_strp_t key = DenseMapInfo<gsym::gsym_strp_t>::getTombstoneKey();
     return gsym::FileEntry(key, key);
   }
   static unsigned getHashValue(const gsym::FileEntry &Val) {
-    return llvm::hash_combine(DenseMapInfo<uint32_t>::getHashValue(Val.Dir),
-                              DenseMapInfo<uint32_t>::getHashValue(Val.Base));
+    return llvm::hash_combine(
+        DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Dir),
+        DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Base));
   }
   static bool isEqual(const gsym::FileEntry &LHS, const gsym::FileEntry &RHS) {
     return LHS == RHS;

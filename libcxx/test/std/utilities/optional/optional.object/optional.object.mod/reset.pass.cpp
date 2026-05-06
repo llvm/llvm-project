@@ -75,6 +75,7 @@ int main(int, char**)
       optional<X&> opt(x);
       X::dtor_called = false;
       opt.reset();
+      ASSERT_NOEXCEPT(opt.reset());
       assert(X::dtor_called == false);
       assert(static_cast<bool>(opt) == false);
     }

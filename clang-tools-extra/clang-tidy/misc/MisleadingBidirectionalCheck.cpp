@@ -64,16 +64,18 @@ static bool containsMisleadingBidi(StringRef Buffer,
 
     // Open a PDF context.
     if (CodePoint == RLO || CodePoint == RLE || CodePoint == LRO ||
-        CodePoint == LRE)
+        CodePoint == LRE) {
       BidiContexts.push_back(PDF);
+    }
     // Close PDF Context.
     else if (CodePoint == PDF) {
       if (!BidiContexts.empty() && BidiContexts.back() == PDF)
         BidiContexts.pop_back();
     }
     // Open a PDI Context.
-    else if (CodePoint == RLI || CodePoint == LRI || CodePoint == FSI)
+    else if (CodePoint == RLI || CodePoint == LRI || CodePoint == FSI) {
       BidiContexts.push_back(PDI);
+    }
     // Close a PDI Context.
     else if (CodePoint == PDI) {
       auto R = llvm::find(llvm::reverse(BidiContexts), PDI);
@@ -81,8 +83,9 @@ static bool containsMisleadingBidi(StringRef Buffer,
         BidiContexts.resize(BidiContexts.rend() - R - 1);
     }
     // Line break or equivalent
-    else if (CodePoint == PS)
+    else if (CodePoint == PS) {
       BidiContexts.clear();
+    }
   }
   return !BidiContexts.empty();
 }

@@ -98,7 +98,7 @@ define void @test(ptr %p, i40 %a) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
   %shl = shl i40 %a, 24
   %ashr = ashr i40 %shl, 28
@@ -113,6 +113,6 @@ for.body:                                         ; preds = %for.body, %entry
   %cond = icmp ult i32 %iv.next, 10
   br i1 %cond, label %for.body, label %exit
 
-exit:                                             ; preds = %for.body
+exit:
   ret void
 }

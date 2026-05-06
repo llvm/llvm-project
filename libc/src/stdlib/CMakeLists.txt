@@ -492,6 +492,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
       DEPENDS
         ${SCUDO_DEPS}
     )
+    add_entrypoint_external(
+      posix_memalign
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
   else()
     add_entrypoint_external(
       malloc
@@ -510,6 +515,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       mallopt
+    )
+    add_entrypoint_external(
+      posix_memalign
     )
   endif()
 endif()
@@ -705,11 +713,22 @@ add_entrypoint_object(
     ${exit_deps}
 )
 
+add_header_library(
+  abort_utils
+  HDRS
+    abort_utils.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.abort_utils
+)
+
 add_entrypoint_object(
   abort
-  ALIAS
+  SRCS
+    abort.cpp
+  HDRS
+    abort.h
   DEPENDS
-    .${LIBC_TARGET_OS}.abort
+    .abort_utils
 )
 
 add_entrypoint_object(

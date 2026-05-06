@@ -1,24 +1,8 @@
 // RUN: %check_clang_tidy %s readability-uniqueptr-delete-release %t -check-suffix=NULLPTR
 // RUN: %check_clang_tidy %s readability-uniqueptr-delete-release %t -check-suffix=RESET -config='{ \
 // RUN: CheckOptions: {readability-uniqueptr-delete-release.PreferResetCall: true}}'
-namespace std {
-template <typename T>
-struct default_delete {};
 
-template <typename T, typename D = default_delete<T>>
-class unique_ptr {
- public:
-  unique_ptr();
-  ~unique_ptr();
-  explicit unique_ptr(T*);
-  template <typename U, typename E>
-  unique_ptr(unique_ptr<U, E>&&);
-  T* release();
-  void reset(T *P = nullptr);
-  T &operator*() const;
-  T *operator->() const;
-};
-}  // namespace std
+#include <memory>
 
 std::unique_ptr<int>& ReturnsAUnique();
 
@@ -30,7 +14,7 @@ void Positives() {
   // CHECK-FIXES-NULLPTR: P = nullptr;
   // CHECK-FIXES-RESET: P.reset();
 
-  auto P2 = P;
+  auto &P2 = P;
   delete P2.release();
   // CHECK-MESSAGES-NULLPTR: :[[@LINE-1]]:3: warning: prefer '= nullptr' to reset 'unique_ptr<>' objects
   // CHECK-MESSAGES-RESET: :[[@LINE-2]]:3: warning: prefer 'reset()' to reset 'unique_ptr<>' objects

@@ -10,7 +10,6 @@
 #include "Config.h"
 #include "FS.h"
 #include "ProjectModules.h"
-#include "ScanningProjectModules.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -174,7 +173,7 @@ public:
     }
 
     std::lock_guard<std::mutex> Lock(Mu);
-    auto RequestBroadcast = llvm::make_scope_exit([&, OldCDB(CDB.get())] {
+    llvm::scope_exit RequestBroadcast([&, OldCDB(CDB.get())] {
       // If we loaded a new CDB, it should be broadcast at some point.
       if (CDB != nullptr && CDB.get() != OldCDB)
         NeedsBroadcast = true;
@@ -772,7 +771,7 @@ DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
   if (!Res)
     return {};
 
-  return scanningProjectModules(Res->CDB, Opts.TFS);
+  return clang::clangd::getProjectModules(Res->CDB, Opts.TFS);
 }
 
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,

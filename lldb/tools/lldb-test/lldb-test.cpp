@@ -767,8 +767,7 @@ Error opts::symbols::verify(lldb_private::Module &Module) {
     if (!comp_unit)
       return make_string_error("Cannot parse compile unit {0}.", i);
 
-    outs() << "Processing '"
-           << comp_unit->GetPrimaryFile().GetFilename().AsCString()
+    outs() << "Processing '" << comp_unit->GetPrimaryFile().GetFilename()
            << "' compile unit.\n";
 
     LineTable *lt = comp_unit->GetLineTable();
@@ -1254,8 +1253,7 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  auto TerminateDebugger =
-      llvm::make_scope_exit([&] { DebuggerLifetime.Terminate(); });
+  llvm::scope_exit TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
   ModuleList::GetGlobalModuleListProperties().SetEnableExternalLookup(false);

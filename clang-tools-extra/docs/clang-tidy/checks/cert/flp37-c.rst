@@ -1,5 +1,4 @@
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/suspicious-memory-comparison.html
+.. title:: clang-tidy - cert-flp37-c
 
 cert-flp37-c
 ============

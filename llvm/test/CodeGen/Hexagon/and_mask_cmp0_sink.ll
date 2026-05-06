@@ -28,7 +28,7 @@ define i32 @and_sink1(i32 %a) {
   br label %bb0
 bb0:
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb0, label %bb2
 bb2:
   ret i32 0
@@ -61,7 +61,7 @@ define i32 @and_sink2(i32 %a) {
   br label %bb0
 bb0:
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb0, label %bb2
 bb2:
   ret i32 0

@@ -230,8 +230,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
   auto CommonBinder =
       CodeGenFunction::OpaqueValueMappingData::bind(CGF, S.getOpaqueValue(), E);
-  auto UnbindCommonOnExit =
-      llvm::make_scope_exit([&] { CommonBinder.unbind(CGF); });
+  llvm::scope_exit UnbindCommonOnExit([&] { CommonBinder.unbind(CGF); });
 
   auto Prefix = buildSuspendPrefixStr(Coro, Kind);
   BasicBlock *ReadyBlock = CGF.createBasicBlock(Prefix + Twine(".ready"));
@@ -424,15 +423,13 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   ASTContext &C = getContext();
 
-  FunctionArgList args;
-
-  ImplicitParamDecl AwaiterDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
-  ImplicitParamDecl FrameDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  auto *AwaiterDecl =
+      ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  auto *FrameDecl =
+      ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
   QualType ReturnTy = S.getSuspendExpr()->getType();
 
-  args.push_back(&AwaiterDecl);
-  args.push_back(&FrameDecl);
-
+  FunctionArgList args{AwaiterDecl, FrameDecl};
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
@@ -448,24 +445,24 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   Fn->setMustProgress();
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
 
   // FIXME: add TBAA metadata to the loads
-  llvm::Value *AwaiterPtr = Builder.CreateLoad(GetAddrOfLocalVar(&AwaiterDecl));
+  llvm::Value *AwaiterPtr = Builder.CreateLoad(GetAddrOfLocalVar(AwaiterDecl));
   auto AwaiterLValue =
-      MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl.getType());
+      MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl->getType());
 
   CurAwaitSuspendWrapper.FramePtr =
-      Builder.CreateLoad(GetAddrOfLocalVar(&FrameDecl));
+      Builder.CreateLoad(GetAddrOfLocalVar(FrameDecl));
 
   auto AwaiterBinder = CodeGenFunction::OpaqueValueMappingData::bind(
       *this, S.getOpaqueValue(), AwaiterLValue);
 
   auto *SuspendRet = EmitScalarExpr(S.getSuspendExpr());
 
-  auto UnbindCommonOnExit =
-      llvm::make_scope_exit([&] { AwaiterBinder.unbind(*this); });
+  llvm::scope_exit UnbindCommonOnExit([&] { AwaiterBinder.unbind(*this); });
   if (SuspendRet != nullptr) {
     Fn->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
     Builder.CreateStore(SuspendRet, ReturnValue);
@@ -644,6 +641,9 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     // No longer need old terminator.
     InsertPt->eraseFromParent();
     CGF.Builder.SetInsertPoint(AfterFreeBB);
+
+    auto *CoroDeadFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_dead);
+    CGF.Builder.CreateCall(CoroDeadFn, {CGF.CurCoro.Data->CoroBegin});
   }
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
 };
@@ -659,6 +659,7 @@ struct GetReturnObjectManager {
 
   Address GroActiveFlag;
   CodeGenFunction::AutoVarEmission GroEmission;
+  std::unique_ptr<CodeGenFunction::RunCleanupsScope> GroScope;
 
   GetReturnObjectManager(CodeGenFunction &CGF, const CoroutineBodyStmt &S)
       : CGF(CGF), Builder(CGF.Builder), S(S), GroActiveFlag(Address::invalid()),
@@ -734,6 +735,7 @@ struct GetReturnObjectManager {
                              llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
     }
 
+    GroScope = std::make_unique<CodeGenFunction::RunCleanupsScope>(CGF);
     // Remember the top of EHStack before emitting the cleanup.
     auto old_top = CGF.EHStack.stable_begin();
     CGF.EmitAutoVarCleanups(GroEmission);
@@ -846,6 +848,7 @@ struct GetReturnObjectManager {
     CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
                          S.getReturnValue()->getType().getQualifiers(),
                          /*IsInit*/ true);
+    GroScope->ForceCleanup();
     Builder.CreateBr(AfterConvBB);
 
     CGF.EmitBlock(AfterConvBB);
@@ -876,6 +879,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *AllocBB = createBasicBlock("coro.alloc");
   auto *InitBB = createBasicBlock("coro.init");
   auto *FinalBB = createBasicBlock("coro.final");
+  auto *CleanupBB = createBasicBlock("coro.cleanup");
   auto *RetBB = createBasicBlock("coro.ret");
 
   auto *CoroId = Builder.CreateCall(
@@ -928,8 +932,6 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *CoroBegin = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
   CurCoro.Data->CoroBegin = CoroBegin;
-
-  CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(RetBB);
   {
     CGDebugInfo *DI = getDebugInfo();
     ParamReferenceReplacerRAII ParamReplacer(LocalDeclMap);
@@ -975,12 +977,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitStmt(S.getPromiseDeclStmt());
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
-    auto *PromiseAddrVoidPtr =
-        new llvm::BitCastInst(PromiseAddr.emitRawPointer(*this), VoidPtrTy, "",
-                              CoroId->getIterator());
     // Update CoroId to refer to the promise. We could not do it earlier because
     // promise local variable was not emitted yet.
-    CoroId->setArgOperand(1, PromiseAddrVoidPtr);
+    CoroId->setArgOperand(1, PromiseAddr.emitRawPointer(*this));
 
     // Now we have the promise, initialize the GRO
     GroManager.EmitGroAlloca();
@@ -988,6 +987,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
     EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
 
+    CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(CleanupBB);
     CurCoro.Data->CurrentAwaitKind = AwaitKind::Init;
     CurCoro.Data->ExceptionHandler = S.getExceptionHandler();
     EmitStmt(S.getInitSuspendStmt());
@@ -1044,6 +1044,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // coroutine return type.
     if (!GroManager.DirectEmit)
       GroManager.EmitGroConv(RetBB);
+    EmitBlock(CleanupBB);
   }
 
   EmitBlock(RetBB);

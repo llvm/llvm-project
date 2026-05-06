@@ -22,6 +22,8 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -37,6 +39,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -74,6 +77,8 @@ class PHIEliminationImpl {
   MachineLoopInfo *MLI = nullptr;
   MachineDominatorTree *MDT = nullptr;
   MachinePostDominatorTree *PDT = nullptr;
+  const MachineBranchProbabilityInfo *MBPI = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 
   /// EliminatePHINodes - Eliminate phi nodes by inserting copy instructions
   /// in predecessor basic blocks.
@@ -127,11 +132,18 @@ public:
         P->getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
     auto *PDTWrapper =
         P->getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
+    auto *MBPIWrapper =
+        P->getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
+    auto *MBFIWrapper =
+        P->getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
+
     LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
     PDT = PDTWrapper ? &PDTWrapper->getPostDomTree() : nullptr;
+    MBPI = MBPIWrapper ? &MBPIWrapper->getMBPI() : nullptr;
+    MBFI = MBFIWrapper ? &MBFIWrapper->getMBFI() : nullptr;
   }
 
   PHIEliminationImpl(MachineFunction &MF, MachineFunctionAnalysisManager &AM)
@@ -140,7 +152,9 @@ public:
         MLI(AM.getCachedResult<MachineLoopAnalysis>(MF)),
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
         PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
-        MFAM(&AM) {}
+        MBPI(AM.getCachedResult<MachineBranchProbabilityAnalysis>(MF)),
+        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)), MFAM(&AM) {
+  }
 
   bool run(MachineFunction &MF);
 };
@@ -149,9 +163,7 @@ class PHIElimination : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  PHIElimination() : MachineFunctionPass(ID) {
-    initializePHIEliminationPass(*PassRegistry::getPassRegistry());
-  }
+  PHIElimination() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     PHIEliminationImpl Impl(this);
@@ -181,6 +193,7 @@ PHIEliminationPass::run(MachineFunction &MF,
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachinePostDominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineBlockFrequencyAnalysis>();
   return PA;
 }
 
@@ -196,6 +209,8 @@ INITIALIZE_PASS_BEGIN(PHIElimination, DEBUG_TYPE,
                       "Eliminate PHI nodes for register allocation", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
                     "Eliminate PHI nodes for register allocation", false, false)
 
@@ -208,6 +223,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -830,11 +846,22 @@ bool PHIEliminationImpl::SplitPHIEdges(
       }
       if (!ShouldSplit && !SplitAllCriticalEdges)
         continue;
-      if (!(P ? PreMBB->SplitCriticalEdge(&MBB, *P, LiveInSets, &MDTU)
-              : PreMBB->SplitCriticalEdge(&MBB, *MFAM, LiveInSets, &MDTU))) {
+      MachineBasicBlock *NewBB;
+      if (P)
+        NewBB = PreMBB->SplitCriticalEdge(&MBB, *P, LiveInSets, &MDTU);
+      else
+        NewBB = PreMBB->SplitCriticalEdge(&MBB, *MFAM, LiveInSets, &MDTU);
+      if (!NewBB) {
         LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
       }
+
+      // Patch up MBFI after split if it is available.
+      if (MBFI) {
+        assert(MBPI);
+        MBFI->onEdgeSplit(*PreMBB, *NewBB, *MBPI);
+      }
+
       Changed = true;
       ++NumCriticalEdgesSplit;
     }

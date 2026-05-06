@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class ProcessImplicitDefsPass : public PassInfoMixin<ProcessImplicitDefsPass> {
+class ProcessImplicitDefsPass
+    : public OptionalPassInfoMixin<ProcessImplicitDefsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

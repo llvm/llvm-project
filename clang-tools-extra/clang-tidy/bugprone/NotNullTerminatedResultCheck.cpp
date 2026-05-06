@@ -679,7 +679,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                 std::optional<unsigned> SourcePos, unsigned LengthPos,
                 bool WithIncrease)
         : Name(Name), DestinationPos(DestinationPos), SourcePos(SourcePos),
-          LengthPos(LengthPos), WithIncrease(WithIncrease) {};
+          LengthPos(LengthPos), WithIncrease(WithIncrease) {}
 
     StringRef Name;
     std::optional<unsigned> DestinationPos;

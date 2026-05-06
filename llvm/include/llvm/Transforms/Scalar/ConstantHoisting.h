@@ -123,7 +123,8 @@ struct ConstantInfo {
 
 } // end namespace consthoist
 
-class ConstantHoistingPass : public PassInfoMixin<ConstantHoistingPass> {
+class ConstantHoistingPass
+    : public OptionalPassInfoMixin<ConstantHoistingPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
@@ -135,12 +136,8 @@ public:
   void cleanup() {
     ClonedCastMap.clear();
     ConstIntCandVec.clear();
-    for (auto MapEntry : ConstGEPCandMap)
-      MapEntry.second.clear();
     ConstGEPCandMap.clear();
     ConstIntInfoVec.clear();
-    for (auto MapEntry : ConstGEPInfoMap)
-      MapEntry.second.clear();
     ConstGEPInfoMap.clear();
   }
 

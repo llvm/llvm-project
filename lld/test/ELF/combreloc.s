@@ -31,12 +31,12 @@
 # NOCOMB-NOT:    RELACOUNT
 # NOCOMB:      Relocations [
 # NOCOMB-NEXT:   Section ({{.*}}) .rela.dyn {
-# NOCOMB-NEXT:     0x33F8 R_X86_64_64 aaa 0x0
-# NOCOMB-NEXT:     0x3400 R_X86_64_64 ccc 0x0
-# NOCOMB-NEXT:     0x3408 R_X86_64_64 bbb 0x0
-# NOCOMB-NEXT:     0x3410 R_X86_64_64 aaa 0x0
-# NOCOMB-NEXT:     0x23F0 R_X86_64_GLOB_DAT aaa 0x0
 # NOCOMB-NEXT:     0x3418 R_X86_64_RELATIVE - 0x3420
+# NOCOMB-NEXT:     0x23F0 R_X86_64_GLOB_DAT aaa 0x0
+# NOCOMB-NEXT:     0x33F8 R_X86_64_64 aaa 0x0
+# NOCOMB-NEXT:     0x3410 R_X86_64_64 aaa 0x0
+# NOCOMB-NEXT:     0x3408 R_X86_64_64 bbb 0x0
+# NOCOMB-NEXT:     0x3400 R_X86_64_64 ccc 0x0
 # NOCOMB-NEXT:   }
 
 .globl aaa, bbb, ccc

@@ -59,7 +59,7 @@ void PluginManager::deinit() {
       continue;
 
     if (auto Err = Plugin->deinit()) {
-      [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+      std::string InfoMsg = toString(std::move(Err));
       ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
     }
     Plugin.release();
@@ -73,7 +73,7 @@ bool PluginManager::initializePlugin(GenericPluginTy &Plugin) {
     return true;
 
   if (auto Err = Plugin.init()) {
-    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+    std::string InfoMsg = toString(std::move(Err));
     ODBG(ODT_Init) << "Failed to init plugin: " << InfoMsg;
     return false;
   }
@@ -106,7 +106,7 @@ bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
 
   auto Device = std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId);
   if (auto Err = Device->init()) {
-    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+    std::string InfoMsg = toString(std::move(Err));
     ODBG(ODT_Init) << "Failed to init device " << DeviceId << ": " << InfoMsg;
     return false;
   }

@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from enum import Enum
+from typing import Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -51,9 +52,11 @@ class DAPMessageLogger:
         self.out_handle = None
         self.open = False
         self.lock = threading.Lock()
+        self.start_time: Optional[float] = None
 
     def _custom_enter(self):
         self.open = True
+        self.start_time = time.time()
         if self.log_file is None:
             return
         if self.log_file == "-":
@@ -94,6 +97,13 @@ class DAPMessageLogger:
 
     def write_message(self, message: dict, incoming: bool):
         prefix = self.prefix_recv if incoming else self.prefix_send
+        if self.start_time is not None:
+            message_time = time.time() - self.start_time
+            minutes = int(message_time / 60)
+            seconds = int(message_time % 60)
+            milliseconds = int((message_time % 1) * 1000)
+            prefix += f" {minutes}:{seconds:02d}:{milliseconds:03d}"
+
         # ANSI escape codes get butchered by json.dumps(), so we fix them up here.
         message_str = json.dumps(
             self._colorize_dap_message(message), indent=self.indent
@@ -775,16 +785,17 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
         # Wait for the initialized event; for LLDB, this will be sent after the launch request has been processed;
         # for other debuggers, it will have been sent some time after the initialize response was sent.
-        # NB: In all current cases this timeout is never hit because the initialized event is received almost
-        # immediately after either the initialize response or the launch request/response; if this starts being hit, we
-        # probably need to parameterize this.
-        initialize_timeout = Timeout(3)
-        while not self._debugger_state.initialized:
+        # NB: In all currently known cases this timeout is never hit because the initialized event is usually received
+        # almost immediately after either the initialize response or the launch request/response, and otherwise this
+        # timeout is long enough for any internal debugger timeout to be hit, and so if this gets hit it probably means
+        # the debugger is hanging.
+        initialize_timeout = Timeout(60)
+        while self._proc.poll() is None and not self._debugger_state.initialized:
             if initialize_timeout.timed_out():
                 raise TimeoutError(
-                    f"Timed out while waiting for initialized event from DAP"
+                    "Timed out while waiting for initialized event from DAP"
                 )
-            time.sleep(0.001)
+            time.sleep(0.01)
 
         # Set breakpoints after receiving launch response but before configurationDone.
         self._flush_breakpoints()

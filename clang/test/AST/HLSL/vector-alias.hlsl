@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
-// CHECK: NamespaceDecl {{.*}} implicit hlsl
-// CHECK: TypeAliasTemplateDecl {{.*}} implicit vector
+// CHECK: NamespaceDecl {{.*}} implicit referenced hlsl
+// CHECK: TypeAliasTemplateDecl {{.*}} implicit referenced vector
 // CHECK-NEXT: TemplateTypeParmDecl {{.*}} class depth 0 index 0 element
 // CHECK-NEXT: TemplateArgument type 'float'
 // CHECK-NEXT: BuiltinType {{.*}} 'float'
 // CHECK-NEXT: NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 1 element_count
 // CHECK-NEXT: TemplateArgument expr
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 4
-// CHECK-NEXT: TypeAliasDecl {{.*}} implicit vector 'vector<element, element_count>'
+// CHECK-NEXT: TypeAliasDecl {{.*}} implicit referenced vector 'vector<element, element_count>'
 // CHECK-NEXT: DependentSizedExtVectorType {{.*}} 'vector<element, element_count>' dependent
 // CHECK-NEXT: TemplateTypeParmType {{.*}} 'element' dependent depth 0 index 0
 // CHECK-NEXT: TemplateTypeParm {{.*}} 'element'

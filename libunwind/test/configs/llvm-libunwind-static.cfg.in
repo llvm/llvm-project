@@ -10,6 +10,12 @@ link_flags = []
 if @LIBUNWIND_ENABLE_THREADS@:
     link_flags.append('-lpthread')
 
+if @HAVE_GETAUXVAL@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_GETAUXVAL')
+
+if @HAVE_ELF_AUX_INFO@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_ELF_AUX_INFO')
+
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
 

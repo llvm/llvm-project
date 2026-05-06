@@ -696,13 +696,13 @@ func.func @_QPsb() {
 
 // CHECK:  omp.declare_reduction @[[EQV_REDUCTION:.*]] : i32 init {
 // CHECK:  ^bb0(%{{.*}}: i32):
-// CHECK:    %[[TRUE:.*]] = llvm.mlir.constant(1 : i64) : i32
+// CHECK:    %[[TRUE:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:    omp.yield(%[[TRUE]] : i32)
 // CHECK:  } combiner {
 // CHECK:  ^bb0(%[[ARG_1:.*]]: i32, %[[ARG_2:.*]]: i32):
-// CHECK:    %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:    %[[ARGVAL_1:.*]] = llvm.icmp "ne" %[[ARG_1]], %[[ZERO_1]] : i32
-// CHECK:    %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:    %[[ARGVAL_2:.*]] = llvm.icmp "ne" %[[ARG_2]], %[[ZERO_2]] : i32
 // CHECK:    %[[RES:.*]] = llvm.icmp "eq" %[[ARGVAL_1]], %[[ARGVAL_2]] : i1
 // CHECK:    %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
@@ -718,9 +718,9 @@ func.func @_QPsb() {
 // CHECK:          %[[ARRAY_ELEM_REF:.*]] = llvm.getelementptr %[[ARRAY_REF]][0, %{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr
 // CHECK:          %[[ARRAY_ELEM:.*]] = llvm.load %[[ARRAY_ELEM_REF]] : !llvm.ptr -> i32
 // CHECK:          %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> i32
-// CHECK:          %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:          %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:          %[[ARGVAL_1:.*]] = llvm.icmp "ne" %[[LPRV]], %[[ZERO_1]] : i32
-// CHECK:          %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:          %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:          %[[ARGVAL_2:.*]] = llvm.icmp "ne" %[[ARRAY_ELEM]], %[[ZERO_2]] : i32
 // CHECK:          %[[RES:.*]] = llvm.icmp "eq" %[[ARGVAL_2]], %[[ARGVAL_1]] : i1
 // CHECK:          %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
@@ -798,7 +798,7 @@ func.func @_QPs(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "x"}) {
 //CHECK:    %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
 //CHECK:    %[[ALLOCA_1:.*]] = llvm.alloca %[[CONST_1:.*]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 //CHECK:    %[[SIZE:.*]] = llvm.mlir.constant(24 : i32) : i32
-//CHECK:    "llvm.intr.memcpy"(%[[ALLOCA_1]], %[[ALLOCA]], %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+//CHECK:    "llvm.intr.memcpy"(%[[ALLOCA_1]], %[[ALLOCA]], %[[SIZE]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 //CHECK:    %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA_1]][0, 0] : (!llvm.ptr) -> !llvm.ptr
 //CHECK:    %[[LOAD_2:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> !llvm.ptr
 //CHECK:    omp.terminator
@@ -1153,7 +1153,7 @@ func.func @map_dtype_alloca_mem2(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_
   %c0 = arith.constant 0 : index
   // CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
   %0 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%c4 : index) extent(%c4 : index) stride(%c1 : index) start_idx(%c0 : index) {stride_in_bytes = true}
-  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA]], %[[ARG_0]], {{.*}}) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %1 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>>>>
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
@@ -1165,7 +1165,7 @@ func.func @map_dtype_alloca_mem2(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_
   %4 = omp.map.info var_ptr(%2 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.array<?xi32>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%3 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%0) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
   // CHECK: %[[MAP_MEMBER_DESC:.*]] = omp.map.info var_ptr(%[[GEP_DTYPE_MEMBER]] : !llvm.ptr, [[DESC_TY2]]) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
   %5 = omp.map.info var_ptr(%2 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA_2]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA_2]], %[[ARG_0]], {{.*}}) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %6 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>>>>
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA_2]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
@@ -1201,7 +1201,7 @@ func.func @map_nested_dtype_alloca_mem(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.
   %c0 = arith.constant 0 : index
   // CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
   %0 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%c4 : index) extent(%c4 : index) stride(%c1 : index) start_idx(%c0 : index) {stride_in_bytes = true}
-  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA]], %[[ARG_0]], {{.*}}) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %1 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32,nest:!fir.type<_QFRecTy2{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>}>>>>
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_GEP_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
@@ -1215,7 +1215,7 @@ func.func @map_nested_dtype_alloca_mem(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.
   %5 = omp.map.info var_ptr(%3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.array<?xi32>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%4 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%0) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
   // CHECK: %[[MAP_NESTED_MEMBER_DESC:.*]] = omp.map.info var_ptr(%[[GEP_NESTED_DTYPE_ALLOCATABLE_MEMBER]] : !llvm.ptr, [[DESC_TY2]]) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
   %6 = omp.map.info var_ptr(%3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA_2]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA_2]], %[[ARG_0]], {{.*}}) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA_2]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_GEP_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
   %7 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32,nest:!fir.type<_QFRecTy2{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>}>>>>

@@ -48,6 +48,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
@@ -2447,6 +2448,7 @@ public:
 };
 
 void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
+  IfDefGuardEmitter If(OS, "GET_GICOMBINER_TYPES");
   OS << "struct " << getRuleConfigClassName() << " {\n"
      << "  SparseBitVector<> DisabledRules;\n\n"
      << "  bool isRuleEnabled(unsigned RuleID) const;\n"
@@ -2795,18 +2797,16 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     TypeObjects.push_back(LLT::scalar(1));
 
   // GET_GICOMBINER_DEPS, which pulls in extra dependencies.
-  OS << "#ifdef GET_GICOMBINER_DEPS\n"
-     << "#include \"llvm/ADT/SparseBitVector.h\"\n"
-     << "namespace llvm {\n"
-     << "extern cl::OptionCategory GICombinerOptionCategory;\n"
-     << "} // end namespace llvm\n"
-     << "#endif // ifdef GET_GICOMBINER_DEPS\n\n";
+  {
+    IfDefGuardEmitter If(OS, "GET_GICOMBINER_DEPS");
+    OS << "#include \"llvm/ADT/SparseBitVector.h\"\n";
+    NamespaceEmitter LlvmNS(OS, "llvm");
+    OS << "extern cl::OptionCategory GICombinerOptionCategory;\n";
+  }
 
   // GET_GICOMBINER_TYPES, which needs to be included before the declaration of
   // the class.
-  OS << "#ifdef GET_GICOMBINER_TYPES\n";
   emitRuleConfigImpl(OS);
-  OS << "#endif // ifdef GET_GICOMBINER_TYPES\n\n";
   emitPredicateBitset(OS, "GET_GICOMBINER_TYPES");
 
   // GET_GICOMBINER_CLASS_MEMBERS, which need to be included inside the class.

@@ -9,7 +9,7 @@ for.body.lr.ph:
   %t = load ptr, ptr %arr, align 8
   br label %for.body
 
-for.body:                                      ; preds = %for.body, %for.body.lr.ph
+for.body:
   %i = phi i64 [ 0, %for.body.lr.ph ], [ %i.next, %for.body ]
   %a = getelementptr inbounds double, ptr %t, i64 %i
   %i.next = add nuw nsw i64 %i, 1
@@ -21,6 +21,6 @@ for.body:                                      ; preds = %for.body, %for.body.lr
   %c = icmp eq i64 %i, %n
   br i1 %c, label %final, label %for.body
 
-final:                                   ; preds = %for.body
+final:
   ret void
 }

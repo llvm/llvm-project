@@ -6,8 +6,8 @@
 
 target triple="aarch64-unknown-linux-gnu"
 
-; CHECK-VF4: Found an estimated cost of 14 for VF 4 For instruction:   %add = fadd float %0, %sum.07
-; CHECK-VF8: Found an estimated cost of 28 for VF 8 For instruction:   %add = fadd float %0, %sum.07
+; CHECK-VF4: Cost of 14 for VF 4: REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
+; CHECK-VF8: Cost of 28 for VF 8: REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 
 define float @fadd_strict32(ptr noalias nocapture readonly %a, i64 %n) {
 entry:
@@ -28,8 +28,8 @@ for.end:
 }
 
 
-; CHECK-VF4: Found an estimated cost of 12 for VF 4 For instruction:   %add = fadd double %0, %sum.07
-; CHECK-VF8: Found an estimated cost of 24 for VF 8 For instruction:   %add = fadd double %0, %sum.07
+; CHECK-VF4: Cost of 12 for VF 4: REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
+; CHECK-VF8: Cost of 24 for VF 8: REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 
 define double @fadd_strict64(ptr noalias nocapture readonly %a, i64 %n) {
 entry:
@@ -49,8 +49,8 @@ for.end:
   ret double %add
 }
 
-; CHECK-VF4: Found an estimated cost of 16 for VF 4 For instruction:   %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
-; CHECK-VF8: Found an estimated cost of 32 for VF 8 For instruction:   %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+; CHECK-VF4: Cost of 14 for VF 4: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
+; CHECK-VF8: Cost of 28 for VF 8: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
 
 define float @fmuladd_strict32(ptr %a, ptr %b, i64 %n) {
 entry:
@@ -72,10 +72,9 @@ for.end:
   ret float %muladd
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
-; CHECK-VF4: Found an estimated cost of 16 for VF 4 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
-; CHECK-VF8: Found an estimated cost of 32 for VF 8 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
+; CHECK-VF4: Cost of 12 for VF 4: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
+; CHECK-VF8: Cost of 24 for VF 8: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
 
 define double @fmuladd_strict64(ptr %a, ptr %b, i64 %n) {
 entry:
@@ -97,4 +96,3 @@ for.end:
   ret double %muladd
 }
 
-declare double @llvm.fmuladd.f64(double, double, double)

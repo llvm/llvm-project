@@ -6,7 +6,7 @@
 #include "Fields.h"
 
 // CHECK-FIELD: Dumping IntWrapper::value:
-// CHECK-FIELD-NEXT: FieldDecl {{.+}} value
+// CHECK-FIELD-NEXT: FieldDecl {{.+}} value 'ValueType'
 // CHECK-FIELD: UnavailableAttr {{.+}} <<invalid sloc>> "oh no"
 
 // CHECK-DEEP-FIELD: Dumping Outer::Inner::value:

@@ -100,11 +100,6 @@ private:
   /// Attempt to delinearize the indexed reference.
   bool delinearize(const LoopInfo &LI);
 
-  /// Attempt to delinearize \p AccessFn for fixed-size arrays.
-  bool tryDelinearizeFixedSize(const SCEV *AccessFn,
-                               SmallVectorImpl<const SCEV *> &Subscripts,
-                               const SCEV *ElementSize);
-
   /// Return true if the index reference is invariant with respect to loop \p L.
   bool isLoopInvariant(const Loop &L) const;
 
@@ -283,7 +278,8 @@ raw_ostream &operator<<(raw_ostream &OS, const IndexedReference &R);
 raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
 
 /// Printer pass for the \c CacheCost results.
-class LoopCachePrinterPass : public PassInfoMixin<LoopCachePrinterPass> {
+class LoopCachePrinterPass
+    : public RequiredPassInfoMixin<LoopCachePrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -291,8 +287,6 @@ public:
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

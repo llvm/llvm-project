@@ -6,9 +6,11 @@ influence the result variable numbering.
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no expression evaluation
 class TestExpressionResultNumbering(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

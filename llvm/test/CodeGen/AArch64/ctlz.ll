@@ -99,8 +99,7 @@ define void @v4i8(ptr %p1) {
 ; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
 ; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
 ; CHECK-GI-NEXT:    clz v0.8b, v2.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
+; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
@@ -593,4 +592,17 @@ define <4 x i128> @v4i128(<4 x i128> %d) {
 entry:
   %s = call <4 x i128> @llvm.ctlz(<4 x i128> %d, i1 false)
   ret <4 x i128> %s
+}
+
+define <8 x i4> @v8i4(<8 x i4> %a) {
+; CHECK-LABEL: v8i4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.8b, #15
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    movi v1.8b, #4
+; CHECK-NEXT:    clz v0.8b, v0.8b
+; CHECK-NEXT:    sub v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %r = call <8 x i4> @llvm.ctlz(<8 x i4> %a, i1 false)
+  ret <8 x i4> %r
 }

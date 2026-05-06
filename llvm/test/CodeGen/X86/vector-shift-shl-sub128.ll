@@ -21,7 +21,7 @@ define <2 x i32> @var_shift_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; SSE2-LABEL: var_shift_v2i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $23, %xmm1
-; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm0
@@ -35,7 +35,7 @@ define <2 x i32> @var_shift_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; SSE41-LABEL: var_shift_v2i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pslld $23, %xmm1
-; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE41-NEXT:    pmulld %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -43,7 +43,7 @@ define <2 x i32> @var_shift_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; AVX1-LABEL: var_shift_v2i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
 ; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -76,7 +76,7 @@ define <2 x i32> @var_shift_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; X86-SSE-LABEL: var_shift_v2i32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pslld $23, %xmm1
-; X86-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; X86-SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X86-SSE-NEXT:    pmuludq %xmm1, %xmm0
@@ -93,42 +93,45 @@ define <2 x i32> @var_shift_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 define <4 x i16> @var_shift_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 ; SSE2-LABEL: var_shift_v4i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pslld $23, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; SSE2-NEXT:    paddd %xmm3, %xmm2
-; SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
-; SSE2-NEXT:    pslld $16, %xmm2
-; SSE2-NEXT:    psrad $16, %xmm2
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; SSE2-NEXT:    pslld $23, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
+; SSE2-NEXT:    paddd %xmm4, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; SSE2-NEXT:    pslld $16, %xmm3
+; SSE2-NEXT:    psrad $16, %xmm3
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; SSE2-NEXT:    pslld $23, %xmm1
-; SSE2-NEXT:    paddd %xmm3, %xmm1
+; SSE2-NEXT:    paddd %xmm4, %xmm1
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    packssdw %xmm2, %xmm1
+; SSE2-NEXT:    packssdw %xmm3, %xmm1
 ; SSE2-NEXT:    pmullw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shift_v4i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE41-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSE41-NEXT:    pxor %xmm2, %xmm2
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE41-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; SSE41-NEXT:    pslld $23, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; SSE41-NEXT:    paddd %xmm3, %xmm1
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
+; SSE41-NEXT:    paddd %xmm2, %xmm1
 ; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
-; SSE41-NEXT:    pslld $23, %xmm2
-; SSE41-NEXT:    paddd %xmm3, %xmm2
-; SSE41-NEXT:    cvttps2dq %xmm2, %xmm2
+; SSE41-NEXT:    pslld $23, %xmm3
+; SSE41-NEXT:    paddd %xmm2, %xmm3
+; SSE41-NEXT:    cvttps2dq %xmm3, %xmm2
 ; SSE41-NEXT:    packusdw %xmm1, %xmm2
 ; SSE41-NEXT:    pmullw %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shift_v4i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm1[4,4,5,5,6,6,7,7]
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
@@ -192,17 +195,18 @@ define <4 x i16> @var_shift_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 ;
 ; X86-SSE-LABEL: var_shift_v4i16:
 ; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pxor %xmm3, %xmm3
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
 ; X86-SSE-NEXT:    pslld $23, %xmm2
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; X86-SSE-NEXT:    paddd %xmm3, %xmm2
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
+; X86-SSE-NEXT:    paddd %xmm4, %xmm2
 ; X86-SSE-NEXT:    cvttps2dq %xmm2, %xmm2
 ; X86-SSE-NEXT:    pslld $16, %xmm2
 ; X86-SSE-NEXT:    psrad $16, %xmm2
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
 ; X86-SSE-NEXT:    pslld $23, %xmm1
-; X86-SSE-NEXT:    paddd %xmm3, %xmm1
+; X86-SSE-NEXT:    paddd %xmm4, %xmm1
 ; X86-SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE-NEXT:    pslld $16, %xmm1
 ; X86-SSE-NEXT:    psrad $16, %xmm1
@@ -216,42 +220,45 @@ define <4 x i16> @var_shift_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 define <2 x i16> @var_shift_v2i16(<2 x i16> %a, <2 x i16> %b) nounwind {
 ; SSE2-LABEL: var_shift_v2i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pslld $23, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; SSE2-NEXT:    paddd %xmm3, %xmm2
-; SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
-; SSE2-NEXT:    pslld $16, %xmm2
-; SSE2-NEXT:    psrad $16, %xmm2
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; SSE2-NEXT:    pslld $23, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
+; SSE2-NEXT:    paddd %xmm4, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; SSE2-NEXT:    pslld $16, %xmm3
+; SSE2-NEXT:    psrad $16, %xmm3
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; SSE2-NEXT:    pslld $23, %xmm1
-; SSE2-NEXT:    paddd %xmm3, %xmm1
+; SSE2-NEXT:    paddd %xmm4, %xmm1
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    packssdw %xmm2, %xmm1
+; SSE2-NEXT:    packssdw %xmm3, %xmm1
 ; SSE2-NEXT:    pmullw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shift_v2i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE41-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSE41-NEXT:    pxor %xmm2, %xmm2
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE41-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; SSE41-NEXT:    pslld $23, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; SSE41-NEXT:    paddd %xmm3, %xmm1
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
+; SSE41-NEXT:    paddd %xmm2, %xmm1
 ; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
-; SSE41-NEXT:    pslld $23, %xmm2
-; SSE41-NEXT:    paddd %xmm3, %xmm2
-; SSE41-NEXT:    cvttps2dq %xmm2, %xmm2
+; SSE41-NEXT:    pslld $23, %xmm3
+; SSE41-NEXT:    paddd %xmm2, %xmm3
+; SSE41-NEXT:    cvttps2dq %xmm3, %xmm2
 ; SSE41-NEXT:    packusdw %xmm1, %xmm2
 ; SSE41-NEXT:    pmullw %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shift_v2i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm1[4,4,5,5,6,6,7,7]
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
@@ -315,17 +322,18 @@ define <2 x i16> @var_shift_v2i16(<2 x i16> %a, <2 x i16> %b) nounwind {
 ;
 ; X86-SSE-LABEL: var_shift_v2i16:
 ; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pxor %xmm3, %xmm3
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
 ; X86-SSE-NEXT:    pslld $23, %xmm2
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; X86-SSE-NEXT:    paddd %xmm3, %xmm2
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
+; X86-SSE-NEXT:    paddd %xmm4, %xmm2
 ; X86-SSE-NEXT:    cvttps2dq %xmm2, %xmm2
 ; X86-SSE-NEXT:    pslld $16, %xmm2
 ; X86-SSE-NEXT:    psrad $16, %xmm2
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
 ; X86-SSE-NEXT:    pslld $23, %xmm1
-; X86-SSE-NEXT:    paddd %xmm3, %xmm1
+; X86-SSE-NEXT:    paddd %xmm4, %xmm1
 ; X86-SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE-NEXT:    pslld $16, %xmm1
 ; X86-SSE-NEXT:    psrad $16, %xmm1
@@ -354,9 +362,9 @@ define <8 x i8> @var_shift_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
@@ -377,8 +385,8 @@ define <8 x i8> @var_shift_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    psllw $2, %xmm3
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE41-NEXT:    paddb %xmm2, %xmm3
+; SSE41-NEXT:    paddb %xmm3, %xmm3
 ; SSE41-NEXT:    paddb %xmm1, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
@@ -396,8 +404,8 @@ define <8 x i8> @var_shift_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; AVX-NEXT:    vpsllw $4, %xmm0, %xmm2
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpsllw $2, %xmm0, %xmm2
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
@@ -464,9 +472,9 @@ define <8 x i8> @var_shift_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    pcmpgtb %xmm1, %xmm3
 ; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSE-NEXT:    pandn %xmm0, %xmm4
-; X86-SSE-NEXT:    psllw $2, %xmm0
+; X86-SSE-NEXT:    paddb %xmm0, %xmm0
+; X86-SSE-NEXT:    paddb %xmm0, %xmm0
 ; X86-SSE-NEXT:    pand %xmm3, %xmm0
-; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    por %xmm4, %xmm0
 ; X86-SSE-NEXT:    paddb %xmm1, %xmm1
 ; X86-SSE-NEXT:    pcmpgtb %xmm1, %xmm2
@@ -498,9 +506,9 @@ define <4 x i8> @var_shift_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
@@ -521,8 +529,8 @@ define <4 x i8> @var_shift_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    psllw $2, %xmm3
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE41-NEXT:    paddb %xmm2, %xmm3
+; SSE41-NEXT:    paddb %xmm3, %xmm3
 ; SSE41-NEXT:    paddb %xmm1, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
@@ -540,8 +548,8 @@ define <4 x i8> @var_shift_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
 ; AVX-NEXT:    vpsllw $4, %xmm0, %xmm2
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpsllw $2, %xmm0, %xmm2
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
@@ -608,9 +616,9 @@ define <4 x i8> @var_shift_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    pcmpgtb %xmm1, %xmm3
 ; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSE-NEXT:    pandn %xmm0, %xmm4
-; X86-SSE-NEXT:    psllw $2, %xmm0
+; X86-SSE-NEXT:    paddb %xmm0, %xmm0
+; X86-SSE-NEXT:    paddb %xmm0, %xmm0
 ; X86-SSE-NEXT:    pand %xmm3, %xmm0
-; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    por %xmm4, %xmm0
 ; X86-SSE-NEXT:    paddb %xmm1, %xmm1
 ; X86-SSE-NEXT:    pcmpgtb %xmm1, %xmm2
@@ -642,9 +650,9 @@ define <2 x i8> @var_shift_v2i8(<2 x i8> %a, <2 x i8> %b) nounwind {
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
@@ -665,8 +673,8 @@ define <2 x i8> @var_shift_v2i8(<2 x i8> %a, <2 x i8> %b) nounwind {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    psllw $2, %xmm3
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE41-NEXT:    paddb %xmm2, %xmm3
+; SSE41-NEXT:    paddb %xmm3, %xmm3
 ; SSE41-NEXT:    paddb %xmm1, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
@@ -684,8 +692,8 @@ define <2 x i8> @var_shift_v2i8(<2 x i8> %a, <2 x i8> %b) nounwind {
 ; AVX-NEXT:    vpsllw $4, %xmm0, %xmm2
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpsllw $2, %xmm0, %xmm2
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
@@ -752,9 +760,9 @@ define <2 x i8> @var_shift_v2i8(<2 x i8> %a, <2 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    pcmpgtb %xmm1, %xmm3
 ; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSE-NEXT:    pandn %xmm0, %xmm4
-; X86-SSE-NEXT:    psllw $2, %xmm0
+; X86-SSE-NEXT:    paddb %xmm0, %xmm0
+; X86-SSE-NEXT:    paddb %xmm0, %xmm0
 ; X86-SSE-NEXT:    pand %xmm3, %xmm0
-; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    por %xmm4, %xmm0
 ; X86-SSE-NEXT:    paddb %xmm1, %xmm1
 ; X86-SSE-NEXT:    pcmpgtb %xmm1, %xmm2

@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-pos47-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../concurrency/thread-canceltype-asynchronous.html
 
 cert-pos47-c
 ============

@@ -11,7 +11,7 @@ if (SPHINX_FOUND)
               "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.md"
               "${CMAKE_CURRENT_BINARY_DIR}"
       )
 
@@ -45,29 +45,40 @@ if (SPHINX_FOUND)
       cpio
       ctype
       dirent
+      dlfcn
       endian
       errno
+      fcntl
       fenv
       float
       glob
       inttypes
       locale
+      nl_types
       net/if
       netinet/in
-      # TODO: https://github.com/llvm/llvm-project/issues/123821
-      # pthread
+      poll
+      pthread
+      pwd
+      sched
       setjmp
       signal
+      spawn
       stdbit
       stdio
       stdlib
       string
       strings
+      sys/ipc
       sys/mman
       sys/resource
+      sys/select
+      sys/sem
+      sys/socket
       sys/stat
       sys/statvfs
       sys/time
+      sys/uio
       sys/utsname
       sys/wait
       termios
@@ -81,15 +92,17 @@ if (SPHINX_FOUND)
     foreach(stem IN LISTS docgen_list)
       # It is an error in cmake to have a target name that contains a "/", but
       # docgen relies on the "/" to find headers nested under directories.
-      # Replace with underscore.
+      # Replace with underscore and namespace the target to avoid collisions
+      # with other runtime targets in combined builds.
       string(REPLACE "/" "_" stem_rst ${stem})
+      set(docgen_target_name libc-docgen-${stem_rst})
 
       # docgen invocation.
-      add_custom_target(${stem_rst}
+      add_custom_target(${docgen_target_name}
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py ${stem}.h >
                 ${CMAKE_CURRENT_BINARY_DIR}/headers/${stem}.rst)
       # depend on the docgen invocation.
-      add_dependencies(docs-libc-html ${stem_rst})
+      add_dependencies(docs-libc-html ${docgen_target_name})
     endforeach()
   endif()
 endif()

@@ -8,59 +8,6 @@ struct NonRelocatable {
 };
 static NonRelocatable NonRelocatable_g;
 
-class A trivially_relocatable_if_eligible {};
-static_assert(__builtin_is_cpp_trivially_relocatable(A));
-
-
-class B trivially_relocatable_if_eligible : Trivial{};
-static_assert(__builtin_is_cpp_trivially_relocatable(B));
-
-class C trivially_relocatable_if_eligible {
-    int a;
-    void* b;
-    int c[3];
-    Trivial d[3];
-    NonRelocatable& e = NonRelocatable_g;
-};
-static_assert(__builtin_is_cpp_trivially_relocatable(C));
-
-
-class D trivially_relocatable_if_eligible : Trivial {};
-static_assert(__builtin_is_cpp_trivially_relocatable(D));
-
-
-class E trivially_relocatable_if_eligible : virtual Trivial {};
-static_assert(!__builtin_is_cpp_trivially_relocatable(E));
-
-
-class F trivially_relocatable_if_eligible : NonRelocatable {};
-static_assert(!__builtin_is_cpp_trivially_relocatable(F));
-
-class G trivially_relocatable_if_eligible {
-    G(G&&);
-};
-static_assert(__builtin_is_cpp_trivially_relocatable(G));
-
-class H trivially_relocatable_if_eligible {
-    ~H();
-};
-static_assert(__builtin_is_cpp_trivially_relocatable(H));
-
-class I trivially_relocatable_if_eligible {
-    NonRelocatable a;
-    NonRelocatable b[1];
-    const NonRelocatable c;
-    const NonRelocatable d[1];
-};
-static_assert(!__builtin_is_cpp_trivially_relocatable(I));
-
-
-class J trivially_relocatable_if_eligible:  virtual Trivial, NonRelocatable {
-    NonRelocatable a;
-};
-static_assert(!__builtin_is_cpp_trivially_relocatable(J));
-
-
 struct Incomplete; // expected-note {{forward declaration of 'Incomplete'}}
 static_assert(__builtin_is_cpp_trivially_relocatable(Incomplete));  // expected-error {{incomplete type 'Incomplete' used in type trait expression}}
 static_assert(__builtin_is_cpp_trivially_relocatable(int));
@@ -75,11 +22,6 @@ struct WithConst {
     const int i;
 };
 static_assert(!__builtin_is_cpp_trivially_relocatable(WithConst));
-
-struct WithConstExplicit trivially_relocatable_if_eligible {
-    const int i;
-};
-static_assert(__builtin_is_cpp_trivially_relocatable(WithConstExplicit));
 
 struct UserDtr {
     ~UserDtr();
@@ -130,11 +72,6 @@ static_assert(__builtin_is_cpp_trivially_relocatable(UserMoveAssignDefault));
 static_assert(__builtin_is_cpp_trivially_relocatable(UserCopyDefault));
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeletedMove));
 
-template <typename T>
-class TestDependentErrors trivially_relocatable_if_eligible : T {};
-TestDependentErrors<Trivial> Ok;
-TestDependentErrors<NonRelocatable> Err;
-
 struct DeletedMove {
     DeletedMove(DeletedMove&&) = delete;
 };
@@ -155,13 +92,6 @@ static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedMoveAssign));
 static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedDtr));
 
 
-union U {
-    G g;
-};
-static_assert(!__is_trivially_copyable(U));
-static_assert(__builtin_is_cpp_trivially_relocatable(U));
-
-
 template <typename T>
 struct S {
     T t;
@@ -174,21 +104,6 @@ static_assert(!__builtin_is_cpp_trivially_relocatable(S<int&>));
 static_assert(__builtin_is_cpp_trivially_relocatable(S<int[2]>));
 static_assert(!__builtin_is_cpp_trivially_relocatable(S<const int[2]>));
 static_assert(__builtin_is_cpp_trivially_relocatable(S<int[]>));
-
-
-template <typename T>
-struct SExplicit trivially_relocatable_if_eligible{
-    T t;
-};
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int>));
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<volatile int>));
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<const int>));
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<const int&>));
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int&>));
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int[2]>));
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<const int[2]>));
-static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int[]>));
-
 
 namespace replaceable {
 
@@ -251,15 +166,6 @@ static_assert(!__builtin_is_cpp_trivially_relocatable(int[n]));
 // expected-warning@-1 {{variable length arrays in C++ are a Clang extension}}
 // expected-note@-2 {{read of non-const variable 'n' is not allowed in a constant expression}}
 
-
-struct S42 trivially_relocatable_if_eligible {
-    S42(S42&&);
-    S42& operator=(S42&&) = default;
-};
-struct S43 trivially_relocatable_if_eligible {
-    S43(S43&&) = default;
-    S43& operator=(S43&&);
-};
 
 
 struct Copyable1Explicit {
@@ -347,33 +253,4 @@ struct C { C& operator=(const C&); };
 C& C::operator=(const C&) = default;
 
 static_assert (!__builtin_is_cpp_trivially_relocatable(C));
-}
-
-namespace GH144232 {
-
-struct E trivially_relocatable_if_eligible {
-  E (E &&);
-  E &operator= (E &&) = default;
-};
-
-struct F trivially_relocatable_if_eligible {
-  F (F &&) = default;
-  F &operator= (F &&);
-};
-
-struct G trivially_relocatable_if_eligible { G (G const &) = default; };
-
-struct I trivially_relocatable_if_eligible { I &operator= (const I &) = default; };
-
-struct J trivially_relocatable_if_eligible { J (J const &); };
-struct K trivially_relocatable_if_eligible { K (K const &); };
-
-
-static_assert (__builtin_is_cpp_trivially_relocatable(E));
-static_assert (__builtin_is_cpp_trivially_relocatable(F));
-static_assert (__builtin_is_cpp_trivially_relocatable(G));
-static_assert (__builtin_is_cpp_trivially_relocatable(I));
-static_assert (__builtin_is_cpp_trivially_relocatable(J));
-static_assert (__builtin_is_cpp_trivially_relocatable(K));
-
 }

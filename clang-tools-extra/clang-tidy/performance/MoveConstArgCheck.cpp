@@ -136,7 +136,8 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
         return;
       // Don't warn when the type is not copyable.
       for (const auto *Ctor : R->ctors())
-        if (Ctor->isCopyConstructor() && Ctor->isDeleted())
+        if (Ctor->isCopyConstructor() &&
+            (Ctor->isDeleted() || Ctor->getAccess() != AS_public))
           return;
     }
 

@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -91,31 +92,62 @@ public:
     };
 
     if (assignOp.isAllocatableAssignment()) {
-      // Whole allocatable assignment: use the runtime to deal with the
-      // reallocation.
-      mlir::Value from = emboxRHS(rhsExv);
-      mlir::Value to = fir::getBase(lhsExv);
-      if (assignOp.mustKeepLhsLengthInAllocatableAssignment()) {
-        // Indicate the runtime that it should not reallocate in case of length
-        // mismatch, and that it should use the LHS explicit/assumed length if
-        // allocating/reallocation the LHS.
-        // Note that AssignExplicitLengthCharacter() must be used
-        // when isTemporaryLHS() is true here: the LHS is known to be
-        // character allocatable in this case, so finalization will not
-        // happen (as implied by temporary_lhs attribute), and LHS
-        // must keep its length (as implied by keep_lhs_length_if_realloc).
-        fir::runtime::genAssignExplicitLengthCharacter(builder, loc, to, from);
-      } else if (assignOp.isTemporaryLHS()) {
-        // Use AssignTemporary, when the LHS is a compiler generated temporary.
-        // Note that it also works properly for polymorphic LHS (i.e. the LHS
-        // will have the RHS dynamic type after the assignment).
-        fir::runtime::genAssignTemporary(builder, loc, to, from);
-      } else if (lhs.isPolymorphic()) {
-        // Indicate the runtime that the LHS must have the RHS dynamic type
-        // after the assignment.
-        fir::runtime::genAssignPolymorphic(builder, loc, to, from);
+      // For trivial scalar allocatable assignments that are not polymorphic,
+      // not character, not temporary, and not CUDA Fortran, inline the
+      // assignment instead of calling the runtime.
+      if (!assignOp.mustKeepLhsLengthInAllocatableAssignment() &&
+          !assignOp.isTemporaryLHS() && !lhs.isPolymorphic() &&
+          !lhs.isArray() && fir::isa_trivial(lhs.getFortranElementType()) &&
+          !cuf::getDataAttr(lhs.getDefiningOp())) {
+        mlir::Value rhsVal = fir::getBase(rhsExv);
+        mlir::Value boxRef = fir::getBase(lhsExv);
+        mlir::Value box = fir::LoadOp::create(builder, loc, boxRef);
+        mlir::Value addr = fir::BoxAddrOp::create(builder, loc, box);
+        mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
+        auto boxType = mlir::cast<fir::BoxType>(box.getType());
+        auto heapType = mlir::cast<fir::HeapType>(boxType.getEleTy());
+        mlir::Type elemType = heapType.getEleTy();
+        builder.genIfThenElse(loc, isAllocated)
+            .genThen(
+                [&]() { fir::StoreOp::create(builder, loc, rhsVal, addr); })
+            .genElse([&]() {
+              mlir::Value newMem =
+                  fir::AllocMemOp::create(builder, loc, elemType);
+              fir::StoreOp::create(builder, loc, rhsVal, newMem);
+              mlir::Value newBox =
+                  fir::EmboxOp::create(builder, loc, boxType, newMem);
+              fir::StoreOp::create(builder, loc, newBox, boxRef);
+            })
+            .end();
       } else {
-        fir::runtime::genAssign(builder, loc, to, from);
+        // Whole allocatable assignment: use the runtime to deal with the
+        // reallocation.
+        mlir::Value from = emboxRHS(rhsExv);
+        mlir::Value to = fir::getBase(lhsExv);
+        if (assignOp.mustKeepLhsLengthInAllocatableAssignment()) {
+          // Indicate the runtime that it should not reallocate in case of
+          // length mismatch, and that it should use the LHS
+          // explicit/assumed length if allocating/reallocation the LHS.
+          // Note that AssignExplicitLengthCharacter() must be used
+          // when isTemporaryLHS() is true here: the LHS is known to be
+          // character allocatable in this case, so finalization will not
+          // happen (as implied by temporary_lhs attribute), and LHS
+          // must keep its length (as implied by keep_lhs_length_if_realloc).
+          fir::runtime::genAssignExplicitLengthCharacter(builder, loc, to,
+                                                         from);
+        } else if (assignOp.isTemporaryLHS()) {
+          // Use AssignTemporary, when the LHS is a compiler generated
+          // temporary. Note that it also works properly for polymorphic
+          // LHS (i.e. the LHS will have the RHS dynamic type after the
+          // assignment).
+          fir::runtime::genAssignTemporary(builder, loc, to, from);
+        } else if (lhs.isPolymorphic()) {
+          // Indicate the runtime that the LHS must have the RHS dynamic
+          // type after the assignment.
+          fir::runtime::genAssignPolymorphic(builder, loc, to, from);
+        } else {
+          fir::runtime::genAssign(builder, loc, to, from);
+        }
       }
     } else if (lhs.isArray() ||
                // Special case for element-by-element (or scalar) assignments
@@ -151,7 +183,7 @@ public:
 
       mlir::ArrayAttr accessGroups;
       if (auto attrs = assignOp.getOperation()->getAttrOfType<mlir::ArrayAttr>(
-              "access_groups"))
+              fir::getAccessGroupsAttrName()))
         accessGroups = attrs;
 
       // genScalarAssignment() must take care of potential overlap
@@ -333,23 +365,30 @@ public:
     if (mlir::isa<fir::BaseBoxType>(hlfirBaseType)) {
       fir::FirOpBuilder builder(rewriter, declareOp.getOperation());
       // Helper to generate the hlfir fir.box with the local lower bounds and
-      // type parameters.
+      // type parameters and OPTIONAL aspect.
+      const bool isOptional =
+          mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
+              .isOptional();
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
           if (declareOp.getSkipRebox())
             return firBase;
           // Rebox so that lower bounds and attributes are correct.
-          if (baseBoxType.isAssumedRank())
+          if (baseBoxType.isAssumedRank()) {
             return fir::ReboxAssumedRankOp::create(
                 builder, loc, hlfirBaseType, firBase,
-                fir::LowerBoundModifierAttribute::SetToOnes);
+                fir::LowerBoundModifierAttribute::SetToOnes, isOptional);
+          }
           if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
               baseBoxType == hlfirBaseType)
             return firBase;
-          return fir::ReboxOp::create(builder, loc, hlfirBaseType, firBase,
-                                      declareOp.getShape(),
-                                      /*slice=*/mlir::Value{});
+          auto rebox = fir::ReboxOp::create(builder, loc, hlfirBaseType,
+                                            firBase, declareOp.getShape(),
+                                            /*slice=*/mlir::Value{});
+          if (isOptional)
+            rebox.setOptional(true);
+          return rebox.getResult();
         } else {
           llvm::SmallVector<mlir::Value> typeParams;
           auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
@@ -357,14 +396,16 @@ public:
           if (!maybeCharType || maybeCharType.hasDynamicLen())
             typeParams.append(declareOp.getTypeparams().begin(),
                               declareOp.getTypeparams().end());
-          return fir::EmboxOp::create(builder, loc, hlfirBaseType, firBase,
-                                      declareOp.getShape(),
-                                      /*slice=*/mlir::Value{}, typeParams);
+          auto embox = fir::EmboxOp::create(
+              builder, loc, hlfirBaseType, firBase, declareOp.getShape(),
+              /*slice=*/mlir::Value{}, typeParams);
+          if (isOptional)
+            embox.setOptional(true);
+          return embox.getResult();
         }
       };
-      if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
-               .isOptional()) {
-        hlfirBase = genHlfirBox();
+      hlfirBase = genHlfirBox();
+      if (!isOptional) {
         // If the original base is a box too, we could as well
         // use the HLFIR box as the FIR base: otherwise, the two
         // boxes are "alive" at the same time, and the FIR box
@@ -374,26 +415,6 @@ public:
         // the representation a little bit more clear.
         if (hlfirBase.getType() == declareOp.getOriginalBase().getType())
           firBase = hlfirBase;
-      } else {
-        // Need to conditionally rebox/embox the optional: the input fir.box
-        // may be null and the rebox would be illegal. It is also important to
-        // preserve the optional aspect: the hlfir fir.box should be null if
-        // the entity is absent so that later fir.is_present on the hlfir base
-        // are valid.
-        mlir::Value isPresent = fir::IsPresentOp::create(
-            builder, loc, builder.getI1Type(), firBase);
-        hlfirBase =
-            builder
-                .genIfOp(loc, {hlfirBaseType}, isPresent,
-                         /*withElseRegion=*/true)
-                .genThen(
-                    [&] { fir::ResultOp::create(builder, loc, genHlfirBox()); })
-                .genElse([&]() {
-                  mlir::Value absent =
-                      fir::AbsentOp::create(builder, loc, hlfirBaseType);
-                  fir::ResultOp::create(builder, loc, absent);
-                })
-                .getResults()[0];
       }
     } else if (mlir::isa<fir::BoxCharType>(hlfirBaseType)) {
       assert(declareOp.getTypeparams().size() == 1 &&

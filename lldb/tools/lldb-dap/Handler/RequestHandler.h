@@ -11,6 +11,7 @@
 
 #include "DAP.h"
 #include "DAPError.h"
+#include "JSONUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
@@ -63,6 +64,10 @@ protected:
   /// Prints a welcome message on the editor if the preprocessor variable
   /// LLDB_DAP_WELCOME_MESSAGE is defined.
   void PrintWelcomeMessage() const;
+
+  /// Prints an introduction to the debug console and information about the
+  /// debug session.
+  void PrintIntroductionMessage() const;
 
   // Takes a LaunchRequest object and launches the process, also handling
   // runInTerminal if applicable. It doesn't do any of the additional
@@ -193,8 +198,7 @@ class DelayedResponseRequestHandler : public BaseRequestHandler {
     // The 'configurationDone' request is not sent until after 'initialized'
     // triggers the breakpoints being sent and 'configurationDone' is the last
     // message in the chain.
-    protocol::Event initialized{"initialized"};
-    dap.Send(initialized);
+    dap.SendJSON(CreateInitializedEventObject(dap.target));
   };
 
 protected:
@@ -293,7 +297,8 @@ public:
   llvm::Expected<protocol::EvaluateResponseBody>
   Run(const protocol::EvaluateArguments &) const override;
   FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureEvaluateForHovers};
+    return {protocol::eAdapterFeatureEvaluateForHovers,
+            protocol::eAdapterFeatureClipboardContext};
   }
 };
 
@@ -651,6 +656,15 @@ public:
   }
   llvm::Expected<protocol::WriteMemoryResponseBody>
   Run(const protocol::WriteMemoryArguments &args) const override;
+};
+
+class UnknownRequestHandler final
+    : public RequestHandler<protocol::UnknownArguments,
+                            protocol::UnknownResponseBody> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "unknown"; }
+  llvm::Error Run(const protocol::UnknownArguments &args) const override;
 };
 
 } // namespace lldb_dap

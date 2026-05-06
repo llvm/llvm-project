@@ -7,7 +7,7 @@
 define <2 x bfloat> @select_v2bf16(<2 x i1> %a, <2 x bfloat> %b, <2 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v2bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <2 x bfloat> @llvm.vp.select.v2bf16(<2 x i1> %a, <2 x bfloat> %b, <2 x bfloat> %c, i32 %evl)
@@ -17,7 +17,7 @@ define <2 x bfloat> @select_v2bf16(<2 x i1> %a, <2 x bfloat> %b, <2 x bfloat> %c
 define <4 x bfloat> @select_v4bf16(<4 x i1> %a, <4 x bfloat> %b, <4 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v4bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <4 x bfloat> @llvm.vp.select.v4bf16(<4 x i1> %a, <4 x bfloat> %b, <4 x bfloat> %c, i32 %evl)
@@ -27,7 +27,7 @@ define <4 x bfloat> @select_v4bf16(<4 x i1> %a, <4 x bfloat> %b, <4 x bfloat> %c
 define <8 x bfloat> @select_v8bf16(<8 x i1> %a, <8 x bfloat> %b, <8 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <8 x bfloat> @llvm.vp.select.v8bf16(<8 x i1> %a, <8 x bfloat> %b, <8 x bfloat> %c, i32 %evl)
@@ -37,7 +37,7 @@ define <8 x bfloat> @select_v8bf16(<8 x i1> %a, <8 x bfloat> %b, <8 x bfloat> %c
 define <16 x bfloat> @select_v16bf16(<16 x i1> %a, <16 x bfloat> %b, <16 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <16 x bfloat> @llvm.vp.select.v16bf16(<16 x i1> %a, <16 x bfloat> %b, <16 x bfloat> %c, i32 %evl)

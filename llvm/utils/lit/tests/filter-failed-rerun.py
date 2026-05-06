@@ -2,11 +2,11 @@
 # since the last time --filter-failed was run.
 
 # RUN: rm -rf %t
-# RUN: cp -r %{inputs}%{fs-sep}filter-failed %t
+# RUN: cp -rL %{inputs}%{fs-sep}filter-failed %t
 #
 # RUN: not %{lit} %t | FileCheck %s --check-prefix=CHECK-FIRST
 #
-# RUN: cp %t%{fs-sep}pass.txt %t%{fs-sep}fail.txt
+# RUN: cp -f %t%{fs-sep}pass.txt %t%{fs-sep}fail.txt
 # RUN: not %{lit} %t | FileCheck %s --check-prefix=CHECK-SECOND
 # RUN: not %{lit} --filter-failed %t | FileCheck %s --check-prefix=CHECK-THIRD
 

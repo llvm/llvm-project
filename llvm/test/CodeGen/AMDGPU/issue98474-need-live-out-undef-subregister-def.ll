@@ -17,11 +17,11 @@ define amdgpu_vs void @test(i32 inreg %cmp, i32 %e0) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    buffer_load_format_xy v[1:2], v1, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    exp mrt0 v0, v1, v2, v0
+; CHECK-NEXT:    exp mrt0, v0, v1, v2, v0
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    exp mrt0 v0, v1, v2, v0
+; CHECK-NEXT:    exp mrt0, v0, v1, v2, v0
 ; CHECK-NEXT:    s_endpgm
 entry:
   %cond = icmp eq i32 %cmp, 0

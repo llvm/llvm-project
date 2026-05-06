@@ -139,6 +139,9 @@ An overview of all the command-line options:
 
   clang-tidy options:
 
+    --allow-no-checks                - Allow empty enabled checks. This suppresses
+                                       the "no checks enabled" error when disabling
+                                       all of the checks.
     --checks=<string>                - Comma-separated list of globs with optional '-'
                                        prefix. Globs are processed in order of
                                        appearance in the list. Globs without '-'
@@ -182,6 +185,9 @@ An overview of all the command-line options:
                                        Can be used together with -line-filter.
                                        This option overrides the 'ExcludeHeaderFilterRegex'
                                        option in .clang-tidy file, if any.
+    --experimental-custom-checks     - Enable experimental clang-query based
+                                       custom checks.
+                                       see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
     --explain-config                 - For each enabled check explains, where it is
                                        enabled, i.e. in clang-tidy binary, command
                                        line or a specific configuration file.
@@ -244,6 +250,13 @@ An overview of all the command-line options:
                                        printing statistics about ignored warnings and
                                        warnings treated as errors if the respective
                                        options are specified.
+    --removed-arg=<string>           - List of arguments to remove from the command
+                                       line sent to the compiler. Please note that
+                                       removing arguments might change the semantic
+                                       of the analyzed code, possibly leading to
+                                       compiler errors, false positives or
+                                       false negatives. This option is applied
+                                       before --extra-arg and --extra-arg-before
     --store-check-profile=<prefix>   - By default reports are printed in tabulated
                                        format to stderr. When this option is passed,
                                        these per-TU profiles are instead stored as JSON.
@@ -256,7 +269,7 @@ An overview of all the command-line options:
                                        This option overrides the 'UseColor' option in
                                        .clang-tidy file, if any.
     --verify-config                  - Check the config files to ensure each check and
-                                       option is recognized.
+                                       option is recognized without running any checks.
     --vfsoverlay=<filename>          - Overlay the virtual filesystem described by file
                                        over the real file system.
     --warnings-as-errors=<string>    - Upgrades warnings to errors. Same format as
@@ -264,9 +277,6 @@ An overview of all the command-line options:
                                        This option's value is appended to the value of
                                        the 'WarningsAsErrors' option in .clang-tidy
                                        file, if any.
-    --allow-no-checks                - Allow empty enabled checks. This suppresses
-                                       the "no checks enabled" error when disabling
-                                       all of the checks.
 
   -p <build-path> is used to read a compile command database.
 
@@ -307,7 +317,7 @@ An overview of all the command-line options:
     Checks                       - Same as '--checks'. Additionally, the list of
                                    globs can be specified as a list instead of a
                                    string.
-    CustomChecks                 - List of user defined checks based on
+    CustomChecks                 - Array of user defined checks based on
                                    Clang-Query syntax.
     ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
     ExtraArgs                    - Same as '--extra-arg'.
@@ -324,6 +334,7 @@ An overview of all the command-line options:
                                    (if any exists) will be taken and the current
                                    config file will be applied on top of the
                                    parent one.
+    RemovedArgs                  - Same as '--removed-arg'.
     SystemHeaders                - Same as '--system-headers'.
     UseColor                     - Same as '--use-color'.
     User                         - Specifies the name or e-mail of the user
@@ -331,23 +342,55 @@ An overview of all the command-line options:
                                    example, to place the correct user name in
                                    TODO() comments in the relevant check.
     WarningsAsErrors             - Same as '--warnings-as-errors'.
-    RemovedArgs                  - Same as '--removed-arg'
 
     The effective configuration can be inspected using --dump-config:
 
       $ clang-tidy --dump-config
       ---
-      Checks:              '-*,some-check'
-      WarningsAsErrors:    ''
+      Checks:                       '-*,some-check'
+      WarningsAsErrors:             ''
       HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
       ImplementationFileExtensions: ['c','cc','cpp','cxx']
-      HeaderFilterRegex:   '.*'
-      FormatStyle:         none
-      InheritParentConfig: true
-      User:                user
+      HeaderFilterRegex:            '.*'
+      FormatStyle:                  none
+      InheritParentConfig:          true
+      User:                         user
       CheckOptions:
         some-check.SomeOption: 'some value'
       ...
+
+Running Clang-Tidy on CUDA Files
+--------------------------------
+
+:program:`clang-tidy` supports analyzing CUDA source files. To ensure correct
+header resolution, it is important to specify the CUDA toolkit path using
+``--cuda-path``. For more details on how Clang handles CUDA, see
+`Compiling CUDA with Clang <https://llvm.org/docs/CompileCudaWithLLVM.html>`_.
+
+If you are using a GCC + NVCC build setup, the compiler command database will
+contain NVCC-specific flags that :program:`clang-tidy` does not understand.
+
+In this case, you should use the ``RemovedArgs`` configuration option (or
+``--removed-arg`` command-line option) to remove these flags, and
+``ExtraArgs`` (or ``--extra-arg``) to provide the ``--cuda-path``.
+
+For example, to remove the NVCC-specific ``-gencode`` flag and provide the
+CUDA path:
+
+.. code-block:: console
+
+  $ clang-tidy source.cu --removed-arg="-gencode" --removed-arg="arch=.." --extra-arg="--cuda-path=/path/to/cuda"
+
+By default, :program:`clang-tidy` will analyze both host and device code.
+To restrict the analysis to a specific side and specifically choose device
+compilation flags, use the ``--extra-arg`` flag to pass the arguments.
+
+For example, to perform device analysis only, use
+the ``--cuda-device-only`` flag:
+
+.. code-block:: console
+
+  $ clang-tidy source.cu --extra-arg="--cuda-device-only" --extra-arg="--cuda-path=/path/to/cuda"
 
 Clang-Tidy Automation
 =====================

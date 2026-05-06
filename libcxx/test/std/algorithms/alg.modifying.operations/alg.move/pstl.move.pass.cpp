@@ -18,6 +18,7 @@
 //                         ForwardIterator2 result);
 
 #include <algorithm>
+#include <cassert>
 #include <vector>
 
 #include "test_macros.h"

@@ -15,6 +15,7 @@
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,7 +27,7 @@
 using namespace mlir;
 using llvm::Record;
 using llvm::RecordKeeper;
-using mlir::tblgen::Interface;
+using mlir::tblgen::DialectInterface;
 using mlir::tblgen::InterfaceMethod;
 
 /// Emit a string corresponding to a C++ type, followed by a space if necessary.
@@ -74,7 +75,7 @@ public:
   bool emitInterfaceDecls();
 
 protected:
-  void emitInterfaceDecl(const Interface &interface);
+  void emitInterfaceDecl(const DialectInterface &interface);
 
   /// The set of interface records to emit.
   std::vector<const Record *> defs;
@@ -91,9 +92,11 @@ static void emitInterfaceMethodDoc(const InterfaceMethod &method,
                                    raw_ostream &os, StringRef prefix = "") {
   if (std::optional<StringRef> description = method.getDescription())
     tblgen::emitDescriptionComment(*description, os, prefix);
+  else
+    os << "\n";
 }
 
-static void emitInterfaceMethodsDef(const Interface &interface,
+static void emitInterfaceMethodsDef(const DialectInterface &interface,
                                     raw_ostream &os) {
 
   raw_indented_ostream ios(os);
@@ -104,6 +107,18 @@ static void emitInterfaceMethodsDef(const Interface &interface,
     ios << "virtual ";
     emitCPPType(method.getReturnType(), ios);
     emitMethodNameAndArgs(method, method.getName(), ios);
+
+    if (method.isDeclaration()) {
+      ios << ";\n";
+      continue;
+    }
+
+    if (method.isPureVirtual()) {
+      ios << " = 0;\n";
+      continue;
+    }
+
+    // if it is not a method declaration, then it's a normal interface method.
     ios << " {";
 
     if (auto body = method.getBody()) {
@@ -116,22 +131,54 @@ static void emitInterfaceMethodsDef(const Interface &interface,
   }
 }
 
-void DialectInterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
-  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
+static void emitConstructor(const DialectInterface &interface,
+                            raw_ostream &os) {
 
-  StringRef interfaceName = interface.getName();
+  raw_indented_ostream ios(os);
+
+  // We consider a constructor protected if interface has at least one pure
+  // virtual method
+  auto hasProtectedConstructor =
+      llvm::any_of(interface.getMethods(), [](const InterfaceMethod &method) {
+        return method.isPureVirtual();
+      });
+
+  ios.indent(0);
+  if (hasProtectedConstructor)
+    ios << "protected:\n";
+
+  ios.indent(2);
+  ios << llvm::formatv("{0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
+                       interface.getName());
+}
+
+void DialectInterfaceGenerator::emitInterfaceDecl(
+    const DialectInterface &interface) {
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
 
   tblgen::emitSummaryAndDescComments(os, "",
                                      interface.getDescription().value_or(""));
 
   // Emit the main interface class declaration.
   os << llvm::formatv(
-      "class {0} : public ::mlir::DialectInterface::Base<{0}> {\n"
-      "public:\n"
-      "  {0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
-      interfaceName);
+      "class {0} : public ::mlir::DialectInterface::Base<{0}> {{\n"
+      "public:\n",
+      interface.getName());
 
   emitInterfaceMethodsDef(interface, os);
+
+  // Emit any extra declarations.
+  if (std::optional<StringRef> extraDecls =
+          interface.getExtraClassDeclaration()) {
+    raw_indented_ostream ios(os);
+    ios.indent(2);
+    ios.printReindented(extraDecls.value());
+    ios << "\n";
+  }
+
+  os << "\n";
+
+  emitConstructor(interface, os);
 
   os << "};\n";
 }
@@ -148,7 +195,7 @@ bool DialectInterfaceGenerator::emitInterfaceDecls() {
   });
 
   for (const Record *def : sortedDefs)
-    emitInterfaceDecl(Interface(def));
+    emitInterfaceDecl(DialectInterface(def));
 
   return false;
 }

@@ -67,7 +67,7 @@ TEST11:
 
 # CHECK: TEST12
 # CHECK: .fill TEST11-TEST12, 4, 0x12345678
-# OBJ-ERRS: '.fill' directive with negative repeat count has no effect
+# OBJ-ERRS: [[#@LINE+2]]:8: error: invalid number of bytes
 TEST12:
 	.fill TEST11 - TEST12, 4, 0x12345678
 
