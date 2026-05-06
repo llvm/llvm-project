@@ -104,7 +104,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
-  clang-ssaf-analyzer
   clang-ssaf-format
   clang-ssaf-linker
   clang-sycl-linker
