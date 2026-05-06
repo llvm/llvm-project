@@ -26,8 +26,8 @@ SYCLInstallationDetector::SYCLInstallationDetector(
 
   if (HostTriple.isOSWindows()) {
     // Windows: Check for LLVMSYCL.lib
-    // NOTE: Only checks for release library; debug variant is selected via
-    //       CRT flags in MSVC.cpp, not filesystem detection
+    // NOTE: Only checks for LLVMSYCL.lib existence (release variant).
+    // Debug vs release library selection happens at link time based on CRT flags.
     if (DriverDir.starts_with(SysRoot) &&
         Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
       SmallString<128> LibDir(DriverDir);
@@ -42,7 +42,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
       }
     }
   } else {
-    // Linux/Unix: Check for libLLVMSYCL.so (existing logic)
+    // Linux/Unix: Check for libLLVMSYCL.so
     SmallString<128> LibPath(DriverDir);
     llvm::sys::path::append(LibPath, "..", "lib", HostTriple.str(),
                             "libLLVMSYCL.so");

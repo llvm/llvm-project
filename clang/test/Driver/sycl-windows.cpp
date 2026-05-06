@@ -5,14 +5,13 @@
 // Tests check for --dependent-lib in compiler (-cc1) output and
 // -libpath: in linker output.
 
-/// Test 1: Auto-/MD and release library dependency
-// RUN: %clang_cl -### -fsycl --target=x86_64-pc-windows-msvc -- %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-AUTO-MD %s
-// CHECK-AUTO-MD: "-cc1"
-// CHECK-AUTO-MD: "--dependent-lib=LLVMSYCL"
-// CHECK-AUTO-MD: clang-linker-wrapper"
-// CHECK-AUTO-MD-SAME: "/MD"
-// CHECK-AUTO-MD-SAME: "-libpath:{{.*}}{{[/\\]+}}lib"
+/// Test 1: /MD (explicit) and release library dependency
+// RUN: %clang_cl -### -fsycl /MD --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MD %s
+// CHECK-MD: "-cc1"
+// CHECK-MD: "--dependent-lib=LLVMSYCL"
+// CHECK-MD: clang-linker-wrapper"
+// CHECK-MD-SAME: "-libpath:{{.*}}{{[/\\]+}}lib"
 
 /// Test 2: /MT is rejected with clear error
 // RUN: not %clang_cl -fsycl /MT --target=x86_64-pc-windows-msvc -- %s 2>&1 \
@@ -71,7 +70,27 @@
 // CHECK-EXPLICIT-MD: "--dependent-lib=LLVMSYCL"
 
 /// Test 11: Library search path is added at linker stage
-// RUN: %clang_cl -### -fsycl --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN: %clang_cl -### -fsycl /MD --target=x86_64-pc-windows-msvc -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LIBPATH %s
 // CHECK-LIBPATH: clang-linker-wrapper"
 // CHECK-LIBPATH: "-libpath:{{.*}}{{[/\\]+}}lib"
+
+/// Test 12: clang (non-clang-cl) with MSVC target uses -defaultlib:
+// RUN: %clang -### -fsycl -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-CLANG-DEFAULTLIB %s
+// CHECK-CLANG-DEFAULTLIB: clang-linker-wrapper"
+// CHECK-CLANG-DEFAULTLIB: "-libpath:{{.*}}{{[/\\]+}}lib"
+// CHECK-CLANG-DEFAULTLIB: "-defaultlib:LLVMSYCL"
+
+/// Test 13: clang with -fms-runtime-lib=dll_dbg uses debug library via -defaultlib:
+// RUN: %clang -### -fsycl -fms-runtime-lib=dll_dbg --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-CLANG-DEBUG %s
+// CHECK-CLANG-DEBUG: clang-linker-wrapper"
+// CHECK-CLANG-DEBUG: "-defaultlib:LLVMSYCLd"
+
+/// Test 14: Default CRT behavior - release library when no CRT flag specified
+// RUN: %clang -### -fsycl -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-DEFAULT-CRT %s
+// CHECK-DEFAULT-CRT: "-cc1"
+// CHECK-DEFAULT-CRT: "--dependent-lib=LLVMSYCL"
+// CHECK-DEFAULT-CRT-NOT: LLVMSYCLd

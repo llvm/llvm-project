@@ -4928,9 +4928,12 @@ static void ProcessVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
         IsDebugBuild = true;
     }
 
-    // Check for /MDd flag (dynamic debug CRT)
-    if (Args.hasArg(options::OPT__SLASH_MDd))
-      IsDebugBuild = true;
+    // Check for /MDd flag (dynamic debug CRT), use getLastArg to handle
+    // overriding options (e.g., /MDd /MD -> /MD wins)
+    if (const Arg *A = Args.getLastArg(options::OPT__SLASH_M_Group)) {
+      if (A->getOption().matches(options::OPT__SLASH_MDd))
+        IsDebugBuild = true;
+    }
 
     // Add appropriate SYCL runtime library dependency
     CmdArgs.push_back(IsDebugBuild ? "--dependent-lib=LLVMSYCLd"

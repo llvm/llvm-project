@@ -85,30 +85,6 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("--dependent-lib=amath"));
   }
 
-  // SYCL: Auto-add /MD if no C++ runtime specified
-  // SYCL requires dynamic C++ runtime because STL objects cross DLL boundaries
-  // This must happen BEFORE other CRT handling logic
-  if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
-      !Args.hasArg(options::OPT_nolibsycl) &&
-      !Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_nostartfiles)) {
-
-    bool HasExplicitCRT = false;
-
-    // Check if user already specified a CRT flag
-    if (Args.hasArg(options::OPT__SLASH_MT) ||
-        Args.hasArg(options::OPT__SLASH_MTd) ||
-        Args.hasArg(options::OPT__SLASH_MD) ||
-        Args.hasArg(options::OPT__SLASH_MDd) ||
-        Args.hasArg(options::OPT_fms_runtime_lib_EQ))
-      HasExplicitCRT = true;
-
-    // Auto-add /MD if no CRT specified (makes dynamic CRT the default for SYCL)
-    if (!HasExplicitCRT) {
-      CmdArgs.push_back("/MD");
-    }
-  }
-
   // SYCL requires dynamic CRT because STL objects cross DLL boundaries.
   // Library dependency is added via --dependent-lib at compiler stage.
   // Here we validate CRT compatibility and add the library search path.
@@ -116,13 +92,19 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !Args.hasArg(options::OPT_nolibsycl) &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
 
-    // Check if static CRT is being used.
-    bool HasStaticCRT = Args.hasArg(options::OPT__SLASH_MT) ||
-                        Args.hasArg(options::OPT__SLASH_MTd);
+    // Check if static CRT is being used. Use getLastArg to handle overriding
+    // options (e.g., /MT /MD -> /MD wins).
+    bool HasStaticCRT = false;
 
     if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
       StringRef RuntimeLib = A->getValue();
       if (RuntimeLib == "static" || RuntimeLib == "static_dbg")
+        HasStaticCRT = true;
+    }
+
+    if (const Arg *A = Args.getLastArg(options::OPT__SLASH_M_Group)) {
+      if (A->getOption().matches(options::OPT__SLASH_MT) ||
+          A->getOption().matches(options::OPT__SLASH_MTd))
         HasStaticCRT = true;
     }
 
@@ -140,6 +122,25 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
     CmdArgs.push_back("-defaultlib:libcmt");
     CmdArgs.push_back("-defaultlib:oldnames");
+
+    // SYCL: Add runtime library for clang (non-clang-cl) with MSVC target.
+    // For clang-cl, --dependent-lib is used at compiler stage instead.
+    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
+        !Args.hasArg(options::OPT_nolibsycl)) {
+      bool IsDebugBuild = false;
+      if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+        StringRef RuntimeVal = A->getValue();
+        if (RuntimeVal == "dll_dbg")
+          IsDebugBuild = true;
+      }
+      // Check for /MDd flag, use getLastArg to handle overriding options
+      if (const Arg *A = Args.getLastArg(options::OPT__SLASH_M_Group)) {
+        if (A->getOption().matches(options::OPT__SLASH_MDd))
+          IsDebugBuild = true;
+      }
+      CmdArgs.push_back(IsDebugBuild ? "-defaultlib:LLVMSYCLd"
+                                     : "-defaultlib:LLVMSYCL");
+    }
   }
 
   // If the VC environment hasn't been configured (perhaps because the user
