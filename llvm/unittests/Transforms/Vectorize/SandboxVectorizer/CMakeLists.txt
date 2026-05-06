@@ -13,6 +13,7 @@ add_llvm_unittest(SandboxVectorizerTests
   IntervalTest.cpp
   LegalityTest.cpp
   RegionWithScoreTest.cpp
+  SandboxVectorizerIRTest.cpp
   SandboxVectorizerTest.cpp
   SchedulerTest.cpp
   SeedCollectorTest.cpp	
