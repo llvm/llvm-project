@@ -17,7 +17,3 @@ breaks build of llvm
 breaks windows build
 [cmake] Refactor DIA SDK detection into FindDIASDK module (#160354)
 ---
-breaks build 528.pot3d, whole-archive* 
-5f6d09488dca (HEAD -> amd/dev/rlieberm/RevTIMEF) Revert "[flang][flang-rt] Add support for non-standard TIMEF intrinsic (#185377)"
-29c5c2f0b9c3 Revert "[flang-rt] Fix for TIMEF test case hanging on Windows (#195651)"
----
