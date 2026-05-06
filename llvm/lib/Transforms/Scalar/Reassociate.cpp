@@ -984,10 +984,9 @@ static bool ShouldBreakUpDistribution(Instruction *Mul) {
 
     // Sibling must be NonConst * C'.
     Value *SibNC;
-    if (match(Sibling, m_Mul(m_Value(SibNC), m_Constant()))) {
-      if ((SibNC == A || SibNC == B) && !isa<Constant>(SibNC))
+    if (match(Sibling, m_Mul(m_Value(SibNC), m_Constant())) && (SibNC == A || SibNC == B) && !isa<Constant>(SibNC))
         return true;
-    }
+    
   }
   return false;
 }
@@ -1000,7 +999,7 @@ static BinaryOperator *BreakUpDistribute(Instruction *Mul,
 
   Instruction *AddSub = cast<Instruction>(Mul->getOperand(0));
   Constant *C = cast<Constant>(Mul->getOperand(1));
-  Constant *C2 = (AddSub->getOpcode() == Instruction::Sub)
+  Constant *C2 = AddSub->getOpcode() == Instruction::Sub
                      ? cast<Constant>(ConstantExpr::getNeg(C))
                      : C;
 
