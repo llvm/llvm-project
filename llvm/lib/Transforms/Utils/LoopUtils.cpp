@@ -945,7 +945,7 @@ llvm::getLoopEstimatedTripCount(Loop *L,
                       << "count of " << *TC
                       << (*TC == 0 ? " (returning std::nullopt)" : "")
                       << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : std::optional(*TC);
+    return *TC == 0 ? std::nullopt : TC;
   }
 
   // Estimate the trip count from latch branch weights.
