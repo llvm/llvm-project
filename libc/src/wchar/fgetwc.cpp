@@ -18,7 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(wint_t, fgetwc, (::FILE *stream)) {
+LLVM_LIBC_FUNCTION(wint_t, fgetwc, (::FILE * stream)) {
   LIBC_CRASH_ON_NULLPTR(stream);
   auto *f = reinterpret_cast<File *>(stream);
   wchar_t wc;
