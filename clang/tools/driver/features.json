@@ -43,6 +43,9 @@
     },
     {
       "name": "print-headers-direct-per-file"
+    },
+    {
+      "name": "invoke-ssaf"
     }
   ]
 }
