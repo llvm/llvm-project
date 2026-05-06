@@ -742,10 +742,6 @@ static Value complexRMWValue(PatternRewriter &rewriter, Location loc,
   return complex::CreateOp::create(rewriter, loc, complexTy, re, im);
 }
 
-/// If \p firMemref is defined by a fir.array_coor that indexes a
-/// complex-component projection (z%re / z%im), return false for the real
-/// component or true for the imaginary component.
-/// Returns std::nullopt when the IR does not match the projection pattern.
 std::optional<bool> FIRToMemRef::complexProjectionOf(Value firMemref) const {
   auto arrayCoor = firMemref.getDefiningOp<fir::ArrayCoorOp>();
   if (!arrayCoor)
