@@ -614,9 +614,8 @@ define void @nonnull_only_ephemeral_use(ptr %p) {
 
 define void @nonnull_gep_inbounds_bundle(ptr %p, i64 %i) {
 ; CHECK-LABEL: @nonnull_gep_inbounds_bundle(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
-; CHECK-NEXT:    ret ptr [[P2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
+; CHECK-NEXT:    ret void
 ;
   %p2 = getelementptr inbounds i8, ptr %p, i64 %i
   call void @llvm.assume(i1 true) ["nonnull"(ptr %p2)]
