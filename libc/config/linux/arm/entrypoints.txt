@@ -219,6 +219,12 @@ if(LLVM_LIBC_FULL_BUILD)
     # search.h entrypoints
     libc.src.search.lfind
 
+    # regex.h entrypoints
+    libc.src.regex.regcomp
+    libc.src.regex.regexec
+    libc.src.regex.regerror
+    libc.src.regex.regfree
+
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp

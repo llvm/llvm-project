@@ -104,6 +104,7 @@ add_subdirectory(dirent)
 add_subdirectory(locale)
 add_subdirectory(nl_types)
 add_subdirectory(signal)
+add_subdirectory(regex)
 add_subdirectory(spawn)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")

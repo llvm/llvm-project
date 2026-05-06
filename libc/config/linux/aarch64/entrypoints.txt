@@ -1194,6 +1194,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.twalk
     libc.src.search.twalk_r
 
+    # regex.h entrypoints
+    libc.src.regex.regcomp
+    libc.src.regex.regexec
+    libc.src.regex.regerror
+    libc.src.regex.regfree
+
     # threads.h entrypoints
     libc.src.threads.call_once
     libc.src.threads.cnd_broadcast
