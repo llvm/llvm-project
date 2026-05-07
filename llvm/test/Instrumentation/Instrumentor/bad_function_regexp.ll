@@ -1,4 +1,4 @@
-; RUN: not opt < %s -passes=instrumentor -instrumentor-read-config-file=%S/bad_function_regex.json -S 2>&1 | FileCheck %s
+; RUN: not opt < %s -passes=instrumentor -instrumentor-read-config-files=%S/bad_function_regex.json -S 2>&1 | FileCheck %s
 
 ; CHECK: error: failed to parse function regex: repetition-operator operand invalid
 

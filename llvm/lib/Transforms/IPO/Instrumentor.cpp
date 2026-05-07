@@ -64,17 +64,25 @@ using namespace llvm::instrumentor;
 namespace {
 
 /// The user option to specify an output JSON file to write the configuration.
-static cl::opt<std::string> WriteConfigFile(
+static cl::opt<std::string> OutputConfigFile(
     "instrumentor-write-config-file",
     cl::desc(
         "Write the instrumentor configuration into the specified JSON file"),
     cl::init(""));
 
-/// The user option to specify an input JSON file to read the configuration.
-static cl::opt<std::string> ReadConfigFile(
-    "instrumentor-read-config-file",
-    cl::desc(
-        "Read the instrumentor configuration from the specified JSON file"),
+/// The user option to specify input JSON files to read the configuration from.
+static cl::list<std::string>
+    ConfigFiles("instrumentor-read-config-files",
+                cl::desc("Read the instrumentor configuration from the "
+                         "specified JSON files (comma separated)"),
+                cl::ZeroOrMore, cl::CommaSeparated);
+
+/// The user option to specify an input file to read the configuration file
+/// paths from.
+static cl::opt<std::string> ConfigPathsFile(
+    "instrumentor-read-config-paths-file",
+    cl::desc("Read the instrumentor configuration file "
+             "paths from the specified file (newline separated)"),
     cl::init(""));
 
 /// Set the debug location, if not set, after changing the insertion point of
@@ -132,12 +140,18 @@ public:
   /// Construct an instrumentor implementation using the configuration \p IConf.
   InstrumentorImpl(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                    Module &M)
-      : IConf(IConf), M(M), IIRB(IIRB) {
-    IConf.populate(IIRB);
-  }
+      : IConf(IConf), M(M), IIRB(IIRB) {}
 
   /// Instrument the module, public entry point.
   bool instrument();
+
+  // Reset the state to allow reuse of the instrumentor with a different
+  // configuration.
+  void clear() {
+    InstChoicesPRE.clear();
+    InstChoicesPOST.clear();
+    ParsedFunctionRegex = Regex();
+  }
 
 private:
   /// Indicate if the module should be instrumented based on the target.
@@ -324,15 +338,39 @@ InstrumentorPass::InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS,
 PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB,
                                         bool ReadConfig) {
+  bool Changed = false;
   InstrumentorImpl Impl(IConf, IIRB, M);
-  if (ReadConfig && !readConfigFromJSON(IConf, ReadConfigFile, IIRB.Ctx, *FS))
-    return PreservedAnalyses::all();
 
-  writeConfigToJSON(IConf, WriteConfigFile, IIRB.Ctx);
+  // If this is a configuration driven run, iterate over all configurations
+  // provided by the user, if not, use the config as is and run the instrumentor
+  // once.
+  if (ReadConfig)
+    readConfigPathsFile(ConfigPathsFile, ConfigFiles, IIRB.Ctx, *FS);
 
-  printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
+  bool MultipleConfigs = ConfigFiles.size() > 1;
+  unsigned Idx = 0;
+  do {
+    std::string ConfigFile =
+        ReadConfig && !ConfigFiles.empty() ? ConfigFiles[Idx] : "";
 
-  bool Changed = Impl.instrument();
+    // Initialize the config to the base state but keep the caches around.
+    Impl.clear();
+    IConf.init(IIRB);
+
+    if (!readConfigFromJSON(IConf, ConfigFile, IIRB.Ctx, *FS))
+      continue;
+
+    writeConfigToJSON(IConf,
+                      MultipleConfigs
+                          ? OutputConfigFile + "." + std::to_string(Idx)
+                          : OutputConfigFile,
+                      IIRB.Ctx);
+
+    printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
+
+    Changed |= Impl.instrument();
+  } while (++Idx < ConfigFiles.size());
+
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

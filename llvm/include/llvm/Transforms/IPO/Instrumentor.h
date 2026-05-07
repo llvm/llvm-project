@@ -348,7 +348,16 @@ struct InstrumentationConfig {
   virtual ~InstrumentationConfig() {}
 
   /// Construct an instrumentation configuration with the base options.
-  InstrumentationConfig() : SS(StringAllocator) {
+  InstrumentationConfig() : SS(StringAllocator) {}
+
+  /// Initialize the config to a clean base state without loosing cached values
+  /// that can be reused across configurations.
+  void init(InstrumentorIRBuilderTy &IIRB) {
+    // Clear previous configurations but not the caches.
+    BaseConfigurationOptions.clear();
+    for (auto &Map : IChoices)
+      Map.clear();
+
     RuntimePrefix = BaseConfigurationOption::createStringOption(
         *this, "runtime_prefix", "The runtime API prefix.", "__instrumentor_");
     RuntimeStubsFile = BaseConfigurationOption::createStringOption(
@@ -371,6 +380,7 @@ struct InstrumentationConfig {
         *this, "host_enabled", "Instrument non-GPU targets", true);
     GPUEnabled = BaseConfigurationOption::createBoolOption(
         *this, "gpu_enabled", "Instrument GPU targets", true);
+    populate(IIRB);
   }
 
   /// Populate the instrumentation opportunities.
@@ -659,7 +669,7 @@ struct AllocaIO final : public InstructionIO<Instruction::Alloca> {
 };
 
 struct UnreachableIO final : public InstructionIO<Instruction::Unreachable> {
-  UnreachableIO() : InstructionIO<Instruction::Unreachable>(/*IsPRE*/ true) {}
+  UnreachableIO() : InstructionIO<Instruction::Unreachable>(/*IsPRE=*/true) {}
 
   enum ConfigKind {
     PassId,
