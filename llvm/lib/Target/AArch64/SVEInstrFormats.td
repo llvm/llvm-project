@@ -3832,6 +3832,12 @@ multiclass sve2p1_two_way_dot_vv<string mnemonic, bit u, SDPatternOperator intri
   def : SVE_3_Op_Pat<nxv4i32, intrinsic, nxv4i32, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
 }
 
+multiclass sve2p3_two_way_dot_vv<string mnemonic, bit u, SDPatternOperator intrinsic> {
+  def NAME : sve_intx_dot<0b01, 0b00000, u, mnemonic, ZPR16, ZPR8>;
+
+  def : SVE_3_Op_Pat<nxv8i16, intrinsic, nxv8i16, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Integer Dot Product Group - Indexed Group
 //===----------------------------------------------------------------------===//
@@ -10061,6 +10067,12 @@ multiclass sve2p1_two_way_dot_vvi<string mnemonic, bit u, SDPatternOperator intr
   def NAME : sve2p1_two_way_dot_vvi<mnemonic, u>;
 
   def : SVE_4_Op_Imm_Pat<nxv4i32, intrinsic, nxv4i32, nxv8i16, nxv8i16, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME)>;
+}
+
+multiclass sve2p3_two_way_dot_vvi<string mnemonic, bit u, SDPatternOperator intrinsic> {
+  def NAME : sve_intx_dot_by_indexed_elem_x<u, mnemonic>;
+
+  def : SVE_4_Op_Imm_Pat<nxv8i16, intrinsic, nxv8i16, nxv16i8, nxv16i8, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME)>;
 }
 
 class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty, SDPatternOperator op>

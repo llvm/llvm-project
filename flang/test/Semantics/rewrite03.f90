@@ -5,14 +5,14 @@
 program main
   real sf(1)
   integer :: j = 1
-!CHECK: sf(int(j,kind=8))=1._4
+!CHECK: sf(__builtin_int(j,kind=8))=1._4
   sf(j) = 1.
 end
 
 function func
   real sf(1)
   integer :: j = 1
-!CHECK: sf(int(j,kind=8))=2._4
+!CHECK: sf(__builtin_int(j,kind=8))=2._4
   sf(j) = 2.
   func = 0.
 end
@@ -20,7 +20,7 @@ end
 subroutine subr
   real sf(1)
   integer :: j = 1
-!CHECK: sf(int(j,kind=8))=3._4
+!CHECK: sf(__builtin_int(j,kind=8))=3._4
   sf(j) = 3.
 end
 
@@ -35,7 +35,7 @@ submodule(m) sm
   module procedure smp
     real sf(1)
     integer :: j = 1
-!CHECK: sf(int(j,kind=8))=4._4
+!CHECK: sf(__builtin_int(j,kind=8))=4._4
     sf(j) = 4.
   end
 end
@@ -44,7 +44,7 @@ subroutine block
   block
     real sf(1)
     integer :: j = 1
-!CHECK: sf(int(j,kind=8))=5._4
+!CHECK: sf(__builtin_int(j,kind=8))=5._4
     sf(j) = 5.
   end block
 end

@@ -16,7 +16,7 @@ namespace llvm {
 
 class TargetMachine;
 
-class ExpandIRInstsPass : public PassInfoMixin<ExpandIRInstsPass> {
+class ExpandIRInstsPass : public RequiredPassInfoMixin<ExpandIRInstsPass> {
 private:
   const TargetMachine *TM;
   CodeGenOptLevel OptLevel;
@@ -25,7 +25,7 @@ public:
   explicit ExpandIRInstsPass(const TargetMachine &TM, CodeGenOptLevel OptLevel);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };

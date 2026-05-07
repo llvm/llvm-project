@@ -13,7 +13,7 @@
 namespace llvm {
 
 class MachineLateInstrsCleanupPass
-    : public PassInfoMixin<MachineLateInstrsCleanupPass> {
+    : public OptionalPassInfoMixin<MachineLateInstrsCleanupPass> {
 public:
   PreservedAnalyses run(MachineFunction &MachineFunction,
                         MachineFunctionAnalysisManager &MachineFunctionAM);
