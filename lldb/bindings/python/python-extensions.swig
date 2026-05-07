@@ -288,8 +288,8 @@ def _add_formatter(kind: str, type_name: str, options: dict):
 
     type_name = shlex.quote(type_name)
 
+    # Convert `option=True` to "--option", all others to "--option value".
     flag_list = []
-    # Convert `option=True` to "--option", all other cases convert to "--option value".
     for key, value in options.values():
         flag = key.replace("_", "-")
         if value is True:
