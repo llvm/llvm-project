@@ -18,6 +18,14 @@ envs=(
   --env CI="${CI:-false}"
   --env JOB_NAME="${JOB_NAME:-NoSuchJobName}"
 )
+if test "${IS_PR_BUILD:-false}" = "true"
+then
+  envs+=(
+    --env IS_PR_BUILD=true
+    --env PR_BASE_COMMIT="${PR_BASE_COMMIT}"
+    --env PR_LATEST_COMMIT="${PR_LATEST_COMMIT}"
+  )
+fi
 if test -n "${BUILD_TYPE:-}"
 then
   envs+=(--env BUILD_TYPE="${BUILD_TYPE}")
@@ -48,4 +56,4 @@ apptainer exec \
           "${envs[@]}" \
           --bind "${binds}" \
           ${image_path} \
-          bash -c "cd ${bind_point} && ${_script_dir}/run.sh"
+          bash -c "cd ${bind_point} && bash ${_script_dir}/run.sh"

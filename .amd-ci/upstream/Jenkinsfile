@@ -167,6 +167,7 @@ if (postsub && targetIsRelBranch) {
 }
 
 def gitVars // groovylint-disable-line NoDef,VariableTypeRequired
+String prBaseCommit = '', prLatestCommit = ''
 
 Integer fullTimeoutH = 15
 
@@ -259,6 +260,27 @@ try {
                         )
                     )
                     assert gitVars.GIT_COMMIT
+                    if (isPrBranch) {
+                        prLatestCommit = gitVars.GIT_COMMIT
+                        withEnv([gitPathEnv]) {
+                            withCredentials([
+                                gitUsernamePassword(
+                                    credentialsId: gitHubAppCredsId,
+                                    gitToolName: gitTool
+                                )
+                            ]) {
+                                prBaseCommit = sh(
+                                    label: 'pr-merge-base-commit',
+                                    script: (
+                                        'git fetch origin +refs/heads/' + actualTarget +
+                                            ':refs/remotes/origin/' + actualTarget + ' && ' +
+                                            'git merge-base HEAD origin/' + actualTarget
+                                    ),
+                                    returnStdout: true
+                                ).trim()
+                            }
+                        }
+                    }
                     Integer activeStat = successStat
                     withEnv([gitPathEnv]) {
                         if (
@@ -343,7 +365,7 @@ try {
             }
             stage('run') {
                 try {
-                    withEnv([
+                    List<String> runEnv = [
                         'PATH=' + linuxBasePath,
                         'JOB_NAME=' + jobName,
                         'AOCC_DUAL_FLANG_BUILD=' + dualFlangBuild,
@@ -351,7 +373,13 @@ try {
                         'VERSION_VAL=' + versionVal,
                         'REL_MODE=' + relMode,
                         'BUILD_TYPE=' + buildType
-                    ]) {
+                    ]
+                    if (isPrBranch) {
+                        runEnv.add('IS_PR_BUILD=true')
+                        runEnv.add('PR_BASE_COMMIT=' + prBaseCommit)
+                        runEnv.add('PR_LATEST_COMMIT=' + prLatestCommit)
+                    }
+                    withEnv(runEnv) {
                         sh 'llvm-project/.amd-ci/upstream/apptainer_run.sh'
                     }
                     currentBuild.result = successResultStr
