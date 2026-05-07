@@ -104,9 +104,22 @@ private:
 
   LogicalResult processExtension();
 
+  /// Encodes `op` + `operands` into `binary`, splitting via the
+  /// SPV_INTEL_long_composites continuation opcode when the total word count
+  /// would exceed kMaxWordCount. `op` must be a splittable composite/struct
+  /// opcode (see getContinuationOpcode). The capability and extension are
+  /// emitted lazily on first split.
+  void encodeInstructionWithContinuationInto(SmallVectorImpl<uint32_t> &binary,
+                                             spirv::Opcode op,
+                                             ArrayRef<uint32_t> operands);
+
+  void addLongCompositesCapability();
+
   void processMemoryModel();
 
   LogicalResult processConstantOp(spirv::ConstantOp op);
+
+  LogicalResult processCompositeConstructOp(spirv::CompositeConstructOp op);
 
   LogicalResult processConstantCompositeReplicateOp(
       spirv::EXTConstantCompositeReplicateOp op);
@@ -386,6 +399,8 @@ private:
 
   /// The next available result <id>.
   uint32_t nextID = 1;
+
+  bool longCompositesEmitted = false;
 
   // The following are for different SPIR-V instruction sections. They follow
   // the logical layout of a SPIR-V module.
