@@ -1,0 +1,56 @@
+## Check that BOLT accepts relocation mode when code relocations are stored
+## in SHT_CREL.
+
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-readelf -S %t.exe | FileCheck %s --check-prefix=SECTIONS
+# RUN: llvm-bolt %t.exe -o %t.bolt -relocs 2>&1 | FileCheck %s
+
+# SECTIONS: .crel.text
+
+# CHECK: BOLT-INFO: enabling relocation mode
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+  Entry:   0x2670000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text
+    VAddr:    0x2670000
+    Align:    0x10000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x2670000
+    AddressAlign: 0x4
+    Content:      00000094c0035fd6
+  - Name:         .crel.text
+    Type:         SHT_CREL
+    Flags:        [ SHF_INFO_LINK ]
+    Link:         .symtab
+    Info:         .text
+    AddressAlign: 0x8
+    Relocations:
+      - Offset:   0x2670000
+        Symbol:   target
+        Type:     R_AARCH64_CALL26
+Symbols:
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x2670000
+    Size:    0x8
+  - Name:    target
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x2670004
+    Size:    0x4
+...

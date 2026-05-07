@@ -2249,8 +2249,9 @@ Error RewriteInstance::readSpecialSections() {
     BC->updateLSDAEncoding();
   }
 
-  HasTextRelocations = (bool)BC->getUniqueSectionByName(
-      ".rela" + std::string(BC->getMainCodeSectionName()));
+  HasTextRelocations =
+      (bool)BC->getUniqueSectionByName(std::string(".rela") + std::string(BC->getMainCodeSectionName())) ||
+      (bool)BC->getUniqueSectionByName(std::string(".crel") + std::string(BC->getMainCodeSectionName()));
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
 
@@ -2472,6 +2473,10 @@ int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
   case ELF::SHT_RELA: {
     const Elf_Rela *RelA = Obj->getRela(Rel);
     Addend = RelA->r_addend;
+    break;
+  }
+  case ELF::SHT_CREL: {
+    Addend = Obj->getCrel(Rel).r_addend;
     break;
   }
   }
