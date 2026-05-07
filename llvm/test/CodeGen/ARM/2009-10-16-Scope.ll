@@ -25,7 +25,7 @@ declare i32 @foo(i32) ssp
 !llvm.dbg.cu = !{!0}
 !0 = !DILocation(line: 5, column: 2, scope: !1)
 !1 = distinct !DILexicalBlock(line: 1, column: 1, file: null, scope: !2)
-!2 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scope: !3)
+!2 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scope: !3, type: !11)
 !3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang 1.1", isOptimized: true, emissionKind: FullDebug, file: !8, retainedTypes: !9)
 !4 = !DILocalVariable(name: "count_", line: 5, scope: !5, file: !3, type: !6)
 !5 = distinct !DILexicalBlock(line: 1, column: 1, file: null, scope: !1)
@@ -33,3 +33,5 @@ declare i32 @foo(i32) ssp
 !7 = !DILocation(line: 6, column: 1, scope: !2)
 !8 = !DIFile(filename: "genmodes.i", directory: "/Users/yash/Downloads")
 !9 = !{i32 0}
+!10 = !{null}
+!11 = !DISubroutineType(types: !10)

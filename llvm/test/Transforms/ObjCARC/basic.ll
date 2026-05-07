@@ -2944,7 +2944,7 @@ define void @test68(ptr %a, ptr %b) {
 
 !0 = !{}
 !1 = !{i32 1, !"Debug Info Version", i32 3}
-!2 = distinct !DISubprogram(unit: !3)
+!2 = distinct !DISubprogram(unit: !3, type: !7)
 !3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !4,
                              isOptimized: true, flags: "-O2",
@@ -2954,3 +2954,5 @@ define void @test68(ptr %a, ptr %b) {
 
 ; CHECK: attributes [[NUW]] = { nounwind }
 ; CHECK: ![[RELEASE]] = !{}
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)
