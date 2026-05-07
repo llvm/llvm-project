@@ -1392,10 +1392,10 @@ def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^REV_ZZ_[BHSD]",
 def : InstRW<[C1NanoWrite<2, C1NanoUnitVALU>], (instregex "^SEL_ZPZZ_[BHSD]")>;
 
 // Table lookup
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^TBL_ZZZZ?_[BHS]")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^TBL_ZZZ_[BHSD]")>;
 
 // Table lookup, double table
-def : InstRW<[C1NanoMC2Write<8, 5, C1NanoUnitVALU>], (instregex "^TBL_ZZZZ?_D")>;
+def : InstRW<[C1NanoMC2Write<8, 5, C1NanoUnitVALU>], (instregex "^TBL_ZZZZ_[BHSD]")>;
 
 // Table lookup extension
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^TBX_ZZZ_[BHSD]")>;

@@ -2888,12 +2888,12 @@
 # CHECK-NEXT:  1      3     0.50                        sxth	z31.s, p7/m, z31.s
 # CHECK-NEXT:  1      3     0.50                        sxtw	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      3     0.50                        sxtw	z31.d, p7/m, z31.d
-# CHECK-NEXT:  1      4     0.50                        tbl	z28.b, { z29.b, z30.b }, z31.b
+# CHECK-NEXT:  1      8     5.00                        tbl	z28.b, { z29.b, z30.b }, z31.b
 # CHECK-NEXT:  1      8     5.00                        tbl	z28.d, { z29.d, z30.d }, z31.d
-# CHECK-NEXT:  1      4     0.50                        tbl	z28.h, { z29.h, z30.h }, z31.h
-# CHECK-NEXT:  1      4     0.50                        tbl	z28.s, { z29.s, z30.s }, z31.s
+# CHECK-NEXT:  1      8     5.00                        tbl	z28.h, { z29.h, z30.h }, z31.h
+# CHECK-NEXT:  1      8     5.00                        tbl	z28.s, { z29.s, z30.s }, z31.s
 # CHECK-NEXT:  1      4     0.50                        tbl	z31.b, { z31.b }, z31.b
-# CHECK-NEXT:  1      8     5.00                        tbl	z31.d, { z31.d }, z31.d
+# CHECK-NEXT:  1      4     0.50                        tbl	z31.d, { z31.d }, z31.d
 # CHECK-NEXT:  1      4     0.50                        tbl	z31.h, { z31.h }, z31.h
 # CHECK-NEXT:  1      4     0.50                        tbl	z31.s, { z31.s }, z31.s
 # CHECK-NEXT:  1      4     0.50                        tbx	z31.b, z31.b, z31.b
@@ -3442,7 +3442,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 393.00 54.00  9.00    -     221.00 2425.00  -     -     1366.50 1296.50 215.00 215.00 676.00
+# CHECK-NEXT: 393.00 54.00  9.00    -     221.00 2425.00  -     -     1375.50 1305.50 215.00 215.00 676.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -6324,12 +6324,12 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sxth	z31.s, p7/m, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sxtw	z0.d, p0/m, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sxtw	z31.d, p7/m, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.b, { z29.b, z30.b }, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     tbl	z28.b, { z29.b, z30.b }, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     tbl	z28.d, { z29.d, z30.d }, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.h, { z29.h, z30.h }, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z28.s, { z29.s, z30.s }, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     tbl	z28.h, { z29.h, z30.h }, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     tbl	z28.s, { z29.s, z30.s }, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.b, { z31.b }, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   5.00    -      -      -     tbl	z31.d, { z31.d }, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.d, { z31.d }, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.h, { z31.h }, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbl	z31.s, { z31.s }, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     tbx	z31.b, z31.b, z31.b
