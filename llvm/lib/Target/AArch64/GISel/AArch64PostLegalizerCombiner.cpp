@@ -948,13 +948,13 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
   if (MF.getProperties().hasFailedISel())
     return PreservedAnalyses::all();
 
-  bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
+  bool IsOptNone = llvm::isGlobalISelOptNone(&MF.getTarget());
   bool EnableOpt = !IsOptNone;
 
   GISelValueTracking *VT = &MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  auto *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
+  GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
 
   if (!runCombiner(MF, CSEInfo, VT, MDT, *RuleConfig, EnableOpt, IsOptNone))
     return PreservedAnalyses::all();
@@ -967,7 +967,7 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
 }
 
 namespace llvm {
-FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone) {
+FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone) {
   return new AArch64PostLegalizerCombinerLegacy(IsOptNone);
 }
 } // end namespace llvm

@@ -143,7 +143,7 @@ public:
 
 FunctionPass *createAArch64O0PreLegalizerCombiner();
 FunctionPass *createAArch64PreLegalizerCombiner();
-FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
+FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
 FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);

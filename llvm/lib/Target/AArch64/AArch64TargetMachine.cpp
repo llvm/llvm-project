@@ -281,6 +281,16 @@ LLVMInitializeAArch64Target() {
   initializeAArch64Arm64ECCallLoweringPass(PR);
 }
 
+bool llvm::isGlobalISelOptNone(const TargetMachine *TM) {
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  return TM->getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(TM->getOptLevel()) >
+              AArch64TargetMachine::getEnableGlobalISelAtO() &&
+          !GlobalISelFlag);
+}
+
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
 
 //===----------------------------------------------------------------------===//
@@ -413,7 +423,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     setCFIFixup(true);
 }
 
-unsigned AArch64TargetMachine::getEnableGlobalISelAtO() const {
+unsigned AArch64TargetMachine::getEnableGlobalISelAtO() {
   return EnableGlobalISelAtO;
 }
 
@@ -615,13 +625,7 @@ std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
 // globalisel at, and it wasn't enabled via CLI, we know that it must be because
 // of an optnone function.
 bool AArch64PassConfig::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
-
-  return getOptLevel() == CodeGenOptLevel::None ||
-         (static_cast<unsigned>(getOptLevel()) >
-              getAArch64TargetMachine().getEnableGlobalISelAtO() &&
-          !GlobalISelFlag);
+  return llvm::isGlobalISelOptNone(&getAArch64TargetMachine());
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -770,7 +774,7 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 
 void AArch64PassConfig::addPreRegBankSelect() {
   if (!isGlobalISelOptNone()) {
-    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
+    addPass(createAArch64PostLegalizerCombinerLegacy(isGlobalISelOptNone()));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
