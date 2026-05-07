@@ -26,6 +26,9 @@ extern int  ejit_deactivate(const char *name, unsigned char idx);
 extern int  ejit_is_active(const char *name, unsigned char idx);
 extern void ejit_shutdown(void);
 
+typedef struct { size_t entryCount; size_t totalCodeSize; size_t maxSize; unsigned long long hits, misses, evictions; } ejit_stats_t;
+extern int ejit_get_stats(ejit_stats_t *stats);
+
 //===-- 结构体定义 (多类型 may_const) -----------------------------------------===//
 
 struct PhyConfig {
@@ -420,6 +423,17 @@ int main(int argc, char **argv)
     printf("  before: activeBeams=%u\n", g_trpCfg[trpIdx].activeBeams);
     update_trp_power(trpIdx, 32);
     printf("  after:  activeBeams=%u\n\n", g_trpCfg[trpIdx].activeBeams);
+
+    // JIT Statistics
+    {
+        ejit_stats_t s;
+        ejit_get_stats(&s);
+        printf("--- JIT Stats ---\n");
+        printf("  entries: %zu  codeSize: %zu\n", s.entryCount, s.totalCodeSize);
+        printf("  hits: %llu  misses: %llu  evictions: %llu\n",
+               s.hits, s.misses, s.evictions);
+        printf("  JIT: %s\n", s.entryCount > 0 ? "ACTIVE" : "AOT-FALLBACK-ONLY");
+    }
 
     ejit_shutdown();
     printf("=== All Tests Complete ===\n");

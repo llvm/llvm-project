@@ -96,9 +96,10 @@ static std::string extractAndSerialize(Module &M,
     if (!FuncNames.count(F.getName()))
       FuncsToDelete.push_back(&F);
   for (Function *F : FuncsToDelete) {
+    if (F->isDeclaration())
+      continue; // Keep declarations (intrinsics, external refs)
     F->replaceAllUsesWith(UndefValue::get(F->getType()));
-    if (!F->isDeclaration())
-      F->deleteBody();
+    F->deleteBody();
     F->eraseFromParent();
   }
 
@@ -107,6 +108,8 @@ static std::string extractAndSerialize(Module &M,
     if (!GlobalNames.count(GV.getName()))
       GVToDelete.push_back(&GV);
   for (GlobalVariable *GV : GVToDelete) {
+    if (GV->isDeclaration())
+      continue; // Keep declarations (external refs)
     GV->replaceAllUsesWith(UndefValue::get(GV->getType()));
     GV->eraseFromParent();
   }

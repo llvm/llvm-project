@@ -67,6 +67,8 @@ void EJitOptimizer::preReplacePeriodIndices(
 void EJitOptimizer::runInstCombine(Module &M) {
   FunctionPassManager FPM;
   FPM.addPass(InstCombinePass());
+  FPM.addPass(PromotePass());  // mem2reg: promote allocas so constants flow through
+  FPM.addPass(InstCombinePass());  // re-fold after mem2reg
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;

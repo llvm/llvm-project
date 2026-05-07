@@ -67,32 +67,45 @@ static const GlobalVariable *findRootGV(const Value *V) {
   return nullptr;
 }
 
-/// Accumulate byte offset for constant GEP indices using DataLayout.
+/// Walk a GEP chain from the load's pointer operand down to the root
+/// global variable, accumulating the total byte offset. All GEP indices
+/// must be constants (already folded by InstCombine after param substitution).
 static std::optional<uint64_t>
-accumulateConstantOffset(const DataLayout &DL,
-                         const GEPOperator *GEP) {
-  APInt offset(DL.getPointerSizeInBits(0), 0);
+accumulateFullOffset(const DataLayout &DL, const Value *PtrOp) {
+  APInt total(DL.getPointerSizeInBits(0), 0);
 
-  for (auto I = GEP->idx_begin(), E = GEP->idx_end(); I != E; ++I) {
-    Value *Idx = *I;
-    auto *CI = dyn_cast<ConstantInt>(Idx);
-    if (!CI)
+  while (PtrOp) {
+    PtrOp = PtrOp->stripPointerCasts();
+    if (isa<GlobalVariable>(PtrOp))
+      break;
+
+    auto *GEP = dyn_cast<GEPOperator>(PtrOp);
+    if (!GEP)
       return std::nullopt;
 
-    if (I == GEP->idx_begin()) {
-      offset += CI->getValue().sextOrTrunc(offset.getBitWidth()) *
-                APInt(offset.getBitWidth(),
-                      DL.getTypeAllocSize(GEP->getSourceElementType()));
-    } else {
-      SmallVector<Value *, 4> IdxList;
-      for (auto J = GEP->idx_begin(); J != I + 1; ++J)
-        IdxList.push_back(*J);
-      int64_t typeOffset = DL.getIndexedOffsetInType(
-          GEP->getSourceElementType(), IdxList);
-      offset += APInt(offset.getBitWidth(), typeOffset);
+    for (auto I = GEP->idx_begin(), E = GEP->idx_end(); I != E; ++I) {
+      auto *CI = dyn_cast<ConstantInt>(*I);
+      if (!CI)
+        return std::nullopt;
+
+      if (I == GEP->idx_begin()) {
+        total += CI->getValue().sextOrTrunc(total.getBitWidth()) *
+                 APInt(total.getBitWidth(),
+                       DL.getTypeAllocSize(GEP->getSourceElementType()));
+      } else {
+        SmallVector<Value *, 4> IdxList;
+        for (auto J = GEP->idx_begin(); J != I + 1; ++J)
+          IdxList.push_back(*J);
+        total += APInt(total.getBitWidth(),
+                       DL.getIndexedOffsetInType(
+                           GEP->getSourceElementType(), IdxList));
+      }
     }
+
+    PtrOp = GEP->getPointerOperand();
   }
-  return offset.getZExtValue();
+
+  return total.getZExtValue();
 }
 
 static Constant *createConstantFromMemory(const void *addr, Type *Ty,
@@ -186,8 +199,9 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
       }
 
       // GEP-based access
-      if (auto *GEP = dyn_cast<GEPOperator>(PtrOp)) {
-        const GlobalVariable *GV = findRootGV(GEP);
+      // Walk the full GEP chain (may be multiple GEPs: array index + field)
+      {
+        const GlobalVariable *GV = findRootGV(PtrOp);
         if (!GV)
           continue;
 
@@ -195,11 +209,13 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
         if (it == gvPeriodMap.end())
           continue;
 
-        auto byteOffset = accumulateConstantOffset(DL, GEP);
+        auto byteOffset = accumulateFullOffset(DL, PtrOp);
         if (!byteOffset)
           continue;
 
         void *base = resolveBase(GV, it->second);
+        if (!base)
+          continue;
         if (!base)
           continue;
 
