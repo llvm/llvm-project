@@ -24,10 +24,10 @@ namespace llvm {
 class Module;
 
 /// Pass to remove unused function declarations.
-struct StripDeadPrototypesPass : PassInfoMixin<StripDeadPrototypesPass> {
+struct StripDeadPrototypesPass
+    : OptionalPassInfoMixin<StripDeadPrototypesPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
-
 }
 
 #endif // LLVM_TRANSFORMS_IPO_STRIPDEADPROTOTYPES_H
