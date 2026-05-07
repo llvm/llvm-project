@@ -277,9 +277,7 @@ elif not can_target_host():
     )
 else:
     if config.host_triple != config.target_triple:
-        print(
-            "Forcing dexter tests to use host triple {}.".format(config.host_triple)
-        )
+        print("Forcing dexter tests to use host triple {}.".format(config.host_triple))
 
     dependencies = configure_dexter_substitutions()
     if all(d in config.available_features for d in dependencies):
