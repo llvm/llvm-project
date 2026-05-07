@@ -11,8 +11,8 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader
   spirv.ARM.GraphEntryPoint @main, @main_arg_0, @main_res_0
   // CHECK: spirv.ARM.Graph [[GN]]({{%.*}}: !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<2x3xi16> attributes {entry_point = true} {
   spirv.ARM.Graph @main(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<2x3xi16> attributes {entry_point = true} {
-    // CHECK: [[CONST2:%.*]] = spirv.ARM.GraphConstant <{graph_constant_id = 42 : i32}> : !spirv.arm.tensor<2x3xi16>
-    %0 = spirv.ARM.GraphConstant <{graph_constant_id = 42 : i32}> : !spirv.arm.tensor<2x3xi16>
+    // CHECK: [[CONST2:%.*]] = spirv.ARM.GraphConstant id = 42 : !spirv.arm.tensor<2x3xi16>
+    %0 = spirv.ARM.GraphConstant id = 42 : !spirv.arm.tensor<2x3xi16>
     // CHECK: spirv.ARM.GraphOutputs [[OUT:%.*]] : !spirv.arm.tensor<2x3xi16>
     spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3xi16>
   }

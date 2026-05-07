@@ -237,7 +237,10 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
   let autogenSerialization = 0;
 
   let assemblyFormat = [{
-    $callee `(` $arguments `)` prop-dict attr-dict `:`
+    $callee `(` $arguments `)`
+      (`arg_attrs` `=` $arg_attrs^)?
+      (`res_attrs` `=` $res_attrs^)?
+      attr-dict `:`
       functional-type($arguments, results)
   }];
 }
