@@ -80,6 +80,33 @@ define <4 x i64> @fold_commuted(<4 x i64> %x, <4 x i64> %a, <4 x i64> %b) {
   ret <4 x i64> %r
 }
 
+define <4 x i64> @fold_two_madd52_calls(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: @fold_two_madd52_calls(
+; CHECK-NEXT:    [[M2:%.*]] = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> [[M2]], <4 x i64> [[A]], <4 x i64> [[B]])
+; CHECK-NEXT:    ret <4 x i64> [[R]]
+;
+  %m1 = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> %a, <4 x i64> %b)
+  %m2 = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> %a, <4 x i64> %b)
+  %r = add <4 x i64> %m1, %m2
+  ret <4 x i64> %r
+}
+
+define <4 x i64> @fold_three_madd52_chain(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d, <4 x i64> %e, <4 x i64> %f) {
+; CHECK-LABEL: @fold_three_madd52_chain(
+; CHECK-NEXT:    [[M2:%.*]] = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> [[C:%.*]], <4 x i64> [[D:%.*]])
+; CHECK-NEXT:    [[T1:%.*]] = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> [[M2]], <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> [[T1]], <4 x i64> [[E:%.*]], <4 x i64> [[F:%.*]])
+; CHECK-NEXT:    ret <4 x i64> [[R]]
+;
+  %m1 = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> %a, <4 x i64> %b)
+  %m2 = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> %c, <4 x i64> %d)
+  %m3 = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> %e, <4 x i64> %f)
+  %t1 = add <4 x i64> %m1, %m2
+  %r  = add <4 x i64> %t1, %m3
+  ret <4 x i64> %r
+}
+
 ; ---- Negative cases should NOT fold ----
 
 define <4 x i64> @nofold_nonzero_acc(<4 x i64> %x, <4 x i64> %acc, <4 x i64> %a, <4 x i64> %b) {

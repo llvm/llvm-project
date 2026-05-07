@@ -3220,6 +3220,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!Add || !match(Add, m_c_Add(m_Specific(&II), m_Value(X))))
       break;
 
+    IC.Builder.SetInsertPoint(Add);
     Value *NewCall = IC.Builder.CreateIntrinsic(
         IID, {}, {X, II.getArgOperand(1), II.getArgOperand(2)});
 
