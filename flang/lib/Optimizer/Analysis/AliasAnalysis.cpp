@@ -212,9 +212,7 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
       });
   bool allPathsSame =
       llvm::all_of(sources, [&](const fir::AliasAnalysis::Source &s) {
-        return s.accessPath.isApproximate ==
-                   sources[0].accessPath.isApproximate &&
-               s.accessPath.steps == sources[0].accessPath.steps;
+        return s.accessPath == sources[0].accessPath;
       });
   bool allTypesSame =
       llvm::all_of(sources, [&](const fir::AliasAnalysis::Source &s) {
