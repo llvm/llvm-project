@@ -600,7 +600,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           if (!SeenSegments.insert(Index).second)
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
-          if (Index > DataSegments.size())
+          if (static_cast<size_t>(Index) >= DataSegments.size())
             return make_error<GenericBinaryError>("invalid data segment name entry",
                                                   object_error::parse_failed);
           nameType = wasm::NameType::DATA_SEGMENT;
