@@ -7839,38 +7839,6 @@ void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
          MI->definesRegister(End->getOperand(1).getReg(), &RI))
     ++End;
 
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  auto DominatesStart = [&](const MachineInstr *Q) -> bool {
-    if (!Q)
-      return false;
-    if (MDT)
-      return MDT->dominates(Q, &*Start);
-    if (Q->getParent() != &MBB)
-      return true;
-    for (auto It = MBB.begin(); It != Start; ++It)
-      if (&*It == Q)
-        return true;
-    return false;
-  };
-  for (MachineOperand *MO : ScalarOps) {
-    if (!MO->isReg())
-      continue;
-    Register R = MO->getReg();
-    if (!R.isVirtual())
-      continue;
-    MachineInstr *DefMI = MRI.getVRegDef(R);
-    if (!DefMI || !DefMI->isCopy() || DefMI->getParent() != &MBB ||
-        DominatesStart(DefMI))
-      continue;
-    const MachineOperand &Src = DefMI->getOperand(1);
-    if (!Src.isReg() || !Src.getReg().isVirtual() ||
-        !DominatesStart(MRI.getVRegDef(Src.getReg())))
-      continue;
-    for (MachineOperand &U : DefMI->all_uses())
-      MRI.clearKillFlags(U.getReg());
-    MBB.splice(Start, &MBB, DefMI->getIterator());
-  }
-
   generateWaterFallLoop(*this, *MI, ScalarOps, MDT, Start, End, PhySGPRs);
 }
 
