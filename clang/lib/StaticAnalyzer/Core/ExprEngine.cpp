@@ -3738,12 +3738,12 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, Location, Val,
                                          StoreE, AtDeclInit, *this, *PP);
 
-  for (const auto PredI : CheckedSet) {
+  for (ExplodedNode *PredI : CheckedSet) {
     ProgramStateRef State = PredI->getState();
 
     State = processPointerEscapedOnBind(State, Location, Val, LC);
 
-    if (std::optional<Loc> AsLoc = Location.getAs<Loc>()) {
+    if (auto AsLoc = Location.getAs<Loc>()) {
       // When binding the value, pass on the hint that this is a
       // initialization. For initializations, we do not need to inform clients
       // of region changes.
@@ -3751,10 +3751,8 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
     }
 
     const MemRegion *LocReg = nullptr;
-    if (std::optional<loc::MemRegionVal> LocRegVal =
-            Location.getAs<loc::MemRegionVal>()) {
+    if (auto LocRegVal = Location.getAs<loc::MemRegionVal>())
       LocReg = LocRegVal->getRegion();
-    }
 
     PostStore PS(StoreE, LC, LocReg, /*tag=*/nullptr);
     Dst.insert(Engine.makeNode(PS, State, PredI));
