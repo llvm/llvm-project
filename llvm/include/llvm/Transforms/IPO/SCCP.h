@@ -45,7 +45,7 @@ struct IPSCCPOptions {
 };
 
 /// Pass to perform interprocedural constant propagation.
-class IPSCCPPass : public PassInfoMixin<IPSCCPPass> {
+class IPSCCPPass : public OptionalPassInfoMixin<IPSCCPPass> {
   IPSCCPOptions Options;
 
 public:

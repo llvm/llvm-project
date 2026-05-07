@@ -32,7 +32,7 @@ TEST_F(LlvmLibcShutdownTest, ShutWrProducesEOF) {
   // Reading from sv[1] should report end-of-file by returning 0.
   char read_buf[10];
   ASSERT_THAT(LIBC_NAMESPACE::read(sv[1], read_buf, sizeof(read_buf)),
-              Succeeds(0));
+              Succeeds<ssize_t>(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
@@ -49,7 +49,7 @@ TEST_F(LlvmLibcShutdownTest, ShutRdPreventsReading) {
   // Reading from sv[0] should report end-of-file by returning 0.
   char read_buf[10];
   ASSERT_THAT(LIBC_NAMESPACE::read(sv[0], read_buf, sizeof(read_buf)),
-              Succeeds(0));
+              Succeeds<ssize_t>(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
@@ -66,9 +66,9 @@ TEST_F(LlvmLibcShutdownTest, ShutRdWrDoesBoth) {
   // Both descriptors should report end-of-file by returning 0.
   char read_buf[10];
   ASSERT_THAT(LIBC_NAMESPACE::read(sv[0], read_buf, sizeof(read_buf)),
-              Succeeds(0));
+              Succeeds<ssize_t>(0));
   ASSERT_THAT(LIBC_NAMESPACE::read(sv[1], read_buf, sizeof(read_buf)),
-              Succeeds(0));
+              Succeeds<ssize_t>(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));

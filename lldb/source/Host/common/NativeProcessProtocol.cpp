@@ -344,10 +344,8 @@ Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
   LLDB_LOG(log, "addr = {0:x}, size_hint = {1}", addr, size_hint);
 
   auto it = m_software_breakpoints.find(addr);
-  if (it != m_software_breakpoints.end()) {
-    ++it->second.ref_count;
+  if (it != m_software_breakpoints.end())
     return Status();
-  }
   auto expected_bkpt = EnableSoftwareBreakpoint(addr, size_hint);
   if (!expected_bkpt)
     return Status::FromError(expected_bkpt.takeError());
@@ -362,14 +360,10 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
   auto it = m_software_breakpoints.find(addr);
   if (it == m_software_breakpoints.end())
     return Status::FromErrorString("Breakpoint not found.");
-  assert(it->second.ref_count > 0);
-  if (--it->second.ref_count > 0)
-    return Status();
 
   // Remove the entry from m_software_breakpoints rightaway, so that we don't
-  // leave behind an entry with ref_count == 0 in case one of the following
-  // conditions returns an error. The breakpoint is moved so that it can be
-  // accessed below.
+  // leave behind an entry in case one of the following conditions returns an
+  // error. The breakpoint is moved so that it can be accessed below.
   SoftwareBreakpoint bkpt = std::move(it->second);
   m_software_breakpoints.erase(it);
 
@@ -503,7 +497,7 @@ NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
   }
 
   LLDB_LOG(log, "addr = {0:x}: SUCCESS", addr);
-  return SoftwareBreakpoint{1, saved_opcode_bytes, *expected_trap};
+  return SoftwareBreakpoint{saved_opcode_bytes, *expected_trap};
 }
 
 llvm::Expected<llvm::ArrayRef<uint8_t>>
