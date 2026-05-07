@@ -638,6 +638,21 @@ TEST(DWARFExpression, DW_OP_addr) {
       ExpectScalar(uint32_t{0x40302010}));
 }
 
+TEST(DWARFExpression, DW_OP_addr_big_endian) {
+  // Same operand bytes, big-endian extractor: the address must be read in
+  // target byte order.
+  uint8_t expr[] = {DW_OP_addr, 0x10, 0x20, 0x30, 0x40, DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderBig,
+                          /*addr_size*/ 4);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(/*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr,
+                                /*module_sp=*/{}, extractor,
+                                /*dwarf_cu=*/nullptr, lldb::eRegisterKindLLDB,
+                                /*initial_value_ptr=*/nullptr,
+                                /*object_address_ptr=*/nullptr),
+      ExpectScalar(uint32_t{0x10203040}));
+}
+
 TEST(DWARFExpression, DW_OP_nop) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_nop}), ExpectScalar(5));
 }
@@ -723,27 +738,59 @@ TEST(DWARFExpression, DW_OP_not) {
 }
 
 TEST(DWARFExpression, DW_OP_lt) {
+  // a < b
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_lt}),
       ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_lt}),
+                       ExpectScalar(0));
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lt}),
+      ExpectScalar(0));
 }
 
 TEST(DWARFExpression, DW_OP_gt) {
+  // a > b
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_gt}),
       ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_gt}),
+                       ExpectScalar(0));
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_gt}),
+      ExpectScalar(0));
 }
 
 TEST(DWARFExpression, DW_OP_le) {
+  // a < b
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_le}),
       ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_le}),
+                       ExpectScalar(1));
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_le}),
+      ExpectScalar(0));
 }
 
 TEST(DWARFExpression, DW_OP_ge) {
+  // a > b
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_ge}),
       ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_ge}),
+                       ExpectScalar(1));
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_ge}),
+      ExpectScalar(0));
 }
 
 TEST(DWARFExpression, DW_OP_eq) {
@@ -807,7 +854,12 @@ TEST(DWARFExpression, DW_OP_skip_to_end) {
                        ExpectScalar(5));
 }
 
-TEST(DWARFExpression, DW_OP_bra_false) {
+TEST(DWARFExpression, DW_OP_bra_branches) {
+  // Top is non-zero → branch is taken, skip past the trailing const1u 0xff and
+  // return the previously-pushed 0x42.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0x42, DW_OP_lit1, DW_OP_bra,
+                                 0x02, 0x00, DW_OP_const1u, 0xff}),
+                       ExpectScalar(0x42));
   // Top is 0 → no branch, fall through to next opcode.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit5, DW_OP_lit0, DW_OP_bra, 0x63, 0x00}),

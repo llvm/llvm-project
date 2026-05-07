@@ -925,14 +925,14 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
 }
 
 static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
-                                        LocationAtom opcode, uint8_t size,
+                                        LocationAtom opcode, unsigned size,
                                         size_t size_addr_bytes) {
   const char *op_name = DW_OP_value_to_name(opcode);
   if (eval_ctx.stack.empty())
     return llvm::createStringError("expression stack empty for %s", op_name);
 
   if (size > 8)
-    return llvm::createStringError("Invalid address size for %s: %d\n", op_name,
+    return llvm::createStringError("Invalid address size for %s: %u", op_name,
                                    size);
 
   if (opcode == DW_OP_deref_size && size > size_addr_bytes)
