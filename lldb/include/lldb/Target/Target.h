@@ -1011,9 +1011,9 @@ public:
   // This is the abstract version of the override.  Particular implementations
   // e.g. the scripted override will derive from this.
   class BreakpointResolverOverride;
-  using BreakpointResolverOverrideUP 
-      = std::unique_ptr<BreakpointResolverOverride>;
-  
+  using BreakpointResolverOverrideUP =
+      std::unique_ptr<BreakpointResolverOverride>;
+
   class BreakpointResolverOverride {
   public:
     BreakpointResolverOverride(Target &target, const std::string &description)
@@ -1037,8 +1037,7 @@ public:
   lldb::user_id_t
   AddBreakpointResolverOverride(BreakpointResolverOverrideUP override_up) {
     lldb::user_id_t id_used = m_override_id;
-    m_breakpoint_overrides.emplace(
-        m_override_id, std::move(override_up));
+    m_breakpoint_overrides.emplace(m_override_id, std::move(override_up));
     m_override_id++;
     return id_used;
   }

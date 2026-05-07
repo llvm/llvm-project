@@ -241,8 +241,8 @@ void Target::PrimeFromDummyTarget(Target &target) {
   }
 
   for (auto const &elem : target.m_breakpoint_overrides) {
-    BreakpointResolverOverrideUP new_override_up 
-        = elem.second->CopyIntoNewTarget(*this);
+    BreakpointResolverOverrideUP new_override_up =
+        elem.second->CopyIntoNewTarget(*this);
     if (new_override_up->Validate())
       AddBreakpointResolverOverride(std::move(new_override_up));
   }

@@ -3652,8 +3652,8 @@ protected:
       result.AppendMessageWithFormatv("{0}", *id);
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormatv("could not add resolver: {0}.", 
-          llvm::toString(id.takeError()));
+      result.AppendErrorWithFormatv("could not add resolver: {0}.",
+                                    llvm::toString(id.takeError()));
     }
   }
 

@@ -694,20 +694,22 @@ uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
     StructuredDataImpl impl;
     args_data.CopyImpl(impl);
     StructuredData::ObjectSP object_sp = impl.GetObjectSP();
-    StructuredData::DictionarySP args_dict(new StructuredData::Dictionary(object_sp));
+    StructuredData::DictionarySP args_dict(
+        new StructuredData::Dictionary(object_sp));
     if (!args_dict->IsValid()) {
       error.SetErrorString("args data is not a dictionary");
       return LLDB_INVALID_INDEX64;
     }
-    
-    llvm::Expected<lldb::user_id_t> id_or_err = 
-        target_sp->AddBreakpointResolverOverride(class_name, args_dict, 
+
+    llvm::Expected<lldb::user_id_t> id_or_err =
+        target_sp->AddBreakpointResolverOverride(
+            class_name, args_dict,
             description ? description : "<No Description>");
-    if(id_or_err)
+    if (id_or_err)
       return *id_or_err;
     error.SetErrorString(llvm::toString(id_or_err.takeError()).c_str());
     return LLDB_INVALID_INDEX64;
-      
+
   } else {
     error.SetErrorString("invalid SBTarget.");
     return LLDB_INVALID_INDEX64;
