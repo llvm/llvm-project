@@ -11,9 +11,9 @@ void test_one(void) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-parallel-sections.c:3:1, line:6:1> line:3:6 test_zero 'void (void)'
+// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-parallel-sections.c:3:1, line:6:1> line:3:6 test_zero 'void (void)' external-linkage
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:22, line:6:1>
-// CHECK-NEXT: `-FunctionDecl {{.*}} <line:8:1, line:11:1> line:8:6 test_one 'void (void)'
+// CHECK-NEXT: `-FunctionDecl {{.*}} <line:8:1, line:11:1> line:8:6 test_one 'void (void)' external-linkage
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:21, line:11:1>
 // CHECK-NEXT:     `-OMPParallelSectionsDirective {{.*}} <line:9:1, col:30>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:10:3, col:7>

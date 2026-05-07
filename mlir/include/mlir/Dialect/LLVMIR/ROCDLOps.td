@@ -536,6 +536,19 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDL_WaveBarrierOp : ROCDL_ConcreteNonMemIntrOp<"wave.barrier", [], 0> {
+  let assemblyFormat = "attr-dict";
+  let description = [{
+    Insert a wave-level (subgroup) barrier. Synchronizes lanes within a
+    single wave/wavefront without any memory ordering guarantees.
+
+    Example:
+    ```mlir
+    rocdl.wave.barrier
+    ```
+  }];
+}
+
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
