@@ -33,7 +33,7 @@
 
 #define __CUDA__
 #define __OPENMP_NVPTX__
-#include <__clang_spirv_cmath.h>
+#include <__clang_cmath.h>
 #undef __OPENMP_NVPTX__
 #undef __CUDA__
 
@@ -44,7 +44,7 @@
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 #define __OPENMP_AMDGCN__
-#include <__clang_spirv_cmath.h>
+#include <__clang_cmath.h>
 #undef __OPENMP_AMDGCN__
 
 #pragma omp end declare variant
@@ -55,7 +55,7 @@
 
 #define __OPENMP_SPIRV__
 
-#include <__clang_spirv_cmath.h>
+#include <__clang_cmath.h>
 
 #undef __OPENMP_SPIRV__
 

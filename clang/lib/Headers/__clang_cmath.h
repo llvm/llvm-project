@@ -7,8 +7,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef __CLANG_SPIRV_CMATH_H__
-#define __CLANG_SPIRV_CMATH_H__
+#ifndef __CLANG_CMATH_H__
+#define __CLANG_CMATH_H__
 
 #if !defined(__OPENMP_SPIRV__) && !defined(__OPENMP_AMDGCN__) &&               \
     !defined(__OPENMP_NVPTX__)
@@ -206,4 +206,4 @@ __DEVICE__ _Float16 pow(_Float16 __base, int __iexp) {
 #endif
 #endif
 #undef __DEVICE__
-#endif // __CLANG_SPIRV_CMATH_H__
+#endif // __CLANG_CMATH_H__

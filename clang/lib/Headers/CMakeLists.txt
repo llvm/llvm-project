@@ -42,6 +42,7 @@ set(core_files
   tgmath.h
   unwind.h
   varargs.h
+  __clang_cmath.h
   )
 
 set(arm_common_files
@@ -146,7 +147,6 @@ set(spirv_files
   __clang_spirv_builtins.h
   __clang_spirv_libdevice_declares.h
   __clang_spirv_math.h
-  __clang_spirv_cmath.h
   )
 
 set(systemz_files
