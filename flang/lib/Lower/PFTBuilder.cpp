@@ -737,17 +737,51 @@ private:
           if (successorIt != it) {
             Fortran::lower::pft::EvaluationList &ifBodyList =
                 *ifConstructIt->evaluationList;
+            // The trailing GOTO/CYCLE is the last body statement, just before
+            // EndIfStmt. For the legacy single-body-statement case (3-eval
+            // IfConstruct) it is also `next(begin)`.
+            lower::pft::EvaluationList::iterator endIfStmtIt =
+                std::prev(ifBodyList.end());
             lower::pft::EvaluationList::iterator branchStmtIt =
-                std::next(ifBodyList.begin());
+                std::prev(endIfStmtIt);
             assert((branchStmtIt->isA<parser::GotoStmt>() ||
                     branchStmtIt->isA<parser::CycleStmt>()) &&
                    "expected goto or cycle statement");
+            // Capture the body statement that lexically precedes the trailing
+            // CYCLE/GOTO; for the legacy 3-eval case this is the IfStmt
+            // itself.
+            lower::pft::Evaluation *lastBodyEval = &*std::prev(branchStmtIt);
+            bool wasThreeEval = branchStmtIt == std::next(ifBodyList.begin());
             ifBodyList.erase(branchStmtIt);
-            lower::pft::Evaluation &ifStmt = *ifBodyList.begin();
-            ifStmt.negateCondition = true;
-            ifStmt.lexicalSuccessor = firstStmt(&*successorIt);
-            lower::pft::EvaluationList::iterator endIfStmtIt =
-                std::prev(ifBodyList.end());
+            endIfStmtIt = std::prev(ifBodyList.end());
+            if (wasThreeEval) {
+              // Legacy rewrite for `if (cond) then; CYCLE/GOTO; end if`:
+              // negate the condition, drop the IF, and put the after-stmts
+              // where the IF used to be. Saves one branch versus introducing
+              // an empty THEN with a synthetic ELSE for the same shape.
+              lower::pft::Evaluation &ifStmt = *ifBodyList.begin();
+              ifStmt.negateCondition = true;
+              ifStmt.lexicalSuccessor = firstStmt(&*successorIt);
+            } else {
+              // Multi-stmt body: keep the THEN body (minus the trailing
+              // CYCLE/GOTO) and synthesise an ELSE branch that holds the
+              // after-stmts. After this rewrite the IfConstruct is a plain
+              // structured if/else with no branches out of the loop, so PFT
+              // branch analysis no longer marks the enclosing DO as
+              // unstructured.
+              static const parser::ElseStmt syntheticElseStmt{
+                  std::optional<parser::Name>{}};
+              auto elseIt = ifBodyList.insert(
+                  endIfStmtIt,
+                  lower::pft::Evaluation{
+                      syntheticElseStmt,
+                      lower::pft::PftNode{*ifConstructIt},
+                      ifConstructIt->position,
+                      std::optional<parser::Label>{}});
+              elseIt->parentConstruct = &*ifConstructIt;
+              lastBodyEval->lexicalSuccessor = &*elseIt;
+              elseIt->lexicalSuccessor = firstStmt(&*successorIt);
+            }
             std::prev(it)->lexicalSuccessor = &*endIfStmtIt;
             endIfStmtIt->lexicalSuccessor = firstStmt(&*it);
             ifBodyList.splice(endIfStmtIt, evaluationList, successorIt, it);
@@ -757,17 +791,35 @@ private:
           ifCandidateStack.pop_back();
         }
       }
-      if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() == 3) {
-        const auto bodyEval = std::next(eval.evaluationList->begin());
-        if (const auto *gotoStmt = bodyEval->getIf<parser::GotoStmt>()) {
-          if (!bodyEval->lexicalSuccessor->label)
-            ifCandidateStack.push_back({it, gotoStmt->v});
-        } else if (doStmt) {
-          if (const auto *cycleStmt = bodyEval->getIf<parser::CycleStmt>()) {
-            std::string cycleName = getConstructName(*cycleStmt);
-            if (cycleName.empty() || cycleName == doName)
-              // This candidate will match doStmt's EndDoStmt.
-              ifCandidateStack.push_back({it, {}, true});
+      if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() >= 3) {
+        // Find the last body statement (just before EndIfStmt). For an
+        // IfConstruct body of size >= 3 layout is
+        // `[IfThenStmt, body1, ..., bodyN, EndIfStmt]`; the candidate is
+        // viable only if `bodyN` is a GOTO/CYCLE that targets out of the
+        // enclosing loop and there is no ELSE / ELSE IF branch in between.
+        auto endIfIt = std::prev(eval.evaluationList->end());
+        auto lastBodyIt = std::prev(endIfIt);
+        bool hasElseChain = false;
+        for (auto bIt = std::next(eval.evaluationList->begin()); bIt != endIfIt;
+             ++bIt) {
+          if (bIt->isA<parser::ElseStmt>() ||
+              bIt->isA<parser::ElseIfStmt>()) {
+            hasElseChain = true;
+            break;
+          }
+        }
+        if (!hasElseChain) {
+          if (const auto *gotoStmt = lastBodyIt->getIf<parser::GotoStmt>()) {
+            if (!lastBodyIt->lexicalSuccessor->label)
+              ifCandidateStack.push_back({it, gotoStmt->v});
+          } else if (doStmt) {
+            if (const auto *cycleStmt =
+                    lastBodyIt->getIf<parser::CycleStmt>()) {
+              std::string cycleName = getConstructName(*cycleStmt);
+              if (cycleName.empty() || cycleName == doName)
+                // This candidate will match doStmt's EndDoStmt.
+                ifCandidateStack.push_back({it, {}, true});
+            }
           }
         }
       }
