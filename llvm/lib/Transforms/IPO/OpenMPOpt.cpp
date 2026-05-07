@@ -259,7 +259,7 @@ KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MaxTeams)
 GlobalVariable *
 getKernelEnvironementGVFromKernelInitCB(CallBase *KernelInitCB) {
   constexpr int InitKernelEnvironmentArgNo = 0;
-  return cast<GlobalVariable>(
+  return dyn_cast<GlobalVariable>(
       KernelInitCB->getArgOperand(InitKernelEnvironmentArgNo)
           ->stripPointerCasts());
 }
@@ -267,7 +267,9 @@ getKernelEnvironementGVFromKernelInitCB(CallBase *KernelInitCB) {
 ConstantStruct *getKernelEnvironementFromKernelInitCB(CallBase *KernelInitCB) {
   GlobalVariable *KernelEnvGV =
       getKernelEnvironementGVFromKernelInitCB(KernelInitCB);
-  return cast<ConstantStruct>(KernelEnvGV->getInitializer());
+  if (!KernelEnvGV || !KernelEnvGV->hasInitializer())
+    return nullptr;
+  return dyn_cast<ConstantStruct>(KernelEnvGV->getInitializer());
 }
 } // namespace KernelInfo
 
@@ -2947,6 +2949,8 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
         return false;
       ConstantStruct *KernelEnvC =
           KernelInfo::getKernelEnvironementFromKernelInitCB(CB);
+      if (!KernelEnvC)
+        return false;
       ConstantInt *ExecModeC =
           KernelInfo::getExecModeFromKernelEnvironment(KernelEnvC);
       return ExecModeC->getSExtValue() & OMP_TGT_EXEC_MODE_GENERIC;
@@ -3744,14 +3748,16 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!KernelInitCB || !KernelDeinitCB)
       return;
 
-    // Add itself to the reaching kernel and set IsKernelEntry.
-    ReachingKernelEntries.insert(Fn);
-    IsKernelEntry = true;
-
     KernelEnvC =
         KernelInfo::getKernelEnvironementFromKernelInitCB(KernelInitCB);
     GlobalVariable *KernelEnvGV =
         KernelInfo::getKernelEnvironementGVFromKernelInitCB(KernelInitCB);
+    if (!KernelEnvC || !KernelEnvGV)
+      return;
+
+    // Add itself to the reaching kernel and set IsKernelEntry.
+    ReachingKernelEntries.insert(Fn);
+    IsKernelEntry = true;
 
     Attributor::GlobalVariableSimplifictionCallbackTy
         KernelConfigurationSimplifyCB =
@@ -3920,6 +3926,14 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!KernelInitCB || !KernelDeinitCB)
       return ChangeStatus::UNCHANGED;
 
+    // Likewise, if the kernel-environment global is missing (e.g. the IR
+    // passes a null pointer as the first argument of __kmpc_target_init)
+    // there is no environment to update.
+    GlobalVariable *KernelEnvGV =
+        KernelInfo::getKernelEnvironementGVFromKernelInitCB(KernelInitCB);
+    if (!KernelEnvGV || !KernelEnvC)
+      return ChangeStatus::UNCHANGED;
+
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
     bool HasBuiltStateMachine = true;
@@ -3941,8 +3955,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
           OldUseGenericStateMachineVal);
 
     // At last, update the KernelEnvc
-    GlobalVariable *KernelEnvGV =
-        KernelInfo::getKernelEnvironementGVFromKernelInitCB(KernelInitCB);
     if (KernelEnvGV->getInitializer() != KernelEnvC) {
       KernelEnvGV->setInitializer(KernelEnvC);
       Changed = ChangeStatus::CHANGED;
@@ -4271,6 +4283,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // Check if the kernel is already in SPMD mode, if so, return success.
     ConstantStruct *ExistingKernelEnvC =
         KernelInfo::getKernelEnvironementFromKernelInitCB(KernelInitCB);
+    if (!ExistingKernelEnvC)
+      return false;
     auto *ExecModeC =
         KernelInfo::getExecModeFromKernelEnvironment(ExistingKernelEnvC);
     const int8_t ExecModeVal = ExecModeC->getSExtValue();
@@ -4322,6 +4336,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     ConstantStruct *ExistingKernelEnvC =
         KernelInfo::getKernelEnvironementFromKernelInitCB(KernelInitCB);
+    if (!ExistingKernelEnvC)
+      return false;
 
     // Check if the current configuration is non-SPMD and generic state machine.
     // If we already have SPMD mode or a custom state machine we do not need to
@@ -4650,6 +4666,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
         ConstantStruct *ExistingKernelEnvC =
             KernelInfo::getKernelEnvironementFromKernelInitCB(AA.KernelInitCB);
+        if (!ExistingKernelEnvC)
+          return;
 
         if (!AA.isValidState()) {
           AA.KernelEnvC = ExistingKernelEnvC;
