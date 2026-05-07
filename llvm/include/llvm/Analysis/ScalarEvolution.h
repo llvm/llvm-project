@@ -2573,23 +2573,20 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public PassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {

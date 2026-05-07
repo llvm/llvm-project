@@ -3904,8 +3904,8 @@ def warn_cmse_nonsecure_union : Warning<
   InGroup<DiagGroup<"cmse-union-leak">>;
 def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
-def err_attribute_selectany_non_extern_data : Error<
-  "'selectany' can only be applied to data items with external linkage">;
+def err_attribute_selectany_non_extern_var : Error<
+  "'selectany' can only be applied to variables with external linkage">;
 def warn_attribute_hybrid_patchable_non_extern : Warning<
   "'hybrid_patchable' is ignored on functions without external linkage">,
   InGroup<IgnoredAttributes>;
