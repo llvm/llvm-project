@@ -167,13 +167,12 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; AVX512-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <8 x ptr> [[BROADCAST_SPLAT2]], i64 0
-; AVX512-NEXT:    [[TMP10:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v8p0(<8 x ptr> [[TMP7]], <8 x i1> [[TMP6]], ptr [[TMP9]])
+; AVX512-NEXT:    [[TMP9:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v8p0(<8 x ptr> [[TMP7]], <8 x i1> [[TMP6]], ptr [[INIT]])
 ; AVX512-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; AVX512:       [[SCALAR_PH]]:
 ; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; AVX512-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; AVX512-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; AVX512-NEXT:    br label %[[LOOP1:.*]]
 ; AVX512:       [[LOOP1]]:
 ; AVX512-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
@@ -187,7 +186,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; AVX512-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; AVX512-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; AVX512:       [[EXIT]]:
-; AVX512-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi ptr [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
+; AVX512-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi ptr [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
 ; AVX512-NEXT:    ret ptr [[SELECT_DATA_LCSSA]]
 ;
 entry:

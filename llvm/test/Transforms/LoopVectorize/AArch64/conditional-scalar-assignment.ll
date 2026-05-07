@@ -145,13 +145,12 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 2 x ptr> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP14:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.nxv2p0(<vscale x 2 x ptr> [[TMP11]], <vscale x 2 x i1> [[TMP10]], ptr [[TMP13]])
+; SVE-NEXT:    [[TMP13:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.nxv2p0(<vscale x 2 x ptr> [[TMP11]], <vscale x 2 x i1> [[TMP10]], ptr [[INIT]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP1:.*]]
 ; SVE:       [[LOOP1]]:
 ; SVE-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
@@ -165,7 +164,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi ptr [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi ptr [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret ptr [[SELECT_DATA_LCSSA]]
 ;
 entry:
@@ -1054,13 +1053,12 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP11]], <vscale x 4 x i1> [[TMP10]], i32 [[TMP13]])
+; SVE-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP11]], <vscale x 4 x i1> [[TMP10]], i32 [[DEFAULT_VAL]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1079,7 +1077,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
 ;
 entry:
@@ -1174,13 +1172,12 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP15:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i1> [[TMP11]], i32 [[TMP14]])
+; SVE-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i1> [[TMP11]], i32 [[DEFAULT_VAL]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1198,7 +1195,7 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
 ;
 entry:
@@ -1304,13 +1301,12 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP17:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP14]], <vscale x 4 x i1> [[TMP13]], i32 [[TMP16]])
+; SVE-NEXT:    [[TMP16:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP14]], <vscale x 4 x i1> [[TMP13]], i32 [[DEFAULT_VAL]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1332,7 +1328,7 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP21:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP17]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
 ;
 entry:

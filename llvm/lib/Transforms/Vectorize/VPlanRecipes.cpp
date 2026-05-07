@@ -717,8 +717,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Br;
   }
   case VPInstruction::Broadcast: {
-    return Builder.CreateVectorSplat(
-        State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
+    Value *Op = State.get(getOperand(0), /*IsScalar*/ true);
+    State.set(this, Op, true);
+    return Builder.CreateVectorSplat(State.VF, Op, "broadcast");
   }
   case VPInstruction::BuildStructVector: {
     // For struct types, we need to build a new 'wide' struct type, where each

@@ -875,8 +875,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i1> poison, i1 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i1> [[BROADCAST_SPLATINSERT]], <32 x i1> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <32 x i1> [[BROADCAST_SPLAT]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C]], true
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE62:%.*]] ]
@@ -1153,8 +1152,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 992, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT63:%.*]] = insertelement <8 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT64:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT63]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP137:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT64]], i64 0
-; CHECK-NEXT:    [[TMP167:%.*]] = xor i1 [[TMP137]], true
+; CHECK-NEXT:    [[TMP167:%.*]] = xor i1 [[C]], true
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT65:%.*]] = insertelement <8 x i32> poison, i32 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT66:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT65]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[BROADCAST_SPLAT66]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
