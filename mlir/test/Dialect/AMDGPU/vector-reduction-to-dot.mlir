@@ -192,78 +192,19 @@ func.func @i4_mixed_sign_ext(%lhs: vector<8xi4>, %rhs: vector<8xi4>,
 
 // -----
 
-// CHECK-LABEL: func.func @nofold_missing_fastmath
-func.func @nofold_missing_fastmath(%lhs: vector<4xf16>,
-                                   %rhs: vector<4xf16>) -> f32 {
+// CHECK-LABEL: func.func @f16_extf_no_fastmath
+func.func @f16_extf_no_fastmath(%lhs: vector<4xf16>,
+                                %rhs: vector<4xf16>) -> f32 {
   %lhs_ext = arith.extf %lhs : vector<4xf16> to vector<4xf32>
   %rhs_ext = arith.extf %rhs : vector<4xf16> to vector<4xf32>
   %mul = arith.mulf %lhs_ext, %rhs_ext : vector<4xf32>
   %red = vector.reduction <add>, %mul : vector<4xf32> into f32
   return %red : f32
 }
-// CHECK-NOT: amdgpu.dot
-// CHECK: vector.reduction
-
-// -----
-
-// CHECK-LABEL: func.func @nofold_mul_missing_contract
-func.func @nofold_mul_missing_contract(%lhs: vector<4xf16>,
-                                       %rhs: vector<4xf16>) -> f32 {
-  %lhs_ext = arith.extf %lhs : vector<4xf16> to vector<4xf32>
-  %rhs_ext = arith.extf %rhs : vector<4xf16> to vector<4xf32>
-  %mul = arith.mulf %lhs_ext, %rhs_ext fastmath<reassoc> : vector<4xf32>
-  %red = vector.reduction <add>, %mul fastmath<contract,reassoc,nsz>
-    : vector<4xf32> into f32
-  return %red : f32
-}
-// CHECK-NOT: amdgpu.dot
-// CHECK: vector.reduction
-
-// -----
-
-// CHECK-LABEL: func.func @nofold_reduction_missing_contract
-func.func @nofold_reduction_missing_contract(%lhs: vector<4xf16>,
-                                             %rhs: vector<4xf16>) -> f32 {
-  %lhs_ext = arith.extf %lhs : vector<4xf16> to vector<4xf32>
-  %rhs_ext = arith.extf %rhs : vector<4xf16> to vector<4xf32>
-  %mul = arith.mulf %lhs_ext, %rhs_ext fastmath<contract,reassoc>
-    : vector<4xf32>
-  %red = vector.reduction <add>, %mul fastmath<reassoc,nsz>
-    : vector<4xf32> into f32
-  return %red : f32
-}
-// CHECK-NOT: amdgpu.dot
-// CHECK: vector.reduction
-
-// -----
-
-// CHECK-LABEL: func.func @nofold_reduction_missing_reassoc
-func.func @nofold_reduction_missing_reassoc(%lhs: vector<4xf16>,
-                                            %rhs: vector<4xf16>) -> f32 {
-  %lhs_ext = arith.extf %lhs : vector<4xf16> to vector<4xf32>
-  %rhs_ext = arith.extf %rhs : vector<4xf16> to vector<4xf32>
-  %mul = arith.mulf %lhs_ext, %rhs_ext fastmath<contract> : vector<4xf32>
-  %red = vector.reduction <add>, %mul fastmath<contract,nsz>
-    : vector<4xf32> into f32
-  return %red : f32
-}
-// CHECK-NOT: amdgpu.dot
-// CHECK: vector.reduction
-
-// -----
-
-// CHECK-LABEL: func.func @nofold_no_acc_missing_nsz
-func.func @nofold_no_acc_missing_nsz(%lhs: vector<4xf16>,
-                                     %rhs: vector<4xf16>) -> f32 {
-  %lhs_ext = arith.extf %lhs : vector<4xf16> to vector<4xf32>
-  %rhs_ext = arith.extf %rhs : vector<4xf16> to vector<4xf32>
-  %mul = arith.mulf %lhs_ext, %rhs_ext fastmath<contract> : vector<4xf32>
-  %red = vector.reduction <add>, %mul fastmath<contract,reassoc>
-    : vector<4xf32> into f32
-  return %red : f32
-}
-// CHECK-NOT: amdgpu.dot
-// CHECK: vector.reduction
+// CHECK: %[[ZERO:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK: amdgpu.dot {{.*}} + %[[ZERO]] : vector<2xf16>, vector<2xf16>, f32
+// CHECK: amdgpu.dot {{.*}} : vector<2xf16>, vector<2xf16>, f32
+// CHECK-NOT: vector.reduction
 
 // -----
 

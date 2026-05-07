@@ -233,18 +233,6 @@ static FailureOr<DotChainInfo> getDotChainInfo(vector::ReductionOp reductionOp,
   return DotChainInfo{*lhsChunkSize, unsignedA, unsignedB};
 }
 
-static bool hasRequiredFastMath(vector::ReductionOp reductionOp,
-                                arith::MulFOp mulOp) {
-  arith::FastMathFlags requiredReductionFlags =
-      arith::FastMathFlags::contract | arith::FastMathFlags::reassoc;
-  if (!reductionOp.getAcc())
-    requiredReductionFlags = requiredReductionFlags | arith::FastMathFlags::nsz;
-  return arith::bitEnumContainsAll(reductionOp.getFastmath(),
-                                   requiredReductionFlags) &&
-         arith::bitEnumContainsAll(mulOp.getFastmath(),
-                                   arith::FastMathFlags::contract);
-}
-
 static Value materializeNarrowedVector(PatternRewriter &rewriter, Location loc,
                                        const DotOperandInfo &operand) {
   if (operand.extractPosition.empty())
@@ -285,10 +273,6 @@ struct VectorReductionToDotChain final : OpRewritePattern<vector::ReductionOp> {
       return rewriter.notifyMatchFailure(
           reductionOp, "reduction operand is not an arithmetic multiply");
 
-    if (mulFOp && !hasRequiredFastMath(reductionOp, mulFOp))
-      return rewriter.notifyMatchFailure(
-          reductionOp,
-          "floating-point dot requires contract and reassoc flags");
     if (mulIOp &&
         mulIOp.getOverflowFlags() != arith::IntegerOverflowFlags::none)
       return rewriter.notifyMatchFailure(
