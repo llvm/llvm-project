@@ -1161,7 +1161,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   }
 }
 
-/// Returns true if private ZA setup and be elided. This occurs when there is
+/// Returns true if private ZA setup can be elided. This occurs when there is
 /// no instruction within the function that requires ZA to be active.
 static bool canElidePrivateZASetup(const FunctionInfo &FnInfo) {
   for (const BlockInfo &BlockInfo : FnInfo.Blocks) {
