@@ -1,5 +1,6 @@
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -debug-info-kind=limited -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -debug-info-kind=limited -gno-inlined-builtins -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefix=CHECK-DISABLED
 
 void fun() {
     // Most call-like built-ins are wrapped in an artificial inlined function in
@@ -29,23 +30,26 @@ void fun() {
 
 // CHECK: [[B1]] = !DILocation(line: 0, scope: [[S1:!.*]], inlinedAt: [[I1:!.*]])
 // CHECK: [[S1]] = distinct !DISubprogram(name: "__builtin_alloca"{{.*}}, flags: DIFlagArtificial
-// CHECK: [[I1]] = !DILocation(line: 8,
+// CHECK: [[I1]] = !DILocation(line: 9,
 
 // Second call should reuse same `DISubprogram` scope.
 // CHECK: [[B2]] = !DILocation(line: 0, scope: [[S1:!.*]], inlinedAt: [[I2:!.*]])
-// CHECK: [[I2]] = !DILocation(line: 12,
+// CHECK: [[I2]] = !DILocation(line: 13,
 
 // CHECK: [[B3]] = !DILocation(line: 0, scope: [[S3:!.*]], inlinedAt: [[I3:!.*]])
 // CHECK: [[S3]] = distinct !DISubprogram(name: "__builtin_memset"{{.*}}, flags: DIFlagArtificial
-// CHECK: [[I3]] = !DILocation(line: 15,
+// CHECK: [[I3]] = !DILocation(line: 16,
 
 // Excluded built-ins should use location without inlined function wrapper.
 
-// CHECK: [[B4]] = !DILocation(line: 19,
+// CHECK: [[B4]] = !DILocation(line: 20,
 // CHECK-NOT: distinct !DISubprogram(name: "__builtin_assume"{{.*}}, flags: DIFlagArtificial
 
-// CHECK: [[B5]] = !DILocation(line: 23,
+// CHECK: [[B5]] = !DILocation(line: 24,
 // CHECK-NOT: distinct !DISubprogram(name: "__builtin_ia32_rdtsc"{{.*}}, flags: DIFlagArtificial
 
-// CHECK: [[B6]] = !DILocation(line: 27,
+// CHECK: [[B6]] = !DILocation(line: 28,
 // CHECK-NOT: distinct !DISubprogram(name: "__builtin_malloc"{{.*}}, flags: DIFlagArtificial
+
+// When disabled, there should not be any artificial subprograms
+// CHECK-DISABLED-NOT: distinct !DISubprogram({{.*}}, flags: DIFlagArtificial

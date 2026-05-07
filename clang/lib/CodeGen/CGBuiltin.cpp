@@ -2769,7 +2769,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // built-ins with the built-in function name.
   // See `useBuiltinDebugLocation` for cases where this treatment is disabled.
   auto DebugScope =
-      shouldUseBuiltinDebugLocation(BuiltinID)
+      CGM.getCodeGenOpts().DebugInlinedBuiltins &&
+              shouldUseBuiltinDebugLocation(BuiltinID)
           ? std::make_optional<ApplyBuiltinDebugLocation>(*this, GD)
           : std::nullopt;
 
