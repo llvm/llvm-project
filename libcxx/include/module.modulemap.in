@@ -1691,6 +1691,7 @@ module std [system] {
       header "__memory/shared_ptr.h"
       export std.functional.hash
     }
+    module start_lifetime_as                  { header "__memory/start_lifetime_as.h" }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
     module temp_value                         { header "__memory/temp_value.h" }
     module temporary_buffer                   {

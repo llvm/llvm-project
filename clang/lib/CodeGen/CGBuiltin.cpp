@@ -5184,7 +5184,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(Ptr);
   }
-  // Sema already validates the target as an implicit-lifetime type hence it doesn't require vptr laundering.
+  // Sema already validates the target as an implicit-lifetime type hence it
+  // doesn't require vptr laundering.
   case Builtin::BI__builtin_start_lifetime_as: {
     const Expr *PtrArg = E->getArg(0);
     llvm::Value *Ptr = EmitScalarExpr(PtrArg);

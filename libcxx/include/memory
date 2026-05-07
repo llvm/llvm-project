@@ -931,6 +931,31 @@ template<class Smart, class Pointer, class... Args>
 template<class Pointer = void, class Smart, class... Args>
   auto inout_ptr(Smart& s, Args&&... args);                 // since c++23
 
+// start_lifetime_as
+template <typename _Tp>
+_Tp* start_lifetime_as(void* __p) noexcept; // since c++23
+
+template <typename _Tp>
+const _Tp* start_lifetime_as(const void* __p) noexcept;  // since c++23
+
+template <typename _Tp>
+volatile _Tp* start_lifetime_as(volatile void* __p) noexcept;  // since c++23
+
+template <class _Tp>
+const volatile _Tp* start_lifetime_as(const volatile void* __p) noexcept;  // since c++23
+
+template <typename _Tp>
+_Tp* start_lifetime_as_array(void* __p, size_t __n) noexcept; // since c++23
+
+template <typename _Tp>
+const _Tp* start_lifetime_as_array(const void* __p, size_t __n) noexcept; // since c++23
+
+template <typename _Tp>
+volatile _Tp* start_lifetime_as_array(volatile void* __p, size_t __n) noexcept; // since c++23
+
+template <class _Tp>
+const volatile _Tp* start_lifetime_as_array(const volatile void* __p, size_t __n) noexcept; // since c++23
+
 }  // std
 
 */
@@ -976,6 +1001,7 @@ template<class Pointer = void, class Smart, class... Args>
 
 #  if _LIBCPP_STD_VER >= 23
 #    include <__memory/allocate_at_least.h>
+#    include <__memory/start_lifetime_as.h>
 #  endif
 
 #  include <version>
