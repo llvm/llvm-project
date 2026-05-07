@@ -935,6 +935,11 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
     return llvm::createStringError("Invalid address size for %s: %d\n", op_name,
                                    size);
 
+  if (opcode == DW_OP_deref_size && size > size_addr_bytes)
+    return llvm::createStringError(
+        "DW_OP_deref_size size (%u) exceeds address size (%zu)", size,
+        size_addr_bytes);
+
   // Deref a register or implicit location and truncate the value to `size`
   // bytes. See the corresponding comment in DW_OP_deref for more details on
   // why we deref these locations this way.
