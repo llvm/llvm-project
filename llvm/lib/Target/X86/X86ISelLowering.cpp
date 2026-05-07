@@ -57150,21 +57150,22 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Strip TRUNCATE/ZERO_EXTEND/ANY_EXTEND wrappers and `and x, C` where C
-// preserves the low log2(BW) bits; these are transparent to BT/BTR/BTS/BTC,
-// which implicitly mask the bit index to log2(BW) bits.
+// Strip TRUNCATE/Z|S|ANY_EXTEND wrappers and `and x, C` where C preserves
+// the low log2(BW) bits; these are transparent to BT/BTR/BTS/BTC, which
+// implicitly mask the bit index to log2(BW) bits.
 static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
   APInt LowBits =
       APInt::getLowBitsSet(V.getScalarValueSizeInBits(), Log2_32(BW));
   for (;;) {
     unsigned Op = V.getOpcode();
     if (Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
-        Op == ISD::ANY_EXTEND) {
+        Op == ISD::SIGN_EXTEND || Op == ISD::ANY_EXTEND) {
       V = V.getOperand(0);
       LowBits = LowBits.zextOrTrunc(V.getScalarValueSizeInBits());
       continue;
     }
     if (Op == ISD::AND) {
+      // The mask must keep all bits the bit-test cares about set.
       auto *C = dyn_cast<ConstantSDNode>(V.getOperand(1));
       if (C && LowBits.isSubsetOf(C->getAPIntValue())) {
         V = V.getOperand(0);
@@ -57230,10 +57231,11 @@ static SDValue combineBTToBitOpFlag(SDNode *N, SelectionDAG &DAG) {
     if (peekThroughBitPosExtTrunc(ShAmt, BW) != PeeledBitNo)
       continue;
 
-    // BTR/BTS/BTC *rr take the bit index in a register of the same width as
-    // the source. Extend or truncate to VT to match the instruction signature.
-    SDValue BN = DAG.getZExtOrTrunc(BitNo, DL, VT);
-    SDValue New = DAG.getNode(FlagOp, DL, DAG.getVTList(VT, MVT::i32), Src, BN);
+    // BT's bit index is constrained to Src's type, so we can reuse it as-is
+    // for BTR/BTS/BTC's bit index operand.
+    assert(BitNo.getValueType() == VT && "BT bit index must match Src type");
+    SDValue New =
+        DAG.getNode(FlagOp, DL, DAG.getVTList(VT, MVT::i32), Src, BitNo);
     // Reroute the value output through User's consumers.
     DAG.ReplaceAllUsesOfValueWith(SDValue(User, 0), New.getValue(0));
     // Return the flags output so combineBT installs it as N's replacement.
