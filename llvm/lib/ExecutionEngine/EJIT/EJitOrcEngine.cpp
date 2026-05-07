@@ -84,7 +84,6 @@ EJitOrcEngine::Create(const Config &config,
             if (!F.isDeclaration()) {
               EJitStructFieldPass structField(periodReg);
               FunctionAnalysisManager FAM;
-              // Register analysis passes needed by the pass manager
               PassBuilder PB;
               PB.registerFunctionAnalyses(FAM);
               structField.run(F, FAM);

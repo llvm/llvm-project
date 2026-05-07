@@ -17,6 +17,7 @@ void PeriodArrayRegistry::registerArray(const std::string &periodName,
 void PeriodArrayRegistry::registerStaticVar(const std::string &varName,
                                             void *varAddr) {
   staticVars_.push_back({varName, varAddr});
+  staticVarIndex_[varName] = varAddr;
 }
 
 const std::vector<PeriodArrayInfo> *
@@ -31,6 +32,14 @@ const PeriodArrayInfo *
 PeriodArrayRegistry::getArrayInfo(const std::string &varName) const {
   auto it = varNameIndex_.find(varName);
   if (it == varNameIndex_.end())
+    return nullptr;
+  return it->second;
+}
+
+void *
+PeriodArrayRegistry::getStaticVarAddr(const std::string &varName) const {
+  auto it = staticVarIndex_.find(varName);
+  if (it == staticVarIndex_.end())
     return nullptr;
   return it->second;
 }

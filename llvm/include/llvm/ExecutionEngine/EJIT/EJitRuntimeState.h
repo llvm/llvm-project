@@ -42,6 +42,7 @@ public:
   const std::vector<PeriodArrayInfo> *getArrays(const std::string &periodName) const;
   const std::vector<StaticVarInfo> &getStaticVars() const { return staticVars_; }
   const PeriodArrayInfo *getArrayInfo(const std::string &varName) const;
+  void *getStaticVarAddr(const std::string &varName) const;
 
   const PeriodArrayInfo *getArrayByBaseAddr(void *addr) const;
 
@@ -49,6 +50,7 @@ private:
   std::unordered_map<std::string, std::vector<PeriodArrayInfo>> arraysByPeriod_;
   std::vector<StaticVarInfo> staticVars_;
   std::unordered_map<std::string, const PeriodArrayInfo *> varNameIndex_;
+  std::unordered_map<std::string, void *> staticVarIndex_;
   std::unordered_map<uintptr_t, const PeriodArrayInfo *> baseAddrIndex_;
 };
 

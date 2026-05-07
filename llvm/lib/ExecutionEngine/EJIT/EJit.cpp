@@ -5,6 +5,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
+#include "llvm/Support/TargetSelect.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -39,12 +40,20 @@ EJit::EJit(const Config &config) : config_(config) {
   for (auto &sv : data.staticVars)
     reg.registerStaticVar(sv.varName, sv.varAddr);
 
-  // Create sync JIT engine
+  // Create sync JIT engine (target must be initialized first)
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
   auto engine = EJitOrcEngine::Create(config, reg, *runtimeState_);
   if (engine)
     compileDriver_->setSyncEngine(std::move(*engine));
-  else
-    llvm::consumeError(engine.takeError());
+  else {
+    std::string errStr;
+    llvm::handleAllErrors(engine.takeError(),
+                          [&](const llvm::ErrorInfoBase &E) { errStr = E.message(); });
+    if (logger_)
+      logger_->log(ErrorCode::CompilationFailed,
+                   "Failed to create OrcJIT engine: " + errStr, "", "");
+  }
 }
 
 EJit::~EJit() {

@@ -9,6 +9,14 @@ if(EJIT_DEFAULT_TARGET_TRIPLE)
   message(STATUS "EmbeddedJIT: forcing target triple = ${EJIT_DEFAULT_TARGET_TRIPLE}")
 endif()
 
+# Build target component list from LLVM_TARGETS_TO_BUILD.
+# Each target needs CodeGen, Desc, and Info for native target initialization.
+# AsmPrinter init lives in CodeGen, so no separate AsmPrinter component needed.
+set(EJIT_TARGET_COMPONENTS "")
+foreach(_t ${LLVM_TARGETS_TO_BUILD})
+  list(APPEND EJIT_TARGET_COMPONENTS ${_t}CodeGen ${_t}Desc ${_t}Info)
+endforeach()
+
 add_llvm_component_library(LLVMEJIT
   EJit.cpp
   EJitRuntime.cpp
@@ -39,6 +47,7 @@ add_llvm_component_library(LLVMEJIT
   IPO
   TransformUtils
   Analysis
+  ${EJIT_TARGET_COMPONENTS}
   )
 
 # Propagate the target triple setting to the C++ code
@@ -62,6 +71,7 @@ endif()
 llvm_map_components_to_libnames(EJIT_LLVM_LIBS
   BitReader Core ExecutionEngine OrcJIT JITLink Support
   Passes Scalar InstCombine IPO TransformUtils Analysis
+  ${EJIT_TARGET_COMPONENTS}
   )
 
 # Build a file listing all .a files to combine (one per line)

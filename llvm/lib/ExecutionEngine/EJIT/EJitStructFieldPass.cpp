@@ -50,7 +50,9 @@ static void buildGVPeriodMap(
         if (PN)
           gvMap[&GV] = {PN->getString().str(), true, sz};
       } else if (Tag->getString() == TAG_EJIT_PERIOD) {
-        gvMap[&GV] = {"", false, 0};
+        auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
+        std::string pn = PN ? PN->getString().str() : "";
+        gvMap[&GV] = {pn, false, 0};
       }
     }
   }
@@ -150,17 +152,31 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
 
       Value *PtrOp = LI->getPointerOperand();
 
+      // Helper: resolve base address for a global variable
+      auto resolveBase = [&](const GlobalVariable *GV,
+                             const GVPeriodInfo &info) -> void * {
+        if (info.isArray) {
+          const auto *arrs = registry_.getArrays(info.periodName);
+          if (!arrs || arrs->empty())
+            return nullptr;
+          // For single-array periods, use the only array's base.
+          // For multi-array periods, look up by variable name to get the
+          // correct array's base address (not just the first one).
+          if (arrs->size() == 1)
+            return arrs->front().baseAddr;
+          const auto *paInfo = registry_.getArrayInfo(GV->getName().str());
+          return paInfo ? paInfo->baseAddr : nullptr;
+        }
+        return registry_.getStaticVarAddr(GV->getName().str());
+      };
+
       // Direct global variable load
       if (auto *GV = dyn_cast<GlobalVariable>(PtrOp->stripPointerCasts())) {
         auto it = gvPeriodMap.find(GV);
         if (it == gvPeriodMap.end())
           continue;
 
-        const auto *arrs = registry_.getArrays(it->second.periodName);
-        if (!arrs || arrs->empty())
-          continue;
-
-        void *base = arrs->front().baseAddr;
+        void *base = resolveBase(GV, it->second);
         if (!base)
           continue;
 
@@ -183,11 +199,7 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
         if (!byteOffset)
           continue;
 
-        const auto *arrs = registry_.getArrays(it->second.periodName);
-        if (!arrs || arrs->empty())
-          continue;
-
-        void *base = arrs->front().baseAddr;
+        void *base = resolveBase(GV, it->second);
         if (!base)
           continue;
 
