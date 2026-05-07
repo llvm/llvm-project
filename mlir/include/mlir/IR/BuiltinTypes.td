@@ -597,6 +597,7 @@ def Builtin_Index : Builtin_Type<"Index", "index",
 
 def Builtin_Integer : Builtin_Type<"Integer", "integer",
     [VectorElementTypeInterface, QuantStorageTypeInterface,
+     IntLikeTypeInterface,
      DeclareTypeInterfaceMethods<DenseElementTypeInterface, [
          "getDenseElementBitSize", "convertToAttribute",
          "convertFromAttribute"]>]> {

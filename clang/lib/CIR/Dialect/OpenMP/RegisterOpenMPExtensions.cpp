@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -24,6 +25,13 @@ struct OpenMPPointerLikeModel
     return mlir::cast<cir::PointerType>(pointer).getPointee();
   }
 };
+
+struct CIRIntLikeModel
+    : public mlir::IntLikeType::ExternalModel<CIRIntLikeModel, cir::IntType> {
+  unsigned getWidth(mlir::Type type) const {
+    return mlir::cast<cir::IntType>(type).getWidth();
+  }
+};
 } // namespace
 
 namespace cir::omp {
@@ -33,6 +41,7 @@ void registerOpenMPExtensions(mlir::DialectRegistry &registry) {
     cir::FuncOp::attachInterface<
         mlir::omp::DeclareTargetDefaultModel<cir::FuncOp>>(*ctx);
     cir::PointerType::attachInterface<OpenMPPointerLikeModel>(*ctx);
+    cir::IntType::attachInterface<CIRIntLikeModel>(*ctx);
   });
 }
 

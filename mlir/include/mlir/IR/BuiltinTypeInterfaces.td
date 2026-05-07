@@ -159,6 +159,31 @@ def FloatTypeInterface : TypeInterface<"FloatType",
 }
 
 //===----------------------------------------------------------------------===//
+// IntLikeTypeInterface
+//===----------------------------------------------------------------------===//
+
+def IntLikeTypeInterface : TypeInterface<"IntLikeType"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    This type interface should be implemented by integer-like types. It provides
+    a common API for querying the bit width of the integer type. This is useful
+    for dialects that need to accept integer-like types from other dialects,
+    e.g. for loop bounds, steps, and other integer operands.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the bit width of this integer-like type.
+      }],
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getWidth",
+      /*args=*/(ins)
+    >
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // MemRefElementTypeInterface
 //===----------------------------------------------------------------------===//
 

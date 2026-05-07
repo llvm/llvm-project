@@ -3284,7 +3284,7 @@ func.func @taskloop_private_count_mismatch(%lb : index, %ub : index, %step : ind
 
 // -----
 func.func @masked_arg_type_mismatch(%arg0: f32) {
-  // expected-error @below {{'omp.masked' op operand #0 must be integer or index, but got 'f32'}}
+  // expected-error @below {{'omp.masked' op operand #0 must be integer or index or integer-like type, but got 'f32'}}
   "omp.masked"(%arg0) ({
       omp.terminator
     }) : (f32) -> ()
