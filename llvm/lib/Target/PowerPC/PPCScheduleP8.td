@@ -261,10 +261,6 @@ let SchedModel = P8Model in {
     (instregex "^SUBF(M|Z)?(E)?(IC)?(4|8)?$"),
     (instregex "^NEG(8)?(O)?$"))>;
 
-  // Special pseudo instruction that combines a direct call with a toc restore
-  def : InstRW<[P8_BR_2C, P8_ISSUE_BR, P8_LU_or_LS_FX_3C, P8_ISSUE_FXLD], (instrs
-    (instregex "^BL(8)?_RESTORE(_RM)$"))>;
-
   // Instructions of PM pipeline
 
   def : InstRW<[P8_PM_2C, P8_ISSUE_VSX], (instrs

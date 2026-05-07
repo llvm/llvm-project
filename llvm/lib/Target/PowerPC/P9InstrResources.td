@@ -1299,7 +1299,10 @@ def : InstRW<[P9_CY_6C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C],
 // Pseduo instruction that encapsulates a branch and a toc load.
 def : InstRW<[P9_BR_2C, DISP_BR_1C, P9_LS_4C, IP_AGEN_1C, DISP_1C],
       (instrs
-    (instregex "BL(8)?_RESTORE(_RM)?$")
+  BL_LWZinto_toc,
+  BL_LWZinto_toc_RM,
+  BL8_LDinto_toc,
+  BL8_LDinto_toc_RM
 )>;
 
 // Two Cycle Branch

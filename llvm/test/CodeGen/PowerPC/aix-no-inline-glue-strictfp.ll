@@ -13,6 +13,6 @@ entry:
 
 attributes #0 = { strictfp }
 
-; CHECK: BL_RESTORE_RM &"._ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit-def dead $rm, implicit $rm, implicit $r1, implicit $r11, implicit $r2, implicit-def $r1, implicit-def $r3
+; CHECK: BL_LWZinto_toc_RM &"._ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit-def dead $rm, implicit $rm, implicit $r1, implicit $r11, implicit $r2, implicit-def $r1, implicit-def $r3
 
-; CHECK64: BL8_RESTORE_RM &"._ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit-def dead $rm, implicit $rm, implicit $x1, implicit $x11, implicit $x2, implicit-def $r1, implicit-def $x3
+; CHECK64: BL8_LDinto_toc_RM &"._ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit-def dead $rm, implicit $rm, implicit $x1, implicit $x11, implicit $x2, implicit-def $r1, implicit-def $x3

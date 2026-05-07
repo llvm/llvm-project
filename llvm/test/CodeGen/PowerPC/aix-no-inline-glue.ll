@@ -40,14 +40,14 @@ entry:
 ; MIR32:   %0:gprc = COPY $r3
 ; MIR32:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; MIR32:   $r11 = COPY %0
-; MIR32:   BL_RESTORE &"._ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit $rm, implicit $r1, implicit $r11, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; MIR32:   BL_LWZinto_toc &"._ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit $rm, implicit $r1, implicit $r11, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; MIR32:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; MIR64: name:            caller1
 ; MIR64:   %0:g8rc = COPY $x3
 ; MIR64:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; MIR64:   $x11 = COPY %0
-; MIR64:   BL8_RESTORE &"._ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $rm, implicit $x1, implicit $x11, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; MIR64:   BL8_LDinto_toc &"._ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $rm, implicit $x1, implicit $x11, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; MIR64:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 define dso_local zeroext i1 @caller2() {
@@ -72,7 +72,7 @@ entry:
 ; MIR32:   %1:gprc = LWZ 0, killed %0 :: (dereferenceable load (s32) from @fp, align 8)
 ; MIR32:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; MIR32:   $r11 = COPY %1
-; MIR32:   BL_RESTORE &"._ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit $rm, implicit $r1, implicit $r11, implicit $r3, implicit $f1, implicit $r6, implicit $r2, implicit-def $r1, implicit-def $r3
+; MIR32:   BL_LWZinto_toc &"._ptrgl[PR]", csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit $rm, implicit $r1, implicit $r11, implicit $r3, implicit $f1, implicit $r6, implicit $r2, implicit-def $r1, implicit-def $r3
 ; MIR32:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; MIR64: name:            caller2
@@ -80,7 +80,7 @@ entry:
 ; MIR64:   %1:g8rc = LD 0, killed %0 :: (dereferenceable load (s64) from @fp)
 ; MIR64:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; MIR64:   $x11 = COPY %1
-; MIR64:   BL8_RESTORE &"._ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $rm, implicit $x1, implicit $x11, implicit $x3, implicit $f1, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; MIR64:   BL8_LDinto_toc &"._ptrgl[PR]", csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $rm, implicit $x1, implicit $x11, implicit $x3, implicit $f1, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; MIR64:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECK: .extern ._ptrgl[PR]

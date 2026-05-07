@@ -116,7 +116,12 @@ let SchedModel = P7Model in {
     (instregex "^B(L)?(A)?(8)?(_NOP|_NOTOC)?(_TLS|_RM)?(_)?$")>;
 
   def : InstRW<[P7_BRU_NONE, P7_DISP_BR, P7_LSU_2C, P7_DISP_LS],
-    (instregex "^BL(8)?_RESTORE(_RM)?$")>;
+    (instrs
+    BL_LWZinto_toc,
+    BL_LWZinto_toc_RM,
+    BL8_LDinto_toc,
+    BL8_LDinto_toc_RM
+    )>;
 
   def : InstRW<[P7_BRU_3C, P7_DISP_BR], (instrs
     BDZLRLp, BDZLRm, BDZLRp, BDZLm, BDZLp, BDZm, BDZp,
