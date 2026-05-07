@@ -14,9 +14,9 @@ llvm.func @fsub_f16_f16(%a : f16, %b : f16) -> f16 {
   // CHECK-NEXT: ret half %10
   // CHECK-NEXT: }
   %f1 = nvvm.subf %a, %b : f16
-  %f2 = nvvm.subf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f16
-  %f3 = nvvm.subf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : f16
-  %f4 = nvvm.subf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : f16
+  %f2 = nvvm.subf %f1, %f1 <{rnd = #nvvm.fp_rnd_mode<rn>}> : f16
+  %f3 = nvvm.subf %f2, %f2 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>}> : f16
+  %f4 = nvvm.subf %f3, %f3 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true}> : f16
   llvm.return %f4 : f16
 }
 
@@ -30,7 +30,7 @@ llvm.func @fsub_bf16_bf16(%a : bf16, %b : bf16) -> bf16 {
   // CHECK-NEXT: ret bfloat %6
   // CHECK-NEXT: }
   %f1 = nvvm.subf %a, %b : bf16
-  %f2 = nvvm.subf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : bf16
+  %f2 = nvvm.subf %f1, %f1 <{rnd = #nvvm.fp_rnd_mode<rn>}> : bf16
   llvm.return %f2 : bf16
 }
 
@@ -74,22 +74,22 @@ llvm.func @fsub_f32_f32(%a : f32, %b : f32) -> f32 {
   // CHECK-NEXT: ret float %36
   // CHECK-NEXT: }
   %f1 = nvvm.subf %a, %b : f32
-  %f2 = nvvm.subf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f32
-  %f3 = nvvm.subf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : f32
-  %f4 = nvvm.subf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : f32
-  %f5 = nvvm.subf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
-  %f6 = nvvm.subf %f5, %f5 {rnd = #nvvm.fp_rnd_mode<rm>} : f32
-  %f7 = nvvm.subf %f6, %f6 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : f32
-  %f8 = nvvm.subf %f7, %f7 {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : f32
-  %f9 = nvvm.subf %f8, %f8 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
-  %f10 = nvvm.subf %f9, %f9 {rnd = #nvvm.fp_rnd_mode<rp>} : f32
-  %f11 = nvvm.subf %f10, %f10 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : f32
-  %f12 = nvvm.subf %f11, %f11 {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : f32
-  %f13 = nvvm.subf %f12, %f12 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
-  %f14 = nvvm.subf %f13, %f13 {rnd = #nvvm.fp_rnd_mode<rz>} : f32
-  %f15 = nvvm.subf %f14, %f14 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : f32
-  %f16 = nvvm.subf %f15, %f15 {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : f32
-  %f17 = nvvm.subf %f16, %f16 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
+  %f2 = nvvm.subf %f1, %f1 <{rnd = #nvvm.fp_rnd_mode<rn>}> : f32
+  %f3 = nvvm.subf %f2, %f2 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>}> : f32
+  %f4 = nvvm.subf %f3, %f3 <{rnd = #nvvm.fp_rnd_mode<rn>, ftz=true}> : f32
+  %f5 = nvvm.subf %f4, %f4 <{rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true}> : f32
+  %f6 = nvvm.subf %f5, %f5 <{rnd = #nvvm.fp_rnd_mode<rm>}> : f32
+  %f7 = nvvm.subf %f6, %f6 <{rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>}> : f32
+  %f8 = nvvm.subf %f7, %f7 <{rnd = #nvvm.fp_rnd_mode<rm>, ftz=true}> : f32
+  %f9 = nvvm.subf %f8, %f8 <{rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true}> : f32
+  %f10 = nvvm.subf %f9, %f9 <{rnd = #nvvm.fp_rnd_mode<rp>}> : f32
+  %f11 = nvvm.subf %f10, %f10 <{rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>}> : f32
+  %f12 = nvvm.subf %f11, %f11 <{rnd = #nvvm.fp_rnd_mode<rp>, ftz=true}> : f32
+  %f13 = nvvm.subf %f12, %f12 <{rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true}> : f32
+  %f14 = nvvm.subf %f13, %f13 <{rnd = #nvvm.fp_rnd_mode<rz>}> : f32
+  %f15 = nvvm.subf %f14, %f14 <{rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>}> : f32
+  %f16 = nvvm.subf %f15, %f15 <{rnd = #nvvm.fp_rnd_mode<rz>, ftz=true}> : f32
+  %f17 = nvvm.subf %f16, %f16 <{rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true}> : f32
   llvm.return %f17 : f32
 }
 
@@ -109,9 +109,9 @@ llvm.func @fsub_f64_f64(%a : f64, %b : f64) -> f64 {
   // CHECK-NEXT: ret double %12
   // CHECK-NEXT: }
   %f1 = nvvm.subf %a, %b : f64
-  %f2 = nvvm.subf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f64
-  %f3 = nvvm.subf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rm>} : f64
-  %f4 = nvvm.subf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rp>} : f64
-  %f5 = nvvm.subf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rz>} : f64
+  %f2 = nvvm.subf %f1, %f1 <{rnd = #nvvm.fp_rnd_mode<rn>}> : f64
+  %f3 = nvvm.subf %f2, %f2 <{rnd = #nvvm.fp_rnd_mode<rm>}> : f64
+  %f4 = nvvm.subf %f3, %f3 <{rnd = #nvvm.fp_rnd_mode<rp>}> : f64
+  %f5 = nvvm.subf %f4, %f4 <{rnd = #nvvm.fp_rnd_mode<rz>}> : f64
   llvm.return %f5 : f64
 }

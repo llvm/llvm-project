@@ -128,7 +128,7 @@ gpu.module @test_module_4 {
     // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
     // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : i32
-    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] <{return_value_and_is_valid}> : f32 -> !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][0] : !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][1] : !llvm.struct<(f32, i1)>
     %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : f32
@@ -137,13 +137,13 @@ gpu.module @test_module_4 {
     // CHECK: %[[#THIRTY_TWO:]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
-    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync up %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#NUM_LANES]] {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync up %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#NUM_LANES]] <{return_value_and_is_valid}> : f32 -> !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][0] : !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][1] : !llvm.struct<(f32, i1)>
     %shflu, %predu = gpu.shuffle up %arg0, %arg1, %arg2 : f32
-    // CHECK: nvvm.shfl.sync down {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: nvvm.shfl.sync down {{.*}} <{return_value_and_is_valid}> : f32 -> !llvm.struct<(f32, i1)>
     %shfld, %predd = gpu.shuffle down %arg0, %arg1, %arg2 : f32
-    // CHECK: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: nvvm.shfl.sync idx {{.*}} <{return_value_and_is_valid}> : f32 -> !llvm.struct<(f32, i1)>
     %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
 
     func.return %shfl, %shflu, %shfld, %shfli, %pred, %predu, %predd, %predi

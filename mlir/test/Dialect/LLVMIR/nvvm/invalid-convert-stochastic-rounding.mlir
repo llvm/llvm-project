@@ -49,7 +49,7 @@ llvm.func @invalid_dst_type_f4x4_f6(%src : vector<4xf32>, %rbits : i32) -> i16 {
 // Test invalid rounding modes for non-stochastic ops
 llvm.func @convert_float_to_tf32_rs_not_supported(%src : f32) -> i32 {
   // expected-error @below {{Only {rn,rz,rna} rounding modes supported for ConvertFloatToTF32Op.}}
-  %res = nvvm.convert.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rs>}
+  %res = nvvm.convert.float.to.tf32 %src <{rnd = #nvvm.fp_rnd_mode<rs>}>
   llvm.return %res : i32
 }
 
@@ -57,7 +57,7 @@ llvm.func @convert_float_to_tf32_rs_not_supported(%src : f32) -> i32 {
 
 llvm.func @convert_f32x2_to_f8x2_rs_not_supported(%a : f32, %b : f32) {
   // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to 'f8E4M3FN' and 'f8E5M2' types}}
-  %res = nvvm.convert.f32x2.to.f8x2 %a, %b {rnd = #nvvm.fp_rnd_mode<rs>, sat = #nvvm.sat_mode<satfinite>} : i16 (f8E4M3FN)
+  %res = nvvm.convert.f32x2.to.f8x2 %a, %b <{rnd = #nvvm.fp_rnd_mode<rs>, sat = #nvvm.sat_mode<satfinite>}> : i16 (f8E4M3FN)
   llvm.return
 }
 
@@ -65,6 +65,6 @@ llvm.func @convert_f32x2_to_f8x2_rs_not_supported(%a : f32, %b : f32) {
 
 llvm.func @convert_bf16x2_to_f8x2_rs_not_supported(%src : vector<2xbf16>) {
   // expected-error @below {{Only RZ and RP rounding modes are supported for conversions from bf16x2 to 'f8E8M0FNU' type}}
-  %res = nvvm.convert.bf16x2.to.f8x2 %src {rnd = #nvvm.fp_rnd_mode<rs>} : vector<2xbf16> -> i16 (f8E8M0FNU)
+  %res = nvvm.convert.bf16x2.to.f8x2 %src <{rnd = #nvvm.fp_rnd_mode<rs>}> : vector<2xbf16> -> i16 (f8E8M0FNU)
   llvm.return
 }

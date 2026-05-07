@@ -18,5 +18,5 @@ func.func @nvvm_invalid_shfl_invalid_return_type_1(%arg0 : i32, %arg1 : f32, %ar
 
 func.func @nvvm_invalid_shfl_invalid_return_type_2(%arg0 : i32, %arg1 : f32, %arg2 : i32, %arg3 : i32) {
   // expected-error@+1 {{expected first element in the returned struct to be of type 'f32' but got 'i32' instead}}
-  %0 = nvvm.shfl.sync bfly %arg0, %arg1, %arg2, %arg3 {return_value_and_is_valid} : f32 -> !llvm.struct<(i32, i1)>
+  %0 = nvvm.shfl.sync bfly %arg0, %arg1, %arg2, %arg3 <{return_value_and_is_valid}> : f32 -> !llvm.struct<(i32, i1)>
 }

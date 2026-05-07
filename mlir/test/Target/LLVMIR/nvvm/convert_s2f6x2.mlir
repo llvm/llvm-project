@@ -8,7 +8,7 @@ llvm.func @convert_f32x2_to_s2f6x2(%srcA : f32, %srcB : f32) -> i16 {
   // CHECK-NEXT: ret i16 %5
   // CHECK-NEXT: }
   %res1 = nvvm.convert.f32x2.to.s2f6x2 %srcA, %srcB : i16
-  %res2 = nvvm.convert.f32x2.to.s2f6x2 %srcA, %srcB {relu = true} : i16
+  %res2 = nvvm.convert.f32x2.to.s2f6x2 %srcA, %srcB <{relu = true}> : i16
 
   // Combine results to avoid dead code elimination
   %final_result = llvm.or %res1, %res2 : i16
@@ -23,7 +23,7 @@ llvm.func @convert_f32x2_to_s2f6x2_scale(%srcA : f32, %srcB : f32, %scale : i16)
   // CHECK-NEXT: ret i16 %6
   // CHECK-NEXT: }
   %res1 = nvvm.convert.f32x2.to.s2f6x2 %srcA, %srcB, %scale : i16
-  %res2 = nvvm.convert.f32x2.to.s2f6x2 %srcA, %srcB, %scale {relu = true} : i16
+  %res2 = nvvm.convert.f32x2.to.s2f6x2 %srcA, %srcB, %scale <{relu = true}> : i16
 
   // Combine results to avoid dead code elimination
   %final_result = llvm.or %res1, %res2 : i16
@@ -58,7 +58,7 @@ llvm.func @convert_bf16x2_to_s2f6x2(%srcA : vector<2xbf16>) -> i16 {
   // CHECK-NEXT: ret i16 %4
   // CHECK-NEXT: }
   %res1 = nvvm.convert.bf16x2.to.s2f6x2 %srcA : vector<2xbf16> -> i16
-  %res2 = nvvm.convert.bf16x2.to.s2f6x2 %srcA {relu = true} : vector<2xbf16> -> i16
+  %res2 = nvvm.convert.bf16x2.to.s2f6x2 %srcA <{relu = true}> : vector<2xbf16> -> i16
 
   // Combine results to avoid dead code elimination
   %final_result = llvm.or %res1, %res2 : i16
@@ -73,7 +73,7 @@ llvm.func @convert_bf16x2_to_s2f6x2_scale(%srcA : vector<2xbf16>, %scale : i16) 
   // CHECK-NEXT: ret i16 %5
   // CHECK-NEXT: }
   %res1 = nvvm.convert.bf16x2.to.s2f6x2 %srcA, %scale : vector<2xbf16> -> i16
-  %res2 = nvvm.convert.bf16x2.to.s2f6x2 %srcA, %scale {relu = true} : vector<2xbf16> -> i16
+  %res2 = nvvm.convert.bf16x2.to.s2f6x2 %srcA, %scale <{relu = true}> : vector<2xbf16> -> i16
 
   // Combine results to avoid dead code elimination
   %final_result = llvm.or %res1, %res2 : i16
@@ -118,7 +118,7 @@ llvm.func @convert_s2f6x2_to_bf16x2_relu(%src : vector<2xi8>) -> vector<2xbf16> 
   // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %2, i16 32639)
   // CHECK-NEXT: ret <2 x bfloat> %3
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {relu = true} : vector<2xi8> -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src <{relu = true}> : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
@@ -140,7 +140,7 @@ llvm.func @convert_s2f6x2_to_bf16x2_scale_relu(%src : vector<2xi8>, %scale : i16
   // CHECK-NEXT: %4 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %3, i16 %1)
   // CHECK-NEXT: ret <2 x bfloat> %4
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {relu = true} : vector<2xi8> -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale <{relu = true}> : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
@@ -151,7 +151,7 @@ llvm.func @convert_s2f6x2_to_bf16x2_satfinite(%src : vector<2xi8>) -> vector<2xb
   // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %2, i16 32639)
   // CHECK-NEXT: ret <2 x bfloat> %3
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src <{sat = #nvvm.sat_mode<satfinite>}> : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
@@ -162,7 +162,7 @@ llvm.func @convert_s2f6x2_to_bf16x2_relu_satfinite(%src : vector<2xi8>) -> vecto
   // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %2, i16 32639)
   // CHECK-NEXT: ret <2 x bfloat> %3
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {relu = true, sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src <{relu = true, sat = #nvvm.sat_mode<satfinite>}> : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
@@ -173,7 +173,7 @@ llvm.func @convert_s2f6x2_to_bf16x2_scale_satfinite(%src : vector<2xi8>, %scale 
   // CHECK-NEXT: %4 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %3, i16 %1)
   // CHECK-NEXT: ret <2 x bfloat> %4
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale <{sat = #nvvm.sat_mode<satfinite>}> : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
@@ -184,6 +184,6 @@ llvm.func @convert_s2f6x2_to_bf16x2_scale_relu_satfinite(%src : vector<2xi8>, %s
   // CHECK-NEXT: %4 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %3, i16 %1)
   // CHECK-NEXT: ret <2 x bfloat> %4
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {relu = true, sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale <{relu = true, sat = #nvvm.sat_mode<satfinite>}> : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }

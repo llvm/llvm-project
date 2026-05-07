@@ -9,9 +9,9 @@ llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.p
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   nvvm.cp.async.mbarrier.arrive %bar_gen : !llvm.ptr
-  nvvm.cp.async.mbarrier.arrive %bar_gen {noinc = true} : !llvm.ptr
+  nvvm.cp.async.mbarrier.arrive %bar_gen <{noinc = true}> : !llvm.ptr
   nvvm.cp.async.mbarrier.arrive %bar_shared : !llvm.ptr<3>
-  nvvm.cp.async.mbarrier.arrive %bar_shared {noinc = true} : !llvm.ptr<3>
+  nvvm.cp.async.mbarrier.arrive %bar_shared <{noinc = true}> : !llvm.ptr<3>
   llvm.return
 }
 

@@ -38,9 +38,9 @@ llvm.func @tma_store_3d(%tma_desc: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %
 
   nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2] l2_cache_hint=%ch : !llvm.ptr, !llvm.ptr<3>
 
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2] {mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2] <{mode = #nvvm.tma_store_mode<im2col>}>: !llvm.ptr, !llvm.ptr<3>
 
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2] l2_cache_hint=%ch {mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2] l2_cache_hint=%ch <{mode = #nvvm.tma_store_mode<im2col>}>: !llvm.ptr, !llvm.ptr<3>
   llvm.return
 }
 
@@ -56,9 +56,9 @@ llvm.func @tma_store_4d(%tma_desc: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %
 
   nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3] l2_cache_hint=%ch : !llvm.ptr, !llvm.ptr<3>
 
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3] {mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3] <{mode = #nvvm.tma_store_mode<im2col>}>: !llvm.ptr, !llvm.ptr<3>
 
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3] l2_cache_hint=%ch {mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3] l2_cache_hint=%ch <{mode = #nvvm.tma_store_mode<im2col>}>: !llvm.ptr, !llvm.ptr<3>
   llvm.return
 }
 
@@ -74,9 +74,9 @@ llvm.func @tma_store_5d(%tma_desc: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %
 
   nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] l2_cache_hint=%ch : !llvm.ptr, !llvm.ptr<3>
 
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] {mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] <{mode = #nvvm.tma_store_mode<im2col>}>: !llvm.ptr, !llvm.ptr<3>
 
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] l2_cache_hint=%ch {mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] l2_cache_hint=%ch <{mode = #nvvm.tma_store_mode<im2col>}>: !llvm.ptr, !llvm.ptr<3>
   llvm.return
 }
 
@@ -86,9 +86,9 @@ llvm.func @tma_store_scatter(%tma_desc: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i
   // CHECK-NEXT: call void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.scatter4.2d(ptr addrspace(3) %1, ptr %0, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i64 %7, i1 true)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] {mode = #nvvm.tma_store_mode<tile_scatter4>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] <{mode = #nvvm.tma_store_mode<tile_scatter4>}>: !llvm.ptr, !llvm.ptr<3>
 
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] l2_cache_hint=%ch {mode = #nvvm.tma_store_mode<tile_scatter4>}: !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tma_desc, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] l2_cache_hint=%ch <{mode = #nvvm.tma_store_mode<tile_scatter4>}>: !llvm.ptr, !llvm.ptr<3>
 
   llvm.return
 }
