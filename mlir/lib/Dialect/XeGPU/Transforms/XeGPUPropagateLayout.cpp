@@ -1103,7 +1103,6 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
 
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
-
   const uArch *uArch = getUArch(xegpu::getChipStr(bitcast).value_or(""));
   if (!uArch)
     return;

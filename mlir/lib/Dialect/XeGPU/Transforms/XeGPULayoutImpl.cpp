@@ -1012,12 +1012,11 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
   SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
   assert(consumerLayout.getRank() == static_cast<int64_t>(srcShape.size()) &&
          "laneData must be available for all dimensions");
-  size_t innerMostDim = srcShape.size() - 1;
+  size_t dim = srcShape.size() - 1;
   int64_t sgDataValue = -1;
   int64_t instDataValue = -1;
   int64_t laneDataValue = -1;
   const int subgroupSize = uArch->getSubgroupSize();
-
   if (srcElemTyBitWidth > resElemTyBitWidth) {
     // When casting to a smaller bitwidth, multiply the result layout
     // accordingly to ensure it can be divided by the ratio back to the
@@ -1025,26 +1024,26 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
     int innermostDimLaneLayout = subgroupSize;
     if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      sgDataValue = sgData[innerMostDim];
+      sgDataValue = sgData[dim];
     } else if (layoutKind == xegpu::LayoutKind::InstData) {
-      instDataValue = instData[innerMostDim];
+      instDataValue = instData[dim];
       // Adjust instDataValue so it still fits within an instruction after
       // dividing by bitWidthRatio
-      while ((instDataValue <= resShape[innerMostDim]) &&
+      while ((instDataValue <= resShape[dim]) &&
              (instDataValue % (innermostDimLaneLayout * bitWidthRatio) != 0))
         instDataValue *= 2;
-      assert((resShape[innerMostDim] % instDataValue) == 0 &&
+      assert((resShape[dim] % instDataValue) == 0 &&
              "resShape, instData, and lanelayout for innermost must be 2^n !");
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneDataValue = laneData[innerMostDim];
-      while ((laneDataValue <= resShape[innerMostDim]) &&
+      laneDataValue = laneData[dim];
+      while ((laneDataValue <= resShape[dim]) &&
              (laneDataValue % bitWidthRatio != 0))
         laneDataValue *= 2;
     }
     // Now set only instData and laneData, preserving sgData
     xegpu::DistributeLayoutAttr resLayout;
-    resLayout = consumerLayout.setDimData(innerMostDim, sgDataValue,
-                                          instDataValue, laneDataValue);
+    resLayout = consumerLayout.setDimData(dim, sgDataValue, instDataValue,
+                                          laneDataValue);
     return resLayout;
   }
   return consumerLayout;
@@ -1088,6 +1087,10 @@ xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     sgDataValue = sgData[innerMostDim];
+    // Ensure sgDataValue is divisible by ratio so source sgData can be inferred
+    while ((sgDataValue <= resShape[innerMostDim]) &&
+           (sgDataValue % ratio != 0))
+      sgDataValue *= ratio;
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
     instDataValue = instData[innerMostDim];
     // Adjust instDataValue so it can be divided by (innermostDimLaneLayout *
