@@ -98,19 +98,19 @@ void main() {
 // CHECK-NEXT: %a = alloca float
 
 // CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @"_ZL8c.A::Buf", i32 noundef 0)
-// CHECK-NEXT: store float 0x3FF3AE1480000000, ptr %[[PTR1:]]
+// CHECK-NEXT: store float 1.230000e+00, ptr %[[PTR1:]]
   c.Buf[0] = 1.230f;
 
 // CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @c.Buf2, i32 noundef 0)
-// CHECK-NEXT: store float 0x4002B851E0000000, ptr %[[PTR2:]]
+// CHECK-NEXT: store float 2.340000e+00, ptr %[[PTR2:]]
   c.Buf2[0] = 2.340f;
 
 // CHECK-NEXT: %[[PTR3:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @"_ZL8d.A::Buf", i32 noundef 0)
-// CHECK-NEXT: store float 0x400B9999A0000000, ptr %[[PTR3:]]
+// CHECK-NEXT: store float 3.450000e+00, ptr %[[PTR3:]]
   d.Buf[0] = 3.450f;
 
 // CHECK-NEXT: %[[PTR4:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @d.A.Buf, i32 noundef 0)
-// CHECK-NEXT: store float 0x40123D70A0000000, ptr %[[PTR4:]]
+// CHECK-NEXT: store float 4.560000e+00, ptr %[[PTR4:]]
   d.A.Buf[0] = 4.560f;
 
 // Resource array access - initilized on demand:

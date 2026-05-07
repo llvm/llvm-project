@@ -185,13 +185,13 @@ double test_double_pre_inc()
 // CHECK-LABEL: define dso_local half @test__Float16_post_inc(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // CHECK-NEXT:    ret half [[TMP0]]
 //
 // CHECK-SPIRV-LABEL: define spir_func half @test__Float16_post_inc(
 // CHECK-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
-// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr addrspace(4)), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr addrspace(4)), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // CHECK-SPIRV-NEXT:    ret half [[TMP0]]
 //
 _Float16 test__Float16_post_inc()
@@ -203,13 +203,13 @@ _Float16 test__Float16_post_inc()
 // CHECK-LABEL: define dso_local half @test__Float16_post_dc(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // CHECK-NEXT:    ret half [[TMP0]]
 //
 // CHECK-SPIRV-LABEL: define spir_func half @test__Float16_post_dc(
 // CHECK-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
-// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr addrspace(4)), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr addrspace(4)), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // CHECK-SPIRV-NEXT:    ret half [[TMP0]]
 //
 _Float16 test__Float16_post_dc()
@@ -221,15 +221,15 @@ _Float16 test__Float16_post_dc()
 // CHECK-LABEL: define dso_local half @test__Float16_pre_dc(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = fsub half [[TMP0]], 0xH3C00
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = fsub half [[TMP0]], 1.000000e+00
 // CHECK-NEXT:    ret half [[TMP1]]
 //
 // CHECK-SPIRV-LABEL: define spir_func half @test__Float16_pre_dc(
 // CHECK-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
-// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr addrspace(4)), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
-// CHECK-SPIRV-NEXT:    [[TMP1:%.*]] = fsub half [[TMP0]], 0xH3C00
+// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr addrspace(4)), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-SPIRV-NEXT:    [[TMP1:%.*]] = fsub half [[TMP0]], 1.000000e+00
 // CHECK-SPIRV-NEXT:    ret half [[TMP1]]
 //
 _Float16 test__Float16_pre_dc()
@@ -241,15 +241,15 @@ _Float16 test__Float16_pre_dc()
 // CHECK-LABEL: define dso_local half @test__Float16_pre_inc(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 0xH3C00
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 1.000000e+00
 // CHECK-NEXT:    ret half [[TMP1]]
 //
 // CHECK-SPIRV-LABEL: define spir_func half @test__Float16_pre_inc(
 // CHECK-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
-// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr addrspace(4)), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
-// CHECK-SPIRV-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 0xH3C00
+// CHECK-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr addrspace(4)), half 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
+// CHECK-SPIRV-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 1.000000e+00
 // CHECK-SPIRV-NEXT:    ret half [[TMP1]]
 //
 _Float16 test__Float16_pre_inc()
