@@ -66,11 +66,9 @@ struct OMPDeferredDeclareTargetInfo {
 /// each groupprivate symbol on the `!$omp groupprivate` directive that
 /// declared it. Populated when the directive is lowered and consumed when
 /// `omp.groupprivate` operations are emitted inside teams regions.
-struct OMPGroupprivateDeviceTypeInfo {
-  llvm::DenseMap<const Fortran::semantics::Symbol *,
-                 mlir::omp::DeclareTargetDeviceType>
-      map;
-};
+using OMPGroupprivateDeviceTypeInfo =
+    llvm::DenseMap<const Fortran::semantics::Symbol *,
+                   mlir::omp::DeclareTargetDeviceType>;
 
 // Generate the OpenMP terminator for Operation at Location.
 mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,

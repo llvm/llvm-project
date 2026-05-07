@@ -804,8 +804,7 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
     // was lowered. Default to 'any' if no explicit device_type was given.
     mlir::omp::DeclareTargetDeviceType deviceTypeEnum =
         mlir::omp::DeclareTargetDeviceType::any;
-    const auto &deviceTypeMap =
-        converter.getOMPGroupprivateDeviceTypeInfo().map;
+    const auto &deviceTypeMap = converter.getOMPGroupprivateDeviceTypeInfo();
     auto it = deviceTypeMap.find(&sym.GetUltimate());
     if (it != deviceTypeMap.end())
       deviceTypeEnum = it->second;
@@ -4736,7 +4735,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::DeviceTypeClauseOps deviceTypeOps;
   cp.processDeviceType(deviceTypeOps);
 
-  auto &deviceTypeMap = converter.getOMPGroupprivateDeviceTypeInfo().map;
+  auto &deviceTypeMap = converter.getOMPGroupprivateDeviceTypeInfo();
   for (const Object &obj : objects) {
     if (const semantics::Symbol *sym = obj.sym())
       deviceTypeMap[&sym->GetUltimate()] = deviceTypeOps.deviceType;

@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Lower/LoweringOptions.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -76,10 +77,6 @@ using TypeConstructionStack =
 class StatementContext;
 
 using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
-
-/// Forward declaration only; the full definition lives in
-/// `flang/Lower/OpenMP.h`.
-struct OMPGroupprivateDeviceTypeInfo;
 
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
@@ -408,8 +405,7 @@ public:
   /// Return the per-converter table recording the device_type clause
   /// associated with each groupprivate symbol. Used to communicate state from
   /// the lowering of a `!$omp groupprivate` directive to the later creation of
-  /// `omp.groupprivate` operations inside teams regions. The returned object
-  /// is fully defined in `flang/Lower/OpenMP.h`.
+  /// `omp.groupprivate` operations inside teams regions.
   virtual OMPGroupprivateDeviceTypeInfo &getOMPGroupprivateDeviceTypeInfo() = 0;
 
 private:
