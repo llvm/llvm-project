@@ -17,6 +17,7 @@
 
 using namespace llvm;
 using ::testing::HasSubstr;
+using ::testing::Not;
 
 namespace {
 
@@ -102,5 +103,34 @@ TEST(AsmWriterTest, PrintNullOperandBundle) {
   raw_string_ostream OS(S);
   Invoke->print(OS);
   EXPECT_THAT(S, HasSubstr("<null operand bundle!>"));
+}
+
+TEST(AsmWriterTest, SkipIntrinsicsIfRequested) {
+  LLVMContext Ctx;
+  Module M("test module", Ctx);
+
+  FunctionType *FooType =
+      FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt1Ty(Ctx)}, false);
+  Function *Foo =
+      Function::Create(FooType, Function::ExternalLinkage, "foo", &M);
+  BasicBlock *EntryBB = BasicBlock::Create(Ctx, "entry", Foo);
+  IRBuilder<> Builder(EntryBB);
+  Builder.CreateIntrinsic(Intrinsic::assume, {Foo->getArg(0)});
+  Builder.CreateRetVoid();
+
+  std::string TextWithIntrinsic;
+  raw_string_ostream TextWithIntrinsicOS(TextWithIntrinsic);
+  M.print(TextWithIntrinsicOS, nullptr, /*ShouldPreserveUseListOrder=*/false,
+          /*IsForDebug=*/false, /*ShouldSkipIntrinsicDeclarations=*/false);
+  EXPECT_THAT(TextWithIntrinsic, HasSubstr("call void @llvm.assume"));
+  EXPECT_THAT(TextWithIntrinsic, HasSubstr("declare void @llvm.assume"));
+
+  std::string TextWithoutIntrinsic;
+  raw_string_ostream TextWithoutIntrinsicOS(TextWithoutIntrinsic);
+  M.print(TextWithoutIntrinsicOS, nullptr, /*ShouldPreserveUseListOrder=*/false,
+          /*IsForDebug=*/false, /*ShouldSkipIntrinsicDeclarations=*/true);
+  EXPECT_THAT(TextWithoutIntrinsic, HasSubstr("call void @llvm.assume"));
+  EXPECT_THAT(TextWithoutIntrinsic,
+              Not(HasSubstr("declare void @llvm.assume")));
 }
 }
