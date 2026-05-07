@@ -11,7 +11,7 @@ results.
 
 from pathlib import PurePath
 import os
-from typing import Any, Callable, Optional, Set, Union
+from typing import Any, Callable, Optional, Set
 import yaml
 
 from dex.test_script.Nodes import (
@@ -37,9 +37,9 @@ class Scope:
 
     def __init__(
         self,
-        file: Union[str, None] = None,
-        where: Union[Where, None] = None,
-        parent_scope: "Union[Scope, None]" = None,
+        file: Optional[str] = None,
+        where: Optional[Where] = None,
+        parent_scope: "Optional[Scope]" = None,
     ):
         """Can be initialized with either a file for the default Scope, or with the properties of a Where
         for any script-nested Scope.

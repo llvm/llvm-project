@@ -110,7 +110,7 @@ class Where:
             return range(-1)
         if isinstance(self.lines, int):
             return range(self.lines, self.lines + 1)
-        assert isinstance(self.lines, DexRange)
+        assert isinstance(self.lines, DexRange), f"Invalid type for lines: {self.lines}: ({type(self.lines)})"
         return self.lines.to_range()
 
 
