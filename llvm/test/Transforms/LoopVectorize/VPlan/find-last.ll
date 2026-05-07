@@ -16,8 +16,9 @@ define i32 @find_last_with_select(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<1>, ir<%sel>
 ; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
@@ -28,8 +29,6 @@ define i32 @find_last_with_select(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%load.a>, ir<%load.b>
 ; CHECK-NEXT:      WIDEN ir<%sel> = select ir<%cmp>, ir<%rdx>, ir<%load.a>
-; CHECK-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
-; CHECK-NEXT:      CLONE ir<%exitcond> = icmp eq ir<%iv.next>, ir<500>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors

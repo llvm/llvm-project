@@ -8,6 +8,7 @@
 
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -262,7 +263,7 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Symbol &symbol) {
   return DoesScopeContain(maybeAncestor, symbol.owner());
 }
 
-static const Symbol &FollowHostAssoc(const Symbol &symbol) {
+const Symbol &FollowHostAssoc(const Symbol &symbol) {
   for (const Symbol *s{&symbol};;) {
     const auto *details{s->detailsIf<HostAssocDetails>()};
     if (!details) {
@@ -772,7 +773,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   if (elemental && (!withImpureFinalizer || !IsPureProcedure(*elemental))) {
     return elemental;
   }
-  // Check components (including ancestors)
+  // Check components (including ancestors via parent component recursion)
   std::set<const DerivedTypeSpec *> basis;
   if (inProgress) {
     if (inProgress->find(&derived) != inProgress->end()) {
@@ -783,10 +784,14 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   }
   auto iterator{inProgress->insert(&derived).first};
   const Symbol *result{nullptr};
-  for (const Symbol &component : PotentialComponentIterator{derived}) {
-    result = IsFinalizable(component, inProgress, withImpureFinalizer);
-    if (result) {
-      break;
+  // Iterate only the type's own scope to avoid exponential traversal
+  // when combined with recursion through derived-type components.
+  if (const Scope *scope{derived.GetScope()}) {
+    for (const auto &[_, symbolRef] : *scope) {
+      result = IsFinalizable(*symbolRef, inProgress, withImpureFinalizer);
+      if (result) {
+        break;
+      }
     }
   }
   inProgress->erase(iterator);
@@ -1120,6 +1125,15 @@ bool HasCUDAComponent(const Symbol &symbol) {
     }
   }
   return false;
+}
+
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &dummy) {
+  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
+      (dummy.type.attrs().test(
+           evaluate::characteristics::TypeAndShape::Attr::AssumedSize) ||
+          dummy.type.attrs().test(
+              evaluate::characteristics::TypeAndShape::Attr::AssumedRank));
 }
 
 UltimateComponentIterator::const_iterator

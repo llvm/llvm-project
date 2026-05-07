@@ -108,11 +108,6 @@ private:
             "TILE clause may not appear on loop construct "
             "associated with DO CONCURRENT"_err_en_US);
       }
-      if (std::holds_alternative<parser::AccClause::Collapse>(clause.u)) {
-        messages_.Say(beginLoopDirective.source,
-            "COLLAPSE clause may not appear on loop construct "
-            "associated with DO CONCURRENT"_err_en_US);
-      }
     }
   }
 

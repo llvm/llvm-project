@@ -15,6 +15,8 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
+; VI-NEXT:    .Lfunc_end0:
+; VI-NEXT:    .size max_alignment_128, .Lfunc_end0-max_alignment_128
 ; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel max_alignment_128
@@ -66,6 +68,8 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    .Lfunc_end0:
+; GFX9-NEXT:    .size max_alignment_128, .Lfunc_end0-max_alignment_128
 ; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel max_alignment_128
@@ -126,6 +130,8 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
+; VI-NEXT:    .Lfunc_end1:
+; VI-NEXT:    .size stackrealign_attr, .Lfunc_end1-stackrealign_attr
 ; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel stackrealign_attr
@@ -177,6 +183,8 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    .Lfunc_end1:
+; GFX9-NEXT:    .size stackrealign_attr, .Lfunc_end1-stackrealign_attr
 ; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel stackrealign_attr
@@ -237,6 +245,8 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
+; VI-NEXT:    .Lfunc_end2:
+; VI-NEXT:    .size alignstack_attr, .Lfunc_end2-alignstack_attr
 ; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel alignstack_attr
@@ -288,6 +298,8 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    .Lfunc_end2:
+; GFX9-NEXT:    .size alignstack_attr, .Lfunc_end2-alignstack_attr
 ; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel alignstack_attr

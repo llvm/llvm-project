@@ -74,7 +74,7 @@ RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK,
   default:
     return RK;
   case Attribute::NonNull:
-    RK.WasOn = getUnderlyingObject(RK.WasOn);
+    RK.WasOn = RK.WasOn->stripInBoundsOffsets();
     return RK;
   case Attribute::Alignment: {
     Value *V = RK.WasOn->stripInBoundsOffsets([&](const Value *Strip) {
@@ -274,7 +274,13 @@ struct AssumeBuilderState {
       return addAccessedPtr(I, Store->getPointerOperand(),
                             Store->getValueOperand()->getType(),
                             Store->getAlign());
-    // TODO: Add support for the other Instructions.
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(I))
+      return addAccessedPtr(I, RMW->getPointerOperand(),
+                            RMW->getValOperand()->getType(), RMW->getAlign());
+    if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(I))
+      return addAccessedPtr(I, CmpXchg->getPointerOperand(),
+                            CmpXchg->getCompareOperand()->getType(),
+                            CmpXchg->getAlign());
     // TODO: Maybe we should look around and merge with other llvm.assume.
   }
 };

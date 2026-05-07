@@ -2277,6 +2277,19 @@ public:
     return computeOverflowForMul(IsSigned, N0, N1) == OFK_Never;
   }
 
+  /// Returns true if \p V is an identity element of Opc with Flags.
+  /// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
+  /// checks that V is a right identity.
+  LLVM_ABI bool isIdentityElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                  unsigned OperandNo, unsigned Depth = 0) const;
+
+  /// Returns true if the demanded vector elements of \p V is an identity
+  /// element of Opc with Flags. When OperandNo is 0, it checks that V is a left
+  /// identity. Otherwise, it checks that V is a right identity.
+  LLVM_ABI bool isIdentityElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                  const APInt &DemandedElts, unsigned OperandNo,
+                                  unsigned Depth = 0) const;
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set. If 'OrZero' is set, then return true if the given value is either
@@ -2442,9 +2455,15 @@ public:
     return isKnownNeverNaN(Op, true, Depth);
   }
 
-  /// Test whether the given floating point SDValue is known to never be
-  /// positive or negative zero.
-  LLVM_ABI bool isKnownNeverZeroFloat(SDValue Op) const;
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero in \p
+  /// DemandedElts.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, const APInt &DemandedElts,
+                                        unsigned Depth = 0) const;
+
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
@@ -2720,9 +2739,20 @@ public:
 
   LLVM_ABI bool shouldOptForSize() const;
 
-  /// Get the (commutative) neutral element for the given opcode, if it exists.
-  LLVM_ABI SDValue getNeutralElement(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                     SDNodeFlags Flags);
+  /// Get the (commutative) identity element for the given opcode, if it exists.
+  LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,
+                                      SDNodeFlags Flags);
+
+  /// Get an expression that implements a partial multiply-subtract reduction.
+  /// In practice this means that parts of the expression are negated, e.g.
+  ///
+  ///     partial_reduce_fmls acc, lhs, rhs
+  /// <=> partial_reduce_fmla acc, lhs, -rhs
+  ///
+  ///      partial_reduce_umls acc, lhs, rhs
+  /// <=> -partial_reduce_umla -acc, lhs, rhs
+  SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL, SDValue Acc,
+                              SDValue LHS, SDValue RHS);
 
   /// Some opcodes may create immediate undefined behavior when used with some
   /// values (integer division-by-zero for example). Therefore, these operations

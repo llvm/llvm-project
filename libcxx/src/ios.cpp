@@ -102,18 +102,13 @@ void ios_base::__call_callbacks(event ev) {
 // locale
 
 locale ios_base::imbue(const locale& newloc) {
-  static_assert(sizeof(locale) == sizeof(__loc_), "");
-  locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
-  locale oldloc       = loc_storage;
-  loc_storage         = newloc;
+  locale loc = newloc;
+  std::swap(__loc_, loc);
   __call_callbacks(imbue_event);
-  return oldloc;
+  return loc;
 }
 
-locale ios_base::getloc() const {
-  const locale& loc_storage = *reinterpret_cast<const locale*>(&__loc_);
-  return loc_storage;
-}
+locale ios_base::getloc() const { return __loc_; }
 
 // xalloc
 #if _LIBCPP_HAS_C_ATOMIC_IMP && _LIBCPP_HAS_THREADS
@@ -180,12 +175,16 @@ void ios_base::register_callback(event_callback fn, int index) {
   if (req_size > __event_cap_) {
     size_t newcap       = __ios_new_cap<event_callback>(req_size, __event_cap_);
     event_callback* fns = static_cast<event_callback*>(realloc(__fn_, newcap * sizeof(event_callback)));
-    if (fns == 0)
+    if (fns == 0) {
       setstate(badbit);
+      return;
+    }
     __fn_      = fns;
     int* indxs = static_cast<int*>(realloc(__index_, newcap * sizeof(int)));
-    if (indxs == 0)
+    if (indxs == 0) {
       setstate(badbit);
+      return;
+    }
     __index_     = indxs;
     __event_cap_ = newcap;
   }
@@ -197,11 +196,10 @@ void ios_base::register_callback(event_callback fn, int index) {
 ios_base::~ios_base() {
   // Avoid UB when not properly initialized. See ios_base::ios_base for
   // more information.
-  if (!__loc_)
+  if (!__loc_.__locale_)
     return;
   __call_callbacks(erase_event);
-  locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
-  loc_storage.~locale();
+  __loc_.~locale();
   free(__fn_);
   free(__index_);
   free(__iarray_);
@@ -273,12 +271,10 @@ void ios_base::copyfmt(const ios_base& rhs) {
       std::__throw_bad_alloc();
   }
   // Got everything we need.  Copy everything but __rdstate_, __rdbuf_ and __exceptions_
-  __fmtflags_           = rhs.__fmtflags_;
-  __precision_          = rhs.__precision_;
-  __width_              = rhs.__width_;
-  locale& lhs_loc       = *reinterpret_cast<locale*>(&__loc_);
-  const locale& rhs_loc = *reinterpret_cast<const locale*>(&rhs.__loc_);
-  lhs_loc               = rhs_loc;
+  __fmtflags_  = rhs.__fmtflags_;
+  __precision_ = rhs.__precision_;
+  __width_     = rhs.__width_;
+  __loc_       = rhs.__loc_;
   if (__event_cap_ < rhs.__event_size_) {
     free(__fn_);
     __fn_ = new_callbacks.release();
@@ -308,14 +304,13 @@ void ios_base::copyfmt(const ios_base& rhs) {
 
 void ios_base::move(ios_base& rhs) {
   // *this is uninitialized
-  __fmtflags_     = rhs.__fmtflags_;
-  __precision_    = rhs.__precision_;
-  __width_        = rhs.__width_;
-  __rdstate_      = rhs.__rdstate_;
-  __exceptions_   = rhs.__exceptions_;
-  __rdbuf_        = 0;
-  locale& rhs_loc = *reinterpret_cast<locale*>(&rhs.__loc_);
-  ::new (&__loc_) locale(rhs_loc);
+  __fmtflags_   = rhs.__fmtflags_;
+  __precision_  = rhs.__precision_;
+  __width_      = rhs.__width_;
+  __rdstate_    = rhs.__rdstate_;
+  __exceptions_ = rhs.__exceptions_;
+  __rdbuf_      = 0;
+  ::new (&__loc_) locale(rhs.__loc_);
   __fn_              = rhs.__fn_;
   rhs.__fn_          = 0;
   __index_           = rhs.__index_;
@@ -344,9 +339,7 @@ void ios_base::swap(ios_base& rhs) noexcept {
   std::swap(__width_, rhs.__width_);
   std::swap(__rdstate_, rhs.__rdstate_);
   std::swap(__exceptions_, rhs.__exceptions_);
-  locale& lhs_loc = *reinterpret_cast<locale*>(&__loc_);
-  locale& rhs_loc = *reinterpret_cast<locale*>(&rhs.__loc_);
-  std::swap(lhs_loc, rhs_loc);
+  std::swap(__loc_, rhs.__loc_);
   std::swap(__fn_, rhs.__fn_);
   std::swap(__index_, rhs.__index_);
   std::swap(__event_size_, rhs.__event_size_);

@@ -330,6 +330,12 @@ static bool canThrow(const FunctionDecl *Func) {
   if (!FunProto)
     return true;
 
+  // Clang evaluates unresolved exception specs before generating any call to
+  // the function, so these functions cannot appear at a call site and cannot
+  // throw.
+  if (isUnresolvedExceptionSpec(FunProto->getExceptionSpecType()))
+    return false;
+
   switch (FunProto->canThrow()) {
   case CT_Cannot:
     return false;
@@ -496,9 +502,17 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     return Result;
   }
 
+  // Functions without a visible body can still be known non-throwing from their
+  // exception specification.
+  if (!canThrow(Func))
+    return ExceptionInfo::createNonThrowing();
+
   auto Result = ExceptionInfo::createUnknown();
 
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+      return ExceptionInfo::createNonThrowing();
+
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
       Result.registerException(

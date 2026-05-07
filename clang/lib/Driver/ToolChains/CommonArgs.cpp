@@ -1416,9 +1416,16 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
     return;
 
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
-  if (const auto CandidateRPath = TC.getStdlibPath())
-    CandidateRPaths.emplace_back(*CandidateRPath);
-
+  if (const auto StdlibPath = TC.getStdlibPath()) {
+    for (const Multilib &M : llvm::reverse(TC.getSelectedMultilibs())) {
+      if (M.isDefault())
+        continue;
+      SmallString<128> P(*StdlibPath);
+      llvm::sys::path::append(P, M.gccSuffix());
+      CandidateRPaths.emplace_back(std::string(P));
+    }
+    CandidateRPaths.emplace_back(*StdlibPath);
+  }
   for (const auto &CandidateRPath : CandidateRPaths) {
     if (TC.getVFS().exists(CandidateRPath)) {
       CmdArgs.push_back("-rpath");
@@ -1789,7 +1796,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.
-  if (AddExportDynamic)
+  if (AddExportDynamic && !TC.getTriple().isNVPTX())
     CmdArgs.push_back("--export-dynamic");
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)

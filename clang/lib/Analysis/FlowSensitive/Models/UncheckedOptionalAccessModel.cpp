@@ -1278,9 +1278,14 @@ auto buildDiagnoseMatchSwitch(
 
 } // namespace
 
-ast_matchers::DeclarationMatcher
-UncheckedOptionalAccessModel::optionalClassDecl() {
-  return cxxRecordDecl(optionalClass());
+ast_matchers::StatementMatcher
+UncheckedOptionalAccessModel::memberCallToOptionalClass() {
+  return cxxMemberCallExpr(hasOptionalReceiverType());
+}
+
+ast_matchers::StatementMatcher
+UncheckedOptionalAccessModel::operatorCallToOptionalClass() {
+  return cxxOperatorCallExpr(hasOptionalOperatorObjectType());
 }
 
 UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,

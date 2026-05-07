@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/IR/DerivedTypes.h"
 
@@ -38,6 +39,10 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                             const LangOptions &LangOpt) const override;
 
 private:
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
@@ -133,10 +138,15 @@ public:
                            CodeGen::CodeGenModule &M) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
                                 llvm::AtomicOrdering Ordering) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::Instruction &AtomicInst,
+                               const AtomicExpr *Expr = nullptr) const override;
   bool supportsLibCall() const override {
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
   }
+
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 };
 } // End anonymous namespace.
 
@@ -400,6 +410,17 @@ void AMDGCNSPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 }
 
+llvm::FixedVectorType *
+SPIRVABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                                         const LangOptions &LangOpt) const {
+  // For Logical SPIR-V, we don't know the underlying hardware or layout.
+  // This means we don't know which vector size is better, and also cannot
+  // assume a smaller vector size is stored in a larger vector size.
+  if (getTarget().getTriple().isSPIRVLogical())
+    return Ty;
+  return DefaultABIInfo::getOptimalVectorMemoryType(Ty, LangOpt);
+}
+
 llvm::FixedVectorType *AMDGCNSPIRVABIInfo::getOptimalVectorMemoryType(
     llvm::FixedVectorType *Ty, const LangOptions &LangOpt) const {
   // AMDGPU has legal instructions for 96-bit so 3x32 can be supported.
@@ -425,6 +446,14 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
 
 unsigned CommonSPIRTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
+}
+
+LangAS SPIRVTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place, use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getASTAllocaAddressSpace();
 }
 
 void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
@@ -559,6 +588,28 @@ StringRef SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
     return "";
   }
   return "";
+}
+
+void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::Instruction &AtomicInst,
+    const AtomicExpr *AE) const {
+  if (CGF.CGM.getTriple().getVendor() != llvm::Triple::VendorType::AMD)
+    return;
+
+  auto *RMW = dyn_cast<llvm::AtomicRMWInst>(&AtomicInst);
+  if (!RMW)
+    return;
+
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  if (!AO.getOption(clang::AtomicOptionKind::FineGrainedMemory))
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
+  if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
+    RMW->setMetadata("amdgpu.no.remote.memory", Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
+      RMW->getType()->isFloatTy())
+    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

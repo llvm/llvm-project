@@ -7,12 +7,6 @@
     {
       "id": 0,
       "name": {
-        "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "invalid-entity-id-value.cpp"
-          }
-        ],
         "suffix": "",
         "usr": "c:@F@foo#"
       }

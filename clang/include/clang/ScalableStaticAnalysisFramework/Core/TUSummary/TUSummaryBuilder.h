@@ -10,6 +10,7 @@
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_TUSUMMARY_TUSUMMARYBUILDER_H
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
 #include <memory>
 #include <utility>
@@ -23,9 +24,7 @@ class TUSummaryBuilder {
 public:
   explicit TUSummaryBuilder(TUSummary &Summary) : Summary(Summary) {}
 
-  /// Add an entity to the summary and return its EntityId.
-  /// If the entity already exists, returns the existing ID (idempotent).
-  EntityId addEntity(const EntityName &E);
+  EntityId addEntity(const EntityName &EN, EntityLinkageType Linkage);
 
   /// Associate the \p Data \c EntitySummary with the \p Entity.
   /// This consumes the \p Data only if \p Entity wasn't associated yet with the
@@ -63,7 +62,7 @@ TUSummaryBuilder::addSummary(EntityId Entity,
   // Otherwise it doesn't touch the `TypeErasedData`.
   auto [It, Inserted] = addSummaryImpl(Entity, std::move(TypeErasedData));
 
-  // Move it back on failue to keep the `Data` unconsumed.
+  // Move it back on failure to keep the `Data` unconsumed.
   if (!Inserted) {
     Data = std::unique_ptr<ConcreteEntitySummary>(
         static_cast<ConcreteEntitySummary *>(TypeErasedData.release()));
