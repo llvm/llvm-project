@@ -678,7 +678,7 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
 } // namespace instrumentor
 
 /// The Instrumentor pass.
-class InstrumentorPass : public OptionalPassInfoMixin<InstrumentorPass> {
+class InstrumentorPass : public RequiredPassInfoMixin<InstrumentorPass> {
   using InstrumentationConfig = instrumentor::InstrumentationConfig;
   using InstrumentorIRBuilderTy = instrumentor::InstrumentorIRBuilderTy;
 
