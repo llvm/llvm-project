@@ -1147,6 +1147,62 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_set_block_sizes
+    //
+    (amd_comgr_action_info_t ActionInfo, const size_t *BlockSizes,
+     size_t Count) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || (!BlockSizes && Count)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  ActionP->BlockSizes.clear();
+  if (BlockSizes && Count > 0) {
+    ActionP->BlockSizes.assign(BlockSizes, BlockSizes + Count);
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_block_sizes_count
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t *Count) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || !Count) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  *Count = ActionP->BlockSizes.size();
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_block_sizes
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t Count, size_t *BlockSizes) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || !BlockSizes) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  if (Count < ActionP->BlockSizes.size()) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  std::copy(ActionP->BlockSizes.begin(), ActionP->BlockSizes.end(), BlockSizes);
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_working_directory_path
     //
     (amd_comgr_action_info_t ActionInfo, const char *Path) {

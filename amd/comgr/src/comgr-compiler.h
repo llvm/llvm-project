@@ -61,6 +61,7 @@ class AMDGPUCompiler {
                                     llvm::StringRef FileContent);
   amd_comgr_status_t addDeviceLibraries();
   amd_comgr_status_t extractSpirvFlags(DataSet *BcSet);
+  amd_comgr_status_t cloneKernelsInBitcode(DataSet *BcSet);
 
   amd_comgr_status_t executeInProcessDriver(llvm::ArrayRef<const char *> Args);
 

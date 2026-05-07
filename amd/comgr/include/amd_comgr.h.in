@@ -243,6 +243,12 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_3_2
 
+/**
+ * The function was introduced or changed in version 3.3 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.3"``.
+ */
+#define AMD_COMGR_VERSION_3_3
+
 /** @} */
 
 /**
@@ -1495,6 +1501,95 @@ amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_device_lib_linking(
   amd_comgr_action_info_t action_info,
   bool should_link_device_libs) AMD_COMGR_VERSION_2_9;
+
+/**
+ * @brief Set the block sizes for kernel cloning.
+ *
+ * When an action info object is created it has no block sizes specified.
+ * When block sizes are set, SPIR-V translation and compilation actions
+ * (AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC and
+ * AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE) will automatically clone
+ * kernel functions for each specified block size, if the size is within the
+ * limits specified by the amdgpu-flat-work-group-size attribute on the kernel.
+ * The upper limit of the original kernel is assumed to represent the original
+ * kernel, so if corresponding block size is in the set of block sizes, no new
+ * kernel is generated for that block size.
+ * Cloned kernels will have the amdgpu-flat-work-group-size attribute set with
+ * an upper limit equal to the corresponding block size and the lower bound
+ * equal to the lower bound of the original kernel.
+ * Cloned kernels will have a name in the format of
+ * "<original_kernel_name>.bs<block_size>".
+ *
+ * @param[in] action_info A handle to the action info object to be updated.
+ *
+ * @param[in] block_sizes An array of block sizes (flat work group sizes) to
+ * compile kernel variants for. If NULL then the block sizes are cleared.
+ *
+ * @param[in] count The number of elements in the @p block_sizes array.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p action_info is an
+ * invalid action info object, or @p block_sizes is NULL and @p count is
+ * non-zero.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to update action
+ * info object as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_set_block_sizes(
+  amd_comgr_action_info_t action_info,
+  const size_t *block_sizes,
+  size_t count) AMD_COMGR_VERSION_3_3;
+
+/**
+ * @brief Get the number of block sizes set for kernel cloning actions.
+ *
+ * @param[in] action_info The action info object to query.
+ *
+ * @param[out] count The number of block sizes set.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p action_info is an
+ * invalid action info object. @p count is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query action
+ * info object as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_get_block_sizes_count(
+  amd_comgr_action_info_t action_info,
+  size_t *count) AMD_COMGR_VERSION_3_3;
+
+/**
+ * @brief Get the block sizes set for kernel cloning actions.
+ *
+ * @param[in] action_info The action info object to query.
+ *
+ * @param[in] count The number of elements in the @p block_sizes array.
+ *
+ * @param[out] block_sizes Array to store the block sizes. Must be large enough
+ * to hold @p count elements. Use amd_comgr_action_info_get_block_sizes_count
+ * to query the required size.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p action_info is an
+ * invalid action info object. @p block_sizes is NULL. @p count is less than
+ * the number of block sizes set.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query action
+ * info object as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_get_block_sizes(
+  amd_comgr_action_info_t action_info,
+  size_t count,
+  size_t *block_sizes) AMD_COMGR_VERSION_3_3;
 
 /**
  * @brief Set the working directory of an action info object.

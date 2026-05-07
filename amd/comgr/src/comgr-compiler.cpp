@@ -68,6 +68,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 #include "time-stat/ts-interface.h"
 
@@ -2468,8 +2469,164 @@ AMDGPUCompiler::translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
     }
   }
 
+  // If block sizes are specified, clone kernels for each block size
+  if (!ActionInfo->BlockSizes.empty()) {
+    if (auto Status = cloneKernelsInBitcode(BcOutSet)) {
+      return Status;
+    }
+  }
+
   return AMD_COMGR_STATUS_SUCCESS;
 #endif
+}
+
+amd_comgr_status_t AMDGPUCompiler::cloneKernelsInBitcode(DataSet *BcSet) {
+  if (ActionInfo->BlockSizes.empty()) {
+    // Nothing to do
+    return AMD_COMGR_STATUS_SUCCESS;
+  }
+
+  if (env::shouldEmitVerboseLogs()) {
+    LogS << "Cloning kernels for block sizes:";
+    for (size_t BlockSize : ActionInfo->BlockSizes) {
+      LogS << " " << BlockSize;
+    }
+    LogS << "\n";
+  }
+
+  // For each bitcode module, clone kernels for each block size
+  LLVMContext Context;
+  Context.setDiagnosticHandler(
+      std::make_unique<AMDGPUCompilerDiagnosticHandler>(LogS), true);
+
+  // We need to clone all bitcode modules and replace them in the set
+  SmallVector<DataObject *, 8> OriginalBitcodes =
+      BcSet->DataObjects.takeVector();
+
+  for (auto *Input : OriginalBitcodes) {
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_BC) {
+      LogS << "Unexpected input data kind for " << Input->Name << "\n";
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    // Parse the bitcode module
+    SMDiagnostic Err;
+    MemoryBufferRef BufferRef(StringRef(Input->Data, Input->Size), Input->Name);
+    auto M = parseIR(BufferRef, Err, Context);
+    if (!M) {
+      LogS << "Failed to parse bitcode module: " << Input->Name << "\n";
+      Err.print("comgr", LogS);
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    // Clone kernels for each block size
+    SmallVector<Function *, 16> OriginalKernels;
+    for (Function &F : *M) {
+      // Check if this is a kernel function (SPIR-V kernels use SPIR_KERNEL
+      // calling convention)
+      if ((F.getCallingConv() == llvm::CallingConv::AMDGPU_KERNEL ||
+           F.getCallingConv() == llvm::CallingConv::SPIR_KERNEL) &&
+          !F.isDeclaration()) {
+        OriginalKernels.push_back(&F);
+      }
+    }
+
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "Found " << OriginalKernels.size() << " kernel(s) in module "
+           << Input->Name << "\n";
+    }
+
+    for (Function *OrigKernel : OriginalKernels) {
+      // Determine the bounds of the original kernel.
+      auto FlatWGSizeAttr =
+          OrigKernel->getFnAttribute("amdgpu-flat-work-group-size");
+      std::pair<size_t, size_t> OriginalBlockSizeLimits{1ul, 1024ul};
+      if (FlatWGSizeAttr.isValid()) {
+        StringRef Val = FlatWGSizeAttr.getValueAsString();
+        std::pair<StringRef, StringRef> Sizes = Val.split(',');
+        if (!Sizes.first.empty())
+          Sizes.first.getAsInteger(10, OriginalBlockSizeLimits.first);
+        if (!Sizes.second.empty())
+          Sizes.second.getAsInteger(10, OriginalBlockSizeLimits.second);
+      }
+
+      std::string OriginalName = OrigKernel->getName().str();
+      std::string BlockSizeLowerBound =
+          std::to_string(OriginalBlockSizeLimits.first);
+
+      for (size_t BlockSize : ActionInfo->BlockSizes) {
+        if (BlockSize == OriginalBlockSizeLimits.second) {
+          // Keep the original kernel with its original name and block size
+          continue;
+        }
+
+        if (BlockSize < OriginalBlockSizeLimits.first) {
+          if (env::shouldEmitVerboseLogs()) {
+            LogS << "Cannot clone kernel for block size " << BlockSize
+                 << " since it is smaller than the minimum block size of "
+                 << OriginalBlockSizeLimits.first << "\n";
+          }
+          continue;
+        }
+
+        if (BlockSize > OriginalBlockSizeLimits.second) {
+          if (env::shouldEmitVerboseLogs()) {
+            LogS << "Cannot clone kernel for block size " << BlockSize
+                 << " since it is larger than the maximum block size of "
+                 << OriginalBlockSizeLimits.second << "\n";
+          }
+          continue;
+        }
+
+        if (env::shouldEmitVerboseLogs()) {
+          LogS << "Cloning " << OrigKernel->getName()
+               << " for block size: " << BlockSize << "\n";
+        }
+
+        // Create a clone of the kernel
+        ValueToValueMapTy VMap;
+        Function *ClonedKernel = CloneFunction(OrigKernel, VMap);
+
+        // Ensure calling convention is preserved (should be AMDGPU_KERNEL)
+        ClonedKernel->setCallingConv(OrigKernel->getCallingConv());
+
+        // Rename the cloned kernel with block size suffix
+        std::string NewName = OriginalName + ".bs" + std::to_string(BlockSize);
+        ClonedKernel->setName(NewName);
+
+        // Remove the old amdgpu-flat-work-group-size attribute and add the new
+        // one
+        ClonedKernel->removeFnAttr("amdgpu-flat-work-group-size");
+        ClonedKernel->addFnAttr("amdgpu-flat-work-group-size",
+                                BlockSizeLowerBound + "," +
+                                    std::to_string(BlockSize));
+
+        if (env::shouldEmitVerboseLogs()) {
+          LogS << "  Cloned " << OrigKernel->getName() << " -> " << NewName
+               << "\n";
+        }
+      }
+    }
+
+    // Write the modified module to a bitcode buffer
+    SmallString<0> BitcodeBuffer;
+    raw_svector_ostream OS(BitcodeBuffer);
+    WriteBitcodeToFile(*M, OS);
+
+    // Update the existing data object with the cloned bitcode
+    Input->setData(BitcodeBuffer);
+
+    if (env::shouldSaveTemps()) {
+      if (auto Status = outputToFile(Input, getFilePath(Input, OutputDir))) {
+        return Status;
+      }
+    }
+
+    // Re-add the modified bitcode to the set
+    BcSet->DataObjects.insert(Input);
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
 }
 
 amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {

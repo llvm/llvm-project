@@ -216,6 +216,7 @@ struct DataAction {
   bool ShouldUseVFS = true;
 
   std::vector<std::string> BundleEntryIDs;
+  std::vector<size_t> BlockSizes;
 
 private:
   std::vector<std::string> ListOptions;
