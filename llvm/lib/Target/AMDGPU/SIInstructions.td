@@ -2735,6 +2735,18 @@ def : AMDGPUPatIgnoreCopies <
               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
+// v2i32 version
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<or> (and v2i32:$y, v2i32:$x), (and v2i32:$z, (vnot v2i32:$x))),
+  (REG_SEQUENCE VReg_64,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+>;
+
 // (z & ~x)
 def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<and> i32:$z, (not_oneuse i32:$x)),
@@ -2751,6 +2763,16 @@ def : AMDGPUPatIgnoreCopies <
                    (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
+// v2i32 version
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<and> v2i32:$z, (vnot_oneuse v2i32:$x)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)), (i32 0),
+                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)), (i32 0),
+                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+>;
+
 // (y | ~x)
 def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> i32:$y, (not_oneuse i32:$x)),
@@ -2760,6 +2782,16 @@ def : AMDGPUPatIgnoreCopies <
 // 64-bit version
 def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> i64:$y, (not_oneuse i64:$x)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
+                   (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)), (i32 -1)), sub0,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
+                   (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)), (i32 -1)), sub1)
+>;
+
+// v2i32 version
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<or> v2i32:$y, (vnot_oneuse v2i32:$x)),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
                    (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)), (i32 -1)), sub0,

@@ -522,5 +522,37 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}vector_bfi_v2i32
+; GCN: v_bfi_b32
+; GCN: v_bfi_b32
+define <2 x i32> @vector_bfi_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
+entry:
+  %ny = and <2 x i32> %y, %x
+  %nx = xor <2 x i32> %x, <i32 -1, i32 -1>
+  %nz = and <2 x i32> %z, %nx
+  %r = or <2 x i32> %ny, %nz
+  ret <2 x i32> %r
+}
+
+; GCN-LABEL: {{^}}vector_andn2_v2i32_one_use
+; GCN: v_bfi_b32
+; GCN: v_bfi_b32
+define <2 x i32> @vector_andn2_v2i32_one_use(<2 x i32> %v, <2 x i32> %s) {
+entry:
+  %not = xor <2 x i32> %v, <i32 -1, i32 -1>
+  %r = and <2 x i32> %s, %not
+  ret <2 x i32> %r
+}
+
+; GCN-LABEL: {{^}}vector_orn2_v2i32_one_use
+; GCN: v_bfi_b32
+; GCN: v_bfi_b32
+define <2 x i32> @vector_orn2_v2i32_one_use(<2 x i32> %v, <2 x i32> %s) {
+entry:
+  %not = xor <2 x i32> %v, <i32 -1, i32 -1>
+  %r = or <2 x i32> %s, %not
+  ret <2 x i32> %r
+}
+
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.x() #0
