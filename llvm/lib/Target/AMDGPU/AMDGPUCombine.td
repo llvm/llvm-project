@@ -140,6 +140,16 @@ def combine_fmul_with_select_to_fldexp : GICombineRule<
           [{ return Helper.matchCombineFmulWithSelectToFldexp(*${root}, *${sel}, ${matchinfo}); }]),
   (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// Like combine_fmul_with_select_to_fldexp but with VGPR detection for RegBankCombiner.
+// Note that the combine for s64, s32, and s16 would not trigger under the combine_fmul_with_select_to_fldexp
+// in the pre/post legalizer (it is only gating s{64,32,16} with SALU for the regcombiner).
+def combine_fmul_select_to_fldexp_regbank : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match  (G_FMUL $dst, $x, $select):$root,
+          (G_SELECT $select, $y, $A, $B):$sel,
+          [{ return matchFmulSelectToFldexpVgpr(*${root}, *${sel}, ${matchinfo}); }]),
+  (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // (shift x, (zext amt)) -> (shift x, (and (anyext amt), mask)
 //
 // The pattern is longer, but is better for matching during ISel.
@@ -234,7 +244,8 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
 
 def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
-  [unmerge_merge, unmerge_cst, unmerge_undef,
+  [combine_fmul_select_to_fldexp_regbank,
+   unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,

@@ -452,9 +452,11 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
-bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
+bool llvm::matchFmulWithSelectToFldexpImpl(
     MachineInstr &MI, MachineInstr &Sel,
-    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
+    std::function<void(MachineIRBuilder &)> &MatchInfo,
+    const MachineRegisterInfo &MRI, const SIInstrInfo &TII, DstOp DestTyOp,
+    DstOp IntDestTyOp) {
   assert(MI.getOpcode() == TargetOpcode::G_FMUL);
   assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
   assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());
@@ -470,8 +472,11 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     return false;
 
   Register SelectCondReg = Sel.getOperand(1).getReg();
-  MachineInstr *SelectTrue = MRI.getVRegDef(Sel.getOperand(2).getReg());
-  MachineInstr *SelectFalse = MRI.getVRegDef(Sel.getOperand(3).getReg());
+  Register SelectTrueReg = Sel.getOperand(2).getReg();
+  Register SelectFalseReg = Sel.getOperand(3).getReg();
+  // Look through copies (needed in RegBankCombiner where regbank copies exist).
+  MachineInstr *SelectTrue = getDefIgnoringCopies(SelectTrueReg, MRI);
+  MachineInstr *SelectFalse = getDefIgnoringCopies(SelectFalseReg, MRI);
 
   const auto SelectTrueVal =
       isConstantOrConstantSplatVectorFP(*SelectTrue, MRI);
@@ -498,17 +503,16 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   if (SelectFalseLog2Val == INT_MIN)
     return false;
 
-  MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
-    LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+  MatchInfo = [=, &MI, &MRI](MachineIRBuilder &Builder) {
     auto NewSel = Builder.buildSelect(
-        IntDestTy, SelectCondReg,
-        Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
-        Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
+        IntDestTyOp, SelectCondReg,
+        Builder.buildConstant(IntDestTyOp, SelectTrueLog2Val),
+        Builder.buildConstant(IntDestTyOp, SelectFalseLog2Val));
 
     Register XReg = MI.getOperand(1).getReg();
     if (SelectTrueVal->isNegative()) {
       auto NegX =
-          Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
+          Builder.buildFNeg(DestTyOp, XReg, MRI.getVRegDef(XReg)->getFlags());
       Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
     } else {
       Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
@@ -516,6 +520,24 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   };
 
   return true;
+}
+
+bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
+    MachineInstr &MI, MachineInstr &Sel,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT ScalarDestTy = MRI.getType(Dst).getScalarType();
+
+  // fldexp has no SALU form. On targets with SALU float, defer this combine
+  // to the RegBankCombiner where register banks are known and we can limit it
+  // to VGPR (divergent) values only.
+  if (STI.hasSALUFloatInsts() && ScalarDestTy == LLT::scalar(32))
+    return false;
+
+  LLT DestTy = MRI.getType(Dst);
+  LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+  return matchFmulWithSelectToFldexpImpl(MI, Sel, MatchInfo, MRI, TII, DestTy,
+                                         IntDestTy);
 }
 
 bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
