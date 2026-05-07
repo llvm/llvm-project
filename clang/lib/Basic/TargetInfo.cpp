@@ -1072,7 +1072,7 @@ TargetInfo::simplifyConstraint(StringRef Constraint,
                                SmallVectorImpl<ConstraintInfo> *OutCons) const {
   std::string Result;
 
-  // Stop at '\0' to match the old behavior.
+  // Ignore embedded nulls to match prior (clang-21 and earlier) behavior
   Constraint = Constraint.split('\0').first;
 
   for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
