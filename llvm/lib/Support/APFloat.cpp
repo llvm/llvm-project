@@ -29,8 +29,14 @@
 #include <cstring>
 #include <limits.h>
 
-// Shared headers from LLVM libc
-// Make sure to add ${LLVM_SOURCE_DIR}/../libc to include directories.
+/// Shared headers from LLVM libc
+/// Make sure to add ${LLVM_SOURCE_DIR}/../libc to include directories.
+///
+/// Notes: So far it looks like APFloat does not check errnos or floating-point
+/// exceptions after calling the math functions, so we will configure LLVM libc
+/// math functions to skip setting errnos and floating-point exceptions
+/// explicitly.  We also put them in a separate namespace so that the symbols
+/// do not clash with other libc math builds just in case.
 #define LIBC_NAMESPACE __llvm_libc_apfloat
 #define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
 
