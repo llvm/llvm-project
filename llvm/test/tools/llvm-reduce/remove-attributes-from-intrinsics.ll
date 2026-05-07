@@ -23,7 +23,6 @@ define i32 @t(i32 %a) {
   ret i32 %r
 }
 
-; CHECK-ALL: declare i32 @llvm.uadd.sat.i32(i32, i32) #0
 declare i32 @llvm.uadd.sat.i32(i32, i32) #0
 
 ; CHECK-ALL: attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
