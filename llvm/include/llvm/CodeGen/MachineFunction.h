@@ -1158,12 +1158,15 @@ public:
                                           int64_t Offset, LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, LocationSize Size) {
-    return getMachineMemOperand(
-        MMO, Offset,
-        !Size.isPrecise() ? LLT()
-        : Size.isScalable()
-            ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
-            : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
+    if (!Size.isPrecise())
+      return getMachineMemOperand(MMO, Offset, LLT());
+
+    unsigned SizeInBits = 8 * Size.getValue().getKnownMinValue();
+    LLT Ty = Size.isScalable() ? LLT::scalable_vector(1, SizeInBits)
+             : MMO->getType().isPointerOrPointerVector()
+                 ? LLT::scalar(SizeInBits)
+                 : MMO->getType().changeElementSize(SizeInBits);
+    return getMachineMemOperand(MMO, Offset, Ty);
   }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, uint64_t Size) {

@@ -650,8 +650,8 @@ body:             |
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[TRUNC]], [[C5]](i64)
     ; CHECK-NEXT: [[C6:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
     ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[PTR_ADD2]], [[C6]](i64)
-    ; CHECK-NEXT: G_STORE [[TRUNC]](i32), [[PTR_ADD2]](p0) :: (store (s16) into unknown-address + 8, align 8)
-    ; CHECK-NEXT: G_STORE [[LSHR]](i32), [[PTR_ADD3]](p0) :: (store (s8) into unknown-address + 10, align 2)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](i32), [[PTR_ADD2]](p0) :: (store (i16) into unknown-address + 8, align 8)
+    ; CHECK-NEXT: G_STORE [[LSHR]](i32), [[PTR_ADD3]](p0) :: (store (i8) into unknown-address + 10, align 2)
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %load:_(s88) = G_LOAD %ptr(p0) :: (load (s88))
