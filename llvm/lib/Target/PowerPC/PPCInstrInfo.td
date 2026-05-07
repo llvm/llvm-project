@@ -3479,8 +3479,13 @@ def : Pat<(PPCcall_nop (i32 mcsym:$dst)),
 def : Pat<(PPCcall_nop (i32 texternalsym:$dst)),
           (BL_NOP texternalsym:$dst)>;
 
-def : Pat<(PPCbl_load_toc (i32 texternalsym:$dst)),
-          (BL_LWZinto_toc texternalsym:$dst)>;
+let Predicates = [IsAIX] in {
+  def : Pat<(PPCbl_load_toc (i32 texternalsym:$dst)),
+            (BL_LWZinto_toc texternalsym:$dst)>;
+
+  def : Pat<(PPCbl_load_toc_rm (i32 texternalsym:$dst)),
+            (BL_LWZinto_toc_RM texternalsym:$dst)>;
+}
 
 def : Pat<(PPCcall_rm (i32 mcsym:$dst)),
           (BL_RM mcsym:$dst)>;
@@ -3491,8 +3496,6 @@ def : Pat<(PPCcall_nop_rm (i32 mcsym:$dst)),
 def : Pat<(PPCcall_nop_rm (i32 texternalsym:$dst)),
           (BL_NOP_RM texternalsym:$dst)>;
 
-def : Pat<(PPCbl_load_toc_rm (i32 texternalsym:$dst)),
-          (BL_LWZinto_toc_RM texternalsym:$dst)>;
 
 def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
           (TCRETURNdi tglobaladdr:$dst, imm:$imm)>;
