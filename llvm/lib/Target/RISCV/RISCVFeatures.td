@@ -693,18 +693,10 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
 def FeatureStdExtZvqwdota8i
     : RISCVExperimentalExtension<0, 2, "8-bit Integer Dot-Product",
                                  [FeatureStdExtZve32x]>;
-def HasStdExtZvqwdota8i
-    : Predicate<"Subtarget->hasStdExtZvqwdota8i()">,
-      AssemblerPredicate<(all_of FeatureStdExtZvqwdota8i),
-                          "'Zvqwdota8i' (8-bit Integer Dot-Product)">;
 
 def FeatureStdExtZvqwdota16i
     : RISCVExperimentalExtension<0, 2, "16-bit Integer Dot-Product",
                                  [FeatureStdExtZve64x]>;
-def HasStdExtZvqwdota16i
-    : Predicate<"Subtarget->hasStdExtZvqwdota16i()">,
-      AssemblerPredicate<(all_of FeatureStdExtZvqwdota16i),
-                          "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
 
 def HasStdExtZvqwdota8iOrZvqwdota16i
     : Predicate<"Subtarget->hasStdExtZvqwdota8i() || Subtarget->hasStdExtZvqwdota16i()">,

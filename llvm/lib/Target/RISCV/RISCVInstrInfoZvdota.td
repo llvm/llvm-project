@@ -21,7 +21,7 @@ class ZvdotVALUVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                opcodestr, "$vd, $vs2, $vs1$vm"> {
   let Inst{6-0} = OPC_OP_VE.Value;
   let Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb";
-  let VS1VS2Constraint = WidenV;
+  let VS1VS2Constraint = Vrgather;
 }
 }
 
