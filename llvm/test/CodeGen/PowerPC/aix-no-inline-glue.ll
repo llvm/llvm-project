@@ -61,6 +61,7 @@ entry:
 
 ; CHECK-LABEL: .caller2
 ; CHECK64: ld [[REG:[0-9]+]], L..C{{[0-9]+}}(2)  # @fp
+; CHECK64: ld 11, 0([[REG]])
 ; CHECK32: lwz [[REG:[0-9]+]], L..C{{[0-9]+}}(2) # @fp
 ; CHECK32: lwz 11, 0([[REG]])
 ; CHECK: bl ._ptrgl[PR]
