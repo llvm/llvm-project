@@ -371,12 +371,16 @@ public:
   /// base address (BoxOffsetOp) and a MapInfoOp for it. The most
   /// important thing to note is that we normally move the bounds from
   /// the descriptor map onto the base address map.
+  ///
+  /// \p parentOp is the MapInfoOp being expanded (the descriptor map before
+  /// this pass splits it). Lowering attaches a NameLoc there for the Fortran
+  /// map text. New ops created here use its location so NameLoc is preserved.
   mlir::omp::MapInfoOp
   genBaseAddrMap(mlir::Value descriptor, mlir::omp::MapInfoOp parentOp,
                  mlir::omp::ClauseMapFlags mapType, fir::FirOpBuilder &builder,
                  bool isRefPtee = false,
                  mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr()) {
-    mlir::Location loc = descriptor.getLoc();
+    mlir::Location loc = parentOp->getLoc();
     mlir::Value baseAddrAddr = fir::BoxOffsetOp::create(
         builder, loc, descriptor, fir::BoxFieldAttr::base_addr);
 
