@@ -218,6 +218,12 @@ private:
     }
 
     void popOperator() { InfixOperatorStack.pop_back(); }
+    bool isOperatorStackTopNegating() const {
+      if (InfixOperatorStack.empty())
+        return false;
+      InfixCalculatorTok Top = InfixOperatorStack.back();
+      return Top == IC_MINUS || Top == IC_NEG;
+    }
     void pushOperator(InfixCalculatorTok Op) {
       // Push the new operator if the stack is empty.
       if (InfixOperatorStack.empty()) {
@@ -827,6 +833,13 @@ private:
             return true;
           IC.pushOperand(IC_IMM);
           IC.popOperator();
+          // x86 SIB addressing has no way to subtract a scaled index
+          // register, so reject expressions like '[base - scale * index]'
+          // rather than silently dropping the sign.
+          if (IC.isOperatorStackTopNegating()) {
+            ErrMsg = "scaled index register cannot be negated";
+            return true;
+          }
         } else {
           State = IES_ERROR;
         }
@@ -907,6 +920,11 @@ private:
             return true;
           // Get the scale and replace the 'Register * Scale' with '0'.
           IC.popOperator();
+          // Reject expressions like '[base - index * scale]'
+          if (IC.isOperatorStackTopNegating()) {
+            ErrMsg = "scaled index register cannot be negated";
+            return true;
+          }
         } else {
           IC.pushOperand(IC_IMM, TmpInt);
         }

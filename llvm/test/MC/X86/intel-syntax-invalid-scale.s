@@ -13,3 +13,9 @@
     lea rax, [rdi + rdx*-8]
 // CHECK: error: scale factor in address must be 1, 2, 4 or 8
     lea rax, [rdi + -1*rdx]
+// CHECK: error: scaled index register cannot be negated
+    lea rax, [rdi - 2*rdx]
+// CHECK: error: scaled index register cannot be negated
+    lea rax, [rdi - 4*rdx + 8]
+// CHECK: error: scaled index register cannot be negated
+    lea rax, [rdi + 8 - 2*rdx]
