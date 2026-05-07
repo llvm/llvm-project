@@ -176,10 +176,8 @@ constexpr U _ = nondeterministic(true);
 
 namespace cwg2943 { // cwg2943: 3.9
 #if __cplusplus >= 201703L
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wignored-attributes"
 [[nodiscard]] void f();
-#pragma clang diagnostic pop
+// expected-warning@-1 {{attribute 'nodiscard' cannot be applied to functions without return value}}
 template <class T> [[nodiscard]] T g();
 
 void h() {
