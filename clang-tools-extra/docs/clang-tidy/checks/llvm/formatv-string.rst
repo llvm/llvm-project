@@ -10,18 +10,18 @@ This check diagnoses the following issues:
 
 - The number of replacement indices in the format string does not match the
   number of arguments provided.
-- A format string does not use an argument at a given index.
-- Automatic and explicit indices are mixed (e.g. ``{} {1}``).
+- A format string does not use one of the given arguments.
+- Mixing of automatic and explicit indices (e.g. ``{} {1}``).
 
 .. code-block:: c++
 
-  // Warning: requires 2 arguments, but 1 provided.
+  // warning: formatv() format string requires 2 arguments, but 1 argument was provided
   llvm::formatv("{0} {1}", x);
 
-  // Warning: mixes automatic and explicit indices.
+  // warning: formatv() format string mixes automatic and explicit indices
   llvm::formatv("{} {1}", x, y);
 
-  // Warning: format string does not use argument at index 1.
+  // warning: formatv() argument unused in format string
   llvm::formatv("{0} {2}", x, y, z);
 
   // OK.
@@ -42,7 +42,8 @@ Options
   fully qualified function name and `index` is the zero-based parameter
   position of the format string.
 
-  For example, to check `mylib::log(Level, const char *Fmt, ...)` where the
-  format string is the second parameter (index 1):
+  For example, to check `mylib::log(Level, const char *Fmt, ...)` set this
+  option to `mylib::log:1`. The value `1` indicates the format string is found
+  in the second parameter.
 
-  Default is empty string.
+  Default is the empty string.
