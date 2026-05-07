@@ -24125,7 +24125,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   for (unsigned i = 0, e = ArgLocs.size(), InsIdx = 0; i != e; ++i, ++InsIdx) {
     CCValAssign &VA = ArgLocs[i];
     SDValue ArgValue;
-    // Passing f64 on RV32D with a soft float ABI must be handled as a special
+    // Passing 2XLen fp with a soft float ABI must be handled as a special
     // case.
     if ((VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64) ||
         (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f128)) {
