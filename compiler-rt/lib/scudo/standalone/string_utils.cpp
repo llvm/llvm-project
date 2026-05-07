@@ -213,13 +213,7 @@ void ScopedString::vappend(const char *Format, va_list &Args) {
     }
     }
   }
-  String.push_back('\0');
-  if (String.back() != '\0') {
-    // String truncated, make sure the string is terminated properly.
-    // This can happen if there is no more memory when trying to resize
-    // the string.
-    String.back() = '\0';
-  }
+  ensureNullTerminated();
 }
 
 void ScopedString::append(const char *Format, ...) {
@@ -227,6 +221,51 @@ void ScopedString::append(const char *Format, ...) {
   va_start(Args, Format);
   vappend(Format, Args);
   va_end(Args);
+}
+
+void ScopedString::append(const s32 Value) {
+  DCHECK(String.size() > 0);
+  String.resize(String.size() - 1);
+  appendSignedDecimal(static_cast<s64>(Value), 0, false);
+  ensureNullTerminated();
+}
+
+void ScopedString::append(const s64 Value) {
+  DCHECK(String.size() > 0);
+  String.resize(String.size() - 1);
+  appendSignedDecimal(Value, 0, false);
+  ensureNullTerminated();
+}
+
+void ScopedString::append(const u32 Value) {
+  DCHECK(String.size() > 0);
+  String.resize(String.size() - 1);
+  appendUnsigned(static_cast<u64>(Value), 10, 0, false, false);
+  ensureNullTerminated();
+}
+
+void ScopedString::append(const u64 Value) {
+  DCHECK(String.size() > 0);
+  String.resize(String.size() - 1);
+  appendUnsigned(Value, 10, 0, false, false);
+  ensureNullTerminated();
+}
+
+void ScopedString::append(const bool Value) {
+  DCHECK(String.size() > 0);
+  String.resize(String.size() - 1);
+  appendString(0, -1, Value ? "true" : "false");
+  ensureNullTerminated();
+}
+
+void ScopedString::ensureNullTerminated() {
+  String.push_back('\0');
+  if (String.back() != '\0') {
+    // String truncated, make sure the string is terminated properly.
+    // This can happen if there is no more memory when trying to resize
+    // the string.
+    String.back() = '\0';
+  }
 }
 
 void Printf(const char *Format, ...) {

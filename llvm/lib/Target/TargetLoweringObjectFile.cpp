@@ -61,7 +61,7 @@ unsigned TargetLoweringObjectFile::getCallSiteEncoding() const {
   // If target does not have LEB128 directives, we would need the
   // call site encoding to be udata4 so that the alternative path
   // for not having LEB128 directives could work.
-  if (!getContext().getAsmInfo()->hasLEB128Directives())
+  if (!getContext().getAsmInfo().hasLEB128Directives())
     return dwarf::DW_EH_PE_udata4;
   return CallSiteEncoding;
 }
@@ -212,7 +212,8 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
     auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
     auto *Name = cast<MDString>(MD->getOperand(2));
     auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
-        TM->getFunctionSections() ? Name->getString() : StringRef());
+        TM->getFunctionSections() ? Name->getString() : StringRef(),
+        Hash->getZExtValue());
 
     Streamer.switchSection(S);
 

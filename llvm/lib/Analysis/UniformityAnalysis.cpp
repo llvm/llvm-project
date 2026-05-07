@@ -52,17 +52,17 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
 template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
     raw_ostream &OS) const {
-  bool haveDivergentArgs = false;
+  bool HaveDivergentArgs = false;
   for (const auto &Arg : F.args()) {
     if (isDivergent(&Arg)) {
-      if (!haveDivergentArgs) {
+      if (!HaveDivergentArgs) {
         OS << "DIVERGENT ARGUMENTS:\n";
-        haveDivergentArgs = true;
+        HaveDivergentArgs = true;
       }
       OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
     }
   }
-  return haveDivergentArgs;
+  return HaveDivergentArgs;
 }
 
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
@@ -167,14 +167,13 @@ template struct llvm::GenericUniformityAnalysisImplDeleter<
 
 llvm::UniformityInfo UniformityInfoAnalysis::run(Function &F,
                                                  FunctionAnalysisManager &FAM) {
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
-  auto &CI = FAM.getResult<CycleAnalysis>(F);
+  TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  if (!TTI.hasBranchDivergence(&F))
+    return UniformityInfo{};
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  CycleInfo &CI = FAM.getResult<CycleAnalysis>(F);
   UniformityInfo UI{DT, CI, &TTI};
-  // Skip computation if we can assume everything is uniform.
-  if (TTI.hasBranchDivergence(&F))
-    UI.compute();
-
+  UI.compute();
   return UI;
 }
 
@@ -215,27 +214,29 @@ void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
-  auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
-  auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &targetTransformInfo =
+  TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  m_function = &F;
-  m_uniformityInfo = UniformityInfo{domTree, cycleInfo, &targetTransformInfo};
+  Fn = &F;
 
-  // Skip computation if we can assume everything is uniform.
-  if (targetTransformInfo.hasBranchDivergence(m_function))
-    m_uniformityInfo.compute();
+  if (!TTI.hasBranchDivergence(Fn)) {
+    UI = UniformityInfo{};
+    return false;
+  }
 
+  CycleInfo &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  UI = UniformityInfo{DT, CI, &TTI};
+  UI.compute();
   return false;
 }
 
 void UniformityInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
-  OS << "UniformityInfo for function '" << m_function->getName() << "':\n";
-  m_uniformityInfo.print(OS);
+  OS << "UniformityInfo for function '" << Fn->getName() << "':\n";
+  UI.print(OS);
 }
 
 void UniformityInfoWrapperPass::releaseMemory() {
-  m_uniformityInfo = UniformityInfo{};
-  m_function = nullptr;
+  UI = UniformityInfo{};
+  Fn = nullptr;
 }

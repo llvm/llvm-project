@@ -1030,11 +1030,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
 
-  getActionDefinitionsBuilder({G_FNEG, G_FABS})
-    .legalFor(FPTypesPK16)
-    .clampMaxNumElementsStrict(0, S16, 2)
-    .scalarize(0)
-    .clampScalar(0, S16, S64);
+  auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
+  FNegAbs.legalFor(FPTypesPK16)
+      .legalFor(ST.hasPackedFP32Ops(), {V2S32})
+      .clampMaxNumElementsStrict(0, S16, 2);
+  if (ST.hasPackedFP32Ops())
+    FNegAbs.clampMaxNumElementsStrict(0, S32, 2);
+  FNegAbs.scalarize(0).clampScalar(0, S16, S64);
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_FSQRT)
@@ -1131,6 +1133,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // Must use fadd + fneg
       .lowerFor({S64, S16, V2S16});
   }
+
+  if (ST.hasPackedFP32Ops())
+    FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
 
   FSubActions
     .scalarize(0)
@@ -5495,18 +5500,34 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   if (!AllowInaccurateRcp)
     return false;
 
-  auto NegY = B.buildFNeg(ResTy, Y);
+  const ConstantFP *CLHS = getConstantFPVRegVal(X, MRI);
+  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+
+  // Pull out the negation so it folds for free into the source modifiers.
+  if (IsNegRcp)
+    X = B.buildFConstant(ResTy, 1.0).getReg(0);
+
+  Register NegY = IsNegRcp ? Y : B.buildFNeg(ResTy, Y).getReg(0);
   auto One = B.buildFConstant(ResTy, 1.0);
 
   auto R = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy})
                .addUse(Y)
                .setMIFlags(Flags);
+  if (IsNegRcp)
+    R = B.buildFNeg(ResTy, R);
 
   auto Tmp0 = B.buildFMA(ResTy, NegY, R, One);
   R = B.buildFMA(ResTy, Tmp0, R, R);
 
   auto Tmp1 = B.buildFMA(ResTy, NegY, R, One);
   R = B.buildFMA(ResTy, Tmp1, R, R);
+
+  // Skip the last 2 correction terms for reciprocal.
+  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0))) {
+    B.buildCopy(Res, R);
+    MI.eraseFromParent();
+    return true;
+  }
 
   auto Ret = B.buildFMul(ResTy, X, R);
   auto Tmp2 = B.buildFMA(ResTy, NegY, Ret, X);

@@ -54,7 +54,7 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   Lexer.setLexMasmIntegers(true);
 
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));
+      TheTarget.createMCAsmParser(STI, *Parser, MCII));
   if (!TAP)
     return make_error<StringError>(
         "This target does not support assembly parsing.",

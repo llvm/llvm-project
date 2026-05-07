@@ -1235,27 +1235,29 @@ void ___kmp_thread_free(kmp_info_t *th, void *ptr KMP_SRC_LOC_DECL) {
 }
 
 /* OMP 5.0 Memory Management support */
-static const char *kmp_mk_lib_name;
-static void *h_memkind;
 /* memkind experimental API: */
 // memkind_alloc
 static void *(*kmp_mk_alloc)(void *k, size_t sz);
 // memkind_free
 static void (*kmp_mk_free)(void *kind, void *ptr);
-// memkind_check_available
-static int (*kmp_mk_check)(void *kind);
 // kinds we are going to use
 static void **mk_default;
 static void **mk_interleave;
-static void **mk_hbw;
 static void **mk_hbw_interleave;
 static void **mk_hbw_preferred;
+static void **mk_dax_kmem;
+static void **mk_dax_kmem_all;
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
+static const char *kmp_mk_lib_name;
+static void *h_memkind;
+// memkind_check_available
+static int (*kmp_mk_check)(void *kind);
+static void **mk_hbw;
 static void **mk_hugetlb;
 static void **mk_hbw_hugetlb;
 static void **mk_hbw_preferred_hugetlb;
-static void **mk_dax_kmem;
-static void **mk_dax_kmem_all;
 static void **mk_dax_kmem_preferred;
+#endif
 static void *(*kmp_target_alloc_host)(size_t size, int device);
 static void *(*kmp_target_alloc_shared)(size_t size, int device);
 static void *(*kmp_target_alloc_device)(size_t size, int device);
@@ -1500,28 +1502,27 @@ void __kmp_init_memkind() {
     }
     dlclose(h_memkind); // failure
   }
-#else // !(KMP_OS_UNIX && KMP_DYNAMIC_LIB)
-  kmp_mk_lib_name = "";
-#endif // !(KMP_OS_UNIX && KMP_DYNAMIC_LIB)
   h_memkind = NULL;
   kmp_mk_check = NULL;
+  mk_hbw = NULL;
+  mk_hugetlb = NULL;
+  mk_hbw_hugetlb = NULL;
+  mk_hbw_preferred_hugetlb = NULL;
+  mk_dax_kmem_preferred = NULL;
+  kmp_mk_lib_name = "";
+#endif // !(KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN)
   kmp_mk_alloc = NULL;
   kmp_mk_free = NULL;
   mk_default = NULL;
   mk_interleave = NULL;
-  mk_hbw = NULL;
   mk_hbw_interleave = NULL;
   mk_hbw_preferred = NULL;
-  mk_hugetlb = NULL;
-  mk_hbw_hugetlb = NULL;
-  mk_hbw_preferred_hugetlb = NULL;
   mk_dax_kmem = NULL;
   mk_dax_kmem_all = NULL;
-  mk_dax_kmem_preferred = NULL;
 }
 
 void __kmp_fini_memkind() {
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
   if (__kmp_memkind_available)
     KE_TRACE(25, ("__kmp_fini_memkind: finalize memkind library\n"));
   if (h_memkind) {
@@ -1529,19 +1530,21 @@ void __kmp_fini_memkind() {
     h_memkind = NULL;
   }
   kmp_mk_check = NULL;
+  mk_hbw = NULL;
+  mk_hugetlb = NULL;
+  mk_hbw_hugetlb = NULL;
+  mk_hbw_preferred_hugetlb = NULL;
+  mk_dax_kmem_preferred = NULL;
+#endif
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
   kmp_mk_alloc = NULL;
   kmp_mk_free = NULL;
   mk_default = NULL;
   mk_interleave = NULL;
-  mk_hbw = NULL;
   mk_hbw_interleave = NULL;
   mk_hbw_preferred = NULL;
-  mk_hugetlb = NULL;
-  mk_hbw_hugetlb = NULL;
-  mk_hbw_preferred_hugetlb = NULL;
   mk_dax_kmem = NULL;
   mk_dax_kmem_all = NULL;
-  mk_dax_kmem_preferred = NULL;
 #endif
 }
 

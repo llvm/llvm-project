@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include <memory>
 
 using namespace clang;
 using namespace ssaf;
 
-// FIXME: LLVM_INSTANTIATE_REGISTRY can't be used here because it drops extra
-// type parameters.
-template class CLANG_EXPORT_TEMPLATE
-    llvm::Registry<TUSummaryExtractor, TUSummaryBuilder &>;
+LLVM_DEFINE_REGISTRY(clang::ssaf::TUSummaryExtractorRegistry)
 
 bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries())
@@ -24,7 +22,7 @@ bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
   return false;
 }
 
-std::unique_ptr<ASTConsumer>
+std::unique_ptr<TUSummaryExtractor>
 ssaf::makeTUSummaryExtractor(llvm::StringRef SummaryName,
                              TUSummaryBuilder &Builder) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries())

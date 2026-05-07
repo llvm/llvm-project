@@ -452,8 +452,8 @@ public:
                              lldb::RegisterKind reg_kind, uint32_t reg_num,
                              uint64_t reg_value);
 
-  size_t ReadMemory(const Context &context, lldb::addr_t addr, void *dst,
-                    size_t dst_len);
+  bool ReadMemory(const Context &context, lldb::addr_t addr, void *dst,
+                  size_t dst_len);
 
   uint64_t ReadMemoryUnsigned(const Context &context, lldb::addr_t addr,
                               size_t byte_size, uint64_t fail_value,

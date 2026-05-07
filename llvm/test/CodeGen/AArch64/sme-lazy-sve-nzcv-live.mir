@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64 -mattr=+sve -mattr=+sme -run-pass=aarch64-machine-sme-abi -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64 -mattr=+sve -mattr=+sme -aarch64-new-sme-abi %s -o - | FileCheck %s --check-prefix=CHECK-ASM
+# RUN: llc -mtriple=aarch64 -mattr=+sve -mattr=+sme %s -o - | FileCheck %s --check-prefix=CHECK-ASM
 
 # This tests the unfortunate case the status flags ($nzcv) are live at the point
 # we want to restore ZA. Currently, this is handled by saving them to a scratch

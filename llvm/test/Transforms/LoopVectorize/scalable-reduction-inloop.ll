@@ -68,7 +68,7 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 entry:
   br label %loop
 
-loop:                                           ; preds = %entry, %loop
+loop:
   %indvars.iv = phi i32 [ %indvars.iv.next, %loop ], [ 0, %entry ]
   %sum.02p = phi i32 [ %l9, %loop ], [ 255, %entry ]
   %sum.02 = and i32 %sum.02p, 255
@@ -80,7 +80,7 @@ loop:                                           ; preds = %entry, %loop
   %exitcond = icmp eq i32 %indvars.iv.next, 256
   br i1 %exitcond, label %exit, label %loop, !llvm.loop !0
 
-exit:                                      ; preds = %loop
+exit:
   %sum.0.lcssa = phi i32 [ %l9, %loop ]
   %ret = trunc i32 %sum.0.lcssa to i8
   ret i8 %ret
