@@ -1009,13 +1009,17 @@ public:
   // the original one.
 
   // This is the abstract version of the override.  Particular implementations
-  // e.g. the scripted
+  // e.g. the scripted override will derive from this.
+  class BreakpointResolverOverride;
+  using BreakpointResolverOverrideUP 
+      = std::unique_ptr<BreakpointResolverOverride>;
+  
   class BreakpointResolverOverride {
   public:
     BreakpointResolverOverride(Target &target, const std::string &description)
         : m_target(target), m_desc(description) {}
 
-    virtual BreakpointResolverOverride *CopyIntoNewTarget(Target &target) = 0;
+    virtual BreakpointResolverOverrideUP CopyIntoNewTarget(Target &target) = 0;
 
     virtual ~BreakpointResolverOverride() {}
     virtual lldb::BreakpointResolverSP
@@ -1031,10 +1035,10 @@ public:
 
   /// Add a breakpoint override resolver.  This version can't fail.
   lldb::user_id_t
-  AddBreakpointResolverOverride(BreakpointResolverOverride *override) {
+  AddBreakpointResolverOverride(BreakpointResolverOverrideUP &override_up) {
     lldb::user_id_t id_used = m_override_id;
     m_breakpoint_overrides.emplace(
-        m_override_id, std::unique_ptr<BreakpointResolverOverride>(override));
+        m_override_id, std::move(override_up));
     m_override_id++;
     return id_used;
   }
@@ -2091,7 +2095,7 @@ protected:
       std::map<ConstString, std::unique_ptr<BreakpointName>>;
   BreakpointNameList m_breakpoint_names;
 
-  std::map<lldb::user_id_t, std::unique_ptr<BreakpointResolverOverride>>
+  std::map<lldb::user_id_t, BreakpointResolverOverrideUP>
       m_breakpoint_overrides;
   /// This is the ID that will be handed out for the next added breakpoint
   /// override resolver for this target.

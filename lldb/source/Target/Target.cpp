@@ -241,7 +241,10 @@ void Target::PrimeFromDummyTarget(Target &target) {
   }
 
   for (auto const &elem : target.m_breakpoint_overrides) {
-    AddBreakpointResolverOverride(elem.second->CopyIntoNewTarget(*this));
+    BreakpointResolverOverrideUP new_override_up 
+        = elem.second->CopyIntoNewTarget(*this);
+    if (new_override_up->Validate())
+      AddBreakpointResolverOverride(new_override_up);
   }
 
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(
@@ -955,14 +958,14 @@ Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
   StructuredDataImpl impl;
   impl.SetObjectSP(args_data_sp);
 
-  ScriptedBreakpointResolverOverride *new_override =
+  BreakpointResolverOverrideUP new_override_up(
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
-                                             std::string(class_name), impl);
-  llvm::Error error = new_override->Validate();
+                                             std::string(class_name), impl));
+  llvm::Error error = new_override_up->Validate();
   if (error)
     return error;
 
-  return AddBreakpointResolverOverride(new_override);
+  return AddBreakpointResolverOverride(std::move(new_override_up));
 }
 
 void Target::DescribeBreakpointOverrides(Stream &stream,

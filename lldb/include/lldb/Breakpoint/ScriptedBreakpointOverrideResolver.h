@@ -25,9 +25,10 @@ public:
       : Target::BreakpointResolverOverride(target, description),
         m_args_data(args_data), m_class_name(class_name) {}
 
-  BreakpointResolverOverride *CopyIntoNewTarget(Target &target) override {
-    return new ScriptedBreakpointResolverOverride(target, m_desc, m_class_name,
-                                                  m_args_data);
+  Target::BreakpointResolverOverrideUP CopyIntoNewTarget(Target &target) override {
+    return Target::BreakpointResolverOverrideUP(
+        new ScriptedBreakpointResolverOverride(target, m_desc, m_class_name, 
+                                               m_args_data));
   }
 
   lldb::BreakpointResolverSP
