@@ -37,8 +37,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
         llvm::formatv("invalid variablesReference: {}.", var_ref.AsUInt32()),
         /*error_code=*/llvm::inconvertibleErrorCode(), /*show_user=*/false);
 
-  Expected<std::vector<Variable>> variables =
-      store->GetVariables(dap.reference_storage, dap.configuration, arguments);
+  Expected<std::vector<Variable>> variables = store->GetVariables(arguments);
   if (llvm::Error err = variables.takeError())
     return err;
 

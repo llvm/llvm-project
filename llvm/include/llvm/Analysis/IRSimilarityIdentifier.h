@@ -525,7 +525,12 @@ struct IRInstructionMapper {
     InstructionClassification() = default;
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
-    InstrType visitBranchInst(BranchInst &BI) {
+    InstrType visitUncondBrInst(UncondBrInst &BI) {
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
+    InstrType visitCondBrInst(CondBrInst &BI) {
       if (EnableBranches)
         return Legal;
       return Illegal;
@@ -1190,13 +1195,12 @@ private:
 
 /// Printer pass that uses \c IRSimilarityAnalysis.
 class IRSimilarityAnalysisPrinterPass
-    : public PassInfoMixin<IRSimilarityAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<IRSimilarityAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit IRSimilarityAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

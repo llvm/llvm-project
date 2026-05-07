@@ -113,6 +113,72 @@ static void testBinaryOpExhaustive(StringRef Name, BinaryBitsFn BitsFn,
 
 namespace {
 
+TEST(KnownBitsTest, SelfAddExhaustive) {
+  Twine Name = "selfadd";
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    KnownBits Exact(Bits), ExactNSW(Bits), ExactNUW(Bits), ExactNSWAndNUW(Bits);
+    Exact.Zero.setAllBits();
+    Exact.One.setAllBits();
+    ExactNSW.Zero.setAllBits();
+    ExactNSW.One.setAllBits();
+    ExactNUW.Zero.setAllBits();
+    ExactNUW.One.setAllBits();
+    ExactNSWAndNUW.Zero.setAllBits();
+    ExactNSWAndNUW.One.setAllBits();
+
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      bool SignedOverflow;
+      bool UnsignedOverflow;
+      APInt Res;
+      Res = N.uadd_ov(N, UnsignedOverflow);
+      Res = N.sadd_ov(N, SignedOverflow);
+
+      Exact.One &= Res;
+      Exact.Zero &= ~Res;
+
+      if (!SignedOverflow) {
+        ExactNSW.One &= Res;
+        ExactNSW.Zero &= ~Res;
+      }
+
+      if (!UnsignedOverflow) {
+        ExactNUW.One &= Res;
+        ExactNUW.Zero &= ~Res;
+      }
+
+      if (!UnsignedOverflow && !SignedOverflow) {
+        ExactNSWAndNUW.One &= Res;
+        ExactNSWAndNUW.Zero &= ~Res;
+      }
+    });
+
+    KnownBits Computed = KnownBits::add(Known, Known, /*NSW=*/false,
+                                        /*NUW=*/false, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name, Exact, Computed, {Known},
+                            /*CheckOptimality=*/true));
+
+    KnownBits ComputedNSW =
+        KnownBits::add(Known, Known,
+                       /*NSW=*/true, /*NUW=*/false, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name + " nsw", ExactNSW, ComputedNSW, {Known},
+                            /*CheckOptimality=*/true));
+
+    KnownBits ComputedNUW =
+        KnownBits::add(Known, Known,
+                       /*NSW=*/false, /*NUW=*/true, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name + " nuw", ExactNUW, ComputedNUW, {Known},
+                            /*CheckOptimality=*/true));
+
+    KnownBits ComputedNSWAndNUW =
+        KnownBits::add(Known, Known,
+                       /*NSW=*/true, /*NUW=*/true, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name + " nsw nuw", ExactNSWAndNUW,
+                            ComputedNSWAndNUW, {Known},
+                            /*CheckOptimality=*/true));
+  });
+}
+
 TEST(KnownBitsTest, AddCarryExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
@@ -592,11 +658,54 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N ^ (N - 1); });
 
   testUnaryOpExhaustive(
+      "add self",
+      [](const KnownBits &Known) {
+        return KnownBits::add(Known, Known, /*NSW=*/false, /*NUW=*/false,
+                              /*SelfAdd=*/true);
+      },
+      [](const APInt &N) { return N + N; }, /*CheckOptimality=*/true);
+
+  testUnaryOpExhaustive(
       "mul self",
       [](const KnownBits &Known) {
         return KnownBits::mul(Known, Known, /*SelfMultiply=*/true);
       },
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
+}
+
+TEST(KnownBitsTest, FunnelShiftExhaustive) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      if (Known1.hasConflict() || Known2.hasConflict())
+        return;
+
+      for (unsigned ShAmt = 0; ShAmt < Bits; ShAmt++) {
+        KnownBits FSHLResult(Bits), FSHRResult(Bits);
+        FSHLResult.setAllConflict();
+        FSHRResult.setAllConflict();
+
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            APInt FSHL = APIntOps::fshl(N1, N2, APInt(Bits, ShAmt));
+            FSHLResult.One &= FSHL;
+            FSHLResult.Zero &= ~FSHL;
+            APInt FSHR = APIntOps::fshr(N1, N2, APInt(Bits, ShAmt));
+            FSHRResult.One &= FSHR;
+            FSHRResult.Zero &= ~FSHR;
+          });
+        });
+
+        const APInt Amt(Bits, ShAmt);
+        KnownBits ComputeFSHL = KnownBits::fshl(Known1, Known2, Amt);
+        KnownBits ComputeFSHR = KnownBits::fshr(Known1, Known2, Amt);
+        EXPECT_TRUE(FSHLResult.Zero.isSubsetOf(ComputeFSHL.Zero) &&
+                    FSHLResult.One.isSubsetOf(ComputeFSHL.One));
+        EXPECT_TRUE(FSHRResult.Zero.isSubsetOf(ComputeFSHR.Zero) &&
+                    FSHRResult.One.isSubsetOf(ComputeFSHR.One));
+      }
+    });
+  });
 }
 
 TEST(KnownBitsTest, WideShifts) {

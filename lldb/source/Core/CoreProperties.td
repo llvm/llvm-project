@@ -60,6 +60,10 @@ let Definition = "testing", Path = "testing" in {
         Global,
         DefaultFalse,
         Desc<"Used for testing LLDB only. Hide locations of local variables.">;
+  def SafeAutoloadPaths : Property<"safe-auto-load-paths", "FileSpecList">,
+                          DefaultStringValue<"">,
+                          Desc<"List of paths that LLDB will automatically "
+                               "load scripting resources from.">;
 }
 #endif
 
@@ -184,7 +188,7 @@ let Definition = "debugger", Path = "" in {
   def ShowProgress
       : Property<"show-progress", "Boolean">,
         Global,
-        DefaultFalse,
+        DefaultTrue,
         Desc<"Whether to show progress using Operating System Command (OSC) "
              "Sequences in supporting terminal emulators.">;
   def ShowProgressAnsiPrefix: Property<"show-progress-ansi-prefix", "String">,
@@ -289,4 +293,8 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultFalse,
     Desc<"Controls whether diagnostics can refer directly to the command input, drawing arrows to it. If false, diagnostics will echo the input.">;
+  def GuiMaxConsoleLines: Property<"gui-console-max-lines", "UInt64">,
+    Global,
+    DefaultUnsignedValue<10000>,
+    Desc<"The maximum number of lines to keep in the console output window.">;
 }

@@ -98,12 +98,12 @@ add_clang_library(clangDaemon STATIC
   JSONTransport.cpp
   ModulesBuilder.cpp
   PathMapping.cpp
+  ProjectModules.cpp
   Protocol.cpp
   Quality.cpp
   ParsedAST.cpp
   Preamble.cpp
   RIFF.cpp
-  ScanningProjectModules.cpp
   Selection.cpp
   SemanticHighlighting.cpp
   SemanticSelection.cpp
@@ -201,6 +201,7 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 endif()
 add_subdirectory(tool)
 add_subdirectory(indexer)
+add_subdirectory(remap)
 
 if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

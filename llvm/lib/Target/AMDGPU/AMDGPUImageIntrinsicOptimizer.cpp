@@ -188,7 +188,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
     // types along the way.
     SmallVector<Type *, 6> OverloadTys;
     Function *F = IIList.front()->getCalledFunction();
-    if (!Intrinsic::getIntrinsicSignature(F, OverloadTys))
+    if (!Intrinsic::isSignatureValid(F, OverloadTys))
       continue;
 
     Intrinsic::ID IntrinID = IIList.front()->getIntrinsicID();

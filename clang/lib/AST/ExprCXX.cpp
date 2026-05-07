@@ -605,10 +605,11 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(OverloadedOperatorKind OpKind,
                                          QualType Ty, ExprValueKind VK,
                                          SourceLocation OperatorLoc,
                                          FPOptionsOverride FPFeatures,
-                                         ADLCallKind UsesADL)
+                                         ADLCallKind UsesADL, bool IsReversed)
     : CallExpr(CXXOperatorCallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
                OperatorLoc, FPFeatures, /*MinNumArgs=*/0, UsesADL) {
   CXXOperatorCallExprBits.OperatorKind = OpKind;
+  CXXOperatorCallExprBits.IsReversed = IsReversed;
   assert(
       (CXXOperatorCallExprBits.OperatorKind == static_cast<unsigned>(OpKind)) &&
       "OperatorKind overflow!");
@@ -620,12 +621,11 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures,
     : CallExpr(CXXOperatorCallExprClass, /*NumPreArgs=*/0, NumArgs,
                HasFPFeatures, Empty) {}
 
-CXXOperatorCallExpr *
-CXXOperatorCallExpr::Create(const ASTContext &Ctx,
-                            OverloadedOperatorKind OpKind, Expr *Fn,
-                            ArrayRef<Expr *> Args, QualType Ty,
-                            ExprValueKind VK, SourceLocation OperatorLoc,
-                            FPOptionsOverride FPFeatures, ADLCallKind UsesADL) {
+CXXOperatorCallExpr *CXXOperatorCallExpr::Create(
+    const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
+    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+    SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
+    ADLCallKind UsesADL, bool IsReversed) {
   // Allocate storage for the trailing objects of CallExpr.
   unsigned NumArgs = Args.size();
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
@@ -635,7 +635,7 @@ CXXOperatorCallExpr::Create(const ASTContext &Ctx,
                        SizeOfTrailingObjects),
                    alignof(CXXOperatorCallExpr));
   return new (Mem) CXXOperatorCallExpr(OpKind, Fn, Args, Ty, VK, OperatorLoc,
-                                       FPFeatures, UsesADL);
+                                       FPFeatures, UsesADL, IsReversed);
 }
 
 CXXOperatorCallExpr *CXXOperatorCallExpr::CreateEmpty(const ASTContext &Ctx,
@@ -670,6 +670,8 @@ SourceRange CXXOperatorCallExpr::getSourceRangeImpl() const {
   } else if (getNumArgs() == 1) {
     return SourceRange(getOperatorLoc(), getArg(0)->getEndLoc());
   } else if (getNumArgs() == 2) {
+    if (CXXOperatorCallExprBits.IsReversed)
+      return SourceRange(getArg(1)->getBeginLoc(), getArg(0)->getEndLoc());
     return SourceRange(getArg(0)->getBeginLoc(), getArg(1)->getEndLoc());
   } else {
     return getOperatorLoc();
@@ -1749,9 +1751,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {
   if (auto *D = dyn_cast<DeclRefExpr>(getPackIdExpression()); D) {
-    NamedDecl *ND = dyn_cast<NamedDecl>(D->getDecl());
-    assert(ND && "exected a named decl");
-    return ND;
+    return D->getDecl();
   }
   assert(false && "invalid declaration kind in pack indexing expression");
   return nullptr;

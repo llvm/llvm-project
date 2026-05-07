@@ -103,9 +103,9 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
       CreateRunInTerminalCommFile();
   if (!comm_file_or_err)
     return comm_file_or_err.takeError();
-  FifoFile &comm_file = *comm_file_or_err.get();
+  std::shared_ptr<FifoFile> comm_file = *comm_file_or_err;
 
-  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
+  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file);
 
   lldb::pid_t debugger_pid = LLDB_INVALID_PROCESS_ID;
 #if !defined(_WIN32)
@@ -114,11 +114,12 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdio,
+      arguments.cwd, comm_file->GetPath(), debugger_pid, arguments.stdio,
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
-
+  // We need to wait for the client to connect to the pipe.
+  comm_file->Connect();
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else
@@ -138,16 +139,20 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   std::future<lldb::SBError> did_attach_message_success =
       comm_channel.NotifyDidAttach();
 
-  // We just attached to the runInTerminal launcher, which was waiting to be
-  // attached. We now resume it, so it can receive the didAttach notification
-  // and then perform the exec. Upon continuing, the debugger will stop the
-  // process right in the middle of the exec. To the user, what we are doing is
-  // transparent, as they will only be able to see the process since the exec,
-  // completely unaware of the preparatory work.
+// We just attached to the runInTerminal launcher, which was waiting to be
+// attached. We now resume it, so it can receive the didAttach notification
+// and then perform the exec. Upon continuing, the debugger will stop the
+// process right in the middle of the exec. To the user, what we are doing is
+// transparent, as they will only be able to see the process since the exec,
+// completely unaware of the preparatory work.
+//
+// On Windows, the debuggee itself is waiting to be attached to. There is no
+// need to continue.
+#ifndef _WIN32
   dap.target.GetProcess().Continue();
+#endif
 
-  // Now that the actual target is just starting (i.e. exec was just invoked),
-  // we return the debugger to its sync state.
+  // Return the debugger to its prior async state.
   scope_sync_mode.reset();
 
   // If sending the notification failed, the launcher should be dead by now and
@@ -223,6 +228,10 @@ llvm::Error BaseRequestHandler::LaunchProcess(
       SetLaunchFlag(flags, arguments.disableASLR, lldb::eLaunchFlagDisableASLR);
   flags = SetLaunchFlag(flags, arguments.disableSTDIO,
                         lldb::eLaunchFlagDisableSTDIO);
+#ifdef _WIN32
+  flags = SetLaunchFlag(flags, arguments.console == protocol::eConsoleInternal,
+                        lldb::eLaunchFlagUsePipes);
+#endif
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
 

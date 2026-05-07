@@ -1708,8 +1708,7 @@ static Value *simplifyAndOrOfICmpsWithCtpop(ICmpInst *Cmp0, ICmpInst *Cmp1,
   CmpPredicate Pred0, Pred1;
   Value *X;
   const APInt *C;
-  if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                          m_APInt(C))) ||
+  if (!match(Cmp0, m_ICmp(Pred0, m_Ctpop(m_Value(X)), m_APInt(C))) ||
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())) || C->isZero())
     return nullptr;
 
@@ -1950,12 +1949,8 @@ static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
          "Must be and/or");
   CmpPredicate Pred;
   Value *A, *B;
-  if (Op0->getType()->isIntOrIntVectorTy(1) &&
-      match(Op0, m_NUWTrunc(m_Value(A)))) {
-    B = ConstantInt::getNullValue(A->getType());
-    Pred = ICmpInst::ICMP_NE;
-  } else if (!match(Op0, m_ICmp(Pred, m_Value(A), m_Value(B))) ||
-             !ICmpInst::isEquality(Pred))
+  if (!match(Op0, m_ICmpLike(Pred, m_Value(A), m_Value(B))) ||
+      !ICmpInst::isEquality(Pred))
     return nullptr;
 
   auto Simplify = [&](Value *Res) -> Value * {
@@ -3113,8 +3108,7 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
   if (RHS_CR.isFullSet())
     return ConstantInt::getTrue(ITy);
 
-  ConstantRange LHS_CR =
-      computeConstantRange(LHS, CmpInst::isSigned(Pred), Q.IIQ.UseInstrInfo);
+  ConstantRange LHS_CR = computeConstantRange(LHS, CmpInst::isSigned(Pred), Q);
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))
       return ConstantInt::getTrue(ITy);
@@ -3790,7 +3784,7 @@ static Value *simplifyICmpWithDominatingAssume(CmpPredicate Predicate,
       CallInst *Assume = cast<CallInst>(AssumeVH);
       if (std::optional<bool> Imp = isImpliedCondition(
               Assume->getArgOperand(0), Predicate, LHS, RHS, Q.DL))
-        if (isValidAssumeForContext(Assume, Q.CxtI, Q.DT))
+        if (isValidAssumeForContext(Assume, Q))
           return ConstantInt::get(getCompareTy(LHS), *Imp);
     }
   }
@@ -4298,16 +4292,14 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         break;
       }
     }
-    // Check comparison of [minnum/maxnum with constant] with other constant.
+    // Check FCmp of [min/maxnum or min/maximumnum with const] with other const.
     const APFloat *C2;
-    if ((match(LHS, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_APFloat(C2))) &&
-         *C2 < *C) ||
-        (match(LHS, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_APFloat(C2))) &&
-         *C2 > *C)) {
-      bool IsMaxNum =
-          cast<IntrinsicInst>(LHS)->getIntrinsicID() == Intrinsic::maxnum;
-      // The ordered relationship and minnum/maxnum guarantee that we do not
-      // have NaN constants, so ordered/unordered preds are handled the same.
+    bool IsMax = match(LHS, m_FMaxNum_or_FMaximumNum(m_Value(), m_APFloat(C2)));
+    bool IsMin = match(LHS, m_FMinNum_or_FMinimumNum(m_Value(), m_APFloat(C2)));
+    if ((IsMax && *C2 > *C) || (IsMin && *C2 < *C)) {
+      // The ordered relationship and min/maxnum or min/maximumnum guarantee
+      // that we do not have NaN constants, so ordered/unordered preds are
+      // handled the same.
       switch (Pred) {
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_UEQ:
@@ -4327,7 +4319,7 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // minnum(X, LesserC)  >  C --> false
         // maxnum(X, GreaterC) >= C --> true
         // maxnum(X, GreaterC) >  C --> true
-        return ConstantInt::get(RetTy, IsMaxNum);
+        return ConstantInt::get(RetTy, IsMax);
       case FCmpInst::FCMP_OLE:
       case FCmpInst::FCMP_ULE:
       case FCmpInst::FCMP_OLT:
@@ -4336,7 +4328,7 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // minnum(X, LesserC)  <  C --> true
         // maxnum(X, GreaterC) <= C --> false
         // maxnum(X, GreaterC) <  C --> false
-        return ConstantInt::get(RetTy, !IsMaxNum);
+        return ConstantInt::get(RetTy, !IsMax);
       default:
         // TRUE/FALSE/ORD/UNO should be handled before this.
         llvm_unreachable("Unexpected fcmp predicate");
@@ -5457,8 +5449,13 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
 
   // extractvalue x, (insertvalue y, elt, n), n -> elt
   unsigned NumIdxs = Idxs.size();
+  SmallPtrSet<InsertValueInst *, 8> VisitedSet;
   for (auto *IVI = dyn_cast<InsertValueInst>(Agg); IVI != nullptr;
        IVI = dyn_cast<InsertValueInst>(IVI->getAggregateOperand())) {
+    // Protect against insertvalue cycles in unreachable code.
+    if (!VisitedSet.insert(IVI).second)
+      break;
+
     ArrayRef<unsigned> InsertValueIdxs = IVI->getIndices();
     unsigned NumInsertValueIdxs = InsertValueIdxs.size();
     unsigned NumCommonIdxs = std::min(NumInsertValueIdxs, NumIdxs);
@@ -6532,7 +6529,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // round (ceil x) -> ceil x
     auto *II = dyn_cast<IntrinsicInst>(Op0);
     if ((II && removesFPFraction(II->getIntrinsicID())) ||
-        match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+        match(Op0, m_IToFP(m_Value())))
       return Op0;
   }
 
@@ -6852,6 +6849,9 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
+
+    if (!Call)
+      break;
 
     const Function *F = Call->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);

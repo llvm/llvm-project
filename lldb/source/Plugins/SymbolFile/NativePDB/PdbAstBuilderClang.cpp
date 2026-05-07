@@ -24,6 +24,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include <optional>
 #include <string_view>
 
@@ -231,6 +232,7 @@ static bool isLocalVariableType(SymbolKind K) {
   switch (K) {
   case S_REGISTER:
   case S_REGREL32:
+  case S_REGREL32_INDIR:
   case S_LOCAL:
     return true;
   default:
@@ -907,6 +909,9 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
           index.tpi().findFullDeclForForwardRef(class_index);
       if (eti) {
         tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), eti.takeError(),
+                       "failed to find full decl for forward ref: {0}");
       }
     }
 
@@ -1137,6 +1142,14 @@ void PdbAstBuilderClang::CreateFunctionParameters(
     case S_REGREL32: {
       RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
       cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
+      param_type = reg.Type;
+      param_name = reg.Name;
+      break;
+    }
+    case S_REGREL32_INDIR: {
+      RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
+      cantFail(
+          SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
       param_type = reg.Type;
       param_name = reg.Name;
       break;

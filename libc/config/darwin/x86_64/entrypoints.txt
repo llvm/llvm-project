@@ -45,6 +45,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strncmp
     libc.src.string.strncpy
     libc.src.string.strnlen
+    libc.src.string.strnlen_s
     libc.src.string.strpbrk
     libc.src.string.strrchr
     libc.src.string.strspn
@@ -147,6 +148,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.floorf
     #libc.src.math.floorl
     #libc.src.math.fma
+    #libc.src.math.fmabf16
     #libc.src.math.fmaf
     #libc.src.math.fmax
     #libc.src.math.fmaxf
@@ -233,6 +235,8 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -269,6 +273,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
   libc.src.math.issignalingbf16

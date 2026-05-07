@@ -6,8 +6,8 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for trunc_v16i10_v16i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for trunc_v16i10_v16i64
 
-define i8 @trunc_i8_to_i16(i16 %a) {
-; CHECK-LABEL: trunc_i8_to_i16:
+define i8 @trunc_i8_i16(i16 %a) {
+; CHECK-LABEL: trunc_i8_i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -15,8 +15,8 @@ entry:
   ret i8 %c
 }
 
-define i8 @trunc_i8_to_i32(i32 %a) {
-; CHECK-LABEL: trunc_i8_to_i32:
+define i8 @trunc_i8_i32(i32 %a) {
+; CHECK-LABEL: trunc_i8_i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -24,8 +24,8 @@ entry:
   ret i8 %c
 }
 
-define i8 @trunc_i8_to_i64(i64 %a) {
-; CHECK-LABEL: trunc_i8_to_i64:
+define i8 @trunc_i8_i64(i64 %a) {
+; CHECK-LABEL: trunc_i8_i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
@@ -34,8 +34,18 @@ entry:
   ret i8 %c
 }
 
-define i8 @trunc_i8_to_i10(i10 %a) {
-; CHECK-LABEL: trunc_i8_to_i10:
+define i8 @trunc_i8_i128(i128 %a) {
+; CHECK-LABEL: trunc_i8_i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+entry:
+  %c = trunc i128 %a to i8
+  ret i8 %c
+}
+
+define i8 @trunc_i8_i10(i10 %a) {
+; CHECK-LABEL: trunc_i8_i10:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -43,8 +53,8 @@ entry:
   ret i8 %c
 }
 
-define i16 @trunc_i16_to_i32(i32 %a) {
-; CHECK-LABEL: trunc_i16_to_i32:
+define i16 @trunc_i16_i32(i32 %a) {
+; CHECK-LABEL: trunc_i16_i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -52,8 +62,8 @@ entry:
   ret i16 %c
 }
 
-define i16 @trunc_i16_to_i64(i64 %a) {
-; CHECK-LABEL: trunc_i16_to_i64:
+define i16 @trunc_i16_i64(i64 %a) {
+; CHECK-LABEL: trunc_i16_i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
@@ -62,8 +72,18 @@ entry:
   ret i16 %c
 }
 
-define i32 @trunc_i32_to_i64(i64 %a) {
-; CHECK-LABEL: trunc_i32_to_i64:
+define i16 @trunc_i16_i128(i128 %a) {
+; CHECK-LABEL: trunc_i16_i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+entry:
+  %c = trunc i128 %a to i16
+  ret i16 %c
+}
+
+define i32 @trunc_i32_i64(i64 %a) {
+; CHECK-LABEL: trunc_i32_i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
@@ -72,8 +92,8 @@ entry:
   ret i32 %c
 }
 
-define i10 @trunc_i10_to_i16(i16 %a) {
-; CHECK-LABEL: trunc_i10_to_i16:
+define i10 @trunc_i10_i16(i16 %a) {
+; CHECK-LABEL: trunc_i10_i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -81,8 +101,8 @@ entry:
   ret i10 %c
 }
 
-define i10 @trunc_i10_to_i32(i32 %a) {
-; CHECK-LABEL: trunc_i10_to_i32:
+define i10 @trunc_i10_i32(i32 %a) {
+; CHECK-LABEL: trunc_i10_i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -90,14 +110,33 @@ entry:
   ret i10 %c
 }
 
-define i10 @trunc_i10_to_i64(i64 %a) {
-; CHECK-LABEL: trunc_i10_to_i64:
+define i10 @trunc_i10_i64(i64 %a) {
+; CHECK-LABEL: trunc_i10_i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %c = trunc i64 %a to i10
   ret i10 %c
+}
+
+define i32 @trunc_i32_i128(i128 %a) {
+; CHECK-LABEL: trunc_i32_i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+entry:
+  %c = trunc i128 %a to i32
+  ret i32 %c
+}
+
+define i64 @trunc_i64_i128(i128 %a) {
+; CHECK-LABEL: trunc_i64_i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
+entry:
+  %c = trunc i128 %a to i64
+  ret i64 %c
 }
 
 define <2 x i8> @trunc_v2i8_v2i16(<2 x i16> %a) {
@@ -128,6 +167,18 @@ entry:
   ret <2 x i8> %c
 }
 
+define <2 x i8> @trunc_v2i8_v2i128(<2 x i128> %a) {
+; CHECK-LABEL: trunc_v2i8_v2i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %c = trunc <2 x i128> %a to <2 x i8>
+  ret <2 x i8> %c
+}
+
 define <2 x i16> @trunc_v2i16_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: trunc_v2i16_v2i32:
 ; CHECK:       // %bb.0: // %entry
@@ -144,6 +195,18 @@ define <2 x i16> @trunc_v2i16_v2i64(<2 x i64> %a) {
 ; CHECK-NEXT:    ret
 entry:
   %c = trunc <2 x i64> %a to <2 x i16>
+  ret <2 x i16> %c
+}
+
+define <2 x i16> @trunc_v2i16_v2i128(<2 x i128> %a) {
+; CHECK-LABEL: trunc_v2i16_v2i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %c = trunc <2 x i128> %a to <2 x i16>
   ret <2 x i16> %c
 }
 
@@ -183,6 +246,18 @@ define <2 x i10> @trunc_v2i10_v2i64(<2 x i64> %a) {
 entry:
   %c = trunc <2 x i64> %a to <2 x i10>
   ret <2 x i10> %c
+}
+
+define <2 x i32> @trunc_v2i32_v2i128(<2 x i128> %a) {
+; CHECK-LABEL: trunc_v2i32_v2i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %c = trunc <2 x i128> %a to <2 x i32>
+  ret <2 x i32> %c
 }
 
 define <3 x i8> @trunc_v3i8_v3i16(<3 x i16> %a) {

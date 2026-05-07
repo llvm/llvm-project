@@ -391,7 +391,7 @@ TEST(FormatVariadicTest, IntegralHexFormatting) {
 }
 
 template <typename FormatTy>
-std::string printToString(unsigned MaxN, FormatTy &&Fmt) {
+static std::string printToString(FormatTy &&Fmt, unsigned MaxN = 100) {
   std::vector<char> Dst(MaxN + 2);
   int N = Fmt.snprint(Dst.data(), Dst.size());
   Dst.back() = 0;
@@ -404,16 +404,113 @@ TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
 
   // Here's the old format() way of printing a hex number with
   // dynamic width and precision, both being the same.
-  EXPECT_EQ(
-      "0x00000000ff",
-      printToString(100, format("0x%*.*" PRIx64, HexDigits, HexDigits, N)));
+  EXPECT_EQ("0x00000000ff",
+            printToString(format("0x%*.*" PRIx64, HexDigits, HexDigits, N)));
 
-  // Now, do the same with formatv()
+  // Now, do the same with formatv().
   EXPECT_EQ("0x00000000ff",
             formatv("0x{0:x-}", fmt_align(N, AlignStyle::Right, HexDigits, '0'))
                 .str());
+
+  EXPECT_EQ("0x0000000abc",
+            printToString(format("0x%0*" PRIx64, 10, 0xABCULL)));
+  EXPECT_EQ("0x0000000abc",
+            formatv("0x{0:x-}", fmt_align(0xABCULL, AlignStyle::Right, 10, '0'))
+                .str());
+
+  EXPECT_EQ("0x000000fe", printToString(format("0x%8.8" PRIx64, 0xfeULL)));
+  EXPECT_EQ("0x000000fe", formatv("{0:x+8}", 0xfeULL).str());
+  EXPECT_EQ("0x000000fe", formatv("{0:x8}", 0xfeULL).str());
+
+  EXPECT_EQ("000000fe", printToString(format("%08" PRIx64, 0xfeULL)));
+  EXPECT_EQ("000000fe", formatv("{0:x-8}", 0xfeULL).str());
+
+  EXPECT_EQ("0x000000fb", printToString(format("0x%08.08" PRIx64, 0xfbULL)));
+  EXPECT_EQ("0x000000fb", formatv("{0:x+8}", 0xfbULL).str());
+
+  EXPECT_EQ("123", printToString(format("%x", 0x123)));
+  EXPECT_EQ("123", formatv("{0:x-}", 0x123).str());
 }
 
+TEST(FormatAndFormatvTest, StringPadding) {
+  // The expected string has 9 spaces after "abcd" and a closing bracket.
+  EXPECT_EQ("[abcd         ]",
+            printToString(format("[%s%*c", "abcd", 10, ']')));
+  // With formatv we can use padding but the closing bracket can be included in
+  // the format string and the padding needs to be one off.
+  EXPECT_EQ("[abcd         ]",
+            formatv("[{0}]", fmt_pad("abcd", 0, 10 - 1)).str());
+  // We can also use the fmt_align function instead of fmt_pad but it makes it a
+  // bit more complex
+  EXPECT_EQ("[abcd         ]",
+            formatv("[{0}]", fmt_align("abcd", AlignStyle::Left,
+                                       10 + strlen("abcd") - 1))
+                .str());
+}
+
+TEST(FormatAndFormatvTest, Alignment) {
+  EXPECT_EQ("250            ", printToString(format("%-15" PRIu32, 0xfa)));
+  EXPECT_EQ("250            ", formatv("{0,-15}", 0xfa).str());
+  EXPECT_EQ("250            ",
+            formatv("{0}", fmt_align(0xfa, AlignStyle::Left, 15)).str());
+
+  EXPECT_EQ("  123", printToString(format("%5u", 123)));
+  EXPECT_EQ("  123", formatv("{0,5:d}", 123).str());
+  EXPECT_EQ("  123",
+            formatv("{0}", fmt_align(123, AlignStyle::Right, 5)).str());
+
+  EXPECT_EQ("001", printToString(format("%03d", 1)));
+  EXPECT_EQ("001", formatv("{0,0+3}", 1).str());
+
+  EXPECT_EQ("foo1     ", printToString(format("%-9s", "foo1")));
+  EXPECT_EQ("foo2     ", formatv("{0,-9}", "foo2").str());
+  EXPECT_EQ("foo3     ", formatv("{0, -9}", "foo3").str());
+  EXPECT_EQ("foo4_____", formatv("{0,_-9}", "foo4").str());
+}
+
+TEST(FormatAndFormatvTest, NonNegativePlusInteger) {
+  EXPECT_EQ("-255", printToString(format("%+d", -255)));
+  EXPECT_EQ("+255", printToString(format("%+d", 255)));
+  EXPECT_EQ("+0", printToString(format("%+d", 0)));
+  EXPECT_EQ("-7", printToString(format("%+d", -7)));
+
+  // Check that +d works for signed and unsigned integral values.
+  // Ensure the default is not changed (a + is not added without requesting it).
+  EXPECT_EQ("+1", formatv("{0:+d}", static_cast<unsigned int>(1)).str());
+  EXPECT_EQ("+2", formatv("{0:+d}", static_cast<int>(2)).str());
+  EXPECT_EQ("+3", formatv("{0:+d}", static_cast<unsigned long>(3)).str());
+  EXPECT_EQ("+4", formatv("{0:+d}", static_cast<long>(4)).str());
+  EXPECT_EQ("+5", formatv("{0:+d}", static_cast<unsigned long long>(5)).str());
+  EXPECT_EQ("+6", formatv("{0:+d}", static_cast<long long>(6)).str());
+  EXPECT_EQ("-7", formatv("{0:+d}", static_cast<int>(-7)).str());
+  EXPECT_EQ("-8", formatv("{0:+d}", static_cast<long>(-8)).str());
+  EXPECT_EQ("-9", formatv("{0:+d}", static_cast<long long>(-9)).str());
+
+  EXPECT_EQ("11", formatv("{0:d}", static_cast<unsigned int>(11)).str());
+  EXPECT_EQ("22", formatv("{0:d}", static_cast<int>(22)).str());
+  EXPECT_EQ("33", formatv("{0:d}", static_cast<unsigned long>(33)).str());
+  EXPECT_EQ("44", formatv("{0:d}", static_cast<long>(44)).str());
+  EXPECT_EQ("55", formatv("{0:d}", static_cast<unsigned long long>(55)).str());
+  EXPECT_EQ("66", formatv("{0:d}", static_cast<long long>(66)).str());
+  EXPECT_EQ("-77", formatv("{0:d}", static_cast<int>(-77)).str());
+  EXPECT_EQ("-88", formatv("{0:d}", static_cast<long>(-88)).str());
+  EXPECT_EQ("-99", formatv("{0:d}", static_cast<long long>(-99)).str());
+
+  // Ensure that 0 is also prefixed with + (old behaviour from format(), see
+  // above).
+  EXPECT_EQ("+0", formatv("{0:+d}", 0).str());
+  EXPECT_EQ("0", formatv("{0:d}", 0).str());
+
+  // Ensure that an empty or otherwise empty format string is also working as
+  // expected
+  EXPECT_EQ("+333", formatv("{0:+}", 333).str());
+  EXPECT_EQ("444", formatv("{0:}", 444).str());
+
+  // Try with width modifier as well, to ensure that the + is still present and
+  // that the width is correct.
+  EXPECT_EQ("  -1", formatv("{0,4:+d}", -1).str());
+  EXPECT_EQ("  +1", formatv("{0,4:+d}", 1).str());
+}
 TEST(FormatVariadicTest, PointerFormatting) {
   // 1. Trivial cases.  Hex is default.  Default Precision is pointer width.
   if (sizeof(void *) == 4) {

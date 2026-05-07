@@ -1442,8 +1442,8 @@ define i64 @extract_sext_v2i64_vidx() nounwind {
 ; O32-BE-NEXT:    addu $1, $2, $25
 ; O32-BE-NEXT:    lw $2, %got(i32)($1)
 ; O32-BE-NEXT:    lw $2, 0($2)
-; O32-BE-NEXT:    addu $2, $2, $2
-; O32-BE-NEXT:    addiu $3, $2, 1
+; O32-BE-NEXT:    sll $2, $2, 1
+; O32-BE-NEXT:    ori $3, $2, 1
 ; O32-BE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-BE-NEXT:    ld.d $w0, 0($1)
 ; O32-BE-NEXT:    addv.d $w0, $w0, $w0
@@ -1461,8 +1461,8 @@ define i64 @extract_sext_v2i64_vidx() nounwind {
 ; O32-LE-NEXT:    addu $1, $2, $25
 ; O32-LE-NEXT:    lw $2, %got(i32)($1)
 ; O32-LE-NEXT:    lw $2, 0($2)
-; O32-LE-NEXT:    addu $2, $2, $2
-; O32-LE-NEXT:    addiu $3, $2, 1
+; O32-LE-NEXT:    sll $2, $2, 1
+; O32-LE-NEXT:    ori $3, $2, 1
 ; O32-LE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-LE-NEXT:    ld.d $w0, 0($1)
 ; O32-LE-NEXT:    addv.d $w0, $w0, $w0
@@ -1669,8 +1669,8 @@ define i64 @extract_zext_v2i64_vidx() nounwind {
 ; O32-BE-NEXT:    addu $1, $2, $25
 ; O32-BE-NEXT:    lw $2, %got(i32)($1)
 ; O32-BE-NEXT:    lw $2, 0($2)
-; O32-BE-NEXT:    addu $2, $2, $2
-; O32-BE-NEXT:    addiu $3, $2, 1
+; O32-BE-NEXT:    sll $2, $2, 1
+; O32-BE-NEXT:    ori $3, $2, 1
 ; O32-BE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-BE-NEXT:    ld.d $w0, 0($1)
 ; O32-BE-NEXT:    addv.d $w0, $w0, $w0
@@ -1688,8 +1688,8 @@ define i64 @extract_zext_v2i64_vidx() nounwind {
 ; O32-LE-NEXT:    addu $1, $2, $25
 ; O32-LE-NEXT:    lw $2, %got(i32)($1)
 ; O32-LE-NEXT:    lw $2, 0($2)
-; O32-LE-NEXT:    addu $2, $2, $2
-; O32-LE-NEXT:    addiu $3, $2, 1
+; O32-LE-NEXT:    sll $2, $2, 1
+; O32-LE-NEXT:    ori $3, $2, 1
 ; O32-LE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-LE-NEXT:    ld.d $w0, 0($1)
 ; O32-LE-NEXT:    addv.d $w0, $w0, $w0

@@ -3,14 +3,14 @@
 
 define void @alpha(<vscale x 4 x i32> %x) local_unnamed_addr {
 entry:
-; CHECK: INLINEASM &"movt zt0[3, mul vl], z0", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $za
+; CHECK: INLINEASM &"movt zt0[3, mul vl], z0", sideeffect attdialect, clobber, implicit-def early-clobber $za
   tail call void asm sideeffect "movt zt0[3, mul vl], z0", "~{za}"()
   ret void
 }
 
 define void @beta(<vscale x 4 x i32> %x) local_unnamed_addr {
 entry:
-; CHECK: INLINEASM &"movt zt0[3, mul vl], z0", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $zt0
+; CHECK: INLINEASM &"movt zt0[3, mul vl], z0", sideeffect attdialect, clobber, implicit-def early-clobber $zt0
   tail call void asm sideeffect "movt zt0[3, mul vl], z0", "~{zt0}"()
   ret void
 }

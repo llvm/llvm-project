@@ -93,6 +93,57 @@ def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [
 
 // -----
 
+def SPIRV_OuterProductOp : SPIRV_Op<"OuterProduct", [
+    Pure,
+    AllElementTypesMatch<["vector1", "vector2", "result"]>,
+    SPIRV_MatrixVectorDimMatch<"result", "rows", "vector1">,
+    SPIRV_MatrixVectorDimMatch<"result", "columns", "vector2">
+  ]> {
+  let summary = "Linear-algebraic outer product of vector1 and vector2.";
+
+  let description = [{
+    Result Type must be a Matrix Type whose Column Type is a vector of
+    floating-point type.
+
+    Vector1 must have the same type as the Column Type in Result Type.
+
+    Vector2 must be a vector with the same Component Type as the Component
+    Type in Result Type. Its number of components must equal the number of
+    columns in Result Type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.OuterProduct %vector1, %vector2 :
+        vector<3xf32>, vector<2xf32> -> !spirv.matrix<2 x vector<3xf32>>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Matrix]>
+  ];
+
+  let arguments = (ins
+    SPIRV_VectorOf<SPIRV_Float>:$vector1,
+    SPIRV_VectorOf<SPIRV_Float>:$vector2
+  );
+
+  let results = (outs
+    SPIRV_MatrixOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($vector1) `,` type($vector2) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [
     Pure,
     AllTypesMatch<["matrix", "result"]>,

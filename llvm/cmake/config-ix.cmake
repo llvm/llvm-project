@@ -227,6 +227,21 @@ if(LLVM_ENABLE_LIBXML2)
     if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON AND NOT HAVE_LIBXML2)
       message(FATAL_ERROR "Failed to configure libxml2")
     endif()
+
+    if(LLVM_USE_STATIC_LIBXML2)
+      if(NOT TARGET LibXml2::LibXml2Static)
+        message(FATAL_ERROR "Failed to find static libxml2 library, but LLVM_USE_STATIC_LIBXML2=ON")
+      endif()
+      cmake_push_check_state()
+      list(APPEND CMAKE_REQUIRED_INCLUDES ${LIBXML2_INCLUDE_DIR})
+      list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBXML2_STATIC_LIBRARY} ${LIBXML2_STATIC_DEPS})
+      list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LIBXML2_DEFINITIONS})
+      check_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2_STATIC)
+      cmake_pop_check_state()
+      if(NOT HAVE_LIBXML2_STATIC)
+        message(FATAL_ERROR "Failed to configure static libxml2, but LLVM_USE_STATIC_LIBXML2=ON")
+      endif()
+    endif()
   endif()
   set(LLVM_ENABLE_LIBXML2 "${HAVE_LIBXML2}")
 endif()
@@ -313,15 +328,24 @@ endif()
 if(LLVM_ENABLE_ICU AND NOT(LLVM_ENABLE_ICONV STREQUAL FORCE_ON))
   set(LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
-  if (LLVM_ENABLE_ICU STREQUAL FORCE_ON)
-    find_package(ICU REQUIRED COMPONENTS uc i18n)
-    if (NOT ICU_FOUND)
-      message(FATAL_ERROR "Failed to configure ICU, but LLVM_ENABLE_ICU is FORCE_ON")
-    endif()
-  else()
-    find_package(ICU COMPONENTS uc i18n)
+  set(HAVE_WINDOWS_ICU OFF)
+  if(LLVM_ENABLE_WINDOWS_ICU AND WIN32 AND CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL "10.0.18362")
+    message(STATUS "Use Windows vendored ICU")
+    set(HAVE_WINDOWS_ICU ON)
   endif()
-  set(HAVE_ICU ${ICU_FOUND})
+  if(NOT HAVE_WINDOWS_ICU)
+    if (LLVM_ENABLE_ICU STREQUAL FORCE_ON)
+      find_package(ICU REQUIRED COMPONENTS uc i18n)
+      if (NOT ICU_FOUND)
+        message(FATAL_ERROR "Failed to configure ICU, but LLVM_ENABLE_ICU is FORCE_ON")
+      endif()
+    else()
+      find_package(ICU COMPONENTS uc i18n)
+    endif()
+    set(HAVE_ICU ${ICU_FOUND})
+  else()
+    set(HAVE_ICU ON)
+  endif()
   set(CMAKE_FIND_LIBRARY_SUFFIXES ${LIBRARY_SUFFIXES})
 endif()
 
@@ -606,32 +630,11 @@ if( MSVC )
   set(LLVM_WINSYSROOT "" CACHE STRING
     "If set, argument to clang-cl's /winsysroot")
 
-  if (LLVM_WINSYSROOT)
-    set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
-        "Path to the DIA SDK")
-  else()
-    set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
-        "Path to the DIA SDK")
-  endif()
-
-  # See if the DIA SDK is available and usable.
-  # Due to a bug in MSVC 2013's installation software, it is possible
-  # for MSVC 2013 to write the DIA SDK into the Visual Studio 2012
-  # install directory.  If this happens, the installation is corrupt
-  # and there's nothing we can do.  It happens with enough frequency
-  # though that we should handle it.  We do so by simply checking that
-  # the DIA SDK folder exists.  Should this happen you will need to
-  # uninstall VS 2012 and then re-install VS 2013.
-  if (IS_DIRECTORY "${MSVC_DIA_SDK_DIR}")
-    set(HAVE_DIA_SDK 1)
-  else()
-    set(HAVE_DIA_SDK 0)
-  endif()
-
+  find_package(DIASDK)
   option(LLVM_ENABLE_DIA_SDK "Use MSVC DIA SDK for debugging if available."
-                             ${HAVE_DIA_SDK})
+                             ${DIASDK_FOUND})
 
-  if(LLVM_ENABLE_DIA_SDK AND NOT HAVE_DIA_SDK)
+  if(LLVM_ENABLE_DIA_SDK AND NOT DIASDK_FOUND)
     message(FATAL_ERROR "DIA SDK not found. If you have both VS 2012 and 2013 installed, you may need to uninstall the former and re-install the latter afterwards.")
   endif()
 else()

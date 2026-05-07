@@ -3,6 +3,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
 endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+add_subdirectory(syscall_wrappers)
 
 add_object_library(
   linux_util
@@ -38,16 +39,20 @@ add_header_library(
 )
 
 add_header_library(
-  getrandom
+  sysinfo
   HDRS
-    getrandom.h
+    sysinfo.h
   DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
-    libc.src.__support.error_or
+    libc.hdr.errno_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.ctype_utils
     libc.src.__support.macros.config
-    libc.hdr.types.ssize_t
-    libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getaffinity
 )
 
 add_header_library(

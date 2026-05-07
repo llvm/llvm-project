@@ -245,15 +245,17 @@ func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> 
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R5]], %[[V1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 //       CHECK:   return %[[V2]] : vector<4xf32>
 
-// This is a negative test case to ensure that further unrolling is not performed. Since the vector.multi_reduction
-// operation has already been unrolled, attempting additional unrolling should not be allowed.
-func.func @negative_vector_multi_reduction(%v: vector<4x2xf32>, %acc: f32) -> f32 {
+func.func @vector_multi_reduction_scalar(%v: vector<4x2xf32>, %acc: f32) -> f32 {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [0, 1] : vector<4x2xf32> to f32
   return %0 : f32
 }
-// CHECK-LABEL: func @negative_vector_multi_reduction
-//  CHECK-NEXT:   %[[R0:.*]] = vector.multi_reduction <add>, %{{.*}}, %{{.*}} [0, 1] : vector<4x2xf32> to f32
-//  CHECK-NEXT:   return %[[R0]] : f32
+// CHECK-LABEL: func @vector_multi_reduction_scalar
+//  CHECK-SAME:   %[[V:.*]]: vector<4x2xf32>, %[[ACC:.*]]: f32
+//       CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+//       CHECK:   %[[R0:.*]] = vector.multi_reduction <add>, %[[S0]], %[[ACC]] [0, 1] : vector<2x2xf32> to f32
+//       CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+//       CHECK:   %[[R1:.*]] = vector.multi_reduction <add>, %[[S1]], %[[R0]] [0, 1] : vector<2x2xf32> to f32
+//       CHECK:   return %[[R1]] : f32
 
 func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
   %0 = vector.reduction <add>, %v : vector<8xf32> into f32
@@ -665,3 +667,95 @@ func.func @shape_cast_with_all_unit_target_shape(%v: vector<2xf32>) -> vector<2x
 // CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<1xf32> to vector<1x1xf32>
 // CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [1, 0], strides = [1, 1]} : vector<1x1xf32> into vector<2x1xf32>
 // CHECK:   return %[[I1]] : vector<2x1xf32>
+
+// -----
+
+// Test BitCastOp unrolling - target shape [4, 4]
+func.func @bitcast_2d(%v: vector<8x4xf32>) -> vector<8x8xi16> {
+  %0 = vector.bitcast %v : vector<8x4xf32> to vector<8x8xi16>
+  return %0 : vector<8x8xi16>
+}
+// CHECK-LABEL: func @bitcast_2d
+// CHECK-SAME: (%[[V:.*]]: vector<8x4xf32>) -> vector<8x8xi16>
+// CHECK:   %[[INIT:.*]] = arith.constant dense<0> : vector<8x8xi16>
+//
+/// SLICE 0,0:
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0], sizes = [4, 2], strides = [1, 1]} : vector<8x4xf32> to vector<4x2xf32>
+// CHECK:   %[[BC0:.*]] = vector.bitcast %[[S0]] : vector<4x2xf32> to vector<4x4xi16>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[BC0]], %[[INIT]] {offsets = [0, 0], strides = [1, 1]} : vector<4x4xi16> into vector<8x8xi16>
+//
+/// SLICE 0,1:
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 2], sizes = [4, 2], strides = [1, 1]} : vector<8x4xf32> to vector<4x2xf32>
+// CHECK:   %[[BC1:.*]] = vector.bitcast %[[S1]] : vector<4x2xf32> to vector<4x4xi16>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[BC1]], %[[I0]] {offsets = [0, 4], strides = [1, 1]} : vector<4x4xi16> into vector<8x8xi16>
+//
+/// SLICE 1,0:
+// CHECK:   %[[S2:.*]] = vector.extract_strided_slice %[[V]] {offsets = [4, 0], sizes = [4, 2], strides = [1, 1]} : vector<8x4xf32> to vector<4x2xf32>
+// CHECK:   %[[BC2:.*]] = vector.bitcast %[[S2]] : vector<4x2xf32> to vector<4x4xi16>
+// CHECK:   %[[I2:.*]] = vector.insert_strided_slice %[[BC2]], %[[I1]] {offsets = [4, 0], strides = [1, 1]} : vector<4x4xi16> into vector<8x8xi16>
+//
+/// SLICE 1,1:
+// CHECK:   %[[S3:.*]] = vector.extract_strided_slice %[[V]] {offsets = [4, 2], sizes = [4, 2], strides = [1, 1]} : vector<8x4xf32> to vector<4x2xf32>
+// CHECK:   %[[BC3:.*]] = vector.bitcast %[[S3]] : vector<4x2xf32> to vector<4x4xi16>
+// CHECK:   %[[I3:.*]] = vector.insert_strided_slice %[[BC3]], %[[I2]] {offsets = [4, 4], strides = [1, 1]} : vector<4x4xi16> into vector<8x8xi16>
+// CHECK:   return %[[I3]] : vector<8x8xi16>
+
+// -----
+
+// Test InterleaveOp unrolling - target shape [2x4]
+func.func @interleave_2d(%V: vector<4x4xi32>, %arg1: vector<4x4xi32>) -> vector<4x8xi32> {
+  %0 = vector.interleave %V, %arg1 : vector<4x4xi32> -> vector<4x8xi32>
+  return %0 : vector<4x8xi32>
+}
+// CHECK-LABEL: func @interleave_2d
+// CHECK-SAME: (%[[LHS:.*]]: vector<4x4xi32>, %[[RHS:.*]]: vector<4x4xi32>) -> vector<4x8xi32>
+// CHECK:   %[[INIT:.*]] = arith.constant dense<0> : vector<4x8xi32>
+//
+/// SLICE 0,0:
+// CHECK:   %[[L0:.*]] = vector.extract_strided_slice %[[LHS]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[R0:.*]] = vector.extract_strided_slice %[[RHS]] {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[INT0:.*]] = vector.interleave %[[L0]], %[[R0]] : vector<2x2xi32> -> vector<2x4xi32>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[INT0]], %[[INIT]] {offsets = [0, 0], strides = [1, 1]} : vector<2x4xi32> into vector<4x8xi32>
+//
+/// SLICE 0,1:
+// CHECK:   %[[L1:.*]] = vector.extract_strided_slice %[[LHS]] {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[R1:.*]] = vector.extract_strided_slice %[[RHS]] {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[INT1:.*]] = vector.interleave %[[L1]], %[[R1]] : vector<2x2xi32> -> vector<2x4xi32>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[INT1]], %[[I0]] {offsets = [0, 4], strides = [1, 1]} : vector<2x4xi32> into vector<4x8xi32>
+//
+/// SLICE 1,0:
+// CHECK:   %[[L2:.*]] = vector.extract_strided_slice %[[LHS]] {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[R2:.*]] = vector.extract_strided_slice %[[RHS]] {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[INT2:.*]] = vector.interleave %[[L2]], %[[R2]] : vector<2x2xi32> -> vector<2x4xi32>
+// CHECK:   %[[I2:.*]] = vector.insert_strided_slice %[[INT2]], %[[I1]] {offsets = [2, 0], strides = [1, 1]} : vector<2x4xi32> into vector<4x8xi32>
+//
+/// SLICE 1,1:
+// CHECK:   %[[L3:.*]] = vector.extract_strided_slice %[[LHS]] {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[R3:.*]] = vector.extract_strided_slice %[[RHS]] {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xi32> to vector<2x2xi32>
+// CHECK:   %[[INT3:.*]] = vector.interleave %[[L3]], %[[R3]] : vector<2x2xi32> -> vector<2x4xi32>
+// CHECK:   %[[I3:.*]] = vector.insert_strided_slice %[[INT3]], %[[I2]] {offsets = [2, 4], strides = [1, 1]} : vector<2x4xi32> into vector<4x8xi32>
+// CHECK:   return %[[I3]] : vector<4x8xi32>
+
+// -----
+
+// Test DeinterleaveOp unrolling - target shape [2x4]
+func.func @deinterleave_2d(%v: vector<4x8xi32>) -> (vector<4x4xi32>, vector<4x4xi32>) {
+  %0, %1 = vector.deinterleave %v : vector<4x8xi32> -> vector<4x4xi32>
+  return %0, %1 : vector<4x4xi32>, vector<4x4xi32>
+}
+// CHECK-LABEL: func @deinterleave_2d
+// CHECK-SAME: (%[[V:.*]]: vector<4x8xi32>) -> (vector<4x4xi32>, vector<4x4xi32>)
+// CHECK:   %[[CST:.*]] = arith.constant dense<0> : vector<4x4xi32>
+//
+/// SLICE 0:
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x8xi32> to vector<2x8xi32>
+// CHECK:   {{.*}} = vector.deinterleave %[[S0]] : vector<2x8xi32> -> vector<2x4xi32>
+// CHECK:   {{.*}} = vector.insert_strided_slice {{.*}}, %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<2x4xi32> into vector<4x4xi32>
+// CHECK:   {{.*}} = vector.insert_strided_slice {{.*}}, %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<2x4xi32> into vector<4x4xi32>
+//
+/// SLICE 1:
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x8xi32> to vector<2x8xi32>
+// CHECK:   {{.*}} = vector.deinterleave %[[S1]] : vector<2x8xi32> -> vector<2x4xi32>
+// CHECK:   {{.*}} = vector.insert_strided_slice {{.*}}, {{.*}} {offsets = [2, 0], strides = [1, 1]} : vector<2x4xi32> into vector<4x4xi32>
+// CHECK:   {{.*}} = vector.insert_strided_slice {{.*}}, {{.*}} {offsets = [2, 0], strides = [1, 1]} : vector<2x4xi32> into vector<4x4xi32>
+// CHECK:   return {{.*}}, {{.*}} : vector<4x4xi32>, vector<4x4xi32>

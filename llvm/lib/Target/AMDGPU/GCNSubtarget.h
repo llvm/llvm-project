@@ -88,6 +88,15 @@ private:
   SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
 
+  /// Get the register that represents the actual dependency between the
+  /// definition and the use. The definition might only affect a subregister
+  /// that is not actually used. Works for both virtual and physical registers.
+  /// Note: Currently supports VOP3P instructions (without WMMA an SWMMAC).
+  /// Returns the definition register if there is a real dependency and no
+  /// better match is found.
+  Register getRealSchedDependency(const MachineInstr &DefI, int DefOpIdx,
+                                  const MachineInstr &UseI, int UseOpIdx) const;
+
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                const GCNTargetMachine &TM);
@@ -225,6 +234,8 @@ public:
   bool hasScalarMulHiInsts() const { return HasGFX9Insts; }
 
   bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
+
+  bool hasAsyncMark() const { return hasVMemToLDSLoad() || HasAsynccnt; }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
@@ -621,12 +632,6 @@ public:
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
-
-  /// \returns true if inline constants are not supported for F16 pseudo
-  /// scalar transcendentals.
-  bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
-  }
 
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to

@@ -102,11 +102,8 @@ void addExternalNameConversionPass(mlir::PassManager &pm,
 void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm);
 
 void addDebugInfoPass(mlir::PassManager &pm,
-                      llvm::codegenoptions::DebugInfoKind debugLevel,
-                      llvm::OptimizationLevel optLevel,
-                      llvm::StringRef inputFilename, int32_t dwarfVersion,
-                      llvm::StringRef splitDwarfFile,
-                      llvm::StringRef dwarfDebugFlags);
+                      const MLIRToLLVMPassPipelineConfig &config,
+                      llvm::StringRef inputFilename);
 
 /// Create FIRToLLVMPassOptions from pipeline configuration.
 FIRToLLVMPassOptions
@@ -119,6 +116,10 @@ void addLLVMDialectToLLVMPass(mlir::PassManager &pm, llvm::raw_ostream &output);
 
 /// Use inliner extension point callback to register the default inliner pass.
 void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
+
+/// Register the passes used in Flang's MLIR pass pipeline
+/// e.g. --mlir-print-ir-before=<pass> and similar.
+void registerFlangPipelinePasses();
 
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
@@ -164,11 +165,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 void createDebugPasses(mlir::PassManager &pm,
-                       llvm::codegenoptions::DebugInfoKind debugLevel,
-                       llvm::OptimizationLevel OptLevel,
-                       llvm::StringRef inputFilename, int32_t dwarfVersion,
-                       llvm::StringRef splitDwarfFile,
-                       llvm::StringRef dwarfDebugFlags);
+                       const MLIRToLLVMPassPipelineConfig &config,
+                       llvm::StringRef inputFilename);
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,

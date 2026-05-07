@@ -4,7 +4,7 @@
 define void @fli() {
 ; CHECK-LABEL: define void @fli() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fp128 @llvm.floor.f128(fp128 0xL999999999999999A4001199999999999)
+; CHECK-NEXT:    [[TMP0:%.*]] = call fp128 @llvm.floor.f128(fp128 4.400000e+00)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -15,7 +15,7 @@ entry:
 define void @sc() {
 ; CHECK-LABEL: define void @sc() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call fp128 @llvm.floor.f128(fp128 0xL999999999999999A4001199999999999)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call fp128 @llvm.floor.f128(fp128 4.400000e+00)
 ; CHECK-NEXT:    ret void
 ;
 entry:

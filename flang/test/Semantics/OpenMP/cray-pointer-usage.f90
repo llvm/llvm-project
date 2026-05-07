@@ -8,6 +8,7 @@ subroutine test_cray_pointer_usage
   ! ERROR: List item 'var' in LINEAR clause must be a scalar variable
   ! ERROR: The list item 'var' specified without the REF 'linear-modifier' must be of INTEGER type
   ! ERROR: The list item `var` must be a dummy argument
+  ! ERROR: Assumed-size array 'var' may not appear in a LINEAR clause
   !$omp declare simd linear(var)
 
   pointee = 42.0
@@ -19,6 +20,7 @@ subroutine test_cray_pointer_usage
   !$omp end parallel
 
   ! ERROR: Cray Pointee 'var' may not appear in PRIVATE clause, use Cray Pointer 'ivar' instead
+  ! ERROR: Assumed-size array 'var' may not appear in a PRIVATE clause
   !$omp parallel num_threads(2) default(none) private(var)
     print *, var(1)
   !$omp end parallel
@@ -29,6 +31,7 @@ subroutine test_cray_pointer_usage
   !$omp end parallel
 
   ! ERROR: Cray Pointee 'var' may not appear in LASTPRIVATE clause, use Cray Pointer 'ivar' instead
+  ! ERROR: Assumed-size array 'var' may not appear in a LASTPRIVATE clause
   !$omp do lastprivate(var)
     do i = 1, 10
       print *, var(1)
@@ -43,3 +46,38 @@ subroutine test_cray_pointer_usage
     print *, var(1)
   !$omp end parallel
 end subroutine test_cray_pointer_usage
+
+subroutine test_nested_cray_pointer
+  implicit none
+  real :: X, B
+  pointer(P, B)
+
+  X = 1.0
+  P = loc(X)
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp critical
+      B = B + 2.0
+    !$omp end critical
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp parallel default(none)
+      ! ERROR: The DEFAULT(NONE) clause requires that the Cray Pointer 'p' must be listed in a data-sharing attribute clause
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp parallel default(none) shared(P, X)
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
+
+  !$omp parallel default(none)
+    ! ERROR: The DEFAULT(NONE) clause requires that the Cray Pointer 'p' must be listed in a data-sharing attribute clause
+    !$omp parallel default(none) shared(P)
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
+end subroutine test_nested_cray_pointer

@@ -30,11 +30,12 @@ public:
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
   bool include_frame_options : 1,
-      show_args : 1,    // Frame option only (include_frame_options == true)
-      show_recognized_args : 1,  // Frame option only (include_frame_options ==
-                                 // true)
-      show_locals : 1,  // Frame option only (include_frame_options == true)
-      show_globals : 1, // Frame option only (include_frame_options == true)
+      show_args : 1, // Frame option only (include_frame_options == true)
+      show_recognized_args : 1, // Frame option only (include_frame_options ==
+                                // true)
+      show_locals : 1,    // Frame option only (include_frame_options == true)
+      show_globals : 1,   // Frame option only (include_frame_options == true)
+      show_synthetic : 1, // Frame option only (include_frame_options == true)
       use_regex : 1, show_scope : 1, show_decl : 1;
   OptionValueString summary;        // the name of a named summary
   OptionValueString summary_string; // a summary string
