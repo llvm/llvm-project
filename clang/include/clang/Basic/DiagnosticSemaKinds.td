@@ -172,6 +172,9 @@ def err_expr_not_string_literal : Error<"expression is not a string literal">;
 def note_constexpr_assert_failed : Note<
   "assertion failed during evaluation of constant expression">;
 
+def err_start_lifetime_as_not_implicit : Error<
+  "type %0 is not an implicit-lifetime type, cannot start lifetime">;
+
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
   "predefined identifier is only valid inside function">,
