@@ -4767,9 +4767,8 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
       else {
         if (RegisterFlags::Field::GetSizeInBits(*start, *end) > 64)
           LLDB_LOG(log,
-                   "ProcessGDBRemote::ParseFlagsFields Ignoring field \"{2}\" "
-                   "that has "
-                   "size > 64 bits, this is not supported",
+                   "ProcessGDBRemote::ParseFlagsFields Ignoring field \"{}\" "
+                   "that has size > 64 bits, this is not supported",
                    name->data());
         else {
           // A field's type may be set to the name of an enum type.

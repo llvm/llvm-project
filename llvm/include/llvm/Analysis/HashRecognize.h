@@ -94,7 +94,7 @@ public:
 };
 
 class HashRecognizePrinterPass
-    : public PassInfoMixin<HashRecognizePrinterPass> {
+    : public RequiredPassInfoMixin<HashRecognizePrinterPass> {
   raw_ostream &OS;
 
 public:
