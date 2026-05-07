@@ -14220,9 +14220,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
   case ScalarEvolution::LoopInvariant:
     OS << "Invariant";
     break;
-  case ScalarEvolution::LoopUniform:
-    OS << "Uniform";
-    break;
   case ScalarEvolution::LoopComputable:
     OS << "Computable";
     break;
@@ -14362,14 +14359,8 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
       return LoopVariant;
 
     // Everything that is not defined at loop entry is variant.
-    if (DT.dominates(L->getHeader(), AR->getLoop()->getHeader())) {
-      if (L->contains(AR->getLoop()) &&
-          llvm::all_of(AR->operands(),
-                       [&](const SCEV *Op) { return isLoopUniform(Op, L); }))
-        return LoopUniform;
-
+    if (DT.dominates(L->getHeader(), AR->getLoop()->getHeader()))
       return LoopVariant;
-    }
     assert(!L->contains(AR->getLoop()) && "Containing loop's header does not"
            " dominate the contained loop's header?");
 
@@ -14400,18 +14391,14 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
   case scSMinExpr:
   case scSequentialUMinExpr: {
     bool HasVarying = false;
-    bool HasUniform = false;
     for (SCEVUse Op : S->operands()) {
       LoopDisposition D = getLoopDisposition(Op, L);
       if (D == LoopVariant)
         return LoopVariant;
       if (D == LoopComputable)
         HasVarying = true;
-      if (D == LoopUniform)
-        HasUniform = true;
     }
-    return HasVarying ? LoopComputable
-                      : (HasUniform ? LoopUniform : LoopInvariant);
+    return HasVarying ? LoopComputable : LoopInvariant;
   }
   case scUnknown:
     // All non-instruction values are loop invariant.  All instructions are loop
@@ -14425,11 +14412,6 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
     llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   }
   llvm_unreachable("Unknown SCEV kind!");
-}
-
-bool ScalarEvolution::isLoopUniform(const SCEV *S, const Loop *L) {
-  LoopDisposition D = getLoopDisposition(S, L);
-  return D == LoopUniform || D == LoopInvariant;
 }
 
 bool ScalarEvolution::isLoopInvariant(const SCEV *S, const Loop *L) {
