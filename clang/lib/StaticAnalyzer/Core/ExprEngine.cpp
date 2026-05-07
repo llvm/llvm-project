@@ -3721,10 +3721,11 @@ ExprEngine::notifyCheckersOfPointerEscape(ProgramStateRef State,
 }
 
 /// evalBind - Handle the semantics of binding a value to a specific location.
-///  This method is used by evalStore and (soon) VisitDeclStmt, and others.
+///  This method is used by evalStore, VisitDeclStmt, and others.
 void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
                           ExplodedNode *Pred, SVal Location, SVal Val,
                           bool AtDeclInit, const ProgramPoint *PP) {
+  // It may be a Loc, UnknownVal or perhaps UndefinedVal.
   assert(!isa<NonLoc>(Location) && "evalBind location should not be NonLoc!");
 
   const LocationContext *LC = Pred->getLocationContext();
