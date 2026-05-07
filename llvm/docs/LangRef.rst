@@ -21095,7 +21095,7 @@ The reduction is performed in a non-deterministic order. This is only observable
 if one of the inputs is a signaling NaN.
 
 For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
-:ref`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
 which order is picked.
 
 Arguments:
@@ -21130,7 +21130,7 @@ The reduction is performed in a non-deterministic order. This is only observable
 if one of the inputs is a signaling NaN.
 
 For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
-:ref`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
 which order is picked.
 
 Arguments:
