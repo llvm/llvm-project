@@ -14,7 +14,7 @@
 namespace llvm {
 
 class TwoAddressInstructionPass
-    : public PassInfoMixin<TwoAddressInstructionPass> {
+    : public OptionalPassInfoMixin<TwoAddressInstructionPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

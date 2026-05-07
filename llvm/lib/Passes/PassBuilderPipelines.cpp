@@ -64,6 +64,7 @@
 #include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Inliner.h"
+#include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
@@ -220,6 +221,10 @@ static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
 static cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
                                        cl::Hidden,
                                        cl::desc("Enable the LoopFlatten Pass"));
+
+static cl::opt<bool>
+    EnableInstrumentor("enable-instrumentor", cl::init(false), cl::Hidden,
+                       cl::desc("Enable the Instrumentor Pass"));
 
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
@@ -1641,6 +1646,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   invokeOptimizerLastEPCallbacks(MPM, Level, LTOPhase);
 
+  // Run the Instrumentor pass late.
+  if (EnableInstrumentor)
+    MPM.addPass(InstrumentorPass());
+
   // Split out cold code. Splitting is done late to avoid hiding context from
   // other optimizations and inadvertently regressing performance. The tradeoff
   // is that this has a higher code size cost than splitting early.
@@ -2418,6 +2427,9 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     MPM.addPass(AllocTokenPass());
 
   invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
+
+  if (EnableInstrumentor)
+    MPM.addPass(InstrumentorPass());
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);

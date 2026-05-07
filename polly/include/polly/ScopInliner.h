@@ -21,7 +21,7 @@ class FileSystem;
 } // namespace llvm
 
 namespace polly {
-class ScopInlinerPass : public llvm::PassInfoMixin<ScopInlinerPass> {
+class ScopInlinerPass : public llvm::OptionalPassInfoMixin<ScopInlinerPass> {
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
 public:

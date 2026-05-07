@@ -330,7 +330,7 @@ enum ErrorType {
   eErrorTypeWin32       ///< Standard Win32 error codes.
 };
 
-enum ValueType {
+enum ValueType : uint32_t {
   eValueTypeInvalid = 0,
   eValueTypeVariableGlobal = 1,   ///< globals variable
   eValueTypeVariableStatic = 2,   ///< static variable

@@ -861,6 +861,7 @@ libc_support_library(
         "src/__support/endian_internal.h",
     ],
     deps = [
+        ":__support_cpp_bit",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
@@ -997,6 +998,17 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "__support_cpp_scope",
+    hdrs = ["src/__support/CPP/scope.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_cpp_utility",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
     ],
 )
 
@@ -1138,6 +1150,7 @@ libc_support_library(
     hdrs = ["src/__support/c_string.h"],
     deps = [
         ":__support_cpp_string",
+        ":__support_cpp_string_view",
         ":__support_macros_attributes",
         ":__support_macros_config",
     ],
