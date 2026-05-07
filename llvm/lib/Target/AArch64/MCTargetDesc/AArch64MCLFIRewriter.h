@@ -62,7 +62,7 @@ private:
   // Instruction classification. Returns the reserved register that may be
   // modified, or an invalid register if no reserved register is touched.
   MCRegister mayModifyReserved(const MCInst &Inst) const;
-  bool mayModifyStack(const MCInst &Inst) const;
+  bool mayModifySP(const MCInst &Inst) const;
 
   // Instruction emission.
   void emitInst(const MCInst &Inst, MCStreamer &Out,
@@ -97,14 +97,14 @@ private:
   // Memory access.
   void rewriteLoadStore(const MCInst &Inst, MCStreamer &Out,
                         const MCSubtargetInfo &STI);
-  void rewriteLoadStoreBasic(const MCInst &Inst, MCStreamer &Out,
-                             const MCSubtargetInfo &STI);
+  void rewriteLoadStoreBase(const MCInst &Inst, MCStreamer &Out,
+                            const MCSubtargetInfo &STI);
   bool rewriteLoadStoreRoW(const MCInst &Inst, MCStreamer &Out,
                            const MCSubtargetInfo &STI);
 
-  // Register modification.
-  void rewriteStackModification(const MCInst &Inst, MCStreamer &Out,
-                                const MCSubtargetInfo &STI);
+  // SP register modification.
+  void rewriteSPModification(const MCInst &Inst, MCStreamer &Out,
+                             const MCSubtargetInfo &STI);
 
   // Link register modification.
   void rewriteLRModification(const MCInst &Inst, MCStreamer &Out,

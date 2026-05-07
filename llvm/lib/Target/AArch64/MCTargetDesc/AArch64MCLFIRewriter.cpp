@@ -67,14 +67,20 @@ static bool isPrivilegedTPAccess(const MCInst &Inst) {
   return false;
 }
 
+// Classification functions are limited to Armv8.1-A. Instructions outside of
+// this subset are not guaranteed to be rewritten and as a result may fail LFI
+// verification after compilation.
+
 // Instructions that have mayLoad/mayStore set in TableGen but don't actually
 // perform memory accesses.
-static bool isNotMemAccess(const MCInst &Inst) {
+static bool isFakeMemAccess(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
   case AArch64::DMB:
   case AArch64::DSB:
   case AArch64::ISB:
   case AArch64::HINT:
+    // The range of sub-architectures supported by LFI do not include any load
+    // or store instructions in the HINT space.
     return true;
   default:
     return false;
@@ -122,15 +128,17 @@ static MCInst replaceRegAt(const MCInst &Inst, unsigned Idx,
   New.setOpcode(Inst.getOpcode());
   New.setLoc(Inst.getLoc());
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-    if (I == Idx)
+    if (I == Idx) {
+      assert(Inst.getOperand(I).isReg());
       New.addOperand(MCOperand::createReg(NewReg));
-    else
+    } else {
       New.addOperand(Inst.getOperand(I));
+    }
   }
   return New;
 }
 
-// Memory instruction information for the basic load/store rewriting path.
+// Memory instruction information for the base load/store rewriting path.
 // Provides operand indices for the base register and offset, and whether
 // the instruction uses pre/post-indexed addressing.
 struct MemInstInfo {
@@ -144,6 +152,11 @@ struct MemInstInfo {
 // the opcode is not a recognized memory instruction.
 static std::optional<MemInstInfo> getMemInstInfo(unsigned Op);
 
+// AArch64 load/store opcode suffixes used throughout this file:
+//   Ui:  Unsigned immediate offset, scaled by access size: [Xn, #imm].
+//   RoW: Register offset with 32-bit W register: [Xn, Wm, uxtw #shift].
+//   RoX: Register offset with 64-bit X register: [Xn, Xm, lsl #shift].
+
 static unsigned convertUiToRoW(unsigned Op);
 static unsigned convertPreToRoW(unsigned Op);
 static unsigned convertPostToRoW(unsigned Op);
@@ -154,7 +167,7 @@ static unsigned convertPrePostToBase(unsigned Op, bool &IsPre,
                                      bool &IsNoOffset);
 static int getSIMDNaturalOffset(unsigned Op);
 
-bool AArch64MCLFIRewriter::mayModifyStack(const MCInst &Inst) const {
+bool AArch64MCLFIRewriter::mayModifySP(const MCInst &Inst) const {
   return mayModifyRegister(Inst, AArch64::SP);
 }
 
@@ -224,12 +237,14 @@ void AArch64MCLFIRewriter::emitAddImm(MCRegister Dest, MCRegister Src,
   assert(std::abs(Imm) <= 4095);
   MCInst Inst;
   if (Imm >= 0) {
+    // add Dest, Src, Imm
     Inst.setOpcode(AArch64::ADDXri);
     Inst.addOperand(MCOperand::createReg(Dest));
     Inst.addOperand(MCOperand::createReg(Src));
     Inst.addOperand(MCOperand::createImm(Imm));
     Inst.addOperand(MCOperand::createImm(0)); // shift
   } else {
+    // sub Dest, Src, -Imm
     Inst.setOpcode(AArch64::SUBXri);
     Inst.addOperand(MCOperand::createReg(Dest));
     Inst.addOperand(MCOperand::createReg(Src));
@@ -330,7 +345,7 @@ void AArch64MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
 void AArch64MCLFIRewriter::rewriteLRModification(const MCInst &Inst,
                                                  MCStreamer &Out,
                                                  const MCSubtargetInfo &STI) {
-  if (!isNotMemAccess(Inst) &&
+  if (!isFakeMemAccess(Inst) &&
       (mayLoad(Inst) || mayStore(Inst) || mayPrefetch(Inst)))
     rewriteLoadStore(Inst, Out, STI);
   else
@@ -484,9 +499,9 @@ bool AArch64MCLFIRewriter::rewriteLoadStoreRoW(const MCInst &Inst,
   return false;
 }
 
-void AArch64MCLFIRewriter::rewriteLoadStoreBasic(const MCInst &Inst,
-                                                 MCStreamer &Out,
-                                                 const MCSubtargetInfo &STI) {
+void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
+                                                MCStreamer &Out,
+                                                const MCSubtargetInfo &STI) {
   unsigned Opcode = Inst.getOpcode();
   auto Info = getMemInstInfo(Opcode);
 
@@ -592,15 +607,16 @@ void AArch64MCLFIRewriter::rewriteLoadStore(const MCInst &Inst, MCStreamer &Out,
   if (rewriteLoadStoreRoW(Inst, Out, STI))
     return;
 
-  rewriteLoadStoreBasic(Inst, Out, STI);
+  rewriteLoadStoreBase(Inst, Out, STI);
 }
 
 // modify sp
 // ->
 // modify x26
 // add sp, x27, w26, uxtw
-void AArch64MCLFIRewriter::rewriteStackModification(
-    const MCInst &Inst, MCStreamer &Out, const MCSubtargetInfo &STI) {
+void AArch64MCLFIRewriter::rewriteSPModification(const MCInst &Inst,
+                                                 MCStreamer &Out,
+                                                 const MCSubtargetInfo &STI) {
   // Route through rewriteLRModification or rewriteLoadStore for memory
   // accesses. Those helpers automatically handle dangerous stack modifications
   // that can happen via register post-index.
@@ -686,15 +702,15 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   }
 
   // Register modifications that require sandboxing.
-  if (mayModifyStack(Inst))
-    return rewriteStackModification(Inst, Out, STI);
+  if (mayModifySP(Inst))
+    return rewriteSPModification(Inst, Out, STI);
 
   // Link register modification.
   if (explicitlyModifiesRegister(Inst, AArch64::LR))
     return rewriteLRModification(Inst, Out, STI);
 
   // Memory access.
-  if (!isNotMemAccess(Inst) &&
+  if (!isFakeMemAccess(Inst) &&
       (mayLoad(Inst) || mayStore(Inst) || mayPrefetch(Inst)))
     return rewriteLoadStore(Inst, Out, STI);
 
@@ -880,7 +896,7 @@ bool AArch64MCLFIRewriter::rewriteInst(const MCInst &Inst, MCStreamer &Out,
 //
 // Returns information about how to find the base register and offset operands
 // in a memory instruction, and whether it uses pre/post-indexed addressing.
-// Used by rewriteLoadStoreBasic as a fallback when RoW conversion isn't
+// Used by rewriteLoadStoreBase as a fallback when RoW conversion isn't
 // possible.
 static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   switch (Op) {
