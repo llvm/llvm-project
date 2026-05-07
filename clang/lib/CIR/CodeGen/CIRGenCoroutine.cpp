@@ -558,7 +558,17 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
           if (!awaitRes.rv.isIgnored()) {
             // Create the alloca in the block before the scope wrapping
             // cir.await.
-            mlir::Value value = awaitRes.rv.getAnyValue();
+            mlir::Value value;
+            RValue rv = awaitRes.rv;
+            if (rv.isScalar()) {
+              value = rv.getValue();
+            } else if (rv.isComplex()) {
+              value = rv.getComplexValue();
+            } else {
+              cgf.cgm.errorNYI("emitSuspendExpression: Aggregate value");
+              return;
+            }
+
             tmpResumeRValAddr = cgf.emitAlloca(
                 "__coawait_resume_rval", value.getType(), loc, CharUnits::One(),
                 builder.getBestAllocaInsertPoint(scopeParentBlock));

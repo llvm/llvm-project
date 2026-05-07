@@ -59,8 +59,6 @@ public:
     return value;
   }
 
-  mlir::Value getAnyValue() const { return value; }
-
   /// Return the value of this complex value.
   mlir::Value getComplexValue() const {
     assert(isComplex() && "Not a complex!");
