@@ -359,6 +359,17 @@ def sub_to_add : GICombineRule<
          [{ return Helper.matchCombineSubToAdd(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${mi}, ${matchinfo}); }])>;
 
+// Fold (sub a, (mul x, C)) -> (add a, (mul x, -C)), if mul has one use.
+def sub_of_mul_const : GICombineRule<
+  (defs root:$d),
+  (match (G_CONSTANT $c, $imm),
+         (G_MUL $mul, $x, $c),
+         (G_SUB $d, $a, $mul),
+         [{ return MRI.hasOneNonDBGUse(${mul}.getReg()); }]),
+  (apply (G_SUB $negc, 0, $c),
+         (G_MUL $newmul, $x, $negc),
+         (G_ADD $d, $a, $newmul))>;
+
 // (sub -1, x) -> (xor x, -1)
 def sub_minus_one : GICombineRule<
   (defs root:$root),
@@ -2389,7 +2400,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
-    binop_with_neg, sub_minus_one]>;
+    binop_with_neg, sub_minus_one, sub_of_mul_const]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

@@ -24,6 +24,7 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/ScriptedThreadPlan.h"
@@ -1533,7 +1534,7 @@ StackFrameListSP Thread::GetStackFrameList() {
   //       thread that is already mid-construction.
   //
   //  2. Current thread is a private state thread that should see the
-  //     private reality (PrivateStateThreadGuard::IsPrivateStateThread).
+  //     private reality (Policy::View::Private).
   //
   // For case 1, if a provider is active we return its input (parent)
   // frames. For case (2), we return/create the unwinder frame list
@@ -1558,13 +1559,11 @@ StackFrameListSP Thread::GetStackFrameList() {
   if (m_curr_frames_sp)
     return m_curr_frames_sp;
 
-  // For case 2, PST must see the private reality, not the public illusion.
-  // PrivateStateThreadGuard is a thread_local flag set by RunThreadPlan
-  // (for the original PST) and RunPrivateStateThread (for override PSTs).
-  // We cannot use CurrentThreadIsPrivateStateThread() here because
-  // RunThreadPlan reassigns m_current_private_state_thread_sp to the
-  // override, so the original PST is no longer recognized.
-  if (PrivateStateThreadGuard::IsPrivateStateThread()) {
+  // The private state thread must see the raw unwinder frames, not the
+  // provider-augmented public view. Policy::PrivateState is pushed by
+  // RunThreadPlan and RunPrivateStateThread.
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private) {
     if (!m_unwinder_frames_sp)
       m_unwinder_frames_sp = std::make_shared<StackFrameList>(
           *this, m_prev_frames_sp, true, /*provider_id=*/0);

@@ -15,8 +15,8 @@
 /// In the C99 grammar, these unary operators bind tightest and are represented
 /// as the 'cast-expression' production.  Everything else is either a binary
 /// operator (e.g. '/') or a ternary operator ("?:").  The unary leaves are
-/// handled by ParseCastExpression, the higher level pieces are handled by
-/// ParseBinaryExpression.
+/// handled by ParseCastExpression, the higher level pieces are handled
+/// elsewhere.
 ///
 //===----------------------------------------------------------------------===//
 
