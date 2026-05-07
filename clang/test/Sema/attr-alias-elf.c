@@ -115,3 +115,14 @@ int test13_alias(Integer) __attribute__((alias("test13")));
 char *test14 = "asdf";
 extern char test14_alias[5] __attribute__((alias(".str")));
 // expected-error@-1 {{alias must point to a defined variable or function}}
+
+// Unprototyped functions should not alias variadic function and vice versa.
+int test15() { return 9; }
+// expected-note@-1 {{aliasee is declared here}}
+int test15_alias(int x, ...) __attribute__((alias("test15")));
+// expected-warning@-1 {{alias and aliasee have different types 'int (int, ...)' and 'int ()'}}
+
+void test16(int x, ...) { }
+// expected-note@-1 {{aliasee is declared here}}
+void test16_alias() __attribute__((alias("test16")));
+// expected-warning@-1 {{alias and aliasee have different types 'void ()' and 'void (int, ...)'}}

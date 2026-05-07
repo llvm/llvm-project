@@ -843,6 +843,10 @@ void CodeGenModule::checkAliases() {
             return true;
           const auto *AliasFPTy = dyn_cast<FunctionProtoType>(AliasFTy);
           const auto *AliaseeFPTy = dyn_cast<FunctionProtoType>(AliaseeFTy);
+          // Report variadic vs no-prototype.
+          if ((AliasFPTy && AliasFPTy->isVariadic() && !AliaseeFPTy) ||
+              (AliaseeFPTy && AliaseeFPTy->isVariadic() && !AliasFPTy))
+            return true;
           // Do not report aliases with unspecified parameter lists.
           if (!AliasFPTy || !AliaseeFPTy)
             return false;
