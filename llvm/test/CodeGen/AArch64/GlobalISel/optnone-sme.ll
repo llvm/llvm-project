@@ -11,7 +11,18 @@ define void @foo() noinline optnone "aarch64_new_za" "target-features"="+sme" {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbnz x8, .LBB0_1
+; CHECK-NEXT:    b .LBB0_2
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    zero {za}
+; CHECK-NEXT:    b .LBB0_2
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    bl bar
+; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @bar()
