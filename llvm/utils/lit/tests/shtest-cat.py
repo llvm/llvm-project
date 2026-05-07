@@ -4,7 +4,7 @@
 # REQUIRES: llvm-config-available
 #
 # RUN: not %{lit} -v %{inputs}/shtest-cat \
-# RUN: | FileCheck -match-full-lines -DMSG=%errc_ENOENT %s
+# RUN: | FileCheck -match-full-lines -DERROR_MSG=%errc_ENOENT %s
 # END.
 
 # CHECK: FAIL: shtest-cat :: cat-error-0.txt ({{[^)]*}})
@@ -16,7 +16,7 @@
 # CHECK: FAIL: shtest-cat :: cat-error-1.txt ({{[^)]*}})
 # CHECK: cat temp1.txt
 # CHECK: # .---command stderr{{-*}}
-# CHECK-NEXT: # | [Errno {{.*}}] [[MSG]]: 'temp1.txt'
+# CHECK-NEXT: # | [Errno {{[0-9]+}}] [[ERROR_MSG]]: 'temp1.txt'
 # CHECK: # error: command failed with exit status: 1
 
 # CHECK: PASS: shtest-cat :: cat.txt ({{[^)]*}})
