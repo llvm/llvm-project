@@ -2292,7 +2292,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(OutlinedCGF,
                                                   &TaskgraphRegion);
 
-  llvm::Function *FnT = OutlinedCGF.GenerateCapturedStmtFunction(*CS);
+  llvm::Function *OutlinedFn = OutlinedCGF.GenerateCapturedStmtFunction(*CS);
 
   // Create an internal-linkage global variable to hold the taskgraph handle.
   std::string GraphHandleName = getName({"omp", "taskgraph", "handle"});
@@ -2308,7 +2308,8 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
       GraphId,
       GraphReset,
       NoGroup,
-      CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(FnT, CGM.VoidPtrTy),
+      CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(OutlinedFn,
+          CGM.VoidPtrTy),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           CapStruct.getPointer(OutlinedCGF), CGM.VoidPtrTy)};
 
@@ -2317,7 +2318,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
                             CGM.getModule(), OMPRTL___kmpc_taskgraph),
                         Args);
   };
-  auto &&ElseGen = [&CGF, this, &FnT, &CapStruct, &Loc,
+  auto &&ElseGen = [&CGF, this, &OutlinedFn, &CapStruct, &Loc,
                     &OutlinedCGF](CodeGenFunction &, PrePostActionTy &) {
     llvm::Value *CapturedArgsPtr =
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
@@ -2325,7 +2326,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
 
     auto &&CodeGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
       Action.Enter(CGF);
-      CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, Loc, FnT,
+      CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, Loc, OutlinedFn,
                                                           CapturedArgsPtr);
     };
     RegionCodeGenTy RCG(CodeGen);

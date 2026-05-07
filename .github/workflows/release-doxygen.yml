@@ -26,14 +26,20 @@ on:
         required: false
         type: boolean
     secrets:
-      RELEASE_TASKS_USER_TOKEN:
-        description: "Secret used to check user permissions."
-        required: false
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Client ID for our GitHub App we use for generating access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Private key for our GitHub App we use for generating access tokens."
+        required: true
 
 jobs:
   release-doxygen:
     name: Build and Upload Release Doxygen
     runs-on: ubuntu-24.04
+    environment:
+      name: release
+      deployment: false
     permissions:
       contents: write
     env:
@@ -65,10 +71,18 @@ jobs:
         run: |
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-sphinx
 
+      - id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        with:
+          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+
       - name: Upload Doxygen
         if: env.upload
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+          USER_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           ./llvm/utils/release/github-upload-release.py --token "$GITHUB_TOKEN" --release "${{ inputs.release-version }}" --user "${{ github.actor }}" --user-token "$USER_TOKEN" upload --files ./*doxygen*.tar.xz
