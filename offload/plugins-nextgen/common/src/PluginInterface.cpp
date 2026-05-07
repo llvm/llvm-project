@@ -1210,8 +1210,6 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
                                                       StackTrace);
 
     ATI->DeallocationTrace = StackTrace;
-
-#undef DEALLOCATION_ERROR
   }
 
   switch (Kind) {
