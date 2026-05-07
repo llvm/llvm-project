@@ -467,11 +467,12 @@ static ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
 
   // If the location is *never* captured, it cannot be affected by
   // synchronizing operations. However, we cannot ignore locations that are
-  // only captured after the operation, so I is set to null here.
-  // FIXME: This currently handles return captures incorrectly.
+  // only captured after the operation, as the synchronization may still have
+  // an effect if the object is only captured *later*. As such, set I to null
+  // and ReturnCaptures to true here.
   const Value *Obj = getUnderlyingObject(Loc.Ptr);
-  if (capturesNothing(
-          AAQI.CA->getCapturesBefore(Obj, /*I=*/nullptr, /*OrAt=*/true)))
+  if (capturesNothing(AAQI.CA->getCapturesBefore(
+          Obj, /*I=*/nullptr, /*OrAt=*/true, /*ReturnCaptures=*/true)))
     return ModRefInfo::NoModRef;
 
   // If Loc is a constant memory location, the synchronization operation
