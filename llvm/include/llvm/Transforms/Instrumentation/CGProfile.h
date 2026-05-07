@@ -16,7 +16,7 @@
 
 namespace llvm {
 class Module;
-class CGProfilePass : public PassInfoMixin<CGProfilePass> {
+class CGProfilePass : public OptionalPassInfoMixin<CGProfilePass> {
 public:
   CGProfilePass(bool InLTO) : InLTO(InLTO) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

@@ -39,7 +39,7 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = and <4 x i1> zeroinitializer, [[TMP20]]
 ; CHECK-NEXT:    [[ICMP58:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x ptr> <ptr poison, ptr null>, ptr [[GETELEMENTPTR]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp ult <2 x ptr> [[TMP22]], zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp ult <2 x ptr> [[TMP22]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <8 x ptr> <ptr null, ptr null, ptr null, ptr null, ptr poison, ptr poison, ptr null, ptr null>, ptr [[ARG]], i32 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x ptr> [[TMP24]], ptr [[ARG1]], i32 5
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp ult <8 x ptr> [[TMP25]], [[TMP4]]

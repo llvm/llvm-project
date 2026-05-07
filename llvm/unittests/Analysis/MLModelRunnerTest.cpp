@@ -12,6 +12,10 @@
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/IR/DiagnosticHandler.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -192,10 +196,25 @@ TEST(ReleaseModeRunner, ExtraFeaturesOutOfOrder) {
   EXPECT_EQ(*Evaluator->getTensor<int64_t>(2), -3);
 }
 
+namespace {
+struct AbortOnErrorDiagnosticHandler : public DiagnosticHandler {
+  bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    DiagnosticPrinterRawOStream DP(errs());
+    errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
+    DI.print(DP);
+    errs() << '\n';
+    if (DI.getSeverity() == DS_Error)
+      std::abort();
+    return true;
+  }
+};
+} // namespace
+
 // We expect an error to be reported early if the user tried to specify a model
 // selector, but the model in fact doesn't support that.
 TEST(ReleaseModelRunner, ModelSelectorNoInputFeaturePresent) {
   LLVMContext Ctx;
+  Ctx.setDiagnosticHandler(std::make_unique<AbortOnErrorDiagnosticHandler>());
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
   EXPECT_DEATH((void)std::make_unique<ReleaseModeModelRunner<AdditionAOTModel>>(
@@ -206,6 +225,7 @@ TEST(ReleaseModelRunner, ModelSelectorNoInputFeaturePresent) {
 
 TEST(ReleaseModelRunner, ModelSelectorNoSelectorGiven) {
   LLVMContext Ctx;
+  Ctx.setDiagnosticHandler(std::make_unique<AbortOnErrorDiagnosticHandler>());
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
   EXPECT_DEATH(
