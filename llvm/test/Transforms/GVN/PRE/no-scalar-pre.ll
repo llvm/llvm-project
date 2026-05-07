@@ -4,8 +4,8 @@
 ; RUN: opt -passes='gvn<no-scalar-pre>' -S < %s | FileCheck %s --check-prefixes=CHECK
 ; RUN: opt -passes='gvn<scalar-pre>' -S < %s | FileCheck %s --check-prefixes=CHECK-ENABLED
 
-define void @kernel(ptr %arr, i8 %cond) {
-; CHECK-LABEL: define void @kernel(
+define void @test_scalar_pre_option(ptr %arr, i8 %cond) {
+; CHECK-LABEL: define void @test_scalar_pre_option(
 ; CHECK-SAME: ptr [[ARR:%.*]], i8 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[COND]], 0
@@ -22,7 +22,7 @@ define void @kernel(ptr %arr, i8 %cond) {
 ; CHECK-NEXT:    store i32 [[ADD8]], ptr [[GETELEM1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; CHECK-ENABLED-LABEL: define void @kernel(
+; CHECK-ENABLED-LABEL: define void @test_scalar_pre_option(
 ; CHECK-ENABLED-SAME: ptr [[ARR:%.*]], i8 [[COND:%.*]]) {
 ; CHECK-ENABLED-NEXT:  [[ENTRY:.*:]]
 ; CHECK-ENABLED-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[COND]], 0
