@@ -1,7 +1,7 @@
 ## Test the cat command.
 
 # This is required for the use of %errc_ENOENT.
-# REQUIRES: llvm_config_available
+# REQUIRES: llvm-config-available
 #
 # RUN: not %{lit} -v %{inputs}/shtest-cat \
 # RUN: | FileCheck -match-full-lines -DMSG=%errc_ENOENT %s
