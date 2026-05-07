@@ -91,11 +91,11 @@ define i64 @scalar_i64(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB6-LABEL: scalar_i64:
 ; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    mvns r1, r1
-; THUMB6-NEXT:    mvns r0, r0
-; THUMB6-NEXT:    subs r0, r2, r0
-; THUMB6-NEXT:    sbcs r3, r1
-; THUMB6-NEXT:    mov r1, r3
+; THUMB6-NEXT:    adds r0, r2, r0
+; THUMB6-NEXT:    adcs r1, r3
+; THUMB6-NEXT:    movs r2, #0
+; THUMB6-NEXT:    adds r0, r0, #1
+; THUMB6-NEXT:    adcs r1, r2
 ; THUMB6-NEXT:    bx lr
 ;
 ; THUMB78-LABEL: scalar_i64:
