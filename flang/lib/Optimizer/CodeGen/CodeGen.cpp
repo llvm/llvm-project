@@ -3642,6 +3642,10 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
       else
         attachTBAATag(memcpy, boxTy, boxTy, nullptr);
 
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              load.getAccessGroups())
+        memcpy.setAccessGroups(*optionalAccessGroups);
+
       rewriter.replaceOp(load, newBoxStorage);
     } else {
       mlir::LLVM::LoadOp loadOp =
@@ -4014,8 +4018,12 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
       TypePair boxTypePair{boxTy, llvmBoxTy};
       mlir::Value boxSize =
           computeBoxSize(loc, boxTypePair, llvmValue, rewriter);
-      newOp = mlir::LLVM::MemcpyOp::create(rewriter, loc, llvmMemref, llvmValue,
-                                           boxSize, isVolatile);
+      auto memcpy = mlir::LLVM::MemcpyOp::create(
+          rewriter, loc, llvmMemref, llvmValue, boxSize, isVolatile);
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              store.getAccessGroups())
+        memcpy.setAccessGroups(*optionalAccessGroups);
+      newOp = memcpy;
     } else {
       mlir::LLVM::StoreOp storeOp =
           mlir::LLVM::StoreOp::create(rewriter, loc, llvmValue, llvmMemref);

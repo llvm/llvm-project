@@ -23,6 +23,18 @@
 
 namespace clang::CIRGen {
 
+/// Return the number of parameters with the pass_object_size attribute.
+inline unsigned
+getNumPassObjectSizeParams(const clang::FunctionProtoType *proto) {
+  if (!proto->hasExtParameterInfos())
+    return 0;
+  return llvm::count_if(
+      proto->getExtParameterInfos(),
+      [](const clang::FunctionProtoType::ExtParameterInfo &info) {
+        return info.hasPassObjectSize();
+      });
+}
+
 /// A class for recording the number of arguments that a function signature
 /// requires.
 class RequiredArgs {
@@ -50,8 +62,7 @@ public:
     if (!prototype->isVariadic())
       return All;
 
-    if (prototype->hasExtParameterInfos())
-      llvm_unreachable("NYI");
+    additional += getNumPassObjectSizeParams(prototype);
 
     return RequiredArgs(prototype->getNumParams() + additional);
   }

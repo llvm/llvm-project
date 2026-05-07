@@ -265,3 +265,53 @@ entry:
   store i32 77, ptr %inc3, align 2
   ret void
 }
+
+define void @shared-chain-ordering(ptr %dest, ptr %p, i64 %offset) {
+; CHECK-LABEL: @shared-chain-ordering(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INCS0:%.*]] = getelementptr inbounds i16, ptr [[DEST:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store <4 x i16> [[TMP0]], ptr [[INCS0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[DEST]], align 4
+; CHECK-NEXT:    [[INCS:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[TMP0]], i32 1
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[INCS]], align 2
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: @shared-chain-ordering(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    [[INCS0:%.*]] = getelementptr inbounds i16, ptr [[DEST:%.*]], i64 [[OFFSET:%.*]]
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    store <4 x i16> [[TMP0]], ptr [[INCS0]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 0
+; DEFAULT-NEXT:    store i16 [[TMP1]], ptr [[DEST]], align 4
+; DEFAULT-NEXT:    [[INCS:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
+; DEFAULT-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[TMP0]], i32 1
+; DEFAULT-NEXT:    store i16 [[TMP2]], ptr [[INCS]], align 2
+; DEFAULT-NEXT:    ret void
+;
+entry:
+  %e0 = load i16, ptr %p, align 4
+  %inc = getelementptr inbounds i16, ptr %p, i64 1
+  %e1 = load i16, ptr %inc, align 2
+  %inc1 = getelementptr inbounds i16, ptr %p, i64 2
+  %e2 = load i16, ptr %inc1, align 2
+  %inc2 = getelementptr inbounds i16, ptr %p, i64 3
+  %e3 = load i16, ptr %inc2, align 2
+
+  %incs0 = getelementptr inbounds i16, ptr %dest, i64 %offset
+  store i16 %e0, ptr %incs0, align 4
+  %incs1 = getelementptr inbounds i16, ptr %incs0, i64 1
+  store i16 %e1, ptr %incs1, align 2
+  %incs2 = getelementptr inbounds i16, ptr %incs0, i64 2
+  store i16 %e2, ptr %incs2, align 2
+  %incs3 = getelementptr inbounds i16, ptr %incs0, i64 3
+  store i16 %e3, ptr %incs3, align 2
+
+  store i16 %e0, ptr %dest, align 4
+  %incs = getelementptr inbounds i16, ptr %dest, i64 1
+  store i16 %e1, ptr %incs, align 2
+
+  ret void
+}

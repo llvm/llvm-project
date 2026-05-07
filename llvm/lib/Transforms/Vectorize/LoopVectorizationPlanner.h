@@ -201,6 +201,20 @@ public:
         Opcode, Operands, ResultTy, Flags, {}, DL, Name));
   }
 
+  VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
+                                       DebugLoc DL = DebugLoc::getUnknown(),
+                                       const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name));
+  }
+
+  VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
+                                      DebugLoc DL = DebugLoc::getUnknown(),
+                                      const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(VPInstruction::LastActiveLane,
+                                                  Masks, {}, {}, DL, Name));
+  }
+
   VPInstruction *createOverflowingOp(
       unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPRecipeWithIRFlags::WrapFlagsTy WrapFlags = {false, false},
@@ -655,15 +669,9 @@ public:
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
-  /// Returns true if the target machine supports masked store operation
-  /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
-                          unsigned AddressSpace) const;
-
-  /// Returns true if the target machine supports masked load operation
-  /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
-                         unsigned AddressSpace) const;
+  /// Returns true if the target machine supports masked loads or stores
+  /// for \p I's data type and alignment.
+  bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather
   /// or scatter operation.
