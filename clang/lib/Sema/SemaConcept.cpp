@@ -2269,9 +2269,9 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     }
     assert(!ArgsAsWritten);
     const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
-    // This is to make sure that lambdas within template arguments live in a
-    // dependent context such that they are assured to be transformed in
-    // evaluation.
+    // Make sure that lambdas within template arguments live in a
+    // dependent context such that they are assured to be transformed during
+    // constraint evaluation.
     EnterExpressionEvaluationContext EECtx(
         SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
         /*LambdaContextDecl=*/

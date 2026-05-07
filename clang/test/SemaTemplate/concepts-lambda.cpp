@@ -56,7 +56,7 @@ namespace GH57971 {
   function_ptr ptr = f<void>;
 }
 
-namespace LambdaInConcept {
+namespace GH58368 {
 using size_t = unsigned long;
 
 template<size_t...Ts>
