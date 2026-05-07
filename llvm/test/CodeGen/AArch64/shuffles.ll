@@ -6,18 +6,18 @@ define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECKLE-LABEL: test_shuf1:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    ext v3.16b, v6.16b, v1.16b, #4
-; CHECKLE-NEXT:    uzp2 v16.4s, v2.4s, v4.4s
-; CHECKLE-NEXT:    dup v4.4s, v4.s[0]
 ; CHECKLE-NEXT:    uzp1 v5.4s, v1.4s, v0.4s
-; CHECKLE-NEXT:    ext v6.16b, v6.16b, v4.16b, #12
+; CHECKLE-NEXT:    uzp2 v16.4s, v2.4s, v4.4s
+; CHECKLE-NEXT:    dup v17.4s, v4.s[0]
 ; CHECKLE-NEXT:    trn2 v4.4s, v1.4s, v3.4s
+; CHECKLE-NEXT:    mov v17.s[0], v6.s[3]
+; CHECKLE-NEXT:    trn2 v1.4s, v5.4s, v1.4s
 ; CHECKLE-NEXT:    rev64 v3.4s, v7.4s
 ; CHECKLE-NEXT:    trn1 v2.4s, v16.4s, v2.4s
-; CHECKLE-NEXT:    trn2 v1.4s, v5.4s, v1.4s
 ; CHECKLE-NEXT:    mov v4.s[0], v7.s[1]
-; CHECKLE-NEXT:    mov v3.d[0], v6.d[0]
-; CHECKLE-NEXT:    mov v2.s[3], v7.s[0]
 ; CHECKLE-NEXT:    ext v1.16b, v0.16b, v1.16b, #12
+; CHECKLE-NEXT:    mov v3.d[0], v17.d[0]
+; CHECKLE-NEXT:    mov v2.s[3], v7.s[0]
 ; CHECKLE-NEXT:    mov v0.16b, v4.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -41,21 +41,21 @@ define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECKBE-NEXT:    dup v4.4s, v4.s[0]
 ; CHECKBE-NEXT:    rev64 v17.4s, v5.4s
 ; CHECKBE-NEXT:    trn2 v6.4s, v1.4s, v6.4s
-; CHECKBE-NEXT:    ext v3.16b, v3.16b, v4.16b, #12
+; CHECKBE-NEXT:    mov v4.s[0], v3.s[3]
 ; CHECKBE-NEXT:    trn2 v1.4s, v16.4s, v1.4s
 ; CHECKBE-NEXT:    trn1 v2.4s, v7.4s, v2.4s
-; CHECKBE-NEXT:    rev64 v4.4s, v17.4s
+; CHECKBE-NEXT:    rev64 v3.4s, v17.4s
 ; CHECKBE-NEXT:    mov v6.s[0], v5.s[1]
-; CHECKBE-NEXT:    rev64 v3.4s, v3.4s
+; CHECKBE-NEXT:    rev64 v4.4s, v4.4s
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
 ; CHECKBE-NEXT:    mov v2.s[3], v5.s[0]
 ; CHECKBE-NEXT:    rev64 v1.4s, v6.4s
-; CHECKBE-NEXT:    mov v4.d[0], v3.d[0]
-; CHECKBE-NEXT:    rev64 v5.4s, v0.4s
+; CHECKBE-NEXT:    mov v3.d[0], v4.d[0]
+; CHECKBE-NEXT:    rev64 v4.4s, v0.4s
 ; CHECKBE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECKBE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v3.16b, v4.16b, v4.16b, #8
-; CHECKBE-NEXT:    ext v1.16b, v5.16b, v5.16b, #8
+; CHECKBE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
 ; CHECKBE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECKBE-NEXT:    ret
   %s3 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 29, i32 26, i32 7, i32 4, i32 3, i32 6, i32 5, i32 2, i32 9, i32 8, i32 17, i32 28, i32 27, i32 16, i32 31, i32 30>
@@ -702,7 +702,7 @@ define <16 x i8> @test_shuf_zero_ext_end_rhs(<16 x i8> %a) {
 ; CHECKLE-LABEL: test_shuf_zero_ext_end_rhs:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
-; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
 ; CHECKLE-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_end_rhs:
@@ -710,11 +710,11 @@ define <16 x i8> @test_shuf_zero_ext_end_rhs(<16 x i8> %a) {
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
-  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 0>
   ret <16 x i8> %r
 }
 
@@ -722,7 +722,7 @@ define <16 x i8> @test_shuf_zero_ext_end_rhs2(<16 x i8> %a) {
 ; CHECKLE-LABEL: test_shuf_zero_ext_end_rhs2:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
-; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
 ; CHECKLE-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_end_rhs2:
@@ -730,11 +730,11 @@ define <16 x i8> @test_shuf_zero_ext_end_rhs2(<16 x i8> %a) {
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
-  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29>
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 0, i32 0>
   ret <16 x i8> %r
 }
 
