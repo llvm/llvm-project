@@ -177,10 +177,9 @@ public:
   const ImplicitParamDecl *getSelfDecl() const;
 
   /// \copydoc LocationContextManager::getStackFrame()
-  const StackFrame *getStackFrame(const StackFrame *ParentSF,
-                                  const void *Data, const Expr *E,
-                                  const CFGBlock *Blk, unsigned BlockCount,
-                                  unsigned Index);
+  const StackFrame *getStackFrame(const StackFrame *ParentSF, const void *Data,
+                                  const Expr *E, const CFGBlock *Blk,
+                                  unsigned BlockCount, unsigned Index);
 
   /// \returns The specified analysis object, lazily running the analysis if
   /// necessary or nullptr if the analysis could not run.
@@ -369,10 +368,9 @@ public:
   ///                   statements of the CFGBlock \p Block.
   /// \returns The stack frame context corresponding to the call.
   const StackFrame *getStackFrame(AnalysisDeclContext *ADC,
-                                  const StackFrame *ParentLC,
-                                  const void *Data, const Expr *E,
-                                  const CFGBlock *Block, unsigned BlockCount,
-                                  unsigned StmtIdx);
+                                  const StackFrame *ParentLC, const void *Data,
+                                  const Expr *E, const CFGBlock *Block,
+                                  unsigned BlockCount, unsigned StmtIdx);
 
   /// Discard all previously created StackFrame objects.
   void clear();

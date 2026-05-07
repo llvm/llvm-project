@@ -310,9 +310,10 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 
 BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
-const StackFrame *AnalysisDeclContext::getStackFrame(
-    const StackFrame *ParentSF, const void *Data, const Expr *E,
-    const CFGBlock *Blk, unsigned BlockCount, unsigned Index) {
+const StackFrame *
+AnalysisDeclContext::getStackFrame(const StackFrame *ParentSF, const void *Data,
+                                   const Expr *E, const CFGBlock *Blk,
+                                   unsigned BlockCount, unsigned Index) {
   return getLocationContextManager().getStackFrame(this, ParentSF, Data, E, Blk,
                                                    BlockCount, Index);
 }
@@ -657,7 +658,8 @@ LocationContextManager::~LocationContextManager() {
 
 void LocationContextManager::clear() {
   for (llvm::FoldingSet<StackFrame>::iterator I = Contexts.begin(),
-       E = Contexts.end(); I != E; ) {
+                                              E = Contexts.end();
+       I != E;) {
     LocationContext *LC = &*I;
     ++I;
     delete LC;

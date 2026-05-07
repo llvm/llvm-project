@@ -292,10 +292,8 @@ const CFGBlock *ExplodedNode::getCFGBlock() const {
   // FIXME: getStmtForDiagnostics() does nasty things in order to provide
   // a valid statement for body farms, do we need this behavior here?
   if (const Stmt *S = getStmtForDiagnostics())
-    return getStackFrame()
-        ->getAnalysisDeclContext()
-        ->getCFGStmtMap()
-        ->getBlock(S);
+    return getStackFrame()->getAnalysisDeclContext()->getCFGStmtMap()->getBlock(
+        S);
 
   return nullptr;
 }

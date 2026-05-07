@@ -1868,8 +1868,7 @@ public:
     if (!S)
       return nullptr;
     Satisfied = true;
-    PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                               N->getStackFrame());
+    PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
     llvm::StringLiteral Msg = "Stream is closed here";
     return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg);
   }
@@ -2034,15 +2033,13 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
     PathDiagnosticLocation LocUsedForUniqueing;
     if (const Stmt *StreamStmt = StreamOpenNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-          StreamStmt, C.getSourceManager(),
-          StreamOpenNode->getStackFrame());
+          StreamStmt, C.getSourceManager(), StreamOpenNode->getStackFrame());
 
     std::unique_ptr<PathSensitiveBugReport> R =
         std::make_unique<PathSensitiveBugReport>(
             BT_ResourceLeak,
             "Opened stream never closed. Potential resource leak.", Err,
-            LocUsedForUniqueing,
-            StreamOpenNode->getStackFrame()->getDecl());
+            LocUsedForUniqueing, StreamOpenNode->getStackFrame()->getDecl());
     R->markInteresting(LeakSym);
     R->addVisitor<NoStreamStateChangeVisitor>(LeakSym, this);
     C.emitReport(std::move(R));

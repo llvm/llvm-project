@@ -3044,9 +3044,8 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
 
   const Stmt *AllocationStmt = AllocNode->getStmtForDiagnostics();
   if (AllocationStmt)
-    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocationStmt,
-                                              C.getSourceManager(),
-                                              AllocNode->getStackFrame());
+    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
+        AllocationStmt, C.getSourceManager(), AllocNode->getStackFrame());
 
   SmallString<200> buf;
   llvm::raw_svector_ostream os(buf);
@@ -4142,8 +4141,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
     Pos = PathDiagnosticLocation(PostImplCall->getLocation(),
                                  BRC.getSourceManager());
   } else {
-    Pos = PathDiagnosticLocation(S, BRC.getSourceManager(),
-                                 N->getStackFrame());
+    Pos = PathDiagnosticLocation(S, BRC.getSourceManager(), N->getStackFrame());
   }
 
   auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);

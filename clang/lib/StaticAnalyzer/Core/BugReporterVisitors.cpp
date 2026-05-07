@@ -1985,9 +1985,9 @@ constructDebugPieceForTrackedCondition(const Expr *Cond,
       BRC.getSourceManager(), BRC.getASTContext().getLangOpts()));
 
   return std::make_shared<PathDiagnosticEventPiece>(
-      PathDiagnosticLocation::createBegin(
-          Cond, BRC.getSourceManager(), N->getStackFrame()),
-          (Twine() + "Tracking condition '" + ConditionText + "'").str());
+      PathDiagnosticLocation::createBegin(Cond, BRC.getSourceManager(),
+                                          N->getStackFrame()),
+      (Twine() + "Tracking condition '" + ConditionText + "'").str());
 }
 
 static bool isAssertlikeBlock(const CFGBlock *B, ASTContext &Context) {
@@ -2708,7 +2708,7 @@ NilReceiverBRVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
                                      /*EnableNullFPSuppression*/ false});
   // Issue a message saying that the method was skipped.
   PathDiagnosticLocation L(Receiver, BRC.getSourceManager(),
-                                     N->getStackFrame());
+                           N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(L, OS.str());
 }
 

@@ -638,7 +638,8 @@ ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
       SVal VV = *V;
       (void)VV;
       assert(cast<VarRegion>(VV.castAs<loc::MemRegionVal>().getRegion())
-                 ->getStackFrame()->getParent()
+                 ->getStackFrame()
+                 ->getParent()
                  ->getStackFrame() == SF->getStackFrame());
       State = finishObjectConstruction(State, {E, I}, SF);
     }
@@ -766,9 +767,9 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     SVal Target;
     assert(RTC->getStmt() == Call.getOriginExpr());
     EvalCallOptions CallOpts; // FIXME: We won't really need those.
-    std::tie(State, Target) = handleConstructionContext(
-        Call.getOriginExpr(), State, currBldrCtx, SF,
-        RTC->getConstructionContext(), CallOpts);
+    std::tie(State, Target) =
+        handleConstructionContext(Call.getOriginExpr(), State, currBldrCtx, SF,
+                                  RTC->getConstructionContext(), CallOpts);
     const MemRegion *TargetR = Target.getAsRegion();
     assert(TargetR);
     // Invalidate the region so that it didn't look uninitialized. If this is

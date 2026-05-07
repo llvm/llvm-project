@@ -508,12 +508,10 @@ public:
 /// FunctionDecl.
 class AnyFunctionCall : public CallEvent {
 protected:
-  AnyFunctionCall(const Expr *E, ProgramStateRef St,
-                  const StackFrame *SF,
+  AnyFunctionCall(const Expr *E, ProgramStateRef St, const StackFrame *SF,
                   CFGBlock::ConstCFGElementRef ElemRef)
       : CallEvent(E, St, SF, ElemRef) {}
-  AnyFunctionCall(const Decl *D, ProgramStateRef St,
-                  const StackFrame *SF,
+  AnyFunctionCall(const Decl *D, ProgramStateRef St, const StackFrame *SF,
                   CFGBlock::ConstCFGElementRef ElemRef)
       : CallEvent(D, St, SF, ElemRef) {}
   AnyFunctionCall(const AnyFunctionCall &Other) = default;
@@ -548,8 +546,7 @@ class SimpleFunctionCall : public AnyFunctionCall {
 
 protected:
   SimpleFunctionCall(const CallExpr *CE, ProgramStateRef St,
-                     const StackFrame *SF,
-                     CFGBlock::ConstCFGElementRef ElemRef)
+                     const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
       : AnyFunctionCall(CE, St, SF, ElemRef) {}
   SimpleFunctionCall(const SimpleFunctionCall &Other) = default;
 
@@ -688,13 +685,11 @@ public:
 /// it is written.
 class CXXInstanceCall : public AnyFunctionCall {
 protected:
-  CXXInstanceCall(const CallExpr *CE, ProgramStateRef St,
-                  const StackFrame *SF,
+  CXXInstanceCall(const CallExpr *CE, ProgramStateRef St, const StackFrame *SF,
                   CFGBlock::ConstCFGElementRef ElemRef)
       : AnyFunctionCall(CE, St, SF, ElemRef) {}
   CXXInstanceCall(const FunctionDecl *D, ProgramStateRef St,
-                  const StackFrame *SF,
-                  CFGBlock::ConstCFGElementRef ElemRef)
+                  const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
       : AnyFunctionCall(D, St, SF, ElemRef) {}
   CXXInstanceCall(const CXXInstanceCall &Other) = default;
 
@@ -806,8 +801,7 @@ class CXXMemberCall : public CXXInstanceCall {
 
 protected:
   CXXMemberCall(const CXXMemberCallExpr *CE, ProgramStateRef St,
-                const StackFrame *SF,
-                CFGBlock::ConstCFGElementRef ElemRef)
+                const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
       : CXXInstanceCall(CE, St, SF, ElemRef) {}
   CXXMemberCall(const CXXMemberCall &Other) = default;
 
@@ -1131,8 +1125,7 @@ class CXXAllocatorCall : public AnyFunctionCall {
 
 protected:
   CXXAllocatorCall(const CXXNewExpr *E, ProgramStateRef St,
-                   const StackFrame *SF,
-                   CFGBlock::ConstCFGElementRef ElemRef)
+                   const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
       : AnyFunctionCall(E, St, SF, ElemRef) {}
   CXXAllocatorCall(const CXXAllocatorCall &Other) = default;
 
@@ -1215,8 +1208,7 @@ class CXXDeallocatorCall : public AnyFunctionCall {
 
 protected:
   CXXDeallocatorCall(const CXXDeleteExpr *E, ProgramStateRef St,
-                     const StackFrame *SF,
-                     CFGBlock::ConstCFGElementRef ElemRef)
+                     const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
       : AnyFunctionCall(E, St, SF, ElemRef) {}
   CXXDeallocatorCall(const CXXDeallocatorCall &Other) = default;
 
@@ -1264,8 +1256,7 @@ class ObjCMethodCall : public CallEvent {
 
 protected:
   ObjCMethodCall(const ObjCMessageExpr *Msg, ProgramStateRef St,
-                 const StackFrame *SF,
-                 CFGBlock::ConstCFGElementRef ElemRef)
+                 const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
       : CallEvent(Msg, St, SF, ElemRef) {
     Data = nullptr;
   }
@@ -1407,8 +1398,8 @@ class CallEventManager {
   }
 
   template <typename T, typename Arg1, typename Arg2, typename Arg3>
-  T *create(Arg1 A1, Arg2 A2, Arg3 A3, ProgramStateRef St,
-            const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef) {
+  T *create(Arg1 A1, Arg2 A2, Arg3 A3, ProgramStateRef St, const StackFrame *SF,
+            CFGBlock::ConstCFGElementRef ElemRef) {
     static_assert(sizeof(T) == sizeof(CallEventTemplateTy),
                   "CallEvent subclasses are not all the same size");
     return new (allocate()) T(A1, A2, A3, St, SF, ElemRef);

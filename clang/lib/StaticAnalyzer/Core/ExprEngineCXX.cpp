@@ -442,8 +442,8 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
       assert(RTC && "Could not have had a target region without it");
 
       return updateObjectsUnderConstruction(
-          V, SF->getCallSite(), State, CallerSF,
-          RTC->getConstructionContext(), CallOpts);
+          V, SF->getCallSite(), State, CallerSF, RTC->getConstructionContext(),
+          CallOpts);
     }
     case ConstructionContext::ElidedTemporaryObjectKind: {
       assert(AMgr.getAnalyzerOptions().ShouldElideConstructors);
@@ -544,16 +544,16 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (CE) {
     if (std::optional<SVal> ElidedTarget =
             getObjectUnderConstruction(State, CE, SF)) {
-        // We've previously modeled an elidable constructor by pretending that
-        // it in fact constructs into the correct target. This constructor can
-        // therefore be skipped.
-        Target = *ElidedTarget;
-        NodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
-        State = finishObjectConstruction(State, CE, SF);
-        if (auto L = Target.getAs<Loc>())
-          State = State->BindExpr(CE, SF, State->getSVal(*L, CE->getType()));
-        Bldr.generateNode(CE, Pred, State);
-        return;
+      // We've previously modeled an elidable constructor by pretending that
+      // it in fact constructs into the correct target. This constructor can
+      // therefore be skipped.
+      Target = *ElidedTarget;
+      NodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
+      State = finishObjectConstruction(State, CE, SF);
+      if (auto L = Target.getAs<Loc>())
+        State = State->BindExpr(CE, SF, State->getSVal(*L, CE->getType()));
+      Bldr.generateNode(CE, Pred, State);
+      return;
     }
   }
 
@@ -604,23 +604,22 @@ void ExprEngine::handleConstructor(const Expr *E,
       // Only set this once even though we loop through it multiple times.
       if (!getPendingInitLoop(State, CE, SF))
         State = setPendingInitLoop(
-            State, CE, SF,
-            getContext().getArrayInitLoopExprElementCount(AILE));
+            State, CE, SF, getContext().getArrayInitLoopExprElementCount(AILE));
 
       State = bindRequiredArrayElementToEnvironment(
           State, AILE, SF, svalBuilder.makeArrayIndex(Idx));
     }
 
     // The target region is found from construction context.
-    std::tie(State, Target) = handleConstructionContext(
-        CE, State, currBldrCtx, SF, CC, CallOpts, Idx);
+    std::tie(State, Target) = handleConstructionContext(CE, State, currBldrCtx,
+                                                        SF, CC, CallOpts, Idx);
     break;
   }
   case CXXConstructionKind::VirtualBase: {
     // Make sure we are not calling virtual base class initializers twice.
     // Only the most-derived object should initialize virtual base classes.
-    const auto *OuterCtor = dyn_cast_or_null<CXXConstructExpr>(
-        SF->getStackFrame()->getCallSite());
+    const auto *OuterCtor =
+        dyn_cast_or_null<CXXConstructExpr>(SF->getStackFrame()->getCallSite());
     assert(
         (!OuterCtor ||
          OuterCtor->getConstructionKind() == CXXConstructionKind::Complete ||
@@ -652,8 +651,7 @@ void ExprEngine::handleConstructor(const Expr *E,
     [[fallthrough]];
   case CXXConstructionKind::Delegating: {
     const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(SF->getDecl());
-    Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor,
-                                              SF->getStackFrame());
+    Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor, SF->getStackFrame());
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (CK == CXXConstructionKind::Delegating) {
@@ -685,8 +683,8 @@ void ExprEngine::handleConstructor(const Expr *E,
   CallEventRef<> Call =
       CIE ? (CallEventRef<>)CEMgr.getCXXInheritedConstructorCall(
                 CIE, TargetRegion, State, SF, getCFGElementRef())
-          : (CallEventRef<>)CEMgr.getCXXConstructorCall(
-                CE, TargetRegion, State, SF, getCFGElementRef());
+          : (CallEventRef<>)CEMgr.getCXXConstructorCall(CE, TargetRegion, State,
+                                                        SF, getCFGElementRef());
 
   ExplodedNodeSet DstPreVisit;
   getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, E, *this);
@@ -941,8 +939,8 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
           State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
     }
 
-    ValueBldr.generateNode(
-        CNE, I, addObjectUnderConstruction(State, CNE, SF, RetVal));
+    ValueBldr.generateNode(CNE, I,
+                           addObjectUnderConstruction(State, CNE, SF, RetVal));
   }
 
   ExplodedNodeSet DstPostPostCallCallback;

@@ -310,8 +310,8 @@ public:
                              ProgramStateRef St,
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getStackFrame(), tag);
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateNode(L, St, Pred);
   }
 
@@ -320,8 +320,8 @@ public:
                              ProgramStateRef St,
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getStackFrame(), tag);
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateSink(L, St, Pred);
   }
 

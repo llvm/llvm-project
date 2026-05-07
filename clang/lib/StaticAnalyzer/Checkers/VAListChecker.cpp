@@ -413,8 +413,7 @@ PathDiagnosticPieceRef VAListChecker::VAListBugVisitor::VisitNode(
   if (Msg.empty())
     return nullptr;
 
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getStackFrame());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
 }
 

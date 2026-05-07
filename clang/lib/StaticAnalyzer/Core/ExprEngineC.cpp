@@ -246,8 +246,7 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
 
   ExplodedNodeSet Tmp;
   NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
-  Bldr.generateNode(BE, Pred,
-                    State->BindExpr(BE, Pred->getStackFrame(), V),
+  Bldr.generateNode(BE, Pred, State->BindExpr(BE, Pred->getStackFrame(), V),
                     nullptr, ProgramPoint::PostLValueKind);
 
   // FIXME: Move all post/pre visits to ::Visit().
@@ -848,8 +847,7 @@ VisitOffsetOfExpr(const OffsetOfExpr *OOE,
     assert(IV.isSigned() == OOE->getType()->isSignedIntegerType());
     SVal X = svalBuilder.makeIntVal(IV);
     B.generateNode(OOE, Pred,
-                   Pred->getState()->BindExpr(OOE, Pred->getStackFrame(),
-                                              X));
+                   Pred->getState()->BindExpr(OOE, Pred->getStackFrame(), X));
   }
   // FIXME: Handle the case where __builtin_offsetof is not a constant.
 }

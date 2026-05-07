@@ -557,8 +557,8 @@ std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
-  unsigned NumVisitedCall = Engine.getNumVisited(
-      getStackFrame(), getCFGElementRef().getParent());
+  unsigned NumVisitedCall =
+      Engine.getNumVisited(getStackFrame(), getCFGElementRef().getParent());
   SVal RetVal = Engine.computeObjectUnderConstruction(
       getOriginExpr(), getState(), NumVisitedCall, getStackFrame(), CC,
       CallOpts);
@@ -580,8 +580,7 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   // Note that the AnalysisDeclContext will have the FunctionDecl with
   // the definition (if one exists).
   AnalysisDeclContext *AD =
-    getStackFrame()->getAnalysisDeclContext()->
-    getManager()->getContext(FD);
+      getStackFrame()->getAnalysisDeclContext()->getManager()->getContext(FD);
   bool IsAutosynthesized;
   Stmt* Body = AD->getBody(IsAutosynthesized);
   LLVM_DEBUG({

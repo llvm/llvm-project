@@ -447,8 +447,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   if (!PrevT) {
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
 
-    if (isa<ObjCIvarRefExpr>(S) &&
-        isSynthesizedAccessor(SF->getStackFrame())) {
+    if (isa<ObjCIvarRefExpr>(S) && isSynthesizedAccessor(SF->getStackFrame())) {
       S = SF->getStackFrame()->getCallSite();
     }
 
@@ -516,8 +515,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
       }
     } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
       if (const Expr *receiver = ME->getInstanceReceiver()) {
-        if (CurrSt->getSValAsScalarOrLoc(receiver, SF)
-              .getAsLocSymbol() == Sym) {
+        if (CurrSt->getSValAsScalarOrLoc(receiver, SF).getAsLocSymbol() ==
+            Sym) {
           // The symbol we are tracking is the receiver.
           DeallocSent = true;
         }
@@ -532,8 +531,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     return nullptr; // We have nothing to say!
 
   const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                                N->getStackFrame());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
 
   // Add the range by scanning the children of the statement for any bindings
@@ -687,8 +685,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   assert(N && "Could not find allocation node");
 
   if (AllocationNodeInCurrentOrParentContext &&
-      AllocationNodeInCurrentOrParentContext->getStackFrame() !=
-      LeakContext)
+      AllocationNodeInCurrentOrParentContext->getStackFrame() != LeakContext)
     FirstBinding = nullptr;
 
   return AllocationInfo(AllocationNodeInCurrentOrParentContext, FirstBinding,

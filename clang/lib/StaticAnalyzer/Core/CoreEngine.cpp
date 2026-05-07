@@ -356,8 +356,7 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
 
   // Process the entrance of the block.
   if (std::optional<CFGElement> E = L.getFirstElement()) {
-    ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(),
-                                           L.getBlock());
+    ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(), L.getBlock());
     ExprEng.processCFGElement(*E, Pred, 0);
   } else
     HandleBlockExit(L.getBlock(), Pred);
@@ -490,8 +489,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
 }
 
 void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
-  ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(),
-                                         CE.getEntry());
+  ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(), CE.getEntry());
   ExprEng.processCallEnter(CE, Pred);
 }
 

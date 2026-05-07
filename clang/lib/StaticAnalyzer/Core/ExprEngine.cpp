@@ -1127,10 +1127,8 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
 
   // Remove dead bindings and symbols.
   ExplodedNodeSet CleanedStates;
-  if (shouldRemoveDeadBindings(AMgr, currStmt, Pred,
-                               Pred->getStackFrame())) {
-    removeDead(Pred, CleanedStates, currStmt,
-                                    Pred->getStackFrame());
+  if (shouldRemoveDeadBindings(AMgr, currStmt, Pred, Pred->getStackFrame())) {
+    removeDead(Pred, CleanedStates, currStmt, Pred->getStackFrame());
   } else
     CleanedStates.insert(Pred);
 
@@ -2119,10 +2117,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       }
       else if (B->getOpcode() == BO_Comma) {
         ProgramStateRef state = Pred->getState();
-        Bldr.generateNode(B, Pred,
-                          state->BindExpr(B, Pred->getStackFrame(),
-                                          state->getSVal(B->getRHS(),
-                                                  Pred->getStackFrame())));
+        Bldr.generateNode(
+            B, Pred,
+            state->BindExpr(
+                B, Pred->getStackFrame(),
+                state->getSVal(B->getRHS(), Pred->getStackFrame())));
         break;
       }
 
@@ -2402,10 +2401,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       if (const auto *LastExpr =
               dyn_cast<Expr>(*SE->getSubStmt()->body_rbegin())) {
         ProgramStateRef state = Pred->getState();
-        Bldr.generateNode(SE, Pred,
-                          state->BindExpr(SE, Pred->getStackFrame(),
-                                          state->getSVal(LastExpr,
-                                                  Pred->getStackFrame())));
+        Bldr.generateNode(
+            SE, Pred,
+            state->BindExpr(SE, Pred->getStackFrame(),
+                            state->getSVal(LastExpr, Pred->getStackFrame())));
       }
       break;
     }
@@ -2431,13 +2430,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       if (const Expr *Result = PE->getResultExpr()) {
         SVal V = state->getSVal(Result, Pred->getStackFrame());
         Bldr.generateNode(
-            S, Pred,
-            state->BindExpr(cast<Expr>(S), Pred->getStackFrame(), V));
+            S, Pred, state->BindExpr(cast<Expr>(S), Pred->getStackFrame(), V));
       }
       else
         Bldr.generateNode(S, Pred,
-                          state->BindExpr(cast<Expr>(S),
-                                          Pred->getStackFrame(),
+                          state->BindExpr(cast<Expr>(S), Pred->getStackFrame(),
                                           UnknownVal()));
 
       Bldr.addNodes(Dst);
@@ -2454,8 +2451,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const Expr *E = OIE->getSubExpr();
       SVal V = state->getSVal(E, Pred->getStackFrame());
       Bldr.generateNode(
-          S, Pred,
-          state->BindExpr(cast<Expr>(S), Pred->getStackFrame(), V));
+          S, Pred, state->BindExpr(cast<Expr>(S), Pred->getStackFrame(), V));
       Bldr.addNodes(Dst);
       break;
     }
@@ -2501,8 +2497,8 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   // Build an Epsilon node from which we will restart the analyzes.
   // Note that CE is permitted to be NULL!
   static SimpleProgramPointTag PT("ExprEngine", "Replay without inlining");
-  ProgramPoint NewNodeLoc = EpsilonPoint(
-      BeforeProcessingCall->getStackFrame(), CE, nullptr, &PT);
+  ProgramPoint NewNodeLoc =
+      EpsilonPoint(BeforeProcessingCall->getStackFrame(), CE, nullptr, &PT);
   // Add the special flag to GDM to signal retrying with no inlining.
   // Note, changing the state ensures that we are not going to cache out.
   // NOTE: This stores the call site (CE) in the state trait, but the the
@@ -2774,8 +2770,8 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
     // Checkers have already ran on branch conditions, so the current
     // information as to whether the loop has more iteration becomes outdated
     // after this point.
-    State = ExprEngine::removeIterationState(State, ObjCFor,
-                                             N->getStackFrame());
+    State =
+        ExprEngine::removeIterationState(State, ObjCFor, N->getStackFrame());
     if (HasMoreIteraton)
       return std::pair<ProgramStateRef, ProgramStateRef>{State, nullptr};
     else
@@ -3058,8 +3054,7 @@ void ExprEngine::processEndOfFunction(ExplodedNode *Pred,
     }
   }
 
-  assert(areAllObjectsFullyConstructed(Pred->getState(),
-                                       Pred->getStackFrame(),
+  assert(areAllObjectsFullyConstructed(Pred->getState(), Pred->getStackFrame(),
                                        Pred->getStackFrame()->getParent()));
   ExplodedNodeSet Dst;
   if (Pred->getStackFrame()->inTopFrame()) {

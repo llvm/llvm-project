@@ -164,8 +164,8 @@ std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
       // FIXME: Remove respondsToCallback from CheckerContext;
       ProgramPoint::Kind K =  IsPreVisit ? ProgramPoint::PreStmtKind :
                                            ProgramPoint::PostStmtKind;
-      const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                Pred->getStackFrame(), checkFn.Checker);
+      const ProgramPoint &L = ProgramPoint::getProgramPoint(
+          S, K, Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
       checkFn(S, C);
     }
@@ -338,10 +338,8 @@ namespace {
       llvm::TimeTraceScope TimeScope(checkerScopeName("Loc", checkFn.Checker));
       ProgramPoint::Kind K =  IsLoad ? ProgramPoint::PreLoadKind :
                                        ProgramPoint::PreStoreKind;
-      const ProgramPoint &L =
-        ProgramPoint::getProgramPoint(NodeEx, K,
-                                      Pred->getStackFrame(),
-                                      checkFn.Checker);
+      const ProgramPoint &L = ProgramPoint::getProgramPoint(
+          NodeEx, K, Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
       checkFn(Loc, IsLoad, BoundEx, C);
     }
@@ -542,8 +540,8 @@ namespace {
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("BranchCond", checkFn.Checker));
-      ProgramPoint L = PostCondition(Condition, Pred->getStackFrame(),
-                                     checkFn.Checker);
+      ProgramPoint L =
+          PostCondition(Condition, Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
       checkFn(Condition, C);
     }
@@ -638,8 +636,8 @@ namespace {
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("DeadSymbols", checkFn.Checker));
-      const ProgramPoint &L = ProgramPoint::getProgramPoint(S, ProgarmPointKind,
-                                Pred->getStackFrame(), checkFn.Checker);
+      const ProgramPoint &L = ProgramPoint::getProgramPoint(
+          S, ProgarmPointKind, Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
 
       // Note, do not pass the statement to the checkers without letting them

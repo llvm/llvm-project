@@ -477,9 +477,8 @@ MacOSKeychainAPIChecker::generateAllocatedDataNotReleasedReport(
   const Stmt *AllocStmt = AllocNode->getStmtForDiagnostics();
 
   if (AllocStmt)
-    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocStmt,
-                                              C.getSourceManager(),
-                                              AllocNode->getStackFrame());
+    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
+        AllocStmt, C.getSourceManager(), AllocNode->getStackFrame());
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
       BT, os.str(), N, LocUsedForUniqueing,

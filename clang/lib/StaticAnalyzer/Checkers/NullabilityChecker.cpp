@@ -367,8 +367,7 @@ PathDiagnosticPieceRef NullabilityChecker::NullabilityBugVisitor::VisitNode(
           .str();
 
   // Generate the extra diagnostic.
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getStackFrame());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, InfoText, true);
 }
 

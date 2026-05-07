@@ -245,8 +245,7 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
 
   // Return the object as autoreleased.
   //  RetEffect RE = RetEffect::MakeNotOwned(ObjKind::ObjC);
-  if (SymbolRef sym =
-        state->getSVal(Ex, pred->getStackFrame()).getAsSymbol()) {
+  if (SymbolRef sym = state->getSVal(Ex, pred->getStackFrame()).getAsSymbol()) {
     QualType ResultTy = Ex->getType();
     state = setRefBinding(state, sym,
                           RefVal::makeNotOwned(ObjKind::ObjC, ResultTy));

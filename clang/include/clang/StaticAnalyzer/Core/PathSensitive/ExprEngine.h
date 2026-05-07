@@ -242,8 +242,7 @@ public:
   // where CurrLocationContext and CurrBlock are new member variables that
   // fulfill the roles of `currBldrCtx` in a more natural way.
   // This implementation is a temporary measure to allow a gradual transition.
-  void setCurrLocationContextAndBlock(const StackFrame *LC,
-                                      const CFGBlock *B) {
+  void setCurrLocationContextAndBlock(const StackFrame *LC, const CFGBlock *B) {
     // The current LocationContext and Block is reset at the beginning of
     // dispatchWorkItem. Ideally, this method should be called only once per
     // dispatchWorkItem call (= elementary analysis step); so the following
@@ -771,8 +770,7 @@ public:
 
   /// Create a new state in which the call return value is binded to the
   /// call origin expression.
-  ProgramStateRef bindReturnValue(const CallEvent &Call,
-                                  const StackFrame *SF,
+  ProgramStateRef bindReturnValue(const CallEvent &Call, const StackFrame *SF,
                                   ProgramStateRef State);
 
   /// Evaluate a call, running pre- and post-call checkers and allowing checkers
@@ -816,13 +814,14 @@ public:
 
   /// A convenient wrapper around computeObjectUnderConstruction
   /// and updateObjectsUnderConstruction.
-  std::pair<ProgramStateRef, SVal> handleConstructionContext(
-      const Expr *E, ProgramStateRef State, const NodeBuilderContext *BldrCtx,
-      const StackFrame *SF, const ConstructionContext *CC,
-      EvalCallOptions &CallOpts, unsigned Idx = 0) {
+  std::pair<ProgramStateRef, SVal>
+  handleConstructionContext(const Expr *E, ProgramStateRef State,
+                            const NodeBuilderContext *BldrCtx,
+                            const StackFrame *SF, const ConstructionContext *CC,
+                            EvalCallOptions &CallOpts, unsigned Idx = 0) {
 
-    SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(),
-                                            SF, CC, CallOpts, Idx);
+    SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(), SF,
+                                            CC, CallOpts, Idx);
     State = updateObjectsUnderConstruction(V, E, State, SF, CC, CallOpts);
 
     return std::make_pair(State, V);
