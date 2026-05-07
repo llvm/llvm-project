@@ -1024,7 +1024,8 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
       for (VPRecipeBase &R : EB->phis())
         for (VPValue *Op : R.operands()) {
           VPValue *Inner;
-          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))))
+          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))) &&
+              !match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Inner))))
             continue;
           auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Inner);
           if (!WideIV || !PredicatedIVs.contains(WideIV))
