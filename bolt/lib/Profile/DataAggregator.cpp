@@ -717,8 +717,8 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 Error DataAggregator::readProfile(BinaryContext &BC) {
   processProfile(BC);
 
-  for (auto &BFI : BC.getBinaryFunctions())
-    attachProfileToCFG(BFI.second);
+  if (Error E = DataReader::readProfile(BC))
+    return E;
 
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
@@ -745,6 +745,12 @@ bool DataAggregator::mayHaveProfileData(const BinaryFunction &Function) {
 }
 
 void DataAggregator::processProfile(BinaryContext &BC) {
+  // Set for DataReader::readProfile
+  NoLBRMode = opts::BasicAggregation;
+
+  // Set for DataReader::recordBranch and evaluateProfileData
+  BATMode = usesBAT();
+
   if (opts::BasicAggregation)
     processBasicEvents();
   else
@@ -758,11 +764,6 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     if (FuncBranchData *FBD = getBranchData(BF)) {
       BF.markProfiled(BinaryFunction::PF_BRANCH);
       BF.RawSampleCount = FBD->getNumExecutedBranches();
-      // Transfer entry counts from FBD to BF (mirrors
-      // DataReader::preprocessProfile). BB-level entry/landing-pad counts
-      // are bumped later in attachProfileToCFG.
-      BF.ExecutionCount = FBD->ExecutionCount;
-      BF.ExternEntryCount = FBD->ExternEntryCount;
     } else if (FuncBasicSampleData *FSD =
                    getFuncBasicSampleData(BF.getNames())) {
       BF.markProfiled(BinaryFunction::PF_BASIC);
@@ -774,6 +775,9 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     llvm::stable_sort(FuncBranches.second.Data);
     llvm::stable_sort(FuncBranches.second.EntryData);
   }
+
+  for (auto &FuncBasicSamples : NamesToBasicSamples)
+    llvm::stable_sort(FuncBasicSamples.second.Data);
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -892,15 +896,6 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
       ToAggrData->Name = DstFunc;
       setBranchData(*ToFunc, ToAggrData);
     }
-    // Mirror DataReader::parse: branches landing at the function entry
-    // (offset 0) bump FBD ExecutionCount; if originating from outside any
-    // known function, also bump ExternEntryCount. CFG entry/landing-pad
-    // BB exec counts are bumped later in attachProfileToCFG via EntryData.
-    if (To == 0) {
-      ToAggrData->ExecutionCount += Count;
-      if (!FromFunc)
-        ToAggrData->ExternEntryCount += Count;
-    }
   }
 
   if (FromAggrData)
@@ -949,9 +944,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     return false;
 
   // Treat recursive control transfers as inter-branches.
-  if (FromFunc == ToFunc && To != 0) {
+  if (FromFunc == ToFunc && To != 0)
     return doIntraBranch(*FromFunc, From, To, Count, Mispreds);
-  }
 
   return doInterBranch(FromFunc, ToFunc, From, To, Count, Mispreds);
 }

@@ -2875,13 +2875,23 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   }
 
+  bool dummyIsCudaAddressSpaceAgnostic{false};
   common::visit(common::visitors{
                     [&](const characteristics::DummyDataObject &object) {
                       dummyDataAttr = object.cudaDataAttr;
+                      dummyIsCudaAddressSpaceAgnostic =
+                          semantics::IsCUDAAddressSpaceAgnostic(object);
                     },
                     [&](const auto &) {},
                 },
       dummy.u);
+
+  if (actualDataAttr && dummyIsCudaAddressSpaceAgnostic) {
+    // TYPE(*) assumed-size/rank dummies model opaque buffers, so they can
+    // accept host or device storage. Keep a non-zero distance so an explicit
+    // DEVICE overload remains a better CUDA match.
+    return 3;
+  }
 
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
@@ -2929,6 +2939,24 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
       return 0;
     }
+  }
+  // An actual argument with the UseDevice attribute comes from an OpenACC
+  // host_data use_device clause: the variable itself is host-resident, but
+  // inside the host_data region it is referenced via its device address.
+  // It can therefore match either a host dummy or a device dummy in generic
+  // resolution. The matching distance disambiguates when both kinds of
+  // specifics exist:
+  //   - device dummy:           0 (best match: actual carries a device address)
+  //   - managed/unified dummy:  2 (acceptable: dummy is reachable from device)
+  //   - host dummy (no attr):   3 (acceptable: underlying variable is host)
+  if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
+    if (!dummyDataAttr)
+      return 3;
+    if (*dummyDataAttr == common::CUDADataAttr::Device)
+      return 0;
+    if (*dummyDataAttr == common::CUDADataAttr::Managed ||
+        *dummyDataAttr == common::CUDADataAttr::Unified)
+      return 2;
   }
   return cudaInfMatchingValue;
 }

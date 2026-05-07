@@ -224,6 +224,25 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
+    gpu.func @kernel_1() kernel {
+      gpu.return
+    }
+  }
+
+  func.func @launch_func_async_deps_and_async_object(%sz : index,
+                                                     %stream : !llvm.ptr) {
+    %dep = gpu.wait async
+    // expected-error@+1 {{cannot have both async dependencies and an explicit async object}}
+    %t = gpu.launch_func async [%dep] <%stream : !llvm.ptr> @kernels::@kernel_1
+        blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
     gpu.func @kernel_1(%arg1 : !llvm.ptr) {
       gpu.return
     }

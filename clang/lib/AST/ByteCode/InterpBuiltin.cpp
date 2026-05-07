@@ -1411,7 +1411,7 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
                                                     const CallExpr *Call,
-                                                    unsigned BuiltinOp) {
+                                                    bool IsAdd) {
   if (Call->getNumArgs() != 4 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType() ||
       !Call->getArg(2)->getType()->isIntegerType())
@@ -1428,9 +1428,6 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
   APSInt CarryIn;
   if (!popToAPSInt(S, Call->getArg(0), CarryIn))
     return false;
-
-  bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
-               BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
 
   unsigned BitWidth = LHS.getBitWidth();
   unsigned CarryInBit = CarryIn.ugt(0) ? 1 : 0;
@@ -1632,6 +1629,14 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
                                             const CallExpr *Call) {
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
+
+  unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs >= 1);
+
+  // Args are pushed in source order. The trailing sized/aligned delete
+  // operands are above the pointer on the stack.
+  for (unsigned I = NumArgs - 1; I != 0; --I)
+    discard(S.Stk, *S.getContext().classify(Call->getArg(I)));
 
   if (S.checkingPotentialConstantExpression()) {
     S.Stk.discard<Pointer>();
@@ -2769,8 +2774,8 @@ static bool interp__builtin_elementwise_int_binop(
 }
 
 static bool
-interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
-                         llvm::function_ref<APInt(const APSInt &)> PackFn) {
+interp__builtin_ia32_pack(InterpState &S, CodePtr, const CallExpr *E,
+                          llvm::function_ref<APInt(const APSInt &)> PackFn) {
   const auto *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
   [[maybe_unused]] const auto *VT1 =
       E->getArg(1)->getType()->castAs<VectorType>();
@@ -3226,8 +3231,8 @@ static bool interp__builtin_elementwise_triop_fp(
 }
 
 /// AVX512 predicated move: "Result = Mask[] ? LHS[] : RHS[]".
-static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
-                                   const CallExpr *Call) {
+static bool interp__builtin_ia32_select(InterpState &S, CodePtr OpPC,
+                                        const CallExpr *Call) {
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   APSInt Mask;
@@ -3263,8 +3268,8 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
 /// Scalar variant of AVX512 predicated select:
 /// Result[i] = (Mask bit 0) ? LHS[i] : RHS[i], but only element 0 may change.
 /// All other elements are taken from RHS.
-static bool interp__builtin_select_scalar(InterpState &S,
-                                          const CallExpr *Call) {
+static bool interp__builtin_ia32_select_scalar(InterpState &S,
+                                               const CallExpr *Call) {
   unsigned N =
       Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements();
 
@@ -3425,9 +3430,9 @@ static bool interp__builtin_elementwise_triop(
   return true;
 }
 
-static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
-                                               const CallExpr *Call,
-                                               unsigned ID) {
+static bool interp__builtin_ia32_extract_vector(InterpState &S, CodePtr OpPC,
+                                                const CallExpr *Call,
+                                                unsigned ID) {
   assert(Call->getNumArgs() == 2);
 
   APSInt ImmAPS;
@@ -3462,10 +3467,10 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_x86_extract_vector_masked(InterpState &S,
-                                                      CodePtr OpPC,
-                                                      const CallExpr *Call,
-                                                      unsigned ID) {
+static bool interp__builtin_ia32_extract_vector_masked(InterpState &S,
+                                                       CodePtr OpPC,
+                                                       const CallExpr *Call,
+                                                       unsigned ID) {
   assert(Call->getNumArgs() == 4);
 
   APSInt MaskAPS;
@@ -3507,9 +3512,9 @@ static bool interp__builtin_x86_extract_vector_masked(InterpState &S,
   return true;
 }
 
-static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
-                                                 const CallExpr *Call,
-                                                 unsigned ID) {
+static bool interp__builtin_ia32_insert_subvector(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *Call,
+                                                  unsigned ID) {
   assert(Call->getNumArgs() == 3);
 
   APSInt ImmAPS;
@@ -3638,8 +3643,8 @@ static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
-                                    const CallExpr *Call, unsigned ID) {
+static bool interp__builtin_ia32_vec_ext(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 2);
 
   APSInt ImmAPS;
@@ -3667,8 +3672,8 @@ static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
-                                    const CallExpr *Call, unsigned ID) {
+static bool interp__builtin_ia32_vec_set(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 3);
 
   APSInt ImmAPS;
@@ -3887,7 +3892,6 @@ static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
                                           const CallExpr *Call, bool IsMasked,
                                           bool HasRounding) {
-
   APSInt MaskVal;
   Pointer PassThrough;
   Pointer Src;
@@ -4325,9 +4329,9 @@ static bool interp__builtin_ia32_multishiftqb(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp_builtin_ia32_gfni_affine(InterpState &S, CodePtr OpPC,
-                                            const CallExpr *Call,
-                                            bool Inverse) {
+static bool interp__builtin_ia32_gfni_affine(InterpState &S, CodePtr OpPC,
+                                             const CallExpr *Call,
+                                             bool Inverse) {
   assert(Call->getNumArgs() == 3);
   QualType XType = Call->getArg(0)->getType();
   QualType AType = Call->getArg(1)->getType();
@@ -5121,10 +5125,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
+    return interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, Call,
+                                                   /*IsAdd=*/true);
+
   case clang::X86::BI__builtin_ia32_subborrow_u32:
   case clang::X86::BI__builtin_ia32_subborrow_u64:
     return interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, Call,
-                                                   BuiltinID);
+                                                   /*IsAdd=*/false);
 
   case Builtin::BI__builtin_os_log_format_buffer_size:
     return interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, Call);
@@ -5220,7 +5227,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
   case X86::BI__builtin_ia32_vextractf128_si256:
-    return interp__builtin_x86_extract_vector(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_extract_vector(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_extractf32x4_256_mask:
   case X86::BI__builtin_ia32_extractf32x4_mask:
@@ -5234,7 +5241,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_extracti64x2_256_mask:
   case X86::BI__builtin_ia32_extracti64x2_512_mask:
   case X86::BI__builtin_ia32_extracti64x4_mask:
-    return interp__builtin_x86_extract_vector_masked(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_extract_vector_masked(S, OpPC, Call, BuiltinID);
 
   case clang::X86::BI__builtin_ia32_pmulhrsw128:
   case clang::X86::BI__builtin_ia32_pmulhrsw256:
@@ -5402,7 +5409,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_packssdw128:
   case clang::X86::BI__builtin_ia32_packssdw256:
   case clang::X86::BI__builtin_ia32_packssdw512:
-    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+    return interp__builtin_ia32_pack(S, OpPC, Call, [](const APSInt &Src) {
       return APInt(Src).truncSSat(Src.getBitWidth() / 2);
     });
   case clang::X86::BI__builtin_ia32_packusdw128:
@@ -5411,7 +5418,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_packuswb128:
   case clang::X86::BI__builtin_ia32_packuswb256:
   case clang::X86::BI__builtin_ia32_packuswb512:
-    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+    return interp__builtin_ia32_pack(S, OpPC, Call, [](const APSInt &Src) {
       return APInt(Src).truncSSatU(Src.getBitWidth() / 2);
     });
 
@@ -5419,7 +5426,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_selectsd_128:
   case clang::X86::BI__builtin_ia32_selectsh_128:
   case clang::X86::BI__builtin_ia32_selectsbf_128:
-    return interp__builtin_select_scalar(S, Call);
+    return interp__builtin_ia32_select_scalar(S, Call);
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
   case clang::X86::BI__builtin_ia32_vprotqi:
@@ -5736,7 +5743,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_128:
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
-    return interp__builtin_select(S, OpPC, Call);
+    return interp__builtin_ia32_select(S, OpPC, Call);
 
   case X86::BI__builtin_ia32_shufps:
   case X86::BI__builtin_ia32_shufps256:
@@ -5780,11 +5787,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vgf2p8affineinvqb_v16qi:
   case X86::BI__builtin_ia32_vgf2p8affineinvqb_v32qi:
   case X86::BI__builtin_ia32_vgf2p8affineinvqb_v64qi:
-    return interp_builtin_ia32_gfni_affine(S, OpPC, Call, true);
+    return interp__builtin_ia32_gfni_affine(S, OpPC, Call, true);
   case X86::BI__builtin_ia32_vgf2p8affineqb_v16qi:
   case X86::BI__builtin_ia32_vgf2p8affineqb_v32qi:
   case X86::BI__builtin_ia32_vgf2p8affineqb_v64qi:
-    return interp_builtin_ia32_gfni_affine(S, OpPC, Call, false);
+    return interp__builtin_ia32_gfni_affine(S, OpPC, Call, false);
 
   case X86::BI__builtin_ia32_vgf2p8mulb_v16qi:
   case X86::BI__builtin_ia32_vgf2p8mulb_v32qi:
@@ -6228,7 +6235,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vinsertf128_pd256:
   case X86::BI__builtin_ia32_vinsertf128_si256:
   case X86::BI__builtin_ia32_insert128i256:
-    return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_insert_subvector(S, OpPC, Call, BuiltinID);
 
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256:
@@ -6244,7 +6251,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_ext_v8si:
   case X86::BI__builtin_ia32_vec_ext_v4di:
   case X86::BI__builtin_ia32_vec_ext_v4sf:
-    return interp__builtin_vec_ext(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_vec_ext(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_vec_set_v4hi:
   case X86::BI__builtin_ia32_vec_set_v16qi:
@@ -6255,7 +6262,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
-    return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_vec_set(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_cvtb2mask128:
   case X86::BI__builtin_ia32_cvtb2mask256:

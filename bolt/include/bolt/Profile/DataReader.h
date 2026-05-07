@@ -92,12 +92,6 @@ struct FuncBranchData {
   ContainerTy Data;
   ContainerTy EntryData;
 
-  /// Total execution count for the function.
-  int64_t ExecutionCount{0};
-
-  /// Total entry count from external code for the function.
-  uint64_t ExternEntryCount{0};
-
   /// Indicate if the data was used.
   bool Used{false};
 
@@ -114,6 +108,9 @@ struct FuncBranchData {
   /// Returns the total number of executed branches in this function
   /// by counting the number of executed branches for each BranchInfo
   uint64_t getNumExecutedBranches() const;
+
+  /// Set entry counts derived to \p BF.
+  void setEntryCounts(BinaryFunction &BF) const;
 
   /// Aggregation helpers
   DenseMap<uint64_t, DenseMap<uint64_t, size_t>> IntraIndex;
@@ -292,15 +289,6 @@ protected:
 
   /// Convert function-level branch data into instruction annotations.
   void convertBranchData(BinaryFunction &BF) const;
-
-  /// Attach the function's \c FuncBranchData to its CFG: bump entry /
-  /// landing-pad BB execution counts from \c FBD->EntryData; attach
-  /// intra-function edges via \c recordBranch from \c FBD->Data; and
-  /// convert call-site branch data into instruction annotations via
-  /// \c convertBranchData. Shared between \c DataReader::readProfile (after
-  /// \c matchProfileData) and \c DataAggregator::readProfile (after the
-  /// parser populates \c FBD).
-  void attachProfileToCFG(BinaryFunction &BF) const;
 
   /// Update function \p BF profile with a taken branch.
   /// \p Count could be 0 if verification of the branch is required.

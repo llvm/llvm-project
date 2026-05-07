@@ -327,3 +327,8 @@ v_cvt_scale_pk16_bf16_bf6 v[10:17], s[20:22], 0xcf00
 // GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk16_bf16_bf6 v[10:17], s[20:22], 0xcf00
 // GFX125X-ERR-NEXT:{{^}}                                    ^
+
+v_add_f64_e64 v[4:5], lit64(101.0), v[8:9]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_add_f64_e64 v[4:5], lit64(101.0), v[8:9]
+// GFX125X-ERR-NEXT:{{^}}                            ^
