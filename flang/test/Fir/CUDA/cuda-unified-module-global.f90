@@ -1,13 +1,12 @@
 // End-to-end check that under -gpu=mem:unified, a plain host module-scope
-// variable referenced from a global kernel (issue 2573):
-//   1. is mirrored into the GPU module by CUFDeviceGlobal so nvlink can
-//      resolve the device-side reference; and
+// variable referenced from a global kernel:
+//   1. is mirrored into the GPU module by CUFDeviceGlobal as a no-body
+//      external declaration (so PTX gets `.extern .global ...`); and
 //   2. is registered with the CUDA driver via
 //      _FortranACUFRegisterExternalVariable (= __cudaRegisterHostVar) from
-//      __cudaFortranConstructor, so the device-side symbol is mapped to the
-//      host-resident storage at module-load time and HMM/ATS handles
-//      migration -- avoiding the bug where host and device kept separate
-//      copies that never synced.
+//      __cudaFortranConstructor, so the device-side symbol is mapped to
+//      the host-resident storage at module-load time and HMM/ATS handles
+//      migration.
 //
 // Pipeline: cuf-device-global with cuda-unified=true (clones the host
 // global into the GPU module as an external declaration), then
