@@ -789,17 +789,12 @@ int main(int argc, char const *argv[]) {
 #else
   signal(SIGPIPE, SIG_IGN);
 
-  // Install a no-op handler for SIGURG so the signal thread can use
-  // pthread_kill(main_tid, SIGURG) to interrupt blocking syscalls (e.g.
-  // Python's time.sleep or input()) on the main thread without causing the
-  // process to terminate or re-entering the SIGINT callback.
-  struct sigaction wakeup_action = {};
-  wakeup_action.sa_handler = [](int) {};
-  sigemptyset(&wakeup_action.sa_mask);
-  sigaction(SIGURG, &wakeup_action, nullptr);
-
   // Capture the main thread's id so the signal thread can target it.
   pthread_t main_thread = pthread_self();
+
+  // Set when the signal thread sends itself a SIGINT to wake the main thread.
+  // The next SIGINT callback invocation observes this flag and skips the work.
+  std::atomic<bool> skip_next_sigint{false};
 
   // Handle signals in a MainLoop running on a separate thread.
   MainLoop signal_loop;
@@ -808,6 +803,11 @@ int main(int argc, char const *argv[]) {
   auto sigint_handler = signal_loop.RegisterSignal(
       SIGINT,
       [&, main_thread](MainLoopBase &) {
+        // Skip the self-sent wakeup SIGINT queued at the end of the previous
+        // invocation.
+        if (skip_next_sigint.exchange(false))
+          return;
+
         // Temporarily restore the default disposition so that a second SIGINT
         // delivered while DispatchInputInterrupt is running hard-terminates
         // the process. This preserves the "double Ctrl-C to force exit"
@@ -831,8 +831,10 @@ int main(int argc, char const *argv[]) {
         // Wake the main thread so any blocking syscall (e.g. the Python REPL
         // waiting on input or sleeping) returns with EINTR. This lets Python
         // observe the pending interrupt queued by DispatchInputInterrupt and
-        // raise KeyboardInterrupt.
-        pthread_kill(main_thread, SIGURG);
+        // raise KeyboardInterrupt. Flag the resulting callback invocation so
+        // it's skipped rather than re-running DispatchInputInterrupt.
+        skip_next_sigint.store(true);
+        pthread_kill(main_thread, SIGINT);
       },
       signal_status);
   assert(sigint_handler && signal_status.Success());
