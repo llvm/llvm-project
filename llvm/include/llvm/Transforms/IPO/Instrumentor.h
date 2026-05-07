@@ -34,6 +34,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <tuple>
 
@@ -273,17 +274,15 @@ struct BaseConfigurationOption {
 
   /// Create a boolean option with \p Name name, \p Description description and
   /// \p DefaultValue as boolean default value.
-  static BaseConfigurationOption *createBoolOption(InstrumentationConfig &IC,
-                                                   StringRef Name,
-                                                   StringRef Description,
-                                                   bool DefaultValue);
+  static std::unique_ptr<BaseConfigurationOption>
+  createBoolOption(InstrumentationConfig &IC, StringRef Name,
+                   StringRef Description, bool DefaultValue);
 
   /// Create a string option with \p Name name, \p Description description and
   /// \p DefaultValue as string default value.
-  static BaseConfigurationOption *createStringOption(InstrumentationConfig &IC,
-                                                     StringRef Name,
-                                                     StringRef Description,
-                                                     StringRef DefaultValue);
+  static std::unique_ptr<BaseConfigurationOption>
+  createStringOption(InstrumentationConfig &IC, StringRef Name,
+                     StringRef Description, StringRef DefaultValue);
 
   /// Helper union that holds any possible option type.
   union ValueTy {
@@ -384,10 +383,10 @@ struct InstrumentationConfig {
   SmallVector<BaseConfigurationOption *> BaseConfigurationOptions;
 
   /// The base configuration options.
-  BaseConfigurationOption *RuntimePrefix;
-  BaseConfigurationOption *TargetRegex;
-  BaseConfigurationOption *HostEnabled;
-  BaseConfigurationOption *GPUEnabled;
+  std::unique_ptr<BaseConfigurationOption> RuntimePrefix;
+  std::unique_ptr<BaseConfigurationOption> TargetRegex;
+  std::unique_ptr<BaseConfigurationOption> HostEnabled;
+  std::unique_ptr<BaseConfigurationOption> GPUEnabled;
 
   /// The map registered instrumentation opportunities. The map is indexed by
   /// the instrumentation location kind and then by the opportunity name. Notice
