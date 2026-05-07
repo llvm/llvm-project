@@ -1455,7 +1455,7 @@ public:
            const Twine &NameStr = "", ///< Name of the instruction
            Instruction *FlagsSource = nullptr)
       : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
-                RHS, NameStr, nullptr) {
+                RHS, NameStr) {
     if (FlagsSource)
       copyIRFlags(FlagsSource);
     AssertOK();

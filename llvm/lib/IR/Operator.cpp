@@ -302,8 +302,7 @@ void FastMathFlags::print(raw_ostream &O) const {
 }
 
 FastMathFlags &FPMathOperator::getFastMathFlagsImpl() {
-  Value *V = this;
-  auto *I = cast<Instruction>(V);
+  auto *I = cast<Instruction>(this);
 
   if (FastMathFlagsStorage *Op = dyn_cast<FPUnaryOperator>(I))
     return Op->FMF;
