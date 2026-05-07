@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -506,22 +507,39 @@ bool SLSHardeningInserter::hardenBLRs(MachineModuleInfo &MMI,
 }
 
 namespace {
-class AArch64SLSHardening : public ThunkInserterPass<SLSHardeningInserter> {
+class AArch64SLSHardeningLegacy : public ThunkInserterPass<SLSHardeningInserter> {
 public:
   static char ID;
 
-  AArch64SLSHardening() : ThunkInserterPass(ID) {}
+  AArch64SLSHardeningLegacy() : ThunkInserterPass(ID) {}
 
   StringRef getPassName() const override { return AARCH64_SLS_HARDENING_NAME; }
 };
 
 } // end anonymous namespace
 
-char AArch64SLSHardening::ID = 0;
+char AArch64SLSHardeningLegacy::ID = 0;
 
-INITIALIZE_PASS(AArch64SLSHardening, "aarch64-sls-hardening",
+INITIALIZE_PASS(AArch64SLSHardeningLegacy, "aarch64-sls-hardening",
                 AARCH64_SLS_HARDENING_NAME, false, false)
 
-FunctionPass *llvm::createAArch64SLSHardeningPass() {
-  return new AArch64SLSHardening();
+FunctionPass *llvm::createAArch64SLSHardeningLegacyPass() {
+  return new AArch64SLSHardeningLegacy();
+}
+
+PreservedAnalyses AArch64SLSHardeningPass::run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  auto *MMI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<MachineModuleAnalysis>(
+                      *MF.getFunction().getParent());
+  assert(MMI && "MachineModuleAnalysis must be available");
+
+  SLSHardeningInserter Inserter;
+  Inserter.init(*MF.getFunction().getParent());
+
+  if (Inserter.run(MMI->getMMI(), MF)) {
+    auto PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
 }
