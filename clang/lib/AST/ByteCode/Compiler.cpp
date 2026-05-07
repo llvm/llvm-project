@@ -2665,6 +2665,13 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   }
 
   if (!isa<FieldDecl>(Member)) {
+    // A non-static member function access only makes sense as part of the
+    // enclosing call here. Don't try to evaluate it in isolation.
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(Member);
+        MD && !MD->isStatic()) {
+      return false;
+    }
+
     if (!this->discard(Base) && !this->emitSideEffect(E))
       return false;
 

@@ -318,14 +318,14 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
   return false;
 }
 
-static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
+static MCRegister allocateRVVReg(MVT LocVT, unsigned ValNo, CCState &State,
                                  const RISCVTargetLowering &TLI) {
-  const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
+  const TargetRegisterClass *RC = TLI.getRegClassFor(LocVT);
   if (RC == &RISCV::VRRegClass) {
     // Assign the first mask argument to V0.
     // This is an interim calling convention and it may be changed in the
     // future.
-    if (ValVT.getVectorElementType() == MVT::i1)
+    if (LocVT.getVectorElementType() == MVT::i1)
       if (MCRegister Reg = State.AllocateReg(RISCV::V0))
         return Reg;
     return State.AllocateReg(ArgVRs);
@@ -368,6 +368,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo,
                           ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
                           CCState &State, bool IsRet) {
+  assert(ValVT == LocVT && "Expected ValVT and LocVT to match");
   const MachineFunction &MF = State.getMachineFunction();
   const DataLayout &DL = MF.getDataLayout();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -400,16 +401,15 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // Any return value split in to more than two values can't be returned
   // directly. Vectors are returned via the available vector registers.
-  if ((!LocVT.isVector() || Subtarget.isPExtPackedType(ValVT)) && IsRet &&
+  if ((!LocVT.isVector() || Subtarget.isPExtPackedType(LocVT)) && IsRet &&
       ValNo > 1)
     return true;
 
-  // UseGPRForF16_F32 if targeting one of the soft-float ABIs, if passing a
-  // variadic argument, or if no F16/F32 argument registers are available.
-  bool UseGPRForF16_F32 = true;
-  // UseGPRForF64 if targeting soft-float ABIs or an FLEN=32 ABI, if passing a
-  // variadic argument, or if no F64 argument registers are available.
-  bool UseGPRForF64 = true;
+  // AllowFPRForF16_F32 if targeting an FLEN>=32 ABI and the argument isn't
+  // variadic.
+  bool AllowFPRForF16_F32 = false;
+  // UseFPRForF64 if targeting an FLEN>=64 ABI and the argument isn't variadic.
+  bool AllowFPRForF64 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   switch (ABI) {
@@ -420,46 +420,45 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   case RISCVABI::ABI_LP64:
   case RISCVABI::ABI_LP64E:
     break;
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
-    UseGPRForF16_F32 = ArgFlags.isVarArg();
-    break;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
-    UseGPRForF16_F32 = ArgFlags.isVarArg();
-    UseGPRForF64 = ArgFlags.isVarArg();
+    AllowFPRForF64 = !ArgFlags.isVarArg();
+    [[fallthrough]];
+  case RISCVABI::ABI_ILP32F:
+  case RISCVABI::ABI_LP64F:
+    AllowFPRForF16_F32 = !ArgFlags.isVarArg();
     break;
   }
 
-  if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && !UseGPRForF16_F32) {
+  if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR16s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if (LocVT == MVT::f32 && !UseGPRForF16_F32) {
+  if (LocVT == MVT::f32 && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR32s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if (LocVT == MVT::f64 && !UseGPRForF64) {
+  if (LocVT == MVT::f64 && AllowFPRForF64) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR64s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if ((ValVT == MVT::f16 && Subtarget.hasStdExtZhinxmin())) {
+  if (LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin()) {
     if (MCRegister Reg = State.AllocateReg(getArgGPR16s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if (ValVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
+  if (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
     if (MCRegister Reg = State.AllocateReg(getArgGPR32s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
@@ -555,7 +554,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+  if ((LocVT.isScalarInteger() || Subtarget.isPExtPackedType(LocVT)) &&
       ArgFlags.isSplitEnd() && PendingLocs.size() <= 1) {
     assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
@@ -572,7 +571,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // values. Split vectors excluding P extension packed vectors(see
   // isPExtPackedType) are passed via a mix of registers and indirectly, so
   // treat them as we would any other argument.
-  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+  if ((LocVT.isScalarInteger() || Subtarget.isPExtPackedType(LocVT)) &&
       (ArgFlags.isSplit() || !PendingLocs.empty())) {
     PendingLocs.push_back(
         CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
@@ -589,13 +588,13 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // FIXME: If P extension and V extension are enabled at the same time,
   // who should go first?
-  if (!Subtarget.isPExtPackedType(ValVT) &&
-      (ValVT.isVector() || ValVT.isRISCVVectorTuple())) {
-    Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
+  if (!Subtarget.isPExtPackedType(LocVT) &&
+      (LocVT.isVector() || LocVT.isRISCVVectorTuple())) {
+    Reg = allocateRVVReg(LocVT, ValNo, State, TLI);
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
-      if (ValVT.isFixedLengthVector()) {
+      if (LocVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
         State.addLoc(
             CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -610,14 +609,14 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
       if ((Reg = State.AllocateReg(ArgGPRs))) {
         LocVT = XLenVT;
         LocInfo = CCValAssign::Indirect;
-      } else if (ValVT.isScalableVector()) {
+      } else if (LocVT.isScalableVector()) {
         LocVT = XLenVT;
         LocInfo = CCValAssign::Indirect;
       } else {
-        StoreSizeBytes = ValVT.getStoreSize();
+        StoreSizeBytes = LocVT.getStoreSize();
         // Align vectors to their element sizes, being careful for vXi1
         // vectors.
-        StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+        StackAlign = MaybeAlign(LocVT.getScalarSizeInBits() / 8).valueOrOne();
       }
     }
   } else {
@@ -647,10 +646,10 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  assert(((ValVT.isFloatingPoint() && !ValVT.isVector()) || LocVT == XLenVT ||
+  assert(((LocVT.isFloatingPoint() && !LocVT.isVector()) || LocVT == XLenVT ||
           Subtarget.isPExtPackedType(LocVT) ||
           (TLI.getSubtarget().hasVInstructions() &&
-           (ValVT.isVector() || ValVT.isRISCVVectorTuple()))) &&
+           (LocVT.isVector() || LocVT.isRISCVVectorTuple()))) &&
          "Expected an XLenVT or vector types at this stage");
 
   if (Reg) {

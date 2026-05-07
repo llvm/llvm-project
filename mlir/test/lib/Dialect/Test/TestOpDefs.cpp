@@ -1546,6 +1546,30 @@ bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
   return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
 }
 
+void TestRegionTypeChangerOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypeChangerOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypeChangerOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypeChangerOp::areTypesCompatible(Type lhs, Type rhs) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // TestVersionedOpA
 //===----------------------------------------------------------------------===//

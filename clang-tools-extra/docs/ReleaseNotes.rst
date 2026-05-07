@@ -79,6 +79,14 @@ Code completion
 - Now also provides include files without extension, if they are in a directory
   only called ``include``.
 
+- Changed completion-style default to ``detailed``. This means function
+  overloads will no longer be bundled together, but instead each have
+  their own completion item. This gives the user a better overview of the
+  possible overloads and also when accepting the item it will generate
+  placeholder parameters, which was not possible due to ambiguity with
+  ``bundled``. To change back to the old behaviour, pass the argument
+  ``--completion-style=bundled`` to clangd.
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -423,6 +431,10 @@ Changes in existing checks
 - Improved :doc:`modernize-redundant-void-arg
   <clang-tidy/checks/modernize/redundant-void-arg>` check to work in C23.
 
+- Improved :doc:`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
+  when type qualifiers and/or reference modifiers are used with parameters.
+
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on
   private deleted functions, if they do not have a public overload or are a
@@ -497,9 +509,13 @@ Changes in existing checks
     ``empty`` function.
 
 - Improved :doc:`readability-convert-member-functions-to-static
-  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
-  avoiding false positive on ``const`` member functions to static when they are
-  a part of const/non-const overload pair.
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check:
+
+  - Fixing a false positive where ``const`` member functions were incorrectly
+    flagged when they are part of a const/non-const overload pair.
+
+  - Correctly detecting ``this`` usage when a generic lambda calls an overloaded
+    member function.
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
@@ -559,6 +575,9 @@ Changes in existing checks
     implicit conversions of logical operator results (``&&``, ``||``, ``!``)
     to ``bool`` in C.
 
+  - Fixed a false positive where ``bool`` conditions in C conditional
+    operators were diagnosed as implicit conversions to ``int``.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
@@ -567,6 +586,14 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check by adding the
+  `IgnoreImplicitCasts` option (default `false`) to flag casts as redundant
+  when at least one operand of a binary operation matches the cast type due to
+  implicit conversion. For example, ``static_cast<float>(1.0f + 1)`` is now
+  identified as redundant since ``1`` is implicitly converted to ``float``.
+  Setting this option to `true` restores the previous behavior.
 
 - Improved :doc:`readability-redundant-member-init
   <clang-tidy/checks/readability/redundant-member-init>` check by adding an

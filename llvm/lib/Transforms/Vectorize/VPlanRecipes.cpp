@@ -19,6 +19,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/IVDescriptors.h"
@@ -222,6 +223,28 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   default:
     return true;
+  }
+}
+
+bool VPRecipeBase::isSafeToSpeculativelyExecute() const {
+  switch (getVPRecipeID()) {
+  default:
+    return false;
+  case VPInstructionSC: {
+    unsigned Opcode = cast<VPInstruction>(this)->getOpcode();
+    if (Instruction::isCast(Opcode))
+      return true;
+
+    switch (Opcode) {
+    default:
+      return false;
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::Mul:
+    case Instruction::GetElementPtr:
+      return true;
+    }
+  }
   }
 }
 
@@ -1973,12 +1996,10 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   }
 
   Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
-  SmallVector<Type *> ParamTys;
-  for (const VPValue *Op : Operands) {
-    ParamTys.push_back(VF.isVector()
-                           ? toVectorTy(Ctx.Types.inferScalarType(Op), VF)
-                           : Ctx.Types.inferScalarType(Op));
-  }
+  SmallVector<Type *> ParamTys =
+      map_to_vector(Operands, [&](const VPValue *Op) {
+        return toVectorTy(Ctx.Types.inferScalarType(Op), VF);
+      });
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(
@@ -3421,24 +3442,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     for (const VPValue *ArgOp : ArgOps)
       Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
 
-    if (CalledFn->isIntrinsic())
-      // Various pseudo-intrinsics with costs of 0 are scalarized instead of
-      // vectorized via VPWidenIntrinsicRecipe. Return 0 for them early.
-      switch (CalledFn->getIntrinsicID()) {
-      case Intrinsic::assume:
-      case Intrinsic::lifetime_end:
-      case Intrinsic::lifetime_start:
-      case Intrinsic::sideeffect:
-      case Intrinsic::pseudoprobe:
-      case Intrinsic::experimental_noalias_scope_decl: {
-        assert(getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
-                                    ElementCount::getFixed(1), Ctx) == 0 &&
-               "scalarizing intrinsic should be free");
-        return InstructionCost(0);
-      }
-      default:
-        break;
-      }
+    if (CalledFn->isIntrinsic() &&
+        VPCostContext::isFreeScalarIntrinsic(CalledFn->getIntrinsicID())) {
+      assert(getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
+                                  ElementCount::getFixed(1), Ctx) == 0 &&
+             "scalarizing intrinsic should be free");
+      return InstructionCost(0);
+    }
 
     Type *ResultTy = Ctx.Types.inferScalarType(this);
     InstructionCost ScalarCallCost =
