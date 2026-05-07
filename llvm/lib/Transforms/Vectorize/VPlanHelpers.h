@@ -197,6 +197,7 @@ struct VPTransformState {
   /// Hold the index to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
+  /// TODO: This is now only used in asserts. Remove as follow-up.
   std::optional<VPLane> Lane;
 
   struct DataState {

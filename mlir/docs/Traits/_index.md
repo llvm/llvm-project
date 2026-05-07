@@ -272,6 +272,16 @@ trait. In particular, broadcasting behavior is not allowed. See the comments on
 This trait provides APIs and verifiers for operations that can only be nested
 within regions that are attached to operations of `ParentOpType`.
 
+### HasAncestor
+
+*   `OpTrait::HasAncestor<typename AncestorOpType>` -- `HasAncestor<string op>`
+    or `AncestorOneOf<list<string> opList>`
+
+This trait provides APIs and verifiers for operations that must appear somewhere
+inside a region attached to an operation of `AncestorOpType`. Unlike `HasParent`,
+which checks only the immediate parent, `HasAncestor` walks the full ancestor
+chain.
+
 ### IsolatedFromAbove
 
 *   `OpTrait::IsIsolatedFromAbove` -- `IsolatedFromAbove`

@@ -846,7 +846,8 @@ void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
+bool matchBuildVectorToDup(MachineInstr &MI, Register &Src,
+                           MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
 
   // Later, during selection, we'll try to match imported patterns using
@@ -855,14 +856,30 @@ bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (isBuildVectorAllZeros(MI, MRI) || isBuildVectorAllOnes(MI, MRI))
     return false;
 
-  return getAArch64VectorSplat(MI, MRI).has_value();
+  // Find buildvector which always uses the same register or undef. Return true
+  // so long as at least 2 registers were found (not all-undef or only 1
+  // non-undef entry).
+  Register Reg = 0;
+  unsigned NumNonUndef = 0;
+  for (const MachineOperand &Op : drop_begin(MI.operands())) {
+    if (getOpcodeDef<GImplicitDef>(Op.getReg(), MRI))
+      continue;
+
+    if (!Reg)
+      Reg = Op.getReg();
+    else if (Op.getReg() != Reg)
+      return false;
+    NumNonUndef++;
+  }
+
+  Src = Reg;
+  return Reg && NumNonUndef > 1;
 }
 
-void applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) {
+void applyBuildVectorToDup(MachineInstr &MI, Register Src,
+                           MachineRegisterInfo &MRI, MachineIRBuilder &B) {
   B.setInstrAndDebugLoc(MI);
-  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()},
-               {MI.getOperand(1).getReg()});
+  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()}, {Src});
   MI.eraseFromParent();
 }
 

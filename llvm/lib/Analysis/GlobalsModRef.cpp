@@ -773,7 +773,7 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
       if (auto *CPN = dyn_cast<ConstantPointerNull>(Input)) {
         // Null pointer cannot alias with a non-addr-taken global.
         const Function *F = CtxI->getFunction();
-        if (!NullPointerIsDefined(F, CPN->getType()->getAddressSpace()))
+        if (!NullPointerIsDefined(F, CPN->getPointerType()->getAddressSpace()))
           continue;
       }
 
