@@ -8,6 +8,7 @@
 
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -1124,6 +1125,15 @@ bool HasCUDAComponent(const Symbol &symbol) {
     }
   }
   return false;
+}
+
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &dummy) {
+  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
+      (dummy.type.attrs().test(
+           evaluate::characteristics::TypeAndShape::Attr::AssumedSize) ||
+          dummy.type.attrs().test(
+              evaluate::characteristics::TypeAndShape::Attr::AssumedRank));
 }
 
 UltimateComponentIterator::const_iterator

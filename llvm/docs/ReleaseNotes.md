@@ -64,6 +64,10 @@ Makes programs 10x faster by doing Special New Thing.
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* `ConstantPointerNull` can now represent fixed and scalable vector splats of
+  null pointers. Such constants may print as `splat (ptr null)` instead of
+  `zeroinitializer`.
+
 * LLVM IR floating-point literals have greatly changed:
 
   * The old hexadecimal bitwise representation is deprecated and will be removed
@@ -80,6 +84,13 @@ Makes programs 10x faster by doing Special New Thing.
   zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
   will be reintroduced in the future with bitwise-all-zeros semantics
   to support non-zero null pointers.
+
+* Added support for specifying the null pointer bit representation per
+  address space in `DataLayout`. Pointer specifications (`p`) accept new
+  flags: `z` (null is all-zeros) and `o` (null is all-ones). Address
+  spaces without an explicit flag default to all-zeros. See the
+  `DataLayout` section of the
+  [LangRef](https://llvm.org/docs/LangRef.html#data-layout) for details.
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 
@@ -103,6 +114,13 @@ Makes programs 10x faster by doing Special New Thing.
   * Added ``create_symlink``, which always creates a symbolic link. On windows
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
+
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
 
 ### Changes to building LLVM
 
@@ -180,6 +198,7 @@ Makes programs 10x faster by doing Special New Thing.
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
+* Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 
 ### Changes to the WebAssembly Backend
 
@@ -232,6 +251,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
+* The `apropos` command now highlights matching keywords in its output when color is enabled.
 
 #### Deprecated APIs
 

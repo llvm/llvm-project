@@ -14,5 +14,7 @@ define i32 @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %fmt = alloca [4 x i8], align 1 => ptr 0x8 [fmt]
 ; CHECK-NEXT:   store [4 x i8] c"%m\0A\00", ptr %fmt, align 1
-; CHECK-NEXT: Immediate UB detected: Unknown or unsupported format specifier in printf.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   %1 = call i32 (ptr, ...) @printf(ptr %fmt, i32 0) at @main
+; CHECK-NEXT: Immediate UB detected: Unknown or unsupported format specifier 'm' in printf.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
