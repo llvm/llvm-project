@@ -186,14 +186,14 @@ define amdgpu_kernel void @extractelement_8(i32 %arg) {
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_3 = extractelement <4 x i8> poison, i32 3
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_3 = extractelement <5 x i8> poison, i32 3
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_3 = extractelement <8 x i8> poison, i32 3
-; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = extractelement <2 x i8> undef, i32 %arg
-; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = extractelement <4 x i8> undef, i32 %arg
-; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = extractelement <8 x i8> undef, i32 %arg
-; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
-; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_1 = extractelement <16 x i8> undef, i32 1
-; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
-; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
-; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = extractelement <2 x i8> poison, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = extractelement <4 x i8> poison, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = extractelement <8 x i8> poison, i32 %arg
+; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = extractelement <16 x i8> poison, i32 0
+; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_1 = extractelement <16 x i8> poison, i32 1
+; GCN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = extractelement <16 x i8> poison, i32 8
+; GCN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> poison, i32 15
+; GCN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = extractelement <16 x i8> poison, i32 %arg
 ; GCN-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GCN-SIZE-LABEL: 'extractelement_8'
@@ -214,14 +214,14 @@ define amdgpu_kernel void @extractelement_8(i32 %arg) {
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_3 = extractelement <4 x i8> poison, i32 3
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_3 = extractelement <5 x i8> poison, i32 3
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_3 = extractelement <8 x i8> poison, i32 3
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = extractelement <2 x i8> undef, i32 %arg
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = extractelement <4 x i8> undef, i32 %arg
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = extractelement <8 x i8> undef, i32 %arg
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = extractelement <16 x i8> undef, i32 0
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_1 = extractelement <16 x i8> undef, i32 1
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = extractelement <16 x i8> undef, i32 8
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> undef, i32 15
-; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = extractelement <2 x i8> poison, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = extractelement <4 x i8> poison, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = extractelement <8 x i8> poison, i32 %arg
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = extractelement <16 x i8> poison, i32 0
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_1 = extractelement <16 x i8> poison, i32 1
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = extractelement <16 x i8> poison, i32 8
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = extractelement <16 x i8> poison, i32 15
+; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = extractelement <16 x i8> poison, i32 %arg
 ; GCN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v2i8_0 = extractelement <2 x i8> poison, i32 0
@@ -245,15 +245,15 @@ define amdgpu_kernel void @extractelement_8(i32 %arg) {
   %v5i8_3 = extractelement <5 x i8> poison, i32 3
   %v8i8_3 = extractelement <8 x i8> poison, i32 3
 
-  %v2i8_a = extractelement <2 x i8> undef, i32 %arg
-  %v4i8_a = extractelement <4 x i8> undef, i32 %arg
-  %v8i8_a = extractelement <8 x i8> undef, i32 %arg
+  %v2i8_a = extractelement <2 x i8> poison, i32 %arg
+  %v4i8_a = extractelement <4 x i8> poison, i32 %arg
+  %v8i8_a = extractelement <8 x i8> poison, i32 %arg
 
-  %v16i8_0 = extractelement <16 x i8> undef, i32 0
-  %v16i8_1 = extractelement <16 x i8> undef, i32 1
-  %v16i8_8 = extractelement <16 x i8> undef, i32 8
-  %v16i8_15 = extractelement <16 x i8> undef, i32 15
-  %v16i8_a = extractelement <16 x i8> undef, i32 %arg
+  %v16i8_0 = extractelement <16 x i8> poison, i32 0
+  %v16i8_1 = extractelement <16 x i8> poison, i32 1
+  %v16i8_8 = extractelement <16 x i8> poison, i32 8
+  %v16i8_15 = extractelement <16 x i8> poison, i32 15
+  %v16i8_a = extractelement <16 x i8> poison, i32 %arg
   ret void
 }
 
