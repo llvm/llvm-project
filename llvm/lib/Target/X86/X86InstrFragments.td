@@ -169,9 +169,9 @@ def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 // CF is set from the pre-operation bit value; BT on the same operands is
 // therefore redundant after one of these nodes. The atomic (locked) variants
 // live under X86ISD::LBTR/LBTS/LBTC.
-def X86btr_flag : SDNode<"X86ISD::BTR", SDTBinaryArithWithFlags>;
-def X86bts_flag : SDNode<"X86ISD::BTS", SDTBinaryArithWithFlags>;
-def X86btc_flag : SDNode<"X86ISD::BTC", SDTBinaryArithWithFlags>;
+def X86btr : SDNode<"X86ISD::BTR", SDTBinaryArithWithFlags>;
+def X86bts : SDNode<"X86ISD::BTS", SDTBinaryArithWithFlags>;
+def X86btc : SDNode<"X86ISD::BTC", SDTBinaryArithWithFlags>;
 
 // Conditional compare instructions
 def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;

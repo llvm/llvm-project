@@ -57179,16 +57179,17 @@ static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
 // Src (AND(Src, rotl -2, X), OR(Src, shl 1, X), XOR(Src, shl 1, X)) into a
 // single flag-producing X86ISD::{BTR,BTS,BTC} node. Both BT and BTR/BTS/BTC
 // set CF from the pre-op bit value, so one instruction subsumes the other.
-// Fixes llvm#165291.
 static SDValue combineBTToBitOpFlag(SDNode *N, SelectionDAG &DAG) {
+  using namespace SDPatternMatch;
   SDValue Src = N->getOperand(0);
   SDValue BitNo = N->getOperand(1);
   EVT VT = Src.getValueType();
   SDLoc DL(N);
 
-  // BT is only emitted for legal integer widths (16/32/64); match those.
-  if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
-    return SDValue();
+  // X86ISD::BT is only emitted for i32/i64 (smaller widths are promoted in
+  // getBT before the node is created).
+  assert((VT == MVT::i32 || VT == MVT::i64) &&
+         "X86ISD::BT is only emitted for i32/i64");
 
   unsigned BW = VT.getScalarSizeInBits();
   SDValue PeeledBitNo = peekThroughBitPosExtTrunc(BitNo, BW);
@@ -57196,27 +57197,13 @@ static SDValue combineBTToBitOpFlag(SDNode *N, SelectionDAG &DAG) {
   for (SDNode *User : Src->users()) {
     if (User == N)
       continue;
-    unsigned UOpc = User->getOpcode();
-    if (UOpc != ISD::AND && UOpc != ISD::OR && UOpc != ISD::XOR)
-      continue;
-    if (User->getValueType(0) != VT)
-      continue;
 
-    // Identify which operand of User is Src; the other is the mask.
-    SDValue UOp0 = User->getOperand(0);
-    SDValue UOp1 = User->getOperand(1);
     SDValue Mask;
-    if (UOp0 == SDValue(Src.getNode(), Src.getResNo()))
-      Mask = UOp1;
-    else if (UOp1 == SDValue(Src.getNode(), Src.getResNo()))
-      Mask = UOp0;
-    else
-      continue;
-    // We will replace the mask's consumer (User); require the mask to have no
-    // other live uses so we can drop it.
-    if (!Mask.hasOneUse())
+    if (!sd_match(User,
+                  m_BitwiseLogic(m_Specific(Src), m_OneUse(m_Value(Mask)))))
       continue;
 
+    unsigned UOpc = User->getOpcode();
     unsigned FlagOp = 0;
     SDValue ShAmt;
     if (UOpc == ISD::AND && Mask.getOpcode() == ISD::ROTL) {
