@@ -100,7 +100,7 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemmove(
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
     if (CSize->getZExtValue() <= 256)
       return DAG.getNode(SystemZISD::MEMMOVE, DL, MVT::Other,
-                         { Chain, Dst, Src, Size });
+                         {Chain, Dst, Src, Size});
 
   return SDValue();
 }

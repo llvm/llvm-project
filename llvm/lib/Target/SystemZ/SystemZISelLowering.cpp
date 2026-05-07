@@ -1475,7 +1475,7 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
         (!Op.isAligned(Align(8)) || (Op.size() >= 25 && Op.size() <= 31)))
       return false;
     return TargetLowering::findOptimalMemOpLowering(
-            Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
+        Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
   }
 
   if (Op.isZeroMemset())
@@ -10881,8 +10881,9 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
   return MBB;
 }
 
-MachineBasicBlock *SystemZTargetLowering::emitMemmoveImm(
-    MachineInstr &MI, MachineBasicBlock *MBB) const {
+MachineBasicBlock *
+SystemZTargetLowering::emitMemmoveImm(MachineInstr &MI,
+                                      MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -10893,7 +10894,8 @@ MachineBasicBlock *SystemZTargetLowering::emitMemmoveImm(
   MachineOperand SrcBase = earlyUseOperand(MI.getOperand(2));
   uint64_t SrcDisp = MI.getOperand(3).getImm();
   uint64_t Len = MI.getOperand(4).getImm();
-  assert(Len >= 1 && Len <=256 && "Memmove of of unsupported constant length.");
+  assert(Len >= 1 && Len <= 256 &&
+         "Memmove of of unsupported constant length.");
   assert(isUInt<12>(DstDisp) && isUInt<12>(SrcDisp) &&
          "Unexpected large displacement.");
 
@@ -10903,7 +10905,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemmoveImm(
       Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
       unsigned Opcode = TII->getOpcodeForOffset(SystemZ::LA, Disp);
       BuildMI(*MBB, MI, DL, TII->get(Opcode), Reg)
-        .add(Base).addImm(Disp).addReg(0);
+          .add(Base).addImm(Disp).addReg(0);
       Base = MachineOperand::CreateReg(Reg, false);
       Disp = 0;
     }
@@ -10911,18 +10913,17 @@ MachineBasicBlock *SystemZTargetLowering::emitMemmoveImm(
 
   if (Len <= 15 && MEMMOVEVLL) {
     Register HighByteReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
-    BuildMI(*MBB, MI, DL, TII->get(SystemZ::LHI), HighByteReg)
-      .addImm(Len - 1);
+    BuildMI(*MBB, MI, DL, TII->get(SystemZ::LHI), HighByteReg).addImm(Len - 1);
 
     Register VecReg = MRI.createVirtualRegister(&SystemZ::VR128BitRegClass);
     BuildMI(*MBB, MI, DL, TII->get(SystemZ::VLL), VecReg)
-      .addReg(HighByteReg)
-      .add(SrcBase).addImm(SrcDisp);
+        .addReg(HighByteReg)
+        .add(SrcBase).addImm(SrcDisp);
 
     BuildMI(*MBB, MI, DL, TII->get(SystemZ::VSTL))
-      .addReg(VecReg)
-      .addReg(HighByteReg)
-      .add(DstBase).addImm(DstDisp);
+        .addReg(VecReg)
+        .addReg(HighByteReg)
+        .add(DstBase).addImm(DstDisp);
 
     MI.eraseFromParent();
     return MBB;
@@ -10941,25 +10942,23 @@ MachineBasicBlock *SystemZTargetLowering::emitMemmoveImm(
   foldAddressIfNeeded(SrcBase, SrcDisp);
   foldAddressIfNeeded(DstBase, DstDisp);
 
-  BuildMI(MBB, DL, TII->get(SystemZ::CLGR))
-    .add(SrcBase)
-    .add(DstBase);
+  BuildMI(MBB, DL, TII->get(SystemZ::CLGR)).add(SrcBase).add(DstBase);
   BuildMI(MBB, DL, TII->get(SystemZ::BRC))
-    .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_LT)
-    .addMBB(MvcrlMBB);
+      .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_LT)
+      .addMBB(MvcrlMBB);
 
   BuildMI(MvcMBB, DL, TII->get(SystemZ::MVC))
-    .add(DstBase).addImm(DstDisp).addImm(Len)
-    .add(SrcBase).addImm(SrcDisp)
-    .setMemRefs(MI.memoperands());
+      .add(DstBase).addImm(DstDisp)
+      .addImm(Len)
+      .add(SrcBase).addImm(SrcDisp)
+      .setMemRefs(MI.memoperands());
   BuildMI(MvcMBB, DL, TII->get(SystemZ::J)).addMBB(DoneMBB);
 
-  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::LHI), SystemZ::R0L)
-    .addImm(Len - 1);
+  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::LHI), SystemZ::R0L).addImm(Len - 1);
   BuildMI(MvcrlMBB, DL, TII->get(SystemZ::MVCRL))
-    .add(DstBase).addImm(DstDisp)
-    .add(SrcBase).addImm(SrcDisp)
-    .setMemRefs(MI.memoperands());
+      .add(DstBase).addImm(DstDisp)
+      .add(SrcBase).addImm(SrcDisp)
+      .setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return DoneMBB;

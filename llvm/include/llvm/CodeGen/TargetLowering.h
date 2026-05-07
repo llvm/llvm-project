@@ -133,8 +133,8 @@ private:
                      // constant so it does not need to be loaded.
   bool SrcDstMayOverlap; // True if the source and destination memory regions
                          // may overlap (memmove).
-  Align SrcAlign;  // Inferred alignment of the source or default value if the
-                   // memory operation does not need to load the value.
+  Align SrcAlign; // Inferred alignment of the source or default value if the
+                  // memory operation does not need to load the value.
 public:
   static MemOp Copy(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
                     Align SrcAlign, bool IsVolatile, bool MemcpyStrSrc = false,
