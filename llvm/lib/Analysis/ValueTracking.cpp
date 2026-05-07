@@ -8802,6 +8802,9 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
     return std::nullopt;
 
   Type *Type = C->getType();
+
+  if (Type->getScalarSizeInBits() == 1)
+    return std::nullopt;
   bool IsSigned = ICmpInst::isSigned(Pred);
 
   CmpInst::Predicate UnsignedPred = ICmpInst::getUnsignedPredicate(Pred);
