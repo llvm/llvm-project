@@ -164,12 +164,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_ds_swizzle: {
     mlir::Value src0 = emitScalarExpr(expr->getArg(0));
     mlir::Value src1 = emitScalarExpr(expr->getArg(1));
-    mlir::Value result = cir::LLVMIntrinsicCallOp::create(
-                             builder, getLoc(expr->getExprLoc()),
-                             builder.getStringAttr("amdgcn.ds.swizzle"),
-                             src0.getType(), {src0, src1})
-                             .getResult();
-    return result;
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "amdgcn.ds.swizzle", src0.getType(),
+                                       mlir::ValueRange{src0, src1});
   }
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
