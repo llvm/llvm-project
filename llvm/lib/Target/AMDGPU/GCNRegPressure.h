@@ -345,17 +345,28 @@ protected:
     }
     const BitVector &getBitVector() const { return Units.getBitVector(); }
 
-    void add(Register Reg) {
+    void add(MCRegister Reg) {
       Units.addReg(Reg);
-      Regs.insert(Reg.asMCReg());
+      Regs.insert(Reg);
     }
-    void remove(Register Reg) {
+    void remove(MCRegister Reg) {
+      Regs.erase(Reg);
       Units.removeReg(Reg);
-      Regs.erase(Reg.asMCReg());
+      restoreSharedUnits();
     }
     void remove(const BitVector &KilledUnits, MCRegister Reg) {
-      Units.removeUnits(KilledUnits);
       Regs.erase(Reg);
+      Units.removeUnits(KilledUnits);
+      restoreSharedUnits();
+    }
+
+  private:
+    // When a register is removed, its regunits are also removed. But
+    // because of aliasing, some of those regunits may be shared with
+    // other registers still in Regs. This restores those shared regunits.
+    void restoreSharedUnits() {
+      for (MCRegister R : Regs)
+        Units.addReg(R);
     }
   };
   PhysicalRegLiveness PhysLiveRegs;

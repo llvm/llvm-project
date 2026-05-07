@@ -853,7 +853,7 @@ void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
     } else if (TrackPhysRegs && Reg.isPhysical() && MRI->isAllocatable(Reg)) {
       bool WasNotLive = isAnyRegUnitNotLive(Reg.asMCReg());
       if (WasNotLive && !MO.isDead()) {
-        PhysLiveRegs.add(Reg);
+        PhysLiveRegs.add(Reg.asMCReg());
         CurPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
       }
     }
