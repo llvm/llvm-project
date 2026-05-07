@@ -232,12 +232,12 @@ defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 } // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1
 
-let SubtargetPredicate = HasMinMax64Insts, SchedRW = [WriteDoubleAdd] in {
+let SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd] in {
 defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
 defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
 defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
 defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
-} // End SubtargetPredicate = HasMinMax64Insts, SchedRW = [WriteDoubleAdd]
+} // End SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd]
 
 } // End isReMaterializable = 1
 

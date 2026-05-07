@@ -1325,7 +1325,7 @@ defm AddMinMaxInsts : AMDGPUSubtargetFeature<"add-min-max-insts",
   "Has v_add_{min|max}_{i|u}32 instructions"
 >;
 
-defm MinMax64Insts : AMDGPUSubtargetFeature<"min-max-64-insts",
+defm MinMaxI64Insts : AMDGPUSubtargetFeature<"min-max-i64-insts",
   "Has v_{min|max}_{i|u}64 instructions"
 >;
 
@@ -2107,7 +2107,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureMadU32Inst,
    FeatureMadNC64_32Insts,
    FeatureAddMinMaxInsts,
-   FeatureMinMax64Insts,
+   FeatureMinMaxI64Insts,
    FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
