@@ -621,6 +621,8 @@ bool ZOSXPLinkABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
     switch (BT->getKind()) {
     case BuiltinType::Int:
     case BuiltinType::UInt:
+    case BuiltinType::ULong:
+    case BuiltinType::Long:
       return true;
     default:
       break;
@@ -792,6 +794,9 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
+  // Handle transparent union types.
+  RetTy = useFirstFieldIfTransparentUnion(RetTy);
+
   // For non-C calling convention, indirect by value for structs and complex.
   if ((CallConv != llvm::CallingConv::C) &&
       (isAggregateTypeForABI(RetTy) || RetTy->isAnyComplexType())) {
@@ -834,12 +839,14 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
       return getNaturalAlignIndirect(RetTy,
                                      getDataLayout().getAllocaAddrSpace());
   }
-  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
-                                               : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy, CGT.ConvertType(RetTy))
+                                               : ABIArgInfo::getDirect(CGT.ConvertType(RetTy)));
 }
 
 ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
                                                   unsigned CallConv) const {
+  // Handle transparent union types.
+  Ty = useFirstFieldIfTransparentUnion(Ty);
 
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
@@ -848,7 +855,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
 
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerTypeForABI(Ty))
-    return ABIArgInfo::getExtend(Ty);
+    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
 
   // For non-C calling conventions, compound types passed by address copy.
   if ((CallConv != llvm::CallingConv::C) && isCompoundType(Ty))

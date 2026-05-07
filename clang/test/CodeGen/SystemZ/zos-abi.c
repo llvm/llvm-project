@@ -34,7 +34,7 @@ int pass_int(int arg) { return arg; }
 // CHECK-LABEL: define signext i32 @pass_int(i32 signext %{{.*}})
 
 long pass_long(long arg) { return arg; }
-// CHECK-LABEL: define i64 @pass_long(i64 %{{.*}})
+// CHECK-LABEL: define signext i64 @pass_long(i64 signext %{{.*}})
 
 long long pass_longlong(long long arg) { return arg; }
 // CHECK-LABEL: define i64 @pass_longlong(i64 %{{.*}})
@@ -462,3 +462,27 @@ struct Bad4 {
 };
 struct Bad4  pass_Bad4(struct Bad4 arg) { return arg; }
 // CHECK-LABEL: define void @pass_Bad4(ptr dead_on_unwind noalias writable sret(%{{.*}}) align 32 %agg.result, [4 x i64] %{{.*}})
+
+
+// ==================================================================
+// Verify that transparent unions are passed like their first member.
+// ==================================================================
+union tu_char { char a; } __attribute__((transparent_union));
+union tu_char pass_tu_char(union tu_char arg) { return arg; }
+// CHECK-LABEL: define{{.*}} i8 @pass_tu_char(i8 signext %{{.*}})
+
+union tu_short { short a; } __attribute__((transparent_union));
+union tu_short pass_tu_short(union tu_short arg) { return arg; }
+// CHECK-LABEL: define{{.*}} i16 @pass_tu_short(i16 signext %{{.*}})
+
+union tu_int { int a; } __attribute__((transparent_union));
+union tu_int pass_tu_int(union tu_int arg) { return arg; }
+// CHECK-LABEL: define{{.*}} i32 @pass_tu_int(i32 signext %{{.*}})
+
+union tu_long { long a; } __attribute__((transparent_union));
+union tu_long pass_tu_long(union tu_long arg) { return arg; }
+// CHECK-LABEL: define{{.*}} i64 @pass_tu_long(i64 signext %{{.*}})
+
+union tu_ptr { void *a; } __attribute__((transparent_union));
+union tu_ptr pass_tu_ptr(union tu_ptr arg) { return arg; }
+// CHECK-LABEL: define{{.*}} ptr @pass_tu_ptr(ptr %{{.*}})
