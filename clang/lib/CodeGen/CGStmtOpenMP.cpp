@@ -5917,7 +5917,7 @@ void CodeGenFunction::EmitOMPTaskgraphDirective(
   const Expr *IfCond = nullptr;
   for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
     if (C->getNameModifier() == OMPD_unknown ||
-        C->getNameModifier() == OMPD_cancel) {
+        C->getNameModifier() == OMPD_taskgraph) {
       IfCond = C->getCondition();
       break;
     }

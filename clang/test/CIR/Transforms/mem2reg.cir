@@ -1,0 +1,23 @@
+// RUN: cir-opt %s -cir-flatten-cfg -mem2reg -o - | FileCheck %s \
+// RUN:   --implicit-check-not=cir.alloca \
+// RUN:   --implicit-check-not=cir.load \
+// RUN:   --implicit-check-not=cir.store
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // Promote CIR stack slots through the generic mem2reg pass after CFG flattening.
+  // CHECK-LABEL: cir.func @promote_simple_stack_slots
+  cir.func @promote_simple_stack_slots() -> !s32i {
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<42>
+    // CHECK: cir.return %[[CONST]]
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+    %2 = cir.const #cir.int<42> : !s32i
+    cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
+    %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+    %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %4 : !s32i
+  }
+}

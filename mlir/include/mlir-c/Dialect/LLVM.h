@@ -307,7 +307,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
     uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
     MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
-    MlirAttribute associated);
+    MlirAttribute associated, MlirAttribute identifier,
+    MlirAttribute discriminator);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompositeTypeAttrGetName(void);
 
