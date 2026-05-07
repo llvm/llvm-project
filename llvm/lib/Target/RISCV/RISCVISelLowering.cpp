@@ -23879,7 +23879,6 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
       return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
     if (VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector())
       return convertFromScalableVector(VA.getValVT(), Val, DAG, Subtarget);
-    DAG.dumpDotGraph("/tmp/sdag.dot","SDag");
     llvm_unreachable("Unexpected Custom handling.");
   }
 
