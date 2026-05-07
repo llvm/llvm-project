@@ -70,6 +70,11 @@ static cl::opt<bool>
 RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
     cl::init(true), cl::ReallyHidden);
 
+static cl::opt<bool> EnableSinkAsyncDMAOutOfExecz(
+    "amdgpu-sink-async-dma-out-of-execz", cl::init(true), cl::ReallyHidden,
+    cl::desc("Sink async DMA out of EXECZ-skipped then-blocks for "
+             "ASYNCcnt determinism"));
+
 namespace {
 
 class SILowerControlFlow {
@@ -131,6 +136,10 @@ private:
 
   // Remove redundant SI_END_CF instructions.
   void optimizeEndCf();
+
+  // Sink async DMA ops out of EXECZ-skippable then-blocks for ASYNCcnt
+  // determinism.
+  bool sinkAsyncDMAOutOfExeczBlocks(MachineFunction &MF);
 
 public:
   SILowerControlFlow(const GCNSubtarget *ST, LiveIntervals *LIS,
@@ -654,6 +663,128 @@ void SILowerControlFlow::optimizeEndCf() {
   }
 }
 
+static MachineInstr *findExecRestoreAtBlockStart(MachineBasicBlock &JoinBB,
+                                                 const SIRegisterInfo *TRI) {
+  for (MachineInstr &MI : JoinBB) {
+    if (MI.isMetaInstruction() || MI.isDebugInstr())
+      continue;
+    return MI.modifiesRegister(AMDGPU::EXEC, TRI) ? &MI : nullptr;
+  }
+  return nullptr;
+}
+
+bool SILowerControlFlow::sinkAsyncDMAOutOfExeczBlocks(MachineFunction &MF) {
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : MF) {
+    // Header must end with an S_CBRANCH_EXECZ to JoinBB.
+    auto BrIt = llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
+      return MI.getOpcode() == AMDGPU::S_CBRANCH_EXECZ;
+    });
+    if (BrIt == MBB.terminators().end())
+      continue;
+    MachineBasicBlock *JoinBB = BrIt->getOperand(0).getMBB();
+
+    if (MBB.succ_size() != 2)
+      continue;
+    MachineBasicBlock *S0 = *MBB.succ_begin();
+    MachineBasicBlock *S1 = *std::next(MBB.succ_begin());
+    MachineBasicBlock *ThenBB = (S0 == JoinBB) ? S1 : S0;
+    if (ThenBB == JoinBB || ThenBB->succ_size() != 1 ||
+        *ThenBB->succ_begin() != JoinBB)
+      continue;
+
+    // Sink before the EXEC restore at the top of JoinBB.
+    MachineInstr *ExecRestore = findExecRestoreAtBlockStart(*JoinBB, TRI);
+    if (!ExecRestore)
+      continue;
+
+    SmallVector<MachineInstr *, 4> ToSink;
+    bool Eligible = true;
+    for (MachineInstr &TMI : *ThenBB) {
+      if (TMI.isMetaInstruction() || TMI.isDebugInstr() || TMI.isTerminator())
+        continue;
+      if (TII->hasUnwantedEffectsWhenEXECEmpty(TMI)) {
+        Eligible = false;
+        break;
+      }
+      if (SIInstrInfo::usesASYNC_CNT(TMI)) {
+        ToSink.push_back(&TMI);
+        continue;
+      }
+      // Bail on stores that could alias the sunk DMAs.
+      if (TMI.mayStore()) {
+        Eligible = false;
+        break;
+      }
+      // Bail on non-invariant loads that could alias the sunk DMAs.
+      if (TMI.mayLoad() && !TMI.isDereferenceableInvariantLoad()) {
+        Eligible = false;
+        break;
+      }
+    }
+    if (!Eligible || ToSink.empty())
+      continue;
+
+    // Restore dominance for ThenBB-defined operands of the sunk DMAs by
+    // inserting a header-side IMPLICIT_DEF.
+    MachineBasicBlock::iterator FirstTerm = MBB.getFirstTerminator();
+    DebugLoc DL = FirstTerm->getDebugLoc();
+    SmallSet<Register, 4> NeedsImpDef;
+    for (MachineInstr *DmaMI : ToSink) {
+      for (const MachineOperand &MO : DmaMI->uses()) {
+        if (!MO.isReg() || !MO.isUse() || !MO.getReg().isVirtual())
+          continue;
+        Register Reg = MO.getReg();
+        MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
+        if (!Def || Def->getParent() != ThenBB || is_contained(ToSink, Def))
+          continue;
+        if (!NeedsImpDef.insert(Reg).second)
+          continue;
+        MachineInstr *ImpDef = BuildMI(
+            MBB, FirstTerm, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
+        if (LIS)
+          LIS->InsertMachineInstrInMaps(*ImpDef);
+        RecomputeRegs.insert(Reg);
+      }
+    }
+
+    // Sink each DMA before ExecRestore and propagate phys-reg uses to
+    // JoinBB live-ins.
+    for (MachineInstr *DmaMI : ToSink) {
+      LLVM_DEBUG(dbgs() << "Sinking async DMA out of execz then-block: "
+                        << *DmaMI);
+      if (LIS)
+        LIS->RemoveMachineInstrFromMaps(*DmaMI);
+      JoinBB->splice(ExecRestore->getIterator(), ThenBB, DmaMI->getIterator());
+      if (LIS)
+        LIS->InsertMachineInstrInMaps(*DmaMI);
+      for (const MachineOperand &MO : DmaMI->operands()) {
+        if (!MO.isReg() || !MO.isUse())
+          continue;
+        Register Reg = MO.getReg();
+        if (Reg.isVirtual()) {
+          if (LIS)
+            RecomputeRegs.insert(Reg);
+          // Vregs defined outside ThenBB are now live through ThenBB to reach
+          // the sunk DMA in JoinBB. Update LiveVariables AliveBlocks.
+          if (LV) {
+            MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
+            if (Def && Def->getParent() != ThenBB && !is_contained(ToSink, Def))
+              LV->getVarInfo(Reg).AliveBlocks.set(ThenBB->getNumber());
+          }
+        } else if (Reg != LMC.ExecReg) {
+          JoinBB->addLiveIn(Reg);
+        }
+      }
+    }
+    JoinBB->sortUniqueLiveIns();
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineBasicBlock::iterator I(MI);
@@ -828,6 +959,11 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
       }
     }
   }
+
+  // Sink async DMA out of s_cbranch_execz then-blocks for ASYNCcnt
+  // determinism. Must run after the main loop so the SI_END_CF anchor exists.
+  if (EnableSinkAsyncDMAOutOfExecz)
+    Changed |= sinkAsyncDMAOutOfExeczBlocks(MF);
 
   optimizeEndCf();
 
