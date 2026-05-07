@@ -15107,8 +15107,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                        DAG.getConstant(8, DL, MVT::i32));
   }
 
-  bool IsSplat1 = V1.getValueType() == VT && DAG.isSplatValue(V1, /*AllowUndefs=*/false);
-  bool IsSplat2 = V2.getValueType() == VT && DAG.isSplatValue(V2, /*AllowUndefs=*/false);
+  bool IsSplat1 =
+      V1.getValueType() == VT && DAG.isSplatValue(V1, /*AllowUndefs=*/false);
+  bool IsSplat2 =
+      V2.getValueType() == VT && DAG.isSplatValue(V2, /*AllowUndefs=*/false);
   for (unsigned SplatOperand : {0U, 1U}) {
     if ((SplatOperand == 0 && !IsSplat1) || (SplatOperand == 1 && !IsSplat2))
       continue;
