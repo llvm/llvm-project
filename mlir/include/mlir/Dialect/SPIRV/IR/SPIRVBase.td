@@ -4375,6 +4375,8 @@ class SPIRV_MatrixOf<Type type> :
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
+def SPIRV_ScalarOrVectorOrPtrOrCoopMatrix :
+    AnyTypeOf<[SPIRV_ScalarOrVectorOrPtr, SPIRV_AnyCooperativeMatrix]>;
 
 class SPIRV_Vec4<Type type> : VectorOfRankAndLengthAndType<[1], [4], [type]>;
 def SPIRV_IntVec4 : SPIRV_Vec4<SPIRV_Integer>;
@@ -4580,6 +4582,8 @@ def SPIRV_OC_OpEmitVertex                     : I32EnumAttrCase<"OpEmitVertex", 
 def SPIRV_OC_OpEndPrimitive                   : I32EnumAttrCase<"OpEndPrimitive", 219>;
 def SPIRV_OC_OpControlBarrier                 : I32EnumAttrCase<"OpControlBarrier", 224>;
 def SPIRV_OC_OpMemoryBarrier                  : I32EnumAttrCase<"OpMemoryBarrier", 225>;
+def SPIRV_OC_OpAtomicLoad                     : I32EnumAttrCase<"OpAtomicLoad", 227>;
+def SPIRV_OC_OpAtomicStore                    : I32EnumAttrCase<"OpAtomicStore", 228>;
 def SPIRV_OC_OpAtomicExchange                 : I32EnumAttrCase<"OpAtomicExchange", 229>;
 def SPIRV_OC_OpAtomicCompareExchange          : I32EnumAttrCase<"OpAtomicCompareExchange", 230>;
 def SPIRV_OC_OpAtomicCompareExchangeWeak      : I32EnumAttrCase<"OpAtomicCompareExchangeWeak", 231>;
@@ -4680,6 +4684,7 @@ def SPIRV_OC_OpSetMeshOutputsEXT              : I32EnumAttrCase<"OpSetMeshOutput
 def SPIRV_OC_OpSubgroupBlockReadINTEL         : I32EnumAttrCase<"OpSubgroupBlockReadINTEL", 5575>;
 def SPIRV_OC_OpSubgroupBlockWriteINTEL        : I32EnumAttrCase<"OpSubgroupBlockWriteINTEL", 5576>;
 def SPIRV_OC_OpAssumeTrueKHR                  : I32EnumAttrCase<"OpAssumeTrueKHR", 5630>;
+def SPIRV_OC_OpExpectKHR                      : I32EnumAttrCase<"OpExpectKHR", 5631>;
 def SPIRV_OC_OpAtomicFAddEXT                  : I32EnumAttrCase<"OpAtomicFAddEXT", 6035>;
 def SPIRV_OC_OpConvertFToBF16INTEL            : I32EnumAttrCase<"OpConvertFToBF16INTEL", 6116>;
 def SPIRV_OC_OpConvertBF16ToFINTEL            : I32EnumAttrCase<"OpConvertBF16ToFINTEL", 6117>;
@@ -4756,7 +4761,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpNot, SPIRV_OC_OpBitFieldInsert, SPIRV_OC_OpBitFieldSExtract,
       SPIRV_OC_OpBitFieldUExtract, SPIRV_OC_OpBitReverse, SPIRV_OC_OpBitCount,
       SPIRV_OC_OpEmitVertex, SPIRV_OC_OpEndPrimitive, SPIRV_OC_OpControlBarrier,
-      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicExchange,
+      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicLoad, SPIRV_OC_OpAtomicStore,
+      SPIRV_OC_OpAtomicExchange,
       SPIRV_OC_OpAtomicCompareExchange, SPIRV_OC_OpAtomicCompareExchangeWeak,
       SPIRV_OC_OpAtomicIIncrement, SPIRV_OC_OpAtomicIDecrement,
       SPIRV_OC_OpAtomicIAdd, SPIRV_OC_OpAtomicISub, SPIRV_OC_OpAtomicSMin,
@@ -4803,7 +4809,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpSpecConstantCompositeReplicateEXT,
       SPIRV_OC_OpEmitMeshTasksEXT, SPIRV_OC_OpSetMeshOutputsEXT,
       SPIRV_OC_OpSubgroupBlockReadINTEL, SPIRV_OC_OpSubgroupBlockWriteINTEL,
-      SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpAtomicFAddEXT,
+      SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpExpectKHR, SPIRV_OC_OpAtomicFAddEXT,
       SPIRV_OC_OpConvertFToBF16INTEL, SPIRV_OC_OpConvertBF16ToFINTEL,
       SPIRV_OC_OpControlBarrierArriveINTEL, SPIRV_OC_OpControlBarrierWaitINTEL,
       SPIRV_OC_OpGroupIMulKHR, SPIRV_OC_OpGroupFMulKHR,
