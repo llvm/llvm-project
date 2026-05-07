@@ -1060,10 +1060,13 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    if (!opts.PrepareForThinLTO)
-      if (emitSummary && !llvmModule->getModuleFlag("ThinLTO"))
-        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
 
+    // If it is not ThinLTO, emits the module flag and sets it to be off.
+    if (!opts.PrepareForThinLTO) {
+      if (emitSummary && !llvmModule->getModuleFlag("ThinLTO")) {
+        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+      }
+    }
     if (action == BackendActionTy::Backend_EmitBC)
       mpm.addPass(llvm::BitcodeWriterPass(
           os, /*ShouldPreserveUseListOrder=*/false, emitSummary));

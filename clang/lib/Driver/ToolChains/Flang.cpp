@@ -275,9 +275,8 @@ void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
+  else if (LTOMode == LTOK_Thin)
     CmdArgs.push_back("-flto=thin");
-  }
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});
 }
