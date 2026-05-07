@@ -31,3 +31,45 @@ cir.func @test_static_local_mismatch_reverse() {
 }
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// local_init is both static_local and thread_local
+cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
+
+cir.func @test_static_local_and_tls() {
+  %0 = cir.get_global static_local @_ZZ1fvE1y : !cir.ptr<!s32i>
+  // expected-error @below {{'cir.local_init' op access to global not marked thread local}}
+  cir.local_init thread_local @_ZZ1fvE1y ctor {
+    cir.yield
+  } dtor {
+    cir.yield
+  }
+
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// local_init not at function scope.
+cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
+
+cir.global "private" internal @_AnotherGlobal = ctor : !s32i {
+  // expected-error @below {{'cir.local_init' op must be inside of a 'cir.func'}}
+  cir.local_init static_local @_ZZ1fvE1y ctor {
+    cir.yield
+  } dtor {
+    cir.yield
+  }
+}
+}

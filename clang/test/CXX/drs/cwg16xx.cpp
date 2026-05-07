@@ -328,6 +328,15 @@ namespace cwg1658 { // cwg1658: 5
   // assignment case is superseded by cwg2180
 } // namespace cwg1658
 
+namespace cwg1670 { // cwg1670: no
+#if __cpusplus >= 201103L
+struct S {
+  operator auto() { return 0; }
+  // FIXME-error@-1 {{'auto' not allowed in declaration of conversion function}}
+};
+#endif
+} // namespace cwg1670
+
 namespace cwg1672 { // cwg1672: 7
   struct Empty {};
   struct A : Empty {};

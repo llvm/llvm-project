@@ -8,7 +8,10 @@
 
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
+#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -19,22 +22,25 @@
 
 namespace llvm::orc {
 
+class SelfExecutorProcessControl::InProcessDylibManager : public DylibManager {
+public:
+  InProcessDylibManager(char GlobalManglingPrefix);
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
+  void
+  lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                     DylibManager::SymbolLookupCompleteFn Complete) override;
+
+private:
+  char GlobalManglingPrefix;
+};
+
 SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
-    Triple TargetTriple, unsigned PageSize,
-    std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)),
-      IPMA(TargetTriple.isArch64Bit()) {
-
-  OwnedMemMgr = std::move(MemMgr);
-  if (!OwnedMemMgr)
-    OwnedMemMgr = std::make_unique<jitlink::InProcessMemoryManager>(
-        sys::Process::getPageSizeEstimate());
+    Triple TargetTriple, unsigned PageSize)
+    : ExecutorProcessControl(std::move(SSP), std::move(D)) {
 
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
-  this->MemMgr = OwnedMemMgr.get();
-  this->MemAccess = &IPMA;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
 
@@ -50,9 +56,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
 }
 
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
-SelfExecutorProcessControl::Create(
-    std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
-    std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr) {
+SelfExecutorProcessControl::Create(std::shared_ptr<SymbolStringPool> SSP,
+                                   std::unique_ptr<TaskDispatcher> D) {
 
   if (!SSP)
     SSP = std::make_shared<SymbolStringPool>();
@@ -67,8 +72,7 @@ SelfExecutorProcessControl::Create(
   Triple TT(sys::getProcessTriple());
 
   return std::make_unique<SelfExecutorProcessControl>(
-      std::move(SSP), std::move(D), std::move(TT), *PageSize,
-      std::move(MemMgr));
+      std::move(SSP), std::move(D), std::move(TT), *PageSize);
 }
 
 Expected<int32_t>
@@ -105,10 +109,21 @@ Error SelfExecutorProcessControl::disconnect() {
   return Error::success();
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+SelfExecutorProcessControl::createDefaultMemoryManager() {
+  return std::make_unique<jitlink::InProcessMemoryManager>(
+      sys::Process::getPageSizeEstimate());
+}
+
 Expected<std::unique_ptr<DylibManager>>
 SelfExecutorProcessControl::createDefaultDylibMgr() {
   char Prefix = TargetTriple.isOSBinFormatMachO() ? '_' : '\0';
   return std::make_unique<InProcessDylibManager>(Prefix);
+}
+
+Expected<std::unique_ptr<MemoryAccess>>
+SelfExecutorProcessControl::createDefaultMemoryAccess() {
+  return std::make_unique<InProcessMemoryAccess>(TargetTriple.isArch64Bit());
 }
 
 shared::CWrapperFunctionBuffer

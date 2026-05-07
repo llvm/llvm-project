@@ -24,6 +24,18 @@ define i64 @foo0(<2 x i64> %a) nounwind {
   ret i64 %vpaddd.i
 }
 
+define i64 @foo0_or(<2 x i64> %a) nounwind {
+; CHECK-LABEL: foo0_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp.2d d0, v0
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+  %lane0.i = extractelement <2 x i64> %a, i32 0
+  %lane1.i = extractelement <2 x i64> %a, i32 1
+  %vpaddd.i = or disjoint i64 %lane0.i, %lane1.i
+  ret i64 %vpaddd.i
+}
+
 define float @foo1(<2 x float> %a) nounwind {
 ; CHECK-LABEL: foo1:
 ; CHECK:       // %bb.0:

@@ -55,7 +55,8 @@ public:
   /// from. It is used for determining what lines the alignment process should
   /// move.
   void replaceWhitespace(FormatToken &Tok, unsigned Newlines, unsigned Spaces,
-                         unsigned StartOfTokenColumn, bool IsAligned = false,
+                         unsigned StartOfTokenColumn,
+                         const FormatToken *AlignedTo = nullptr,
                          bool InPPDirective = false,
                          unsigned IndentedFromColumn = 0);
 
@@ -117,7 +118,7 @@ public:
            SourceRange OriginalWhitespaceRange, int Spaces,
            unsigned StartOfTokenColumn, unsigned IndentedFromColumn,
            unsigned NewlinesBefore, StringRef PreviousLinePostfix,
-           StringRef CurrentLinePrefix, bool IsAligned,
+           StringRef CurrentLinePrefix, const FormatToken *AlignedTo,
            bool ContinuesPPDirective, bool IsInsideToken);
 
     // The kind of the token whose whitespace this change replaces, or in which
@@ -139,7 +140,7 @@ public:
     unsigned NewlinesBefore;
     std::string PreviousLinePostfix;
     std::string CurrentLinePrefix;
-    bool IsAligned;
+    const FormatToken *AlignedTo;
     bool ContinuesPPDirective;
 
     // The number of spaces in front of the token or broken part of the token.

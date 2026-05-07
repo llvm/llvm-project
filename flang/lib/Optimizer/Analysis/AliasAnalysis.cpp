@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -38,23 +39,14 @@ llvm::cl::opt<bool> supportCrayPointers(
     llvm::cl::init(false));
 
 // Inspect for value-scoped Allocate effects and determine whether
-// 'candidate' is a new allocation. Returns SourceKind::Allocate if a
+// 'result' is a new allocation. Returns SourceKind::Allocate if a
 // MemAlloc effect is attached
 static fir::AliasAnalysis::SourceKind
-classifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate) {
-  if (!op)
-    return fir::AliasAnalysis::SourceKind::Unknown;
-  auto interface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
-  if (!interface)
-    return fir::AliasAnalysis::SourceKind::Unknown;
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
-  interface.getEffects(effects);
-  for (mlir::MemoryEffects::EffectInstance &e : effects) {
-    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
-        e.getValue() && e.getValue() == candidate)
-      return fir::AliasAnalysis::SourceKind::Allocate;
-  }
-  return fir::AliasAnalysis::SourceKind::Unknown;
+classifyAllocateFromEffects(OpResult result) {
+  std::optional<bool> isNewAllocation = fir::isNewAllocationResult(result);
+  return isNewAllocation.value_or(false)
+             ? fir::AliasAnalysis::SourceKind::Allocate
+             : fir::AliasAnalysis::SourceKind::Unknown;
 }
 
 //===----------------------------------------------------------------------===//
@@ -373,6 +365,22 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
   return false;
 }
 
+/// Walk backward from \p val through FortranObjectViewOpInterface ops
+/// that have zero offset (i.e. they access the same base address).
+/// Return the root value at the end of the chain.
+static mlir::Value getZeroOffsetViewRoot(mlir::Value val) {
+  while (auto *defOp = val.getDefiningOp()) {
+    auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
+    if (!viewOp)
+      break;
+    auto offset = viewOp.getViewOffset(mlir::cast<mlir::OpResult>(val));
+    if (!offset || *offset != 0)
+      break;
+    val = viewOp.getViewSource(mlir::cast<mlir::OpResult>(val));
+  }
+  return val;
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
@@ -387,6 +395,15 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
+
+  // If both values trace back to the same root through zero-offset view
+  // operations (e.g. embox without slice, declare, convert), they access
+  // the same underlying memory. This check avoids the case where
+  // getSource() traces through upstream operations (e.g. a sliced embox)
+  // that set approximateSource, conservatively preventing MustAlias.
+  if (lhs == rhs || getZeroOffsetViewRoot(lhs) == getZeroOffsetViewRoot(rhs))
+    return AliasResult::MustAlias;
+
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
@@ -732,8 +749,13 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
-  if (auto call = llvm::dyn_cast<fir::CallOp>(op))
-    return getCallModRef(call, location);
+  if (auto call = llvm::dyn_cast<fir::CallOp>(op)) {
+    ModRefResult result = getCallModRef(call, location);
+    if (result != ModRefResult::getModAndRef())
+      return result;
+    // Proceed to MemoryEffectOpInterface analysis in case one
+    // is attached for fir.call.
+  }
 
   // Build a ModRefResult by merging the behavior of the effects of this
   // operation.
@@ -765,6 +787,12 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   for (const MemoryEffects::EffectInstance &effect : effects) {
     // MemAlloc and MemFree are not mod-ref effects.
     if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+      continue;
+
+    // An effect on a non-addressable resource cannot affect
+    // memory pointed to by 'location'.
+    mlir::SideEffects::Resource *resource = effect.getResource();
+    if (!resource->isAddressable())
       continue;
 
     // Check for an alias between the effect and our memory location.
@@ -822,15 +850,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   Source::AccessPath accessPath;
   bool accessPathFinalized{false};
   while (defOp && !breakFromLoop) {
-    // Value-scoped allocation detection via effects.
-    if (classifyAllocateFromEffects(defOp, v) == SourceKind::Allocate) {
-      type = SourceKind::Allocate;
-      break;
-    }
     // Operations may have multiple results, so we need to analyze
     // the result for which the source is queried.
     auto opResult = mlir::cast<OpResult>(v);
     assert(opResult.getOwner() == defOp && "v must be a result of defOp");
+    // Value-scoped allocation detection via effects.
+    if (classifyAllocateFromEffects(opResult) == SourceKind::Allocate) {
+      type = SourceKind::Allocate;
+      break;
+    }
     ty = opResult.getType();
     std::optional<AliasAnalysis::Source> accSourceReturn;
     llvm::TypeSwitch<Operation *>(defOp)
@@ -865,6 +893,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op.getArray();
           defOp = v.getDefiningOp();
           approximateSource = true;
+        })
+        .Case([&](fir::AbsentOp op) {
+          // Although fir.absent is not a local allocation, we treat it
+          // similarly so that it can be disambiguated that it doesn't alias any
+          // other values. Two entities coming from separate fir.absent ops
+          // also do not alias each other.
+          type = SourceKind::Allocate;
+          breakFromLoop = true;
         })
         .Case([&](fir::LoadOp op) {
           // If load is inside target and it points to mapped item,
@@ -926,11 +962,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else {
               auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
               bool classified = false;
-              if (auto defDefOp = def.getDefiningOp()) {
-                if (classifyAllocateFromEffects(defDefOp, def) ==
+              if (auto defAsOpResult = mlir::dyn_cast<OpResult>(def)) {
+                if (classifyAllocateFromEffects(defAsOpResult) ==
                     SourceKind::Allocate) {
                   v = def;
-                  defOp = defDefOp;
+                  defOp = defAsOpResult.getOwner();
                   type = SourceKind::Allocate;
                   classified = true;
                 }

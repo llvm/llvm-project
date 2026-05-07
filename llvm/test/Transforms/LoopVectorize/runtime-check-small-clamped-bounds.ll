@@ -407,7 +407,7 @@ exit:
   ret void
 }
 
-; FIXME: NUSW on the wider i32 AddRec does no imply NUSW on a narrower i8 AddRec.
+; NUSW on the wider i32 AddRec does no imply NUSW on a narrower i8 AddRec.
 ; Test for https://github.com/llvm/llvm-project/issues/191382.
 define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @wider_nusw_does_not_imply_narrower(
@@ -424,7 +424,9 @@ define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP5]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP5]], [[N_MOD_VF]]
@@ -445,7 +447,7 @@ define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i32> [[TMP16]] to <4 x i64>
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP13]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP13]], i64 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP5]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

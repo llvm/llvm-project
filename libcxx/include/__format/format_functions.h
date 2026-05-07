@@ -342,7 +342,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr typename _Ctx::iterator __vformat_to(_ParseCtx&&
 
 #  if _LIBCPP_STD_VER >= 26
 template <class _CharT>
-struct __runtime_format_string {
+struct __dynamic_format_string {
 private:
   basic_string_view<_CharT> __str_;
 
@@ -350,15 +350,15 @@ private:
   friend struct basic_format_string;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __runtime_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
+  _LIBCPP_HIDE_FROM_ABI __dynamic_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
 
-  __runtime_format_string(const __runtime_format_string&)            = delete;
-  __runtime_format_string& operator=(const __runtime_format_string&) = delete;
+  __dynamic_format_string(const __dynamic_format_string&)            = delete;
+  __dynamic_format_string& operator=(const __dynamic_format_string&) = delete;
 };
 
-_LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<char> runtime_format(string_view __fmt) noexcept { return __fmt; }
+_LIBCPP_HIDE_FROM_ABI inline __dynamic_format_string<char> dynamic_format(string_view __fmt) noexcept { return __fmt; }
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<wchar_t> runtime_format(wstring_view __fmt) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline __dynamic_format_string<wchar_t> dynamic_format(wstring_view __fmt) noexcept {
   return __fmt;
 }
 #    endif
@@ -375,7 +375,7 @@ struct basic_format_string {
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<_CharT> get() const noexcept { return __str_; }
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI basic_format_string(__runtime_format_string<_CharT> __s) noexcept : __str_(__s.__str_) {}
+  _LIBCPP_HIDE_FROM_ABI basic_format_string(__dynamic_format_string<_CharT> __s) noexcept : __str_(__s.__str_) {}
 #  endif
 
 private:

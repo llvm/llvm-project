@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerUnit.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
+#include <limits>
 #include <optional>
 
 namespace llvm {
@@ -110,6 +111,12 @@ public:
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContaingFile() const { return File; }
 
+  /// Set deterministic priority for type DIE allocation ordering.
+  /// Lower priority values win when multiple CUs race to define the same type.
+  llvm::Error setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx);
+
+  uint64_t getPriority() const { return Priority; }
+
   /// Load DIEs of input compilation unit. \returns true if input DIEs
   /// successfully loaded.
   bool loadInputDIEs();
@@ -120,8 +127,14 @@ public:
   void maybeResetToLoadedStage();
 
   /// Collect references to parseable Swift interfaces in imported
-  /// DW_TAG_module blocks.
+  /// DW_TAG_module blocks. The entries are staged on the CompileUnit and
+  /// merged into the shared map after the parallel analysis phase.
   void analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry);
+
+  /// Merge the Swift interface entries collected by analyzeImportedModule
+  /// into \p Map, emitting a warning for each conflicting path. Must be
+  /// called serially after analysis has completed.
+  void mergeSwiftInterfaces(DWARFLinkerBase::SwiftInterfacesMapTy &Map);
 
   /// Navigate DWARF tree and set die properties.
   void analyzeDWARFStructure() {
@@ -400,6 +413,18 @@ public:
   /// Returns function ranges of this unit.
   const RangesTy &getFunctionRanges() const { return Ranges; }
 
+  /// Record that a DW_AT_LLVM_stmt_sequence attribute on this unit
+  /// references the input line-table sequence whose header sits at
+  /// \p InputStmtSeqOffset. Resolution of that offset to an input
+  /// first-row index (via parser results plus a manual boundary-based
+  /// fallback) happens in a post-cloning pass, before \p V is rewritten
+  /// to the byte offset of the matching output sequence. Keying on row
+  /// index rather than address avoids collisions when two input
+  /// sequences would relocate to the same output address (e.g. ICF).
+  void noteStmtSeqListAttribute(DIEValue *V, uint64_t InputStmtSeqOffset) {
+    StmtSeqListAttributes.push_back({V, InputStmtSeqOffset});
+  }
+
   /// Clone and emit this compilation unit.
   Error
   cloneAndEmit(std::optional<std::reference_wrapper<const Triple>> TargetTriple,
@@ -640,9 +665,47 @@ private:
                              SectionDescriptor &OutRangeSection);
 
   /// Insert the new line info sequence \p Seq into the current
-  /// set of already linked line info \p Rows.
+  /// set of already linked line info \p Rows. \p SeqIndices carries the
+  /// input Row index that each entry in \p Seq originated from (or the
+  /// invalid-row-index sentinel for manufactured end-of-range rows), and
+  /// is kept in lockstep with \p RowIndices.
   void insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
-                          std::vector<DWARFDebugLine::Row> &Rows);
+                          SmallVectorImpl<uint64_t> &SeqIndices,
+                          std::vector<DWARFDebugLine::Row> &Rows,
+                          SmallVectorImpl<uint64_t> &RowIndices);
+
+  /// Filter \p InputLineTable's rows to those covered by this unit's
+  /// function ranges, relocating addresses in the process, and store the
+  /// result in \p NewRows. \p NewRowIndices is populated in lockstep with
+  /// \p NewRows and carries, for each output row, the index of the input
+  /// row it originated from — or InvalidRowIndex for manufactured
+  /// end-of-range rows.
+  void filterLineTableRows(const DWARFDebugLine::LineTable &InputLineTable,
+                           std::vector<DWARFDebugLine::Row> &NewRows,
+                           SmallVectorImpl<uint64_t> &NewRowIndices);
+
+  /// Rewrite every DW_AT_LLVM_stmt_sequence DIEValue recorded on this
+  /// unit with the local .debug_line offset of the output sequence
+  /// containing the corresponding input first row.
+  /// \p SeqOffsetToFirstRowIndex maps an input stmt-sequence offset to
+  /// its first-row index (built by buildStmtSeqOffsetToFirstRowIndex so
+  /// that sequences missed by the DWARF parser are recovered from row
+  /// boundaries). \p RowIndexToSeqStartOffset maps an input first-row
+  /// index to the byte offset of the output DW_LNE_set_address that
+  /// opens the matching output sequence.
+  void patchStmtSeqAttributes(
+      const DenseMap<uint64_t, uint64_t> &SeqOffsetToFirstRowIndex,
+      const DenseMap<uint64_t, uint64_t> &RowIndexToSeqStartOffset);
+
+  /// Build a map from input stmt-sequence offset to the first-row index
+  /// of the corresponding sequence in \p InputLineTable. Seeds the map
+  /// from \p InputLineTable.Sequences (the DWARF parser's results), then
+  /// augments it by manually walking row boundaries and realigning them
+  /// against the recorded DW_AT_LLVM_stmt_sequence values so that
+  /// sequences missed by the parser still resolve. Mirrors the
+  /// classic DWARFLinker's constructSeqOffsettoOrigRowMapping.
+  DenseMap<uint64_t, uint64_t> buildStmtSeqOffsetToFirstRowIndex(
+      const DWARFDebugLine::LineTable &InputLineTable) const;
 
   /// Emits body for both macro sections.
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
@@ -674,8 +737,18 @@ private:
   /// Pointer to the paired compile unit from the input DWARF.
   DWARFUnit *OrigUnit = nullptr;
 
-  /// The DW_AT_language of this unit.
+  /// Raw DW_AT_language from the input (not ODR-filtered).
   std::optional<uint16_t> Language;
+
+  /// Parseable Swift interface entries staged during the parallel analysis
+  /// phase. Merged serially afterwards.
+  struct PendingSwiftInterface {
+    PendingSwiftInterface(StringRef ModuleName, StringRef ResolvedPath)
+        : ModuleName(ModuleName), ResolvedPath(ResolvedPath) {}
+    std::string ModuleName;
+    std::string ResolvedPath;
+  };
+  SmallVector<PendingSwiftInterface> PendingSwiftInterfaces;
 
   /// Line table for this unit.
   const DWARFDebugLine::LineTable *LineTablePtr = nullptr;
@@ -691,7 +764,7 @@ private:
 
   std::unique_ptr<DependencyTracker> Dependencies;
 
-  /// \defgroup Data Members accessed asinchronously.
+  /// \defgroup Data Members accessed asynchronously.
   ///
   /// @{
   OffsetToUnitTy getUnitFromOffset;
@@ -702,6 +775,9 @@ private:
   /// Flag indicating whether type de-duplication is forbidden.
   bool NoODR = true;
 
+  /// Deterministic priority for type DIE allocation (lower wins).
+  uint64_t Priority = std::numeric_limits<uint64_t>::max();
+
   /// The ranges in that map are the PC ranges for functions in this unit,
   /// associated with the PC offset to apply to the addresses to get
   /// the linked address.
@@ -711,6 +787,18 @@ private:
   /// The DW_AT_low_pc of each DW_TAG_label.
   using LabelMapTy = SmallDenseMap<uint64_t, uint64_t, 1>;
   LabelMapTy Labels;
+
+  /// Recorded DW_AT_LLVM_stmt_sequence attributes for this unit. Each
+  /// entry pairs the DIEValue holding the attribute with the input-side
+  /// byte offset of the referenced line-table sequence. The value is
+  /// rewritten with the matching output offset after the line table has
+  /// been emitted; resolution from input offset to input first-row
+  /// index (including the parser-miss fallback) happens at patch time.
+  struct StmtSeqPatch {
+    DIEValue *Value = nullptr;
+    uint64_t InputStmtSeqOffset = 0;
+  };
+  SmallVector<StmtSeqPatch, 4> StmtSeqListAttributes;
   std::mutex LabelsMutex;
 
   /// This field keeps current stage of overall compile unit processing.

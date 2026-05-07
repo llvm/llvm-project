@@ -55,7 +55,7 @@ def LLVMTranslationDialectInterface : DialectInterface<"LLVMTranslationDialectIn
       [{
         return ::llvm::success();
       }]
-    >
+    >,
   ];
 }
 

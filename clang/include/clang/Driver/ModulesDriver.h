@@ -32,6 +32,10 @@ class Compilation;
 
 namespace clang::driver::modules {
 
+/// Emits diagnostics for arguments incompatible with -fmodules-driver.
+void diagnoseModulesDriverArgs(llvm::opt::DerivedArgList &DAL,
+                               DiagnosticsEngine &Diags);
+
 /// The parsed Standard library module manifest.
 struct StdModuleManifest {
   struct Module {

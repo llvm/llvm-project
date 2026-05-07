@@ -34,21 +34,21 @@ void sycl_kernel_launch(const char *, Ts... Args) {}
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void skep1() {
 }
-// CHECK:      |-FunctionDecl {{.*}} skep1 'void ()'
+// CHECK:      |-FunctionDecl {{.*}} skep1 'void ()' external-linkage
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<1>
 
 using KN2 = KN<2>;
 [[clang::sycl_kernel_entry_point(KN2)]]
 void skep2() {
 }
-// CHECK:      |-FunctionDecl {{.*}} skep2 'void ()'
+// CHECK:      |-FunctionDecl {{.*}} skep2 'void ()' external-linkage
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN2
 
 template<int I> using KNT = KN<I>;
 [[clang::sycl_kernel_entry_point(KNT<3>)]]
 void skep3() {
 }
-// CHECK:      |-FunctionDecl {{.*}} skep3 'void ()'
+// CHECK:      |-FunctionDecl {{.*}} skep3 'void ()' external-linkage
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KNT<3>
 
 template<typename KNT, typename F>
@@ -56,7 +56,7 @@ template<typename KNT, typename F>
 void skep4(F f) {
   f();
 }
-// CHECK:      |-FunctionTemplateDecl {{.*}} skep4
+// CHECK:      |-FunctionTemplateDecl {{.*}} skep4 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} F
 // CHECK-NEXT: | |-FunctionDecl {{.*}} skep4 'void (F)'
@@ -65,24 +65,24 @@ void skep4(F f) {
 void test_skep4() {
   skep4<KNT<4>>([]{});
 }
-// CHECK:      | `-FunctionDecl {{.*}} used skep4 'void ((lambda at {{.*}}))' implicit_instantiation instantiated_from 0x{{.+}}
+// CHECK:      | `-FunctionDecl {{.*}} used skep4 'void ((lambda at {{.*}}))' implicit_instantiation instantiated_from 0x{{.+}} external-linkage
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<4>'
 // CHECK:      |   |-TemplateArgument type '(lambda at {{.*}})'
 // CHECK:      |   `-SYCLKernelEntryPointAttr {{.*}} struct KN<4>
-// CHECK-NEXT: |-FunctionDecl {{.*}} test_skep4 'void ()'
+// CHECK-NEXT: |-FunctionDecl {{.*}} test_skep4 'void ()' external-linkage
 
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void skep5(T) {
 }
-// CHECK:      |-FunctionTemplateDecl {{.*}} skep5
+// CHECK:      |-FunctionTemplateDecl {{.*}} skep5 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} T
 // CHECK-NEXT: | |-FunctionDecl {{.*}} skep5 'void (T)'
 // CHECK:      | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 // Checks for the explicit template instantiation declaration below.
-// CHECK:      | `-FunctionDecl {{.*}} skep5 'void (int)' explicit_instantiation_definition instantiated_from 0x{{.+}}
+// CHECK:      | `-FunctionDecl {{.*}} skep5 'void (int)' explicit_instantiation_definition instantiated_from 0x{{.+}} external-linkage
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<5, 4>'
 // CHECK:      |   |-TemplateArgument type 'int'
 // CHECK:      |   `-SYCLKernelEntryPointAttr {{.*}} KN<5, 4>
@@ -96,7 +96,7 @@ void skep5(T) {
 template<>
 void skep5<KN<5,1>>(short) {
 }
-// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (short)' explicit_specialization
+// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (short)' explicit_specialization external-linkage
 // CHECK-NEXT: | |-TemplateArgument type 'KN<5, 1>'
 // CHECK:      | |-TemplateArgument type 'short'
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} Inherited struct KN<5, 1>
@@ -105,7 +105,7 @@ template<>
 [[clang::sycl_kernel_entry_point(KN<5,2>)]]
 void skep5<KN<5,2>>(long) {
 }
-// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long)' explicit_specialization
+// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long)' explicit_specialization external-linkage
 // CHECK-NEXT: | |-TemplateArgument type 'KN<5, 2>'
 // CHECK:      | |-TemplateArgument type 'long'
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 2>
@@ -128,7 +128,7 @@ template<>
 [[clang::sycl_kernel_entry_point(KN<5,3>)]]
 void skep5<KN<5,-1>>(long long) {
 }
-// FIXME-CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long long)' explicit_specialization
+// FIXME-CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long long)' explicit_specialization external-linkage
 // FIXME-CHECK-NEXT: | |-TemplateArgument type 'KN<5, -1>'
 // FIXME-CHECK:      | |-TemplateArgument type 'long long'
 // FIXME-CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 3>
@@ -143,18 +143,18 @@ void skep6();
 [[clang::sycl_kernel_entry_point(KN<6>)]]
 void skep6() {
 }
-// CHECK:      |-FunctionDecl {{.*}} skep6 'void ()'
+// CHECK:      |-FunctionDecl {{.*}} skep6 'void ()' external-linkage
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
-// CHECK-NEXT: |-FunctionDecl {{.*}} prev {{.*}} skep6 'void ()'
+// CHECK-NEXT: |-FunctionDecl {{.*}} prev {{.*}} skep6 'void ()' external-linkage
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
 
 // Ensure that matching attributes from the same declaration are ok.
 [[clang::sycl_kernel_entry_point(KN<7>), clang::sycl_kernel_entry_point(KN<7>)]]
 void skep7() {
 }
-// CHECK:      |-FunctionDecl {{.*}} skep7 'void ()'
+// CHECK:      |-FunctionDecl {{.*}} skep7 'void ()' external-linkage
 // CHECK:      | |-SYCLKernelEntryPointAttr {{.*}} KN<7>
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<7>
 
 void the_end() {}
-// CHECK:      `-FunctionDecl {{.*}} the_end 'void ()'
+// CHECK:      `-FunctionDecl {{.*}} the_end 'void ()' external-linkage

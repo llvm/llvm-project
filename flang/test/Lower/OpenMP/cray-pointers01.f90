@@ -2,9 +2,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
 
 module test_host_assoc_cray_pointer
-  ! CHECK-LABEL: fir.global @_QMtest_host_assoc_cray_pointerEivar : i64
   real*8 var(*)
-  ! CHECK-LABEL: fir.global  @_QMtest_host_assoc_cray_pointerEvar : !fir.array<?xf64>
   pointer(ivar,var)
 
 contains
@@ -57,5 +55,9 @@ program test_cray_pointers_01
     print *, var(1)
     ! CHECK:   omp.terminator
     ! CHECK: }
+    ! CHECK-LABEL: fir.global @_QMtest_host_assoc_cray_pointerEivar : i64
+    ! CHECK-LABEL: fir.global  @_QMtest_host_assoc_cray_pointerEvar : !fir.array<?xf64>
+
+
   !$omp end parallel
 end program test_cray_pointers_01

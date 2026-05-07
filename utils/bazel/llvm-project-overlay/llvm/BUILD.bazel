@@ -287,7 +287,6 @@ cc_library(
         "lib/Support/*.h",
         "lib/Support/*.inc",
         "lib/Support/LSP/*.cpp",
-        "lib/Support/HTTP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -631,6 +630,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoDWARF",
+        ":HTTP",
         ":Object",
         ":Support",
         ":Symbolize",
@@ -740,6 +740,7 @@ cc_library(
         ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
+        ":HTTP",
         ":Object",
         ":Support",
         ":TargetParser",
@@ -1088,6 +1089,8 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
+        # Resolves circular-dep b/w Coroutines and Core.
+        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ]),
     hdrs = glob(
         [
@@ -1327,7 +1330,10 @@ cc_library(
 cc_library(
     name = "ABI",
     srcs = glob(
-        ["lib/ABI/*.cpp"],
+        [
+            "lib/ABI/*.cpp",
+            "lib/ABI/Targets/*.cpp",
+        ],
     ),
     hdrs = glob(
         ["include/llvm/ABI/*.h"],
@@ -1590,6 +1596,8 @@ cc_library(
     hdrs = glob(["include/llvm/DWP/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
+        ":BinaryFormatELF",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",
@@ -1717,7 +1725,10 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
+    textual_hdrs = glob([
+        "include/llvm/SandboxIR/*.def",
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -1758,9 +1769,9 @@ cc_library(
         "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
-    textual_hdrs = [
-        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/PassRegistry.def",
-    ],
+    textual_hdrs = glob([
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -2311,7 +2322,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/AArch64/AArch64GenGlobalISel.inc",
             ),
             (
@@ -3696,7 +3710,10 @@ gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
-        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=WebAssemblyPreLegalizerCombiner",
@@ -4668,6 +4685,21 @@ cc_library(
     }),
 )
 
+cc_library(
+    name = "HTTP",
+    srcs = glob(["lib/HTTP/*.cpp"]),
+    hdrs = glob(["include/llvm/HTTP/*.h"]),
+    includes = ["include"],
+    linkopts = select({
+        "@platforms//os:windows": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [":Support"],
+)
+
 ################################################################################
 # LLVM toolchain and development binaries
 
@@ -4819,6 +4851,7 @@ cc_binary(
         ":Core",
         ":IRReader",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -4974,6 +5007,7 @@ cc_binary(
     deps = [
         ":Coverage",
         ":Debuginfod",
+        ":HTTP",
         ":Instrumentation",
         ":Object",
         ":ProfileData",
@@ -5102,6 +5136,7 @@ cc_library(
         ":Core",
         ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":HTTP",
         ":Option",
         ":Support",
         ":Symbolize",
@@ -5206,6 +5241,7 @@ cc_library(
         ":DWP",
         ":DwpOptionsTableGen",
         ":MC",
+        ":Object",
         ":Option",
         ":Support",
     ],
@@ -5797,6 +5833,7 @@ cc_library(
         ":DebugInfoDWARFLowLevel",
         ":Debuginfod",
         ":Demangle",
+        ":HTTP",
         ":MC",
         ":MCDisassembler",
         ":ObjdumpOptsTableGen",
@@ -5912,6 +5949,7 @@ cc_library(
     deps = [
         ":Core",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -6212,6 +6250,7 @@ cc_library(
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":Option",
         ":Support",
