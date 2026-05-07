@@ -2360,7 +2360,12 @@ void CombinerHelper::applyCombineUnmergeConstant(
   unsigned NumElems = MI.getNumOperands() - 1;
   for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
     Register DstReg = MI.getOperand(Idx).getReg();
-    Builder.buildConstant(DstReg, Csts[Idx]);
+    LLT DstTy = MRI.getType(DstReg);
+    if (DstTy.isFloat())
+      Builder.buildFConstant(DstReg,
+                             APFloat(getFltSemanticForLLT(DstTy), Csts[Idx]));
+    else
+      Builder.buildConstant(DstReg, Csts[Idx]);
   }
 
   MI.eraseFromParent();

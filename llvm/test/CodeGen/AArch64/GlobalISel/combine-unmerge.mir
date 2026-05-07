@@ -613,3 +613,20 @@ body:             |
     %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
     $q0 = COPY %me(s128)
 ...
+# Check that unmerged f64 constants use G_FCONSTANT
+---
+name:            test_unmerge_fconstant
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_unmerge_fconstant
+    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double -7.500000e+00
+    ; CHECK-NEXT: $x0 = COPY [[C]](f64)
+    ; CHECK-NEXT: $x1 = COPY [[C1]](f64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
+  %2:_(f128) = G_FCONSTANT fp128 f0xC01E0000000000000000000000000000
+  %25:_(f64), %26:_(f64) = G_UNMERGE_VALUES %2:_(f128)
+  $x0 = COPY %25:_(f64)
+  $x1 = COPY %26:_(f64)
+  RET_ReallyLR implicit $x0, implicit $x1
+...
