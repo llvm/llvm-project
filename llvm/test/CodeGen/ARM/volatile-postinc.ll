@@ -10,7 +10,8 @@ define void @volatile_store(ptr %start, ptr %end) {
 ; CHECK-NEXT:    mov r2, #42
 ; CHECK-NEXT:  .LBB0_1: @ %loop
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str r2, [r0], #4
+; CHECK-NEXT:    str r2, [r0]
+; CHECK-NEXT:    add r0, r0, #4
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    bne .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %bb2
@@ -34,7 +35,8 @@ define void @volatile_load(ptr %start, ptr %end) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:  .LBB1_1: @ %loop
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r2, [r0], #4
+; CHECK-NEXT:    ldr r2, [r0]
+; CHECK-NEXT:    add r0, r0, #4
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    bne .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %bb2
