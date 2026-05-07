@@ -1,6 +1,6 @@
 ## Test reading a valid z/OS archive.
 # RUN: %python %p/Inputs/generate_zos_archive.py --output %t.valid.a \
-# RUN:   --symtab "foo.txt:0" --member foo.txt:abcd
+# RUN:   --symtab "foo.txt:0" --symtab "bar:0" --member foo.txt:abcd
 # RUN: llvm-ar t %t.valid.a | FileCheck %s --check-prefix=LIST
 # RUN: llvm-nm --print-armap %t.valid.a | FileCheck %s --check-prefix=SYMS
 # RUN: llvm-ar p %t.valid.a foo.txt | FileCheck %s --check-prefix=CONTENT
@@ -8,6 +8,7 @@
 # LIST: foo.txt
 # SYMS: Archive map
 # SYMS-NEXT: foo.txt in foo.txt
+# SYMS-NEXT: bar in foo.txt
 # CONTENT: abcd
 
 ## Test malformed terminator on member header.

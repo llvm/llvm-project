@@ -405,6 +405,7 @@ Expected<StringRef> ZOSArchiveMemberHeader::getRawName() const {
 }
 
 Expected<StringRef> ZOSArchiveMemberHeader::getName(uint64_t Size) const {
+  (void)Size;
   return StringRef(MemberName);
 }
 
@@ -433,7 +434,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
                           Twine(Offset));
     return;
   }
-  RawMemberName.append(RawNameRef);
+  RawMemberName.assign(RawNameRef);
 
   // Set MemberName.
   if (RawNameRef.starts_with("#1/")) {
@@ -459,7 +460,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
                        Twine(Offset));
     return;
   }
-  LastModified.append(LastModifiedRef);
+  LastModified.assign(LastModifiedRef);
 
   // UID
   StringRef UIDRef = ebcdicFieldToASCII(ArMemHdr->UID, Dst);
@@ -469,7 +470,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
                           Twine(Offset));
     return;
   }
-  UID.append(UIDRef);
+  UID.assign(UIDRef);
 
   // GID
   StringRef GIDRef = ebcdicFieldToASCII(ArMemHdr->GID, Dst);
@@ -479,7 +480,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
                           Twine(Offset));
     return;
   }
-  GID.append(GIDRef);
+  GID.assign(GIDRef);
 
   // AccessMode
   StringRef AccessModeRef = ebcdicFieldToASCII(ArMemHdr->AccessMode, Dst);
@@ -490,7 +491,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
                        Twine(Offset));
     return;
   }
-  AccessMode.append(AccessModeRef);
+  AccessMode.assign(AccessModeRef);
 }
 
 Expected<uint64_t> BigArchiveMemberHeader::getRawNameSize() const {
@@ -1628,14 +1629,11 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
   StringRef Name = NameOrErr.get();
 
   if (Name == "__.SYMDEF") {
-    Expected<StringRef> BufOrErr = C->getBuffer();
-    if (!BufOrErr) {
-      Err = BufOrErr.takeError();
-      return;
-    }
-
     // Copy symbol table converting embedded EBCDIC names to ASCII.
-    StringRef EbcdicSymbolTable = BufOrErr.get();
+    // getBuffer() cannot fail here because the Child constructor and
+    // getNext() already validate that the member's size fits within
+    // the archive.
+    StringRef EbcdicSymbolTable = cantFail(C->getBuffer());
     if (EbcdicSymbolTable.size() < sizeof(uint32_t)) {
       Err = malformedError(
           "z/OS archive symbol table is too small to read the symbol count, "
