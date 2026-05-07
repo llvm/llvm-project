@@ -39,6 +39,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
 
@@ -69,6 +72,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 23
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 22
 // TODO: Fill this in
@@ -229,6 +237,14 @@
 // See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
+
+// This determines whether we assume that the internal std::__bad_variant_access_with_msg class
+// (which carries a message describing the cause of the failure in bad_variant_access::what())
+// provides a key function in the dylib. This allows centralizing its vtable and typeinfo instead
+// of having all TUs provide a weak definition that then gets deduplicated. When it is not available
+// in the dylib, what() is defined inline instead, so the descriptive message is provided regardless.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS_WITH_MSG_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_23
+// No attribute, since we've had bad_variant_access in the headers before
 
 // This controls the availability of floating-point std::from_chars functions.
 // These overloads were added later than the integer overloads.
