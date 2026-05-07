@@ -14277,7 +14277,7 @@ static SDValue splitAndOrXorv2i32Toi32(SDNode *N, SelectionDAG &DAG,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  if (AMDGPU::isGFX9Plus(*Subtarget)) {
+  if (Subtarget->hasVOP3AndOrOr3()) {
     // Do not split v2i32-v2i32 patterns e.g., and_or/or3 as they will be
     // handled by ThreeOp_v2i32_Pats in VOP3instructions.td
     auto matchV2I32Patterns = [](const unsigned Opc,
