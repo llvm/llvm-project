@@ -890,6 +890,58 @@ static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4cha
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x01020201U);
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_min((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFC0002FFFD0001 : 0x0001FFFD0002FFFC));
 
+static_assert(__builtin_elementwise_maxnum(1.0f, 2.0f) == 2.0f);
+static_assert(__builtin_elementwise_maxnum(-1.0f, 1.0f) == 1.0f);
+static_assert(__builtin_elementwise_maxnum(1.0, 2.0) == 2.0);
+static_assert(__builtin_elementwise_maxnum(-1.0, 1.0) == 1.0);
+static_assert(__builtin_elementwise_maxnum(__builtin_nanf(""), 1.0f) == 1.0f);
+static_assert(__builtin_elementwise_maxnum(1.0f, __builtin_nanf("")) == 1.0f);
+static_assert(__builtin_isnan(__builtin_elementwise_maxnum(__builtin_nanf(""), __builtin_nanf(""))));
+static_assert(__builtin_elementwise_maxnum(__builtin_inff(), 1.0f) == __builtin_inff());
+static_assert(__builtin_elementwise_maxnum(-__builtin_inff(), 1.0f) == 1.0f);
+
+static_assert(__builtin_elementwise_minnum(1.0f, 2.0f) == 1.0f);
+static_assert(__builtin_elementwise_minnum(-1.0f, 1.0f) == -1.0f);
+static_assert(__builtin_elementwise_minnum(1.0, 2.0) == 1.0);
+static_assert(__builtin_elementwise_minnum(-1.0, 1.0) == -1.0);
+static_assert(__builtin_elementwise_minnum(__builtin_nanf(""), 1.0f) == 1.0f);
+static_assert(__builtin_elementwise_minnum(1.0f, __builtin_nanf("")) == 1.0f);
+static_assert(__builtin_isnan(__builtin_elementwise_minnum(__builtin_nanf(""), __builtin_nanf(""))));
+static_assert(__builtin_elementwise_minnum(__builtin_inff(), 1.0f) == 1.0f);
+static_assert(__builtin_elementwise_minnum(-__builtin_inff(), 1.0f) == -__builtin_inff());
+
+constexpr vector4float maxf_vec =
+    __builtin_elementwise_maxnum((vector4float){1.0f, -2.0f, 3.0f, -4.0f},
+                                (vector4float){4.0f, -3.0f, 2.0f, -1.0f});
+static_assert(maxf_vec[0] == 4.0f && maxf_vec[1] == -2.0f &&
+              maxf_vec[2] == 3.0f && maxf_vec[3] == -1.0f);
+constexpr vector4float minf_vec =
+    __builtin_elementwise_minnum((vector4float){1.0f, -2.0f, 3.0f, -4.0f},
+                                (vector4float){4.0f, -3.0f, 2.0f, -1.0f});
+static_assert(minf_vec[0] == 1.0f && minf_vec[1] == -3.0f &&
+              minf_vec[2] == 2.0f && minf_vec[3] == -4.0f);
+constexpr vector4double maxd_vec =
+    __builtin_elementwise_maxnum((vector4double){1.0, -2.0, 3.0, -4.0},
+                                (vector4double){4.0, -3.0, 2.0, -1.0});
+static_assert(maxd_vec[0] == 4.0 && maxd_vec[1] == -2.0 &&
+              maxd_vec[2] == 3.0 && maxd_vec[3] == -1.0);
+constexpr vector4double mind_vec =
+    __builtin_elementwise_minnum((vector4double){1.0, -2.0, 3.0, -4.0},
+                                (vector4double){4.0, -3.0, 2.0, -1.0});
+static_assert(mind_vec[0] == 1.0 && mind_vec[1] == -3.0 &&
+              mind_vec[2] == 2.0 && mind_vec[3] == -4.0);
+
+constexpr vector4float maxf_nan_inf = __builtin_elementwise_maxnum(
+    (vector4float){__builtin_nanf(""), 1.0f, __builtin_inff(), 1.0f},
+    (vector4float){1.0f, __builtin_nanf(""), 1.0f, -__builtin_inff()});
+static_assert(maxf_nan_inf[0] == 1.0f && maxf_nan_inf[1] == 1.0f &&
+              maxf_nan_inf[2] == __builtin_inff() && maxf_nan_inf[3] == 1.0f);
+constexpr vector4float minf_nan_inf = __builtin_elementwise_minnum(
+    (vector4float){__builtin_nanf(""), 1.0f, __builtin_inff(), 1.0f},
+    (vector4float){1.0f, __builtin_nanf(""), 1.0f, -__builtin_inff()});
+static_assert(minf_nan_inf[0] == 1.0f && minf_nan_inf[1] == 1.0f &&
+              minf_nan_inf[2] == 1.0f && minf_nan_inf[3] == -__builtin_inff());
+
 static_assert(__builtin_elementwise_abs(10) == 10);
 static_assert(__builtin_elementwise_abs(-10) == 10);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_abs((vector4char){-1, -2, -3, 4})) == (LITTLE_END ? 0x04030201 : 0x01020304));

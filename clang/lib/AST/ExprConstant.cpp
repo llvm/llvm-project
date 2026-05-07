@@ -12867,38 +12867,24 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min: {
-    APValue SourceLHS, SourceRHS;
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
-        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
-      return false;
-
+    bool IsMax = E->getBuiltinCallee() == Builtin::BI__builtin_elementwise_max;
     QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
-
     if (!DestEltTy->isIntegerType())
       return false;
+    return EvaluateBinOpExpr([IsMax](const APSInt &LHS, const APSInt &RHS) {
+      return IsMax ? std::max(LHS, RHS) : std::min(LHS, RHS);
+    });
+  }
 
-    unsigned SourceLen = SourceLHS.getVectorLength();
-    SmallVector<APValue, 4> ResultElements;
-    ResultElements.reserve(SourceLen);
-
-    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
-      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
-      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
-      switch (E->getBuiltinCallee()) {
-      case Builtin::BI__builtin_elementwise_max:
-        ResultElements.push_back(
-            APValue(APSInt(std::max(LHS, RHS),
-                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
-        break;
-      case Builtin::BI__builtin_elementwise_min:
-        ResultElements.push_back(
-            APValue(APSInt(std::min(LHS, RHS),
-                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
-        break;
-      }
-    }
-
-    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  case Builtin::BI__builtin_elementwise_maxnum:
+  case Builtin::BI__builtin_elementwise_minnum: {
+    bool IsMax =
+        E->getBuiltinCallee() == Builtin::BI__builtin_elementwise_maxnum;
+    return EvaluateFpBinOpExpr(
+        [IsMax](const APFloat &LHS, const APFloat &RHS,
+                std::optional<APSInt>) -> std::optional<APFloat> {
+          return IsMax ? maxnum(LHS, RHS) : minnum(LHS, RHS);
+        });
   }
   case X86::BI__builtin_ia32_vpshldd128:
   case X86::BI__builtin_ia32_vpshldd256:
@@ -19918,7 +19904,8 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
-  case Builtin::BI__builtin_fmaxf128: {
+  case Builtin::BI__builtin_fmaxf128:
+  case Builtin::BI__builtin_elementwise_maxnum: {
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
@@ -19931,7 +19918,8 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
-  case Builtin::BI__builtin_fminf128: {
+  case Builtin::BI__builtin_fminf128:
+  case Builtin::BI__builtin_elementwise_minnum: {
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))

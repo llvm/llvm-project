@@ -237,6 +237,9 @@ Non-comprehensive list of changes in this release
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
+- ``__builtin_elementwise_maxnum`` and ``__builtin_elementwise_minnum`` can now
+  be used in constant expressions.
+
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
 - Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
