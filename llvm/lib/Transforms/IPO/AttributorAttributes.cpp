@@ -2281,6 +2281,15 @@ struct AANoFreeImpl : public AANoFree {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
+    // Make sure that synchronization cannot establish happens-before with a
+    // free on another thread.
+    const IRPosition &IRP = getIRPosition();
+    bool IsKnown;
+    if (!AA::hasAssumedIRAttr<Attribute::NoSync>(
+            A, this, IRPosition::function_scope(IRP), DepClassTy::REQUIRED,
+            IsKnown))
+      return indicatePessimisticFixpoint();
+
     auto CheckForNoFree = [&](Instruction &I) {
       bool IsKnown;
       return AA::hasAssumedIRAttr<Attribute::NoFree>(
@@ -2292,6 +2301,7 @@ struct AANoFreeImpl : public AANoFree {
     if (!A.checkForAllCallLikeInstructions(CheckForNoFree, *this,
                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
+
     return ChangeStatus::UNCHANGED;
   }
 
@@ -2346,27 +2356,41 @@ struct AANoFreeFloating : AANoFreeImpl {
           return true;
         unsigned ArgNo = CB->getArgOperandNo(&U);
 
+        // Even if the argument is nofree, we still need to check for nocapture,
+        // as the call may capture the argument without freeing it, and the
+        // captured argument is freed later.
         bool IsKnown;
-        return AA::hasAssumedIRAttr<Attribute::NoFree>(
-            A, this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::REQUIRED, IsKnown);
+        if (!AA::hasAssumedIRAttr<Attribute::NoFree>(
+                A, this, IRPosition::callsite_argument(*CB, ArgNo),
+                DepClassTy::REQUIRED, IsKnown))
+          return false;
+
+        const AANoCapture *NoCaptureAA = nullptr;
+        if (!AA::hasAssumedIRAttr<Attribute::Captures>(
+                A, this, IRPosition::callsite_argument(*CB, ArgNo),
+                DepClassTy::REQUIRED, IsKnown, false, &NoCaptureAA)) {
+          if (NoCaptureAA && NoCaptureAA->isAssumedNoCaptureMaybeReturned()) {
+            Follow = true;
+            return true;
+          }
+          return false;
+        }
+
+        return true;
       }
 
-      if (isa<GetElementPtrInst>(UserI) || isa<PHINode>(UserI) ||
-          isa<SelectInst>(UserI)) {
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
+      if (!capturesAnyProvenance(CI))
+        return true;
+      if (capturesAnyProvenance(CI.ResultCC)) {
         Follow = true;
         return true;
       }
-      if (isa<LoadInst>(UserI))
-        return true;
-
-      if (isa<StoreInst>(UserI))
-        return U.getOperandNo() == StoreInst::getPointerOperandIndex();
 
       if (isa<ReturnInst>(UserI) && getIRPosition().isArgumentPosition())
         return true;
 
-      // Unknown user.
+      // Capturing user.
       return false;
     };
     if (!A.checkForAllUses(Pred, *this, AssociatedValue))

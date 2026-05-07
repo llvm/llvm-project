@@ -101,8 +101,8 @@ declare void @callback1(ptr)
 declare void @callback2(ptr)
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR1]] = { nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR1]] = { nofree nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR1]] = { nounwind willreturn memory(write) }
 ;.
