@@ -1,5 +1,5 @@
 # Xqcilo - Qualcomm uC Large Offset Load Store extension
-# RUN: not llvm-mc %s -triple=riscv32 -mattr=+xqcilo \
+# RUN: not llvm-mc %s -triple=riscv32 -mattr=+xqcilo,+xqcili \
 # RUN:     2>&1 | FileCheck -check-prefixes=CHECK-ENABLED %s
 # RUN: not llvm-mc %s -triple=riscv32 -mattr=-xqcilo \
 # RUN:     2>&1 | FileCheck -check-prefixes=CHECK-DISABLED %s

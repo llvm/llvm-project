@@ -187,6 +187,7 @@ Makes programs 10x faster by doing Special New Thing.
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
+* The Xqcilo pseudos now emit sequences that can be relaxed.
 
 ### Changes to the WebAssembly Backend
 
