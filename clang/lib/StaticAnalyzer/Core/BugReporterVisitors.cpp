@@ -234,7 +234,7 @@ static bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
 static std::optional<SVal> getSValForVar(const Expr *CondVarExpr,
                                          const ExplodedNode *N) {
   ProgramStateRef State = N->getState();
-  const LocationContext *LCtx = N->getStackFrame();
+  const StackFrame *SF = N->getStackFrame();
 
   assert(CondVarExpr);
   CondVarExpr = CondVarExpr->IgnoreImpCasts();
@@ -245,11 +245,11 @@ static std::optional<SVal> getSValForVar(const Expr *CondVarExpr,
   // capture variable. We most likely need to duplicate that logic here.
   if (const auto *DRE = dyn_cast<DeclRefExpr>(CondVarExpr))
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      return State->getSVal(State->getLValue(VD, LCtx));
+      return State->getSVal(State->getLValue(VD, SF));
 
   if (const auto *ME = dyn_cast<MemberExpr>(CondVarExpr))
     if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
-      if (auto FieldL = State->getSVal(ME, LCtx).getAs<Loc>())
+      if (auto FieldL = State->getSVal(ME, SF).getAs<Loc>())
         return State->getRawSVal(*FieldL, FD->getType());
 
   return std::nullopt;
@@ -2840,7 +2840,7 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
                                   const ExplodedNode *N, bool TookTrue) {
   ProgramStateRef CurrentState = N->getState();
   ProgramStateRef PrevState = N->getFirstPred()->getState();
-  const LocationContext *LCtx = N->getStackFrame();
+  const StackFrame *SF = N->getStackFrame();
 
   // If the constraint information is changed between the current and the
   // previous program state we assuming the newly seen constraint information.
@@ -2858,7 +2858,7 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
   // this is not a "real" assumption.
   bool IsAssuming =
       !BRC.getStateManager().haveEqualConstraints(CurrentState, PrevState) ||
-      CurrentState->getSVal(Cond, LCtx).isUnknownOrUndef();
+      CurrentState->getSVal(Cond, SF).isUnknownOrUndef();
 
   // These will be modified in code below, but we need to preserve the original
   //  values in case we want to throw the generic message.
@@ -2905,7 +2905,7 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
   if (!IsAssuming)
     return nullptr;
 
-  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
+  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), SF);
   if (!Loc.isValid() || !Loc.asLocation().isValid())
     return nullptr;
 

@@ -173,14 +173,13 @@ void ExprEngine::removeDeadOnEndOfFunction(ExplodedNode *Pred,
     return;
   }
 
-  // Here, we destroy the current location context. We use the current
-  // function's entire body as a diagnostic statement, with which the program
-  // point will be associated. However, we only want to use LastStmt as a
-  // reference for what to clean up if it's a ReturnStmt; otherwise, everything
-  // is dead.
-  const LocationContext *LCtx = Pred->getStackFrame();
-  removeDead(Pred, Dst, dyn_cast<ReturnStmt>(LastSt), LCtx,
-             LCtx->getAnalysisDeclContext()->getBody(),
+  // Here, we destroy the current stack frame. We use the current function's
+  // entire body as a diagnostic statement, with which the program point
+  // will be associated. However, we only want to use LastStmt as a reference
+  // for what to clean up if it's a ReturnStmt; otherwise, everything is dead.
+  const StackFrame *SF = Pred->getStackFrame();
+  removeDead(Pred, Dst, dyn_cast<ReturnStmt>(LastSt), SF,
+             SF->getAnalysisDeclContext()->getBody(),
              ProgramPoint::PostStmtPurgeDeadSymbolsKind);
 }
 
@@ -296,11 +295,11 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // If the callee returns an expression, bind its value to CallExpr.
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
-      const LocationContext *LCtx = CEBNode->getStackFrame();
+      const StackFrame *SF = CEBNode->getStackFrame();
 
       SVal V = UndefinedVal();
       if (RS->getRetValue())
-        V = State->getSVal(RS->getRetValue(), LCtx);
+        V = State->getSVal(RS->getRetValue(), SF);
 
       // Ensure that the return type matches the type of the returned Expr.
       if (wasDifferentDeclUsedForInlining(Call, CalleeSF)) {
@@ -453,30 +452,28 @@ bool ExprEngine::isHuge(AnalysisDeclContext *ADC) const {
   return Cfg->getNumBlockIDs() > AMgr.options.MaxInlinableSize;
 }
 
-void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
-                               bool &IsRecursive, unsigned &StackDepth) {
+void ExprEngine::examineStackFrames(const Decl *D, const StackFrame *SF,
+                                    bool &IsRecursive, unsigned &StackDepth) {
   IsRecursive = false;
   StackDepth = 0;
 
-  while (LCtx) {
-    if (const StackFrame *SF = dyn_cast<StackFrame>(LCtx)) {
-      const Decl *DI = SF->getDecl();
+  while (SF) {
+    const Decl *DI = SF->getDecl();
 
-      // Mark recursive (and mutually recursive) functions and always count
-      // them when measuring the stack depth.
-      if (DI == D) {
-        IsRecursive = true;
-        ++StackDepth;
-        LCtx = LCtx->getParent();
-        continue;
-      }
-
-      // Do not count the small functions when determining the stack depth.
-      AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(DI);
-      if (!isSmall(CalleeADC))
-        ++StackDepth;
+    // Mark recursive (and mutually recursive) functions and always count
+    // them when measuring the stack depth.
+    if (DI == D) {
+      IsRecursive = true;
+      ++StackDepth;
+      SF = SF->getParent();
+      continue;
     }
-    LCtx = LCtx->getParent();
+
+    // Do not count the small functions when determining the stack depth.
+    AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(DI);
+    if (!isSmall(CalleeADC))
+      ++StackDepth;
+    SF = SF->getParent();
   }
 }
 
@@ -530,8 +527,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
                             ExplodedNode *Pred, ProgramStateRef State) {
   assert(D);
 
-  const LocationContext *CurLC = Pred->getStackFrame();
-  const StackFrame *CallerSF = CurLC->getStackFrame();
+  const StackFrame *CallerSF = Pred->getStackFrame();
   const BlockDataRegion *BlockInvocationData = nullptr;
   if (Call.getKind() == CE_Block &&
       !cast<BlockCall>(Call).isConversionFromLambda()) {
@@ -549,7 +545,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
       CallerSF, BlockInvocationData, CallE, getCurrBlock(),
       getNumVisitedCurrent(), currStmtIdx);
 
-  CallEnter Loc(CallE, CalleeSF, CurLC);
+  CallEnter Loc(CallE, CalleeSF, CallerSF);
 
   // Construct a new state which contains the mapping from actual to
   // formal arguments.
@@ -838,8 +834,7 @@ ExprEngine::CallInlinePolicy
 ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
                               AnalyzerOptions &Opts,
                               const EvalCallOptions &CallOpts) {
-  const LocationContext *CurLC = Pred->getStackFrame();
-  const StackFrame *CallerSF = CurLC->getStackFrame();
+  const StackFrame *CallerSF = Pred->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
   case CE_CXXStaticOperator:
@@ -867,7 +862,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
       return CIP_DisallowedOnce;
 
     if (CallOpts.IsArrayCtorOrDtor) {
-      if (!shouldInlineArrayConstruction(Pred->getState(), CtorExpr, CurLC))
+      if (!shouldInlineArrayConstruction(Pred->getState(), CtorExpr, CallerSF))
         return CIP_DisallowedOnce;
     }
 

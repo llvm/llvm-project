@@ -101,9 +101,7 @@ public:
     return Eng.getContext().getLangOpts();
   }
 
-  const LocationContext *getLocationContext() const {
-    return Pred->getStackFrame();
-  }
+  const StackFrame *getLocationContext() const { return Pred->getStackFrame(); }
 
   const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
 

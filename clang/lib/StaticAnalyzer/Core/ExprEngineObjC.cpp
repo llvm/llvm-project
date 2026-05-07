@@ -22,13 +22,13 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
   ProgramStateRef state = Pred->getState();
-  const LocationContext *LCtx = Pred->getStackFrame();
-  SVal baseVal = state->getSVal(Ex->getBase(), LCtx);
+  const StackFrame *SF = Pred->getStackFrame();
+  SVal baseVal = state->getSVal(Ex->getBase(), SF);
   SVal location = state->getLValue(Ex->getDecl(), baseVal);
 
   ExplodedNodeSet dstIvar;
   NodeBuilder Bldr(Pred, dstIvar, *currBldrCtx);
-  Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, location));
+  Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, SF, location));
 
   // Perform the post-condition check of the ObjCIvarRefExpr and store
   // the created nodes in 'Dst'.
@@ -53,10 +53,10 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
 
   for (ExplodedNode *Pred : dstLocation) {
     ProgramStateRef state = Pred->getState();
-    const LocationContext *LCtx = Pred->getStackFrame();
+    const StackFrame *SF = Pred->getStackFrame();
 
     ProgramStateRef nextState =
-        ExprEngine::setWhetherHasMoreIteration(state, S, LCtx, hasElements);
+        ExprEngine::setWhetherHasMoreIteration(state, S, SF, hasElements);
 
     if (auto MV = elementV.getAs<loc::MemRegionVal>())
       if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
@@ -68,14 +68,13 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
 
         SVal V;
         if (hasElements) {
-          SymbolRef Sym =
-              SymMgr.conjureSymbol(elem, LCtx, T, NumVisitedCurrent);
+          SymbolRef Sym = SymMgr.conjureSymbol(elem, SF, T, NumVisitedCurrent);
           V = svalBuilder.makeLoc(Sym);
         } else {
           V = svalBuilder.makeIntVal(0, T);
         }
 
-        nextState = nextState->bindLoc(elementV, V, LCtx);
+        nextState = nextState->bindLoc(elementV, V, SF);
       }
 
     Bldr.generateNode(S, Pred, nextState);

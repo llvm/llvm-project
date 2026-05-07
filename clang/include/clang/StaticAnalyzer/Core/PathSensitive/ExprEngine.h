@@ -322,7 +322,7 @@ public:
 
   /// getInitialState - Return the initial state used for the root vertex
   ///  in the ExplodedGraph.
-  ProgramStateRef getInitialState(const LocationContext *InitLoc);
+  ProgramStateRef getInitialState(const StackFrame *InitLoc);
 
   ExplodedGraph &getGraph() { return G; }
   const ExplodedGraph &getGraph() const { return G; }
@@ -672,7 +672,7 @@ public:
   getEagerlyAssumeBifurcationTags();
 
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
-                                      const LocationContext *LCtx, QualType T,
+                                      const StackFrame *SF, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
                                       NodeBuilder &Bldr, ExplodedNode *Pred);
 
@@ -807,9 +807,9 @@ public:
   /// that's necessary to perform construction of an object with a given
   /// syntactic construction context. V and CallOpts have to be obtained from
   /// computeObjectUnderConstruction() invoked with the same set of
-  /// the remaining arguments (E, State, LCtx, CC).
+  /// the remaining arguments (E, State, SF, CC).
   ProgramStateRef updateObjectsUnderConstruction(
-      SVal V, const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
+      SVal V, const Expr *E, ProgramStateRef State, const StackFrame *SF,
       const ConstructionContext *CC, const EvalCallOptions &CallOpts);
 
   /// A convenient wrapper around computeObjectUnderConstruction
@@ -842,7 +842,7 @@ private:
                     bool isLoad);
 
   /// Count the stack depth and determine if the call is recursive.
-  void examineStackFrames(const Decl *D, const LocationContext *LCtx,
+  void examineStackFrames(const Decl *D, const StackFrame *SF,
                           bool &IsRecursive, unsigned &StackDepth);
 
   enum CallInlinePolicy {
