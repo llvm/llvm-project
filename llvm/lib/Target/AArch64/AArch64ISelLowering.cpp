@@ -5569,9 +5569,21 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
 
   assert(ArgVT == MVT::i16);
 
-  Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
-  Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
-  return DAG.getTargetExtractSubreg(AArch64::hsub, DL, OpVT, Op);
+  // If the input from a vector, extract directly from it.
+  if (Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    Op = DAG.getNode(ISD::BITCAST, DL,
+                     Src.getOperand(0).getValueType().changeElementType(
+                         *DAG.getContext(), OpVT),
+                     Src.getOperand(0));
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op,
+                       Src.getOperand(1));
+  }
+
+  Op = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Src);
+  Op = DAG.getNode(ISD::BITCAST, DL,
+                   EVT::getVectorVT(*DAG.getContext(), OpVT, 8), Op);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op,
+                     DAG.getConstant(0, DL, MVT::i64));
 }
 
 // Returns lane if Op extracts from a two-element vector and lane is constant
