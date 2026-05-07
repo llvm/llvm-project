@@ -17,7 +17,7 @@ namespace llvm {
 class LPMUpdater;
 class LoopNest;
 
-struct LoopInterchangePass : public PassInfoMixin<LoopInterchangePass> {
+struct LoopInterchangePass : public OptionalPassInfoMixin<LoopInterchangePass> {
   PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
