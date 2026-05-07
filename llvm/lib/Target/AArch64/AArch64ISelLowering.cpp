@@ -30159,13 +30159,22 @@ bool AArch64TargetLowering::getPostIndexedAddressParts(
     ISD::MemIndexedMode &AM, SelectionDAG &DAG) const {
   EVT VT;
   SDValue Ptr;
+  bool IsVolatile;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     VT = LD->getMemoryVT();
     Ptr = LD->getBasePtr();
+    IsVolatile = LD->isVolatile();
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT = ST->getMemoryVT();
     Ptr = ST->getBasePtr();
+    IsVolatile = ST->isVolatile();
   } else
+    return false;
+
+  // Do not use post-inc addressing mode for volatile accesses. Instructions
+  // performing register writeback do not set a valid instruction syndrome,
+  // making it impossible to handle MMIO in protected hypervisors.
+  if (IsVolatile)
     return false;
 
   if (!getIndexedAddressParts(N, Op, Base, Offset, DAG))
