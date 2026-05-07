@@ -13,11 +13,11 @@
 
 namespace llvm {
 
-class BranchRelaxationPass : public PassInfoMixin<BranchRelaxationPass> {
+class BranchRelaxationPass
+    : public RequiredPassInfoMixin<BranchRelaxationPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

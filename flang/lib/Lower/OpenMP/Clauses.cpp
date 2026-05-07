@@ -1255,8 +1255,8 @@ Nocontext make(const parser::OmpClause::Nocontext &inp,
 
 Nontemporal make(const parser::OmpClause::Nontemporal &inp,
                  semantics::SemanticsContext &semaCtx) {
-  // inp.v -> std::list<parser::Name>
-  return Nontemporal{/*List=*/makeList(inp.v, makeObjectFn(semaCtx))};
+  // inp.v -> parser::OmpObjectList
+  return Nontemporal{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 // NoOpenmp: empty
