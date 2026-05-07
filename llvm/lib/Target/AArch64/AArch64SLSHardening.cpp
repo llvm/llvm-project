@@ -531,16 +531,17 @@ FunctionPass *llvm::createAArch64SLSHardeningLegacyPass() {
 PreservedAnalyses
 AArch64SLSHardeningPass::run(MachineFunction &MF,
                              MachineFunctionAnalysisManager &MFAM) {
-  auto *MMI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-                  .getCachedResult<MachineModuleAnalysis>(
-                      *MF.getFunction().getParent());
+  MachineModuleAnalysis::Result *MMI =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<MachineModuleAnalysis>(
+              *MF.getFunction().getParent());
   assert(MMI && "MachineModuleAnalysis must be available");
 
   SLSHardeningInserter Inserter;
   Inserter.init(*MF.getFunction().getParent());
 
   if (Inserter.run(MMI->getMMI(), MF)) {
-    auto PA = getMachineFunctionPassPreservedAnalyses();
+    PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserveSet<CFGAnalyses>();
     return PA;
   }
