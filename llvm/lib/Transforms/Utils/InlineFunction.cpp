@@ -2659,12 +2659,10 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
 }
 
 namespace {
-/// InlineFunctionDTUpdater is an RAII utility designed to automate
-/// DominatorTree updates across the inlining process. By capturing the tail of
-/// the caller as an anchor and snapshotting call-site boundaries upon
-/// construction, its destructor triggers a unified updates pass upon scope
-/// exit. This ensures that the DominatorTree is accurately updated
-/// regardless of where we return in InlineFunction.
+/// InlineFunctionDTUpdater applies DominatorTree updates during inlining. By
+/// capturing the tail of the caller as an anchor and snapshotting call-site
+/// boundaries upon construction, its update() method triggers a unified
+/// updates pass.
 struct InlineFunctionDTUpdater {
   DomTreeUpdater *DTU;
   BasicBlock *OrigBB;
@@ -2700,7 +2698,7 @@ struct InlineFunctionDTUpdater {
 
   void setAfterCallBB(BasicBlock *BB) { AfterCallBB = BB; }
 
-  ~InlineFunctionDTUpdater() {
+  void update() {
     if (!DTU)
       return;
 
@@ -3469,6 +3467,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
       AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 
     // We are now done with the inlining.
+    Updater.update();
     return;
   }
 
@@ -3640,6 +3639,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
   if (MergeAttributes)
     AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
+
+  Updater.update();
 }
 
 llvm::InlineResult llvm::InlineFunction(
