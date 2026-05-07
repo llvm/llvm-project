@@ -196,59 +196,19 @@ define i1 @fabs_is_nonneg_or_nan(float %x) nounwind {
   ret i1 %res
 }
 
-define i1 @uitofp_isnan(i32 %x) {
-; CHECK-LABEL: uitofp_isnan:
+define i1 @uitofp_is_nan_neg_zero_subnorm(i32 %x) {
+; CHECK-LABEL: uitofp_is_nan_neg_zero_subnorm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
-  %f = uitofp i32 %x to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 3) ; 3 = nan
-  ret i1 %res
-}
-
-define i1 @uitofp_issubnormal(i32 %x) {
-; CHECK-LABEL: uitofp_issubnormal:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %f = uitofp i32 %x to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 144) ; 144 = subnormal
-  ret i1 %res
-}
-
-define i1 @uitofp_isnegzero(i32 %x) {
-; CHECK-LABEL: uitofp_isnegzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %f = uitofp i32 %x to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 32) ; 32 = neg_zero
-  ret i1 %res
-}
-
-define i1 @uitofp_isneg(i32 %x) {
-; CHECK-LABEL: uitofp_isneg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %f = uitofp i32 %x to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 60) ; 60 = negative
-  ret i1 %res
-}
-
-define i1 @uitofp_isposzero(i32 %x) {
-; CHECK-LABEL: uitofp_isposzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %nz = or i32 %x, 1            ; Ensure nonzero
+  %nz = or i32 %x, 1
   %f = uitofp i32 %nz to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 64) ; 64 = pos_zero
+  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 255)
   ret i1 %res
 }
 
-define i1 @uitofp_isinf(i32 %x) {
-; CHECK-LABEL: uitofp_isinf:
+define i1 @uitofp_is_inf(i32 %x) {
+; CHECK-LABEL: uitofp_is_inf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
@@ -257,60 +217,18 @@ define i1 @uitofp_isinf(i32 %x) {
   ret i1 %res
 }
 
-define i1 @sitofp_isnan(i32 %x) {
-; CHECK-LABEL: sitofp_isnan:
+define i1 @sitofp_is_nan_subnorm_negzero(i32 %x) {
+; CHECK-LABEL: sitofp_is_nan_subnorm_negzero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
   %f = sitofp i32 %x to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 3) ; 3 = nan
+  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 179) ; 179 = nan | subnorm | negzero
   ret i1 %res
 }
 
-define i1 @sitofp_issubnormal(i32 %x) {
-; CHECK-LABEL: sitofp_issubnormal:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %f = sitofp i32 %x to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 144) ; 144 = subnormal
-  ret i1 %res
-}
-
-define i1 @sitofp_isnegzero(i32 %x) {
-; CHECK-LABEL: sitofp_isnegzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %f = sitofp i32 %x to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 32) ; 32 = neg_zero
-  ret i1 %res
-}
-
-define i1 @sitofp_isposzero(i32 %x) {
-; CHECK-LABEL: sitofp_isposzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %npz = or i32 %x, u0x80000000 ; Set sign bit
-  %f = sitofp i32 %npz to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 64) ; 64 = pos_zero
-  ret i1 %res
-}
-
-define i1 @sitofp_isneg(i32 %x) {
-; CHECK-LABEL: sitofp_isneg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %nn = and i32 %x, u0x7fffffff ; Clear sign bit
-  %f = sitofp i32 %nn to float
-  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 60) ; 60 = negative
-  ret i1 %res
-}
-
-define i1 @sitofp_isnonneg(i32 %x) {
-; CHECK-LABEL: sitofp_isnonneg:
+define i1 @sitofp_is_pos(i32 %x) {
+; CHECK-LABEL: sitofp_is_pos:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
@@ -320,8 +238,19 @@ define i1 @sitofp_isnonneg(i32 %x) {
   ret i1 %res
 }
 
-define i1 @sitofp_isinf(i32 %x) {
-; CHECK-LABEL: sitofp_isinf:
+define i1 @sitofp_is_neg(i32 %x) {
+; CHECK-LABEL: sitofp_is_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %p = and i32 %x, u0x7fffffff ; Clear sign bit
+  %f = sitofp i32 %p to float
+  %res = call i1 @llvm.is.fpclass.f32(float %f, i32 60) ; 60 = negative
+  ret i1 %res
+}
+
+define i1 @sitofp_is_inf(i32 %x) {
+; CHECK-LABEL: sitofp_is_inf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
@@ -330,120 +259,31 @@ define i1 @sitofp_isinf(i32 %x) {
   ret i1 %res
 }
 
-define <4 x i1> @uitofp_v4_isnan(<4 x i32> %x) {
-; CHECK-LABEL: uitofp_v4_isnan:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %f = uitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 3) ; 3 = nan
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @uitofp_v4_issubnormal(<4 x i32> %x) {
-; CHECK-LABEL: uitofp_v4_issubnormal:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %f = uitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 144) ; 144 subnormal
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @uitofp_v4_isnegzero(<4 x i32> %x) {
-; CHECK-LABEL: uitofp_v4_isnegzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %f = uitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 32); 32 = neg_zero
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @uitofp_v4_isneg(<4 x i32> %x) {
-; CHECK-LABEL: uitofp_v4_isneg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %f = uitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 60) ; 60 = negative
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @uitofp_v4_isposzero(<4 x i32> %x) {
-; CHECK-LABEL: uitofp_v4_isposzero:
+define <4 x i1> @uitofp_v4_is_nan_neg_zero_subnorm(<4 x i32> %x) {
+; CHECK-LABEL: uitofp_v4_is_nan_neg_zero_subnorm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    ret
   %nz = or <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %f = uitofp <4 x i32> %nz to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 64) ; 64 = pos_zero
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 255)
   ret <4 x i1> %res
 }
 
-define <4 x i1> @uitofp_v4_isinf(<4 x i32> %x) {
-; CHECK-LABEL: uitofp_v4_isinf:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %f = uitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 516) ; 516 = inf
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @sitofp_v4_isnan(<4 x i32> %x) {
-; CHECK-LABEL: sitofp_v4_isnan:
+define <4 x i1> @sitofp_v4_is_nan_subnorm_negzero(<4 x i32> %x) {
+; CHECK-LABEL: sitofp_v4_is_nan_subnorm_negzero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    ret
   %f = sitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 3) ; 3 = nan
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 179) ; 179 = nan | subnorm | negzero
   ret <4 x i1> %res
 }
 
-define <4 x i1> @sitofp_v4_issubnormal(<4 x i32> %x) {
-; CHECK-LABEL: sitofp_v4_issubnormal:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %f = sitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 144) ; 144 = subnormal
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @sitofp_v4_isnegzero(<4 x i32> %x) {
-; CHECK-LABEL: sitofp_v4_isnegzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %f = sitofp <4 x i32> %x to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 32) ; 32 = neg_zero
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @sitofp_v4_isposzero(<4 x i32> %x) {
-; CHECK-LABEL: sitofp_v4_isposzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    ret
-  %npz = or <4 x i32> %x, <i32 u0x80000000, i32 u0x80000000, i32 u0x80000000, i32 u0x80000000> ; Set sign bit
-  %f = sitofp <4 x i32> %npz to <4 x float>
-  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 64)  ; 64 = pos_zero
-  ret <4 x i1> %res
-}
-
-define <4 x i1> @sitofp_v4_isneg(<4 x i32> %x) {
-; CHECK-LABEL: sitofp_v4_isneg:
+define <4 x i1> @sitofp_v4_is_neg(<4 x i32> %x) {
+; CHECK-LABEL: sitofp_v4_is_neg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
@@ -454,8 +294,8 @@ define <4 x i1> @sitofp_v4_isneg(<4 x i32> %x) {
   ret <4 x i1> %res
 }
 
-define <4 x i1> @sitofp_v4_isnonneg(<4 x i32> %x) {
-; CHECK-LABEL: sitofp_v4_isnonneg:
+define <4 x i1> @sitofp_v4_is_pos(<4 x i32> %x) {
+; CHECK-LABEL: sitofp_v4_is_pos:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
@@ -466,8 +306,8 @@ define <4 x i1> @sitofp_v4_isnonneg(<4 x i32> %x) {
   ret <4 x i1> %res
 }
 
-define <4 x i1> @sitofp_v4_isinf(<4 x i32> %x) {
-; CHECK-LABEL: sitofp_v4_isinf:
+define <4 x i1> @sitofp_v4_is_inf(<4 x i32> %x) {
+; CHECK-LABEL: sitofp_v4_is_inf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
