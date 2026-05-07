@@ -12,7 +12,7 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %qnan_zero_payload = fadd double 1.000000e+00, +qnan => double NaN
-; CHECK-NEXT:   %qnan_nonzero_payload = fadd double 1.000000e+00, +nan(0x1) => double -nan(0x13217F032E8B9)
-; CHECK-NEXT:   %snan = fadd double 1.000000e+00, +snan(0x1) => double +nan(0x2062AFD5FE9EE)
+; CHECK-NEXT:   %qnan_nonzero_payload = fadd double 1.000000e+00, +nan(0x1) => double 0xFFF93217F032E8B9
+; CHECK-NEXT:   %snan = fadd double 1.000000e+00, +snan(0x1) => double 0x7FFA062AFD5FE9EE
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
