@@ -729,6 +729,30 @@ TEST(CallHierarchy, HierarchyOnVarWithWriteReference) {
           AllOf(withName("caller"), withReferenceTags(ReferenceTag::Write))))));
 }
 
+TEST(CallHierarchy, HierarchyOnVarWithoutReferenceTagsSupport) {
+  Annotations Source(R"cpp(
+    int v^ar = 1;
+    void caller() {
+      var = 2;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("var")));
+
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST,
+                                      /*ComputeReferenceTags=*/false);
+  ASSERT_FALSE(IncomingLevel1.empty());
+  EXPECT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(Field(&CallHierarchyItem::name, "caller")),
+                                from(Field(&CallHierarchyItem::referenceTags,
+                                           IsEmpty())))));
+}
+
 TEST(CallHierarchy, HierarchyOnClassMemberWithWriteReference) {
   Annotations Source(R"cpp(
       class MyClass {
@@ -798,6 +822,59 @@ TEST(CallHierarchy, HierarchyOnVarWithUnaryReadWriteReference) {
       UnorderedElementsAre(AllOf(from(
           AllOf(withName("caller"),
                 withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))))));
+}
+
+TEST(CallHierarchy, HierarchyOnVarWithCompoundAssignmentReference) {
+  // Compound assignment (e.g. +=) is both a read and a write.
+  Annotations Source(R"cpp(
+    int v^ar = 1;
+    void caller() {
+      var += 2;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("var")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
+  ASSERT_FALSE(IncomingLevel1.empty());
+  EXPECT_THAT(
+      IncomingLevel1,
+      UnorderedElementsAre(AllOf(from(AllOf(
+          withName("caller"),
+          withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))))));
+}
+
+TEST(CallHierarchy, HierarchyOnHeaderVarWithWriteReference) {
+  // Verifies that reference tags are computed even when the target symbol lives
+  // in a header file (not the main translation unit).
+  Annotations Header(R"cpp(
+    int var = 1;
+  )cpp");
+  Annotations Source(R"cpp(
+    #include "HeaderSymbol.h"
+    void caller() {
+      v^ar = 2;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  TU.HeaderFilename = "HeaderSymbol.h";
+  TU.HeaderCode = Header.code();
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("var")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
+  ASSERT_FALSE(IncomingLevel1.empty());
+  EXPECT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(AllOf(
+                  withName("caller"),
+                  withReferenceTags(ReferenceTag::Write))))));
 }
 
 TEST(CallHierarchy, HierarchyOnEnumConstant) {

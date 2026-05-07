@@ -303,6 +303,7 @@ public:
 
   /// Resolve incoming calls for a given call hierarchy item.
   void incomingCalls(PathRef File, const CallHierarchyItem &Item,
+                     bool ComputeReferenceTags,
                      Callback<std::vector<CallHierarchyIncomingCall>>);
 
   /// Resolve outgoing calls for a given call hierarchy item.

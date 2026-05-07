@@ -537,6 +537,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportsHierarchicalDocumentSymbol =
       Params.capabilities.HierarchicalDocumentSymbol;
   SupportsReferenceContainer = Params.capabilities.ReferenceContainer;
+  SupportsReferenceTags = Params.capabilities.ReferenceTagsSupport;
   SupportFileStatus = Params.initializationOptions.FileStatus;
   SupportsDocumentChanges = Params.capabilities.DocumentChanges;
   SupportsChangeAnnotation = Params.capabilities.ChangeAnnotation;
@@ -1389,7 +1390,8 @@ void ClangdLSPServer::onPrepareCallHierarchy(
 void ClangdLSPServer::onCallHierarchyIncomingCalls(
     const CallHierarchyIncomingCallsParams &Params,
     Callback<std::vector<CallHierarchyIncomingCall>> Reply) {
-  Server->incomingCalls(Params.item.uri.file(), Params.item, std::move(Reply));
+  Server->incomingCalls(Params.item.uri.file(), Params.item,
+                        SupportsReferenceTags, std::move(Reply));
 }
 
 void ClangdLSPServer::onClangdInlayHints(const InlayHintsParams &Params,

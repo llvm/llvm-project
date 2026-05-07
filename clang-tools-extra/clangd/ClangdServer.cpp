@@ -912,13 +912,14 @@ void ClangdServer::prepareCallHierarchy(
 }
 
 void ClangdServer::incomingCalls(
-    PathRef File, const CallHierarchyItem &Item,
+    PathRef File, const CallHierarchyItem &Item, bool ComputeReferenceTags,
     Callback<std::vector<CallHierarchyIncomingCall>> CB) {
-  auto Action = [Item, CB = std::move(CB),
+  auto Action = [Item, ComputeReferenceTags, CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::incomingCalls(Item, Index, InpAST->AST));
+    CB(clangd::incomingCalls(Item, Index, InpAST->AST,
+                             ComputeReferenceTags));
   };
   WorkScheduler->runWithAST("Incoming Calls", File, std::move(Action));
 }

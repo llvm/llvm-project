@@ -299,6 +299,8 @@ private:
   bool SupportFileStatus = false;
   /// Whether the client supports attaching a container string to references.
   bool SupportsReferenceContainer = false;
+  /// Whether the client supports reference tags on hierarchy/reference items.
+  bool SupportsReferenceTags = false;
   /// Which kind of markup should we use in textDocument/hover responses.
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
   /// Whether the client supports offsets for parameter info labels.

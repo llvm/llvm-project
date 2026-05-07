@@ -575,6 +575,21 @@ struct ClientCapabilities {
   /// notification. This is a clangd extension.
   /// textDocument.inactiveRegionsCapabilities.inactiveRegions
   bool InactiveRegions = false;
+
+  /// Determines whether the client supports reference tags on call hierarchy
+  /// items. If the value is missing, the server assumes that the client does
+  /// not support reference tags.
+  /// textDocument.callHierarchy.referenceTagsSupport
+  /// @since 3.18.0
+  bool ReferenceTagsSupport = false;
+
+  /// Determines whether the client supports and prefers Reference items instead
+  /// of Location items. If this value is missing, the server assumes that the
+  /// client accepts Location items as defined in earlier versions of the
+  /// protocol.
+  /// textDocument.references.referenceItemsSupport
+  /// @since 3.18.0
+  bool ReferenceItemsSupport = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
               llvm::json::Path);
@@ -1555,8 +1570,6 @@ struct TypeHierarchyItem {
   /// The kind of this item.
   SymbolKind kind;
 
-  /// The symbol tags for this item.
-  std::vector<ReferenceTag> referenceTags;
 
   /// More detail for this item, e.g. the signature of a function.
   std::optional<std::string> detail;

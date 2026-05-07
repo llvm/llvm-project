@@ -398,9 +398,16 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto RelatedInfo = Diagnostics->getBoolean("relatedInformation"))
         R.DiagnosticRelatedInformation = *RelatedInfo;
     }
-    if (auto *References = TextDocument->getObject("references"))
+    if (auto *References = TextDocument->getObject("references")) {
       if (auto ContainerSupport = References->getBoolean("container"))
         R.ReferenceContainer = *ContainerSupport;
+      if (auto ItemsSupport = References->getBoolean("referenceItemsSupport"))
+        R.ReferenceItemsSupport = *ItemsSupport;
+    }
+    if (auto *CallHierarchy = TextDocument->getObject("callHierarchy")) {
+      if (auto TagsSupport = CallHierarchy->getBoolean("referenceTagsSupport"))
+        R.ReferenceTagsSupport = *TagsSupport;
+    }
     if (auto *Completion = TextDocument->getObject("completion")) {
       if (auto *Item = Completion->getObject("completionItem")) {
         if (auto SnippetSupport = Item->getBoolean("snippetSupport"))

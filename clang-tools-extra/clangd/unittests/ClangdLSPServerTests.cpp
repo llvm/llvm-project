@@ -65,11 +65,11 @@ protected:
     Base.FeatureModules = &FeatureModules;
   }
 
-  LSPClient &start() {
+  LSPClient &start(llvm::json::Object InitializeParams = {}) {
     EXPECT_FALSE(Server) << "Already initialized";
     Server.emplace(Client.transport(), FS, Opts);
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
-    Client.call("initialize", llvm::json::Object{});
+    Client.call("initialize", std::move(InitializeParams));
     return Client;
   }
 
@@ -305,6 +305,71 @@ TEST_F(LSPTest, IncomingCalls) {
   EXPECT_EQ(FirstCall["fromRanges"], llvm::json::Value{Code.range()});
   auto From = *FirstCall["from"].getAsObject();
   EXPECT_EQ(From["name"], "caller1");
+}
+
+TEST_F(LSPTest, IncomingCallsWithReferenceTagsSupport) {
+  Annotations Code(R"cpp(
+    int va^r = 1;
+    void caller() {
+      var = 2;
+    }
+  )cpp");
+  auto &Client = start(llvm::json::Object{{
+      "capabilities",
+      llvm::json::Object{{
+          "textDocument",
+          llvm::json::Object{{
+              "callHierarchy",
+              llvm::json::Object{{"referenceTagsSupport", true}},
+          }},
+      }},
+  }});
+  Client.didOpen("foo.cpp", Code.code());
+  auto Items = Client
+                   .call("textDocument/prepareCallHierarchy",
+                         llvm::json::Object{{
+                             "textDocument", Client.documentID("foo.cpp")},
+                                            {"position", Code.point()}})
+                   .takeValue();
+  auto FirstItem = (*Items.getAsArray())[0];
+  auto Calls = Client
+                   .call("callHierarchy/incomingCalls",
+                         llvm::json::Object{{"item", FirstItem}})
+                   .takeValue();
+  auto FirstCall = *(*Calls.getAsArray())[0].getAsObject();
+  auto From = *FirstCall["from"].getAsObject();
+
+  EXPECT_EQ(From["name"], "caller");
+  EXPECT_EQ(From["referenceTags"],
+            llvm::json::Value(llvm::json::Array{static_cast<int>(
+                ReferenceTag::Write)}));
+}
+
+TEST_F(LSPTest, IncomingCallsWithoutReferenceTagsSupport) {
+  Annotations Code(R"cpp(
+    int va^r = 1;
+    void caller() {
+      var = 2;
+    }
+  )cpp");
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Code.code());
+  auto Items = Client
+                   .call("textDocument/prepareCallHierarchy",
+                         llvm::json::Object{{
+                             "textDocument", Client.documentID("foo.cpp")},
+                                            {"position", Code.point()}})
+                   .takeValue();
+  auto FirstItem = (*Items.getAsArray())[0];
+  auto Calls = Client
+                   .call("callHierarchy/incomingCalls",
+                         llvm::json::Object{{"item", FirstItem}})
+                   .takeValue();
+  auto FirstCall = *(*Calls.getAsArray())[0].getAsObject();
+  auto From = *FirstCall["from"].getAsObject();
+
+  EXPECT_EQ(From["name"], "caller");
+  EXPECT_FALSE(From.get("referenceTags"));
 }
 
 TEST_F(LSPTest, CDBConfigIntegration) {

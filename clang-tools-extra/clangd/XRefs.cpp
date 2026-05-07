@@ -1788,43 +1788,79 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-// This would require a visitor pattern:
+// Visitor to determine read/write access patterns of a target declaration
+// within a function body.
 class ParamUsageVisitor : public RecursiveASTVisitor<ParamUsageVisitor> {
 public:
   bool HasWrite = false;
   bool HasRead = false;
   const ValueDecl *TargetParam;
+  std::optional<SymbolID> TargetID;
   llvm::SmallSet<const Expr *, 4> WriteOnlyExprs;
 
-  ParamUsageVisitor(const ValueDecl *P) : TargetParam(P) {}
+  ParamUsageVisitor(const ValueDecl *P)
+      : TargetParam(P ? llvm::dyn_cast<ValueDecl>(P->getCanonicalDecl())
+                      : nullptr),
+        TargetID(P ? getSymbolID(P) : std::optional<SymbolID>{}) {}
+
+  bool isTarget(const ValueDecl *VD) const {
+    if (!VD)
+      return false;
+
+    if (TargetParam) {
+      if (const auto *Canonical =
+              llvm::dyn_cast<ValueDecl>(VD->getCanonicalDecl()))
+        if (Canonical == TargetParam)
+          return true;
+    }
+
+    if (TargetID) {
+      if (auto ID = getSymbolID(VD))
+        return ID == *TargetID;
+    }
+
+    return false;
+  }
+
+  void markAssignmentLHS(const Expr *LHS, BinaryOperatorKind Opcode) {
+    const Expr *Base = LHS ? LHS->IgnoreParenImpCasts() : nullptr;
+    if (!Base)
+      return;
+
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+      if (isTarget(DRE->getDecl())) {
+        HasWrite = true;
+        // For pure assignment (=), LHS is write-only. Compound assignments
+        // such as += still read the previous value.
+        if (Opcode == BO_Assign)
+          WriteOnlyExprs.insert(DRE);
+      }
+    } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+      if (isTarget(ME->getMemberDecl())) {
+        HasWrite = true;
+        if (Opcode == BO_Assign)
+          WriteOnlyExprs.insert(ME);
+      }
+    }
+  }
 
   // Identify write-only contexts before visiting children
   bool TraverseBinaryOperator(BinaryOperator *BO) {
-    if (BO->isAssignmentOp()) {
-      auto *LHS = BO->getLHS()->IgnoreParenImpCasts();
-      if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
-        if (DRE->getDecl() == TargetParam) {
-          HasWrite = true;
-          // For pure assignment (=), LHS is write-only
-          if (BO->getOpcode() == BO_Assign)
-            WriteOnlyExprs.insert(DRE);
-        }
-      } else if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
-        if (ME->getMemberDecl() == TargetParam) {
-          HasWrite = true;
-          if (BO->getOpcode() == BO_Assign)
-            WriteOnlyExprs.insert(ME);
-        }
-      }
-    }
+    if (BO->isAssignmentOp())
+      markAssignmentLHS(BO->getLHS(), BO->getOpcode());
     // Continue with default traversal
     return RecursiveASTVisitor::TraverseBinaryOperator(BO);
+  }
+
+  bool TraverseCompoundAssignOperator(CompoundAssignOperator *CAO) {
+    markAssignmentLHS(CAO->getLHS(), CAO->getOpcode());
+    return RecursiveASTVisitor::TraverseCompoundAssignOperator(CAO);
   }
 
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
     if (Init) {
       if (const FieldDecl *FD = Init->getMember()) {
-        if (FD == TargetParam)
+        if (isTarget(FD))
           HasWrite = true;
       }
     }
@@ -1835,12 +1871,12 @@ public:
     if (UO->isIncrementDecrementOp()) {
       auto *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
       if (auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
-        if (DRE->getDecl() == TargetParam) {
+        if (isTarget(DRE->getDecl())) {
           HasWrite = true;
           // Inc/Dec is both read and write, don't add to WriteOnlyExprs
         }
       } else if (auto *ME = dyn_cast<MemberExpr>(SubExpr)) {
-        if (ME->getMemberDecl() == TargetParam) {
+        if (isTarget(ME->getMemberDecl())) {
           HasWrite = true;
         }
       }
@@ -1850,7 +1886,7 @@ public:
 
   // Check for reads, excluding write-only contexts
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-    if (DRE->getDecl() == TargetParam) {
+    if (isTarget(DRE->getDecl())) {
       if (!WriteOnlyExprs.count(DRE))
         HasRead = true;
     }
@@ -1859,7 +1895,7 @@ public:
 
   // Handle member expressions
   bool VisitMemberExpr(MemberExpr *ME) {
-    if (ME->getMemberDecl() == TargetParam) {
+    if (isTarget(ME->getMemberDecl())) {
       if (!WriteOnlyExprs.count(ME))
         HasRead = true;
     }
@@ -2480,39 +2516,66 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   return Result;
 }
 
+// Walks the entire translation unit and returns the first NamedDecl whose
+// computed SymbolID matches the given ID. This allows finding declarations in
+// both the main file and included header files.
+static const NamedDecl *findDeclBySymbolID(const SymbolID &ID,
+                                           const ASTContext &Ctx) {
+  struct Finder : public RecursiveASTVisitor<Finder> {
+    const SymbolID &TargetID;
+    const NamedDecl *Result = nullptr;
+
+    Finder(const SymbolID &ID) : TargetID(ID) {}
+
+    bool VisitNamedDecl(NamedDecl *ND) {
+      if (Result)
+        return false; // Already found – stop early.
+      if (auto DeclID = getSymbolID(ND)) {
+        if (DeclID == TargetID) {
+          Result = ND;
+          return false;
+        }
+      }
+      return true;
+    }
+  };
+
+  Finder F(ID);
+  F.TraverseDecl(Ctx.getTranslationUnitDecl());
+  return F.Result;
+}
+
 // Tries to find a NamedDecl in the AST that matches the given Symbol.
+// First attempts a fast path via source location (main file). If that fails
+// (e.g. the symbol lives in an included header), falls back to a SymbolID-
+// based walk of the full translation unit.
 // Returns nullptr if the symbol is not found in the current AST.
-const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
-                                        const ParsedAST &AST) {
-  // Try to convert the symbol to a location and find the decl at that location
+static const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
+                                               const ParsedAST &AST) {
+  // Fast path: symbol is in the main file – use source-location lookup.
   auto SymLoc = symbolToLocation(Sym, AST.tuPath());
-  if (!SymLoc)
-    return nullptr;
-
-  // Check if the symbol location is in the main file
-  if (SymLoc->uri.file() != AST.tuPath())
-    return nullptr;
-
-  // Convert LSP position to source location
-  const auto &SM = AST.getSourceManager();
-  auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
-  if (!CurLoc) {
-    llvm::consumeError(CurLoc.takeError());
-    return nullptr;
+  if (SymLoc && SymLoc->uri.file() == AST.tuPath()) {
+    const auto &SM = AST.getSourceManager();
+    auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
+    if (CurLoc) {
+      auto Decls =
+          getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
+      if (!Decls.empty())
+        return Decls[0];
+    } else {
+      llvm::consumeError(CurLoc.takeError());
+    }
   }
 
-  // Get all decls at this location
-  auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
-  if (Decls.empty())
-    return nullptr;
-
-  // Return the first decl (usually the most specific one)
-  return Decls[0];
+  // Slow path: symbol is in an included header – walk the entire TU by
+  // SymbolID. This is needed so that analyseParameterUsage can still receive
+  // a valid ValueDecl* for the target symbol.
+  return findDeclBySymbolID(Sym.ID, AST.getASTContext());
 }
 
 std::vector<CallHierarchyIncomingCall>
 incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
-              ParsedAST &AST) {
+              ParsedAST &AST, bool ComputeReferenceTags) {
   std::vector<CallHierarchyIncomingCall> Results;
   if (!Index || Item.data.empty())
     return Results;
@@ -2581,17 +2644,45 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
       std::optional<CallHierarchyItem> CHI;
       if (auto *ND = getNamedDeclFromSymbol(Caller, AST)) {
         CHI = declToCallHierarchyItem(*ND, AST.tuPath());
-        if (const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ND)) {
-          if (Decl.has_value() && Decl.value() != nullptr) {
-            if (const auto *VD =
-                    llvm::dyn_cast<clang::ValueDecl>(Decl.value())) {
+        if (ComputeReferenceTags) {
+          if (const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ND)) {
+            const ValueDecl *VD = nullptr;
+            if (Decl.has_value() && Decl.value() != nullptr)
+              VD = llvm::dyn_cast<clang::ValueDecl>(Decl.value());
+
+            // Header symbols can come from preamble/external AST, where the
+            // declaration may not be discoverable through symbol lookup.
+            // Fall back to resolving the referenced decl at a call site.
+            if (!VD) {
+              const auto &SM = AST.getSourceManager();
+              for (const Location &L : It->second) {
+                if (L.uri.file() != AST.tuPath())
+                  continue;
+                auto RefLoc = sourceLocationInMainFile(SM, L.range.start);
+                if (!RefLoc) {
+                  llvm::consumeError(RefLoc.takeError());
+                  continue;
+                }
+                for (const NamedDecl *AtPos : getDeclAtPosition(AST, *RefLoc, {})) {
+                  if (const auto *Resolved =
+                          llvm::dyn_cast<clang::ValueDecl>(AtPos)) {
+                    VD = Resolved;
+                    break;
+                  }
+                }
+                if (VD)
+                  break;
+              }
+            }
+
+            if (VD) {
               // Use the function definition if available, not just a
-              // declaration
+              // declaration.
               const FunctionDecl *FuncDef = FD->getDefinition();
               if (!FuncDef)
                 FuncDef = FD;
               CHI->referenceTags = analyseParameterUsage(
-                  FuncDef, VD); // FuncDef is the caller of value decl VD
+                  FuncDef, VD); // FuncDef is the caller of value decl VD.
             }
           }
         }
