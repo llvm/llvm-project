@@ -4112,9 +4112,8 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParamObjectDecl) {
   auto *FromFirstSpec =
       FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
           TU, classTemplateSpecializationDecl());
-  auto *FromLastSpec =
-      LastDeclMatcher<ClassTemplateSpecializationDecl>().match(
-          TU, classTemplateSpecializationDecl());
+  auto *FromLastSpec = LastDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      TU, classTemplateSpecializationDecl());
   auto *FromFirstParamObject = dyn_cast<TemplateParamObjectDecl>(
       FromFirstSpec->getTemplateArgs().get(0).getAsDecl());
   auto *FromLastParamObject = dyn_cast<TemplateParamObjectDecl>(
