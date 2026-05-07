@@ -1025,6 +1025,9 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     int innermostDimLaneLayout = subgroupSize;
     if (layoutKind == xegpu::LayoutKind::Subgroup) {
       sgDataValue = sgData[dim];
+      while ((sgDataValue <= resShape[dim]) &&
+             (sgDataValue %  bitWidthRatio) != 0)
+        sgDataValue *= 2;
     } else if (layoutKind == xegpu::LayoutKind::InstData) {
       instDataValue = instData[dim];
       // Adjust instDataValue so it still fits within an instruction after
@@ -1088,23 +1091,23 @@ xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     sgDataValue = sgData[innerMostDim];
     // Ensure sgDataValue is divisible by ratio so source sgData can be inferred
-    while ((sgDataValue <= resShape[innerMostDim]) &&
+    while ((sgDataValue <= srcShape[innerMostDim]) &&
            (sgDataValue % ratio != 0))
       sgDataValue *= ratio;
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
     instDataValue = instData[innerMostDim];
     // Adjust instDataValue so it can be divided by (innermostDimLaneLayout *
     // ratio) when inferring the source layout
-    while ((instDataValue <= resShape[innerMostDim]) &&
+    while ((instDataValue <= srcShape[innerMostDim]) &&
            (instDataValue % (innermostDimLaneLayout * ratio) != 0))
       instDataValue *= ratio;
-    assert((resShape[innerMostDim] % instDataValue) == 0 &&
-           "resShape, instData, and laneLayout for innermost must be 2^n!");
+    assert((srcShape[innerMostDim] % instDataValue) == 0 &&
+           "srcShape, instData, and laneLayout for innermost must be 2^n!");
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     laneDataValue = laneData[innerMostDim];
     // Ensure laneDataValue is at least 2 and divisible by ratio
     // so that source laneData = laneDataValue/2 is valid
-    while ((laneDataValue <= resShape[innerMostDim]) &&
+    while ((laneDataValue <= srcShape[innerMostDim]) &&
            (laneDataValue % ratio != 0))
       laneDataValue *= ratio;
   }

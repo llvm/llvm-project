@@ -488,9 +488,8 @@ void XeGPUBlockingPass::runOnOperation() {
       }
     }
 
-    // Drop inst_data from operation attributes (e.g., layout, layout_a,
-    // layout_b, etc.) This is necessary for anchor operations that don't get
-    // unrolled because their inst_data already matches their shape.
+    // Drop left-over inst_data if the unroll pattern does not being applied,
+    // say, inst_data just matches their shape.
     SmallVector<NamedAttribute> newAttrs =
         xegpu::dropInstDataOnAttrs(op->getAttrs());
     op->setAttrs(newAttrs);
