@@ -1026,7 +1026,7 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     if (layoutKind == xegpu::LayoutKind::Subgroup) {
       sgDataValue = sgData[dim];
       while ((sgDataValue <= resShape[dim]) &&
-             (sgDataValue %  bitWidthRatio) != 0)
+             (sgDataValue % bitWidthRatio) != 0)
         sgDataValue *= 2;
     } else if (layoutKind == xegpu::LayoutKind::InstData) {
       instDataValue = instData[dim];
@@ -1072,7 +1072,6 @@ xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
     DistributeLayoutAttr consumerLayout, const xegpu::uArch::uArch *uArch) {
 
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
-  ArrayRef<int64_t> resShape = resVecTy.getShape();
   SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
