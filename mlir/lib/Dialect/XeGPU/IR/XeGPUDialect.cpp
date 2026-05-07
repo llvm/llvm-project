@@ -682,17 +682,6 @@ DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
 bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
                                ArrayRef<int64_t> perm,
                                const xegpu::LayoutKind kind) {
-  llvm::dbgs() << "[DEBUG isTransposeOf] ENTRY\n";
-  llvm::dbgs() << "[DEBUG isTransposeOf] this layout: " << *this << "\n";
-  llvm::dbgs() << "[DEBUG isTransposeOf] other layout: " << other << "\n";
-  llvm::dbgs() << "[DEBUG isTransposeOf] kind: " << static_cast<int>(kind) << " (0=Subgroup, 1=InstData, 2=Lane)\n";
-  llvm::dbgs() << "[DEBUG isTransposeOf] permutation: [";
-  for (size_t i = 0; i < perm.size(); ++i) {
-    if (i > 0) llvm::dbgs() << ", ";
-    llvm::dbgs() << perm[i];
-  }
-  llvm::dbgs() << "]\n";
-
   if (!other)
     return false;
   if (getRank() != other.getRank() ||
@@ -708,65 +697,13 @@ bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
     }
     return true;
   };
-  if (kind == xegpu::LayoutKind::Subgroup) {
-    auto thisSgLayout = getEffectiveSgLayoutAsInt();
-    auto otherSgLayout = other.getEffectiveSgLayoutAsInt();
-    auto thisSgData = getEffectiveSgDataAsInt();
-    auto otherSgData = other.getEffectiveSgDataAsInt();
-    auto thisOrder = getEffectiveOrderAsInt();
-    auto otherOrder = other.getEffectiveOrderAsInt();
-
-    llvm::dbgs() << "[DEBUG isTransposeOf] Checking Subgroup level:\n";
-    llvm::dbgs() << "[DEBUG isTransposeOf]   this.sgLayout: [";
-    for (size_t i = 0; i < thisSgLayout.size(); ++i) {
-      if (i > 0) llvm::dbgs() << ", ";
-      llvm::dbgs() << thisSgLayout[i];
-    }
-    llvm::dbgs() << "]\n";
-    llvm::dbgs() << "[DEBUG isTransposeOf]   other.sgLayout: [";
-    for (size_t i = 0; i < otherSgLayout.size(); ++i) {
-      if (i > 0) llvm::dbgs() << ", ";
-      llvm::dbgs() << otherSgLayout[i];
-    }
-    llvm::dbgs() << "]\n";
-
-    llvm::dbgs() << "[DEBUG isTransposeOf]   this.sgData: [";
-    for (size_t i = 0; i < thisSgData.size(); ++i) {
-      if (i > 0) llvm::dbgs() << ", ";
-      llvm::dbgs() << thisSgData[i];
-    }
-    llvm::dbgs() << "]\n";
-    llvm::dbgs() << "[DEBUG isTransposeOf]   other.sgData: [";
-    for (size_t i = 0; i < otherSgData.size(); ++i) {
-      if (i > 0) llvm::dbgs() << ", ";
-      llvm::dbgs() << otherSgData[i];
-    }
-    llvm::dbgs() << "]\n";
-
-    llvm::dbgs() << "[DEBUG isTransposeOf]   this.order: [";
-    for (size_t i = 0; i < thisOrder.size(); ++i) {
-      if (i > 0) llvm::dbgs() << ", ";
-      llvm::dbgs() << thisOrder[i];
-    }
-    llvm::dbgs() << "]\n";
-    llvm::dbgs() << "[DEBUG isTransposeOf]   other.order: [";
-    for (size_t i = 0; i < otherOrder.size(); ++i) {
-      if (i > 0) llvm::dbgs() << ", ";
-      llvm::dbgs() << otherOrder[i];
-    }
-    llvm::dbgs() << "]\n";
-
-    bool sgLayoutOk = checkTranspose(thisSgLayout, otherSgLayout, perm);
-    bool sgDataOk = checkTranspose(thisSgData, otherSgData, perm);
-    bool orderOk = checkTranspose(thisOrder, otherOrder, perm);
-
-    llvm::dbgs() << "[DEBUG isTransposeOf]   sgLayout check: " << sgLayoutOk << "\n";
-    llvm::dbgs() << "[DEBUG isTransposeOf]   sgData check: " << sgDataOk << "\n";
-    llvm::dbgs() << "[DEBUG isTransposeOf]   order check: " << orderOk << "\n";
-    llvm::dbgs() << "[DEBUG isTransposeOf]   RESULT: " << (sgLayoutOk && sgDataOk && orderOk) << "\n";
-
-    return sgLayoutOk && sgDataOk && orderOk;
-  }
+  if (kind == xegpu::LayoutKind::Subgroup)
+    return checkTranspose(getEffectiveSgLayoutAsInt(),
+                          other.getEffectiveSgLayoutAsInt(), perm) &&
+           checkTranspose(getEffectiveSgDataAsInt(),
+                          other.getEffectiveSgDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
   if (kind == xegpu::LayoutKind::InstData)
     return checkTranspose(getEffectiveInstDataAsInt(),
                           other.getEffectiveInstDataAsInt(), perm);

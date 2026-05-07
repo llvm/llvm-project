@@ -531,67 +531,6 @@ xegpu::inferDeinterleaveSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
   return resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
 }
 
-/// Infers the source layout attribute for an extract strided slice operation
-/// given the result layout attribute, result shape, and source shape. Since the
-/// source and result are from the same lane, sg_layout and lane_layout remain
-/// the same.
-/// For dimensions where extraction occurs (source shape > result shape):
-/// - If the dimension is distributed (lane_layout > 1), lane_data stays the
-/// same
-/// - If the dimension is not distributed (lane_layout == 1), scale
-///   lane_data by the ratio of source shape to result shape
-/// scale the inst_data and sg_data by the ratio of source shape to result shape
-xegpu::DistributeLayoutAttr xegpu::inferExtractStridedSliceSourceLayout(
-    xegpu::DistributeLayoutAttr resLayout, ArrayRef<int64_t> resShape,
-    ArrayRef<int64_t> srcShape) {
-
-  SmallVector<int64_t> sgData = resLayout.getEffectiveSgDataAsInt();
-  SmallVector<int64_t> instData = resLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> laneData = resLayout.getEffectiveLaneDataAsInt();
-  SmallVector<int64_t> laneLayout = resLayout.getEffectiveLaneLayoutAsInt();
-
-  // Verify shapes have the same rank
-  assert(resShape.size() == srcShape.size() &&
-         "source and result must have the same rank");
-
-  auto srcLayout = resLayout;
-
-  // Loop through all dimensions and scale inst_data and lane_data
-  // where extraction occurs (srcShape[i] > resShape[i])
-  for (size_t i = 0; i < srcShape.size(); ++i) {
-    assert(srcShape[i] >= resShape[i] &&
-           "source shape must be >= result shape for extraction");
-
-    if (srcShape[i] == resShape[i])
-      continue; // No extraction on this dimension
-
-    assert(srcShape[i] % resShape[i] == 0 &&
-           "source shape must be divisible by result shape");
-
-    int64_t ratio = srcShape[i] / resShape[i];
-
-    // Check if this dimension is distributed (lane_layout > 1)
-    bool isDistributed = (laneLayout[i] > 1);
-
-    int64_t sgDataValue = -1;
-    int64_t instDataValue = -1;
-    int64_t laneDataValue = -1;
-
-    if (sgData.size())
-      sgDataValue = sgData[i] * ratio;
-    if (instData.size())
-      instDataValue = instData[i] * ratio;
-
-    if (laneData.size())
-        laneDataValue = isDistributed ? laneData[i]: laneData[i] * ratio;
-
-    srcLayout =
-        srcLayout.setDimData(i, sgDataValue, instDataValue, laneDataValue);
-  }
-
-  return srcLayout;
-}
-
 /// Infers the source layout attribute for an insert strided slice operation
 /// given the result layout attribute, result shape, and source shape. Removes
 /// leading dimensions from the result layout to match the source shape size.
@@ -1079,71 +1018,21 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
   int64_t laneDataValue = -1;
   const int subgroupSize = uArch->getSubgroupSize();
 
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] ENTRY\n";
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] srcVecTy = " << srcVecTy
-               << "\n";
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] resVecTy = " << resVecTy
-               << "\n";
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] consumerLayout = "
-               << consumerLayout << "\n";
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] srcElemTyBitWidth = "
-               << srcElemTyBitWidth << "\n";
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] resElemTyBitWidth = "
-               << resElemTyBitWidth << "\n";
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] srcShape = [";
-  for (size_t i = 0; i < srcShape.size(); ++i) {
-    if (i > 0)
-      llvm::dbgs() << ", ";
-    llvm::dbgs() << srcShape[i];
-  }
-  llvm::dbgs() << "]\n";
-  llvm::dbgs() << "[DEBUG setupBitCastResultLayout] instData from consumer = [";
-  for (size_t i = 0; i < instData.size(); ++i) {
-    if (i > 0)
-      llvm::dbgs() << ", ";
-    llvm::dbgs() << instData[i];
-  }
-  llvm::dbgs() << "]\n";
-
   if (srcElemTyBitWidth > resElemTyBitWidth) {
     // When casting to a smaller bitwidth, multiply the result layout
     // accordingly to ensure it can be divided by the ratio back to the
     // source layout.
     int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
-    llvm::dbgs() << "[DEBUG setupBitCastResultLayout] bitWidthRatio = "
-                 << bitWidthRatio << "\n";
     int innermostDimLaneLayout = subgroupSize;
     if (layoutKind == xegpu::LayoutKind::Subgroup) {
       sgDataValue = sgData[innerMostDim];
     } else if (layoutKind == xegpu::LayoutKind::InstData) {
       instDataValue = instData[innerMostDim];
-      llvm::dbgs()
-          << "[DEBUG setupBitCastResultLayout] Initial instDataValue = "
-          << instDataValue << "\n";
-      llvm::dbgs() << "[DEBUG setupBitCastResultLayout] srcShape[dim="
-                   << innerMostDim << "] = " << srcShape[innerMostDim] << "\n";
-      llvm::dbgs() << "[DEBUG setupBitCastResultLayout] Adjustment condition: "
-                      "(instDataValue <= srcShape[innerMostDim]) = "
-
-                   << (instDataValue <= srcShape[innerMostDim]) << "\n";
-      llvm::dbgs() << "[DEBUG setupBitCastResultLayout] Adjustment condition: "
-                      "(instDataValue % "
-                   << (innermostDimLaneLayout * bitWidthRatio) << ") = "
-                   << (instDataValue % (innermostDimLaneLayout * bitWidthRatio))
-                   << "\n";
       // Adjust instDataValue so it still fits within an instruction after
       // dividing by bitWidthRatio
       while ((instDataValue <= resShape[innerMostDim]) &&
              (instDataValue % (innermostDimLaneLayout * bitWidthRatio) != 0))
         instDataValue *= 2;
-      llvm::dbgs() << "[DEBUG setupBitCastResultLayout] After adjustment "
-                      "instDataValue = "
-                   << instDataValue << "\n";
-      llvm::dbgs() << "[DEBUG setupBitCastResultLayout] Final check: "
-                      "resShape[innerMostDim] % instDataValue = "
-
-                   << resShape[innerMostDim] << " % " << instDataValue << " = "
-                   << (resShape[innerMostDim] % instDataValue) << "\n";
       assert((resShape[innerMostDim] % instDataValue) == 0 &&
              "resShape, instData, and lanelayout for innermost must be 2^n !");
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
@@ -1996,17 +1885,9 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
     return xegpu::inferDeinterleaveSourceLayout(resLayout);
   }
 
-  // For vector::ExtractStridedSliceOp, infer source layout from result layout
-  // using shapes
-  if (auto extractSlice = dyn_cast<vector::ExtractStridedSliceOp>(op)) {
-    VectorType srcVecTy = extractSlice.getSourceVectorType();
-    VectorType resVecTy =
-        dyn_cast<VectorType>(extractSlice.getResult().getType());
-    if (!srcVecTy || !resVecTy)
-      return nullptr;
-    return xegpu::inferExtractStridedSliceSourceLayout(
-        resLayout, resVecTy.getShape(), srcVecTy.getShape());
-  }
+  // For vector::ExtractStridedSliceOp, simply return result layout
+  if (dyn_cast<vector::ExtractStridedSliceOp>(op))
+    return resLayout;
   // For elementwise operations, all operands must have the same layout as the
   // result.
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
