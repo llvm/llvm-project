@@ -180,10 +180,10 @@ void future_timeout_test() {
 
   struct timespec ts;
   ASSERT_EQ(LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC), TIME_UTC);
-  ts.tv_nsec += 100000000;
-  if (ts.tv_nsec >= 1000000000) {
+  ts.tv_nsec += 50'000;
+  if (ts.tv_nsec >= 1'000'000'000) {
     ts.tv_sec += 1;
-    ts.tv_nsec -= 1000000000;
+    ts.tv_nsec -= 1'000'000'000;
   }
   ASSERT_EQ(LIBC_NAMESPACE::cnd_timedwait(&cnd, &mtx, &ts), int(thrd_timedout));
 
