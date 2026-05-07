@@ -364,8 +364,8 @@ def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
 
 // When enabled indirect calls will place the address of the descriptor
 // into r11 and do a direct branch to the ._ptrgl routine.
-def FeatureNoInlineGlue :
- SubtargetFeature<"use-ptrgl-helper", "NoInlineGlue", "true",
+def FeaturePointerGlueHelper :
+ SubtargetFeature<"use-ptrgl-helper", "UsePointerGlueHelper", "true",
                   "Use ._ptrgl for indirect calls">;
 
 //===----------------------------------------------------------------------===//

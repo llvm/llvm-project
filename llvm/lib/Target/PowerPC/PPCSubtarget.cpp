@@ -145,7 +145,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
                        "is only supported on AIX in 64-bit mode.\n",
                        false);
 
-  if (NoInlineGlue && !getTargetTriple().isOSAIX())
+  if (UsePointerGlueHelper && !getTargetTriple().isOSAIX())
     report_fatal_error("use-ptrgl-helper feature is only supported on AIX\n",
                        false);
 }

@@ -5359,7 +5359,7 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // immediately followed by a load of the TOC pointer from the stack save
     // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
     // as it is not saved or used.
-    if (Subtarget.noInlineGlue())
+    if (Subtarget.usePointerGlueHelper())
       RetOpc = PPCISD::BL_LOAD_TOC;
     else
       RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
@@ -5639,7 +5639,7 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
   // If it's a direct call pass the callee as the second operand.
   if (!CFlags.IsIndirect)
     Ops.push_back(Callee);
-  else if (Subtarget.noInlineGlue()) {
+  else if (Subtarget.usePointerGlueHelper()) {
     Ops.push_back(Callee);
     // Add the register used to pass the descriptor address.
     Ops.push_back(
@@ -5727,7 +5727,7 @@ SDValue PPCTargetLowering::FinishCall(
   if (!CFlags.IsIndirect)
     Callee = transformCallee(Callee, DAG, dl, Subtarget);
   else if (Subtarget.usesFunctionDescriptors()) {
-    if (Subtarget.noInlineGlue()) {
+    if (Subtarget.usePointerGlueHelper()) {
       prepareOutOfLineGlueCall(DAG, Callee, Glue, Chain, CallSeqStart, CB, dl,
                                CFlags.HasNest, Subtarget);
       SDValue PtrGlueCallee =
@@ -7783,7 +7783,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   // For indirect calls, we need to save the TOC base to the stack for
   // restoration after the call.
-  if (CFlags.IsIndirect && !Subtarget.noInlineGlue()) {
+  if (CFlags.IsIndirect && !Subtarget.usePointerGlueHelper()) {
     assert(!CFlags.IsTailCall && "Indirect tail-calls not supported.");
     const MCRegister TOCBaseReg = Subtarget.getTOCPointerRegister();
     const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
