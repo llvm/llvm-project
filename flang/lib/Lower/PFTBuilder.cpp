@@ -774,10 +774,8 @@ private:
               auto elseIt = ifBodyList.insert(
                   endIfStmtIt,
                   lower::pft::Evaluation{
-                      syntheticElseStmt,
-                      lower::pft::PftNode{*ifConstructIt},
-                      ifConstructIt->position,
-                      std::optional<parser::Label>{}});
+                      syntheticElseStmt, lower::pft::PftNode{*ifConstructIt},
+                      ifConstructIt->position, std::optional<parser::Label>{}});
               elseIt->parentConstruct = &*ifConstructIt;
               lastBodyEval->lexicalSuccessor = &*elseIt;
               elseIt->lexicalSuccessor = firstStmt(&*successorIt);
@@ -802,8 +800,7 @@ private:
         bool hasElseChain = false;
         for (auto bIt = std::next(eval.evaluationList->begin()); bIt != endIfIt;
              ++bIt) {
-          if (bIt->isA<parser::ElseStmt>() ||
-              bIt->isA<parser::ElseIfStmt>()) {
+          if (bIt->isA<parser::ElseStmt>() || bIt->isA<parser::ElseIfStmt>()) {
             hasElseChain = true;
             break;
           }
