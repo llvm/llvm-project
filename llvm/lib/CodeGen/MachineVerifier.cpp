@@ -897,8 +897,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
         report("MBB live-in list contains non-physical register", MBB);
         continue;
       }
-      if (MRI->isSSA() && LI.PhysReg.isPhysical() && !MBB->isEntryBlock() &&
-          !MBB->isEHPad()) {
+      if (MRI->isSSA() && !MBB->isEntryBlock() && !MBB->isEHPad()) {
         report("Physical registers should not be a live-in during SSA form",
                MBB);
         continue;
