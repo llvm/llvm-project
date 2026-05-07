@@ -3723,9 +3723,10 @@ ExprEngine::notifyCheckersOfPointerEscape(ProgramStateRef State,
 /// evalBind - Handle the semantics of binding a value to a specific location.
 ///  This method is used by evalStore and (soon) VisitDeclStmt, and others.
 void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
-                          ExplodedNode *Pred, SVal location, SVal Val,
+                          ExplodedNode *Pred, SVal Location, SVal Val,
                           bool AtDeclInit, const ProgramPoint *PP) {
-  assert(!isa<NonLoc>(location) && "evalBind location should not be NonLoc!");
+  assert(!isa<NonLoc>(Location) && "evalBind location should not be NonLoc!");
+
   const LocationContext *LC = Pred->getLocationContext();
   PostStmt DefaultPP(StoreE, LC);
   if (!PP)
@@ -3733,29 +3734,29 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
 
   // Do a previsit of the bind.
   ExplodedNodeSet CheckedSet;
-  getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
+  getCheckerManager().runCheckersForBind(CheckedSet, Pred, Location, Val,
                                          StoreE, AtDeclInit, *this, *PP);
 
   for (const auto PredI : CheckedSet) {
-    ProgramStateRef state = PredI->getState();
+    ProgramStateRef State = PredI->getState();
 
-    state = processPointerEscapedOnBind(state, location, Val, LC);
+    State = processPointerEscapedOnBind(State, Location, Val, LC);
 
-    if (std::optional<Loc> AsLoc = location.getAs<Loc>()) {
+    if (std::optional<Loc> AsLoc = Location.getAs<Loc>()) {
       // When binding the value, pass on the hint that this is a
       // initialization. For initializations, we do not need to inform clients
       // of region changes.
-      state = state->bindLoc(*AsLoc, Val, LC, /*notifyChanges=*/!AtDeclInit);
+      State = State->bindLoc(*AsLoc, Val, LC, /*notifyChanges=*/!AtDeclInit);
     }
 
     const MemRegion *LocReg = nullptr;
     if (std::optional<loc::MemRegionVal> LocRegVal =
-            location.getAs<loc::MemRegionVal>()) {
+            Location.getAs<loc::MemRegionVal>()) {
       LocReg = LocRegVal->getRegion();
     }
 
-    PostStore PS(LC, LocReg, nullptr);
-    Dst.insert(Engine.makeNode(PS, state, PredI));
+    PostStore PS(StoreE, LC, LocReg, /*tag=*/nullptr);
+    Dst.insert(Engine.makeNode(PS, State, PredI));
   }
 }
 
