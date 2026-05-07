@@ -136,7 +136,7 @@ public:
 
     Satisfied = true;
     PathDiagnosticLocation Pos(Call, BRC.getSourceManager(),
-                               N->getLocationContext());
+                               N->getStackFrame());
     return std::make_shared<PathDiagnosticEventPiece>(Pos, "chroot called here",
                                                       /*addPosRange=*/true);
   }

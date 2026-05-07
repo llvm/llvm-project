@@ -102,7 +102,7 @@ public:
   }
 
   const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
+    return Pred->getStackFrame();
   }
 
   const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
@@ -147,7 +147,7 @@ public:
   }
 
   AnalysisDeclContext *getCurrentAnalysisDeclContext() const {
-    return Pred->getLocationContext()->getAnalysisDeclContext();
+    return Pred->getStackFrame()->getAnalysisDeclContext();
   }
 
   /// Get the blockID.

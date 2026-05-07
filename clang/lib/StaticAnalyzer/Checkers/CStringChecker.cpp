@@ -1301,7 +1301,7 @@ ProgramStateRef CStringChecker::invalidateBufferAux(
     }
 
     // Invalidate this region.
-    const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
+    const LocationContext *LCtx = C.getPredecessor()->getStackFrame();
     RegionAndSymbolInvalidationTraits ITraits;
     bool CausesPointerEscape = InvalidationTraitOperations(ITraits, R);
 

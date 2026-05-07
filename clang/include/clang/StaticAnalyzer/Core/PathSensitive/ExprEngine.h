@@ -205,7 +205,7 @@ public:
   virtual ~ExprEngine() = default;
 
   /// Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkList(const LocationContext *L, unsigned Steps = 150000) {
+  bool ExecuteWorkList(const StackFrame *L, unsigned Steps = 150000) {
     assert(L->inTopFrame());
     BR.setAnalysisEntryPoint(L->getDecl());
     return Engine.ExecuteWorkList(L, Steps, nullptr);
@@ -242,7 +242,7 @@ public:
   // where CurrLocationContext and CurrBlock are new member variables that
   // fulfill the roles of `currBldrCtx` in a more natural way.
   // This implementation is a temporary measure to allow a gradual transition.
-  void setCurrLocationContextAndBlock(const LocationContext *LC,
+  void setCurrLocationContextAndBlock(const StackFrame *LC,
                                       const CFGBlock *B) {
     // The current LocationContext and Block is reset at the beginning of
     // dispatchWorkItem. Ideally, this method should be called only once per

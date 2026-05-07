@@ -178,7 +178,7 @@ void ExprEngine::removeDeadOnEndOfFunction(ExplodedNode *Pred,
   // point will be associated. However, we only want to use LastStmt as a
   // reference for what to clean up if it's a ReturnStmt; otherwise, everything
   // is dead.
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   removeDead(Pred, Dst, dyn_cast<ReturnStmt>(LastSt), LCtx,
              LCtx->getAnalysisDeclContext()->getBody(),
              ProgramPoint::PostStmtPurgeDeadSymbolsKind);
@@ -296,7 +296,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // If the callee returns an expression, bind its value to CallExpr.
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
-      const LocationContext *LCtx = CEBNode->getLocationContext();
+      const LocationContext *LCtx = CEBNode->getStackFrame();
 
       SVal V = UndefinedVal();
       if (RS->getRetValue())
@@ -530,7 +530,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
                             ExplodedNode *Pred, ProgramStateRef State) {
   assert(D);
 
-  const LocationContext *CurLC = Pred->getLocationContext();
+  const LocationContext *CurLC = Pred->getStackFrame();
   const StackFrame *CallerSF = CurLC->getStackFrame();
   const BlockDataRegion *BlockInvocationData = nullptr;
   if (Call.getKind() == CE_Block &&
@@ -604,7 +604,7 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
   // all the checks.
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<> CallTemplate = CEMgr.getSimpleCall(
-      CE, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
+      CE, Pred->getState(), Pred->getStackFrame(), getCFGElementRef());
 
   // Evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call.
@@ -722,7 +722,7 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
       }
     }
 
-    State = processPointerEscapedOnBind(State, Escaped, I->getLocationContext(),
+    State = processPointerEscapedOnBind(State, Escaped, I->getStackFrame(),
                                         PSK_EscapeOutParameters, &*Call);
 
     if (State != I->getState())
@@ -826,7 +826,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
                                       ExplodedNode *Pred, ProgramStateRef State) {
   State = Call.invalidateRegions(getNumVisitedCurrent(), State);
-  State = bindReturnValue(Call, Pred->getLocationContext(), State);
+  State = bindReturnValue(Call, Pred->getStackFrame(), State);
 
   // And make the result node.
   static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
@@ -837,7 +837,7 @@ ExprEngine::CallInlinePolicy
 ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
                               AnalyzerOptions &Opts,
                               const EvalCallOptions &CallOpts) {
-  const LocationContext *CurLC = Pred->getLocationContext();
+  const LocationContext *CurLC = Pred->getStackFrame();
   const StackFrame *CallerSF = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
@@ -1116,7 +1116,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   // Do not inline if recursive or we've reached max stack frame count.
   bool IsRecursive = false;
   unsigned StackDepth = 0;
-  examineStackFrames(D, Pred->getLocationContext(), IsRecursive, StackDepth);
+  examineStackFrames(D, Pred->getStackFrame(), IsRecursive, StackDepth);
   if ((StackDepth >= Opts.InlineMaxStackDepth) &&
       (!isSmall(CalleeADC) || IsRecursive))
     return false;

@@ -219,7 +219,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << "Array access";
     const ArraySubscriptExpr *AE = cast<ArraySubscriptExpr>(S);
     AddDerefSource(Out, Ranges, AE->getBase()->IgnoreParenCasts(), State.get(),
-                   N->getLocationContext());
+                   N->getStackFrame());
     Out << " results in " << BT.getArrayMsg();
     break;
   }
@@ -227,7 +227,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << "Array access";
     const ArraySectionExpr *AE = cast<ArraySectionExpr>(S);
     AddDerefSource(Out, Ranges, AE->getBase()->IgnoreParenCasts(), State.get(),
-                   N->getLocationContext());
+                   N->getStackFrame());
     Out << " results in " << BT.getArrayMsg();
     break;
   }
@@ -235,7 +235,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << BT.getDescription();
     const UnaryOperator *U = cast<UnaryOperator>(S);
     AddDerefSource(Out, Ranges, U->getSubExpr()->IgnoreParens(), State.get(),
-                   N->getLocationContext(), true);
+                   N->getStackFrame(), true);
     break;
   }
   case Stmt::MemberExprClass: {
@@ -244,7 +244,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
       Out << "Access to field '" << M->getMemberNameInfo() << "' results in "
           << BT.getFieldMsg();
       AddDerefSource(Out, Ranges, M->getBase()->IgnoreParenCasts(), State.get(),
-                     N->getLocationContext(), true);
+                     N->getStackFrame(), true);
     }
     break;
   }
@@ -253,7 +253,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << "Access to instance variable '" << *IV->getDecl() << "' results in "
         << BT.getFieldMsg();
     AddDerefSource(Out, Ranges, IV->getBase()->IgnoreParenCasts(), State.get(),
-                   N->getLocationContext(), true);
+                   N->getStackFrame(), true);
     break;
   }
   default:

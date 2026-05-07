@@ -147,7 +147,7 @@ public:
   /// bug path.
   const LocationContext *getCurrLocationContext() const {
     assert(CurrentNode && "Already reached the root!");
-    return CurrentNode->getLocationContext();
+    return CurrentNode->getStackFrame();
   }
 
   /// Same as getCurrLocationContext (they should always return the same
@@ -2009,7 +2009,7 @@ PathDiagnosticConstruct::PathDiagnosticConstruct(
       SM(CurrentNode->getCodeDecl().getASTContext().getSourceManager()),
       PD(generateEmptyDiagnosticForReport(R, getSourceManager(),
                                           AnalysisEntryPoint)) {
-  LCM[&PD->getActivePath()] = ErrorNode->getLocationContext();
+  LCM[&PD->getActivePath()] = ErrorNode->getStackFrame();
 }
 
 PathDiagnosticBuilder::PathDiagnosticBuilder(
@@ -2208,7 +2208,7 @@ const Decl *PathSensitiveBugReport::getDeclWithIssue() const {
   if (!N)
     return nullptr;
 
-  const LocationContext *LC = N->getLocationContext();
+  const LocationContext *LC = N->getStackFrame();
   return LC->getStackFrame()->getDecl();
 }
 
@@ -2443,7 +2443,7 @@ static bool exitingDestructor(const ExplodedNode *N) {
   while (N && !N->getLocation().getAs<StmtPoint>()) {
     N = N->getFirstPred();
   }
-  return N && isa<CXXDestructorDecl>(N->getLocationContext()->getDecl());
+  return N && isa<CXXDestructorDecl>(N->getStackFrame()->getDecl());
 }
 
 static const Stmt *
@@ -2507,8 +2507,7 @@ PathSensitiveBugReport::getLocation() const {
         PathDiagnosticLocation::getValidSourceLocation(S, LC), SM);
   }
 
-  return PathDiagnosticLocation::createDeclEnd(ErrorNode->getLocationContext(),
-                                               SM);
+  return PathDiagnosticLocation::createDeclEnd(ErrorNode->getStackFrame(), SM);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3009,7 +3008,7 @@ void PathSensitiveBugReporter::emitReport(std::unique_ptr<BugReport> R) {
              "Error node must either be a sink or have a tag");
 
       const AnalysisDeclContext *DeclCtx =
-          E->getLocationContext()->getAnalysisDeclContext();
+          E->getStackFrame()->getAnalysisDeclContext();
       // The source of autosynthesized body can be handcrafted AST or a model
       // file. The locations from handcrafted ASTs have no valid source
       // locations and have to be discarded. Locations from model files should
@@ -3261,7 +3260,7 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
   while (N) {
     if (N->getFirstPred() == nullptr) {
       // First node: show signature of the entrance point.
-      const Decl *D = N->getLocationContext()->getDecl();
+      const Decl *D = N->getStackFrame()->getDecl();
       populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
     } else if (auto CE = N->getLocationAs<CallEnter>()) {
       // Inlined function: show signature.

@@ -440,7 +440,7 @@ const ExplodedNode *
 MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
                                            SymbolRef Sym,
                                            CheckerContext &C) const {
-  const LocationContext *LeakContext = N->getLocationContext();
+  const LocationContext *LeakContext = N->getStackFrame();
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked symbol.
   const ExplodedNode *AllocNode = N;
@@ -450,7 +450,7 @@ MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
       break;
     // Allocation node, is the last node in the current or parent context in
     // which the symbol was tracked.
-    const LocationContext *NContext = N->getLocationContext();
+    const LocationContext *NContext = N->getStackFrame();
     if (NContext == LeakContext ||
         NContext->isParentOf(LeakContext))
       AllocNode = N;
@@ -479,11 +479,11 @@ MacOSKeychainAPIChecker::generateAllocatedDataNotReleasedReport(
   if (AllocStmt)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocStmt,
                                               C.getSourceManager(),
-                                              AllocNode->getLocationContext());
+                                              AllocNode->getStackFrame());
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
       BT, os.str(), N, LocUsedForUniqueing,
-      AllocNode->getLocationContext()->getDecl());
+      AllocNode->getStackFrame()->getDecl());
 
   Report->addVisitor(std::make_unique<SecKeychainBugVisitor>(AP.first));
   markInteresting(Report.get(), AP);
@@ -631,7 +631,7 @@ MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
   assert(Idx != InvalidIdx && "This should be a call to an allocator.");
   const Expr *ArgExpr = CE->getArg(FunctionsToTrack[Idx].Param);
   PathDiagnosticLocation Pos(ArgExpr, BRC.getSourceManager(),
-                             N->getLocationContext());
+                             N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos,
                                                     "Data is allocated here.");
 }

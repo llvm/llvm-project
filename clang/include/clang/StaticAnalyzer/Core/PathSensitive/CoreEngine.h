@@ -137,7 +137,7 @@ public:
 
   /// ExecuteWorkList - Run the worklist algorithm for a maximum number of
   ///  steps.  Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkList(const LocationContext *L, unsigned Steps,
+  bool ExecuteWorkList(const StackFrame *SF, unsigned Steps,
                        ProgramStateRef InitState);
 
   /// Dispatch the work list item based on the given location information.
@@ -173,7 +173,7 @@ public:
   ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
                                  ExplodedNode *Pred,
                                  bool MarkAsSink = false) const {
-    PostStmt Loc(S, Pred->getLocationContext(), /*tag=*/nullptr);
+    PostStmt Loc(S, Pred->getStackFrame(), /*tag=*/nullptr);
     return makeNode(Loc, State, Pred, MarkAsSink);
   }
 
@@ -181,7 +181,7 @@ public:
   makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
                       ProgramStateRef State,
                       ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
-    const LocationContext *LC = Pred->getLocationContext();
+    const LocationContext *LC = Pred->getStackFrame();
     State = State->BindExpr(E, LC, V);
     const auto &L = ProgramPoint::getProgramPoint(E, K, LC, /*tag=*/nullptr);
     return makeNode(L, State, Pred);
@@ -224,7 +224,7 @@ public:
   }
 
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
-      : NodeBuilderContext(E, B, N->getLocationContext()) {}
+      : NodeBuilderContext(E, B, N->getStackFrame()) {}
 
   /// Return the CoreEngine associated with this builder.
   const CoreEngine &getEngine() const { return Eng; }
@@ -311,7 +311,7 @@ public:
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
     const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+                                  Pred->getStackFrame(), tag);
     return generateNode(L, St, Pred);
   }
 
@@ -321,7 +321,7 @@ public:
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
     const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+                                  Pred->getStackFrame(), tag);
     return generateSink(L, St, Pred);
   }
 

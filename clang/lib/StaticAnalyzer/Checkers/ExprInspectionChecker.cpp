@@ -136,7 +136,7 @@ static const char *getArgumentValueString(const CallExpr *CE,
     return "Missing assertion argument";
 
   ExplodedNode *N = C.getPredecessor();
-  const LocationContext *LC = N->getLocationContext();
+  const LocationContext *LC = N->getStackFrame();
   ProgramStateRef State = N->getState();
 
   const Expr *Assertion = CE->getArg(0);
@@ -210,7 +210,7 @@ const MemRegion *ExprInspectionChecker::getArgRegion(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerEval(const CallExpr *CE,
                                          CheckerContext &C) const {
-  const LocationContext *LC = C.getPredecessor()->getLocationContext();
+  const LocationContext *LC = C.getPredecessor()->getStackFrame();
 
   // A specific instantiation of an inlined function may have more constrained
   // values than can generally be assumed. Skip the check.
@@ -237,7 +237,7 @@ void ExprInspectionChecker::analyzerNumTimesReached(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerCheckInlined(const CallExpr *CE,
                                                  CheckerContext &C) const {
-  const LocationContext *LC = C.getPredecessor()->getLocationContext();
+  const LocationContext *LC = C.getPredecessor()->getStackFrame();
 
   // An inlined function could conceivably also be analyzed as a top-level
   // function. We ignore this case and only emit a message (TRUE or FALSE)
@@ -551,7 +551,7 @@ void ExprInspectionChecker::analyzerIsTainted(const CallExpr *CE,
     return;
   }
   const bool IsTainted =
-      taint::isTainted(C.getState(), CE->getArg(0), C.getLocationContext());
+      taint::isTainted(C.getState(), CE->getArg(0), C.getStackFrame());
   reportBug(IsTainted ? "YES" : "NO", C);
 }
 

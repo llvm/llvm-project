@@ -111,7 +111,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   ProgramStateRef state = node->getState();
   ProgramStateRef pred_state = pred->getState();
   if (state->store != pred_state->store || state->GDM != pred_state->GDM ||
-      progPoint.getLocationContext() != pred->getLocationContext())
+      progPoint.getLocationContext() != pred->getStackFrame())
     return false;
 
   // All further checks require expressions. As per #3, we know that we have
@@ -292,7 +292,7 @@ const CFGBlock *ExplodedNode::getCFGBlock() const {
   // FIXME: getStmtForDiagnostics() does nasty things in order to provide
   // a valid statement for body farms, do we need this behavior here?
   if (const Stmt *S = getStmtForDiagnostics())
-    return getLocationContext()
+    return getStackFrame()
         ->getAnalysisDeclContext()
         ->getCFGStmtMap()
         ->getBlock(S);
@@ -317,7 +317,7 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   // We cannot place diagnostics on autosynthesized code.
   // Put them onto the call site through which we jumped into autosynthesized
   // code for the first time.
-  const LocationContext *LC = getLocationContext();
+  const LocationContext *LC = getStackFrame();
   if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
     return cast<StackFrame>(findTopAutosynthesizedParentContext(LC))

@@ -130,7 +130,7 @@ PathDiagnosticPieceRef DynamicTypeChecker::DynamicTypeBugVisitor::VisitNode(
 
   // Generate the extra diagnostic.
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+                             N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 

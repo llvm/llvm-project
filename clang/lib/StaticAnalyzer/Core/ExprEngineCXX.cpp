@@ -36,7 +36,7 @@ void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
   NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   const Expr *tempExpr = ME->getSubExpr()->IgnoreParens();
   ProgramStateRef state = Pred->getState();
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
 
   state = createTemporaryRegionIfNeeded(state, LCtx, tempExpr, ME);
   Bldr.generateNode(ME, Pred, state);
@@ -64,7 +64,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     AlwaysReturnsLValue = true;
   }
 
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   const Expr *CallExpr = Call.getOriginExpr();
 
   ExplodedNodeSet Dst;
@@ -537,7 +537,7 @@ void ExprEngine::handleConstructor(const Expr *E,
   const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(E);
   assert(CE || CIE);
 
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   ProgramStateRef State = Pred->getState();
 
   SVal Target = UnknownVal();
@@ -816,7 +816,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
                                     ExplodedNodeSet &Dst,
                                     EvalCallOptions &CallOpts) {
   assert(S && "A destructor without a trigger!");
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   ProgramStateRef State = Pred->getState();
 
   const CXXRecordDecl *RecordDecl = ObjectType->getAsCXXRecordDecl();
@@ -844,7 +844,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
     // with concrete integers specifically.
     CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
     if (const Expr *E = dyn_cast_or_null<Expr>(S)) {
-      Dest = MRMgr.getCXXTempObjectRegion(E, Pred->getLocationContext());
+      Dest = MRMgr.getCXXTempObjectRegion(E, Pred->getStackFrame());
     } else {
       static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
       NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
@@ -879,7 +879,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
   ProgramStateRef State = Pred->getState();
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 CNE->getBeginLoc(),
                                 "Error evaluating New Allocator Call");
@@ -962,7 +962,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // CXXConstructExpr subexpression. See PR12014 for some discussion.
 
   unsigned blockCount = getNumVisitedCurrent();
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   SVal symVal = UnknownVal();
   FunctionDecl *FD = CNE->getOperatorNew();
 
@@ -1054,7 +1054,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       }
     }
 
-    State = State->BindExpr(CNE, Pred->getLocationContext(), Result);
+    State = State->BindExpr(CNE, Pred->getStackFrame(), Result);
     Bldr.generateNode(CNE, Pred, State);
     return;
   }
@@ -1093,7 +1093,7 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXDeallocatorCall> Call = CEMgr.getCXXDeallocatorCall(
-      CDE, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
+      CDE, Pred->getState(), Pred->getStackFrame(), getCFGElementRef());
 
   ExplodedNodeSet DstPreCall;
   getCheckerManager().runCheckersForPreCall(DstPreCall, Pred, *Call, *this);
@@ -1122,7 +1122,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
     return;
   }
 
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   SVal V = svalBuilder.conjureSymbolVal(getCFGElementRef(), LCtx, VD->getType(),
                                         getNumVisitedCurrent());
   ProgramStateRef state = Pred->getState();
@@ -1137,7 +1137,7 @@ void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
   NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
 
   // Get the this object region from StoreManager.
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   const MemRegion *R =
     svalBuilder.getRegionManager().getCXXThisRegion(
                                   getContext().getCanonicalType(TE->getType()),
@@ -1150,7 +1150,7 @@ void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
 
 void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  const LocationContext *LocCtxt = Pred->getLocationContext();
+  const LocationContext *LocCtxt = Pred->getStackFrame();
 
   // Get the region of the lambda itself.
   const MemRegion *R = svalBuilder.getRegionManager().getCXXTempObjectRegion(

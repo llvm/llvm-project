@@ -211,7 +211,7 @@ CXXDeleteChecker::PtrCastVisitor::VisitNode(const ExplodedNode *N,
      << TargetType.getAsString() << "' here";
 
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+                             N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(),
                                                     /*addPosRange=*/true);
 }

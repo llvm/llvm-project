@@ -458,7 +458,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   ExplodedNode *Node = Ctx.getPredecessor();
 
   bool ExitingTopFrame =
-      Ctx.getPredecessor()->getLocationContext()->inTopFrame();
+      Ctx.getPredecessor()->getStackFrame()->inTopFrame();
 
   if (ExitingTopFrame &&
       Node->getLocation().getTag() == ExprEngine::cleanupNodeTag() &&

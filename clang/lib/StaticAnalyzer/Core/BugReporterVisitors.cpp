@@ -191,7 +191,7 @@ getLocationRegionIfReference(const Expr *E, const ExplodedNode *N,
       return nullptr;
 
     if (FD->getType()->isReferenceType()) {
-      SVal StructSVal = N->getState()->getLValue(VD, N->getLocationContext());
+      SVal StructSVal = N->getState()->getLValue(VD, N->getStackFrame());
       return N->getState()->getLValue(FD, StructSVal).getAsRegion();
     }
     return nullptr;
@@ -202,7 +202,7 @@ getLocationRegionIfReference(const Expr *E, const ExplodedNode *N,
     return nullptr;
   if (LookingForReference && !VD->getType()->isReferenceType())
     return nullptr;
-  return N->getState()->getLValue(VD, N->getLocationContext()).getAsRegion();
+  return N->getState()->getLValue(VD, N->getStackFrame()).getAsRegion();
 }
 
 /// Comparing internal representations of symbolic values (via
@@ -234,7 +234,7 @@ static bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
 static std::optional<SVal> getSValForVar(const Expr *CondVarExpr,
                                          const ExplodedNode *N) {
   ProgramStateRef State = N->getState();
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
 
   assert(CondVarExpr);
   CondVarExpr = CondVarExpr->IgnoreImpCasts();
@@ -378,7 +378,7 @@ BugReporterVisitor::getDefaultEndPath(const BugReporterContext &BRC,
 //===----------------------------------------------------------------------===//
 
 bool NoStateChangeFuncVisitor::isModifiedInFrame(const ExplodedNode *N) {
-  const LocationContext *Ctx = N->getLocationContext();
+  const LocationContext *Ctx = N->getStackFrame();
   const StackFrame *SF = Ctx->getStackFrame();
   if (!FramesModifyingCalculated.count(SF))
     findModifyingFrames(N);
@@ -421,7 +421,7 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
   assert(CallExitBeginN->getLocationAs<CallExitBegin>());
 
   const StackFrame *const OriginalSF =
-      CallExitBeginN->getLocationContext()->getStackFrame();
+      CallExitBeginN->getStackFrame()->getStackFrame();
 
   const ExplodedNode *CurrCallExitBeginN = CallExitBeginN;
   const StackFrame *CurrentSF = OriginalSF;
@@ -465,7 +465,7 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
 PathDiagnosticPieceRef NoStateChangeFuncVisitor::VisitNode(
     const ExplodedNode *N, BugReporterContext &BR, PathSensitiveBugReport &R) {
 
-  const LocationContext *Ctx = N->getLocationContext();
+  const LocationContext *Ctx = N->getStackFrame();
   const StackFrame *SF = Ctx->getStackFrame();
   ProgramStateRef State = N->getState();
   auto CallExitLoc = N->getLocationAs<CallExitBegin>();
@@ -867,7 +867,7 @@ private:
   std::optional<SourceLocation> matchAssignment(const ExplodedNode *N) {
     const Stmt *S = N->getStmtForDiagnostics();
     ProgramStateRef State = N->getState();
-    auto *LCtx = N->getLocationContext();
+    auto *LCtx = N->getStackFrame();
     if (!S)
       return std::nullopt;
 
@@ -934,7 +934,7 @@ public:
                                           BugReporterContext &BRC,
                                           PathSensitiveBugReport &BR) {
     // Only print a message at the interesting return statement.
-    if (N->getLocationContext() != CalleeSF)
+    if (N->getStackFrame() != CalleeSF)
       return nullptr;
 
     std::optional<StmtPoint> SP = N->getLocationAs<StmtPoint>();
@@ -1205,7 +1205,7 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
   }
 
   assert(VR->getDecl()->hasLocalStorage());
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
   return FrameSpace->getStackFrame() == LCtx->getStackFrame();
 }
 
@@ -1568,7 +1568,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
           // Get the region for the object we copied/moved from.
           const auto *OriginEx = CE->getArg(0);
           const auto OriginVal =
-              State->getSVal(OriginEx, Succ->getLocationContext());
+              State->getSVal(OriginEx, Succ->getStackFrame());
 
           // Pop the stored field regions and apply them to the origin
           // object in the same order we had them on the copy.
@@ -1883,8 +1883,8 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
     IsSatisfied = true;
 
     // Check if this is inlined defensive checks.
-    const LocationContext *CurLC = Succ->getLocationContext();
-    const LocationContext *ReportLC = BR.getErrorNode()->getLocationContext();
+    const LocationContext *CurLC = Succ->getStackFrame();
+    const LocationContext *ReportLC = BR.getErrorNode()->getStackFrame();
     if (CurLC != ReportLC && !CurLC->isParentOf(ReportLC)) {
       BR.markInvalid("Suppress IDC", CurLC);
       return nullptr;
@@ -1986,7 +1986,7 @@ constructDebugPieceForTrackedCondition(const Expr *Cond,
 
   return std::make_shared<PathDiagnosticEventPiece>(
       PathDiagnosticLocation::createBegin(
-          Cond, BRC.getSourceManager(), N->getLocationContext()),
+          Cond, BRC.getSourceManager(), N->getStackFrame()),
           (Twine() + "Tracking condition '" + ConditionText + "'").str());
 }
 
@@ -2469,7 +2469,7 @@ public:
 
     // If the expression is not an "lvalue expression", we can still
     // track the constraints on its contents.
-    SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getLocationContext());
+    SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getStackFrame());
 
     // Is it a symbolic value?
     if (auto L = V.getAs<loc::MemRegionVal>()) {
@@ -2556,14 +2556,14 @@ public:
     }
 
     ProgramStateRef RVState = RVNode->getState();
-    SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getLocationContext());
+    SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getStackFrame());
     const auto *BO = dyn_cast<BinaryOperator>(E);
 
     if (!BO || !BO->isMultiplicativeOp() || !V.isZeroConstant())
       return {};
 
-    SVal RHSV = RVState->getSVal(BO->getRHS(), RVNode->getLocationContext());
-    SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getLocationContext());
+    SVal RHSV = RVState->getSVal(BO->getRHS(), RVNode->getStackFrame());
+    SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getStackFrame());
 
     // Track both LHS and RHS of a multiplication.
     if (BO->getOpcode() == BO_Mul) {
@@ -2708,7 +2708,7 @@ NilReceiverBRVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
                                      /*EnableNullFPSuppression*/ false});
   // Issue a message saying that the method was skipped.
   PathDiagnosticLocation L(Receiver, BRC.getSourceManager(),
-                                     N->getLocationContext());
+                                     N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(L, OS.str());
 }
 
@@ -2840,7 +2840,7 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
                                   const ExplodedNode *N, bool TookTrue) {
   ProgramStateRef CurrentState = N->getState();
   ProgramStateRef PrevState = N->getFirstPred()->getState();
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
 
   // If the constraint information is changed between the current and the
   // previous program state we assuming the newly seen constraint information.
@@ -2944,7 +2944,7 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
     const bool quotes = isa<VarDecl>(DR->getDecl());
     if (quotes) {
       Out << '\'';
-      const LocationContext *LCtx = N->getLocationContext();
+      const LocationContext *LCtx = N->getStackFrame();
       const ProgramState *state = N->getState().get();
       if (const MemRegion *R = state->getLValue(cast<VarDecl>(DR->getDecl()),
                                                 LCtx).getAsRegion()) {
@@ -3082,7 +3082,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   }
 
   Out << (shouldInvert ? LhsString : RhsString);
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
   const SourceManager &SM = BRC.getSourceManager();
 
   if (isVarAnInterestingCondition(BExpr->getLHS(), N, &R) ||
@@ -3131,7 +3131,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitConditionVariable(
   if (!printValue(CondVarExpr, Out, N, TookTrue, /*IsAssuming=*/true))
     return nullptr;
 
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
   PathDiagnosticLocation Loc(CondVarExpr, BRC.getSourceManager(), LCtx);
 
   if (isVarAnInterestingCondition(CondVarExpr, N, &report))
@@ -3161,7 +3161,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   if (!printValue(DRE, Out, N, TookTrue, IsAssuming))
     return nullptr;
 
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
 
   if (isVarAnInterestingCondition(DRE, N, &report))
     Out << WillBeUsedForACondition;
@@ -3194,7 +3194,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   if (!printValue(ME, Out, N, TookTrue, IsAssuming))
     return nullptr;
 
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
   PathDiagnosticLocation Loc;
 
   // If we know the value create a pop-up note to the member of the MemberExpr.
@@ -3272,7 +3272,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
   // Here we suppress false positives coming from system headers. This list is
   // based on known issues.
   const AnalyzerOptions &Options = BRC.getAnalyzerOptions();
-  const Decl *D = N->getLocationContext()->getDecl();
+  const Decl *D = N->getStackFrame()->getDecl();
 
   if (AnalysisDeclContext::isInStdNamespace(D)) {
     // Skip reports within the 'std' namespace. Although these can sometimes be
@@ -3307,7 +3307,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         }
       }
 
-      for (const LocationContext *LCtx = N->getLocationContext(); LCtx;
+      for (const LocationContext *LCtx = N->getStackFrame(); LCtx;
            LCtx = LCtx->getParent()) {
         const auto *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
         if (!MD)

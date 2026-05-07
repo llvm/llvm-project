@@ -175,7 +175,7 @@ void UninitializedObjectChecker::checkEndFunction(
   const Expr *CallSite = Context.getStackFrame()->getCallSite();
   if (CallSite)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-        CallSite, Context.getSourceManager(), Node->getLocationContext());
+        CallSite, Context.getSourceManager(), Node->getStackFrame());
 
   // For Plist consumers that don't support notes just yet, we'll convert notes
   // to warnings.
@@ -184,7 +184,7 @@ void UninitializedObjectChecker::checkEndFunction(
 
       auto Report = std::make_unique<PathSensitiveBugReport>(
           BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
-          Node->getLocationContext()->getDecl());
+          Node->getStackFrame()->getDecl());
       Context.emitReport(std::move(Report));
     }
     return;
@@ -198,7 +198,7 @@ void UninitializedObjectChecker::checkEndFunction(
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
       BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
-      Node->getLocationContext()->getDecl());
+      Node->getStackFrame()->getDecl());
 
   for (const auto &Pair : UninitFields) {
     Report->addNote(Pair.second,

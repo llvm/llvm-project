@@ -1942,7 +1942,7 @@ ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
 
   unsigned Count = C.blockCount();
   SValBuilder &SVB = C.getSValBuilder();
-  const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
+  const LocationContext *LCtx = C.getPredecessor()->getStackFrame();
   DefinedSVal RetVal =
       isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
                : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), LCtx,
@@ -2029,7 +2029,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   assert(Loc::isLocType(CE->getType()) &&
          "Allocation functions must return a pointer");
 
-  const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
+  const LocationContext *LCtx = C.getPredecessor()->getStackFrame();
   SVal RetVal = State->getSVal(CE, C.getLocationContext());
 
   // Fill the region with the initialization value.
@@ -2978,7 +2978,7 @@ ProgramStateRef MallocChecker::CallocMem(CheckerContext &C,
 MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
                                                          SymbolRef Sym,
                                                          CheckerContext &C) {
-  const LocationContext *LeakContext = N->getLocationContext();
+  const LocationContext *LeakContext = N->getStackFrame();
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked symbol.
   const ExplodedNode *AllocNode = N;
@@ -3006,7 +3006,7 @@ MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
 
     // Allocation node, is the last node in the current or parent context in
     // which the symbol was tracked.
-    const LocationContext *NContext = N->getLocationContext();
+    const LocationContext *NContext = N->getStackFrame();
     if (NContext == LeakContext ||
         NContext->isParentOf(LeakContext))
       AllocNode = N;
@@ -3046,7 +3046,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   if (AllocationStmt)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocationStmt,
                                               C.getSourceManager(),
-                                              AllocNode->getLocationContext());
+                                              AllocNode->getStackFrame());
 
   SmallString<200> buf;
   llvm::raw_svector_ostream os(buf);
@@ -3059,7 +3059,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
 
   auto R = std::make_unique<PathSensitiveBugReport>(
       Frontend->LeakBug, os.str(), N, LocUsedForUniqueing,
-      AllocNode->getLocationContext()->getDecl());
+      AllocNode->getStackFrame()->getDecl());
   R->markInteresting(Sym);
   R->addVisitor<MallocBugVisitor>(Sym, true);
   if (ShouldRegisterNoOwnershipChangeVisitor)
@@ -3936,7 +3936,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   if (!S && (!RSCurr || RSCurr->getAllocationFamily().Kind != AF_InnerBuffer))
     return nullptr;
 
-  const LocationContext *CurrentLC = N->getLocationContext();
+  const LocationContext *CurrentLC = N->getStackFrame();
 
   // If we find an atomic fetch_add or fetch_sub within the function in which
   // the pointer was released (before the release), this is likely a release
@@ -4143,7 +4143,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
                                  BRC.getSourceManager());
   } else {
     Pos = PathDiagnosticLocation(S, BRC.getSourceManager(),
-                                 N->getLocationContext());
+                                 N->getStackFrame());
   }
 
   auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);

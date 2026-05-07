@@ -310,7 +310,7 @@ PathDiagnosticPieceRef InnerPointerChecker::InnerPointerBRVisitor::VisitNode(
   llvm::raw_svector_ostream OS(Buf);
   OS << "Pointer to inner buffer of '" << ObjTy << "' obtained here";
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+                             N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 

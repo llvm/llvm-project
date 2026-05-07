@@ -329,7 +329,7 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
 
   // Generate the extra diagnostic.
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+                             N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 
@@ -403,7 +403,7 @@ ExplodedNode *MoveChecker::tryToReportBug(const MemRegion *Region,
 
     if (const Stmt *MoveStmt = MoveNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-          MoveStmt, C.getSourceManager(), MoveNode->getLocationContext());
+          MoveStmt, C.getSourceManager(), MoveNode->getStackFrame());
 
     // Creating the error message.
     llvm::SmallString<128> Str;
@@ -432,7 +432,7 @@ ExplodedNode *MoveChecker::tryToReportBug(const MemRegion *Region,
 
     auto R = std::make_unique<PathSensitiveBugReport>(
         BT, OS.str(), N, LocUsedForUniqueing,
-        MoveNode->getLocationContext()->getDecl());
+        MoveNode->getStackFrame()->getDecl());
     R->addVisitor(std::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
     C.emitReport(std::move(R));
     return N;

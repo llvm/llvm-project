@@ -165,7 +165,7 @@ std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
       ProgramPoint::Kind K =  IsPreVisit ? ProgramPoint::PreStmtKind :
                                            ProgramPoint::PostStmtKind;
       const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                Pred->getLocationContext(), checkFn.Checker);
+                                Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
       checkFn(S, C);
     }
@@ -340,7 +340,7 @@ namespace {
                                        ProgramPoint::PreStoreKind;
       const ProgramPoint &L =
         ProgramPoint::getProgramPoint(NodeEx, K,
-                                      Pred->getLocationContext(),
+                                      Pred->getStackFrame(),
                                       checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
       checkFn(Loc, IsLoad, BoundEx, C);
@@ -515,7 +515,7 @@ void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
   NodeBuilder Bldr(Pred, Dst, Eng.getBuilderContext());
   for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
-        FunctionExitPoint(RS, Pred->getLocationContext(), checkFn.Checker);
+        FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
     CheckerContext C(Bldr, Eng, Pred, L);
     llvm::TimeTraceScope TimeScope(checkerScopeName("End", checkFn.Checker));
     checkFn(RS, C);
@@ -542,7 +542,7 @@ namespace {
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("BranchCond", checkFn.Checker));
-      ProgramPoint L = PostCondition(Condition, Pred->getLocationContext(),
+      ProgramPoint L = PostCondition(Condition, Pred->getStackFrame(),
                                      checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
       checkFn(Condition, C);
@@ -587,7 +587,7 @@ namespace {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("Allocator", checkFn.Checker));
       ProgramPoint L = PostAllocatorCall(
-          Call.getOriginExpr(), Pred->getLocationContext(), checkFn.Checker);
+          Call.getOriginExpr(), Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
       checkFn(cast<CXXAllocatorCall>(*Call.cloneWithState(Pred->getState())),
               C);
@@ -639,7 +639,7 @@ namespace {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("DeadSymbols", checkFn.Checker));
       const ProgramPoint &L = ProgramPoint::getProgramPoint(S, ProgarmPointKind,
-                                Pred->getLocationContext(), checkFn.Checker);
+                                Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
 
       // Note, do not pass the statement to the checkers without letting them
@@ -739,7 +739,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
       // to any Expr.
       ProgramPoint L = ProgramPoint::getProgramPoint(
           UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
-          Pred->getLocationContext(), EvalCallChecker.Checker);
+          Pred->getStackFrame(), EvalCallChecker.Checker);
       bool evaluated = false;
       { // CheckerContext generates transitions (populates checkDest) on
         // destruction, so introduce the scope to make sure it gets properly

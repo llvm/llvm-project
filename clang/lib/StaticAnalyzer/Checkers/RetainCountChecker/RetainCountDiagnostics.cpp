@@ -422,7 +422,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   const ExplodedNode *PrevNode = N->getFirstPred();
   ProgramStateRef PrevSt = PrevNode->getState();
   ProgramStateRef CurrSt = N->getState();
-  const LocationContext *LCtx = N->getLocationContext();
+  const LocationContext *LCtx = N->getStackFrame();
 
   const RefVal* CurrT = getRefBinding(CurrSt, Sym);
   if (!CurrT)
@@ -480,7 +480,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
       generateDiagnosticsForCallLike(CurrSt, LCtx, CurrV, Sym, S, os);
     }
 
-    PathDiagnosticLocation Pos(S, SM, N->getLocationContext());
+    PathDiagnosticLocation Pos(S, SM, N->getStackFrame());
     return std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
   }
 
@@ -533,7 +533,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 
   const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                                N->getLocationContext());
+                                N->getStackFrame());
   auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
 
   // Add the range by scanning the children of the statement for any bindings
@@ -616,7 +616,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   const ExplodedNode *AllocationNode = N;
   const ExplodedNode *AllocationNodeInCurrentOrParentContext = N;
   const MemRegion *FirstBinding = nullptr;
-  const LocationContext *LeakContext = N->getLocationContext();
+  const LocationContext *LeakContext = N->getStackFrame();
 
   // The location context of the init method called on the leaked object, if
   // available.
@@ -624,7 +624,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
   while (N) {
     ProgramStateRef St = N->getState();
-    const LocationContext *NContext = N->getLocationContext();
+    const LocationContext *NContext = N->getStackFrame();
 
     if (!getRefBinding(St, Sym))
       break;
@@ -687,7 +687,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   assert(N && "Could not find allocation node");
 
   if (AllocationNodeInCurrentOrParentContext &&
-      AllocationNodeInCurrentOrParentContext->getLocationContext() !=
+      AllocationNodeInCurrentOrParentContext->getStackFrame() !=
       LeakContext)
     FirstBinding = nullptr;
 
@@ -846,13 +846,13 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx) {
   }
 
   PathDiagnosticLocation AllocLocation = PathDiagnosticLocation::createBegin(
-      AllocStmt, SMgr, AllocNode->getLocationContext());
+      AllocStmt, SMgr, AllocNode->getStackFrame());
   Location = AllocLocation;
 
   // Set uniqieing info, which will be used for unique the bug reports. The
   // leaks should be uniqued on the allocation site.
   UniqueingLocation = AllocLocation;
-  UniqueingDecl = AllocNode->getLocationContext()->getDecl();
+  UniqueingDecl = AllocNode->getStackFrame()->getDecl();
 }
 
 void RefLeakReport::createDescription(CheckerContext &Ctx) {

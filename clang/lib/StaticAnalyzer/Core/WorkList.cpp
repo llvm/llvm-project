@@ -157,7 +157,7 @@ public:
     } else {
       LocIdentifier LocId = std::make_pair(
           BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getStackFrame());
+          N->getStackFrame()->getStackFrame());
       auto InsertInfo = Reachable.insert(LocId);
 
       if (InsertInfo.second) {
@@ -227,7 +227,7 @@ public:
     if (auto BE = N->getLocation().getAs<BlockEntrance>()) {
       LocIdentifier LocId = std::make_pair(
           BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getStackFrame());
+          N->getStackFrame()->getStackFrame());
       NumVisited = NumReached[LocId]++;
     }
 

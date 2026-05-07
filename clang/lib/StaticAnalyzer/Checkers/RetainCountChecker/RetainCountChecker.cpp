@@ -246,7 +246,7 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
   // Return the object as autoreleased.
   //  RetEffect RE = RetEffect::MakeNotOwned(ObjKind::ObjC);
   if (SymbolRef sym =
-        state->getSVal(Ex, pred->getLocationContext()).getAsSymbol()) {
+        state->getSVal(Ex, pred->getStackFrame()).getAsSymbol()) {
     QualType ResultTy = Ex->getType();
     state = setRefBinding(state, sym,
                           RefVal::makeNotOwned(ObjKind::ObjC, ResultTy));
@@ -1376,7 +1376,7 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
   RefBindingsTy B = state->get<RefBindings>();
 
   // Don't process anything within synthesized bodies.
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   if (LCtx->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     assert(!LCtx->inTopFrame());
     return;

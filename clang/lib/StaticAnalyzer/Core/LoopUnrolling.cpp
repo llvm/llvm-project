@@ -175,7 +175,7 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
 
   // Get the lambda CXXRecordDecl
   assert(DR->refersToEnclosingVariableOrCapture());
-  const LocationContext *LocCtxt = N->getLocationContext();
+  const LocationContext *LocCtxt = N->getStackFrame();
   const Decl *D = LocCtxt->getDecl();
   const auto *MD = cast<CXXMethodDecl>(D);
   assert(MD && MD->getParent()->isLambda() &&
@@ -251,7 +251,7 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
     // Check the usage of the pass-by-ref function calls and adress-of operator
     // on VD and reference initialized by VD.
     ASTContext &ASTCtx =
-        N->getLocationContext()->getAnalysisDeclContext()->getASTContext();
+        N->getStackFrame()->getAnalysisDeclContext()->getASTContext();
     // Case 3 and 4:
     auto Match =
         match(stmt(anyOf(callByRef(equalsNode(VD)), getAddrTo(equalsNode(VD)),
@@ -328,7 +328,7 @@ static bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
 ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
                                 ExplodedNode *Pred, unsigned maxVisitOnPath) {
   auto State = Pred->getState();
-  auto LCtx = Pred->getLocationContext();
+  auto LCtx = Pred->getStackFrame();
 
   if (!isLoopStmt(LoopStmt))
     return State;

@@ -22,7 +22,7 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
   ProgramStateRef state = Pred->getState();
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const LocationContext *LCtx = Pred->getStackFrame();
   SVal baseVal = state->getSVal(Ex->getBase(), LCtx);
   SVal location = state->getLValue(Ex->getDecl(), baseVal);
 
@@ -53,7 +53,7 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
 
   for (ExplodedNode *Pred : dstLocation) {
     ProgramStateRef state = Pred->getState();
-    const LocationContext *LCtx = Pred->getLocationContext();
+    const LocationContext *LCtx = Pred->getStackFrame();
 
     ProgramStateRef nextState =
         ExprEngine::setWhetherHasMoreIteration(state, S, LCtx, hasElements);
@@ -115,15 +115,15 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
 
-  SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
+  SVal collectionV = state->getSVal(collection, Pred->getStackFrame());
 
   SVal elementV = UnknownVal();
   if (const auto *DS = dyn_cast<DeclStmt>(elem)) {
     const VarDecl *elemD = cast<VarDecl>(DS->getSingleDecl());
     assert(elemD->getInit() == nullptr);
-    elementV = state->getLValue(elemD, Pred->getLocationContext());
+    elementV = state->getLValue(elemD, Pred->getStackFrame());
   } else if (const auto *Ex = dyn_cast<Expr>(elem)) {
-    elementV = state->getSVal(Ex, Pred->getLocationContext());
+    elementV = state->getSVal(Ex, Pred->getStackFrame());
   }
 
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();
@@ -157,7 +157,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
                                   ExplodedNodeSet &Dst) {
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<ObjCMethodCall> Msg = CEMgr.getObjCMethodCall(
-      ME, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
+      ME, Pred->getState(), Pred->getStackFrame(), getCFGElementRef());
 
   // There are three cases for the receiver:
   //   (1) it is definitely nil,
