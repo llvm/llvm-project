@@ -348,26 +348,6 @@ private:
   StringRef HelperName;
 };
 
-/// API for captured statement code generation in OpenMP taskgraphs.
-class CGOpenMPTaskgraphRegionInfo final : public CGOpenMPRegionInfo {
-public:
-  CGOpenMPTaskgraphRegionInfo(const CapturedStmt &CS,
-                              const RegionCodeGenTy &CodeGen)
-      : CGOpenMPRegionInfo(CS, TaskgraphOutlinedRegion, CodeGen,
-                           llvm::omp::OMPD_taskgraph, false) {}
-
-  const VarDecl *getThreadIDVariable() const override { return 0; }
-
-  /// Get the name of the capture helper.
-  StringRef getHelperName() const override { return "taskgraph.omp_outlined."; }
-
-  static bool classof(const CGCapturedStmtInfo *Info) {
-    return CGOpenMPRegionInfo::classof(Info) &&
-           cast<CGOpenMPRegionInfo>(Info)->getRegionKind() ==
-               TaskgraphOutlinedRegion;
-  }
-};
-
 static void EmptyCodeGen(CodeGenFunction &, PrePostActionTy &) {
   llvm_unreachable("No codegen for expressions");
 }
@@ -2252,7 +2232,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
   const auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
   LValue CapStruct = CGF.InitCapturedStruct(*CS);
 
-  llvm::Function *FnT = OutlinedCGF.GenerateCapturedStmtFunction(*CS);
+  llvm::Function *OutlinedFn = OutlinedCGF.GenerateCapturedStmtFunction(*CS);
 
   llvm::Value *CapturedArgsPtr =
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
@@ -2260,7 +2240,7 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
 
   auto &&CodeGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
-    CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, Loc, FnT,
+    CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, Loc, OutlinedFn,
                                                         CapturedArgsPtr);
   };
   RegionCodeGenTy RCG(CodeGen);
