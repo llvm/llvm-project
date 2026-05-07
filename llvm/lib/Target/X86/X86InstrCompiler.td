@@ -2088,18 +2088,14 @@ defm : OneBitPats<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
 defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 
 // Flag-producing variants: reuse the BTR/BTS/BTC encodings so CF can replace
-// a separate X86ISD::BT. Emitted by a DAG combine in combineBT.
-multiclass OneBitFlagPats<RegisterClass rc, Instruction btr_inst,
-                          Instruction bts_inst, Instruction btc_inst> {
-  def : Pat<(X86btr rc:$src1, rc:$src2), (btr_inst rc:$src1, rc:$src2)>;
-  def : Pat<(X86bts rc:$src1, rc:$src2), (bts_inst rc:$src1, rc:$src2)>;
-  def : Pat<(X86btc rc:$src1, rc:$src2), (btc_inst rc:$src1, rc:$src2)>;
-}
-
-// Only i32/i64 are relevant: getBT promotes <32-bit Src to i32 before
-// creating X86ISD::BT, so an i16 BT can never reach combineBTToBitOpFlag.
-defm : OneBitFlagPats<GR32, BTR32rr, BTS32rr, BTC32rr>;
-defm : OneBitFlagPats<GR64, BTR64rr, BTS64rr, BTC64rr>;
+// a separate X86ISD::BT. Emitted by a DAG combine in combineBT. Only i32/i64
+// since getBT promotes <32-bit Src to i32 before creating X86ISD::BT.
+def : Pat<(X86btr GR32:$src1, GR32:$src2), (BTR32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86bts GR32:$src1, GR32:$src2), (BTS32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btc GR32:$src1, GR32:$src2), (BTC32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btr GR64:$src1, GR64:$src2), (BTR64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86bts GR64:$src1, GR64:$src2), (BTS64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86btc GR64:$src1, GR64:$src2), (BTC64rr GR64:$src1, GR64:$src2)>;
 
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns
