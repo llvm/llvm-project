@@ -30249,11 +30249,40 @@ FP Arithmetic Intrinsics
 ------------------------
 
 These intrinsics are call-instruction equivalents of the standard
-floating-point instructions, accepting the same
-:ref:`fast-math flags <fastmath>`.  Expressing a floating-point
-operation as a call allows clients to attach metadata and to use the
-result value like any other call result.  Without operand bundles they
-lower identically to the corresponding instruction.
+floating-point instructions.  They accept the same
+:ref:`fast-math flags <fastmath>` and have the same semantics; without
+operand bundles, they lower identically to the corresponding
+instruction.
+
+The motivation for the call form is to give FP operations the same
+call-site interface that other intrinsics already have, so that
+operand bundles or call-site attributes can carry information about
+the :ref:`FP environment <floatenv>` (rounding mode, exception
+behavior, denormal handling, etc.) for an individual operation.  The
+intrinsics do not by themselves introduce any new FP semantics.
+
+When to use:
+
+Use the intrinsic form when an FP operation needs to carry FP
+environment information at the call site that the plain instruction
+cannot represent.  Until such call-site facilities for the FP
+environment are in place, the intrinsic form is rarely the right
+choice for new code; it is provided so that the ecosystem can adopt
+it as those facilities land.
+
+When not to use:
+
+For ordinary FP arithmetic, prefer the plain instruction.  Frontends
+and optimization passes that have no FP environment information to
+attach should keep emitting :ref:`fadd <i_fadd>`, :ref:`fsub <i_fsub>`,
+and the other plain FP instructions; rewriting them as intrinsic calls
+when nothing is attached adds no semantics and produces less idiomatic
+IR.
+
+These intrinsics are not a substitute for the
+:ref:`Constrained Floating-Point Intrinsics <constrainedfp>`: they do
+not encode rounding-mode or exception-behavior assumptions, and they
+follow the :ref:`default floating-point environment <floatenv>`.
 
 Note: ``llvm.fcmps`` is an exception -- see its entry below for
 details.
