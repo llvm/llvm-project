@@ -440,17 +440,7 @@ static bool ReadEncodedBufferAndDumpToStream(
   const auto max_size = target_sp->GetMaximumSizeOfStringSummary();
 
   uint32_t sourceSize;
-  if (elem_type == StringElementType::ASCII && !options.GetSourceSize()) {
-    // FIXME: The NSString formatter sets HasSourceSize(true) when the size is
-    // actually unknown, as well as SetZeroTermination(Ignore). IIUC the
-    // C++ formatter also sets SetZeroTermination(Ignore) when it doesn't
-    // mean to. I don't see how this makes sense: we should fix the formatters.
-    //
-    // Until then, the behavior that's expected for ASCII strings with unknown
-    // lengths is to read up to the max size and then null-terminate. Do that.
-    sourceSize = max_size;
-    needs_zero_terminator = true;
-  } else if (options.HasSourceSize()) {
+  if (options.HasSourceSize()) {
     sourceSize = options.GetSourceSize();
     if (!options.GetIgnoreMaxLength()) {
       if (sourceSize > max_size) {
