@@ -47,6 +47,7 @@ extern void weak_func_alias(void) __attribute__((weak, alias("weak_func_target")
 // CIR-DAG: cir.func dso_local @prior_decl_func() alias(@prior_decl_func_target)
 // CIR-DAG: cir.func{{.*}} @weak_func_target()
 // CIR-DAG: cir.func weak @weak_func_alias() alias(@weak_func_target)
+// CIR-DAG: cir.func dso_local @test13_alias(!u32i) alias(@test13)
 
 // LLVM-DAG: @alias_target = global i32 42
 // LLVM-DAG: @prior_decl_var_target = global i32 7
@@ -57,6 +58,7 @@ extern void weak_func_alias(void) __attribute__((weak, alias("weak_func_target")
 // LLVM-DAG: @alias_func = alias void (), ptr @alias_func_target
 // LLVM-DAG: @prior_decl_func = alias void (), ptr @prior_decl_func_target
 // LLVM-DAG: @weak_func_alias = weak alias void (), ptr @weak_func_target
+// LLVM-DAG: @test13_alias = alias void (i32), ptr @test13
 // LLVM: define {{.*}}void @alias_func_target()
 
 // OGCG-DAG: @alias_target = {{.*}}global i32 42
@@ -68,4 +70,10 @@ extern void weak_func_alias(void) __attribute__((weak, alias("weak_func_target")
 // OGCG-DAG: @alias_func = {{.*}}alias void (), ptr @alias_func_target
 // OGCG-DAG: @prior_decl_func = {{.*}}alias void (), ptr @prior_decl_func_target
 // OGCG-DAG: @weak_func_alias = {{.*}}weak alias void (), ptr @weak_func_target
+// OGCG-DAG: @test13_alias = alias {}, ptr @test13
 // OGCG: define {{.*}}void @alias_func_target()
+
+// Test that a non visible (-Wvisibility) type doesn't assert.
+enum a_type { test13_a };
+void test13(enum a_type y) {}
+void test13_alias(enum undeclared_type y) __attribute__((alias ("test13")));
