@@ -35,8 +35,8 @@ int test__compiler_rt_logbl(fp_t x) {
 
 fp_t cases[] = {
     1.e-6, -1.e-6,
-    // The logbl() function's behavior on the following values on z/OS
-    // differs from the C++ standard specification.
+// The logbl() function's behavior on the following values on z/OS
+// differs from the C++ standard specification.
 #  ifndef __MVS__
     NAN,   -NAN,   INFINITY, -INFINITY,
 #  endif
