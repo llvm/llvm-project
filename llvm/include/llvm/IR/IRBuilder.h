@@ -2807,7 +2807,7 @@ public:
   /// specified alignment.
   LLVM_ABI CallInst *CreateAlignmentAssumption(const DataLayout &DL,
                                                Value *PtrValue,
-                                               unsigned Alignment,
+                                               uint64_t Alignment,
                                                Value *OffsetValue = nullptr);
 
   /// Create an assume intrinsic call that represents an alignment
