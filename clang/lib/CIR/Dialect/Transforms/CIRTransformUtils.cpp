@@ -48,18 +48,15 @@ mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
       cir::CIRDialect::getCalleeAttrName(), // Set by create()
       cir::CIRDialect::getOperandSegmentSizesAttrName(),
   };
-#ifndef NDEBUG
-  // We don't expect to ever see any of these attributes on a call that we
-  // converted to a try_call.
-  llvm::StringRef unexpectedAttrs[] = {
-      cir::CIRDialect::getNoThrowAttrName(),
-      cir::CIRDialect::getNoUnwindAttrName(),
-  };
-#endif
   for (mlir::NamedAttribute attr : callOp->getAttrs()) {
     if (llvm::is_contained(excludedAttrs, attr.getName()))
       continue;
-    assert(!llvm::is_contained(unexpectedAttrs, attr.getName()) &&
+    assert(!llvm::is_contained(
+               {
+                   cir::CIRDialect::getNoThrowAttrName(),
+                   cir::CIRDialect::getNoUnwindAttrName(),
+               },
+               attr.getName()) &&
            "unexpected attribute on converted call");
     tryCallOp->setAttr(attr.getName(), attr.getValue());
   }
