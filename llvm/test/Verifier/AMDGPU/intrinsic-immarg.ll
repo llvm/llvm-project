@@ -89,22 +89,22 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, 
 define void @exp_compr_invalid_inputs(i32 %tgt, i32 %en, i1 %bool) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %en
-  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
+  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 1.000000e+00, half 2.000000e+00>, <2 x half> <half 5.000000e-01, half 4.000000e+00>, i1 true, i1 false)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
 
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %tgt
-  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
+  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 1.000000e+00, half 2.000000e+00>, <2 x half> <half 5.000000e-01, half 4.000000e+00>, i1 true, i1 false)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
 
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i1 %bool
-  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 5, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 %bool, i1 false)
+  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 5, <2 x half> <half 1.000000e+00, half 2.000000e+00>, <2 x half> <half 5.000000e-01, half 4.000000e+00>, i1 %bool, i1 false)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 5, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 %bool, i1 false)
 
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i1 %bool
-  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 5, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 false, i1 %bool)
+  ; CHECK-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 5, <2 x half> <half 1.000000e+00, half 2.000000e+00>, <2 x half> <half 5.000000e-01, half 4.000000e+00>, i1 false, i1 %bool)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 5, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 false, i1 %bool)
   ret void
 }

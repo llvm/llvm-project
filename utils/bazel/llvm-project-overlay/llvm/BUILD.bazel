@@ -1330,7 +1330,10 @@ cc_library(
 cc_library(
     name = "ABI",
     srcs = glob(
-        ["lib/ABI/*.cpp"],
+        [
+            "lib/ABI/*.cpp",
+            "lib/ABI/Targets/*.cpp",
+        ],
     ),
     hdrs = glob(
         ["include/llvm/ABI/*.h"],

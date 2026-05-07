@@ -144,7 +144,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 // LLVM-NEXT:   %[[B_VAL:.*]] = load i8, ptr %[[U]], align 8
 // LLVM-NEXT:   store i32 1, ptr %[[U]], align 8
 // LLVM-NEXT:   %[[I_VAL:.*]] = load i32, ptr %[[U]], align 8
-// LLVM-NEXT:   store float 0x3FB99999A0000000, ptr %[[U]], align 8
+// LLVM-NEXT:   store float 1.000000e-01, ptr %[[U]], align 8
 // LLVM-NEXT:   %[[F_VAL:.*]] = load float, ptr %[[U]], align 8
 // LLVM-NEXT:   store double 1.000000e-01, ptr %[[U]], align 8
 // LLVM-NEXT:   %[[D_VAL:.*]] = load double, ptr %[[U]], align 8
@@ -159,7 +159,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 // OGCG-NEXT:   %[[B_VAL:.*]] = load i8, ptr %[[U]], align 8
 // OGCG-NEXT:   store i32 1, ptr %[[U]], align 8
 // OGCG-NEXT:   %[[I_VAL:.*]] = load i32, ptr %[[U]], align 8
-// OGCG-NEXT:   store float 0x3FB99999A0000000, ptr %[[U]], align 8
+// OGCG-NEXT:   store float 1.000000e-01, ptr %[[U]], align 8
 // OGCG-NEXT:   %[[F_VAL:.*]] = load float, ptr %[[U]], align 8
 // OGCG-NEXT:   store double 1.000000e-01, ptr %[[U]], align 8
 // OGCG-NEXT:   %[[D_VAL:.*]] = load double, ptr %[[U]], align 8

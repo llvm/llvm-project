@@ -379,14 +379,14 @@ define void @store_2xi32_into_double(double %foo) {
 ; CHECK-LABEL: define void @store_2xi32_into_double
 ; CHECK-SAME: (double [[FOO:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <9 x double> poison
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <9 x double> [[ALLOCA]], double 0x5F0000005E, i32 0
-; CHECK-NEXT:    [[DUMMYUSER0:%.*]] = freeze double 0x5F0000005E
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <9 x double> [[TMP1]], double 0x6700000066, i32 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <9 x double> [[TMP2]], double 0x6900000068, i32 5
-; CHECK-NEXT:    [[DUMMYUSER1:%.*]] = freeze double 0x6700000066
-; CHECK-NEXT:    [[DUMMYUSER2:%.*]] = freeze double 0x6900000068
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <9 x double> [[TMP3]], double 0x6F0000006E, i32 8
-; CHECK-NEXT:    [[DUMMYUSER3:%.*]] = freeze double 0x6F0000006E
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <9 x double> [[ALLOCA]], double f0x0000005F0000005E, i32 0
+; CHECK-NEXT:    [[DUMMYUSER0:%.*]] = freeze double f0x0000005F0000005E
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <9 x double> [[TMP1]], double f0x0000006700000066, i32 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <9 x double> [[TMP2]], double f0x0000006900000068, i32 5
+; CHECK-NEXT:    [[DUMMYUSER1:%.*]] = freeze double f0x0000006700000066
+; CHECK-NEXT:    [[DUMMYUSER2:%.*]] = freeze double f0x0000006900000068
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <9 x double> [[TMP3]], double f0x0000006F0000006E, i32 8
+; CHECK-NEXT:    [[DUMMYUSER3:%.*]] = freeze double f0x0000006F0000006E
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [9 x double], align 8, addrspace(5)

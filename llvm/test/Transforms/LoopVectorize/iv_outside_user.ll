@@ -1299,3 +1299,114 @@ loop:
 exit:
   ret i64 %iv.1.next
 }
+
+define i32 @cast_incremented_iv_live_out(ptr %arr, i32 %n) {
+; VEC-LABEL: define i32 @cast_incremented_iv_live_out(
+; VEC-SAME: ptr [[ARR:%.*]], i32 [[N:%.*]]) {
+; VEC-NEXT:  [[ENTRY:.*]]:
+; VEC-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; VEC-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
+; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 2
+; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VEC:       [[VECTOR_PH]]:
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], 2
+; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
+; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC:       [[VECTOR_BODY]]:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[INDEX]]
+; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1
+; VEC-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[WIDE_LOAD]], splat (i8 1)
+; VEC-NEXT:    store <2 x i8> [[TMP2]], ptr [[TMP1]], align 1
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VEC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VEC-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[MIDDLE_BLOCK]]:
+; VEC-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 1)
+; VEC-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i32>
+; VEC-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VEC:       [[SCALAR_PH]]:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VEC-NEXT:    br label %[[LOOP:.*]]
+; VEC:       [[LOOP]]:
+; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[IV]]
+; VEC-NEXT:    [[VAL:%.*]] = load i8, ptr [[GEP]], align 1
+; VEC-NEXT:    [[VAL_INC:%.*]] = add i8 [[VAL]], 1
+; VEC-NEXT:    store i8 [[VAL_INC]], ptr [[GEP]], align 1
+; VEC-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VEC-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV_NEXT]] to i32
+; VEC-NEXT:    [[COND:%.*]] = icmp ult i32 [[IV_TRUNC]], [[N]]
+; VEC-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[EXIT]]:
+; VEC-NEXT:    [[IV_TRUNC_LCSSA:%.*]] = phi i32 [ [[IV_TRUNC]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    ret i32 [[IV_TRUNC_LCSSA]]
+;
+; INTERLEAVE-LABEL: define i32 @cast_incremented_iv_live_out(
+; INTERLEAVE-SAME: ptr [[ARR:%.*]], i32 [[N:%.*]]) {
+; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; INTERLEAVE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
+; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 2
+; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; INTERLEAVE:       [[VECTOR_PH]]:
+; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], 2
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; INTERLEAVE:       [[VECTOR_BODY]]:
+; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[INDEX]]
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP1]]
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = add i8 [[TMP4]], 1
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = add i8 [[TMP5]], 1
+; INTERLEAVE-NEXT:    store i8 [[TMP6]], ptr [[TMP2]], align 1
+; INTERLEAVE-NEXT:    store i8 [[TMP7]], ptr [[TMP3]], align 1
+; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; INTERLEAVE:       [[MIDDLE_BLOCK]]:
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = add i64 [[TMP1]], 1
+; INTERLEAVE-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i32
+; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC]]
+; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE:       [[SCALAR_PH]]:
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
+; INTERLEAVE:       [[LOOP]]:
+; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[IV]]
+; INTERLEAVE-NEXT:    [[VAL:%.*]] = load i8, ptr [[GEP]], align 1
+; INTERLEAVE-NEXT:    [[VAL_INC:%.*]] = add i8 [[VAL]], 1
+; INTERLEAVE-NEXT:    store i8 [[VAL_INC]], ptr [[GEP]], align 1
+; INTERLEAVE-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; INTERLEAVE-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV_NEXT]] to i32
+; INTERLEAVE-NEXT:    [[COND:%.*]] = icmp ult i32 [[IV_TRUNC]], [[N]]
+; INTERLEAVE-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT]], {{!llvm.loop ![0-9]+}}
+; INTERLEAVE:       [[EXIT]]:
+; INTERLEAVE-NEXT:    [[IV_TRUNC_LCSSA:%.*]] = phi i32 [ [[IV_TRUNC]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    ret i32 [[IV_TRUNC_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %arr, i64 %iv
+  %val = load i8, ptr %gep, align 1
+  %val.inc = add i8 %val, 1
+  store i8 %val.inc, ptr %gep, align 1
+  %iv.next = add i64 %iv, 1
+  %iv.trunc = trunc i64 %iv.next to i32
+  %cond = icmp ult i32 %iv.trunc, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.trunc
+}

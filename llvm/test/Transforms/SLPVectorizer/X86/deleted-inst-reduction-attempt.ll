@@ -7,7 +7,7 @@ define double @test(ptr %0, double %1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double +qnan)
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 poison>

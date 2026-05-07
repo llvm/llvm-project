@@ -234,6 +234,8 @@ public:
   ///     in one statement.
   Stream &operator<<(const llvm::formatv_object_base &obj);
 
+  Stream &operator<<(bool b) { return *this << (b ? "true" : "false"); }
+
   Stream &operator<<(uint8_t uval) = delete;
   Stream &operator<<(uint16_t uval) = delete;
   Stream &operator<<(uint32_t uval) = delete;

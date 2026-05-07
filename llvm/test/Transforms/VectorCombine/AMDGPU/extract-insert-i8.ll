@@ -5,11 +5,38 @@ define <32 x i8> @extract_insert_chain(<8 x i8> %in0, <8 x i8> %in1, <8 x i8> %i
 ; OPT-LABEL: define <32 x i8> @extract_insert_chain(
 ; OPT-SAME: <8 x i8> [[IN0:%.*]], <8 x i8> [[IN1:%.*]], <8 x i8> [[IN2:%.*]], <8 x i8> [[IN3:%.*]]) #[[ATTR0:[0-9]+]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[O_1_7:%.*]] = shufflevector <8 x i8> [[IN0]], <8 x i8> [[IN1]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; OPT-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[IN2]], <8 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; OPT-NEXT:    [[O_2_7:%.*]] = shufflevector <32 x i8> [[O_1_7]], <32 x i8> [[TMP2]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; OPT-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i8> [[IN3]], <8 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; OPT-NEXT:    [[O_3_7:%.*]] = shufflevector <32 x i8> [[O_2_7]], <32 x i8> [[TMP3]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39>
+; OPT-NEXT:    [[I_0_0:%.*]] = extractelement <8 x i8> [[IN0]], i64 0
+; OPT-NEXT:    [[I_0_4:%.*]] = extractelement <8 x i8> [[IN0]], i64 4
+; OPT-NEXT:    [[I_1_0:%.*]] = extractelement <8 x i8> [[IN1]], i64 0
+; OPT-NEXT:    [[I_1_4:%.*]] = extractelement <8 x i8> [[IN1]], i64 4
+; OPT-NEXT:    [[I_2_0:%.*]] = extractelement <8 x i8> [[IN2]], i64 0
+; OPT-NEXT:    [[I_2_4:%.*]] = extractelement <8 x i8> [[IN2]], i64 4
+; OPT-NEXT:    [[I_3_0:%.*]] = extractelement <8 x i8> [[IN3]], i64 0
+; OPT-NEXT:    [[I_3_4:%.*]] = extractelement <8 x i8> [[IN3]], i64 4
+; OPT-NEXT:    [[O_0_0:%.*]] = insertelement <32 x i8> poison, i8 [[I_0_0]], i32 0
+; OPT-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[IN0]], <8 x i8> poison, <32 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_0_3:%.*]] = shufflevector <32 x i8> [[O_0_0]], <32 x i8> [[TMP0]], <32 x i32> <i32 0, i32 33, i32 34, i32 35, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[O_0_4:%.*]] = insertelement <32 x i8> [[O_0_3]], i8 [[I_0_4]], i32 4
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[IN0]], <8 x i8> poison, <32 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_0_7:%.*]] = shufflevector <32 x i8> [[O_0_4]], <32 x i8> [[TMP1]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 37, i32 38, i32 39, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[O_1_0:%.*]] = insertelement <32 x i8> [[O_0_7]], i8 [[I_1_0]], i32 8
+; OPT-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[IN1]], <8 x i8> poison, <32 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_1_3:%.*]] = shufflevector <32 x i8> [[O_1_0]], <32 x i8> [[TMP2]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 33, i32 34, i32 35, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[O_1_4:%.*]] = insertelement <32 x i8> [[O_1_3]], i8 [[I_1_4]], i32 12
+; OPT-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i8> [[IN1]], <8 x i8> poison, <32 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_1_7:%.*]] = shufflevector <32 x i8> [[O_1_4]], <32 x i8> [[TMP3]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 37, i32 38, i32 39, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[O_2_0:%.*]] = insertelement <32 x i8> [[O_1_7]], i8 [[I_2_0]], i32 16
+; OPT-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[IN2]], <8 x i8> poison, <32 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_2_3:%.*]] = shufflevector <32 x i8> [[O_2_0]], <32 x i8> [[TMP4]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 33, i32 34, i32 35, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[O_2_4:%.*]] = insertelement <32 x i8> [[O_2_3]], i8 [[I_2_4]], i32 20
+; OPT-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i8> [[IN2]], <8 x i8> poison, <32 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_2_7:%.*]] = shufflevector <32 x i8> [[O_2_4]], <32 x i8> [[TMP5]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 37, i32 38, i32 39, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[O_3_0:%.*]] = insertelement <32 x i8> [[O_2_7]], i8 [[I_3_0]], i32 24
+; OPT-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i8> [[IN3]], <8 x i8> poison, <32 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_3_3:%.*]] = shufflevector <32 x i8> [[O_3_0]], <32 x i8> [[TMP6]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 33, i32 34, i32 35, i32 28, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[O_3_4:%.*]] = insertelement <32 x i8> [[O_3_3]], i8 [[I_3_4]], i32 28
+; OPT-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> [[IN3]], <8 x i8> poison, <32 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_3_7:%.*]] = shufflevector <32 x i8> [[O_3_4]], <32 x i8> [[TMP7]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 37, i32 38, i32 39>
 ; OPT-NEXT:    ret <32 x i8> [[O_3_7]]
 ;
 entry:
@@ -88,7 +115,14 @@ entry:
 define <8 x i8> @extract_insert_chain_shortening(<32 x i8> %in) {
 ; OPT-LABEL: define <8 x i8> @extract_insert_chain_shortening(
 ; OPT-SAME: <32 x i8> [[IN:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[IN]], <32 x i8> poison, <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; OPT-NEXT:    [[I_0:%.*]] = extractelement <32 x i8> [[IN]], i64 16
+; OPT-NEXT:    [[I_4:%.*]] = extractelement <32 x i8> [[IN]], i64 20
+; OPT-NEXT:    [[O_0:%.*]] = insertelement <8 x i8> poison, i8 [[I_0]], i32 0
+; OPT-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i8> [[IN]], <32 x i8> poison, <8 x i32> <i32 poison, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
+; OPT-NEXT:    [[O_3:%.*]] = shufflevector <8 x i8> [[O_0]], <8 x i8> [[TMP3]], <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; OPT-NEXT:    [[O_4:%.*]] = insertelement <8 x i8> [[O_3]], i8 [[I_4]], i32 4
+; OPT-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i8> [[IN]], <32 x i8> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 21, i32 22, i32 23>
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[O_4]], <8 x i8> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
 ; OPT-NEXT:    ret <8 x i8> [[TMP1]]
 ;
   %i.0 = extractelement <32 x i8> %in, i64 16

@@ -400,17 +400,17 @@ static unsigned getLambdaShift(unsigned XLen) {
 
 static unsigned getAltFmtAShift(unsigned XLen) {
   assertValidXLenForVType(XLen);
-  return XLen - 5;
+  return XLen - 6;
 }
 
 static unsigned getAltFmtBShift(unsigned XLen) {
   assertValidXLenForVType(XLen);
-  return XLen - 6;
+  return XLen - 7;
 }
 
 static unsigned getBSShift(unsigned XLen) {
   assertValidXLenForVType(XLen);
-  return XLen - 7;
+  return XLen - 5;
 }
 
 unsigned encodeLambda(unsigned Lambda) {

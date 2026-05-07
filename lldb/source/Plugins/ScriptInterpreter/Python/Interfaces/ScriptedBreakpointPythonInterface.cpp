@@ -44,7 +44,7 @@ bool ScriptedBreakpointPythonInterface::ResolverCallback(
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
     Log *log = GetLog(LLDBLog::Script);
-    LLDB_LOG(log, "Error calling __callback__ method: {1}", error);
+    LLDB_LOG(log, "Error calling __callback__ method: {}", error);
     return true;
   }
   return obj->GetBooleanValue();

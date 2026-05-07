@@ -287,22 +287,26 @@ PreservedAnalyses InstrumentorPass::run(Module &M, ModuleAnalysisManager &MAM) {
   return PA;
 }
 
-BaseConfigurationOption *
+std::unique_ptr<BaseConfigurationOption>
 BaseConfigurationOption::createBoolOption(InstrumentationConfig &IConf,
                                           StringRef Name, StringRef Description,
                                           bool DefaultValue) {
-  auto *BCO = new BaseConfigurationOption(Name, Description, BOOLEAN);
+  auto BCO =
+      std::make_unique<BaseConfigurationOption>(Name, Description, BOOLEAN);
   BCO->setBool(DefaultValue);
-  IConf.addBaseChoice(BCO);
+  IConf.addBaseChoice(BCO.get());
   return BCO;
 }
 
-BaseConfigurationOption *BaseConfigurationOption::createStringOption(
-    InstrumentationConfig &IConf, StringRef Name, StringRef Description,
-    StringRef DefaultValue) {
-  auto *BCO = new BaseConfigurationOption(Name, Description, STRING);
+std::unique_ptr<BaseConfigurationOption>
+BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
+                                            StringRef Name,
+                                            StringRef Description,
+                                            StringRef DefaultValue) {
+  auto BCO =
+      std::make_unique<BaseConfigurationOption>(Name, Description, STRING);
   BCO->setString(DefaultValue);
-  IConf.addBaseChoice(BCO);
+  IConf.addBaseChoice(BCO.get());
   return BCO;
 }
 

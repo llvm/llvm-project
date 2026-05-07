@@ -5,7 +5,7 @@ import platform
 import shutil
 import stat
 import subprocess
-from io import BytesIO, StringIO
+from io import StringIO
 
 import lit.util
 from lit.ShellEnvironment import (
@@ -70,7 +70,13 @@ def executeBuiltinEcho(cmd, shenv):
     is_redirected = True
     if stdout == subprocess.PIPE:
         is_redirected = False
-        stdout = BytesIO()
+        stdout = StringIO()
+    elif kIsWindows:
+        # Reopen stdout with `newline=""` to avoid CRLF translation.
+        # The versions of echo we are replacing on Windows all emit plain LF,
+        # and the LLVM tests now depend on this.
+        stdout = open(stdout.name, stdout.mode, encoding="utf-8", newline="")
+        opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
     # combination. We have to ignore unknown flags, because `echo "-D FOO"`
@@ -94,22 +100,16 @@ def executeBuiltinEcho(cmd, shenv):
 
     if args:
         for arg in args[:-1]:
-            stdout.write(maybeUnescape(arg).encode())
-            stdout.write(b" ")
-        stdout.write(maybeUnescape(args[-1]).encode())
+            stdout.write(maybeUnescape(arg))
+            stdout.write(" ")
+        stdout.write(maybeUnescape(args[-1]))
     if write_newline:
-        stdout.write("\n".encode())
+        stdout.write("\n")
 
     for name, mode, f, path in opened_files:
         f.close()
 
-    output = (
-        ""
-        if is_redirected
-        # TODO(BStott) remove decode once new interface for in-process builtin
-        # IO is introduced.
-        else stdout.getvalue().decode(encoding="utf8", errors="replace")
-    )
+    output = "" if is_redirected else stdout.getvalue()
     return ShellCommandResult(cmd, output, "", 0, False)
 
 

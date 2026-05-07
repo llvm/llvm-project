@@ -28,9 +28,9 @@
 define float @test(float %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = fmul fast float [[ARG:%.*]], 0x3FE99999A0000000
+; CHECK-NEXT:    [[TMP:%.*]] = fmul fast float [[ARG:%.*]], 8.000000e-01
 ; CHECK-NEXT:    [[TMP110:%.*]] = fsub fast float 1.000000e+00, [[TMP]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[ARG]], 0x3FE99999A0000000
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[ARG]], 8.000000e-01
 ; CHECK-NEXT:    [[TMP311:%.*]] = fsub fast float 1.000000e+00, [[TMP2]]
 ; CHECK-NEXT:    [[REASS_MUL160:%.*]] = fmul fast float [[TMP110]], [[ARG]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast float [[REASS_MUL160]], [[TMP311]]
@@ -59,7 +59,7 @@ define float @test(float %arg) {
 ; CHECK-NEXT:    [[TMP26:%.*]] = fmul fast float [[TMP25]], [[ARG]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = fadd fast float [[TMP26]], [[ARG]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = fmul fast float [[ARG]], [[ARG]]
-; CHECK-NEXT:    [[TMP31:%.*]] = fmul fast float [[TMP29]], 0x3FEA2E8B80000000
+; CHECK-NEXT:    [[TMP31:%.*]] = fmul fast float [[TMP29]], f0x3F51745C
 ; CHECK-NEXT:    [[TMP33:%.*]] = fmul fast float [[TMP31]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = fadd fast float [[TMP33]], [[ARG]]
 ; CHECK-NEXT:    ret float [[TMP34]]

@@ -89,6 +89,8 @@ void BaseSPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "SPIRV", Opts);
   if (Opts.HLSL)
     DefineStd(Builder, "spirv", Opts);
+  if (getTriple().isVulkanOS())
+    Builder.defineMacro("__VULKAN__");
 }
 
 void SPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,

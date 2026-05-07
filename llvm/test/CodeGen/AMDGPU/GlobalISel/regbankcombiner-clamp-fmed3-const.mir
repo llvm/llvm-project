@@ -63,7 +63,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 2.000000e+00
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[C]](s16)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s16) = G_FMUL [[TRUNC]], [[COPY1]]
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s16) = nnan G_AMDGPU_CLAMP [[FMUL]]
@@ -75,7 +75,7 @@ body: |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 2.000000e+00
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[C]](s16)
     ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(s16) = G_FMUL [[TRUNC]], [[COPY1]]
     ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s16) = nnan G_AMDGPU_CLAMP [[FMUL]]

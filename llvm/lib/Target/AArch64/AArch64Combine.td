@@ -11,12 +11,6 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
-def fconstant_to_constant : GICombineRule<
-  (defs root:$root),
-  (match (G_FCONSTANT $dst, $src):$root,
-         [{ return matchFConstantToConstant(*${root}, MRI); }]),
-  (apply [{ applyFConstantToConstant(*${root}); }])>;
-
 def icmp_redundant_trunc : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
@@ -359,7 +353,7 @@ def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
-                        lower_vector_fcmp, form_truncstore, fconstant_to_constant,
+                        lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,

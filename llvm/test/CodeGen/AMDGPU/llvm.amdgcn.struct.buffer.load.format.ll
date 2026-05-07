@@ -1257,8 +1257,8 @@ define amdgpu_cs float @buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
 ; GFX12-GISEL-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v4
@@ -1340,8 +1340,8 @@ define amdgpu_cs float @buffer_load_v2f32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
 ; GFX12-GISEL-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v4

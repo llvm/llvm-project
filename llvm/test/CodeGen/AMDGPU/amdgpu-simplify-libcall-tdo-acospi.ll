@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_acospi() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_acospi() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH3800
+; CHECK-NEXT:    ret half 5.000000e-01
 ;
 entry:
   %c = call half @_Z6acospiDh(half 0.000000e+00)
@@ -34,7 +34,7 @@ entry:
 define <4 x half> @test_tdo_v2_f16_acospi() {
 ; CHECK-LABEL: define <4 x half> @test_tdo_v2_f16_acospi() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x half> <half 0xH3800, half 0xH3800, half 0xH0000, half 0xH3C00>
+; CHECK-NEXT:    ret <4 x half> <half 5.000000e-01, half 5.000000e-01, half 0.000000e+00, half 1.000000e+00>
 ;
 entry:
   %c = call <4 x half> @_Z6acospiDv4_Dh(<4 x half> <half 0.000000e+00, half -0.000000e+00, half 1.000000e+00, half -1.000000e+00>)

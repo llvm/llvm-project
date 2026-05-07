@@ -347,13 +347,18 @@ class MapInfoFinalizationPass
   /// base address (BoxOffsetOp) and a MapInfoOp for it. The most
   /// important thing to note is that we normally move the bounds from
   /// the descriptor map onto the base address map.
+  ///
+  /// \p mapInfoOpLoc is the location of the MapInfoOp being expanded (the
+  /// descriptor map before this pass splits it). Lowering attaches a NameLoc
+  /// there for the Fortran map text. This is used with new Ops being
+  /// created by this function.
   mlir::omp::MapInfoOp
-  genBaseAddrMap(mlir::Value descriptor, mlir::OperandRange bounds,
-                 mlir::omp::ClauseMapFlags mapType, fir::FirOpBuilder &builder,
+  genBaseAddrMap(mlir::Location mapInfoOpLoc, mlir::Value descriptor,
+                 mlir::OperandRange bounds, mlir::omp::ClauseMapFlags mapType,
+                 fir::FirOpBuilder &builder,
                  mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr()) {
-    mlir::Location loc = descriptor.getLoc();
     mlir::Value baseAddrAddr = fir::BoxOffsetOp::create(
-        builder, loc, descriptor, fir::BoxFieldAttr::base_addr);
+        builder, mapInfoOpLoc, descriptor, fir::BoxFieldAttr::base_addr);
 
     mlir::Type underlyingVarType =
         llvm::cast<mlir::omp::PointerLikeType>(
@@ -365,7 +370,7 @@ class MapInfoFinalizationPass
 
     // Member of the descriptor pointing at the allocated data
     return mlir::omp::MapInfoOp::create(
-        builder, loc, baseAddrAddr.getType(), descriptor,
+        builder, mapInfoOpLoc, baseAddrAddr.getType(), descriptor,
         mlir::TypeAttr::get(underlyingVarType),
         builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
@@ -603,7 +608,7 @@ class MapInfoFinalizationPass
       assert(mapMemberUsers.size() == 1 &&
              "OMPMapInfoFinalization currently only supports single users of a "
              "MapInfoOp");
-      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+      auto baseAddr = genBaseAddrMap(op->getLoc(), descriptor, op.getBounds(),
                                      op.getMapType(), builder, mapperId);
       ParentAndPlacement mapUser = mapMemberUsers[0];
       adjustMemberIndices(memberIndices, mapUser.index);
@@ -617,7 +622,7 @@ class MapInfoFinalizationPass
       mapUser.parent.setMembersIndexAttr(
           builder.create2DI64ArrayAttr(memberIndices));
     } else if (!isHasDeviceAddrFlag) {
-      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+      auto baseAddr = genBaseAddrMap(op->getLoc(), descriptor, op.getBounds(),
                                      op.getMapType(), builder, mapperId);
       newMembers.push_back(baseAddr);
       if (!op.getMembers().empty()) {

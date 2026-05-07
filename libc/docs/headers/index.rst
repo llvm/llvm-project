@@ -7,6 +7,7 @@ Implementation Status
    aio
    arpa/inet
    assert
+   byteswap
    complex
    cpio
    ctype

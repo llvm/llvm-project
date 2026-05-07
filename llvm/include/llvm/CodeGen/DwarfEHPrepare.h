@@ -20,7 +20,7 @@ namespace llvm {
 
 class TargetMachine;
 
-class DwarfEHPreparePass : public OptionalPassInfoMixin<DwarfEHPreparePass> {
+class DwarfEHPreparePass : public RequiredPassInfoMixin<DwarfEHPreparePass> {
   const TargetMachine *TM;
 
 public:

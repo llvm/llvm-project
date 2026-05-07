@@ -9,6 +9,7 @@ add_lldb_unittest(TargetTests
   MemoryTagMapTest.cpp
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
+  PolicyTest.cpp
   RegisterFlagsTest.cpp
   RemoteAwarePlatformTest.cpp
   ScratchTypeSystemTest.cpp

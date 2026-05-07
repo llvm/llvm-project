@@ -138,7 +138,7 @@ define void @dividend_not_known_multiple_of_divisor(i64 %x) {
 ; CHECK-NEXT:    %m3 = mul i64 %div.16, 2
 ; CHECK-NEXT:    --> (2 * ((2 * %x) /u 16))<nuw><nsw> U: [0,2305843009213693951) S: [0,2305843009213693951)
 ; CHECK-NEXT:    %m4 = udiv i64 %m3, 4
-; CHECK-NEXT:    --> ((2 * ((2 * %x) /u 16))<nuw><nsw> /u 4) U: [0,576460752303423488) S: [0,576460752303423488)
+; CHECK-NEXT:    --> ((2 * %x) /u 32) U: [0,576460752303423488) S: [0,576460752303423488)
 ; CHECK-NEXT:  Determining loop execution counts for: @dividend_not_known_multiple_of_divisor
 ;
 entry:

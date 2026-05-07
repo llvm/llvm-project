@@ -334,7 +334,7 @@ define i32 @load_after_memset_1(ptr %a) {
 define float @load_after_memset_1_float(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_1_float(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
-; CHECK-NEXT:    ret float 0x3820202020000000
+; CHECK-NEXT:    ret float f0x01010101
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
   %v = load float, ptr %a

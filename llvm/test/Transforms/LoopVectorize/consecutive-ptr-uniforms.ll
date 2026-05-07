@@ -729,10 +729,10 @@ define void @irregular_type(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP0]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP2]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP4]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP6]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP0]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP2]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP4]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -772,10 +772,10 @@ define void @irregular_type(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[TMP2:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP1]]
 ; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP5]]
 ; INTER-NEXT:    [[TMP6:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP3]]
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP0]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP2]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP4]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP6]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP0]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP2]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP4]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP6]], align 16
 ; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
 ; INTER-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTER-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -1177,10 +1177,10 @@ define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP1]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP2]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP3]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP1]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP2]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP3]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
@@ -1225,10 +1225,10 @@ define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; INTER-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; INTER-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP1]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP2]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP3]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP1]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP2]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP3]], align 16
 ; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTER-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTER-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]

@@ -113,8 +113,8 @@ define void @fneg_idiom() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fsub double -0.000000e+00, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fsub <2 x double> splat (double -0.000000e+00), undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fsub <4 x double> splat (double -0.000000e+00), undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fsub fp128 0xL00000000000000008000000000000000, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F129 = fsub <2 x fp128> splat (fp128 0xL00000000000000008000000000000000), undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fsub fp128 -0.000000e+00, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F129 = fsub <2 x fp128> splat (fp128 -0.000000e+00), undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fsub float -0.0, undef
@@ -134,15 +134,15 @@ define void @fneg_idiom() {
 
 define void @fneg_idiom_fp16() {
 ; CHECK-BASE-LABEL: 'fneg_idiom_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fsub half 0xH8000, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fsub <4 x half> splat (half 0xH8000), undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fsub <8 x half> splat (half 0xH8000), undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fsub half -0.000000e+00, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fsub <4 x half> splat (half -0.000000e+00), undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fsub <8 x half> splat (half -0.000000e+00), undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fneg_idiom_fp16'
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fsub half 0xH8000, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fsub <4 x half> splat (half 0xH8000), undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fsub <8 x half> splat (half 0xH8000), undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fsub half -0.000000e+00, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fsub <4 x half> splat (half -0.000000e+00), undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fsub <8 x half> splat (half -0.000000e+00), undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = fsub half -0.0, undef

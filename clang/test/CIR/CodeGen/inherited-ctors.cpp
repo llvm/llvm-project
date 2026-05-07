@@ -78,7 +78,7 @@ void fallsthrough() {
 // LLVM-LABEL: define dso_local void @_Z26cannotEmitDelegateCallArgsv()
 // LLVM: %[[TMP_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[TMP_LOAD:.*]] = load ptr, ptr %[[TMP_ALLOCA]]
-// LLVM: call void (ptr, float, ...) @_ZN4BaseC2Efz(ptr {{.*}}%[[TMP_LOAD]], float {{.*}}0x3FF19999A{{.*}}, i32 {{.*}}2, double {{.*}}3.000000e+00)
+// LLVM: call void (ptr, float, ...) @_ZN4BaseC2Efz(ptr {{.*}}%[[TMP_LOAD]], float {{.*}}1.100000e+00, i32 {{.*}}2, double {{.*}}3.000000e+00)
 //
 // CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN11VirtDerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_VirtDerived> {{.*}}, %{{.*}}: !cir.ptr<!cir.ptr<!void>>{{.*}}) special_member<#cir.cxx_ctor<!rec_VirtDerived, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_VirtDerived>, !cir.ptr<!cir.ptr<!rec_VirtDerived>>, ["this", init] {alignment = 8 : i64}
@@ -146,7 +146,7 @@ void fallsthrough() {
 // OGCG-LABEL: define dso_local void @_Z26cannotEmitDelegateCallArgsv()
 // OGCG: %[[TMP_ALLOCA:.*]] = alloca ptr
 // OGCG: %[[TMP_LOAD:.*]] = load ptr, ptr %[[TMP_ALLOCA]]
-// OGCG: call void (ptr, float, ...) @_ZN4BaseC2Efz(ptr {{.*}}%[[TMP_LOAD]], float {{.*}}0x3FF19999A{{.*}}, i32 {{.*}}2, double {{.*}}3.000000e+00)
+// OGCG: call void (ptr, float, ...) @_ZN4BaseC2Efz(ptr {{.*}}%[[TMP_LOAD]], float {{.*}}1.100000e+00, i32 {{.*}}2, double {{.*}}3.000000e+00)
 // 
 // OGCG-LABEL: declare void @_ZN4BaseC2Efz(ptr {{.*}}, float {{.*}}, ...)
 //

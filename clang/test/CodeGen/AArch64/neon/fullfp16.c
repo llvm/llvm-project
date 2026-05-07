@@ -96,7 +96,7 @@ uint16_t test_vceqzh_f16(float16_t a) {
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
 
 // LLVM-SAME: (half {{.*}} [[A:%.*]])
-// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0xH0000
+// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0.000000e+00
 // LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // LLVM:  ret i16 [[TMP2]]
   return vceqzh_f16(a);

@@ -186,8 +186,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
         LLDB_LOG(log, "Failed to deallocate the sel str at {0} - error: {1}",
                  m_sel_str_addr, dealloc_error);
       objc_runtime->AddToMethodCache(m_isa_addr, m_sel_str, target_addr);
-      LLDB_LOG(log,
-               "Adding \\{isa-addr={0}, sel-addr={1}\\} = addr={2} to cache.",
+      LLDB_LOG(log, "Adding {{isa-addr={}, sel-addr={}}} = addr={} to cache.",
                m_isa_addr, m_sel_str, target_addr);
     } else {
       objc_runtime->AddToMethodCache(m_isa_addr, m_sel_addr, target_addr);

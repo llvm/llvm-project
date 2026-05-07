@@ -2030,7 +2030,7 @@ ConstantRange Constant::toConstantRange() const {
       auto *CB = dyn_cast<ConstantByte>(Elem);
       if (!CI && !CB)
         return ConstantRange::getFull(BitWidth);
-      CR = CR.unionWith(CI->getValue());
+      CR = CR.unionWith(CI ? CI->getValue() : CB->getValue());
     }
     return CR;
   }

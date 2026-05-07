@@ -16,6 +16,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -153,6 +154,10 @@ public:
   StopReason GetStopReason() const override { return eStopReasonBreakpoint; }
 
   bool ShouldStopSynchronous(Event *event_ptr) override {
+    // Breakpoint callbacks run on the PST during stop processing. Push
+    // private state context so callback code sees the private reality.
+    PolicyStack::Guard policy_guard(Policy::PrivateState());
+
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       if (!m_should_stop_is_valid) {
@@ -393,7 +398,9 @@ protected:
 
           ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
           Process *process = exe_ctx.GetProcessPtr();
-          if (process->GetModIDRef().IsRunningExpression()) {
+          Policy policy = PolicyStack::Get().Current();
+          if (!policy.capabilities.can_run_breakpoint_actions ||
+              process->GetModIDRef().IsRunningExpression()) {
             // If we are in the middle of evaluating an expression, don't run
             // asynchronous breakpoint commands or expressions.  That could
             // lead to infinite recursion if the command or condition re-calls
@@ -857,6 +864,10 @@ protected:
   };
 
   bool ShouldStopSynchronous(Event *event_ptr) override {
+    // Watchpoint callbacks run on the PST during stop processing. Push
+    // private state context so callback code sees the private reality.
+    PolicyStack::Guard policy_guard(Policy::PrivateState());
+
     // If we are running our step-over the watchpoint plan, stop if it's done
     // and continue if it's not:
     if (m_should_stop_is_valid)
@@ -965,6 +976,17 @@ protected:
 
   void PerformAction(Event *event_ptr) override {
     Log *log = GetLog(LLDBLog::Watchpoints);
+
+    Policy policy = PolicyStack::Get().Current();
+    if (!policy.capabilities.can_run_breakpoint_actions) {
+      m_should_stop = false;
+      m_should_stop_is_valid = true;
+      LLDB_LOGF(log, "StopInfoWatchpoint::PerformAction - Hit a "
+                     "watchpoint while running an expression,"
+                     " not running commands to avoid recursion.");
+      return;
+    }
+
     // We're going to calculate if we should stop or not in some way during the
     // course of this code.  Also by default we're going to stop, so set that
     // here.

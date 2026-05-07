@@ -11,7 +11,7 @@ define void @denormal_input_preserve_sign_fcmp_olt_smallest_normalized(float %f3
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp oeq double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq half [[F16:%.*]], 0xH0000
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq half [[F16:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    [[CMPF32_FLAGS:%.*]] = fcmp oeq float [[F32]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32_FLAGS]], ptr @var, align 1
@@ -44,7 +44,7 @@ define void @denormal_input_preserve_sign_fcmp_uge_smallest_normalized(float %f3
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp une double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp une half [[F16:%.*]], 0xH0000
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp une half [[F16:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -70,7 +70,7 @@ define void @denormal_input_preserve_sign_fcmp_oge_smallest_normalized(float %f3
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp one double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp one half [[F16:%.*]], 0xH0000
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp one half [[F16:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -96,7 +96,7 @@ define void @denormal_input_preserve_sign_fcmp_ult_smallest_normalized(float %f3
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp ueq double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ueq half [[F16:%.*]], 0xH0000
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ueq half [[F16:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -218,7 +218,7 @@ define void @denormal_input_positive_zero_fcmp_olt_smallest_normalized(float %f3
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp oeq double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq half [[F16:%.*]], 0xH0000
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq half [[F16:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -240,13 +240,13 @@ define void @denormal_input_positive_zero_fcmp_olt_smallest_normalized(float %f3
 define void @denormal_input_ieee(float %f32, double %f64, half %f16) #2 {
 ; CHECK-LABEL: @denormal_input_ieee(
 ; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt float [[F32_FABS]], f0x00800000
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64_FABS]], f0x0010000000000000
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
 ; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16_FABS]], 6.103520e-05
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -270,10 +270,10 @@ define void @denormal_input_preserve_sign_f32_only(float %f32, double %f64, half
 ; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp oeq float [[F32:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64_FABS]], f0x0010000000000000
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
 ; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16_FABS]], 6.103520e-05
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -294,13 +294,13 @@ define void @denormal_input_preserve_sign_f32_only(float %f32, double %f64, half
 define void @wrong_fcmp_type_ole(float %f32, double %f64, half %f16) #0 {
 ; CHECK-LABEL: @wrong_fcmp_type_ole(
 ; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp ole float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp ole float [[F32_FABS]], f0x00800000
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
 ; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp ole double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp ole double [[F64_FABS]], f0x0010000000000000
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
 ; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ole half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ole half [[F16_FABS]], 6.103520e-05
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -320,11 +320,11 @@ define void @wrong_fcmp_type_ole(float %f32, double %f64, half %f16) #0 {
 
 define void @missing_fabs(float %f32, double %f64, half %f16) #0 {
 ; CHECK-LABEL: @missing_fabs(
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt float [[F32:%.*]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt float [[F32:%.*]], f0x00800000
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64:%.*]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64:%.*]], f0x0010000000000000
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16:%.*]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16:%.*]], 6.103520e-05
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;

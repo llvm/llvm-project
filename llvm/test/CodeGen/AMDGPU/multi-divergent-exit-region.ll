@@ -727,7 +727,7 @@ bb5:                                              ; preds = %bb3
 ; IR-NEXT: br i1 false, label %DummyReturnBlock, label %[[LOOP]]
 
 ; IR: [[EXP]]:
-; IR-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 true, i1 true)
+; IR-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> <half 1.000000e+00, half 0.000000e+00>, <2 x half> <half 0.000000e+00, half 1.000000e+00>, i1 true, i1 true)
 ; IR-NEXT: ret void
 
 ; IR: DummyReturnBlock:

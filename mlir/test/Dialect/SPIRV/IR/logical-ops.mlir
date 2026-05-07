@@ -345,6 +345,24 @@ func.func @select_op_vec_condn_vec(%arg0: vector<3xi1>) -> () {
   return
 }
 
+func.func @select_op_array(%arg0: i1, %arg1: !spirv.array<4 x i32>, %arg2: !spirv.array<4 x i32>) -> () {
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.array<4 x i32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.array<4 x i32>
+  return
+}
+
+func.func @select_op_struct(%arg0: i1, %arg1: !spirv.struct<(i32, i32)>, %arg2: !spirv.struct<(i32, i32)>) -> () {
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.struct<(i32, i32)>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.struct<(i32, i32)>
+  return
+}
+
+func.func @select_op_matrix(%arg0: i1, %arg1: !spirv.matrix<4 x vector<3xf32>>, %arg2: !spirv.matrix<4 x vector<3xf32>>) -> () {
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.matrix<4 x vector<3xf32>>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.matrix<4 x vector<3xf32>>
+  return
+}
+
 // -----
 
 func.func @select_op(%arg0: i1) -> () {

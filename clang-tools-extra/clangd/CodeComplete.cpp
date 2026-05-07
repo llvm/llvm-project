@@ -234,7 +234,7 @@ struct CompletionCandidate {
   size_t overloadSet(const CodeCompleteOptions &Opts, llvm::StringRef FileName,
                      IncludeInserter *Inserter,
                      CodeCompletionContext::Kind CCContextKind) const {
-    if (!Opts.BundleOverloads.value_or(false))
+    if (!Opts.BundleOverloads)
       return 0;
 
     // Depending on the index implementation, we can see different header

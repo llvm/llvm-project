@@ -11,31 +11,31 @@ define amdgpu_kernel void @insertelement_i8(i32 %arg) {
 ; ALL-LABEL: 'insertelement_i8'
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 42, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_0 = insertelement <3 x i8> poison, i8 42, i32 0
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 42, i32 0
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 42, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_0 = insertelement <5 x i8> poison, i8 42, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_1 = insertelement <2 x i8> poison, i8 42, i32 1
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_1 = insertelement <3 x i8> poison, i8 42, i32 1
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_1 = insertelement <4 x i8> poison, i8 42, i32 1
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_1 = insertelement <5 x i8> poison, i8 42, i32 1
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 42, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_a = insertelement <3 x i8> poison, i8 42, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 42, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_a = insertelement <5 x i8> poison, i8 42, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 42, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i8_a = insertelement <3 x i8> poison, i8 42, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 42, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5i8_a = insertelement <5 x i8> poison, i8 42, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'insertelement_i8'
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 42, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_0 = insertelement <3 x i8> poison, i8 42, i32 0
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 42, i32 0
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 42, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_0 = insertelement <5 x i8> poison, i8 42, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_1 = insertelement <2 x i8> poison, i8 42, i32 1
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_1 = insertelement <3 x i8> poison, i8 42, i32 1
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_1 = insertelement <4 x i8> poison, i8 42, i32 1
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_1 = insertelement <5 x i8> poison, i8 42, i32 1
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 42, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i8_a = insertelement <3 x i8> poison, i8 42, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 42, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i8_a = insertelement <5 x i8> poison, i8 42, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 42, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i8_a = insertelement <3 x i8> poison, i8 42, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 42, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5i8_a = insertelement <5 x i8> poison, i8 42, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v2i8_0 = insertelement <2 x i8> poison, i8 42, i32 0
@@ -63,10 +63,10 @@ define amdgpu_kernel void @insertelement_i16(i32 %arg) {
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_1 = insertelement <3 x i16> poison, i16 42, i32 1
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_1 = insertelement <4 x i16> poison, i16 42, i32 1
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_1 = insertelement <5 x i16> poison, i16 42, i32 1
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
 ; CI-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX89-LABEL: 'insertelement_i16'
@@ -78,10 +78,10 @@ define amdgpu_kernel void @insertelement_i16(i32 %arg) {
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_1 = insertelement <3 x i16> poison, i16 42, i32 1
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_1 = insertelement <4 x i16> poison, i16 42, i32 1
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_1 = insertelement <5 x i16> poison, i16 42, i32 1
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; CI-SIZE-LABEL: 'insertelement_i16'
@@ -93,10 +93,10 @@ define amdgpu_kernel void @insertelement_i16(i32 %arg) {
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_1 = insertelement <3 x i16> poison, i16 42, i32 1
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_1 = insertelement <4 x i16> poison, i16 42, i32 1
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_1 = insertelement <5 x i16> poison, i16 42, i32 1
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX89-SIZE-LABEL: 'insertelement_i16'
@@ -108,10 +108,10 @@ define amdgpu_kernel void @insertelement_i16(i32 %arg) {
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_1 = insertelement <3 x i16> poison, i16 42, i32 1
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_1 = insertelement <4 x i16> poison, i16 42, i32 1
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_1 = insertelement <5 x i16> poison, i16 42, i32 1
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 42, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i16_a = insertelement <3 x i16> poison, i16 42, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 42, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5i16_a = insertelement <5 x i16> poison, i16 42, i32 %arg
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v2i16_0 = insertelement <2 x i16> poison, i16 42, i32 0
@@ -439,21 +439,21 @@ define i32 @insert_i32_poison(i32 %arg) {
 
 define i32 @insert_i16_poison(i32 %arg) {
 ; CI-LABEL: 'insert_i16_poison'
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_0 = insertelement <2 x i16> poison, i16 poison, i32 0
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_1 = insertelement <2 x i16> poison, i16 poison, i32 1
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_0 = insertelement <4 x i16> poison, i16 poison, i32 0
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = insertelement <4 x i16> poison, i16 poison, i32 3
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = insertelement <8 x i16> poison, i16 poison, i32 0
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = insertelement <8 x i16> poison, i16 poison, i32 7
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = insertelement <16 x i16> poison, i16 poison, i32 0
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = insertelement <16 x i16> poison, i16 poison, i32 7
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = insertelement <16 x i16> poison, i16 poison, i32 8
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = insertelement <16 x i16> poison, i16 poison, i32 15
-; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
+; CI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = insertelement <32 x i16> poison, i16 poison, i32 0
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = insertelement <32 x i16> poison, i16 poison, i32 7
 ; CI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = insertelement <32 x i16> poison, i16 poison, i32 8
@@ -464,21 +464,21 @@ define i32 @insert_i16_poison(i32 %arg) {
 ; CI-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
 ; GFX89-LABEL: 'insert_i16_poison'
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i16_0 = insertelement <2 x i16> poison, i16 poison, i32 0
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_1 = insertelement <2 x i16> poison, i16 poison, i32 1
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i16_0 = insertelement <4 x i16> poison, i16 poison, i32 0
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = insertelement <4 x i16> poison, i16 poison, i32 3
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i16_0 = insertelement <8 x i16> poison, i16 poison, i32 0
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = insertelement <8 x i16> poison, i16 poison, i32 7
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i16_0 = insertelement <16 x i16> poison, i16 poison, i32 0
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = insertelement <16 x i16> poison, i16 poison, i32 7
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = insertelement <16 x i16> poison, i16 poison, i32 8
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = insertelement <16 x i16> poison, i16 poison, i32 15
-; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
+; GFX89-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i16_0 = insertelement <32 x i16> poison, i16 poison, i32 0
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = insertelement <32 x i16> poison, i16 poison, i32 7
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = insertelement <32 x i16> poison, i16 poison, i32 8
@@ -489,21 +489,21 @@ define i32 @insert_i16_poison(i32 %arg) {
 ; GFX89-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
 ; CI-SIZE-LABEL: 'insert_i16_poison'
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_0 = insertelement <2 x i16> poison, i16 poison, i32 0
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_1 = insertelement <2 x i16> poison, i16 poison, i32 1
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_0 = insertelement <4 x i16> poison, i16 poison, i32 0
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = insertelement <4 x i16> poison, i16 poison, i32 3
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_0 = insertelement <8 x i16> poison, i16 poison, i32 0
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = insertelement <8 x i16> poison, i16 poison, i32 7
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_0 = insertelement <16 x i16> poison, i16 poison, i32 0
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = insertelement <16 x i16> poison, i16 poison, i32 7
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = insertelement <16 x i16> poison, i16 poison, i32 8
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = insertelement <16 x i16> poison, i16 poison, i32 15
-; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_0 = insertelement <32 x i16> poison, i16 poison, i32 0
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = insertelement <32 x i16> poison, i16 poison, i32 7
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = insertelement <32 x i16> poison, i16 poison, i32 8
@@ -514,21 +514,21 @@ define i32 @insert_i16_poison(i32 %arg) {
 ; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
 ;
 ; GFX89-SIZE-LABEL: 'insert_i16_poison'
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_a = insertelement <2 x i16> poison, i16 poison, i32 %arg
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i16_0 = insertelement <2 x i16> poison, i16 poison, i32 0
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_1 = insertelement <2 x i16> poison, i16 poison, i32 1
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_a = insertelement <4 x i16> poison, i16 poison, i32 %arg
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i16_0 = insertelement <4 x i16> poison, i16 poison, i32 0
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16_3 = insertelement <4 x i16> poison, i16 poison, i32 3
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_a = insertelement <8 x i16> poison, i16 poison, i32 %arg
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i16_0 = insertelement <8 x i16> poison, i16 poison, i32 0
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16_7 = insertelement <8 x i16> poison, i16 poison, i32 7
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16_a = insertelement <16 x i16> poison, i16 poison, i32 %arg
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i16_0 = insertelement <16 x i16> poison, i16 poison, i32 0
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_7 = insertelement <16 x i16> poison, i16 poison, i32 7
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_8 = insertelement <16 x i16> poison, i16 poison, i32 8
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i16_15 = insertelement <16 x i16> poison, i16 poison, i32 15
-; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
+; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i16_a = insertelement <32 x i16> poison, i16 poison, i32 %arg
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i16_0 = insertelement <32 x i16> poison, i16 poison, i32 0
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_7 = insertelement <32 x i16> poison, i16 poison, i32 7
 ; GFX89-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i16_8 = insertelement <32 x i16> poison, i16 poison, i32 8
@@ -570,68 +570,68 @@ define i32 @insert_i16_poison(i32 %arg) {
 
 define i32 @insert_i8_poison(i32 %arg) {
 ; ALL-LABEL: 'insert_i8_poison'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 poison, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_3 = insertelement <2 x i8> poison, i8 poison, i32 1
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 poison, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 poison, i32 0
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_3 = insertelement <4 x i8> poison, i8 poison, i32 3
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_a = insertelement <8 x i8> poison, i8 poison, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 poison, i32 0
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = insertelement <8 x i8> poison, i8 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_7 = insertelement <8 x i8> poison, i8 poison, i32 7
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = insertelement <16 x i8> poison, i8 poison, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 poison, i32 0
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = insertelement <16 x i8> poison, i8 poison, i32 8
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = insertelement <16 x i8> poison, i8 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 poison, i32 0
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = insertelement <16 x i8> poison, i8 poison, i32 8
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = insertelement <16 x i8> poison, i8 poison, i32 15
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = insertelement <32 x i8> poison, i8 poison, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 poison, i32 0
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8_a = insertelement <32 x i8> poison, i8 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = insertelement <32 x i8> poison, i8 poison, i32 7
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = insertelement <32 x i8> poison, i8 poison, i32 8
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i8_8 = insertelement <32 x i8> poison, i8 poison, i32 8
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = insertelement <32 x i8> poison, i8 poison, i32 15
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = insertelement <32 x i8> poison, i8 poison, i32 24
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i8_24 = insertelement <32 x i8> poison, i8 poison, i32 24
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = insertelement <32 x i8> poison, i8 poison, i32 31
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = insertelement <64 x i8> poison, i8 poison, i32 %arg
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 poison, i32 0
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_a = insertelement <64 x i8> poison, i8 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = insertelement <64 x i8> poison, i8 poison, i32 7
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = insertelement <64 x i8> poison, i8 poison, i32 8
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_8 = insertelement <64 x i8> poison, i8 poison, i32 8
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = insertelement <64 x i8> poison, i8 poison, i32 15
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = insertelement <64 x i8> poison, i8 poison, i32 24
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_24 = insertelement <64 x i8> poison, i8 poison, i32 24
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = insertelement <64 x i8> poison, i8 poison, i32 31
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 poison, i32 32
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 poison, i32 48
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 poison, i32 32
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 poison, i32 48
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = insertelement <64 x i8> poison, i8 poison, i32 63
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
 ; ALL-SIZE-LABEL: 'insert_i8_poison'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 poison, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_3 = insertelement <2 x i8> poison, i8 poison, i32 1
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 poison, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 poison, i32 0
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_3 = insertelement <4 x i8> poison, i8 poison, i32 3
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_a = insertelement <8 x i8> poison, i8 poison, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 poison, i32 0
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_a = insertelement <8 x i8> poison, i8 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_7 = insertelement <8 x i8> poison, i8 poison, i32 7
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_a = insertelement <16 x i8> poison, i8 poison, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 poison, i32 0
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_8 = insertelement <16 x i8> poison, i8 poison, i32 8
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_a = insertelement <16 x i8> poison, i8 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 poison, i32 0
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8_8 = insertelement <16 x i8> poison, i8 poison, i32 8
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8_15 = insertelement <16 x i8> poison, i8 poison, i32 15
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_a = insertelement <32 x i8> poison, i8 poison, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 poison, i32 0
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8_a = insertelement <32 x i8> poison, i8 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_7 = insertelement <32 x i8> poison, i8 poison, i32 7
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_8 = insertelement <32 x i8> poison, i8 poison, i32 8
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i8_8 = insertelement <32 x i8> poison, i8 poison, i32 8
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_15 = insertelement <32 x i8> poison, i8 poison, i32 15
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_24 = insertelement <32 x i8> poison, i8 poison, i32 24
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v32i8_24 = insertelement <32 x i8> poison, i8 poison, i32 24
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i8_31 = insertelement <32 x i8> poison, i8 poison, i32 31
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_a = insertelement <64 x i8> poison, i8 poison, i32 %arg
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 poison, i32 0
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_a = insertelement <64 x i8> poison, i8 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_7 = insertelement <64 x i8> poison, i8 poison, i32 7
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_8 = insertelement <64 x i8> poison, i8 poison, i32 8
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_8 = insertelement <64 x i8> poison, i8 poison, i32 8
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_15 = insertelement <64 x i8> poison, i8 poison, i32 15
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_24 = insertelement <64 x i8> poison, i8 poison, i32 24
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_24 = insertelement <64 x i8> poison, i8 poison, i32 24
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_31 = insertelement <64 x i8> poison, i8 poison, i32 31
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 poison, i32 32
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 poison, i32 48
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 poison, i32 32
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 poison, i32 48
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i8_63 = insertelement <64 x i8> poison, i8 poison, i32 63
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
 ;
@@ -676,27 +676,27 @@ define i32 @insert_i8_poison(i32 %arg) {
 
 define i32 @insert_i1_poison(i32 %arg) {
 ; ALL-LABEL: 'insert_i1_poison'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_a = insertelement <2 x i1> poison, i1 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_a = insertelement <2 x i1> poison, i1 poison, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> poison, i1 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> poison, i1 poison, i32 1
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_a = insertelement <4 x i1> poison, i1 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_a = insertelement <4 x i1> poison, i1 poison, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> poison, i1 poison, i32 2
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_a = insertelement <8 x i1> poison, i1 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i1_a = insertelement <8 x i1> poison, i1 poison, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> poison, i1 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> poison, i1 poison, i32 4
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_a = insertelement <16 x i1> poison, i1 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_a = insertelement <16 x i1> poison, i1 poison, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> poison, i1 poison, i32 8
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> poison, i1 poison, i32 15
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_a = insertelement <32 x i1> poison, i1 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i1_a = insertelement <32 x i1> poison, i1 poison, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_7 = insertelement <32 x i1> poison, i1 poison, i32 7
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_8 = insertelement <32 x i1> poison, i1 poison, i32 8
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_15 = insertelement <32 x i1> poison, i1 poison, i32 15
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_24 = insertelement <32 x i1> poison, i1 poison, i32 24
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_31 = insertelement <32 x i1> poison, i1 poison, i32 31
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_a = insertelement <64 x i1> poison, i1 poison, i32 %arg
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_a = insertelement <64 x i1> poison, i1 poison, i32 %arg
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 poison, i32 0
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_7 = insertelement <64 x i1> poison, i1 poison, i32 7
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_8 = insertelement <64 x i1> poison, i1 poison, i32 8
@@ -709,27 +709,27 @@ define i32 @insert_i1_poison(i32 %arg) {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
 ; ALL-SIZE-LABEL: 'insert_i1_poison'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_a = insertelement <2 x i1> poison, i1 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_a = insertelement <2 x i1> poison, i1 poison, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> poison, i1 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> poison, i1 poison, i32 1
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_a = insertelement <4 x i1> poison, i1 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_a = insertelement <4 x i1> poison, i1 poison, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> poison, i1 poison, i32 2
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_a = insertelement <8 x i1> poison, i1 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i1_a = insertelement <8 x i1> poison, i1 poison, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> poison, i1 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> poison, i1 poison, i32 4
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_a = insertelement <16 x i1> poison, i1 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_a = insertelement <16 x i1> poison, i1 poison, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> poison, i1 poison, i32 8
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> poison, i1 poison, i32 15
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_a = insertelement <32 x i1> poison, i1 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i1_a = insertelement <32 x i1> poison, i1 poison, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_7 = insertelement <32 x i1> poison, i1 poison, i32 7
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_8 = insertelement <32 x i1> poison, i1 poison, i32 8
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_15 = insertelement <32 x i1> poison, i1 poison, i32 15
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_24 = insertelement <32 x i1> poison, i1 poison, i32 24
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_31 = insertelement <32 x i1> poison, i1 poison, i32 31
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_a = insertelement <64 x i1> poison, i1 poison, i32 %arg
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_a = insertelement <64 x i1> poison, i1 poison, i32 %arg
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 poison, i32 0
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_7 = insertelement <64 x i1> poison, i1 poison, i32 7
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_8 = insertelement <64 x i1> poison, i1 poison, i32 8

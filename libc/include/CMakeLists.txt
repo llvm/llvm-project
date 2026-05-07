@@ -230,6 +230,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  byteswap
+  ../libc/include/byteswap.yaml
+  byteswap.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.byteswap_macros
+)
+
+add_header_macro(
   complex
   ../libc/include/complex.yaml
   complex.h

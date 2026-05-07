@@ -4,9 +4,14 @@
 // RUN: %clang -### --target=spirv64 -x ir -c %s 2>&1 | FileCheck --check-prefix=SPV64 %s
 // RUN: %clang -### --target=spirv64 -x clcpp -c %s 2>&1 | FileCheck --check-prefix=SPV64 %s
 // RUN: %clang -### --target=spirv64 -x c -c %s 2>&1 | FileCheck --check-prefix=SPV64 %s
+// RUN: %clang -### --target=spirv64-unknown-vulkan -x c -c %s 2>&1 | FileCheck --check-prefix=SPV64VK %s
+// RUN: %clang -### --target=spirv64-unknown-vulkan1.3 -x c -c %s 2>&1 | FileCheck --check-prefix=SPV64VK %s
 
 // SPV64: "-cc1" "-triple" "spirv64"
 // SPV64-SAME: "-o" {{".*o"}}
+
+// SPV64VK: "-cc1" "-triple" "spirv64-unknown-vulkan{{(1\.3)?}}"
+// SPV64VK-SAME: "-o" {{".*o"}}
 
 // RUN: %clang -### --target=spirv32 -x cl -c %s 2>&1 | FileCheck --check-prefix=SPV32 %s
 // RUN: %clang -### --target=spirv32 %s 2>&1 | FileCheck --check-prefix=SPV32 %s

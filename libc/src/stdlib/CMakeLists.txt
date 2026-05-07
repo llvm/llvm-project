@@ -62,7 +62,25 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
-  libc.config.app_h
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    .environ_internal
+)
+
+add_object_library(
+  environ_internal
+  SRCS
+    environ_internal.cpp
+  HDRS
+    environ_internal.h
+  DEPENDS
+    libc.config.app_h
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(

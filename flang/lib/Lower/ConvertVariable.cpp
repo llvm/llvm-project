@@ -1113,6 +1113,13 @@ static bool needsRepack(Fortran::lower::AbstractConverter &converter,
                     Fortran::semantics::Attr::VOLATILE}))
     return false;
 
+  // CUDA device/managed/unified/shared/pinned arrays must not be repacked
+  // on the host. The repacking would allocate a host-side temporary and
+  // copy the descriptor, but the data lives in device memory, causing
+  // illegal address errors when the kernel tries to access it.
+  if (auto cudaAttr = Fortran::semantics::GetCUDADataAttr(&sym))
+    return false;
+
   return true;
 }
 

@@ -32,6 +32,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -876,7 +877,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is "
                       << *EstimatedTripCount << "\n");
 
-    if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
+    std::optional<unsigned> TotalPeeled =
+        llvm::checkedAddUnsigned(*EstimatedTripCount, AlreadyPeeled);
+    if (TotalPeeled && *TotalPeeled <= MaxPeelCount) {
       unsigned PeelCount = *EstimatedTripCount;
       LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
       PP.PeelCount = PeelCount;

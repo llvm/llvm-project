@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
@@ -155,19 +156,20 @@ struct LLVM_ABI CaptureAnalysis {
   /// are also considered.
   ///
   /// If I is nullptr, then captures at any point will be considered.
-  virtual CaptureComponents
-  getCapturesBefore(const Value *Object, const Instruction *I, bool OrAt) = 0;
+  virtual CaptureComponents getCapturesBefore(const Value *Object,
+                                              const Instruction *I, bool OrAt,
+                                              bool ReturnCaptures) = 0;
 };
 
 /// Context-free CaptureAnalysis provider, which computes and caches whether an
 /// object is captured in the function at all, but does not distinguish whether
 /// it was captured before or after the context instruction.
 class LLVM_ABI SimpleCaptureAnalysis final : public CaptureAnalysis {
-  SmallDenseMap<const Value *, CaptureComponents, 8> IsCapturedCache;
+  SmallDenseMap<const Value *, CaptureResult, 8> IsCapturedCache;
 
 public:
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
-                                      bool OrAt) override;
+                                      bool OrAt, bool ReturnCaptures) override;
 };
 
 /// Context-sensitive CaptureAnalysis provider, which computes and caches the
@@ -183,7 +185,7 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// that may be captured (by any instruction, not necessarily the earliest
   /// one). The "earliest" instruction may be a conservative approximation,
   /// e.g. the first instruction in the function is always a legal choice.
-  DenseMap<const Value *, std::pair<Instruction *, CaptureComponents>>
+  DenseMap<const Value *, std::pair<Instruction *, CaptureResult>>
       EarliestEscapes;
 
   /// Reverse map from instruction to the objects it is the earliest escape for.
@@ -196,7 +198,7 @@ public:
       : DT(DT), LI(LI), CI(CI) {}
 
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
-                                      bool OrAt) override;
+                                      bool OrAt, bool ReturnCaptures) override;
 
   void removeInstruction(Instruction *I);
 };

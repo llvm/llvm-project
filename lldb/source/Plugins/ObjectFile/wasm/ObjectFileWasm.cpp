@@ -732,13 +732,16 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     if (segment.type == WasmSegment::Active) {
       // FIXME: Support segments with a memory index.
       if (segment.memory_index != 0) {
-        LLDB_LOG(log, "Skipping segment {0}: non-zero memory index is "
-                      "currently unsupported");
+        LLDB_LOG(log,
+                 "Skipping segment {}: non-zero memory index is "
+                 "currently unsupported",
+                 segment.name);
         continue;
       }
 
       if (segment.init_expr_offset == LLDB_INVALID_OFFSET) {
-        LLDB_LOG(log, "Skipping segment {0}: unsupported init expression");
+        LLDB_LOG(log, "Skipping segment {}: unsupported init expression",
+                 segment.name);
         continue;
       }
     }

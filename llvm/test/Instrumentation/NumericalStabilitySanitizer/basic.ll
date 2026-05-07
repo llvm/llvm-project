@@ -71,8 +71,8 @@ define x86_fp80 @param_add_return_x86_fp80(x86_fp80 %a) sanitize_numerical_stabi
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext x86_fp80 [[A:%.*]] to fp128
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], fp128 [[TMP2]], fp128 [[TMP3]]
 ; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[B:%.*]] = fadd x86_fp80 [[A]], 0xK3FC9E69594BEC44DE000
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fp128 [[TMP4]], 0xLC0000000000000003FC9CD2B297D889B
+; CHECK-NEXT:    [[B:%.*]] = fadd x86_fp80 [[A]], f0x3FC9E69594BEC44DE000
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fp128 [[TMP4]], f0x3FC9CD2B297D889BC000000000000000
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[B]], fp128 [[TMP5]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fpext x86_fp80 [[B]] to fp128
@@ -96,7 +96,7 @@ define double @param_add_return_double(double %a) sanitize_numerical_stability {
 ; DQQ-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], fp128 [[TMP2]], fp128 [[TMP3]]
 ; DQQ-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
 ; DQQ-NEXT:    [[B:%.*]] = fadd double [[A]], 1.000000e+00
-; DQQ-NEXT:    [[TMP5:%.*]] = fadd fp128 [[TMP4]], 0xL00000000000000003FFF000000000000
+; DQQ-NEXT:    [[TMP5:%.*]] = fadd fp128 [[TMP4]], 1.000000e+00
 ; DQQ-NEXT:    [[TMP6:%.*]] = call i32 @__nsan_internal_check_double_q(double [[B]], fp128 [[TMP5]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
 ; DQQ-NEXT:    [[TMP8:%.*]] = fpext double [[B]] to fp128
@@ -114,7 +114,7 @@ define double @param_add_return_double(double %a) sanitize_numerical_stability {
 ; DLQ-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], x86_fp80 [[TMP2]], x86_fp80 [[TMP3]]
 ; DLQ-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
 ; DLQ-NEXT:    [[B:%.*]] = fadd double [[A]], 1.000000e+00
-; DLQ-NEXT:    [[TMP5:%.*]] = fadd x86_fp80 [[TMP4]], 0xK3FFF8000000000000000
+; DLQ-NEXT:    [[TMP5:%.*]] = fadd x86_fp80 [[TMP4]], 1.000000e+00
 ; DLQ-NEXT:    [[TMP6:%.*]] = call i32 @__nsan_internal_check_double_l(double [[B]], x86_fp80 [[TMP5]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
 ; DLQ-NEXT:    [[TMP8:%.*]] = fpext double [[B]] to x86_fp80
@@ -197,8 +197,8 @@ define void @constantload_add_store_x86_fp80(ptr %dst) sanitize_numerical_stabil
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = load x86_fp80, ptr @x86_fp80_const, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = fpext x86_fp80 [[B]] to fp128
-; CHECK-NEXT:    [[C:%.*]] = fadd x86_fp80 [[B]], 0xK3FC9E69594BEC44DE000
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fp128 [[TMP0]], 0xLC0000000000000003FC9CD2B297D889B
+; CHECK-NEXT:    [[C:%.*]] = fadd x86_fp80 [[B]], f0x3FC9E69594BEC44DE000
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fp128 [[TMP0]], f0x3FC9CD2B297D889BC000000000000000
 ; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__nsan_get_shadow_ptr_for_longdouble_store(ptr [[DST:%.*]], i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[C]], fp128 [[TMP1]], i32 4, i64 [[TMP3]])
@@ -222,7 +222,7 @@ define void @constantload_add_store_double(ptr %dst) sanitize_numerical_stabilit
 ; DQQ-NEXT:    [[B:%.*]] = load double, ptr @double_const, align 8
 ; DQQ-NEXT:    [[TMP0:%.*]] = fpext double [[B]] to fp128
 ; DQQ-NEXT:    [[C:%.*]] = fadd double [[B]], 1.000000e+00
-; DQQ-NEXT:    [[TMP1:%.*]] = fadd fp128 [[TMP0]], 0xL00000000000000003FFF000000000000
+; DQQ-NEXT:    [[TMP1:%.*]] = fadd fp128 [[TMP0]], 1.000000e+00
 ; DQQ-NEXT:    [[TMP2:%.*]] = call ptr @__nsan_get_shadow_ptr_for_double_store(ptr [[DST:%.*]], i64 1)
 ; DQQ-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[DST]] to i64
 ; DQQ-NEXT:    [[TMP4:%.*]] = call i32 @__nsan_internal_check_double_q(double [[C]], fp128 [[TMP1]], i32 4, i64 [[TMP3]])
@@ -238,7 +238,7 @@ define void @constantload_add_store_double(ptr %dst) sanitize_numerical_stabilit
 ; DLQ-NEXT:    [[B:%.*]] = load double, ptr @double_const, align 8
 ; DLQ-NEXT:    [[TMP0:%.*]] = fpext double [[B]] to x86_fp80
 ; DLQ-NEXT:    [[C:%.*]] = fadd double [[B]], 1.000000e+00
-; DLQ-NEXT:    [[TMP1:%.*]] = fadd x86_fp80 [[TMP0]], 0xK3FFF8000000000000000
+; DLQ-NEXT:    [[TMP1:%.*]] = fadd x86_fp80 [[TMP0]], 1.000000e+00
 ; DLQ-NEXT:    [[TMP2:%.*]] = call ptr @__nsan_get_shadow_ptr_for_double_store(ptr [[DST:%.*]], i64 1)
 ; DLQ-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[DST]] to i64
 ; DLQ-NEXT:    [[TMP4:%.*]] = call i32 @__nsan_internal_check_double_l(double [[C]], x86_fp80 [[TMP1]], i32 4, i64 [[TMP3]])
@@ -305,8 +305,8 @@ define void @load_add_store_x86_fp80(ptr %a) sanitize_numerical_stability {
 ; CHECK-NEXT:    br label [[TMP6]]
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi fp128 [ [[TMP3]], [[TMP2]] ], [ [[TMP5]], [[TMP4]] ]
-; CHECK-NEXT:    [[C:%.*]] = fadd x86_fp80 [[B]], 0xK3FC9E69594BEC44DE000
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd fp128 [[TMP7]], 0xLC0000000000000003FC9CD2B297D889B
+; CHECK-NEXT:    [[C:%.*]] = fadd x86_fp80 [[B]], f0x3FC9E69594BEC44DE000
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd fp128 [[TMP7]], f0x3FC9CD2B297D889BC000000000000000
 ; CHECK-NEXT:    [[TMP9:%.*]] = call ptr @__nsan_get_shadow_ptr_for_longdouble_store(ptr [[A]], i64 1)
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[C]], fp128 [[TMP8]], i32 4, i64 [[TMP10]])
@@ -340,7 +340,7 @@ define void @load_add_store_double(ptr %a) sanitize_numerical_stability {
 ; DQQ:       6:
 ; DQQ-NEXT:    [[TMP7:%.*]] = phi fp128 [ [[TMP3]], [[TMP2]] ], [ [[TMP5]], [[TMP4]] ]
 ; DQQ-NEXT:    [[C:%.*]] = fadd double [[B]], 1.000000e+00
-; DQQ-NEXT:    [[TMP8:%.*]] = fadd fp128 [[TMP7]], 0xL00000000000000003FFF000000000000
+; DQQ-NEXT:    [[TMP8:%.*]] = fadd fp128 [[TMP7]], 1.000000e+00
 ; DQQ-NEXT:    [[TMP9:%.*]] = call ptr @__nsan_get_shadow_ptr_for_double_store(ptr [[A]], i64 1)
 ; DQQ-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[A]] to i64
 ; DQQ-NEXT:    [[TMP11:%.*]] = call i32 @__nsan_internal_check_double_q(double [[C]], fp128 [[TMP8]], i32 4, i64 [[TMP10]])
@@ -366,7 +366,7 @@ define void @load_add_store_double(ptr %a) sanitize_numerical_stability {
 ; DLQ:       6:
 ; DLQ-NEXT:    [[TMP7:%.*]] = phi x86_fp80 [ [[TMP3]], [[TMP2]] ], [ [[TMP5]], [[TMP4]] ]
 ; DLQ-NEXT:    [[C:%.*]] = fadd double [[B]], 1.000000e+00
-; DLQ-NEXT:    [[TMP8:%.*]] = fadd x86_fp80 [[TMP7]], 0xK3FFF8000000000000000
+; DLQ-NEXT:    [[TMP8:%.*]] = fadd x86_fp80 [[TMP7]], 1.000000e+00
 ; DLQ-NEXT:    [[TMP9:%.*]] = call ptr @__nsan_get_shadow_ptr_for_double_store(ptr [[A]], i64 1)
 ; DLQ-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[A]] to i64
 ; DLQ-NEXT:    [[TMP11:%.*]] = call i32 @__nsan_internal_check_double_l(double [[C]], x86_fp80 [[TMP8]], i32 4, i64 [[TMP10]])
@@ -484,18 +484,18 @@ define void @call_fn_taking_float() sanitize_numerical_stability {
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    store ptr @takes_floats, ptr @__nsan_shadow_args_tag, align 8
 ; DQQ-NEXT:    store double 1.000000e+00, ptr @__nsan_shadow_args_ptr, align 1
-; DQQ-NEXT:    store fp128 0xL00000000000000004000800000000000, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 8), align 1
-; DQQ-NEXT:    store fp128 0xLC0000000000000003FC9CD2B297D889B, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 24), align 1
-; DQQ-NEXT:    call void @takes_floats(float 1.000000e+00, i8 2, double 3.000000e+00, x86_fp80 0xK3FC9E69594BEC44DE000)
+; DQQ-NEXT:    store fp128 3.000000e+00, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 8), align 1
+; DQQ-NEXT:    store fp128 f0x3FC9CD2B297D889BC000000000000000, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 24), align 1
+; DQQ-NEXT:    call void @takes_floats(float 1.000000e+00, i8 2, double 3.000000e+00, x86_fp80 f0x3FC9E69594BEC44DE000)
 ; DQQ-NEXT:    ret void
 ;
 ; DLQ-LABEL: @call_fn_taking_float(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    store ptr @takes_floats, ptr @__nsan_shadow_args_tag, align 8
 ; DLQ-NEXT:    store double 1.000000e+00, ptr @__nsan_shadow_args_ptr, align 1
-; DLQ-NEXT:    store x86_fp80 0xK4000C000000000000000, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 8), align 1
-; DLQ-NEXT:    store fp128 0xLC0000000000000003FC9CD2B297D889B, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 18), align 1
-; DLQ-NEXT:    call void @takes_floats(float 1.000000e+00, i8 2, double 3.000000e+00, x86_fp80 0xK3FC9E69594BEC44DE000)
+; DLQ-NEXT:    store x86_fp80 3.000000e+00, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 8), align 1
+; DLQ-NEXT:    store fp128 f0x3FC9CD2B297D889BC000000000000000, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 18), align 1
+; DLQ-NEXT:    call void @takes_floats(float 1.000000e+00, i8 2, double 3.000000e+00, x86_fp80 f0x3FC9E69594BEC44DE000)
 ; DLQ-NEXT:    ret void
 ;
 entry:

@@ -92,46 +92,46 @@ int main(void) {
   __float128 f8l = f4l++;
   __float128 arr1l[] = { -1.q, -0.q, -11.q };
 }
-// CHECK-DAG: @_ZN12_GLOBAL__N_13f1nE = internal global fp128 0xL00000000000000000000000000000000
-// CHECK-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global fp128 0xL00000000000000004004080000000000
+// CHECK-DAG: @_ZN12_GLOBAL__N_13f1nE = internal global fp128 0.000000e+00
+// CHECK-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global fp128 3.300000e+01
 // CHECK-DAG: @_ZN12_GLOBAL__N_15arr1nE = internal global [10 x fp128]
-// CHECK-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x fp128] [fp128 0xL33333333333333333FFF333333333333, fp128 0xL00000000000000004000800000000000, fp128 0xL00000000000000004025176592E00000]
+// CHECK-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x fp128] [fp128 1.200000e+00, fp128 3.000000e+00, fp128 3.000000e+11]
 // CHECK-DAG: define internal noundef fp128 @_ZN12_GLOBAL__N_16func1nERKu9__ieee128(ptr
-// CHECK-DAG: @f1f ={{.*}} global fp128 0xL00000000000000000000000000000000
-// CHECK-DAG: @f2f ={{.*}} global fp128 0xL33333333333333334004033333333333
+// CHECK-DAG: @f1f ={{.*}} global fp128 0.000000e+00
+// CHECK-DAG: @f2f ={{.*}} global fp128 3.240000e+01
 // CHECK-DAG: @arr1f ={{.*}} global [10 x fp128]
-// CHECK-DAG: @arr2f ={{.*}} global [3 x fp128] [fp128 0xL3333333333333333BFFF333333333333, fp128 0xL0000000000000000C000800000000000, fp128 0xL0000000000000000C025176592E00000]
+// CHECK-DAG: @arr2f ={{.*}} global [3 x fp128] [fp128 -1.200000e+00, fp128 -3.000000e+00, fp128 -3.000000e+11]
 // CHECK-DAG: declare noundef fp128 @_Z6func1fu9__ieee128(fp128 noundef)
 // CHECK-DAG: define linkonce_odr void @_ZN2C1C2Eu9__ieee128(ptr {{[^,]*}} %this, fp128 noundef %arg)
 // CHECK-DAG: define linkonce_odr noundef fp128 @_ZN2C16func2cEu9__ieee128(fp128 noundef %arg)
 // CHECK-DAG: define linkonce_odr noundef fp128 @_Z6func1tIu9__ieee128ET_S0_(fp128 noundef %arg)
-// CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { fp128 0xL00000000000000004006080000000000 }
-// CHECK-DAG: store fp128 0xLF0AFD0EBFF292DCE42E0B38CDD83F26F, ptr %f1l, align 16
-// CHECK-DAG: store fp128 0xL00000000000000008000000000000000, ptr %f2l, align 16
-// CHECK-DAG: store fp128 0xLFFFFFFFFFFFFFFFF7FFEFFFFFFFFFFFF, ptr %f3l, align 16
-// CHECK-DAG: store fp128 0xL0000000000000000BFFF000000000000, ptr %f5l, align 16
+// CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { fp128 1.320000e+02 }
+// CHECK-DAG: store fp128 1.230000e+222, ptr %f1l, align 16
+// CHECK-DAG: store fp128 -0.000000e+00, ptr %f2l, align 16
+// CHECK-DAG: store fp128 f0x7FFEFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ptr %f3l, align 16
+// CHECK-DAG: store fp128 -1.000000e+00, ptr %f5l, align 16
 // CHECK-DAG: [[F4L:%[a-z0-9]+]] = load fp128, ptr %f4l
-// CHECK-DAG: [[INC:%[a-z0-9]+]] = fadd fp128 [[F4L]], 0xL00000000000000003FFF000000000000
+// CHECK-DAG: [[INC:%[a-z0-9]+]] = fadd fp128 [[F4L]], 1.000000e+00
 // CHECK-DAG: store fp128 [[INC]], ptr %f4l
 
-// CHECK-X86-DAG: @_ZN12_GLOBAL__N_13f1nE = internal global fp128 0xL00000000000000000000000000000000
-// CHECK-X86-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global fp128 0xL00000000000000004004080000000000
+// CHECK-X86-DAG: @_ZN12_GLOBAL__N_13f1nE = internal global fp128 0.000000e+00
+// CHECK-X86-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global fp128 3.300000e+01
 // CHECK-X86-DAG: @_ZN12_GLOBAL__N_15arr1nE = internal global [10 x fp128]
-// CHECK-X86-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x fp128] [fp128 0xL33333333333333333FFF333333333333, fp128 0xL00000000000000004000800000000000, fp128 0xL00000000000000004025176592E00000]
+// CHECK-X86-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x fp128] [fp128 1.200000e+00, fp128 3.000000e+00, fp128 3.000000e+11]
 // CHECK-X86-DAG: define internal noundef fp128 @_ZN12_GLOBAL__N_16func1nERKg(ptr
-// CHECK-X86-DAG: @f1f ={{.*}} global fp128 0xL00000000000000000000000000000000
-// CHECK-X86-DAG: @f2f ={{.*}} global fp128 0xL33333333333333334004033333333333
+// CHECK-X86-DAG: @f1f ={{.*}} global fp128 0.000000e+00
+// CHECK-X86-DAG: @f2f ={{.*}} global fp128 3.240000e+01
 // CHECK-X86-DAG: @arr1f ={{.*}} global [10 x fp128]
-// CHECK-X86-DAG: @arr2f ={{.*}} global [3 x fp128] [fp128 0xL3333333333333333BFFF333333333333, fp128 0xL0000000000000000C000800000000000, fp128 0xL0000000000000000C025176592E00000]
+// CHECK-X86-DAG: @arr2f ={{.*}} global [3 x fp128] [fp128 -1.200000e+00, fp128 -3.000000e+00, fp128 -3.000000e+11]
 // CHECK-X86-DAG: declare noundef fp128 @_Z6func1fg(fp128 noundef)
 // CHECK-X86-DAG: define linkonce_odr void @_ZN2C1C2Eg(ptr {{[^,]*}} %this, fp128 noundef %arg)
 // CHECK-X86-DAG: define linkonce_odr noundef fp128 @_ZN2C16func2cEg(fp128 noundef %arg)
 // CHECK-X86-DAG: define linkonce_odr noundef fp128 @_Z6func1tIgET_S0_(fp128 noundef %arg)
-// CHECK-X86-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { fp128 0xL00000000000000004006080000000000 }
-// CHECK-X86-DAG: store fp128 0xLF0AFD0EBFF292DCE42E0B38CDD83F26F, ptr %f1l, align 16
-// CHECK-X86-DAG: store fp128 0xL00000000000000008000000000000000, ptr %f2l, align 16
-// CHECK-X86-DAG: store fp128 0xLFFFFFFFFFFFFFFFF7FFEFFFFFFFFFFFF, ptr %f3l, align 16
-// CHECK-X86-DAG: store fp128 0xL0000000000000000BFFF000000000000, ptr %f5l, align 16
+// CHECK-X86-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { fp128 1.320000e+02 }
+// CHECK-X86-DAG: store fp128 1.230000e+222, ptr %f1l, align 16
+// CHECK-X86-DAG: store fp128 -0.000000e+00, ptr %f2l, align 16
+// CHECK-X86-DAG: store fp128 f0x7FFEFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ptr %f3l, align 16
+// CHECK-X86-DAG: store fp128 -1.000000e+00, ptr %f5l, align 16
 // CHECK-X86-DAG: [[F4L:%[a-z0-9]+]] = load fp128, ptr %f4l
-// CHECK-X86-DAG: [[INC:%[a-z0-9]+]] = fadd fp128 [[F4L]], 0xL00000000000000003FFF000000000000
+// CHECK-X86-DAG: [[INC:%[a-z0-9]+]] = fadd fp128 [[F4L]], 1.000000e+00
 // CHECK-X86-DAG: store fp128 [[INC]], ptr %f4l

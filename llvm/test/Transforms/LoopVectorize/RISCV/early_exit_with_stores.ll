@@ -105,7 +105,7 @@ define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias 
 ; CHECK-NEXT:    store i16 [[INC]], ptr [[ST_ADDR]], align 2
 ; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw half, ptr [[PRED]], i64 [[IV]]
 ; CHECK-NEXT:    [[EE_VAL:%.*]] = load half, ptr [[EE_ADDR]], align 2
-; CHECK-NEXT:    [[EE_COND:%.*]] = fcmp ugt half [[EE_VAL]], 0xH5FD0
+; CHECK-NEXT:    [[EE_COND:%.*]] = fcmp ugt half [[EE_VAL]], 5.000000e+02
 ; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT:.*]], label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1

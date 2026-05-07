@@ -19,15 +19,15 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %add = fadd bfloat 0xR3FC0, 0xR4020 => bfloat 4.000000e+00
-; CHECK-NEXT:   %sub = fsub bfloat 0xR40A0, 0xR3F80 => bfloat 4.000000e+00
-; CHECK-NEXT:   %mul = fmul bfloat 0xR4000, 0xR4040 => bfloat 6.000000e+00
-; CHECK-NEXT:   %div = fdiv bfloat 0xR3F80, 0xR4000 => bfloat 5.000000e-01
-; CHECK-NEXT:   %neg = fneg bfloat 0xRBFC0 => bfloat 1.500000e+00
-; CHECK-NEXT:   %vadd = fadd <2 x bfloat> <bfloat 0xR3F80, bfloat 0xR4000>, <bfloat 0xR4040, bfloat 0xR4080> => { bfloat 4.000000e+00, bfloat 6.000000e+00 }
-; CHECK-NEXT:   %p1 = fadd bfloat 0xR3F80, poison => poison
+; CHECK-NEXT:   %add = fadd bfloat 1.500000e+00, 2.500000e+00 => bfloat 4.000000e+00
+; CHECK-NEXT:   %sub = fsub bfloat 5.000000e+00, 1.000000e+00 => bfloat 4.000000e+00
+; CHECK-NEXT:   %mul = fmul bfloat 2.000000e+00, 3.000000e+00 => bfloat 6.000000e+00
+; CHECK-NEXT:   %div = fdiv bfloat 1.000000e+00, 2.000000e+00 => bfloat 5.000000e-01
+; CHECK-NEXT:   %neg = fneg bfloat -1.500000e+00 => bfloat 1.500000e+00
+; CHECK-NEXT:   %vadd = fadd <2 x bfloat> <bfloat 1.000000e+00, bfloat 2.000000e+00>, <bfloat 3.000000e+00, bfloat 4.000000e+00> => { bfloat 4.000000e+00, bfloat 6.000000e+00 }
+; CHECK-NEXT:   %p1 = fadd bfloat 1.000000e+00, poison => poison
 ; CHECK-NEXT:   %p2 = fneg bfloat poison => poison
-; CHECK-NEXT:   %inf = fdiv bfloat 0xR3F80, 0xR0000 => bfloat +Inf
-; CHECK-NEXT:   %nan = fdiv bfloat 0xR0000, 0xR0000 => bfloat NaN
+; CHECK-NEXT:   %inf = fdiv bfloat 1.000000e+00, 0.000000e+00 => bfloat +Inf
+; CHECK-NEXT:   %nan = fdiv bfloat 0.000000e+00, 0.000000e+00 => bfloat NaN
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

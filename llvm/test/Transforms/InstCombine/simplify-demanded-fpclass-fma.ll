@@ -7,7 +7,7 @@ declare nofpclass(qnan inf norm sub zero) half @returns_snan()
 define nofpclass(inf norm sub zero) half @ret_only_nan(half %x, half %y, half %z) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret_only_nan(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]], half [[Z:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %result = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %result
@@ -16,7 +16,7 @@ define nofpclass(inf norm sub zero) half @ret_only_nan(half %x, half %y, half %z
 define nofpclass(inf norm sub zero) <2 x half> @ret_only_nan_vec(<2 x half> %x, <2 x half> %y, <2 x half> %z) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x half> @ret_only_nan_vec(
 ; CHECK-SAME: <2 x half> [[X:%.*]], <2 x half> [[Y:%.*]], <2 x half> [[Z:%.*]]) {
-; CHECK-NEXT:    ret <2 x half> splat (half 0xH7E00)
+; CHECK-NEXT:    ret <2 x half> splat (half +qnan)
 ;
   %result = call <2 x half> @llvm.fma.v2f16(<2 x half> %x, <2 x half> %y, <2 x half> %z)
   ret <2 x half> %result
@@ -35,7 +35,7 @@ define nofpclass(inf norm sub zero qnan) half @ret_only_snan(half %x, half %y, h
 define nofpclass(inf norm sub zero snan) half @ret_only_qnan(half %x, half %y, half %z) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]], half [[Z:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %result = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %result
@@ -54,7 +54,7 @@ define nofpclass(nan norm sub zero) half @ret_only_inf(half %x, half %y, half %z
 define nofpclass(nan pinf norm sub zero) half @ret_only_ninf(half %x, half %y, half %z) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) half @ret_only_ninf(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]], half [[Z:%.*]]) {
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %result = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %result
@@ -63,7 +63,7 @@ define nofpclass(nan pinf norm sub zero) half @ret_only_ninf(half %x, half %y, h
 define nofpclass(nan ninf norm sub zero) half @ret_only_pinf(half %x, half %y, half %z) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) half @ret_only_pinf(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]], half [[Z:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7C00
+; CHECK-NEXT:    ret half +inf
 ;
   %result = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %result
@@ -82,7 +82,7 @@ define nofpclass(inf nan norm sub) half @ret_only_zero(half %x, half %y, half %z
 define nofpclass(inf nan norm sub nzero) half @ret_only_pzero(half %x, half %y, half %z) {
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) half @ret_only_pzero(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]], half [[Z:%.*]]) {
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
   %result = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %result
@@ -91,7 +91,7 @@ define nofpclass(inf nan norm sub nzero) half @ret_only_pzero(half %x, half %y, 
 define nofpclass(inf nan norm sub pzero) half @ret_only_nzero(half %x, half %y, half %z) {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) half @ret_only_nzero(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]], half [[Z:%.*]]) {
-; CHECK-NEXT:    ret half 0xH8000
+; CHECK-NEXT:    ret half -0.000000e+00
 ;
   %result = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %result
@@ -130,7 +130,7 @@ define nofpclass(nan inf) half @ret_no_nans_no_infs(half %x, half %y, half %z) {
 define nofpclass(inf norm sub zero) half @ret_only_nan__square(half noundef %x, half %z) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret_only_nan__square(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Z:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %result = call half @llvm.fma.f16(half %x, half %x, half %z)
   ret half %result

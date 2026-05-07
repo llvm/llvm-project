@@ -90,7 +90,7 @@ struct DOTGraphTraits<DOTMachineFuncInfo *> : public DefaultDOTGraphTraits {
   }
 };
 
-class MachineCFGPrinterPass : public PassInfoMixin<MachineCFGPrinterPass> {
+class MachineCFGPrinterPass : public RequiredPassInfoMixin<MachineCFGPrinterPass> {
 public:
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);

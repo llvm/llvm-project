@@ -21,7 +21,7 @@ class Module;
 class TargetMachine;
 
 struct PreISelIntrinsicLoweringPass
-    : OptionalPassInfoMixin<PreISelIntrinsicLoweringPass> {
+    : RequiredPassInfoMixin<PreISelIntrinsicLoweringPass> {
   const TargetMachine *TM;
 
   PreISelIntrinsicLoweringPass(const TargetMachine *TM) : TM(TM) {}

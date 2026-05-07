@@ -14,7 +14,7 @@ define float @callatan0() {
 ; TODO: constant should be folded
 define float @callatanInf() {
 ; CHECK-LABEL: @callatanInf(
-; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float +inf)
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @atanf(float 0x7FF0000000000000)
@@ -24,7 +24,7 @@ define float @callatanInf() {
 ; TODO: constant should be folded
 define float @callatanNaN() {
 ; CHECK-LABEL: @callatanNaN(
-; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float +qnan)
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @atanf(float 0x7FF8000000000000)
@@ -34,7 +34,7 @@ define float @callatanNaN() {
 ; POSIX: May fail with Range Error. We choose not to fail.
 define float @callatanDenorm() {
 ; CHECK-LABEL: @callatanDenorm(
-; CHECK-NEXT:    ret float 0x37A16C2000000000
+; CHECK-NEXT:    ret float 9.999940e-41
 ;
   %call = call float @atanf(float 0x37A16C2000000000)
   ret float %call
@@ -43,7 +43,7 @@ define float @callatanDenorm() {
 ; TODO: long double calls currently not folded
 define x86_fp80 @atanl_x86(x86_fp80 %x) {
 ; CHECK-LABEL: @atanl_x86(
-; CHECK-NEXT:    [[CALL:%.*]] = call x86_fp80 @atanl(x86_fp80 noundef 0xK3FFF8CCCCCCCCCCCCCCD)
+; CHECK-NEXT:    [[CALL:%.*]] = call x86_fp80 @atanl(x86_fp80 noundef 1.100000e+00)
 ; CHECK-NEXT:    ret x86_fp80 [[CALL]]
 ;
   %call = call x86_fp80 @atanl(x86_fp80 noundef 0xK3FFF8CCCCCCCCCCCCCCD)
@@ -96,7 +96,7 @@ define float @callatan2_n0n0() {
 
 define float @callatan2_x0() {
 ; CHECK-LABEL: @callatan2_x0(
-; CHECK-NEXT:    ret float 0x3FF921FB60000000
+; CHECK-NEXT:    ret float f0x3FC90FDB
 ;
   %call = call float @atan2f(float 1.0, float -0.000000e+00)
   ret float %call
@@ -112,7 +112,7 @@ define float @callatan2_0x() {
 
 define float @callatan2_xx() {
 ; CHECK-LABEL: @callatan2_xx(
-; CHECK-NEXT:    ret float 0xBFE921FB60000000
+; CHECK-NEXT:    ret float f0xBF490FDB
 ;
   %call = call float @atan2f(float -1.0, float 1.0)
   ret float %call
@@ -120,7 +120,7 @@ define float @callatan2_xx() {
 
 define float @callatan2_denorm() {
 ; CHECK-LABEL: @callatan2_denorm(
-; CHECK-NEXT:    ret float 0x37A16C2000000000
+; CHECK-NEXT:    ret float 9.999940e-41
 ;
   %call = call float @atan2f(float 0x39B4484C00000000, float 1.0e+10)
   ret float %call
@@ -136,7 +136,7 @@ define float @callatan2_flush_to_zero() {
 
 define float @callatan2_NaN() {
 ; CHECK-LABEL: @callatan2_NaN(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %call = call float @atan2f(float 0x7FF8000000000000, float 0x7FF8000000000000)
   ret float %call
@@ -144,7 +144,7 @@ define float @callatan2_NaN() {
 
 define float @callatan2_Inf() {
 ; CHECK-LABEL: @callatan2_Inf(
-; CHECK-NEXT:    ret float 0x3FE921FB60000000
+; CHECK-NEXT:    ret float f0x3F490FDB
 ;
   %call = call float @atan2f(float 0x7FF0000000000000, float 0x7FF0000000000000)
   ret float %call

@@ -379,8 +379,9 @@ public:
     assert(Triple.getArch() == llvm::Triple::spirv32 &&
            "Invalid architecture for 32-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
-            getTriple().getOS() == llvm::Triple::ChipStar) &&
-           "32-bit SPIR-V target must use unknown or chipstar OS");
+            getTriple().getOS() == llvm::Triple::ChipStar ||
+            getTriple().getOS() == llvm::Triple::Vulkan) &&
+           "32-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
@@ -403,8 +404,9 @@ public:
     assert(Triple.getArch() == llvm::Triple::spirv64 &&
            "Invalid architecture for 64-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
-            getTriple().getOS() == llvm::Triple::ChipStar) &&
-           "64-bit SPIR-V target must use unknown or chipstar OS");
+            getTriple().getOS() == llvm::Triple::ChipStar ||
+            getTriple().getOS() == llvm::Triple::Vulkan) &&
+           "64-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;

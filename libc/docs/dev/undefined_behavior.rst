@@ -89,7 +89,7 @@ direction in this case.
 
 Non-const Constant Return Values
 --------------------------------
-Some libc functions, like ``dlerror()``, return ``char *`` instead of ``const char *`` and then tell the caller they promise not to to modify this value. Any modification of this value is undefined behavior.
+Some libc functions, like ``dlerror()``, return ``char *`` instead of ``const char *`` and then tell the caller they promise not to modify this value. Any modification of this value is undefined behavior.
 
 Unrecognized ``clockid_t`` values for ``pthread_rwlock_clock*`` APIs
 ----------------------------------------------------------------------

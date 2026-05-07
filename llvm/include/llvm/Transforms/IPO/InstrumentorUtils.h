@@ -48,6 +48,12 @@ struct InstrumentorIRBuilderTy {
         I->replaceAllUsesWith(PoisonValue::get(I->getType()));
       I->eraseFromParent();
     }
+
+    // Delete the alloca lists that may have been allocated.
+    for (auto &KV : AllocaMap) {
+      if (KV.second)
+        delete KV.second;
+    }
   }
 
   /// Get a temporary alloca to communicate (large) values with the runtime.

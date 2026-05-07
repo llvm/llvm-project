@@ -87,6 +87,36 @@ LogicalResult BitcastOp::verify() {
   if (operandType == resultType) {
     return emitError("result type must be different from operand type");
   }
+
+  auto operandCoopMatrixType =
+      dyn_cast<spirv::CooperativeMatrixType>(operandType);
+  auto resultCoopMatrixType =
+      dyn_cast<spirv::CooperativeMatrixType>(resultType);
+  if (operandCoopMatrixType || resultCoopMatrixType) {
+    if (!operandCoopMatrixType || !resultCoopMatrixType)
+      return emitError("unhandled bit cast conversion from cooperative matrix "
+                       "type to non-cooperative matrix type");
+
+    if (operandCoopMatrixType.getRows() != resultCoopMatrixType.getRows() ||
+        operandCoopMatrixType.getColumns() != resultCoopMatrixType.getColumns())
+      return emitError("cooperative matrix dimensions must match");
+
+    if (operandCoopMatrixType.getScope() != resultCoopMatrixType.getScope())
+      return emitError("cooperative matrix scope must match");
+
+    if (operandCoopMatrixType.getUse() != resultCoopMatrixType.getUse())
+      return emitError("cooperative matrix use must match");
+
+    unsigned operandBitWidth =
+        getBitWidth(operandCoopMatrixType.getElementType());
+    unsigned resultBitWidth =
+        getBitWidth(resultCoopMatrixType.getElementType());
+    if (operandBitWidth != resultBitWidth)
+      return emitOpError("mismatch in result and operand type bitwidth");
+
+    return success();
+  }
+
   if (isa<spirv::PointerType>(operandType) &&
       !isa<spirv::PointerType>(resultType)) {
     return emitError(

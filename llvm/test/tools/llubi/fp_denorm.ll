@@ -9,7 +9,7 @@ define void @main() denormal_fpenv(positivezero|positivezero) {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %input_flush = fadd float 0x3740000000000000, 0.000000e+00 => float 0.000000e+00
-; CHECK-NEXT:   %output_flush = fmul float 0x3BF0000000000000, 0x3BF0000000000000 => float 0.000000e+00
+; CHECK-NEXT:   %input_flush = fadd float 1.434930e-42, 0.000000e+00 => float 0.000000e+00
+; CHECK-NEXT:   %output_flush = fmul float f0x1F800000, f0x1F800000 => float 0.000000e+00
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
