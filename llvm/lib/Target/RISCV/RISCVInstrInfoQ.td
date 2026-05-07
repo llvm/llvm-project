@@ -20,6 +20,16 @@ def QExt : ExtInfo<"", "", [HasStdExtQ], f128, FPR128, FPR32, FPR64, ?>;
 defvar QExts = [QExt];
 defvar QExtsRV64 = [QExt];
 
+def SDT_RISCVBuildPairF128 : SDTypeProfile<1, 2, [SDTCisVT<0, f128>,
+                                                  SDTCisVT<1, i64>,
+                                                  SDTCisSameAs<1, 2>]>;
+def SDT_RISCVSplitF128     : SDTypeProfile<2, 1, [SDTCisVT<0, i64>,
+                                                  SDTCisVT<1, i64>,
+                                                  SDTCisVT<2, f128>]>;
+
+def RISCVBuildPairF128 : SDNode<"RISCVISD::BuildPairF128", SDT_RISCVBuildPairF128>;
+def RISCVSplitF128     : SDNode<"RISCVISD::SplitF128", SDT_RISCVSplitF128>;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -164,4 +174,36 @@ let Predicates = [HasStdExtQ] in {
 
   def PseudoFLQ : PseudoFloatLoad<"flq", FPR128>;
   def PseudoFSQ : PseudoStore<"fsq", FPR128>;
+} // Predicates = [HasStdExtQ]
+
+let Predicates = [HasStdExtQ] in {
+// Moves two GPRs to an FPR.
+let usesCustomInserter = 1 in
+def BuildPairF128Pseudo
+    : Pseudo<(outs FPR128:$dst), (ins GPR:$src1, GPR:$src2),
+             [(set FPR128:$dst, (RISCVBuildPairF128 GPR:$src1, GPR:$src2))]>;
+
+// Moves an FPR to two GPRs.
+let usesCustomInserter = 1 in
+def SplitF128Pseudo
+    : Pseudo<(outs GPR:$dst1, GPR:$dst2), (ins FPR128:$src),
+             [(set GPR:$dst1, GPR:$dst2, (RISCVSplitF128 FPR128:$src))]>;
+
+foreach Ext = QExts in {
+  defm : PatFprFprDynFrm_m<any_fadd, FADD_Q, Ext>;
+  defm : PatFprFprDynFrm_m<any_fsub, FSUB_Q, Ext>;
+  defm : PatFprFprDynFrm_m<any_fmul, FMUL_Q, Ext>;
+  defm : PatFprFprDynFrm_m<any_fdiv, FDIV_Q, Ext>;
+}
+
+} // Predicates = [HasStdExtQ]
+
+let Predicates = [HasStdExtQ] in {
+/// Loads
+
+def : LdPat<load, FLQ, f128>;
+
+/// Stores
+
+def : StPat<store, FSQ, FPR128, f128>;
 } // Predicates = [HasStdExtQ]
