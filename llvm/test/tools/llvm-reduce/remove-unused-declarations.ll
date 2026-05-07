@@ -4,7 +4,6 @@
 declare void @llvm.uninteresting()
 declare void @uninteresting()
 
-; CHECK-ALL: declare void @llvm.interesting()
 ; CHECK-ALL: declare void @interesting()
 declare void @llvm.interesting()
 declare void @interesting()

@@ -454,7 +454,9 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
     }
   } else {
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
-             /*ShouldPreserveUseListOrder=*/true);
+             /*ShouldPreserveUseListOrder=*/true,
+             /*IsForDebug=*/false,
+             /*ShouldSkipIntrinsicDeclarations*/ true);
   }
 }
 
