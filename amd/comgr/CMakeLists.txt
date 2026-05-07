@@ -12,6 +12,31 @@ message("Comgr Version: ${ver_major}.${ver_minor}.0")
 project(amd_comgr VERSION "${ver_major}.${ver_minor}.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
+# Static API consistency check: verify VERSION.txt, the public header
+# (include/amd_comgr.h.in), and the Linux exportmap (src/exportmap.in)
+# stay in sync. Runs at configure time so the gate applies to every
+# Comgr build.
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+set(_comgr_api_check_script
+  "${CMAKE_CURRENT_SOURCE_DIR}/utils/check_api_consistency.py")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/amd_comgr.h.in"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap.in"
+  "${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt"
+  "${_comgr_api_check_script}")
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" "${_comgr_api_check_script}"
+          --comgr-dir "${CMAKE_CURRENT_SOURCE_DIR}"
+  RESULT_VARIABLE _comgr_api_check_rc
+  OUTPUT_VARIABLE _comgr_api_check_out
+  ERROR_VARIABLE _comgr_api_check_err
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_STRIP_TRAILING_WHITESPACE)
+if(NOT _comgr_api_check_rc EQUAL 0)
+  message(FATAL_ERROR "${_comgr_api_check_err}")
+endif()
+message(STATUS "${_comgr_api_check_out}")
+
 # Get git branch and commit hash to add to log for easier debugging.
 execute_process(
   COMMAND git log -1 --format=%h
