@@ -1568,7 +1568,7 @@ TYPE_PARSER( //
                        parenthesized(scalarLogicalExpr))) ||
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
     "NONTEMPORAL" >> construct<OmpClause>(construct<OmpClause::Nontemporal>(
-                         parenthesized(nonemptyList(name)))) ||
+                         parenthesized(Parser<OmpObjectList>{}))) ||
     "NOTINBRANCH" >>
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
     "NOVARIANTS" >> construct<OmpClause>(construct<OmpClause::Novariants>(
