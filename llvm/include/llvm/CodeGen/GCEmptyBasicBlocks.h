@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class GCEmptyBasicBlocksPass : public PassInfoMixin<GCEmptyBasicBlocksPass> {
+class GCEmptyBasicBlocksPass
+    : public OptionalPassInfoMixin<GCEmptyBasicBlocksPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

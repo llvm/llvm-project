@@ -113,7 +113,7 @@ public:
 };
 
 class DebugAssignmentTrackingPrinterPass
-    : public PassInfoMixin<DebugAssignmentTrackingPrinterPass> {
+    : public RequiredPassInfoMixin<DebugAssignmentTrackingPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -130,8 +130,6 @@ public:
   AssignmentTrackingAnalysis();
 
   bool runOnFunction(Function &F) override;
-
-  static bool isRequired() { return true; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

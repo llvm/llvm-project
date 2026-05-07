@@ -2381,8 +2381,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::Unused:
       case OffloadArch::Unknown:
         break;
-      case OffloadArch::LAST:
-        llvm_unreachable("Unexpected GPU arch.");
       }
     }
   }
