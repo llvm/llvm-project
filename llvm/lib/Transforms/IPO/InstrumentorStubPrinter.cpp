@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// The implementation of a generator of Instrumentor's runtime stubs.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
