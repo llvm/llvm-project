@@ -2075,6 +2075,13 @@ private:
   void EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
                             ASTContext &Ctx);
 
+  /// Attach the "sycl-module-id" function attribute to \p Fn, to record the
+  /// module ID for the translation unit. This attribute is applied to SYCL
+  /// kernel entry point functions and functions declared with the
+  /// sycl_external attribute to enable them to be identified as entry points
+  /// by clang-sycl-linker during device-code splitting.
+  void addSYCLModuleIdAttr(llvm::Function *Fn);
+
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);

@@ -362,6 +362,17 @@ LogicalResult cir::ArrayCtor::verify() {
 LogicalResult cir::ArrayDtor::verify() { return verifyArrayCtorDtor(*this); }
 
 //===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::DeleteArrayOp::verify() {
+  if (getDtorMayThrow() && !getElementDtorAttr())
+    return emitOpError(
+        "'dtor_may_throw' requires an 'element_dtor' to be present");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BreakOp
 //===----------------------------------------------------------------------===//
 
@@ -415,6 +426,7 @@ void cir::ConditionOp::getSuccessorRegions(
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody());
     regions.push_back(RegionSuccessor::parent());
+    return;
   }
 
   // Parent is an await: condition may branch to resume or suspend regions.
@@ -1365,11 +1377,10 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getThenRegion()));
-  // If the else region does not exist, it is not a viable successor.
   if (elseRegion)
     regions.push_back(RegionSuccessor(elseRegion));
-
-  return;
+  else
+    regions.push_back(RegionSuccessor::parent());
 }
 
 mlir::ValueRange cir::IfOp::getSuccessorInputs(RegionSuccessor successor) {
@@ -4138,7 +4149,15 @@ LogicalResult cir::TryOp::verify() {
     if (mlir::isa<cir::UnwindAttr>(typeAttr))
       continue;
 
-    if (entryBlock.empty() || !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
+    // A catch handler region must start with cir.begin_catch, optionally
+    // preceded by a single cir.construct_catch_param that performs any
+    // pre-begin_catch initialization for the catch parameter.
+    if (entryBlock.empty())
+      return emitOpError("catch handler region must not be empty");
+    mlir::Operation *firstOp = &entryBlock.front();
+    if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
+      firstOp = firstOp->getNextNode();
+    if (!firstOp || !mlir::isa<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
   }
@@ -4282,6 +4301,35 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!isa_and_nonnull<GlobalOp>(op))
     return emitOpError("'")
            << getTypeSym() << "' does not reference a valid cir.global";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstructCatchParamOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  auto fn =
+      symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, getCopyFnAttr());
+  if (!fn)
+    return emitOpError("'")
+           << getCopyFn() << "' does not reference a valid cir.func";
+
+  cir::FuncType fnType = fn.getFunctionType();
+  if (fnType.getNumInputs() != 2 || !fnType.hasVoidReturn())
+    return emitOpError("catch-init copy_fn must take two pointer arguments and "
+                       "return void");
+
+  if (fnType.getInput(0) != getParamAddr().getType())
+    return emitOpError("first argument of catch-init copy_fn must match the "
+                       "type of 'param_addr'");
+
+  if (fnType.getInput(1) != getParamAddr().getType())
+    return emitOpError(
+        "second argument of catch-init copy_fn must be a pointer "
+        "to the catch type");
+
   return success();
 }
 
