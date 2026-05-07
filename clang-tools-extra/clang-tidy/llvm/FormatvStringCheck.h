@@ -20,6 +20,9 @@ namespace clang::tidy::llvm_check {
 /// - The number of format indices matches the number of arguments.
 /// - Every argument is used by the format string.
 /// - Automatic and explicit indices are not mixed.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvm/formatv-string.html
 class FormatvStringCheck : public ClangTidyCheck {
 public:
   FormatvStringCheck(StringRef Name, ClangTidyContext *Context);
@@ -29,6 +32,10 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 
 private:
   // Map from fully-qualified function name to the 0-based index of the format

@@ -12,7 +12,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 using namespace clang::ast_matchers;
@@ -104,15 +103,15 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
     Input = Rest;
     if (Entry.empty())
       continue;
-    const auto [Name, IdxStr] = Entry.rsplit(':');
-    unsigned Idx = 0;
-    if (Name.empty() || IdxStr.empty() || IdxStr.getAsInteger(10, Idx)) {
+    const auto [Name, IndexStr] = Entry.rsplit(':');
+    unsigned Index = 0;
+    if (Name.empty() || IndexStr.empty() || IndexStr.getAsInteger(10, Index)) {
       configurationDiag("invalid entry '%0' in option AdditionalFunctions, "
                         "expected 'fully::qualified::name:fmt_arg_index'")
           << Entry;
       continue;
     }
-    Functions[Name] = Idx;
+    Functions[Name] = Index;
   }
 }
 
@@ -127,43 +126,43 @@ void FormatvStringCheck::registerMatchers(MatchFinder *Finder) {
   llvm::copy(Functions.keys(), std::back_inserter(Names));
 
   Finder->addMatcher(
-      callExpr(callee(functionDecl(hasAnyName(Names)))).bind("call"), this);
+      callExpr(callee(functionDecl(hasAnyName(Names))), argumentCountAtLeast(1))
+          .bind("call"),
+      this);
 }
 
 void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
-  if (!Call || Call->getNumArgs() == 0)
-    return;
+  assert(Call && Call->getNumArgs() > 0);
 
   const auto *FD = Call->getDirectCallee();
-  if (!FD)
-    return;
+  assert(FD);
 
-  // Look up the format string parameter index for this function.
+  // Look up the index of the format string parameter for this function.
   const std::string QualName = FD->getQualifiedNameAsString();
   assert(Functions.contains(QualName) &&
          "matched function not in Functions map");
-  unsigned FmtArgIdx = Functions.lookup(QualName);
+  unsigned FmtStringIndex = Functions.lookup(QualName);
 
   // For llvm::formatv, also handle the (bool, const char*, ...) overload.
   if (QualName == "llvm::formatv" && FD->getNumParams() > 0 &&
       FD->getParamDecl(0)->getType()->isBooleanType())
-    FmtArgIdx = 1;
+    FmtStringIndex = 1;
 
-  if (Call->getNumArgs() <= FmtArgIdx)
+  if (Call->getNumArgs() <= FmtStringIndex)
     return;
 
   // Extract the format string literal.
-  const Expr *FmtArg = Call->getArg(FmtArgIdx)->IgnoreParenImpCasts();
+  const Expr *FmtArg = Call->getArg(FmtStringIndex)->IgnoreParenImpCasts();
   const auto *FmtLiteral = dyn_cast<StringLiteral>(FmtArg);
   if (!FmtLiteral)
     return;
 
-  const llvm::StringRef FmtStr = FmtLiteral->getString();
-  const unsigned FirstArgIdx = FmtArgIdx + 1;
-  const int NumArgs = Call->getNumArgs() - FirstArgIdx;
+  const llvm::StringRef FmtString = FmtLiteral->getString();
+  const unsigned FirstFmtArgIndex = FmtStringIndex + 1;
+  const int NumFmtArgs = Call->getNumArgs() - FirstFmtArgIndex;
 
-  auto ParsedOrErr = parseFormatvString(FmtStr);
+  auto ParsedOrErr = parseFormatvString(FmtString);
   if (!ParsedOrErr) {
     diag(FmtLiteral->getBeginLoc(), "formatv() %0")
         << llvm::toString(ParsedOrErr.takeError());
@@ -173,15 +172,15 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
   const ParseResult &Parsed = *ParsedOrErr;
   const int NumRequiredArgs = Parsed.Indices.empty() ? 0 : Parsed.MaxIndex + 1;
 
-  if (NumRequiredArgs != NumArgs) {
+  if (NumRequiredArgs != NumFmtArgs) {
     diag(FmtLiteral->getBeginLoc(),
-         "formatv() format string requires %0 argument(s), but %1 "
-         "argument(s) were provided")
-        << NumRequiredArgs << NumArgs;
+         "formatv() format string requires %0 argument%s0, but %1 argument%s1 "
+         "%plural{1:was|:were}1 provided")
+        << NumRequiredArgs << NumFmtArgs;
     return;
   }
 
-  // Check for holes in indices.
+  // Check for unused arguments.
   if (!Parsed.Indices.empty()) {
     llvm::SmallBitVector UsedIndices(NumRequiredArgs);
     for (const unsigned Index : Parsed.Indices)
@@ -190,10 +189,9 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
     const int UnusedIndex = UsedIndices.find_first_unset();
     if (0 <= UnusedIndex && UnusedIndex < NumRequiredArgs) {
       // Point to the unused argument.
-      const Expr *UnusedArg = Call->getArg(FirstArgIdx + UnusedIndex);
+      const Expr *UnusedArg = Call->getArg(FirstFmtArgIndex + UnusedIndex);
       diag(UnusedArg->getBeginLoc(),
-           "formatv() format string does not use argument at index %0")
-          << UnusedIndex;
+           "formatv() argument unused in format string");
       return;
     }
   }

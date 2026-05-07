@@ -24,5 +24,5 @@ void correct() {
 
 void wrong_count() {
   mylib::log(mylib::Info, "{0} {1}", 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: formatv() format string requires 2 argument(s), but 1 argument(s) were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: formatv() format string requires 2 arguments, but 1 argument was provided
 }

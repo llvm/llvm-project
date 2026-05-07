@@ -28,18 +28,18 @@ void correct() {
 
 void too_few_args() {
   llvm::formatv("{0} {1}", 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 2 argument(s), but 1 argument(s) were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 2 arguments, but 1 argument was provided
 
   llvm::formatv("{0} {1} {2}", 1, 2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 3 argument(s), but 2 argument(s) were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 3 arguments, but 2 arguments were provided
 }
 
 void too_many_args() {
   llvm::formatv("{0}", 1, 2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 1 argument(s), but 2 argument(s) were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 1 argument, but 2 arguments were provided
 
   llvm::formatv("no replacements", 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 0 argument(s), but 1 argument(s) were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 0 arguments, but 1 argument was provided
 }
 
 void mixed_indices() {
@@ -49,7 +49,7 @@ void mixed_indices() {
 
 void holes_in_indices() {
   llvm::formatv("{0} {2}", 1, 2, 3);
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: formatv() format string does not use argument at index 1
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: formatv() argument unused in format string
 }
 
 void non_literal_format_string(const char *fmt) {
