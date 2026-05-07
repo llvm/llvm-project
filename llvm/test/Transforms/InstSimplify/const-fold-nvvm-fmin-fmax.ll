@@ -918,73 +918,41 @@ define float @test_fmin_nan_undef_xorsign_abs_f() {
 }
 
 ;###############################################################
-;#                  FMax/FMin(NaN, NaN) f16/bf16               #
+;#       NaN inputs are not folded for f16/bf16 (deferred)     #
 ;###############################################################
 
-define half @test_fmax_nan_nan_f16() {
-; CHECK-LABEL: define half @test_fmax_nan_nan_f16() {
-; CHECK-NEXT:    ret half 0xH7C01
+define half @test_fmax_f16_no_fold() {
+; CHECK-LABEL: define half @test_fmax_f16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmax.f16(half 0xH7C01, half 0xH7C01)
+; CHECK-NEXT:    ret half [[RES]]
 ;
   %res = call half @llvm.nvvm.fmax.f16(half 0xH7C01, half 0xH7C01)
   ret half %res
 }
 
-define bfloat @test_fmax_nan_nan_bf16() {
-; CHECK-LABEL: define bfloat @test_fmax_nan_nan_bf16() {
-; CHECK-NEXT:    ret bfloat 0xR7F81
+define bfloat @test_fmax_bf16_no_fold() {
+; CHECK-LABEL: define bfloat @test_fmax_bf16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmax.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
+; CHECK-NEXT:    ret bfloat [[RES]]
 ;
   %res = call bfloat @llvm.nvvm.fmax.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
   ret bfloat %res
 }
 
-define half @test_fmin_nan_nan_f16() {
-; CHECK-LABEL: define half @test_fmin_nan_nan_f16() {
-; CHECK-NEXT:    ret half 0xH7C01
+define half @test_fmin_f16_no_fold() {
+; CHECK-LABEL: define half @test_fmin_f16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmin.f16(half 0xH7C01, half 0xH7C01)
+; CHECK-NEXT:    ret half [[RES]]
 ;
   %res = call half @llvm.nvvm.fmin.f16(half 0xH7C01, half 0xH7C01)
   ret half %res
 }
 
-define bfloat @test_fmin_nan_nan_bf16() {
-; CHECK-LABEL: define bfloat @test_fmin_nan_nan_bf16() {
-; CHECK-NEXT:    ret bfloat 0xR7F81
+define bfloat @test_fmin_bf16_no_fold() {
+; CHECK-LABEL: define bfloat @test_fmin_bf16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmin.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
+; CHECK-NEXT:    ret bfloat [[RES]]
 ;
   %res = call bfloat @llvm.nvvm.fmin.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
-  ret bfloat %res
-}
-
-;###############################################################
-;#                  FMax/FMin(NaN, undef) f16/bf16             #
-;###############################################################
-
-define half @test_fmax_nan_undef_f16() {
-; CHECK-LABEL: define half @test_fmax_nan_undef_f16() {
-; CHECK-NEXT:    ret half 0xH7C01
-;
-  %res = call half @llvm.nvvm.fmax.f16(half 0xH7C01, half undef)
-  ret half %res
-}
-
-define bfloat @test_fmax_nan_undef_bf16() {
-; CHECK-LABEL: define bfloat @test_fmax_nan_undef_bf16() {
-; CHECK-NEXT:    ret bfloat 0xR7F81
-;
-  %res = call bfloat @llvm.nvvm.fmax.bf16(bfloat 0xR7F81, bfloat undef)
-  ret bfloat %res
-}
-
-define half @test_fmin_nan_undef_f16() {
-; CHECK-LABEL: define half @test_fmin_nan_undef_f16() {
-; CHECK-NEXT:    ret half 0xH7C01
-;
-  %res = call half @llvm.nvvm.fmin.f16(half 0xH7C01, half undef)
-  ret half %res
-}
-
-define bfloat @test_fmin_nan_undef_bf16() {
-; CHECK-LABEL: define bfloat @test_fmin_nan_undef_bf16() {
-; CHECK-NEXT:    ret bfloat 0xR7F81
-;
-  %res = call bfloat @llvm.nvvm.fmin.bf16(bfloat 0xR7F81, bfloat undef)
   ret bfloat %res
 }

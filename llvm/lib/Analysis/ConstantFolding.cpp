@@ -3425,21 +3425,27 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     bool IsOp0Undef = isa<UndefValue>(Operands[0]);
     bool IsOp1Undef = isa<UndefValue>(Operands[1]);
     switch (IntrinsicID) {
+    case Intrinsic::nvvm_fmax:
+    case Intrinsic::nvvm_fmin:
+      // Only fold f32/f64; f16/bf16 NaN canonicalization isn't yet modeled
+      // here.
+      if (!Ty->isFloatTy() && !Ty->isDoubleTy())
+        return nullptr;
+      [[fallthrough]];
+
     case Intrinsic::maxnum:
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
     case Intrinsic::minimumnum:
-    case Intrinsic::nvvm_fmax:
-    case Intrinsic::nvvm_fmin:
       // If one argument is undef, return the other argument — unless it is a
       // float NaN, in which case fall through to canonicalize it. PTX only
-      // canonicalizes f32 NaNs; f16, bf16, and double NaNs are returned as-is.
+      // canonicalizes f32 NaNs; double NaNs are returned as-is.
       if (IsOp0Undef || IsOp1Undef) {
         Constant *Other = Operands[IsOp0Undef ? 1 : 0];
         auto *Op = dyn_cast<ConstantFP>(Other);
-        if (!Op || !Op->isNaN() || !Ty->isFloatTy())
+        if (!Op || !Op->isNaN() || Ty->isDoubleTy())
           return Other;
       }
       [[fallthrough]];
@@ -3555,8 +3561,10 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::nvvm_fmin_nan:
       case Intrinsic::nvvm_fmin_nan_xorsign_abs:
       case Intrinsic::nvvm_fmin_xorsign_abs: {
+        if (!Ty->isFloatTy() && !Ty->isDoubleTy())
+          return nullptr;
 
-        bool ShouldCanonicalizeNaNs = Ty->isFloatTy();
+        bool ShouldCanonicalizeNaNs = !Ty->isDoubleTy();
         bool IsFTZ = nvvm::FMinFMaxShouldFTZ(IntrinsicID);
         bool IsNaNPropagating = nvvm::FMinFMaxPropagatesNaNs(IntrinsicID);
         bool IsXorSignAbs = nvvm::FMinFMaxIsXorSignAbs(IntrinsicID);
