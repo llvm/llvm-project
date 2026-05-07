@@ -95,6 +95,64 @@ static bool isCudaUnifiedExternalGlobal(fir::GlobalOp hostGlobal,
   return !gpuGlobal.isInitialized();
 }
 
+/// Build a C-style name literal (`<symname>\0`) for use as the deviceName
+/// argument of a CUF registration runtime call.
+static mlir::Value buildGlobalNameLiteral(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          fir::GlobalOp globalOp) {
+  std::string nameStr = globalOp.getSymbol().getValue().str();
+  nameStr += '\0';
+  return fir::getBase(
+      fir::factory::createStringLiteral(builder, loc, nameStr));
+}
+
+/// Compute the storage size in bytes of \p globalOp. For a box-typed
+/// allocatable global the size is the descriptor size (after type
+/// conversion); otherwise it's the size of the global's declared type.
+static mlir::Value computeGlobalSize(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Type idxTy,
+                                     const mlir::DataLayout &dl,
+                                     const fir::KindMapping &kindMap,
+                                     fir::LLVMTypeConverter &typeConverter,
+                                     fir::GlobalOp globalOp) {
+  std::optional<uint64_t> size;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+    mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+    size = dl.getTypeSizeInBits(structTy) / 8;
+  }
+  if (!size) {
+    size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(), dl,
+                                               kindMap)
+               .first;
+  }
+  return builder.createIntegerConstant(loc, idxTy, *size);
+}
+
+/// Emit a call to a CUF registration runtime function with the canonical
+/// (module, addr, name, size) signature, where addr is the address of \p
+/// addrGlobal taken via fir.address_of and name/size describe \p nameGlobal.
+/// Used both for CUFRegisterVariable / CUFRegisterManagedVariable / and
+/// CUFRegisterExternalVariable.
+static void emitCUFRegistrationCall(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Type idxTy,
+                                    const mlir::DataLayout &dl,
+                                    const fir::KindMapping &kindMap,
+                                    fir::LLVMTypeConverter &typeConverter,
+                                    mlir::Value registeredMod,
+                                    mlir::func::FuncOp func,
+                                    fir::GlobalOp addrGlobal,
+                                    fir::GlobalOp nameGlobal) {
+  mlir::Value gblName = buildGlobalNameLiteral(builder, loc, nameGlobal);
+  mlir::Value sizeVal = computeGlobalSize(builder, loc, idxTy, dl, kindMap,
+                                          typeConverter, nameGlobal);
+  mlir::Value addr = fir::AddrOfOp::create(
+      builder, loc, addrGlobal.resultType(), addrGlobal.getSymbol());
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, func.getFunctionType(), registeredMod, addr, gblName,
+      sizeVal)};
+  fir::CallOp::create(builder, loc, func, args);
+}
+
 static bool hasRegisteredGlobals(mlir::ModuleOp mod,
                                  mlir::SymbolTable gpuSymTable,
                                  bool cudaUnified) {
@@ -211,31 +269,10 @@ struct CUFAddConstructor
               attr.getValue() == cuf::DataAttribute::Managed &&
               !mlir::isa<fir::BaseBoxType>(globalOp.getType());
 
-          mlir::func::FuncOp func;
           switch (attr.getValue()) {
           case cuf::DataAttribute::Device:
           case cuf::DataAttribute::Constant:
           case cuf::DataAttribute::Managed: {
-            // Global variable name
-            std::string gblNameStr = globalOp.getSymbol().getValue().str();
-            gblNameStr += '\0';
-            mlir::Value gblName = fir::getBase(
-                fir::factory::createStringLiteral(builder, loc, gblNameStr));
-
-            // Global variable size
-            std::optional<uint64_t> size;
-            if (auto boxTy =
-                    mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
-              mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
-              size = dl->getTypeSizeInBits(structTy) / 8;
-            }
-            if (!size) {
-              size = fir::getTypeSizeAndAlignmentOrCrash(
-                         loc, globalOp.getType(), *dl, kindMap)
-                         .first;
-            }
-            auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
-
             if (isNonAllocManagedGlobal) {
               hasNonAllocManagedGlobal = true;
               // Non-allocatable managed globals use pointer indirection:
@@ -243,23 +280,20 @@ struct CUFAddConstructor
               // memory address, registered via __cudaRegisterManagedVar.
               fir::GlobalOp ptrGlobal =
                   createManagedPointerGlobal(builder, mod, globalOp);
-              func = fir::runtime::getRuntimeFunc<mkRTKey(
+              auto func = fir::runtime::getRuntimeFunc<mkRTKey(
                   CUFRegisterManagedVariable)>(loc, builder);
-              auto fTy = func.getFunctionType();
-              mlir::Value addr = fir::AddrOfOp::create(
-                  builder, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
-              llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-                  builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
-              fir::CallOp::create(builder, loc, func, args);
+              emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,
+                                      typeConverter, registeredMod, func,
+                                      /*addrGlobal=*/ptrGlobal,
+                                      /*nameGlobal=*/globalOp);
             } else {
-              func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
-                  loc, builder);
-              auto fTy = func.getFunctionType();
-              mlir::Value addr = fir::AddrOfOp::create(
-                  builder, loc, globalOp.resultType(), globalOp.getSymbol());
-              llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-                  builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
-              fir::CallOp::create(builder, loc, func, args);
+              auto func =
+                  fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
+                      loc, builder);
+              emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,
+                                      typeConverter, registeredMod, func,
+                                      /*addrGlobal=*/globalOp,
+                                      /*nameGlobal=*/globalOp);
             }
           } break;
           default:
@@ -272,39 +306,17 @@ struct CUFAddConstructor
         // linkage so PTX emits .extern; the CUDA driver patches the device
         // reference to the host pointer at module-load time after this call.
         // Works uniformly for fixed-shape (e.g. fir.array<5xi32>) and
-        // allocatable (fir.box<fir.heap<...>>) module globals -- the size
-        // computation is the same as the managed path above.
+        // allocatable (fir.box<fir.heap<...>>) module globals.
         if (cudaUnified) {
           for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
             if (!isCudaUnifiedExternalGlobal(globalOp, gpuSymTable))
               continue;
-
-            std::string gblNameStr = globalOp.getSymbol().getValue().str();
-            gblNameStr += '\0';
-            mlir::Value gblName = fir::getBase(
-                fir::factory::createStringLiteral(builder, loc, gblNameStr));
-
-            std::optional<uint64_t> size;
-            if (auto boxTy =
-                    mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
-              mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
-              size = dl->getTypeSizeInBits(structTy) / 8;
-            }
-            if (!size) {
-              size = fir::getTypeSizeAndAlignmentOrCrash(
-                         loc, globalOp.getType(), *dl, kindMap)
-                         .first;
-            }
-            auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
-
-            mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
+            auto func = fir::runtime::getRuntimeFunc<mkRTKey(
                 CUFRegisterExternalVariable)>(loc, builder);
-            auto fTy = func.getFunctionType();
-            mlir::Value addr = fir::AddrOfOp::create(
-                builder, loc, globalOp.resultType(), globalOp.getSymbol());
-            llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-                builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
-            fir::CallOp::create(builder, loc, func, args);
+            emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,
+                                    typeConverter, registeredMod, func,
+                                    /*addrGlobal=*/globalOp,
+                                    /*nameGlobal=*/globalOp);
           }
         }
 

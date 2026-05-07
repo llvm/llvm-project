@@ -27,10 +27,6 @@ extern void __cudaRegisterVar(void **fatCubinHandle, char *hostVar,
 extern void __cudaRegisterManagedVar(void **fatCubinHandle,
     void **hostVarPtrAddress, char *deviceAddress, const char *deviceName,
     int ext, size_t size, int constant, int global);
-// __cudaRegisterHostVar registers a host-resident variable so that a
-// device-side reference of the same name resolves to the host pointer at
-// module-load time. Used for -gpu=mem:unified so kernel accesses go through
-// the host storage and HMM/ATS handles migration. Exported from libcudart.
 extern void __cudaRegisterHostVar(
     void **fatCubinHandle, const char *deviceName, char *hostVar, size_t size);
 extern char __cudaInitModule(void **fatCubinHandle);
