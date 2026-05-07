@@ -271,7 +271,7 @@ MATH_MANGLE(lgamma_r_impl)(double x)
             double t = MATH_MANGLE(sinpi)(x);
             double negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F64(t * x)));
             ret = negadj - ret;
-            bool z = BUILTIN_FRACTION_F64(x) == 0.0;
+            bool z = BUILTIN_TRUNC_F64(x) == x;
             ret = z ? PINF_F64 : ret;
             s = t < 0.0 ? -1 : 1;
             s = z ? 0 : s;

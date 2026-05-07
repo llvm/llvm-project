@@ -266,7 +266,7 @@ MATH_MANGLE(lgamma_r_impl)(float x)
             float t = MATH_MANGLE(sinpi)(x);
             float negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F32(t * x)));
             ret = negadj - ret;
-            bool z = BUILTIN_FRACTION_F32(x) == 0.0f;
+            bool z = BUILTIN_TRUNC_F32(x) == x;
             ret = z ? PINF_F32 : ret;
             s = t < 0.0f ? -1 : 1;
             s = z ? 0 : s;

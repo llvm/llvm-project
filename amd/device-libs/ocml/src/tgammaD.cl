@@ -59,7 +59,7 @@ MATH_MANGLE(tgamma)(double x)
 
         ret = MATH_DIV(n, MATH_MAD(d, y*qt, d));
         ret = x == 0.0 ? BUILTIN_COPYSIGN_F64(PINF_F64, x) : ret;
-        ret = x < 0.0 && BUILTIN_FRACTION_F64(x) == 0.0 ? QNAN_F64 : ret;
+        ret = x < 0.0 && BUILTIN_TRUNC_F64(x) == x ? QNAN_F64 : ret;
     } else {
         const double sqrt2pi = 0x1.40d931ff62706p+1;
         const double sqrtpiby2 = 0x1.40d931ff62706p+0;
@@ -88,7 +88,7 @@ MATH_MANGLE(tgamma)(double x)
                 ret = MATH_DIV(MATH_DIV(sqrtpiby2, MATH_MAD(d, xr*pt, d)), s*t1);
             } else
                 ret = BUILTIN_COPYSIGN_F64(0.0, s);
-            ret = BUILTIN_FRACTION_F64(x) == 0.0 || BUILTIN_ISNAN_F64(x) ? QNAN_F64 : ret;
+            ret = BUILTIN_TRUNC_F64(x) == x || BUILTIN_ISNAN_F64(x) ? QNAN_F64 : ret;
         }
     }
 

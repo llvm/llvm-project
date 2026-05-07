@@ -51,7 +51,7 @@ MATH_MANGLE(tgamma)(float x)
                        -0x1.5810f2p-5f), -0x1.4fcfd6p-1f), 0x1.2788ccp-1f);
         ret = MATH_DIV(n, MATH_MAD(d, y*qt, d));
         ret = x == 0.0f ? BUILTIN_COPYSIGN_F32(PINF_F32, x) : ret;
-        ret = x < 0.0f && BUILTIN_FRACTION_F32(x) == 0.0f ? QNAN_F32 : ret;
+        ret = x < 0.0f && BUILTIN_TRUNC_F32(x) == x ? QNAN_F32 : ret;
     } else {
         const float sqrt2pi = 0x1.40d932p+1f;
         const float sqrtpiby2 = 0x1.40d932p+0f;
@@ -71,7 +71,7 @@ MATH_MANGLE(tgamma)(float x)
                 ret = MATH_DIV(MATH_DIV(sqrtpiby2, t2*t1*p), s*t1);
             else
                 ret = BUILTIN_COPYSIGN_F32(0.0f, s);
-            ret = BUILTIN_FRACTION_F32(x) == 0.0f || BUILTIN_ISNAN_F32(x) ? QNAN_F32 : ret;
+            ret = BUILTIN_TRUNC_F32(x) == x || BUILTIN_ISNAN_F32(x) ? QNAN_F32 : ret;
         }
     }
 
