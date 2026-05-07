@@ -12152,20 +12152,18 @@ SDValue DAGCombiner::visitABS_MIN_POISON(SDNode *N) {
   SDLoc DL(N);
 
   // fold (abs_min_poison c1) -> c2 (or poison if c1 == INT_MIN)
-  if (SDValue C =
-          DAG.FoldConstantArithmetic(ISD::ABS_MIN_POISON, DL, VT, {N0}))
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::ABS_MIN_POISON, DL, VT, {N0}))
     return C;
   // fold (abs_min_poison (abs_min_poison x)) -> (abs_min_poison x)
   // fold (abs_min_poison (abs x)) -> (abs x)
-  if (ISD::isAbsOpcode(N0.getOpcode()))
-    return N0;
   // fold (abs_min_poison (freeze (abs x))) -> (freeze (abs x))
-  // fold (abs_min_poison (freeze (abs_min_poison x))) -> (freeze (abs_min_poison x))
-  // Valid because: for x != INT_MIN both sides equal abs(x); for x == INT_MIN
-  // both forms produce a non-deterministic but well-defined value since freeze
-  // already consumed the poison.
-  if (N0.getOpcode() == ISD::FREEZE &&
-      ISD::isAbsOpcode(N0.getOperand(0).getOpcode()))
+  // fold (abs_min_poison (freeze (abs_min_poison x))) ->
+  //   (freeze (abs_min_poison x))
+  //
+  // Freeze case is valid because: for x != INT_MIN both sides equal abs(x);
+  // for x == INT_MIN both forms produce a non-deterministic but well-defined
+  // value since freeze already consumed the poison.
+  if (ISD::isAbsOpcode(peekThroughFreeze(N0).getOpcode()))
     return N0;
   // fold (abs_min_poison x) -> x iff not-negative
   if (DAG.SignBitIsZero(N0))
@@ -12177,7 +12175,8 @@ SDValue DAGCombiner::visitABS_MIN_POISON(SDNode *N) {
   // fold (abs_min_poison (sign_extend_inreg x)) ->
   //   (zero_extend (abs (truncate x)))
   // iff zero_extend/truncate are free. The sign_extend_inreg keeps the value
-  // in the narrow type's range, so the wide abs_min_poison is never actually poison
+  // in the narrow type's range, so the wide abs_min_poison is never actually
+  // poison.
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     EVT ExtVT = cast<VTSDNode>(N0.getOperand(1))->getVT();
     if (TLI.isTruncateFree(VT, ExtVT) && TLI.isZExtFree(ExtVT, VT) &&
@@ -12186,8 +12185,7 @@ SDValue DAGCombiner::visitABS_MIN_POISON(SDNode *N) {
       return DAG.getNode(
           ISD::ZERO_EXTEND, DL, VT,
           DAG.getNode(ISD::ABS, DL, ExtVT,
-                      DAG.getNode(ISD::TRUNCATE, DL, ExtVT,
-                                  N0.getOperand(0))));
+                      DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N0.getOperand(0))));
     }
   }
 

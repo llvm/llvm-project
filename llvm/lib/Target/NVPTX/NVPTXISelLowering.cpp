@@ -652,8 +652,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Only logical ops can be done on v4i8/v2i32 directly, others must be done
   // elementwise.
   setOperationAction(
-      {ISD::ABS,
-       ISD::ADD,        ISD::ADDC,        ISD::ADDE,
+      {ISD::ABS,         ISD::ADD,        ISD::ADDC,        ISD::ADDE,
        ISD::BITREVERSE,  ISD::CTLZ,       ISD::CTPOP,       ISD::CTTZ,
        ISD::FP_TO_SINT,  ISD::FP_TO_UINT, ISD::FSHL,        ISD::FSHR,
        ISD::MUL,         ISD::MULHS,      ISD::MULHU,       ISD::PARITY,
@@ -839,8 +838,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      {MVT::v2i16, MVT::v2i32}, Expand);
 
   // v2i32 is not supported for any arithmetic operations
-  setOperationAction({ISD::ABS,
-                      ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX,
+  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX,
                       ISD::CTPOP, ISD::CTLZ, ISD::ADD, ISD::SUB, ISD::MUL,
                       ISD::SHL, ISD::SRA, ISD::SRL, ISD::OR, ISD::AND, ISD::XOR,
                       ISD::SREM, ISD::UREM},
