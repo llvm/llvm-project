@@ -24,8 +24,10 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) {
 define <4 x i16> @test_v4i16(<4 x i16> %a) {
 ; CHECK-SVE-LABEL: test_v4i16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-SVE-NEXT:    rbit v0.8b, v0.8b
+; CHECK-SVE-NEXT:    ptrue p0.h, vl4
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    rbit z0.h, p0/m, z0.h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
   %r = call <4 x i16> @llvm.bitreverse(<4 x i16> %a)
   ret <4 x i16> %r
@@ -34,8 +36,10 @@ define <4 x i16> @test_v4i16(<4 x i16> %a) {
 define <8 x i16> @test_v8i16(<8 x i16> %a) {
 ; CHECK-SVE-LABEL: test_v8i16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-SVE-NEXT:    rbit v0.16b, v0.16b
+; CHECK-SVE-NEXT:    ptrue p0.h, vl8
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    rbit z0.h, p0/m, z0.h
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
   %r = call <8 x i16> @llvm.bitreverse(<8 x i16> %a)
   ret <8 x i16> %r
@@ -44,8 +48,10 @@ define <8 x i16> @test_v8i16(<8 x i16> %a) {
 define <2 x i32> @test_v2i32(<2 x i32> %a) {
 ; CHECK-SVE-LABEL: test_v2i32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    rev32 v0.8b, v0.8b
-; CHECK-SVE-NEXT:    rbit v0.8b, v0.8b
+; CHECK-SVE-NEXT:    ptrue p0.s, vl2
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    rbit z0.s, p0/m, z0.s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
   %r = call <2 x i32> @llvm.bitreverse(<2 x i32> %a)
   ret <2 x i32> %r
@@ -54,8 +60,10 @@ define <2 x i32> @test_v2i32(<2 x i32> %a) {
 define <4 x i32> @test_v4i32(<4 x i32> %a) {
 ; CHECK-SVE-LABEL: test_v4i32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    rev32 v0.16b, v0.16b
-; CHECK-SVE-NEXT:    rbit v0.16b, v0.16b
+; CHECK-SVE-NEXT:    ptrue p0.s, vl4
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    rbit z0.s, p0/m, z0.s
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
   %r = call <4 x i32> @llvm.bitreverse(<4 x i32> %a)
   ret <4 x i32> %r
@@ -64,8 +72,10 @@ define <4 x i32> @test_v4i32(<4 x i32> %a) {
 define <1 x i64> @test_v1i64(<1 x i64> %a) {
 ; CHECK-SVE-LABEL: test_v1i64:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    rev64 v0.8b, v0.8b
-; CHECK-SVE-NEXT:    rbit v0.8b, v0.8b
+; CHECK-SVE-NEXT:    ptrue p0.d, vl1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    rbit z0.d, p0/m, z0.d
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
   %r = call <1 x i64> @llvm.bitreverse(<1 x i64> %a)
   ret <1 x i64> %r
@@ -74,8 +84,10 @@ define <1 x i64> @test_v1i64(<1 x i64> %a) {
 define <2 x i64> @test_v2i64(<2 x i64> %a) {
 ; CHECK-SVE-LABEL: test_v2i64:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-SVE-NEXT:    rbit v0.16b, v0.16b
+; CHECK-SVE-NEXT:    ptrue p0.d, vl2
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    rbit z0.d, p0/m, z0.d
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
   %r = call <2 x i64> @llvm.bitreverse(<2 x i64> %a)
   ret <2 x i64> %r
