@@ -237,7 +237,7 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
 
   if (auto *process = exe_ctx.GetProcessPtr()) {
     raw_addr = process->FixCodeAddress(raw_addr);
-  } else { 
+  } else {
     LLDB_LOG(log, "IndirectCallEdge: No Process available, unable to call "
                   "FixCodeAddress on function pointer");
   }
