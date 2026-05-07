@@ -6322,7 +6322,7 @@ def no_canonical_prefixes : Flag<["-"], "no-canonical-prefixes">,
 def no_cpp_precomp : Flag<["-"], "no-cpp-precomp">, Group<clang_ignored_f_Group>;
 def no_integrated_cpp : Flag<["-", "--"], "no-integrated-cpp">;
 def no_pedantic : Flag<["-", "--"], "no-pedantic">, Group<pedantic_Group>,
-  Visibility<[FlangOption, FC1Option]>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def no__dead__strip__inits__and__terms : Flag<["-"], "no_dead_strip_inits_and_terms">;
 def nobuiltininc : Flag<["-"], "nobuiltininc">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
