@@ -129,6 +129,18 @@ private:
   MemRefInfo convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp,
                                 PatternRewriter &, FIRToMemRefTypeConverter &);
 
+  /// Returns true if \p coordinateOp can be lowered to an indexed memref access
+  /// by convertCoordinateArrayOp. This is true when the base is a reference to
+  /// a statically-shaped scalar array.
+  bool isArrayIndexingCoordinateOp(fir::CoordinateOp coordinateOp,
+                                   FIRToMemRefTypeConverter &) const;
+
+  /// Lower a fir.coordinate_of that indexes into a static-extent scalar array
+  /// (e.g. a struct component like `A%v(i)`) to a memref + index pair.
+  MemRefInfo convertCoordinateArrayOp(Operation *memOp, fir::CoordinateOp,
+                                      PatternRewriter &,
+                                      FIRToMemRefTypeConverter &);
+
   void replaceFIRMemrefs(Value, Value, PatternRewriter &) const;
 
   FailureOr<Value> getFIRConvert(Operation *memOp, Operation *memref,
@@ -867,6 +879,77 @@ Value FIRToMemRef::canonicalizeIndex(Value index,
   return index;
 }
 
+bool FIRToMemRef::isArrayIndexingCoordinateOp(
+    fir::CoordinateOp coordinateOp,
+    FIRToMemRefTypeConverter &typeConverter) const {
+  // The base must be a reference/pointer/heap to a sequence/array type.
+  Type baseType = coordinateOp.getRef().getType();
+  Type unwrapped = fir::dyn_cast_ptrEleTy(baseType);
+  if (!unwrapped)
+    return false;
+
+  auto seqTy = dyn_cast<fir::SequenceType>(unwrapped);
+  if (!seqTy)
+    return false;
+
+  // Restrict to fully static extents — dynamic arrays would need a shape
+  // operand (which coordinate_of lacks) to build a valid memref descriptor.
+  if (fir::hasDynamicSize(seqTy))
+    return false;
+
+  // The element type must be a convertible scalar — no derived types.
+  if (!typeConverter.convertibleMemrefType(baseType))
+    return false;
+
+  return true;
+}
+
+MemRefInfo FIRToMemRef::convertCoordinateArrayOp(
+    Operation *memOp, fir::CoordinateOp coordinateOp, PatternRewriter &rewriter,
+    FIRToMemRefTypeConverter &typeConverter) {
+  Value firBase = coordinateOp.getRef();
+  Location loc = coordinateOp->getLoc();
+  IndexType indexTy = rewriter.getIndexType();
+
+  if (typeConverter.isEmptyArray(firBase.getType()))
+    return failure();
+
+  // Convert the base ref/heap/ptr to a memref.  convertMemrefType reverses the
+  // FIR column-major shape to row-major, keeping it in sync with index reversal
+  // below.
+  rewriter.setInsertionPoint(coordinateOp);
+  FailureOr<Value> converted;
+  if (isa<BlockArgument>(firBase)) {
+    Type memrefTy = typeConverter.convertMemrefType(firBase.getType());
+    if (!memrefTy)
+      return failure();
+    converted =
+        fir::ConvertOp::create(rewriter, loc, memrefTy, firBase).getResult();
+  } else {
+    converted =
+        getFIRConvert(memOp, firBase.getDefiningOp(), rewriter, typeConverter);
+    if (failed(converted))
+      return failure();
+  }
+  rewriter.setInsertionPointAfter(coordinateOp);
+
+  // The converted memref has static shape — no reinterpret_cast needed.
+  assert(cast<MemRefType>(converted->getType()).hasStaticShape() &&
+         "expected static shape for coordinate_of array base");
+
+  // Collect and normalize the 0-based coor indices
+  SmallVector<Value> indices;
+  for (Value v : coordinateOp.getCoor()) {
+    v = canonicalizeIndex(v, rewriter);
+    if (!isa<IndexType>(v.getType()))
+      v = arith::IndexCastOp::create(rewriter, loc, indexTy, v);
+    indices.push_back(v);
+  }
+  std::reverse(indices.begin(), indices.end());
+
+  return std::pair{*converted, indices};
+}
+
 MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
                                       PatternRewriter &rewriter,
                                       FIRToMemRefTypeConverter &typeConverter,
@@ -937,6 +1020,31 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
   }
 
   if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(memrefOp)) {
+    // Fast path: coordinate_of used as a plain array indexer on a static-extent
+    // scalar array (e.g. a struct component `A%v(i)`).
+    if (isArrayIndexingCoordinateOp(coordinateOp, typeConverter)) {
+      MemRefInfo memrefInfo = convertCoordinateArrayOp(memOp, coordinateOp,
+                                                       rewriter, typeConverter);
+      if (succeeded(memrefInfo)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "FIRToMemRef: converted coordinate_of array indexer\n");
+        for (auto user : memrefOp->getUsers()) {
+          if (!isa<fir::LoadOp, fir::StoreOp>(user)) {
+            LLVM_DEBUG(
+                llvm::dbgs()
+                    << "FIRToMemRef: coordinate_of used by non-load/store, "
+                       "skipping erase\n";
+                firMemref.dump(); user->dump());
+            return memrefInfo;
+          }
+        }
+        eraseOps.insert(memrefOp);
+        return memrefInfo;
+      }
+    }
+
+    // Fallback: struct field access or dynamic array — produce a rank-0 scalar
+    // memref from the leaf reference.
     FailureOr<Value> converted =
         getFIRConvert(memOp, coordinateOp, rewriter, typeConverter);
     if (failed(converted)) {
