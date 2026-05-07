@@ -41,6 +41,7 @@ class OverrideExample:
             return True
         return False
 
+
 class TrivialExample:
     def __init__(
         self, bkpt: lldb.SBBreakpoint, extra_args: lldb.SBStructuredData, dict
