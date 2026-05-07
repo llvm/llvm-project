@@ -41,6 +41,10 @@ def SDT_MipsExtractElementF64 : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
 def SDT_MipsMTC1_D64 : SDTypeProfile<1, 1, [SDTCisVT<0, f64>,
                                             SDTCisVT<1, i32>]>;
 
+def SDT_MipsMTHC1_D64 : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
+                                             SDTCisVT<1, f64>,
+                                             SDTCisVT<2, i32>]>;
+
 // Floating Point Compare
 def MipsFPCmp : SDNode<"MipsISD::FPCmp", SDT_MipsFPCmp, [SDNPOutGlue]>;
 
@@ -63,6 +67,8 @@ def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
 // Node used to generate an MTC1 i32 to f64 instruction
 def MipsMTC1_D64 : SDNode<"MipsISD::MTC1_D64", SDT_MipsMTC1_D64>;
 
+// Node used to generate an MTHC1 i32 to high half of f64 instruction
+def MipsMTHC1_D64 : SDNode<"MipsISD::MTHC1_D64", SDT_MipsMTHC1_D64>;
 
 // Operand for printing out a condition code.
 let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
@@ -625,6 +631,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def MTHC1_D64 : MTC1_64_FT<"mthc1", FGR64Opnd, GPR32Opnd>,
                   MFC1_FM<7>, ISA_MIPS32R2, FGR_64 {
     let DecoderNamespace = "MipsFP64";
+    let hasSideEffects = 1;
   }
 
   let AdditionalPredicates = [IsNotSingleFloat] in {
@@ -1019,6 +1026,9 @@ def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
 
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
               (MTC1_D64 GPR32Opnd:$src)>, ISA_MIPS1, FGR_64;
+
+def : MipsPat<(MipsMTHC1_D64 FGR64Opnd:$lo, GPR32Opnd:$hi),
+              (MTHC1_D64 FGR64Opnd:$lo, GPR32Opnd:$hi)>, ISA_MIPS32R2, FGR_64;
 
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D32_W GPR32Opnd:$src)>, FGR_32;
