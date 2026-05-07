@@ -19,8 +19,10 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
         frame = thread.selected_frame
-        p = frame.var("p")
-        self.assertEqual(p.summary, "(1, 2)")
+        ic = frame.var("ic")
+        self.assertEqual(ic.summary, "size=2")
+        fc = frame.var("fc")
+        self.assertEqual(fc.summary, "size=2")
 
     def test_synthetic(self):
         self.build()
@@ -28,4 +30,5 @@ class TestCase(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
-        self.expect("v c", substrs=["[0] = 10", "[1] = 20", "[2] = 30"])
+        self.expect("v ic", substrs=["[0] = 10", "[1] = 20"])
+        self.expect("v fc", substrs=["[0] = 10.5", "[1] = 20.25"])

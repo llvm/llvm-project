@@ -290,7 +290,7 @@ def _add_formatter(kind: str, type_name: str, options: dict):
 
     # Convert `option=True` to "--option", all others to "--option value".
     flag_list = []
-    for key, value in options.values():
+    for key, value in options.items():
         flag = key.replace("_", "-")
         if value is True:
             flag_list.append(f"--{flag}")
@@ -658,9 +658,5 @@ def is_numeric_type(basic_type):
     if basic_type == eBasicTypeNullPtr: return (False,False)
     #if basic_type == eBasicTypeOther:
     return (False,False)
-
-%}
-
-%pythoncode %{
 
 %}

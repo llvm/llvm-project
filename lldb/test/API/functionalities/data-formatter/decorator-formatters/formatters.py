@@ -1,15 +1,26 @@
 import lldb
 
 
-@lldb.summary("Pair")
-def pair_summary(valobj, _):
-    first = valobj.GetChildMemberWithName("first").GetValueAsSigned()
-    second = valobj.GetChildMemberWithName("second").GetValueAsSigned()
-    return f"({first}, {second})"
+def _summary(valobj: lldb.SBValue) -> str:
+    size = (
+        valobj.GetNonSyntheticValue()
+        .GetChildMemberWithName("size")
+        .GetValueAsUnsigned()
+    )
+    return f"size={size}"
 
 
-@lldb.synthetic("Container")
-class ContainerSyntheticProvider:
+@lldb.summary("IntContainer", expand=True)
+def IntContainerSummary(valobj: lldb.SBValue, _):
+    return _summary(valobj)
+
+
+@lldb.summary("^Container<.+>$", regex=True, expand=True)
+def ContainerSummary(valobj, _):
+    return _summary(valobj)
+
+
+class _ContainerSyntheticBase:
     valobj: lldb.SBValue
     count: int
     items: lldb.SBValue
@@ -27,3 +38,13 @@ class ContainerSyntheticProvider:
 
     def get_child_at_index(self, index: int) -> lldb.SBValue:
         return self.items.GetChildAtIndex(index)
+
+
+@lldb.synthetic("IntContainer")
+class IntContainerSynthetic(_ContainerSyntheticBase):
+    pass
+
+
+@lldb.synthetic("^Container<.+>$", regex=True)
+class ContainerSynthetic(_ContainerSyntheticBase):
+    pass
