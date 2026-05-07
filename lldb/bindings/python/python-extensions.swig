@@ -283,7 +283,7 @@ def command(command_name=None, doc=None):
     return callable
 
 
-def _add_formatter(kind: str, type_name: str, options: dict):
+def _add_formatter(cmd: str, type_name: str, options: dict):
     import shlex
 
     type_name = shlex.quote(type_name)
@@ -307,7 +307,7 @@ def _add_formatter(kind: str, type_name: str, options: dict):
         result = SBCommandReturnObject()
         flags = " ".join(flag_list)
         interp = debugger.GetCommandInterpreter()
-        interp.HandleCommand(f"type {kind} add {flags} {type_name}", result)
+        interp.HandleCommand(f"{cmd} {flags} {type_name}", result)
         if not result.Succeeded():
             raise RuntimeError(result.GetError())
         return obj
@@ -322,7 +322,7 @@ def summary(type_name, **kwargs):
     def MyTypeSummary(valobj, _):
         return "summary string"
     """
-    return _add_formatter("summary", type_name, kwargs)
+    return _add_formatter("type summary add", type_name, kwargs)
 
 
 def synthetic(type_name, **kwargs):
@@ -333,7 +333,7 @@ def synthetic(type_name, **kwargs):
         def __init__(self, valobj, _):
             ...
     """
-    return _add_formatter("synthetic", type_name, kwargs)
+    return _add_formatter("type synthetic add", type_name, kwargs)
 
 
 class declaration(object):
