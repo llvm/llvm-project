@@ -1553,7 +1553,7 @@ public:
     PPE.printLeft(OB);
     OB.printClose(')');
     OB.printOpen('[');
-    Index->printLeft(OB);
+    OB.printLeft(*Index);
     OB.printClose(']');
   }
 };
