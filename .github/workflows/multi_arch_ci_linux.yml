@@ -80,6 +80,7 @@ jobs:
       prebuilt_stages: ${{ fromJSON(inputs.build_config).prebuilt_stages }}
       rocm_package_version: ${{ inputs.rocm_package_version }}
       release_type: ${{ inputs.release_type }}
+      test_type: ${{ inputs.test_type }}
     permissions:
       contents: read
       id-token: write

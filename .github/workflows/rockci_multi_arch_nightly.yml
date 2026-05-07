@@ -1,0 +1,141 @@
+# This CI workflow is triggered by:
+#   - scheduled run
+#
+# In the scheduled run, we run all targets from amdgpu_family_matrix.py and amdgpu_family_matrix_xfail.py
+# As some of these builds are xfail, we allow errors to occur with `continue-on-error`, where the job will fail but the workflow is green
+
+name: Multi Arch CI amd-staging Nightly
+
+on:
+  # For AMD GPU families that expect_failure, we run builds and tests from this scheduled trigger
+  schedule:
+    - cron: "0 2 * * *" # Runs nightly at 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      linux_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      linux_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Linux to the list of labels prefixed with 'test:'"
+        default: ""
+      linux_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Linux artifacts using artifact_run_id and only run tests"
+      windows_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Windows GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      windows_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Windows to the list of labels prefixed with 'test:'"
+        default: ""
+      windows_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Windows artifacts using artifact_run_id and only run tests"
+      artifact_run_id:
+        type: string
+        description: "If provided, the tests will run on this artifact ID"
+        default: ""
+  workflow_call:
+    inputs:
+      linux_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      linux_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Linux to the list of labels prefixed with 'test:'"
+        default: ""
+      linux_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Linux artifacts using artifact_run_id and only run tests"
+      windows_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Windows GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      windows_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Windows to the list of labels prefixed with 'test:'"
+        default: ""
+      windows_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Windows artifacts using artifact_run_id and only run tests"
+      artifact_run_id:
+        type: string
+        description: "If provided, the tests will run on this artifact ID"
+        default: ""
+  push:
+    branches:
+      - ADHOCBUILD
+
+permissions:
+  contents: read
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    uses: ./.github/workflows/setup_multi_arch.yml
+    with:
+      build_variant: "release"
+
+  linux_build_and_test:
+    name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
+    needs: setup
+    if: >-
+      ${{
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true'
+      }}
+    uses: ./.github/workflows/multi_arch_ci_linux.yml
+    secrets: inherit
+    with:
+      build_config: ${{ needs.setup.outputs.linux_build_config }}
+      test_labels: ${{ needs.setup.outputs.linux_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: "full"
+    permissions:
+      contents: read
+      id-token: write
+        
+  windows_build_and_test:
+    name: Windows::${{ fromJSON(needs.setup.outputs.windows_build_config || '{}').build_variant_label || 'skip' }}
+    needs: setup
+    if: >-
+      ${{
+        needs.setup.outputs.windows_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true'
+      }}
+    uses: ./.github/workflows/multi_arch_ci_windows.yml
+    secrets: inherit
+    with:
+      build_config: ${{ needs.setup.outputs.windows_build_config }}
+      test_labels: ${{ needs.setup.outputs.windows_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: "full"
+    permissions:
+      contents: read
+      id-token: write
+
+  invoke-teams-notifier:
+    uses: ROCm/llvm-project/.github/workflows/teams_notifier.yml@amd-staging
+    if: always() && github.ref == 'refs/heads/amd-staging'
+    needs:
+      - windows_build_and_test
+      - linux_build_and_test
+    with:
+        JOB_NAME_TO_MATCH: "Linux::release / Build Multi-Arch Stages / math-libs (gfx94X-dcgpu, gfx942, linux-gfx942-1gpu-ossci-rocm, false) / Stage - Math Libs (gfx94X-dcgpu)"
+    secrets: inherit
+
+
+  # build_python_packages:
+  #   name: Build Python Packages
+  #   uses: ./.github/workflows/build_python_packages.yml

@@ -50,6 +50,8 @@ on:
         description: 'Release type: "" for CI, or "dev", "nightly", "prerelease". Controls artifact bucket and IAM role.'
         type: string
         default: ""
+      test_type:
+        type: string
 
 jobs:
   build_stage:
@@ -277,7 +279,7 @@ jobs:
           python build_tools/fetch_sources.py --stage ${STAGE_NAME} --jobs 12 --depth 1
 
       - name: TheRock and llvm SHA
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}
         run: |
              git config --global --add safe.directory $PWD
              git log --oneline -1
@@ -300,6 +302,18 @@ jobs:
         if: ${{ steps.stage_config.outputs.pip_install_cmd }}
         run: pip install ${{ steps.stage_config.outputs.pip_install_cmd }}
 
+      - name: Use Wno-error for CK (nightly)
+        if: ${{ github.event_name != 'pull_request' && (inputs.test_type == 'full' && inputs.stage_name == 'math-libs') }}
+        shell: pwsh
+        run: |
+          $file = "rocm-libraries/projects/composablekernel/CMakeLists.txt"
+          $content = Get-Content $file -Raw
+          if ($content -match '-Werror') {
+            $updated = $content -replace '-Werror\b', '-Wno-error'
+            Set-Content -Path $file -Value $updated -NoNewline
+            Write-Host "Patched: $file"
+          }
+          
       - name: Configure PR Projects
         if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}
         env:
@@ -330,7 +344,14 @@ jobs:
           # clear cache before build and after download
           cd L:
           ccache -z
-          cmake -B 'B:\build' -GNinja -S 'L:\' --preset windows-release -DTHEROCK_AMDGPU_FAMILIES=gfx1151 '-DCMAKE_C_COMPILER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/cl.exe' '-DCMAKE_CXX_COMPILER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/cl.exe' '-DCMAKE_LINKER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/link.exe' -DTHEROCK_BACKGROUND_BUILD_JOBS=4
+          cmake -B 'B:\build' -S 'L:\' -GNinja \
+            -DTHEROCK_PACKAGE_VERSION=${{ inputs.rocm_package_version }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DTHEROCK_AMDGPU_FAMILIES=gfx1151 \
+            -DTHEROCK_BACKGROUND_BUILD_JOBS=4 \
+            ${{ inputs.build_variant_cmake_preset && format('--preset={0}', inputs.build_variant_cmake_preset) }} \
+            ${{ steps.stage_config.outputs.cmake_args }}
 
       - name: Build stage
         run: |

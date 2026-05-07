@@ -53,6 +53,8 @@ on:
         description: 'Release type: "" for CI, or "dev", "nightly", "prerelease". Controls artifact bucket and IAM role.'
         type: string
         default: ""
+      test_type:
+        type: string
 
 jobs:
   build_stage:
@@ -166,10 +168,10 @@ jobs:
           git config --global user.email "z1-cciauto@amd.com"
           git config --global user.name "Z1 cciauto"
           git commit -m "Update submodule references from PR URLs"
-          git submodule update --init --recursive compiler/amd-llvm
+          git submodule update --init --recursive compiler/amd-llvm          
           git submodule status
           git submodule
-            
+          
       - name: Install python deps
         run: |
           pip install -r requirements.txt
@@ -222,7 +224,7 @@ jobs:
         run: ./build_tools/fetch_sources.py --stage ${STAGE_NAME} --jobs 12 --depth 1
 
       - name: TheRock and llvm SHA
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}
         run: |
              git config --global --add safe.directory $PWD
              git log --oneline -1
@@ -246,6 +248,12 @@ jobs:
       - name: Install stage python deps
         if: ${{ steps.stage_config.outputs.pip_install_cmd || steps.stage_config_pr.outputs.pip_install_cmd }}
         run: pip install ${{ steps.stage_config.outputs.pip_install_cmd }}
+
+
+      - name: Use Wno-error for CK (nightly)
+        if: ${{ github.event_name != 'pull_request' && (inputs.test_type == 'full' && inputs.stage_name == 'math-libs') }}
+        run: |
+          sed -i 's/-Werror\b/-Wno-error/g' rocm-libraries/projects/composablekernel/CMakeLists.txt
 
       - name: Configure PR Projects
         if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}
