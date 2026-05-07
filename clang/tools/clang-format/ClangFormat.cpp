@@ -636,6 +636,7 @@ static bool isIgnored(StringRef FilePath) {
   if (IgnoreDir.empty())
     return false;
 
+  bool IsIgnored = false;
   const auto Pathname{convert_to_slash(AbsPath)};
   for (const auto &Pat : Patterns) {
     const bool IsNegated = Pat[0] == '!';
@@ -657,11 +658,11 @@ static bool isIgnored(StringRef FilePath) {
       Pattern = Path;
     }
 
-    if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
-      return true;
+    if (clang::format::matchFilePath(Pattern, Pathname))
+      IsIgnored = !IsNegated;
   }
 
-  return false;
+  return IsIgnored;
 }
 
 int main(int argc, const char **argv) {
@@ -700,8 +701,15 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty()) {
-    if (isIgnored(AssumeFileName))
+    if (isIgnored(AssumeFileName)) {
+      // The user should be able to expect that running
+      // `cat foo | clang-format --assume-filename foo` and writing the output
+      // to foo will format foo.
+      // Thus, we need to just output stdin untouched if it is ignored.
+      if (!OutputXML)
+        outs() << MemoryBuffer::getSTDIN()->get()->getBuffer();
       return 0;
+    }
     return clang::format::format("-", FailOnIncompleteFormat);
   }
 
