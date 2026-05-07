@@ -832,21 +832,6 @@ void AddDebugInfoPass::handleOnlyClause(
     for (mlir::Attribute attr : *onlySymbols) {
       auto symbolRef = mlir::cast<mlir::FlatSymbolRefAttr>(attr);
 
-      // Check if this symbol is also in renames, if so skip it
-      bool isInRenames = false;
-      if (renames) {
-        for (auto renameAttr : *renames) {
-          auto rename = mlir::cast<fir::UseRenameAttr>(renameAttr);
-          if (rename.getSymbol().getValue() == symbolRef.getValue()) {
-            isInRenames = true;
-            break;
-          }
-        }
-      }
-
-      if (isInRenames)
-        continue;
-
       if (auto importedDecl = createImportedDeclForGlobal(
               symbolRef.getValue(), spAttr, fileAttr, mlir::StringAttr(),
               symbolTable))
@@ -928,7 +913,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
                             /*decl=*/true);
 
   llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
-  if (useOp.hasOnlyClause())
+  if (useOp.hasOnlyClause() || useOp.getHasOnlyWithRenames())
     handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
   else if (useOp.hasRenames())
     handleRenamesWithoutOnly(useOp, spAttr, modAttr, fileAttr, symbolTable,
