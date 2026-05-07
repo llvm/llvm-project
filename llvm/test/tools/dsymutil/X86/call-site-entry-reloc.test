@@ -19,7 +19,7 @@ The test requires the return PC to match a relocation (in this case the
 DW_AT_high_pc of main). Without this change the value would get relocated
 twice.
 
-RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_return_pc/call -o %t.dSYM
+RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_return_pc/call -o %t.dSYM
 RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
 
 RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_return_pc/call -o %t.dSYM

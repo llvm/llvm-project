@@ -946,11 +946,11 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_teams:
       CaptureRegions.push_back(OMPD_teams);
       break;
-    case OMPD_taskloop:
-      CaptureRegions.push_back(OMPD_taskloop);
-      break;
     case OMPD_taskgraph:
       CaptureRegions.push_back(OMPD_taskgraph);
+      break;
+    case OMPD_taskloop:
+      CaptureRegions.push_back(OMPD_taskloop);
       break;
     case OMPD_loop:
       // TODO: 'loop' may require different capture regions depending on the
