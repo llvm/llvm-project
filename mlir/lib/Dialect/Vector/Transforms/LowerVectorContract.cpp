@@ -201,38 +201,6 @@ static Value createMul(Location loc, Value x, Value y, bool isInt,
   return arith::MulFOp::create(rewriter, loc, x, y, fmf);
 }
 
-static LogicalResult
-checkSameOperandAndAccumulatorElementType(vector::ContractionOp op,
-                                          PatternRewriter &rewriter) {
-  if (op.getLhsType().getElementType() ==
-          getElementTypeOrSelf(op.getAccType()) &&
-      op.getRhsType().getElementType() == getElementTypeOrSelf(op.getAccType()))
-    return success();
-
-  return rewriter.notifyMatchFailure(
-      op, "mixed-mode contract lowering is not supported");
-}
-
-static LogicalResult checkAddKind(vector::ContractionOp op,
-                                  PatternRewriter &rewriter) {
-  if (op.getKind() == vector::CombiningKind::ADD)
-    return success();
-
-  return rewriter.notifyMatchFailure(
-      op, "contractions other than 'add' not supported");
-}
-
-static bool isContractArithOpSupported(vector::CombiningKind kind, bool isInt) {
-  using vector::CombiningKind;
-  if (isInt)
-    return kind != CombiningKind::MINNUMF && kind != CombiningKind::MAXNUMF &&
-           kind != CombiningKind::MINIMUMF && kind != CombiningKind::MAXIMUMF;
-  return kind != CombiningKind::AND && kind != CombiningKind::MINUI &&
-         kind != CombiningKind::MINSI && kind != CombiningKind::MAXUI &&
-         kind != CombiningKind::MAXSI && kind != CombiningKind::OR &&
-         kind != CombiningKind::XOR;
-}
-
 namespace {
 
 /// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
@@ -683,8 +651,15 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
       *vectorContractLowering != vector::VectorContractLowering::Dot)
     return failure();
 
-  if (failed(checkSameOperandAndAccumulatorElementType(op, rewriter)) ||
-      failed(checkAddKind(op, rewriter)))
+  // TODO: support mixed mode contract lowering.
+  if (op.getLhsType().getElementType() !=
+          getElementTypeOrSelf(op.getAccType()) ||
+      op.getRhsType().getElementType() != getElementTypeOrSelf(op.getAccType()))
+    return failure();
+
+  // TODO: the code below assumes the default contraction, make sure it supports
+  // other kinds before enabling this lowering.
+  if (op.getKind() != vector::CombiningKind::ADD)
     return failure();
 
   VectorType dstType = dyn_cast<VectorType>(op.getResultType());
@@ -840,7 +815,11 @@ struct ContractOpToElementwise
             vector::VectorContractLowering::ParallelArith)
       return failure();
 
-    if (failed(checkSameOperandAndAccumulatorElementType(contractOp, rewriter)))
+    // TODO: support mixed mode contract lowering.
+    if (contractOp.getLhsType().getElementType() !=
+            getElementTypeOrSelf(contractOp.getAccType()) ||
+        contractOp.getRhsType().getElementType() !=
+            getElementTypeOrSelf(contractOp.getAccType()))
       return failure();
 
     ArrayRef<int64_t> lhsShape = contractOp.getLhsType().getShape();
@@ -899,9 +878,6 @@ struct ContractOpToElementwise
       }
     }
     bool isInt = contractOp.getLhsType().getElementType().isIntOrIndex();
-    if (!isContractArithOpSupported(contractOp.getKind(), isInt))
-      return failure();
-
     Value newLhs = contractOp.getLhs();
     Value newRhs = contractOp.getRhs();
     Location loc = contractOp.getLoc();
@@ -927,8 +903,10 @@ struct ContractOpToElementwise
         createContractArithOp(loc, newLhs, newRhs, contractOp.getAcc(),
                               contractOp.getKind(), rewriter, isInt,
                               /*mask=*/Value(), contractOp.getFastmathAttr());
-    assert(result && "kind and type support should have been checked");
-    return *result;
+    if (result)
+      return *result;
+
+    return failure();
   }
 
 private:
@@ -959,10 +937,18 @@ LogicalResult ContractionOpGenericLowering::matchSupportedGenericContraction(
   if (failed(filter(op)))
     return failure();
 
-  if (failed(checkSameOperandAndAccumulatorElementType(op, rewriter)))
+  // TODO: support mixed mode contract lowering.
+  if (op.getLhsType().getElementType() !=
+          getElementTypeOrSelf(op.getAccType()) ||
+      op.getRhsType().getElementType() != getElementTypeOrSelf(op.getAccType()))
     return failure();
 
-  return checkAddKind(op, rewriter);
+  // TODO: the code below assumes the default contraction, make sure it supports
+  // other kinds before enabling this lowering.
+  if (op.getKind() != vector::CombiningKind::ADD)
+    return rewriter.notifyMatchFailure(
+        op, "contractions other than 'add' not supported");
+  return success();
 }
 
 FailureOr<Value> ContractionOpGenericLowering::matchAndRewriteMaskableOp(
