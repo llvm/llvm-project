@@ -3,7 +3,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid value for RegisterSpace: 4294967280
+; CHECK: LLVM ERROR: Invalid value for RegisterSpace: 4294967280
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

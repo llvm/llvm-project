@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: Overflow for shader register range: UAV(register=4294967295, space=0)
+; CHECK: LLVM ERROR: Overflow for shader register range: UAV(register=4294967295, space=0)
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
   ret void

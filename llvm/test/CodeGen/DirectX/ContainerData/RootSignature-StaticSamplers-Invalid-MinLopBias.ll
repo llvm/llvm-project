@@ -3,7 +3,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid value for MipLODBias: 6.660000e+02 
+; CHECK: LLVM ERROR: Invalid value for MipLODBias: 6.660000e+02 
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

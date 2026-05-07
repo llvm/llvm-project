@@ -45,7 +45,7 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
 
 static bool reportError(LLVMContext *Ctx, Twine Message,
                         DiagnosticSeverity Severity = DS_Error) {
-  Ctx->diagnose(DiagnosticInfoGeneric(Message, Severity));
+  reportFatalUsageError(DiagnosticInfoGeneric(Message, Severity).getMsgStr());
   return true;
 }
 
@@ -135,7 +135,7 @@ analyzeModule(Module &M) {
 
     if (!RSDOrErr) {
       handleAllErrors(RSDOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        Ctx->emitError(EIB.message());
+        reportFatalUsageError(EIB.message().c_str());
       });
       continue;
     }

@@ -3,7 +3,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid value for ComparisonFunc: 666
+; CHECK: LLVM ERROR: Invalid value for ComparisonFunc: 666
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

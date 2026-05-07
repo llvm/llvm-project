@@ -4,7 +4,7 @@ target triple = "dxil-unknown-shadermodel6.0-compute"
 
 ; Check that 10 = DataVolatile | Datastatic is invalid due to mutually exclusive
 
-; CHECK: error: Invalid value for RootDescriptorFlag: 10
+; CHECK: LLVM ERROR: Invalid value for RootDescriptorFlag: 10
 ; CHECK-NOT: Root Signature Definitions
 define void @main() #0 {
 entry:

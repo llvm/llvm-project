@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Missing Root Element Metadata Node.
+; CHECK: LLVM ERROR: Missing Root Element Metadata Node.
 ; CHECK-NOT: Root Signature Definitions
 
 
