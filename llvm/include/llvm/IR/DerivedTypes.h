@@ -67,12 +67,12 @@ public:
 
   /// Returns type twice as wide the input type.
   IntegerType *getExtendedType() const {
-    return Type::getIntNTy(getContext(), 2 * getScalarSizeInBits());
+    return Type::getIntNTy(getContext(), 2 * getBitWidth());
   }
 
   /// Returns type half as wide the input type.
   IntegerType *getTruncatedType() const {
-    unsigned BitWidth = getScalarSizeInBits();
+    unsigned BitWidth = getBitWidth();
     assert((BitWidth & 1) == 0 &&
            "Cannot truncate integer type with odd bit-width");
     return Type::getIntNTy(getContext(), BitWidth / 2);
