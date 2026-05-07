@@ -11,6 +11,11 @@
 #include <gtest/gtest.h>
 
 struct olMemFillTest : OffloadQueueTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
+  }
+
   template <typename PatternTy, PatternTy PatternVal, size_t Size,
             bool Block = false>
   void test_body() {

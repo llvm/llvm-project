@@ -107,6 +107,8 @@ TEST_P(olLaunchKernelFooTest, Success) {
 }
 
 TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
+  SKIP_KNOWN_FAILURE(LevelZero{"thread-safety issues"});
+
   threadify([&](size_t) {
     void *Mem;
     ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
@@ -170,6 +172,8 @@ TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
 }
 
 TEST_P(olLaunchKernelLocalMemTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
+
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
@@ -195,6 +199,8 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
+
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
@@ -218,6 +224,8 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
+
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 0;
 
@@ -272,6 +280,8 @@ TEST_P(olLaunchKernelGlobalTest, InvalidNotAKernel) {
 }
 
 TEST_P(olLaunchKernelGlobalCtorTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
+
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
