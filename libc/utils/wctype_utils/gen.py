@@ -14,7 +14,8 @@ from sys import argv
 if len(argv) > 1:
     environ[
         "EXTRA_CLING_ARGS"
-    ] = f"-DLIBC_NAMESPACE=LIBC_NAMESPACE -D_DEBUG -I{argv[1]}/libc -fvisibility-inlines-hidden -fdiagnostics-color -Xclang -fno-pch-timestamp -std=c++17 -DLIBC_QSORT_IMPL=LIBC_QSORT_QUICK_SORT -DLIBC_COPT_STRING_LENGTH_IMPL=clang_vector -DLIBC_COPT_FIND_FIRST_CHARACTER_IMPL=word -DLIBC_ADD_NULL_CHECKS -DLIBC_ERRNO_MODE=LIBC_ERRNO_MODE_DEFAULT -DLIBC_THREAD_MODE=LIBC_THREAD_MODE_PLATFORM -DLIBC_CONF_WCTYPE_MODE=LIBC_WCTYPE_MODE_ASCII -DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=100 -fpie -ffreestanding -idirafter/usr/include -ffixed-point -fno-builtin -fno-lax-vector-conversions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti -ftrivial-auto-var-init=pattern -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fstack-protector-strong -Werror=date-time -Werror=unguarded-availability-new -Wall -Wextra -Wno-unused-parameter -Wwrite-strings -Wcast-qual -Wmissing-field-initializers -Wimplicit-fallthrough -Wcovered-switch-default -Wno-noexcept-type -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -Wsuggest-override -Wstring-conversion -Wno-pass-failed -Wmisleading-indentation -Wctad-maybe-unsupported -Wconversion -Wno-sign-conversion -Wno-c99-extensions -Wno-gnu-imaginary-constant -Wno-pedantic -Wimplicit-fallthrough -Wwrite-strings -Wextra-semi -Wnewline-eof -Wnonportable-system-include-path -Wstrict-prototypes -Wthread-safety -Wglobal-constructors"
+    ] = f"-DLIBC_NAMESPACE=LIBC_NAMESPACE -D_DEBUG -I{argv[1]}/libc"
+
 
 from conversion.gen_conversion_data import extract_maps_from_unicode_file
 from conversion.hex_writer import write_hex_conversions
