@@ -26,7 +26,7 @@ int test_function() {
 // CHECK: AddressSanitizer: stack-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]
 // CHECK: WRITE of size 6 at [[ADDR]] thread T0
 // CHECK-NEXT:  __asan_memset
-// CHECK-NEXT:  test_function {{.*}}dll_intercept_memset.cpp:[[@LINE-4]]
+// CHECK-NEXT:  test_function {{.*}}dll_intercept_memset.cpp:[[@LINE-7]]
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset {{.*}} in frame
 // CHECK-NEXT:  test_function {{.*}}dll_intercept_memset.cpp
 // CHECK: 'buff'{{.*}} <== Memory access at offset {{.*}} overflows this variable
