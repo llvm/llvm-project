@@ -237,6 +237,54 @@ class SettingsCommandTestCase(TestBase):
             startstr="auto-confirm (boolean) = false",
         )
 
+    def test_settings_show_changed(self):
+        """Test `settings show --changed` filters the listing to non-default values."""
+        setting = "target.max-children-count"
+
+        def cleanup():
+            self.runCmd("settings clear %s" % setting, check=False)
+
+        self.addTearDownHook(cleanup)
+
+        # Ensure a clean slate for this setting.
+        self.runCmd("settings clear %s" % setting)
+
+        # With the setting at its default, it should not show up under --changed.
+        self.expect(
+            "settings show --changed",
+            matching=False,
+            substrs=[setting],
+        )
+
+        # After explicitly changing the setting, it should show up.
+        self.runCmd("settings set %s 42" % setting)
+        self.expect(
+            "settings show --changed",
+            substrs=["%s (unsigned) = 42" % setting],
+        )
+
+        # After clearing, it should no longer show up.
+        self.runCmd("settings clear %s" % setting)
+        self.expect(
+            "settings show --changed",
+            matching=False,
+            substrs=[setting],
+        )
+
+        # An explicit property path at its default prints nothing.
+        self.expect(
+            "settings show --changed %s" % setting,
+            matching=False,
+            substrs=[setting],
+        )
+
+        # When the value has been changed, the explicit path prints normally.
+        self.runCmd("settings set %s 42" % setting)
+        self.expect(
+            "settings show --changed %s" % setting,
+            substrs=["%s (unsigned) = 42" % setting],
+        )
+
     @skipIf(archs=no_match(["x86_64", "i386", "i686"]))
     def test_disassembler_settings(self):
         """Test that user options for the disassembler take effect."""
