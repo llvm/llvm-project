@@ -57779,9 +57779,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
     // Both of these patterns can be better optimized in
     // DAGCombiner::foldAndOrOfSETCC. Note this only applies for scalar
     // integers which is checked above.
-    if ((LHS.getOpcode() == ISD::ABS ||
-         LHS.getOpcode() == ISD::ABS_MIN_POISON) &&
-        LHS.hasOneUse()) {
+    if (ISD::isAbsOpcode(LHS.getOpcode()) && LHS.hasOneUse()) {
       if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
         const APInt &CInt = C->getAPIntValue();
         // We can better optimize this case in DAGCombiner::foldAndOrOfSETCC.

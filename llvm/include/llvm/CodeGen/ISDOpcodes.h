@@ -1649,6 +1649,12 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
 
+/// Whether this is an integer absolute-value opcode (ISD::ABS or
+/// ISD::ABS_MIN_POISON).
+inline bool isAbsOpcode(unsigned Opcode) {
+  return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
+}
+
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);

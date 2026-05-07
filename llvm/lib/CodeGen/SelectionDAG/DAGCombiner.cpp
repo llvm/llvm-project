@@ -4316,8 +4316,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
 
     // Convert 0 - abs(x).
-    if ((N1.getOpcode() == ISD::ABS || N1.getOpcode() == ISD::ABS_MIN_POISON) &&
-        N1.hasOneUse() &&
+    if (ISD::isAbsOpcode(N1.getOpcode()) && N1.hasOneUse() &&
         !TLI.isOperationLegalOrCustom(N1.getOpcode(), VT))
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
@@ -12121,7 +12120,7 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
     return C;
   // fold (abs (abs x)) -> (abs x)
   // fold (abs (abs_min_poison x)) -> (abs_min_poison x)
-  if (N0.getOpcode() == ISD::ABS || N0.getOpcode() == ISD::ABS_MIN_POISON)
+  if (ISD::isAbsOpcode(N0.getOpcode()))
     return N0;
   // fold (abs x) -> x iff not-negative
   if (DAG.SignBitIsZero(N0))
@@ -12158,18 +12157,16 @@ SDValue DAGCombiner::visitABS_MIN_POISON(SDNode *N) {
     return C;
   // fold (abs_min_poison (abs_min_poison x)) -> (abs_min_poison x)
   // fold (abs_min_poison (abs x)) -> (abs x)
-  if (N0.getOpcode() == ISD::ABS_MIN_POISON || N0.getOpcode() == ISD::ABS)
+  if (ISD::isAbsOpcode(N0.getOpcode()))
     return N0;
   // fold (abs_min_poison (freeze (abs x))) -> (freeze (abs x))
   // fold (abs_min_poison (freeze (abs_min_poison x))) -> (freeze (abs_min_poison x))
   // Valid because: for x != INT_MIN both sides equal abs(x); for x == INT_MIN
   // both forms produce a non-deterministic but well-defined value since freeze
   // already consumed the poison.
-  if (N0.getOpcode() == ISD::FREEZE) {
-    unsigned InnerOpc = N0.getOperand(0).getOpcode();
-    if (InnerOpc == ISD::ABS || InnerOpc == ISD::ABS_MIN_POISON)
-      return N0;
-  }
+  if (N0.getOpcode() == ISD::FREEZE &&
+      ISD::isAbsOpcode(N0.getOperand(0).getOpcode()))
+    return N0;
   // fold (abs_min_poison x) -> x iff not-negative
   if (DAG.SignBitIsZero(N0))
     return N0;
@@ -15771,9 +15768,7 @@ static SDValue widenAbs(SDNode *Extend, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue Abs = Extend->getOperand(0);
-  unsigned AbsOpc = Abs.getOpcode();
-  if ((AbsOpc != ISD::ABS && AbsOpc != ISD::ABS_MIN_POISON) ||
-      !Abs.hasOneUse())
+  if (!ISD::isAbsOpcode(Abs.getOpcode()) || !Abs.hasOneUse())
     return SDValue();
 
   EVT AbsVT = Abs.getValueType();
