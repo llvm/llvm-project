@@ -151,9 +151,18 @@ public:
                           llvm::StringRef GPUArch,
                           Action::OffloadKind DeviceOffloadingKind) const;
 
-  SanitizerMask getSupportedSanitizers() const override {
+  // FIXME: Remove this and make use of OffloadKind argument to
+  // getSupportedSanitizers
+  static constexpr SanitizerMask getOffloadSupportedSanitizers() {
     return SanitizerKind::Address | SanitizerKind::Undefined |
            SanitizerKind::UndefinedGroup;
+  }
+
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override {
+    assert(DeviceOffloadKind == Action::OFK_None);
+    return getOffloadSupportedSanitizers();
   }
 
   bool diagnoseUnsupportedOption(const llvm::opt::Arg *A,
@@ -203,7 +212,7 @@ public:
     SmallVector<const char *, 4> SupportedSanitizers;
     SmallVector<const char *, 4> UnSupportedSanitizers;
 
-    SanitizerMask Supported = ROCMToolChain::getSupportedSanitizers();
+    SanitizerMask Supported = ROCMToolChain::getOffloadSupportedSanitizers();
     SanitizerMask SupportedMask;
     for (const char *Value : A->getValues()) {
       SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ true);

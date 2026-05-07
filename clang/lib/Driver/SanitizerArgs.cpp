@@ -412,7 +412,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask IgnoreForUbsanFeature; // Accumulated set of values passed to
                                        // `-fsanitize-ignore-for-ubsan-feature`.
   SanitizerMask Kinds;
-  const SanitizerMask Supported = setGroupBits(TC.getSupportedSanitizers());
+  const SanitizerMask Supported =
+      setGroupBits(TC.getSupportedSanitizers("", Action::OFK_None));
 
   CfiCrossDso = Args.hasFlag(options::OPT_fsanitize_cfi_cross_dso,
                              options::OPT_fno_sanitize_cfi_cross_dso, false);
