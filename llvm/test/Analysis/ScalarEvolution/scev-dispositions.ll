@@ -82,7 +82,7 @@ define void @nested_loop2(i16 %.pre.pre) {
 ; CHECK:  %j.next = add nsw i16 %j, 1
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
 ; CHECK:  %smin = call i16 @llvm.smin.i16(i16 %i, i16 %j)
-; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Computable, %inner.loop: Computable }
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Variant, %inner.loop: Computable }
 ; CHECK:  %i.next = add i16 %i, 1
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Computable, %inner.loop: Invariant }
 

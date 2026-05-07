@@ -14410,7 +14410,7 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
       if (D == LoopUniform)
         HasUniform = true;
     }
-    return HasVarying ? LoopComputable
+    return HasVarying ? (HasUniform ? LoopVariant : LoopComputable)
                       : (HasUniform ? LoopUniform : LoopInvariant);
   }
   case scUnknown:
