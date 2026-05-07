@@ -51,18 +51,12 @@ namespace mlir {
 
 using namespace mlir;
 
-//===----------------------------------------------------------------------===//
-// Helpers
-//===----------------------------------------------------------------------===//
-
 // Returns true for the f8 float types that need LUT-based extf lowering.
 static bool isSupportedF8Type(Type t) {
   return isa<Float8E4M3FNType, Float8E5M2Type, Float8E4M3FNUZType,
              Float8E5M2FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
              Float8E4M3Type>(t);
 }
-
-// Returns a stable, symbol-safe name for the global LUT of the given f8 type.
 
 // Returns a name for the global LUT by appending the MLIR textual
 // // representation of the given f8 type to a fixed prefix.
@@ -121,10 +115,6 @@ getOrCreateLUT(ModuleOp module, FloatType srcType,
   return global;
 }
 
-//===----------------------------------------------------------------------===//
-// Rewrite pattern
-//===----------------------------------------------------------------------===//
-
 struct ExtFToLUTPattern : public OpRewritePattern<arith::ExtFOp> {
   ExtFToLUTPattern(MLIRContext *ctx,
                    llvm::DenseMap<Type, memref::GlobalOp> &lutCache)
@@ -171,10 +161,6 @@ struct ExtFToLUTPattern : public OpRewritePattern<arith::ExtFOp> {
 private:
   llvm::DenseMap<Type, memref::GlobalOp> &lutCache;
 };
-
-//===----------------------------------------------------------------------===//
-// Pass
-//===----------------------------------------------------------------------===//
 
 namespace {
 struct ConvertArithFP8ExtFToLUTPass
