@@ -38,7 +38,10 @@ class TestDelayedBreakpoint(TestBase):
         self.assertNotIn("send packet: $z", log_before_continue)
 
         log_after = log_text.split("AFTER_BPS", 1)[-1].split("AFTER_CONTINUE", 1)[0]
-        self.assertIn("send packet: $Z", log_after)
+        if "jMultiBreakpoint+" in lldbutil.get_qsupported_capabilities(self):
+            self.assertIn("send packet: $jMultiBreakpoint", log_after)
+        else:
+            self.assertIn("send packet: $Z", log_after)
 
     def test_eager_breakpoints(self):
         self.build()
@@ -65,6 +68,9 @@ class TestDelayedBreakpoint(TestBase):
             .splitlines()
         )
         breakpoint_lines = [line for line in log if "send packet: $Z" in line]
+        breakpoint_lines += [
+            line for line in log if "send packet: $jMultiBreakpoint" in line
+        ]
         breakpoint_lines = "".join(breakpoint_lines)
 
         bp_addresses = [f"{loc.GetLoadAddress():x}" for loc in bp1.locations]
