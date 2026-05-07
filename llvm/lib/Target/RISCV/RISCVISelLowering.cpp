@@ -760,11 +760,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::f64, Custom);
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
-    // TODO: Check if needed for lp64q
-    //setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f64, Expand);
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
-    // TODO: Check if needed for lp64q
-    //setTruncStoreAction(MVT::f128, MVT::f64, Expand);
     setOperationAction(FPOpToExpand, MVT::f64, Expand);
     setOperationAction(FPOpToLibCall, MVT::f64, LibCall);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
@@ -23980,9 +23976,8 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
 }
 
 static SDValue unpackF2XLenOnSoftABI(SelectionDAG &DAG, SDValue Chain,
-                                       const CCValAssign &VA,
-                                       const CCValAssign &HiVA,
-                                       const SDLoc &DL) {
+                                     const CCValAssign &VA,
+                                     const CCValAssign &HiVA, const SDLoc &DL) {
   const RISCVSubtarget &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
   unsigned XLen = Subtarget.getXLen();
   assert(
