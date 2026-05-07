@@ -2,7 +2,7 @@
 
 Sandbox IR is an IR layer on top of LLVM IR that allows you to save/restore its state.
 
-# Quick Start Notes
+## Quick Start Notes
 
 Within your LLVM pass:
 
@@ -37,7 +37,7 @@ SandboxIR
 ...
 ```
 
-# API
+## API
 The Sandbox IR API is designed to feel like LLVM, replicating many common API classes and functions to mirror the LLVM API.
 The class hierarchy is similar (but in the `llvm::sandboxir` namespace).
 For example here is a small part of it:
@@ -53,9 +53,9 @@ namespace sandboxir {
 }
 ```
 
-# Design
+## Design
 
-## Sandbox IR Value <-> LLVM IR Value Mapping
+### Sandbox IR Value <-> LLVM IR Value Mapping
 Each LLVM IR Value maps to a single Sandbox IR Value.
 The reverse is also true in most cases, except for Sandbox IR Instructions that map to more than one LLVM IR Instruction.
 Such instructions can be defined in extensions of the base Sandbox IR.
@@ -71,7 +71,7 @@ For example `sandboxir::User::getOperand(OpIdx)` for a `sandboxir::User *U` work
 - Next we get the LLVM Value operand: `llvm::Value *LLVMOp = LLVMU->getOperand(OpIdx)`
 - Finally we get the Sandbox IR operand that corresponds to `LLVMOp` by querying the map in the Sandbox IR context: `retrun Ctx.getValue(LLVMOp)`.
 
-## Sandbox IR is Write-Through
+### Sandbox IR is Write-Through
 Sandbox IR is designed to rely on LLVM IR for its state.
 So any change made to Sandbox IR objects directly updates the corresponding LLVM IR.
 
@@ -87,7 +87,7 @@ For example, for `sandboxir::User::setOperand(OpIdx, sandboxir::Value *Op)`:
 - Next we get the corresponding LLVM Operand: `llvm::Value *LLVMOp = Op->Val`
 - Finally we modify `LLVMU`'s operand: `LLVMU->setOperand(OpIdx, LLVMOp)
 
-## IR Change Tracking
+### IR Change Tracking
 Sandbox IR's state can be saved and restored.
 This is done with the help of the tracker component that is tightly coupled to the public Sandbox IR API functions.
 Please note that nested saves/restores are currently not supported.
@@ -105,5 +105,10 @@ Internally this will go through the changes and run any finalization required.
 Please note that after a call to `revert()` or `accept()` tracking will stop.
 To start tracking again, the user needs to call `save()`.
 
-# Users of Sandbox IR
+
+Sandbox IR supports nested checkpoints, meaning that you can save more than once and revert more than once.
+Conceptually each `save()` adds a new checkpoint to a stack and each `revert()` rolls back the IR state to that of the checkpoint at the top of the stack and pops the checkpoint off the stack.
+A call to `accept()` will clear the stack.
+
+## Users of Sandbox IR
 - [The Sandbox Vectorizer](project:SandboxVectorizer.md)

@@ -238,11 +238,9 @@ define i16 @test13(i32 %a, i32 %b) nounwind {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    cmpl %esi, %edi
 ; KNL-NEXT:    setb %al
-; KNL-NEXT:    movw $-4, %cx
-; KNL-NEXT:    kmovw %ecx, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k0
-; KNL-NEXT:    kshiftlw $1, %k0, %k0
 ; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    movw $-4, %ax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -253,12 +251,10 @@ define i16 @test13(i32 %a, i32 %b) nounwind {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
-; SKX-NEXT:    movw $-4, %cx
-; SKX-NEXT:    kmovd %ecx, %k0
-; SKX-NEXT:    kshiftrw $1, %k0, %k0
-; SKX-NEXT:    kshiftlw $1, %k0, %k0
 ; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovw %eax, %k0
+; SKX-NEXT:    movw $-4, %ax
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    korw %k1, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    ## kill: def $ax killed $ax killed $eax

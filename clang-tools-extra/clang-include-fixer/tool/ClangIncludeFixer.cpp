@@ -264,7 +264,7 @@ int includeFixerMain(int argc, const char **argv) {
   auto ExpectedParser =
       tooling::CommonOptionsParser::create(argc, argv, IncludeFixerCategory);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   tooling::CommonOptionsParser &options = ExpectedParser.get();
