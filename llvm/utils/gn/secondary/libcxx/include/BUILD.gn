@@ -75,20 +75,9 @@ if (current_toolchain == default_toolchain) {
         [ "LIBCXX_CONFIG_SITE_MODULE_ENTRY=textual header \"__config_site\"" ]
   }
 
-  # FIXME: Remove this after a while.
-  action("remove_float_h") {
-    stamp = "$target_gen_dir/remove_float_h.stamp"
-    outputs = [ stamp ]
-    script = "//llvm/utils/gn/build/remove_if_exists.py"
-    args = [
-      "--stamp",
-      rebase_path(stamp, root_build_dir),
-      rebase_path("$root_build_dir/include/c++/v1/float.h", root_build_dir),
-    ]
-  }
-
-  copy("copy_headers") {
-    sources = [
+  action("copy_headers") {
+    script = "//llvm/utils/gn/build/sync_dir.py"
+    inputs = [
       "__algorithm/adjacent_find.h",
       "__algorithm/all_of.h",
       "__algorithm/any_of.h",
@@ -1671,7 +1660,6 @@ if (current_toolchain == default_toolchain) {
       "cstring",
       "ctgmath",
       "ctime",
-      "ctype.h",
       "cuchar",
       "cwchar",
       "cwctype",
@@ -1698,7 +1686,6 @@ if (current_toolchain == default_toolchain) {
       "ext/__hash",
       "ext/hash_map",
       "ext/hash_set",
-      "fenv.h",
       "filesystem",
       "flat_map",
       "flat_set",
@@ -1773,8 +1760,24 @@ if (current_toolchain == default_toolchain) {
       "wchar.h",
       "wctype.h",
     ]
+    response_file_contents = inputs
+    outputs = [ "$target_gen_dir/copy_headers.stamp" ]
+    args = [
+      "--stamp",
+      rebase_path(outputs[0], root_build_dir),
+      "--source-dir",
+      rebase_path("//libcxx/include", root_build_dir),
+      "--output-dir",
+      rebase_path(libcxx_generated_include_dir, root_build_dir),
+      "--except",
+      "__assertion_handler",
+      "--except",
+      "__config_site",
+      "--except",
+      "module.modulemap",
+      "{{response_file_name}}",
+    ]
     deps = [
-      ":remove_float_h",
       ":write_assertion_handler",
       ":write_config_site",
       ":write_modulemap",
@@ -1790,7 +1793,6 @@ if (current_toolchain == default_toolchain) {
       # don't get copied on macOS due to that.
       deps += [ "//libcxxabi/include" ]
     }
-    outputs = [ "$root_build_dir/include/c++/v1/{{source_target_relative}}" ]
   }
 }
 

@@ -109,6 +109,12 @@ set(LIBOMP_BUILD_DATE "No_Timestamp")
 set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
   "Create Fortran module files? (requires fortran compiler)")
 
+option(LIBOMP_FORTRAN_MODULES_ONLY
+  "Build only Fortran modules without libomp runtime library" OFF)
+if(LIBOMP_FORTRAN_MODULES_ONLY)
+  set(LIBOMP_FORTRAN_MODULES TRUE)
+endif()
+
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
@@ -139,6 +145,12 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
+# Meta-target for building OpenMP runtime artifacts (libraries, device RTL, tools).
+# Subdirectories call openmp_register_meta_dep() for each target they add.
+add_custom_target(openmp ALL
+  COMMENT "OpenMP meta-target. Use 'ninja openmp' to build all OpenMP runtime targets."
+)
+
 # Use the current compiler target to determine the appropriate runtime to build.
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
@@ -148,7 +160,9 @@ else()
 
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
-  add_subdirectory(runtime)
+  if(NOT LIBOMP_FORTRAN_MODULES_ONLY)
+    add_subdirectory(runtime)
+  endif()	
 
   set(ENABLE_OMPT_TOOLS ON)
   # Currently tools are not tested well on Windows or MacOS X.
