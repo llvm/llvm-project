@@ -13,7 +13,8 @@
 
 #include "hdr/types/ssize_t.h"
 #include "hdr/types/struct_msghdr.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/socketcall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/sanitizer.h"
@@ -22,14 +23,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, recvmsg, (int sockfd, msghdr *msg, int flags)) {
 #ifdef SYS_recvmsg
-  ssize_t ret =
-      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_recvmsg, sockfd, msg, flags);
+  ssize_t ret = syscall_impl<ssize_t>(SYS_recvmsg, sockfd, msg, flags);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(sockfd),
-                                    reinterpret_cast<unsigned long>(msg),
-                                    static_cast<unsigned long>(flags)};
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_socketcall, SYS_RECVMSG, sockcall_args);
+  ssize_t ret = socketcall<ssize_t>(SYS_RECVMSG, sockfd, msg, flags);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif

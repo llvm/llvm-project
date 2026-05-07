@@ -38,11 +38,23 @@ add_header_library(
 )
 
 add_header_library(
+  socketcall
+  HDRS
+    socketcall.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   accept
   HDRS
     accept.h
   DEPENDS
     libc.src.__support.OSUtil.linux.syscall_wrappers.accept
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socketcall
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_errno
@@ -57,6 +69,7 @@ add_header_library(
   HDRS
     accept4.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socketcall
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_errno
@@ -72,6 +85,7 @@ add_header_library(
     connect.h
   DEPENDS
     libc.src.__support.OSUtil.linux.syscall_wrappers.connect
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socketcall
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_errno
@@ -86,6 +100,7 @@ add_header_library(
   HDRS
     getsockopt.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socketcall
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_errno
@@ -99,6 +114,7 @@ add_header_library(
   HDRS
     listen.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socketcall
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_errno
@@ -124,6 +140,7 @@ add_header_library(
   HDRS
     setsockopt.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socketcall
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_errno

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_SETSOCKOPT_H
 
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/socketcall.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -27,12 +28,8 @@ LIBC_INLINE ErrorOr<int> setsockopt(int sockfd, int level, int optname,
   int ret =
       syscall_impl<int>(SYS_setsockopt, sockfd, level, optname, optval, optlen);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[5] = {static_cast<unsigned long>(sockfd),
-                                    static_cast<unsigned long>(level),
-                                    static_cast<unsigned long>(optname),
-                                    reinterpret_cast<unsigned long>(optval),
-                                    static_cast<unsigned long>(optlen)};
-  int ret = syscall_impl<int>(SYS_socketcall, SYS_SETSOCKOPT, sockcall_args);
+  int ret =
+      socketcall<int>(SYS_SETSOCKOPT, sockfd, level, optname, optval, optlen);
 #else
 #error "setsockopt and socketcall syscalls unavailable for this platform."
 #endif

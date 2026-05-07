@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_LISTEN_H
 
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/socketcall.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -22,12 +23,9 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> listen(int sockfd, int backlog) {
 #ifdef SYS_listen
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_listen, sockfd, backlog);
+  int ret = syscall_impl<int>(SYS_listen, sockfd, backlog);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[2] = {static_cast<unsigned long>(sockfd),
-                                    static_cast<unsigned long>(backlog)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_LISTEN,
-                                              sockcall_args);
+  int ret = socketcall<int>(SYS_LISTEN, sockfd, backlog);
 #else
 #error "listen and socketcall syscalls unavailable for this platform."
 #endif

@@ -14,7 +14,8 @@
 #include "hdr/types/socklen_t.h"
 #include "hdr/types/ssize_t.h"
 #include "hdr/types/struct_sockaddr.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/socketcall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 
@@ -24,17 +25,11 @@ LLVM_LIBC_FUNCTION(ssize_t, sendto,
                    (int sockfd, const void *buf, size_t len, int flags,
                     const struct sockaddr *dest_addr, socklen_t addrlen)) {
 #ifdef SYS_sendto
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_sendto, sockfd, buf, len, flags, dest_addr, addrlen);
+  ssize_t ret = syscall_impl<ssize_t>(SYS_sendto, sockfd, buf, len, flags,
+                                      dest_addr, addrlen);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[6] = {static_cast<unsigned long>(sockfd),
-                                    reinterpret_cast<unsigned long>(buf),
-                                    static_cast<unsigned long>(len),
-                                    static_cast<unsigned long>(flags),
-                                    reinterpret_cast<unsigned long>(dest_addr),
-                                    static_cast<unsigned long>(addrlen)};
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_socketcall, SYS_SENDTO, sockcall_args);
+  ssize_t ret = socketcall<ssize_t>(SYS_SENDTO, sockfd, buf, len, flags,
+                                    dest_addr, addrlen);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif

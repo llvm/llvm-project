@@ -14,7 +14,8 @@
 #include "hdr/types/socklen_t.h"
 #include "hdr/types/ssize_t.h"
 #include "hdr/types/struct_sockaddr.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/socketcall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/sanitizer.h"
@@ -24,17 +25,12 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(ssize_t, recv,
                    (int sockfd, void *buf, size_t len, int flags)) {
 #ifdef SYS_recv
-  ssize_t ret =
-      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_recv, sockfd, buf, len, flags);
+  ssize_t ret = syscall_impl<ssize_t>(SYS_recv, sockfd, buf, len, flags);
 #elif defined(SYS_recvfrom)
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_recvfrom, sockfd, buf, len, flags, nullptr, nullptr);
+  ssize_t ret = syscall_impl<ssize_t>(SYS_recvfrom, sockfd, buf, len, flags,
+                                      nullptr, nullptr);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[4] = {
-      static_cast<unsigned long>(sockfd), reinterpret_cast<unsigned long>(buf),
-      static_cast<unsigned long>(len), static_cast<unsigned long>(flags)};
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_socketcall, SYS_RECV,
-                                                      sockcall_args);
+  ssize_t ret = socketcall<ssize_t>(SYS_RECV, sockfd, buf, len, flags);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif

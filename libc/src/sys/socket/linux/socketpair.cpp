@@ -8,7 +8,8 @@
 
 #include "src/sys/socket/socketpair.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall_wrappers/socketcall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -21,14 +22,9 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, socketpair,
                    (int domain, int type, int protocol, int sv[2])) {
 #ifdef SYS_socketpair
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketpair, domain, type,
-                                              protocol, sv);
+  int ret = syscall_impl<int>(SYS_socketpair, domain, type, protocol, sv);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {
-      static_cast<unsigned long>(domain), static_cast<unsigned long>(type),
-      static_cast<unsigned long>(protocol), static_cast<unsigned long>(sv)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_SOCKETPAIR,
-                                              sockcall_args);
+  int ret = socketcall(SYS_SOCKETPAIR, domain, type, protocol, sv);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif
