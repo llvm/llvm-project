@@ -126,13 +126,11 @@ define i1 @isfinite_float(float %x) nounwind {
 ;
 ; R2-LABEL: isfinite_float:
 ; R2:       # %bb.0:
-; R2-NEXT:    lui $1, 32767
-; R2-NEXT:    ori $1, $1, 65535
-; R2-NEXT:    mfc1 $2, $f12
-; R2-NEXT:    and $1, $2, $1
-; R2-NEXT:    lui $2, 32640
+; R2-NEXT:    mfc1 $1, $f12
+; R2-NEXT:    srl $1, $1, 23
+; R2-NEXT:    andi $1, $1, 255
 ; R2-NEXT:    jr $ra
-; R2-NEXT:    slt $2, $1, $2
+; R2-NEXT:    sltiu $2, $1, 255
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; 0x1f8 = "finite"
   ret i1 %1
 }

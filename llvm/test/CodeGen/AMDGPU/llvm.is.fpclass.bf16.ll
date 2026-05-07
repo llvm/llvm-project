@@ -2068,11 +2068,10 @@ define i1 @not_ispositive_bf16(bfloat %x) {
 ; GFX11SELDAG-TRUE16-LABEL: not_ispositive_bf16:
 ; GFX11SELDAG-TRUE16:       ; %bb.0:
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
 ; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v0.l
+; GFX11SELDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v1.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f32_e64 s0, v2, v2
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f32_e64 s0, v0, v0
 ; GFX11SELDAG-TRUE16-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -2134,11 +2133,10 @@ define i1 @isnegative_bf16(bfloat %x) {
 ; GFX11SELDAG-TRUE16-LABEL: isnegative_bf16:
 ; GFX11SELDAG-TRUE16:       ; %bb.0:
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
 ; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v0.l
+; GFX11SELDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v1.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_o_f32_e64 s0, v2, v2
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_o_f32_e64 s0, v0, v0
 ; GFX11SELDAG-TRUE16-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]

@@ -9720,9 +9720,7 @@ static SDValue getFloatSign(EVT ResultVT, bool &NeedFPTrunc, SDValue Op,
                             SelectionDAG &DAG, const SDLoc &DL,
                             const TargetLowering &TLI) {
   EVT OperandVT = Op.getValueType();
-  unsigned BitSize = OperandVT.getScalarSizeInBits();
-  EVT IntVT = OperandVT.changeElementType(
-      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), BitSize));
+  EVT IntVT = OperandVT.changeTypeToInteger();
   SDValue OpAsInt = DAG.getBitcast(IntVT, Op);
   SDValue SignBitResult = DAG.getSetCC(
       DL, ResultVT, OpAsInt, DAG.getConstant(0, DL, IntVT), ISD::SETLT);
