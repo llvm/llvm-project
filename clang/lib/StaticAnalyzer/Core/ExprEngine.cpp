@@ -3727,9 +3727,9 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
                           bool AtDeclInit, const ProgramPoint *PP) {
   assert(!isa<NonLoc>(location) && "evalBind location should not be NonLoc!");
   const LocationContext *LC = Pred->getLocationContext();
-  PostStmt PS(StoreE, LC);
+  PostStmt DefaultPP(StoreE, LC);
   if (!PP)
-    PP = &PS;
+    PP = &DefaultPP;
 
   // Do a previsit of the bind.
   ExplodedNodeSet CheckedSet;
@@ -3754,8 +3754,8 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
       LocReg = LocRegVal->getRegion();
     }
 
-    const ProgramPoint L = PostStore(StoreE, LC, LocReg, nullptr);
-    Dst.insert(Engine.makeNode(L, state, PredI));
+    PostStore PS(LC, LocReg, nullptr);
+    Dst.insert(Engine.makeNode(PS, state, PredI));
   }
 }
 
