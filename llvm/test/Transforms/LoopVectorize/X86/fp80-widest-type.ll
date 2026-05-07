@@ -14,8 +14,8 @@ define x86_fp80 @test() {
 ; CHECK-NEXT:    br label [[FOR_BODY3_I_3:%.*]]
 ; CHECK:       for.body3.i.3:
 ; CHECK-NEXT:    [[N_ADDR_112_I_3:%.*]] = phi i64 [ [[DEC_I_3:%.*]], [[FOR_BODY3_I_3]] ], [ 24, [[FOO_EXIT:%.*]] ]
-; CHECK-NEXT:    [[X_ADDR_111_I_3:%.*]] = phi x86_fp80 [ [[MUL_I_3:%.*]], [[FOR_BODY3_I_3]] ], [ 0xK00000000000000000000, [[FOO_EXIT]] ]
-; CHECK-NEXT:    [[MUL_I_3]] = fmul x86_fp80 [[X_ADDR_111_I_3]], 0xK40008000000000000000
+; CHECK-NEXT:    [[X_ADDR_111_I_3:%.*]] = phi x86_fp80 [ [[MUL_I_3:%.*]], [[FOR_BODY3_I_3]] ], [ 0.000000e+00, [[FOO_EXIT]] ]
+; CHECK-NEXT:    [[MUL_I_3]] = fmul x86_fp80 [[X_ADDR_111_I_3]], 2.000000e+00
 ; CHECK-NEXT:    [[DEC_I_3]] = add nsw i64 [[N_ADDR_112_I_3]], -1
 ; CHECK-NEXT:    [[CMP2_I_3:%.*]] = icmp sgt i64 [[N_ADDR_112_I_3]], 1
 ; CHECK-NEXT:    br i1 [[CMP2_I_3]], label [[FOR_BODY3_I_3]], label [[FOO_EXIT_3:%.*]]

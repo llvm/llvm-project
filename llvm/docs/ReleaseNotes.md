@@ -77,6 +77,9 @@ Makes programs 10x faster by doing Special New Thing.
 
   * Special values for infinities and NaNs, including NaN payloads, are added.
 
+* The standard textual output for floating-point literals is changed to take
+  advantage of the new floating-point literals formats.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to

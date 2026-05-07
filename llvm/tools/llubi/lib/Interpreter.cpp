@@ -484,9 +484,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           ScalarFn) {
     if (!LHS.isAggregate()) {
       if (LHS.isPoison() || RHS.isPoison())
-        return std::vector{AnyValue::poison(), AnyValue::poison()};
+        return std::vector<AnyValue>{AnyValue::poison(), AnyValue::poison()};
       auto [Res, Overflow] = ScalarFn(LHS.asInteger(), RHS.asInteger());
-      return std::vector{AnyValue(Res), AnyValue::boolean(Overflow)};
+      return std::vector<AnyValue>{AnyValue(Res), AnyValue::boolean(Overflow)};
     }
 
     auto &LHSVec = LHS.asAggregate();
@@ -506,8 +506,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       ResVec.push_back(AnyValue(Res));
       OverflowVec.push_back(AnyValue::boolean(Overflow));
     }
-    return std::vector{AnyValue(std::move(ResVec)),
-                       AnyValue(std::move(OverflowVec))};
+    return std::vector<AnyValue>{AnyValue(std::move(ResVec)),
+                                 AnyValue(std::move(OverflowVec))};
   }
 
   AnyValue

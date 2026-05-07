@@ -29,7 +29,7 @@ int test_float_isinf_sign(float x) {
   // OGCG-LABEL: test_float_isinf_sign
   // OGCG: %[[ARG:.*]] = load float, ptr %{{.*}}
   // OGCG: %[[ABS:.*]] = call float @llvm.fabs.f32(float %[[ARG]])
-  // OGCG: %[[IS_INF:.*]] = fcmp oeq float %[[ABS]], 0x7FF0000000000000
+  // OGCG: %[[IS_INF:.*]] = fcmp oeq float %[[ABS]], +inf
   // OGCG: %[[BITCAST:.*]] = bitcast float %[[ARG]] to i32
   // OGCG: %[[IS_NEG:.*]] = icmp slt i32 %[[BITCAST]], 0
   // OGCG: %[[SIGN:.*]] = select i1 %[[IS_NEG]], i32 -1, i32 1
