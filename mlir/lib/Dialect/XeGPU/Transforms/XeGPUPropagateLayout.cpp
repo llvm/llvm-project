@@ -1101,11 +1101,18 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   auto srcVecType = bitcast.getSourceVectorType();
   auto resVecType = bitcast.getResultVectorType();
 
+  llvm::dbgs() << "[DEBUG visitVectorBitcastOp] bitcast op: " << bitcast << "\n";
+  llvm::dbgs() << "[DEBUG visitVectorBitcastOp] srcVecType: " << srcVecType << "\n";
+  llvm::dbgs() << "[DEBUG visitVectorBitcastOp] resVecType: " << resVecType << "\n";
+
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  llvm::dbgs() << "[DEBUG visitVectorBitcastOp] consumerLayoutAttr: " << consumerLayoutAttr << "\n";
+
   const uArch *uArch = getUArch(xegpu::getChipStr(bitcast).value_or(""));
   if (!uArch)
     return;
+  llvm::dbgs() << "[DEBUG visitVectorBitcastOp] About to call setupBitCastResultLayout...\n";
   auto requiredResLayoutAttr = setupBitCastResultLayout(
       layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
 

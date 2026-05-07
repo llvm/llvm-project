@@ -1337,18 +1337,35 @@ struct WgToSgVectorTransposeOp
   LogicalResult
   matchAndRewrite(vector::TransposeOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] ENTRY for op: " << op << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] adaptor.getVector().size() = " << adaptor.getVector().size() << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] op.getVector() = " << op.getVector() << "\n";
     VectorType resultType = op.getResultVectorType();
 
     ArrayRef<int64_t> wgShape = resultType.getShape();
     xegpu::DistributeLayoutAttr layout =
         xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] layout = " << layout << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] layout.isForWorkgroup() = " << (layout ? layout.isForWorkgroup() : false) << "\n";
     if (!layout || !layout.isForWorkgroup())
       return failure();
     // TODO-LayoutRefactor: handle the case using getTemporaryLayout
     xegpu::DistributeLayoutAttr sourceLayout =
         xegpu::getDistributeLayoutAttr(op.getVector());
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] sourceLayout = " << sourceLayout << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] sourceLayout.isForWorkgroup() = " << (sourceLayout ? sourceLayout.isForWorkgroup() : false) << "\n";
     if (!sourceLayout || !sourceLayout.isForWorkgroup())
       return failure();
+
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] transpose op: " << op << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] sourceLayout: " << sourceLayout << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] resultLayout: " << layout << "\n";
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] permutation: [";
+    for (size_t i = 0; i < op.getPermutation().size(); ++i) {
+      if (i > 0) llvm::dbgs() << ", ";
+      llvm::dbgs() << op.getPermutation()[i];
+    }
+    llvm::dbgs() << "]\n";
 
     SmallVector<int64_t> sourceSgLayout =
         sourceLayout.getEffectiveSgLayoutAsInt();
@@ -1364,8 +1381,11 @@ struct WgToSgVectorTransposeOp
 
     // Check that sgLayout, sgData & order are properly transposed for source
     // and result
-    if (!layout.isTransposeOf(sourceLayout, permutation,
-                              xegpu::LayoutKind::Subgroup))
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] About to check isTransposeOf...\n";
+    bool isValidTranspose = layout.isTransposeOf(sourceLayout, permutation,
+                              xegpu::LayoutKind::Subgroup);
+    llvm::dbgs() << "[DEBUG WgToSgVectorTransposeOp] isTransposeOf result: " << isValidTranspose << "\n";
+    if (!isValidTranspose)
       return rewriter.notifyMatchFailure(
           op, "Result layout is not a valid transpose of source layout "
               "according to permutation");
