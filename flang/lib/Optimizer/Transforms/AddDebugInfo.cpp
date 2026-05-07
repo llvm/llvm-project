@@ -823,12 +823,10 @@ void AddDebugInfoPass::handleOnlyClause(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
     llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
-
   // Process ONLY symbols (without renames)
   if (auto onlySymbols = useOp.getOnlySymbols()) {
     for (mlir::Attribute attr : *onlySymbols) {
       auto symbolRef = mlir::cast<mlir::FlatSymbolRefAttr>(attr);
-
       if (auto importedDecl = createImportedDeclForGlobal(
               symbolRef.getValue(), spAttr, fileAttr, mlir::StringAttr(),
               symbolTable))
