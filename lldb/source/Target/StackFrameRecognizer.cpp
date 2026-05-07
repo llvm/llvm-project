@@ -146,11 +146,11 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   if (!module_sp)
     return StackFrameRecognizerSP();
   ConstString module_name = module_sp->GetFileSpec().GetFilename();
+  // We need either a Symbol or a Function to look up a recognizer. On Windows,
+  // when using PDB Symbol is not always populated even when a Function is.
   const Symbol *symbol = symctx.symbol;
-  if (!symbol)
+  if (!symbol && !symctx.function)
     return StackFrameRecognizerSP();
-  Address start_addr = symbol->GetAddress();
-  Address current_addr = frame->GetFrameCodeAddress();
 
   for (const auto &entry : m_recognizers) {
     if (!entry.enabled)
@@ -174,9 +174,14 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
       if (!entry.symbol_regexp->Execute(function_name.GetStringRef()))
         continue;
 
-    if (entry.first_instruction_only)
-      if (start_addr != current_addr)
+    if (entry.first_instruction_only) {
+      // First-instruction matching requires a Symbol to know the function's
+      // entry address. Without one, we cannot apply this recognizer here.
+      if (!symbol)
         continue;
+      if (symbol->GetAddress() != frame->GetFrameCodeAddress())
+        continue;
+    }
 
     return entry.recognizer;
   }
