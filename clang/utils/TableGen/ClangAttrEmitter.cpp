@@ -415,9 +415,9 @@ namespace {
     int64_t Default;
 
   public:
-    DefaultSimpleArgument(const Record &Arg, StringRef Attr,
-                          std::string T, int64_t Default)
-      : SimpleArgument(Arg, Attr, T), Default(Default) {}
+    DefaultSimpleArgument(const Record &Arg, StringRef Attr, std::string T,
+                          int64_t Default)
+        : SimpleArgument(Arg, Attr, std::move(T)), Default(Default) {}
 
     void writeAccessors(raw_ostream &OS) const override {
       SimpleArgument::writeAccessors(OS);
@@ -2006,6 +2006,23 @@ static void emitClangAttrLateParsedExperimentalList(const RecordKeeper &Records,
   emitClangAttrLateParsedListImpl(Records, OS,
                                   LateAttrParseKind::ExperimentalExt);
   OS << "#endif // CLANG_ATTR_LATE_PARSED_EXPERIMENTAL_EXT_LIST\n\n";
+}
+
+// Emits a list of attributes whose argument list is parsed inside a function
+// prototype scope so it can refer to the enclosing function's parameters.
+static void
+emitClangAttrParseArgsInFunctionScopeList(const RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST)\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    if (!Attr->getValueAsBit("ParseArgsInFunctionScope"))
+      continue;
+    // FIXME: Handle non-GNU attributes
+    for (const auto &I : GetFlattenedSpellings(*Attr))
+      if (I.variety() == "GNU")
+        OS << ".Case(\"" << I.name() << "\", 1)\n";
+  }
+  OS << "#endif // CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST\n\n";
 }
 
 static bool hasGNUorCXX11Spelling(const Record &Attribute) {
@@ -5268,6 +5285,7 @@ void EmitClangAttrParserStringSwitches(const RecordKeeper &Records,
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
   emitClangAttrLateParsedExperimentalList(Records, OS);
+  emitClangAttrParseArgsInFunctionScopeList(Records, OS);
   emitClangAttrStrictIdentifierArgList(Records, OS);
 }
 
@@ -5314,7 +5332,7 @@ public:
     return Spellings[(size_t)K];
   }
 
-  void add(const Record &Attr, FlattenedSpelling Spelling) {
+  void add(const Record &Attr, const FlattenedSpelling &Spelling) {
     SpellingKind Kind =
         StringSwitch<SpellingKind>(Spelling.variety())
             .Case("GNU", SpellingKind::GNU)

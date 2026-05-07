@@ -7,18 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fabsf.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fabsf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, fabsf, (float x)) {
-#ifdef __LIBC_MISC_MATH_BASIC_OPS_OPT
-  return __builtin_fabsf(x);
-#else
-  return fputil::abs(x);
-#endif
-}
+LLVM_LIBC_FUNCTION(float, fabsf, (float x)) { return math::fabsf(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -538,24 +538,35 @@ defset list<VTypeInfoToFraction> AllFractionableVF8IntVectors = {
   def : VTypeInfoToFraction<VI64M8, VI8M1>;
 }
 
-defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
-  def : VTypeInfoToWide<VI8MF8, VF16MF4>;
-  def : VTypeInfoToWide<VI8MF4, VF16MF2>;
-  def : VTypeInfoToWide<VI8MF2, VF16M1>;
-  def : VTypeInfoToWide<VI8M1, VF16M2>;
-  def : VTypeInfoToWide<VI8M2, VF16M4>;
-  def : VTypeInfoToWide<VI8M4, VF16M8>;
+defset list<VTypeInfoToWide> AllWidenableIntToFloatAndBF16Vectors = {
+  defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
+    def : VTypeInfoToWide<VI8MF8, VF16MF4>;
+    def : VTypeInfoToWide<VI8MF4, VF16MF2>;
+    def : VTypeInfoToWide<VI8MF2, VF16M1>;
+    def : VTypeInfoToWide<VI8M1, VF16M2>;
+    def : VTypeInfoToWide<VI8M2, VF16M4>;
+    def : VTypeInfoToWide<VI8M4, VF16M8>;
 
-  def : VTypeInfoToWide<VI16MF4, VF32MF2>;
-  def : VTypeInfoToWide<VI16MF2, VF32M1>;
-  def : VTypeInfoToWide<VI16M1, VF32M2>;
-  def : VTypeInfoToWide<VI16M2, VF32M4>;
-  def : VTypeInfoToWide<VI16M4, VF32M8>;
+    def : VTypeInfoToWide<VI16MF4, VF32MF2>;
+    def : VTypeInfoToWide<VI16MF2, VF32M1>;
+    def : VTypeInfoToWide<VI16M1, VF32M2>;
+    def : VTypeInfoToWide<VI16M2, VF32M4>;
+    def : VTypeInfoToWide<VI16M4, VF32M8>;
 
-  def : VTypeInfoToWide<VI32MF2, VF64M1>;
-  def : VTypeInfoToWide<VI32M1, VF64M2>;
-  def : VTypeInfoToWide<VI32M2, VF64M4>;
-  def : VTypeInfoToWide<VI32M4, VF64M8>;
+    def : VTypeInfoToWide<VI32MF2, VF64M1>;
+    def : VTypeInfoToWide<VI32M1, VF64M2>;
+    def : VTypeInfoToWide<VI32M2, VF64M4>;
+    def : VTypeInfoToWide<VI32M4, VF64M8>;
+  }
+
+  defset list<VTypeInfoToWide> AllWidenableIntToBFloatVectors = {
+    def : VTypeInfoToWide<VI8MF8, VBF16MF4>;
+    def : VTypeInfoToWide<VI8MF4, VBF16MF2>;
+    def : VTypeInfoToWide<VI8MF2, VBF16M1>;
+    def : VTypeInfoToWide<VI8M1, VBF16M2>;
+    def : VTypeInfoToWide<VI8M2, VBF16M4>;
+    def : VTypeInfoToWide<VI8M4, VBF16M8>;
+  }
 }
 
 // This class holds the record of the RISCVVPseudoTable below.

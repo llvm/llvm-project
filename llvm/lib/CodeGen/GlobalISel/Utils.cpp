@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <numeric>
@@ -589,7 +590,7 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
     return true;
   }
 
-  LeftoverTy = LLT::scalar(LeftoverSize);
+  LeftoverTy = LLT::integer(LeftoverSize);
   // For irregular sizes, extract the individual parts.
   for (unsigned I = 0; I != NumParts; ++I) {
     Register NewReg = MRI.createGenericVirtualRegister(MainTy);
@@ -940,36 +941,52 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
   return std::nullopt;
 }
 
-std::optional<SmallVector<unsigned>>
-llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
-                             std::function<unsigned(APInt)> CB) {
-  LLT Ty = MRI.getType(Src);
-  SmallVector<unsigned> FoldedCTLZs;
-  auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
-    auto MaybeCst = getIConstantVRegVal(R, MRI);
-    if (!MaybeCst)
-      return std::nullopt;
-    return CB(*MaybeCst);
+SmallVector<APInt>
+llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
+                             const MachineRegisterInfo &MRI) {
+  unsigned EltBits = DstTy.getScalarSizeInBits();
+  auto Fold = [Opcode, EltBits](const APInt &V) -> APInt {
+    switch (Opcode) {
+    case TargetOpcode::G_CTLZ:
+    case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+      return APInt(EltBits, V.countl_zero());
+    case TargetOpcode::G_CTTZ:
+    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+      return APInt(EltBits, V.countr_zero());
+    case TargetOpcode::G_CTPOP:
+      return APInt(EltBits, V.popcount());
+    case TargetOpcode::G_ABS:
+      return V.abs();
+    case TargetOpcode::G_BSWAP:
+      return V.byteSwap();
+    case TargetOpcode::G_BITREVERSE:
+      return V.reverseBits();
+    }
+    llvm_unreachable("unexpected opcode in ConstantFoldUnaryIntOp");
   };
-  if (Ty.isVector()) {
-    // Try to constant fold each element.
+
+  auto tryFoldScalar = [&](Register R) -> std::optional<APInt> {
+    if (auto MaybeCst = getIConstantVRegVal(R, MRI))
+      return Fold(*MaybeCst);
+    return std::nullopt;
+  };
+  if (MRI.getType(Src).isVector()) {
     auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
     if (!BV)
-      return std::nullopt;
+      return {};
+    SmallVector<APInt> Folded;
     for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
       if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
-        FoldedCTLZs.emplace_back(*MaybeFold);
+        Folded.emplace_back(std::move(*MaybeFold));
         continue;
       }
-      return std::nullopt;
+      return {};
     }
-    return FoldedCTLZs;
+    return Folded;
   }
-  if (auto MaybeCst = tryFoldScalar(Src)) {
-    FoldedCTLZs.emplace_back(*MaybeCst);
-    return FoldedCTLZs;
-  }
-  return std::nullopt;
+  if (auto MaybeCst = tryFoldScalar(Src))
+    return {std::move(*MaybeCst)};
+  return {};
 }
 
 std::optional<SmallVector<APInt>>
@@ -1266,7 +1283,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   LLT TargetScalar = TargetTy.getScalarType();
   unsigned GCD = std::gcd(OrigScalar.getSizeInBits().getFixedValue(),
                           TargetScalar.getSizeInBits().getFixedValue());
-  return LLT::scalar(GCD);
+  return LLT::integer(GCD);
 }
 
 std::optional<int> llvm::getSplatIndex(MachineInstr &MI) {
@@ -1712,8 +1729,10 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPEXTLOAD:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPTRUNCSTORE:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSIN:
@@ -1767,22 +1786,6 @@ static bool shiftAmountKnownInRange(Register ShiftAmount,
   }
 
   return true;
-}
-
-namespace {
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-}
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
 static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,

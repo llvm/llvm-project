@@ -456,6 +456,26 @@ static bool checkCodegenOptions(const CodeGenOptions &CGOpts,
   return false;
 }
 
+static std::vector<std::string>
+accumulateFeaturesAsWritten(std::vector<std::string> FeaturesAsWritten) {
+  llvm::erase_if(FeaturesAsWritten, [](const std::string &S) {
+    return S.empty() || (S[0] != '+' && S[0] != '-');
+  });
+  llvm::stable_sort(FeaturesAsWritten,
+                    [](const std::string &A, const std::string &B) {
+                      return A.substr(1) < B.substr(1);
+                    });
+  auto NewRend =
+      std::unique(FeaturesAsWritten.rbegin(), FeaturesAsWritten.rend(),
+                  [](const std::string &A, const std::string &B) {
+                    return A.substr(1) == B.substr(1);
+                  });
+  // Because we are operating on reverse iterators, the duplicate elements
+  // are actually at the beginning.
+  FeaturesAsWritten.erase(FeaturesAsWritten.begin(), NewRend.base());
+  return FeaturesAsWritten;
+}
+
 /// Compare the given set of target options against an existing set of
 /// target options.
 ///
@@ -491,16 +511,12 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
 #undef CHECK_TARGET_OPT
 
   // Compare feature sets.
-  SmallVector<StringRef, 4> ExistingFeatures(
-                                             ExistingTargetOpts.FeaturesAsWritten.begin(),
-                                             ExistingTargetOpts.FeaturesAsWritten.end());
-  SmallVector<StringRef, 4> ReadFeatures(TargetOpts.FeaturesAsWritten.begin(),
-                                         TargetOpts.FeaturesAsWritten.end());
-  llvm::sort(ExistingFeatures);
-  ExistingFeatures.erase(llvm::unique(ExistingFeatures),
-                         ExistingFeatures.end());
-  llvm::sort(ReadFeatures);
-  ReadFeatures.erase(llvm::unique(ReadFeatures), ReadFeatures.end());
+  // Alternatively, we could be diffing TargetOpts.Features, but that would
+  // clutter the output with implied features.
+  std::vector<std::string> ExistingFeatures =
+      accumulateFeaturesAsWritten(ExistingTargetOpts.FeaturesAsWritten);
+  std::vector<std::string> ReadFeatures =
+      accumulateFeaturesAsWritten(TargetOpts.FeaturesAsWritten);
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
@@ -5115,8 +5131,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
 
     case UnresolvedModuleRef::Export:
       if (ResolvedMod || Unresolved.IsWildcard)
-        Unresolved.Mod->Exports.push_back(
-          Module::ExportDecl(ResolvedMod, Unresolved.IsWildcard));
+        Unresolved.Mod->Exports.push_back(Module::ExportDecl(
+            ResolvedMod, static_cast<bool>(Unresolved.IsWildcard)));
       continue;
     }
   }
@@ -9748,9 +9764,9 @@ void ASTReader::ReadExtnameUndeclaredIdentifiers(
     IdentifierInfo *NameId =
         DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I]);
     IdentifierInfo *ExtnameId =
-        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I+1]);
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I + 1]);
     SourceLocation Loc =
-        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I+2]);
+        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I + 2]);
     AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
         getContext(), ExtnameId->getName(),
         AttributeCommonInfo(ExtnameId, SourceRange(Loc),

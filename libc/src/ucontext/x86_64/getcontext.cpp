@@ -19,7 +19,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 // We use naked because we need to capture the exact register state
 // at the moment of the function call, avoiding any compiler prologue/epilogue.
-__attribute__((naked)) LLVM_LIBC_FUNCTION(int, getcontext, (ucontext_t * ucp)) {
+__attribute__((naked)) LLVM_LIBC_FUNCTION(int, getcontext,
+                                          (ucontext_t * ucp)) noexcept {
   asm(R"(
       # ucp is in rdi
       

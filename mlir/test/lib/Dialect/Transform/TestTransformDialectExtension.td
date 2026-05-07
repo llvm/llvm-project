@@ -35,6 +35,19 @@ def TestTransformSingleBlockNormalForm
   let assemblyFormat = "`<` `nested` $check_nested `>`";
 }
 
+def TestTransformCountingNormalForm
+    : AttrDef<Transform_Dialect, "TestCountingNormalForm",
+              [DeclareAttrInterfaceMethods<
+                  NormalFormAttrInterface, ["checkOperation"]>]> {
+  let description = [{
+    Normal form that always succeeds and updates a counter attribute on an
+    operation every time the check runs.
+  }];
+  let parameters = (ins);
+  let mnemonic = "test_counting_normal_form";
+  let assemblyFormat = "";
+}
+
 def TestTransformTestDialectHandleType
   : TypeDef<Transform_Dialect, "TestDialectOp",
       [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {

@@ -117,6 +117,7 @@ LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
 LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
   static_cast<const CommonEntityInfo &>(*this).dump(OS);
   OS << (NullabilityAudited ? "[NullabilityAudited] " : "")
+     << (UnsafeBufferUsage ? "[UnsafeBufferUsage] " : "")
      << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   if (!ResultType.empty())
     OS << "Result Type: " << ResultType << ' ';

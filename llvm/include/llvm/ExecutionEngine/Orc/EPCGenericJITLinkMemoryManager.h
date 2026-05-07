@@ -20,6 +20,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -37,19 +38,6 @@ public:
     ExecutorAddr Release;
   };
 
-  /// Symbol names for memory management implementation.
-  struct SymbolNames {
-    StringRef AllocatorName;
-    StringRef ReserveName;
-    StringRef InitializeName;
-    StringRef DeinitializeName;
-    StringRef ReleaseName;
-  };
-
-  /// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
-  /// interface.
-  static const SymbolNames orc_rt_SimpleNativeMemoryMapSPSSymbols;
-
   /// Create an EPCGenericJITLinkMemoryManager instance from a given set of
   /// function addrs.
   EPCGenericJITLinkMemoryManager(ExecutorProcessControl &EPC, SymbolAddrs SAs)
@@ -58,15 +46,15 @@ public:
   /// Create an EPCGenericJITLinkMemoryManager using the given implementation
   /// symbol names. These will be looked up in the given JITDylib.
   static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-  Create(JITDylib &JD,
-         SymbolNames SNs = orc_rt_SimpleNativeMemoryMapSPSSymbols);
+  Create(JITDylib &JD, rt::SimpleExecutorMemoryManagerSymbolNames SNs =
+                           rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
 
   /// Create an EPCGenericJITLinkMemoryManager using the given implementation
   /// symbol names. These will be looked up in the given ExecutionSession's
   /// Bootstrap JITDylib.
   static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-  Create(ExecutionSession &ES,
-         SymbolNames SNs = orc_rt_SimpleNativeMemoryMapSPSSymbols);
+  Create(ExecutionSession &ES, rt::SimpleExecutorMemoryManagerSymbolNames SNs =
+                                   rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
 
   void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;

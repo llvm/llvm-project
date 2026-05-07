@@ -511,6 +511,25 @@ define <32 x i8> @packuswb_icmp_zero_trunc_256(<16 x i16> %a0) {
   ret <32 x i8> %4
 }
 
+define <8 x i8> @_mm_packs_pu16_manual(<4 x i16> %a, <4 x i16> %b) nounwind {
+; SSE-LABEL: _mm_packs_pu16_manual:
+; SSE:       # %bb.0:
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: _mm_packs_pu16_manual:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %sh  = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %minv = tail call <8 x i16> @llvm.smax.v8i16(<8 x i16> %sh, <8 x i16> splat (i16 0))
+  %sat = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> %minv, <8 x i16> splat (i16 255))
+  %tr  = trunc nuw <8 x i16> %sat to <8 x i8>
+  ret <8 x i8> %tr
+}
+
 define <16 x i8> @_mm_packus_epi16_manual(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE-LABEL: _mm_packus_epi16_manual:
 ; SSE:       # %bb.0:

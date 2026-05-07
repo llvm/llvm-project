@@ -201,7 +201,7 @@ define void @sremCase(ptr %addr1, ptr %dest) {
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
 ; Scalar version:  
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
-; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = fdiv float [[EXTRACT]], 7.0
+; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = fdiv float [[EXTRACT]], 7.000000e+00
 ; Vector version:
 ; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = fdiv <2 x float> [[LOAD]], splat (float 7.000000e+00)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[DIV]], i32 1
@@ -220,7 +220,7 @@ define void @fdivCase(ptr %addr1, ptr %dest) {
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
 ; Scalar version:  
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
-; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem float [[EXTRACT]], 7.0
+; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem float [[EXTRACT]], 7.000000e+00
 ; Vector version:
 ; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = frem <2 x float> [[LOAD]], splat (float 7.000000e+00)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[DIV]], i32 1
@@ -274,7 +274,7 @@ define void @undefRemCase(ptr %addr1, ptr %dest) {
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
 ; Scalar version:  
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
-; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem nnan float [[EXTRACT]], 7.0
+; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem nnan float [[EXTRACT]], 7.000000e+00
 ; Vector version:
 ; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = frem nnan <2 x float> [[LOAD]], <float poison, float 7.000000e+00>
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[DIV]], i32 1
@@ -317,7 +317,7 @@ define void @undefVectorFRemCaseWithFastMath(ptr %addr1, ptr %dest) {
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
 ; Scalar version: 
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
-; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = fadd float [[EXTRACT]], 1.0
+; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = fadd float [[EXTRACT]], 1.000000e+00
 ; Vector version:
 ; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = fadd <2 x float> [[LOAD]], <float poison, float 1.000000e+00>
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[DIV]], i32 1
