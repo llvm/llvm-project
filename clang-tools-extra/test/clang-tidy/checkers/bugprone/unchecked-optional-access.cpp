@@ -387,64 +387,62 @@ void foo() {
 
 // Custom optional-like type using analyze_as_class / analyze_as_method attributes.
 template <typename T>
-class [[clang::analyze_as_class("std::optional")]] CustomOptional {
-public:
-  [[clang::analyze_as_method("has_value")]] bool isEngaged() const;
-  [[clang::analyze_as_method("value")]] T &retrieve();
-  [[clang::analyze_as_method("value")]] const T &retrieve() const;
-  [[clang::analyze_as_method("emplace")]] T &fill(T val);
-  [[clang::analyze_as_method("reset")]] void clear();
-};
-
-void custom_unchecked_access(CustomOptional<int> opt) {
-  opt.retrieve();
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
-}
-
-void custom_checked_access(CustomOptional<int> opt) {
-  if (opt.isEngaged()) {
-    opt.retrieve();
-  }
-}
-
-void custom_emplace_then_access(CustomOptional<int> opt) {
-  opt.fill(42);
-  opt.retrieve();
-}
-
-void custom_clear_then_access(CustomOptional<int> opt) {
-  opt.fill(42);
-  opt.clear();
-  opt.retrieve();
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
-}
-
-// Custom optional-like type using standard method names — recognised via
-// analyze_as_class alone, without analyze_as_method attributes.
-template <typename T>
-class [[clang::analyze_as_class("std::optional")]] StdNamedOptional {
+class [[clang::analyze_as_class("std::optional")]] MyCustomOptional {
 public:
   bool has_value() const;
-  T &value();
-  const T &value() const;
-  T &emplace(T val);
+
+  [[clang::analyze_as_method("has_value")]] bool HasValue() const;
+
+  const T& value();
+
+  [[clang::analyze_as_method("value")]] const T &GetValue();
+
   void reset();
+
+  [[clang::analyze_as_method("reset")]] void RemoveValue();
+
+  T &emplace(T val);
+
+  [[clang::analyze_as_method("emplace")]] T &Fill(T val);
 };
 
-void std_named_unchecked_access(StdNamedOptional<int> opt) {
+void custom_unchecked_access(MyCustomOptional<int> opt) {
+  opt.GetValue();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void std_named_unchecked_access(MyCustomOptional<int> opt) {
   opt.value();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
 
-void std_named_checked_access(StdNamedOptional<int> opt) {
+void custom_checked_access(MyCustomOptional<int> opt) {
+  if (opt.HasValue()) {
+    opt.GetValue();
+  }
+}
+
+void std_named_checked_access(MyCustomOptional<int> opt) {
   if (opt.has_value()) {
     opt.value();
   }
 }
 
+void custom_emplace_then_access(MyCustomOptional<int> opt) {
+  opt.Fill(42);
+  opt.GetValue();
+}
+
 void std_named_emplace_then_access(StdNamedOptional<int> opt) {
   opt.emplace(42);
   opt.value();
+}
+
+void custom_clear_then_access(MyCustomOptional<int> opt) {
+  opt.Fill(42);
+  opt.RemoveValue();
+  opt.GetValue();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
 
 void std_named_reset_then_access(StdNamedOptional<int> opt) {
