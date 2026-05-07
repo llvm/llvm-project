@@ -1065,21 +1065,9 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     return substitutions
 
 
-def _memoize(f):
-    cache = {}  # Intentionally unbounded, see applySubstitutions()
-
-    def memoized(x):
-        if x not in cache:
-            cache[x] = f(x)
-        return cache[x]
-
-    return memoized
-
-
-@_memoize
+@lit.util.memoize  # Intentionally unbounded: see applySubstitutions
 def _caching_re_compile(r):
     return re.compile(r)
-
 
 class ExpandableScriptDirective(object):
     """

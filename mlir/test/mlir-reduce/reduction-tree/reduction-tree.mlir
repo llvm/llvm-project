@@ -1,5 +1,5 @@
 // UNSUPPORTED: system-windows
-// RUN: mlir-reduce %s -split-input-file -reduction-tree='traversal-mode=0 test=%S/failure-test.sh' | FileCheck %s
+// RUN: mlir-reduce %s -split-input-file -reduction-tree='traversal-mode=0 test=%S/../script/failure-test.sh' | FileCheck %s
 // "test.op_crash_long" should be replaced with a shorter form "test.op_crash_short".
 
 // CHECK-NOT: func @simple1() {

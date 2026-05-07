@@ -4375,6 +4375,8 @@ class SPIRV_MatrixOf<Type type> :
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
+def SPIRV_ScalarOrVectorOrPtrOrCoopMatrix :
+    AnyTypeOf<[SPIRV_ScalarOrVectorOrPtr, SPIRV_AnyCooperativeMatrix]>;
 
 class SPIRV_Vec4<Type type> : VectorOfRankAndLengthAndType<[1], [4], [type]>;
 def SPIRV_IntVec4 : SPIRV_Vec4<SPIRV_Integer>;
