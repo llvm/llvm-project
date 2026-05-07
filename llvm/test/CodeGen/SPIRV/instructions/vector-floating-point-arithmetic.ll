@@ -109,10 +109,12 @@ define <2 x half> @vector_frem(<2 x half> %a, <2 x half> %b) {
 
 
 ;; Test fmod on vector:
-define <2 x half> @vector_fmod(<2 x half> %a, <2 x half> %b) {
-    %c = call <2 x half> @llvm.spv.fmod.v2f16(<2 x half> %a, <2 x half> %b)
+define spir_func <2 x half> @vector_fmod(<2 x half> %a, <2 x half> %b) {
+    %c = call spir_func <2 x half> @_Z12__spirv_FModDv2_DhS_(<2 x half> %a, <2 x half> %b)
     ret <2 x half> %c
 }
+
+declare spir_func <2 x half> @_Z12__spirv_FModDv2_DhS_(<2 x half>, <2 x half>)
 
 ; CHECK:      [[VECTOR_FMOD]] = OpFunction [[VECTOR]] None [[VECTOR_FN]]
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[VECTOR]]

@@ -110,10 +110,12 @@ define float @scalar_frem(float %a, float %b) {
 ; CHECK-NEXT: OpFunctionEnd
 
 ;; Test fmod on scalar:
-define float @scalar_fmod(float %a, float %b) {
-    %c = call float @llvm.spv.fmod.f32(float %a, float %b)
+define spir_func float @scalar_fmod(float %a, float %b) {
+    %c = call spir_func float @_Z12__spirv_FModff(float %a, float %b)
     ret float %c
 }
+
+declare spir_func float @_Z12__spirv_FModff(float, float)
 
 ; CHECK:      [[SCALAR_FMOD]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]

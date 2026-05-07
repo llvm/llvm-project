@@ -677,7 +677,6 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_firstbitlow:
   case Intrinsic::spv_firstbitshigh:
   case Intrinsic::spv_firstbituhigh:
-  case Intrinsic::spv_fmod:
   case Intrinsic::spv_frac:
   case Intrinsic::spv_gep:
   case Intrinsic::spv_global_offset:
@@ -4764,10 +4763,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::degrees, GL::Degrees);
   case Intrinsic::spv_faceforward:
     return selectExtInst(ResVReg, ResType, I, GL::FaceForward);
-  case Intrinsic::spv_fmod:
-    return selectOpWithSrcs(
-        ResVReg, ResType, I,
-        {I.getOperand(2).getReg(), I.getOperand(3).getReg()}, SPIRV::OpFMod);
   case Intrinsic::spv_frac:
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_isinf:
