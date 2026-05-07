@@ -970,7 +970,7 @@ OMPTaskgraphDirective *OMPTaskgraphDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt) {
   auto *Dir = createDirective<OMPTaskgraphDirective>(
-      C, Clauses, AssociatedStmt, /*NumChildren=*/1, StartLoc, EndLoc);
+      C, Clauses, AssociatedStmt, /*NumChildren=*/0, StartLoc, EndLoc);
   return Dir;
 }
 
@@ -978,7 +978,7 @@ OMPTaskgraphDirective *OMPTaskgraphDirective::CreateEmpty(const ASTContext &C,
                                                           unsigned NumClauses,
                                                           EmptyShell) {
   return createEmptyDirective<OMPTaskgraphDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, /*NumChildren=*/1);
+      C, NumClauses, /*HasAssociatedStmt=*/true);
 }
 
 OMPTaskgroupDirective *OMPTaskgroupDirective::Create(

@@ -31,7 +31,8 @@ class FileSystem;
 /// pass instruments functions for coverage, adds initialization calls to the
 /// module for trace PC guards and 8bit counters if they are requested, and
 /// appends globals to llvm.compiler.used.
-class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
+class SanitizerCoveragePass
+    : public RequiredPassInfoMixin<SanitizerCoveragePass> {
 public:
   LLVM_ABI explicit SanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
@@ -39,7 +40,6 @@ public:
       const std::vector<std::string> &AllowlistFiles = {},
       const std::vector<std::string> &BlocklistFiles = {});
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 
 private:
   SanitizerCoverageOptions Options;

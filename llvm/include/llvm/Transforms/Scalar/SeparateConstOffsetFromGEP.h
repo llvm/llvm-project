@@ -14,7 +14,7 @@
 namespace llvm {
 
 class SeparateConstOffsetFromGEPPass
-    : public PassInfoMixin<SeparateConstOffsetFromGEPPass> {
+    : public OptionalPassInfoMixin<SeparateConstOffsetFromGEPPass> {
   bool LowerGEP;
 
 public:
