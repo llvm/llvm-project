@@ -26,6 +26,14 @@
 #include <threads.h>
 #include <time.h> // for TIME_UTC
 
+static void add_ns(struct timespec &ts, long ns) {
+  ts.tv_nsec += ns;
+  if (ts.tv_nsec >= 1'000'000'000) {
+    ++ts.tv_sec;
+    ts.tv_nsec -= 1'000'000'000;
+  }
+}
+
 namespace wait_notify_broadcast_test {
 
 // The test in this namespace tests all condition variable operations. The
@@ -103,6 +111,11 @@ namespace single_waiter_test {
 mtx_t waiter_mtx, main_thread_mtx;
 cnd_t waiter_cnd, main_thread_cnd;
 
+enum class WaitMode {
+  Default,
+  Timed,
+};
+
 int waiter_thread_func([[maybe_unused]] void *unused) {
   LIBC_NAMESPACE::mtx_lock(&waiter_mtx);
 
@@ -116,7 +129,7 @@ int waiter_thread_func([[maybe_unused]] void *unused) {
   return 0x600D;
 }
 
-void single_waiter_test() {
+void single_waiter_test(WaitMode wait_mode) {
   ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&waiter_mtx, mtx_plain),
             int(thrd_success));
   ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&main_thread_mtx, mtx_plain),
@@ -129,8 +142,18 @@ void single_waiter_test() {
   thrd_t waiter_thread;
   LIBC_NAMESPACE::thrd_create(&waiter_thread, waiter_thread_func, nullptr);
 
-  ASSERT_EQ(LIBC_NAMESPACE::cnd_wait(&main_thread_cnd, &main_thread_mtx),
-            int(thrd_success));
+  if (wait_mode == WaitMode::Default) {
+    ASSERT_EQ(LIBC_NAMESPACE::cnd_wait(&main_thread_cnd, &main_thread_mtx),
+              int(thrd_success));
+  } else {
+    ASSERT_EQ(wait_mode, WaitMode::Timed);
+    struct timespec ts;
+    ASSERT_EQ(LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC), TIME_UTC);
+    add_ns(ts, 50'000);
+    int result =
+        LIBC_NAMESPACE::cnd_timedwait(&main_thread_cnd, &main_thread_mtx, &ts);
+    ASSERT_TRUE(result == int(thrd_success) || result == int(thrd_timedout));
+  }
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&main_thread_mtx), int(thrd_success));
 
   ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&waiter_mtx), int(thrd_success));
@@ -180,11 +203,7 @@ void future_timeout_test() {
 
   struct timespec ts;
   ASSERT_EQ(LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC), TIME_UTC);
-  ts.tv_nsec += 50'000;
-  if (ts.tv_nsec >= 1'000'000'000) {
-    ts.tv_sec += 1;
-    ts.tv_nsec -= 1'000'000'000;
-  }
+  add_ns(ts, 50'000);
   ASSERT_EQ(LIBC_NAMESPACE::cnd_timedwait(&cnd, &mtx, &ts), int(thrd_timedout));
 
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mtx), int(thrd_success));
@@ -197,7 +216,8 @@ void future_timeout_test() {
 
 TEST_MAIN() {
   wait_notify_broadcast_test::wait_notify_broadcast_test();
-  single_waiter_test::single_waiter_test();
+  single_waiter_test::single_waiter_test(single_waiter_test::WaitMode::Default);
+  single_waiter_test::single_waiter_test(single_waiter_test::WaitMode::Timed);
   timed_wait_test::timeout_test();
   timed_wait_test::future_timeout_test();
   return 0;
