@@ -530,6 +530,7 @@ Bug Fixes in This Version
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
 - Fixed a crash caused by lambda capture handling in delayed default arguments. (#GH176534)
 - Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
+- Fixed ``#import`` incorrectly skipping non-modular headers when the header was included by a module that is not visible in the current translation unit. Non-modular headers are now only considered "already imported" when the including module is visible. (#GH170215)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
