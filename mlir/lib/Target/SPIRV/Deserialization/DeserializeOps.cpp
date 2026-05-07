@@ -132,7 +132,7 @@ void spirv::Deserializer::mergeLongCompositeContinuations(
   if (!continuationOp)
     return;
 
-  auto binarySize = binary.size();
+  size_t binarySize = binary.size();
   auto isNextContinuation = [&]() {
     if (curOffset >= binarySize)
       return false;
