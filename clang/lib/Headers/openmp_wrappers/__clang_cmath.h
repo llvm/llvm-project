@@ -14,15 +14,8 @@
     !defined(__OPENMP_NVPTX__)
 #error "This file is for SPIRV/HIP/CUDA OpenMP device compilation only."
 #endif
-#if defined(__cplusplus)
-#include <limits>
-#include <type_traits>
-#include <utility>
-#endif
-#include <limits.h>
-#include <stdint.h>
 #define __DEVICE__ static constexpr __attribute__((always_inline, nothrow))
-#if defined(__cplusplus)
+
 __DEVICE__ float sin(float __x) { return ::sinf(__x); }
 __DEVICE__ float sinh(float __x) { return ::sinhf(__x); }
 __DEVICE__ float cos(float __x) { return ::cosf(__x); }
@@ -204,6 +197,6 @@ __DEVICE__ _Float16 pow(_Float16 __base, int __iexp) {
   return __ocml_pown_f16(__base, __iexp);
 }
 #endif
-#endif
+
 #undef __DEVICE__
 #endif // __CLANG_CMATH_H__
