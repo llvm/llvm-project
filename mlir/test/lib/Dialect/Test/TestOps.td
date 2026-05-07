@@ -2808,6 +2808,17 @@ def TestLoopTypesCompatOp : TEST_Op<"loop_types_compat",
   let regions = (region SizedRegion<1>:$body);
 }
 
+def TestRegionTypeChangerOp : TEST_Op<"region_type_changer",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$entries);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "`(` $entries `)` $body `:` functional-type($entries, $results) attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test TableGen generated build() methods
 //===----------------------------------------------------------------------===//
