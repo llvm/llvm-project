@@ -514,6 +514,21 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
     emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+
+    // If this is an implicit-return-zero function, initialize the return
+    // value. This mirrors the implicit-return-zero handling in classic
+    // codegen's EmitFunctionProlog (CGCall.cpp). It is done here, after
+    // emitAndUpdateRetAlloca, because in CIR the return slot is created
+    // after the prolog (the opposite of classic codegen, where ReturnValue
+    // is set up before EmitFunctionProlog runs).
+    // TODO(cir): Align prolog handling with classic codegen.
+    if (fd && fd->hasImplicitReturnZero()) {
+      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
+      mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
+      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
+      builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
+                                            returnValue.getPointer());
+    }
   }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
@@ -683,6 +698,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       builder.setInsertionPoint(fn);
       clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
                                   fn.getFunctionType());
+      cgm.insertGlobalSymbol(clone);
       clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
       clone.setInlineKind(cir::InlineKind::AlwaysInline);
@@ -707,6 +723,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                   .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
                   .failed())
             llvm_unreachable("Failed to replace inline builtin symbol uses");
+          cgm.eraseGlobalSymbol(inlineFn);
           inlineFn.erase();
         }
         break;
@@ -1018,8 +1035,14 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   if (passedParams) {
     for (auto *param : fd->parameters()) {
       args.push_back(param);
-      if (param->hasAttr<PassObjectSizeAttr>())
-        cgm.errorNYI(param->getSourceRange(), "pass-object-size attribute");
+      if (!param->hasAttr<PassObjectSizeAttr>())
+        continue;
+
+      auto *implicit = ImplicitParamDecl::Create(
+          getContext(), param->getDeclContext(), param->getLocation(),
+          /*Id=*/nullptr, getContext().getSizeType(), ImplicitParamKind::Other);
+      sizeArguments[param] = implicit;
+      args.push_back(implicit);
     }
   }
 
@@ -1058,10 +1081,6 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
 
       // Skip unique OVEs.
       if (ov->isUnique()) {
-        // FIXME: This doesn't really affect anything, but I cannot find a test
-        // for this, so leave an ErrorNYI here until we can find one.
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "emitPseudoObjectExpr skipped for uniqueness");
         assert(ov != resultExpr &&
                "A unique OVE cannot be used as the result expression");
         continue;
@@ -1097,9 +1116,7 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
       if (forLValue)
         result = cgf.emitLValue(semantic);
       else
-        cgf.cgm.errorNYI(
-            e->getSourceRange(),
-            "emitPseudoObjectExpr as an RValue, when semantic is result");
+        result = cgf.emitAnyExpr(semantic, slot);
     } else {
       // FIXME: best I can tell, this is only reachable as an r-value, so this
       // isn't properly tested.
@@ -1111,6 +1128,12 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
   }
 
   return result;
+}
+
+RValue CIRGenFunction::emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                              AggValueSlot slot) {
+  return std::get<RValue>(
+      emitPseudoObjectExpr(*this, e, /*forLValue=*/false, slot));
 }
 
 LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {

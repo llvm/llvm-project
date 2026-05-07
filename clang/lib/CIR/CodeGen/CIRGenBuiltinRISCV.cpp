@@ -54,26 +54,63 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   // Zbc
   case RISCV::BI__builtin_riscv_clmul_32:
-  case RISCV::BI__builtin_riscv_clmul_64:
+  case RISCV::BI__builtin_riscv_clmul_64: {
+    intrinsicName = "clmul";
+    break;
+  }
   case RISCV::BI__builtin_riscv_clmulh_32:
-  case RISCV::BI__builtin_riscv_clmulh_64:
+  case RISCV::BI__builtin_riscv_clmulh_64: {
+    intrinsicName = "riscv.clmulh";
+    break;
+  }
   case RISCV::BI__builtin_riscv_clmulr_32:
-  case RISCV::BI__builtin_riscv_clmulr_64:
+  case RISCV::BI__builtin_riscv_clmulr_64: {
+    intrinsicName = "riscv.clmulr";
+    break;
+  }
+
   // Zbkx
   case RISCV::BI__builtin_riscv_xperm4_32:
-  case RISCV::BI__builtin_riscv_xperm4_64:
+  case RISCV::BI__builtin_riscv_xperm4_64: {
+    intrinsicName = "riscv.xperm4";
+    break;
+  }
   case RISCV::BI__builtin_riscv_xperm8_32:
-  case RISCV::BI__builtin_riscv_xperm8_64:
+  case RISCV::BI__builtin_riscv_xperm8_64: {
+    intrinsicName = "riscv.xperm8";
+    break;
+  }
   // Zbkb
   case RISCV::BI__builtin_riscv_brev8_32:
-  case RISCV::BI__builtin_riscv_brev8_64:
-  case RISCV::BI__builtin_riscv_zip_32:
-  case RISCV::BI__builtin_riscv_unzip_32:
+  case RISCV::BI__builtin_riscv_brev8_64: {
+    intrinsicName = "riscv.brev8";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_zip_32: {
+    intrinsicName = "riscv.zip";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_unzip_32: {
+    intrinsicName = "riscv.unzip";
+    break;
+  }
   // Zknh
-  case RISCV::BI__builtin_riscv_sha256sig0:
-  case RISCV::BI__builtin_riscv_sha256sig1:
-  case RISCV::BI__builtin_riscv_sha256sum0:
-  case RISCV::BI__builtin_riscv_sha256sum1:
+  case RISCV::BI__builtin_riscv_sha256sig0: {
+    intrinsicName = "riscv.sha256sig0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sig1: {
+    intrinsicName = "riscv.sha256sig1";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum0: {
+    intrinsicName = "riscv.sha256sum0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum1: {
+    intrinsicName = "riscv.sha256sum1";
+    break;
+  }
   // Zksed
   case RISCV::BI__builtin_riscv_sm4ks:
   case RISCV::BI__builtin_riscv_sm4ed:

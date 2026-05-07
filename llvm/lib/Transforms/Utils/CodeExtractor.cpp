@@ -707,6 +707,9 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
     }
   }
 
+  // Reset stale state from any prior call in HotColdSplitting; the CFG may
+  // have changed since.
+  FuncRetVal = nullptr;
   if (!VoidReturnWithSingleOutput && !AggregateArgs && Outputs.size() == 1 &&
       getCommonExitBlock(Blocks)) {
     FuncRetVal = Outputs[0];

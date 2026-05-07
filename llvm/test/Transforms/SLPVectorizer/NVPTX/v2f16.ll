@@ -13,8 +13,8 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
 ; VECTOR-NEXT:    [[TMP5:%.*]] = getelementptr inbounds half, ptr [[ARG1:%.*]], i64 [[TMP4]]
 ; VECTOR-NEXT:    [[TMP6:%.*]] = getelementptr inbounds half, ptr [[ARG:%.*]], i64 [[TMP4]]
 ; VECTOR-NEXT:    [[TMP7:%.*]] = load <2 x half>, ptr [[TMP5]], align 8
-; VECTOR-NEXT:    [[TMP8:%.*]] = fmul fast <2 x half> [[TMP7]], splat (half 0xH5380)
-; VECTOR-NEXT:    [[TMP9:%.*]] = fadd fast <2 x half> [[TMP8]], splat (half 0xH57F0)
+; VECTOR-NEXT:    [[TMP8:%.*]] = fmul fast <2 x half> [[TMP7]], splat (half 6.000000e+01)
+; VECTOR-NEXT:    [[TMP9:%.*]] = fadd fast <2 x half> [[TMP8]], splat (half 1.270000e+02)
 ; VECTOR-NEXT:    store <2 x half> [[TMP9]], ptr [[TMP6]], align 8
 ; VECTOR-NEXT:    ret void
 ;
@@ -26,14 +26,14 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
 ; NOVECTOR-NEXT:    [[TMP10:%.*]] = or disjoint i64 [[TMP4]], 1
 ; NOVECTOR-NEXT:    [[TMP5:%.*]] = getelementptr inbounds half, ptr [[ARG1:%.*]], i64 [[TMP4]]
 ; NOVECTOR-NEXT:    [[TMP7:%.*]] = load half, ptr [[TMP5]], align 8
-; NOVECTOR-NEXT:    [[TMP8:%.*]] = fmul fast half [[TMP7]], 0xH5380
-; NOVECTOR-NEXT:    [[TMP9:%.*]] = fadd fast half [[TMP8]], 0xH57F0
+; NOVECTOR-NEXT:    [[TMP8:%.*]] = fmul fast half [[TMP7]], 6.000000e+01
+; NOVECTOR-NEXT:    [[TMP9:%.*]] = fadd fast half [[TMP8]], 1.270000e+02
 ; NOVECTOR-NEXT:    [[TMP6:%.*]] = getelementptr inbounds half, ptr [[ARG:%.*]], i64 [[TMP4]]
 ; NOVECTOR-NEXT:    store half [[TMP9]], ptr [[TMP6]], align 8
 ; NOVECTOR-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[ARG1]], i64 [[TMP10]]
 ; NOVECTOR-NEXT:    [[TMP12:%.*]] = load half, ptr [[TMP11]], align 2
-; NOVECTOR-NEXT:    [[TMP18:%.*]] = fmul fast half [[TMP12]], 0xH5380
-; NOVECTOR-NEXT:    [[TMP19:%.*]] = fadd fast half [[TMP18]], 0xH57F0
+; NOVECTOR-NEXT:    [[TMP18:%.*]] = fmul fast half [[TMP12]], 6.000000e+01
+; NOVECTOR-NEXT:    [[TMP19:%.*]] = fadd fast half [[TMP18]], 1.270000e+02
 ; NOVECTOR-NEXT:    [[TMP15:%.*]] = getelementptr inbounds half, ptr [[ARG]], i64 [[TMP10]]
 ; NOVECTOR-NEXT:    store half [[TMP19]], ptr [[TMP15]], align 2
 ; NOVECTOR-NEXT:    ret void

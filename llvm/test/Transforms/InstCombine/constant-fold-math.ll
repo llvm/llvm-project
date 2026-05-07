@@ -48,7 +48,7 @@ define double @constant_fold_fmuladd_f64() #0 {
 ; PR32177
 
 ; CHECK-LABEL: @constant_fold_frem_f32
-; CHECK-NEXT: ret float 0x41A61B2000000000
+; CHECK-NEXT: ret float f0x4D30D900
 define float @constant_fold_frem_f32() #0 {
   %x = frem float 0x43cbfcd960000000, 0xc1e2b34a00000000
   ret float %x

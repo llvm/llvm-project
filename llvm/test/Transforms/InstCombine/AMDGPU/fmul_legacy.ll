@@ -57,9 +57,9 @@ define float @test_finite(i32 %x, i32 %y) {
 define float @test_finite_assumed(float %x, float %y) {
 ; CHECK-LABEL: @test_finite_assumed(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[IS_FINITE_X:%.*]] = fcmp one float [[FABS_X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_FINITE_X:%.*]] = fcmp one float [[FABS_X]], +inf
 ; CHECK-NEXT:    [[FABS_Y:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[IS_FINITE_Y:%.*]] = fcmp one float [[FABS_Y]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_FINITE_Y:%.*]] = fcmp one float [[FABS_Y]], +inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_X]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_Y]])
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul nnan float [[X]], [[Y]]

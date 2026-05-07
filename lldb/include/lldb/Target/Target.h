@@ -1666,6 +1666,201 @@ public:
 
   typedef std::shared_ptr<StopHook> StopHookSP;
 
+  // Target Hooks
+  //
+  // Hooks fire on target lifecycle events. There are two flows:
+  //
+  // Command-based hooks: the user specifies which triggers the hook responds
+  //   to (--on-load, --on-unload, --on-stop) and provides a list of commands.
+  //   All commands run for every trigger the hook is signed up for.
+  //
+  // Python class hooks: the user provides a Python class name and optional
+  //   extra_args that will be passed to the hook init method (-k key -v value).
+  //   The class controls which events it handles by implementing the
+  //   corresponding callback methods (handle_module_loaded,
+  //   handle_module_unloaded, handle_stop). Triggers are set automatically
+  //   based on which methods exist.
+  class Hook : public UserID {
+  public:
+    Hook(const Hook &rhs);
+    virtual ~Hook() = default;
+
+    enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
+
+    HookKind GetHookKind() const { return m_kind; }
+
+    /// Individual trigger bits. Combine with bitwise OR to form a trigger mask.
+    // FIXME: Add kProcessExit, kProcessDetach, etc. as needed.
+    enum TriggerBit : uint32_t {
+      kModulesLoaded = (1u << 0),
+      kModulesUnloaded = (1u << 1),
+      kProcessStop = (1u << 2),
+    };
+
+    lldb::TargetSP &GetTarget() { return m_target_sp; }
+
+    bool IsEnabled() { return m_enabled; }
+    void SetIsEnabled(bool enabled) { m_enabled = enabled; }
+
+    /// Return the bitmask of triggers this hook responds to.
+    /// Each bit corresponds to a TriggerBit value.
+    uint32_t GetTriggerMask() const { return m_trigger_mask; }
+
+    /// Return true if this hook fires on the given trigger.
+    bool FiresOn(uint32_t trigger) const { return m_trigger_mask & trigger; }
+
+    // Filter fields
+
+    /// Set the symbol context specifier. The hook takes ownership.
+    void SetSCSpecifier(SymbolContextSpecifier *specifier);
+    SymbolContextSpecifier *GetSCSpecifier() { return m_sc_specifier_sp.get(); }
+
+    /// Check if the execution context passes the specifier and thread spec
+    /// filters. Always returns true if no filters are set.
+    bool ExecutionContextPasses(const ExecutionContext &exe_ctx);
+
+    /// Set the thread specifier. The hook takes ownership.
+    void SetThreadSpecifier(ThreadSpec *specifier);
+    ThreadSpec *GetThreadSpecifier() { return m_thread_spec_up.get(); }
+
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
+    // Reaction settings
+
+    void SetAutoContinue(bool auto_continue) {
+      m_auto_continue = auto_continue;
+    }
+    bool GetAutoContinue() const { return m_auto_continue; }
+
+    void SetSuppressOutput(bool suppress_output) {
+      m_suppress_output = suppress_output;
+    }
+    bool GetSuppressOutput() const { return m_suppress_output; }
+
+    // Event handler methods (default no-ops)
+
+    virtual void HandleModuleLoaded(lldb::StreamSP output) {}
+    virtual void HandleModuleUnloaded(lldb::StreamSP output) {}
+
+    /// Called when the process stops. Returns a StopHookResult indicating
+    /// whether the process should remain stopped or continue.
+    virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                                lldb::StreamSP output) {
+      return StopHook::StopHookResult::NoPreference;
+    }
+
+    virtual void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
+
+  protected:
+    /// Print the filter portion of the description (AutoContinue, Specifier,
+    /// ThreadSpec). Called by subclass GetDescription after printing the
+    /// hook-specific content (commands or class).
+    void GetFilterDescription(Stream &s, lldb::DescriptionLevel level) const;
+    lldb::TargetSP m_target_sp;
+    HookKind m_kind;
+    bool m_enabled = true;
+    uint32_t m_trigger_mask = 0; // No default, triggers must be explicit.
+
+    // Filters
+    lldb::SymbolContextSpecifierSP m_sc_specifier_sp;
+    std::unique_ptr<ThreadSpec> m_thread_spec_up;
+    bool m_at_initial_stop = true;
+
+    // Reaction settings
+    bool m_auto_continue = false;
+    bool m_suppress_output = false;
+
+    Hook(lldb::TargetSP target_sp, lldb::user_id_t uid, HookKind kind);
+  };
+
+  class HookCommandLine : public Hook {
+  public:
+    ~HookCommandLine() override = default;
+
+    /// Replace the trigger mask. \a mask is a bitwise OR of TriggerBit values.
+    void SetTriggerMask(uint32_t mask) { m_trigger_mask = mask; }
+
+    /// Add a trigger to the mask. \a trigger is a single TriggerBit value.
+    void AddTrigger(uint32_t trigger) { m_trigger_mask |= trigger; }
+
+    /// Remove a trigger from the mask. \a trigger is a single TriggerBit value.
+    void RemoveTrigger(uint32_t trigger) { m_trigger_mask &= ~trigger; }
+
+    /// Return the list of commands that this hook runs.
+    StringList &GetCommands() { return m_commands; }
+
+    /// Populate the command list by splitting a single string on newlines.
+    void SetActionFromString(const std::string &string);
+
+    /// Populate the command list from a vector of individual command strings.
+    void SetActionFromStrings(const std::vector<std::string> &strings);
+
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
+
+  private:
+    StringList m_commands;
+
+    HookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid, HookKind::CommandBased) {}
+    friend class Target;
+  };
+
+  class HookScripted : public Hook {
+  public:
+    ~HookScripted() override = default;
+
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
+
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
+
+    Status SetScriptCallback(std::string class_name,
+                             StructuredData::ObjectSP extra_args_sp);
+
+  private:
+    std::string m_class_name;
+    StructuredDataImpl m_extra_args;
+    lldb::ScriptedHookInterfaceSP m_interface_sp;
+
+    HookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid, HookKind::ScriptBased) {}
+    friend class Target;
+  };
+
+  typedef std::shared_ptr<Hook> HookSP;
+
+  HookSP CreateHook(Hook::HookKind kind);
+
+  /// Removes the most recently created hook. Used to roll back a
+  /// hook creation when an error occurs (e.g., invalid script class name
+  /// or empty interactive input).
+  void UndoCreateHook(lldb::user_id_t uid);
+
+  bool RemoveHookByID(lldb::user_id_t uid);
+
+  void RemoveAllHooks();
+
+  HookSP GetHookByID(lldb::user_id_t uid);
+
+  bool SetHookEnabledStateByID(lldb::user_id_t uid, bool enabled);
+
+  void SetAllHooksEnabledState(bool enabled);
+
+  size_t GetNumHooks() const { return m_hooks.size(); }
+
+  HookSP GetHookAtIndex(size_t index);
+
+  void RunModuleHooks(bool is_load);
+
   /// Add an empty stop hook to the Target's stop hook list, and returns a
   /// shared pointer to the new hook.
   StopHookSP CreateStopHook(StopHook::StopHookKind kind, bool internal = false);
@@ -1859,6 +2054,10 @@ protected:
   bool m_valid;
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
+
+  typedef std::map<lldb::user_id_t, HookSP> HookCollection;
+  HookCollection m_hooks;
+  lldb::user_id_t m_hook_next_id = 0;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
       LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; ///< The globally unique ID

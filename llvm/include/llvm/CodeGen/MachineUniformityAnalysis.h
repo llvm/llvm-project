@@ -64,14 +64,13 @@ public:
 };
 
 class MachineUniformityPrinterPass
-    : public PassInfoMixin<MachineUniformityAnalysis> {
+    : public RequiredPassInfoMixin<MachineUniformityPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MachineUniformityPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm
