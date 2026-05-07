@@ -457,7 +457,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
-  const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
+  const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
   for (const auto &Feature : RISCVFeatureKV) {
     if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
@@ -556,7 +556,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
           dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
 
-  MCSubtargetInfo SubtargetInfo = *TM.getMCSubtargetInfo();
+  MCSubtargetInfo SubtargetInfo = TM.getMCSubtargetInfo();
 
   // Use module flag to update feature bits.
   if (auto *MD = dyn_cast_or_null<MDNode>(M.getModuleFlag("riscv-isa"))) {
@@ -730,7 +730,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
-  const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
+  const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
 
   MCSymbol *HwasanTagMismatchV2Sym =
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch_v2");

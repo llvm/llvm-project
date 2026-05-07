@@ -45,12 +45,14 @@ declare void @foo()
 declare i32 @setjmp(ptr) #0
 
 !llvm.dbg.cu = !{!2}
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename: "lower-em-sjlj.c", directory: "test")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
-!3 = distinct !DISubprogram(name: "setjmp_debug_info0", unit:!2, file: !1, line: 1)
+!3 = distinct !DISubprogram(name: "setjmp_debug_info0", type: !10, unit:!2, file: !1, line: 1)
 !4 = !DILocation(line:2, scope: !3)
 !5 = !DILocation(line:3, scope: !3)
 !6 = !DILocation(line:4, scope: !3)

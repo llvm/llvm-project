@@ -52,6 +52,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -279,6 +280,7 @@ void Target::CleanupProcess() {
   m_breakpoint_list.ClearAllBreakpointSites();
   m_internal_breakpoint_list.ClearAllBreakpointSites();
   ResetBreakpointHitCounts();
+  llvm::consumeError(m_process_sp->FlushDelayedBreakpoints());
   // Disable watchpoints just on the debugger side.
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);
@@ -2754,7 +2756,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
     return ts->GetPersistentExpressionState();
 
   LLDB_LOG(GetLog(LLDBLog::Target),
-           "Unable to get persistent expression state for language {1}: {0}",
+           "Unable to get persistent expression state for language {}:",
            Language::GetNameForLanguageType(language));
   return nullptr;
 }
@@ -4331,8 +4333,11 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
-  if (!should_stop_or_err)
+  if (!should_stop_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), should_stop_or_err.takeError(),
+                   "scripted stop hook HandleStop failed: {0}");
     return StopHookResult::KeepStopped;
+  }
 
   return *should_stop_or_err ? StopHookResult::KeepStopped
                              : StopHookResult::RequestContinue;
@@ -5950,10 +5955,14 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
 }
 
 std::recursive_mutex &Target::GetAPIMutex() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return m_private_mutex;
+
   if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
     return m_private_mutex;
-  else
-    return m_mutex;
+
+  return m_mutex;
 }
 
 /// Get metrics associated with this target in JSON format.
