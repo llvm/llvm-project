@@ -72,7 +72,9 @@ LLVM_ABI extern bool VerifySCEV;
 /// Add and Mul expressions may have no-unsigned-wrap <NUW> or
 /// no-signed-wrap <NSW> properties, which are derived from the IR
 /// operator. NSW is a misnomer that we use to mean no signed overflow or
-/// underflow.
+/// underflow. NUW and NSW must hold for all subsets and orders of
+/// Add/Mul operands. That is, in `(a + b + c)<nsw>`, all of `a + b`,
+/// `b + c`, `a + c` must be nsw as well.
 ///
 /// AddRec expressions may have a no-self-wraparound <NW> property if, in
 /// the integer domain, abs(step) * max-iteration(loop) <=
@@ -628,6 +630,7 @@ public:
   enum LoopDisposition {
     LoopVariant,   ///< The SCEV is loop-variant (unknown).
     LoopInvariant, ///< The SCEV is loop-invariant.
+    LoopUniform,   ///< The SCEV is loop-uniform.
     LoopComputable ///< The SCEV varies predictably with the loop.
   };
 
@@ -1448,6 +1451,29 @@ public:
   /// Return the "disposition" of the given SCEV with respect to the given
   /// loop.
   LLVM_ABI LoopDisposition getLoopDisposition(const SCEV *S, const Loop *L);
+
+  /// Returns true if the given SCEV is loop-uniform with respect to the
+  /// specified loop L.
+  ///
+  /// A SCEV is considered loop-uniform if its value is invariant across all
+  /// iterations of L, meaning it does not depend on any induction variables
+  /// or values that vary within L.
+  ///
+  /// This notion is particularly useful in nested loops, where a value may vary
+  /// in an inner loop but remain invariant in an outer loop.
+  ///
+  /// Example:
+  /// \code
+  ///   for (i)
+  ///     for (j)
+  ///       dep(j);
+  ///       dep(i, j);
+  /// \endcode
+  /// isLoopUniform(SCEV(dep(j)), loop_i) returns true, as `j` is independent of
+  /// `i`.
+  /// isLoopUniform(SCEV(dep(i, j)), loop_i) returns false, as the expression
+  /// depends on `i`, which varies in loop_i.
+  LLVM_ABI bool isLoopUniform(const SCEV *S, const Loop *L);
 
   /// Return true if the value of the given SCEV is unchanging in the
   /// specified loop.
@@ -2547,23 +2573,20 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public PassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {

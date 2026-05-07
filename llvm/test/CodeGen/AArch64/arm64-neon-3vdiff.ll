@@ -2768,7 +2768,7 @@ define <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coer
 ; CHECK-GI-NEXT:    dup v2.8h, v1.h[0]
 ; CHECK-GI-NEXT:    sqneg v1.8h, v2.8h
 ; CHECK-GI-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    fmov d3, x0
 ; CHECK-GI-NEXT:    sqdmull v2.4s, v2.4h, v3.h[0]
 ; CHECK-GI-NEXT:    sqdmull v5.4s, v4.4h, v1.4h

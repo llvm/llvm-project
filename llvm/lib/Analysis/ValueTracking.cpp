@@ -75,6 +75,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <algorithm>
 #include <cassert>
@@ -852,7 +853,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
 
           return false;
         }();
-        if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q))
           return true;
       }
       continue;
@@ -868,7 +869,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
       continue;
 
-    if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q))
       return true;
   }
 
@@ -1094,12 +1095,8 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
         continue;
       if (RetainedKnowledge RK = getKnowledgeFromBundle(
               *I, I->bundle_op_info_begin()[Elem.Index])) {
-        // Allow AllowEphemerals in isValidAssumeForContext, as the CxtI might
-        // be the producer of the pointer in the bundle. At the moment, align
-        // assumptions aren't optimized away.
         if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
-            isPowerOf2_64(RK.ArgValue) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT, /*AllowEphemerals*/ true))
+            isPowerOf2_64(RK.ArgValue) && isValidAssumeForContext(I, Q))
           Known.Zero.setLowBits(Log2_64(RK.ArgValue));
       }
       continue;
@@ -1111,14 +1108,14 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
     Value *Arg = I->getArgOperand(0);
 
-    if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+    if (Arg == V && isValidAssumeForContext(I, Q)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
       (void)BitWidth;
       Known.setAllOnes();
       return;
     }
     if (match(Arg, m_Not(m_Specific(V))) &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        isValidAssumeForContext(I, Q)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
       (void)BitWidth;
       Known.setAllZero();
@@ -1126,7 +1123,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     }
     auto *Trunc = dyn_cast<TruncInst>(Arg);
     if (Trunc && Trunc->getOperand(0) == V &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        isValidAssumeForContext(I, Q)) {
       if (Trunc->hasNoUnsignedWrap()) {
         Known = KnownBits::makeConstant(APInt(BitWidth, 1));
         return;
@@ -1143,7 +1140,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     if (!Cmp)
       continue;
 
-    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (!isValidAssumeForContext(I, Q))
       continue;
 
     computeKnownBitsFromICmpCond(V, Cmp, Known, Q, /*Invert=*/false);
@@ -2635,8 +2632,7 @@ static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
                                              bool CondIsTrue) {
   CmpPredicate Pred;
   const APInt *RHSC;
-  if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
-                          m_APInt(RHSC))))
+  if (!match(Cond, m_ICmp(Pred, m_Ctpop(m_Specific(V)), m_APInt(RHSC))))
     return false;
   if (!CondIsTrue)
     Pred = ICmpInst::getInversePredicate(Pred);
@@ -2670,7 +2666,7 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
       CallInst *I = cast<CallInst>(AssumeVH);
       if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, I->getArgOperand(0),
                                            /*CondIsTrue=*/true) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT))
+          isValidAssumeForContext(I, Q))
         return true;
     }
   }
@@ -4118,7 +4114,7 @@ static bool isKnownNonEqualFromContext(const Value *V1, const Value *V2,
     if (isImpliedCondition(I->getArgOperand(0), ICmpInst::ICMP_NE, V1, V2, Q.DL,
                            /*LHSIsTrue=*/true, Depth)
             .value_or(false) &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        isValidAssumeForContext(I, Q))
       return true;
   }
 
@@ -4891,7 +4887,7 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
     assert(I->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
 
-    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (!isValidAssumeForContext(I, Q))
       continue;
 
     computeKnownFPClassFromCond(V, I->getArgOperand(0),
@@ -7631,20 +7627,6 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
   });
 
   return Safe;
-}
-
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
@@ -10484,7 +10466,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
-      if (!isValidAssumeForContext(I, SQ.CxtI, SQ.DT))
+      if (!isValidAssumeForContext(I, SQ))
         continue;
       Value *Arg = I->getArgOperand(0);
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
@@ -10621,7 +10603,7 @@ void llvm::findValuesAffectedByCondition(
         }
       }
 
-      if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
+      if (HasRHSC && match(A, m_Ctpop(m_Value(X))))
         AddAffected(X);
     } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
