@@ -18,6 +18,6 @@ define i32 @setjmp_test() nounwind "frame-pointer"="all" {
 ; CHECK-DAG:   std 31, 0([[BUFADDR]])
 ; CHECK-DAG:   std 1, 16([[BUFADDR]])
 ; CHECK-DAG:   std 2, 24([[BUFADDR]])
-; CHECK-DAG:   std {{[^,]+}}, 32([[BUFADDR]])
+; CHECK-DAG:   std **BASE POINTER**, 32([[BUFADDR]])
 ; CHECK:       mflr [[IPREG:[0-9]+]]
 ; CHECK:       std [[IPREG]], 8({{[0-9]+}})
