@@ -630,57 +630,87 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
 
   const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
   CIRBaseBuilderTy cirBuilder(rewriter);
+
+  // Read the array cookie (or compute the void* pointer for the
+  // non-cookie case) before creating the cleanup scope. The cookie read
+  // produces values that are needed by both the destruction loop in the
+  // body region (numElements for the array.dtor) and the operator
+  // delete[] call in the cleanup region (deletePtr / numElements for the
+  // total-size computation), so it must dominate both regions.
   mlir::Value deletePtr;
-  llvm::SmallVector<mlir::Value> callArgs;
+  mlir::Value numElements;
+  cir::PointerType ptrTy;
+  clang::CharUnits cookieSize;
+  mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
+  unsigned ptrWidth =
+      lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
+  cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
 
   if (cookieRequired) {
-    mlir::Value numElements;
-    clang::CharUnits cookieSize;
-    auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
-    mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
-
+    ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
     cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
                            deletePtr, cookieSize);
-
-    // If a dtor function is provided, create an array dtor operation.
-    // This will get expanded during LoweringPrepare.
-    mlir::FlatSymbolRefAttr dtorFn = op.getElementDtorAttr();
-    if (dtorFn) {
-      auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
-      cir::ArrayDtor::create(
-          rewriter, loc, loweredAddress, numElements,
-          [&](mlir::OpBuilder &b, mlir::Location l) {
-            auto arg = b.getInsertionBlock()->addArgument(eltPtrTy, l);
-            cir::CallOp::create(b, l, dtorFn, cir::VoidType(),
-                                mlir::ValueRange{arg});
-            cir::YieldOp::create(b, l);
-          });
-    }
-
-    callArgs.push_back(deletePtr);
-    if (deleteParams.getSize()) {
-      uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
-      unsigned ptrWidth =
-          lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
-      cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
-
-      mlir::Value eltSizeVal = cir::ConstantOp::create(
-          rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
-      mlir::Value allocSize =
-          cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
-      mlir::Value cookieSizeVal = cir::ConstantOp::create(
-          rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
-      allocSize =
-          cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
-      callArgs.push_back(allocSize);
-    }
   } else {
     deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
                                     cir::CastKind::bitcast, loweredAddress);
-    callArgs.push_back(deletePtr);
   }
 
-  cir::CallOp::create(rewriter, loc, deleteFn, cir::VoidType(), callArgs);
+  // Create a cleanup scope to wrap the ArrayDtor operation (if needed) and
+  // call the array delete operator from the cleanup region. If no exceptions
+  // are thrown during the array dtor, the normal control flow will call the
+  // delete operator. The ArrayDtor operation will get its own cleanup region
+  // when it is expanded during LoweringPrepare. If an exception is thrown, the
+  // exception handling flow will be connected to the cleanup region here to
+  // call the delete operator on the exception path.
+  mlir::FlatSymbolRefAttr dtorFn = op.getElementDtorAttr();
+  cir::CleanupKind cleanupKind =
+      op.getDtorMayThrow() ? cir::CleanupKind::All : cir::CleanupKind::Normal;
+  cir::CleanupScopeOp::create(
+      rewriter, loc, cleanupKind,
+      /*bodyBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        if (dtorFn) {
+          auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
+          auto arrayDtor = cir::ArrayDtor::create(
+              b, l, loweredAddress, numElements,
+              [&](mlir::OpBuilder &bb, mlir::Location ll) {
+                mlir::Value arg =
+                    bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
+                auto dtorCall = cir::CallOp::create(
+                    bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
+                if (!op.getDtorMayThrow())
+                  dtorCall.setNothrowAttr(bb.getUnitAttr());
+                cir::YieldOp::create(bb, ll);
+              });
+          if (op.getDtorMayThrow())
+            arrayDtor.setDtorMayThrow(true);
+        }
+        cir::YieldOp::create(b, l);
+      },
+      /*cleanupBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        llvm::SmallVector<mlir::Value> callArgs;
+        callArgs.push_back(deletePtr);
+        if (deleteParams.getSize()) {
+          uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
+          auto eltSizeVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, eltSizeBytes));
+          mlir::Value allocSize =
+              cir::MulOp::create(b, l, sizeTy, eltSizeVal, numElements);
+          auto cookieSizeVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+          allocSize =
+              cir::AddOp::create(b, l, sizeTy, allocSize, cookieSizeVal);
+          callArgs.push_back(allocSize);
+        }
+        auto deleteCall =
+            cir::CallOp::create(b, l, deleteFn, cir::VoidType(), callArgs);
+        // operator delete[] is implicitly nothrow per [basic.stc.dynamic],
+        // matching classic CodeGen's `nounwind` attribute on the call.
+        deleteCall.setNothrowAttr(b.getUnitAttr());
+        cir::YieldOp::create(b, l);
+      });
+
   rewriter.eraseOp(op);
   return mlir::success();
 }

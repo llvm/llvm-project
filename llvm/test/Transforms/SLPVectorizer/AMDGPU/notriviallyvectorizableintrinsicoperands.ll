@@ -8,8 +8,8 @@ define amdgpu_kernel void @test_with_wmma( ptr addrspace(1) %input, ptr addrspac
 ; GCN-NEXT:    [[IN0:%.*]] = load float, ptr addrspace(1) [[INPUT]], align 4
 ; GCN-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr addrspace(1) [[INPUT]], i64 1
 ; GCN-NEXT:    [[IN1:%.*]] = load float, ptr addrspace(1) [[PTR1]], align 4
-; GCN-NEXT:    [[MUL0:%.*]] = fmul contract float [[IN0]], 0x3FC0527DC0000000
-; GCN-NEXT:    [[MUL1:%.*]] = fmul contract float [[IN1]], 0x3FC0527DC0000000
+; GCN-NEXT:    [[MUL0:%.*]] = fmul contract float [[IN0]], f0x3E0293EE
+; GCN-NEXT:    [[MUL1:%.*]] = fmul contract float [[IN1]], f0x3E0293EE
 ; GCN-NEXT:    [[SUB0:%.*]] = fsub contract float [[MUL0]], [[SCALED_MAX]]
 ; GCN-NEXT:    [[SUB1:%.*]] = fsub contract float [[MUL1]], [[SCALED_MAX]]
 ; GCN-NEXT:    [[EXP0:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[SUB0]])
@@ -65,7 +65,7 @@ define amdgpu_kernel void @test_amdgcn_exp_log(ptr addrspace(1) %input, ptr addr
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[INPUT]], align 4
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[SCALES]], align 4
-; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x float> [[TMP0]], splat (float 0x3FC0527DC0000000)
+; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x float> [[TMP0]], splat (float f0x3E0293EE)
 ; GCN-NEXT:    [[TMP3:%.*]] = fsub contract <2 x float> [[TMP2]], [[TMP1]]
 ; GCN-NEXT:    [[SUB0:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
 ; GCN-NEXT:    [[EXP0:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[SUB0]])
@@ -103,7 +103,7 @@ define amdgpu_kernel void @test_amdgcn_exp_f16(ptr addrspace(1) %input, ptr addr
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr addrspace(1) [[INPUT]], align 2
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[SCALES]], align 2
-; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x half> [[TMP0]], splat (half 0xH3E14)
+; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x half> [[TMP0]], splat (half 1.519530e+00)
 ; GCN-NEXT:    [[TMP3:%.*]] = fsub contract <2 x half> [[TMP2]], [[TMP1]]
 ; GCN-NEXT:    [[SUB0:%.*]] = extractelement <2 x half> [[TMP3]], i32 0
 ; GCN-NEXT:    [[EXP0:%.*]] = tail call half @llvm.amdgcn.exp2.f16(half [[SUB0]])
@@ -137,7 +137,7 @@ define amdgpu_kernel void @kernel_f16(ptr addrspace(1) %input, ptr addrspace(1) 
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr addrspace(1) [[INPUT]], align 2
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[SCALES]], align 2
-; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x half> [[TMP0]], splat (half 0xH3E14)
+; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x half> [[TMP0]], splat (half 1.519530e+00)
 ; GCN-NEXT:    [[TMP3:%.*]] = fsub contract <2 x half> [[TMP2]], [[TMP1]]
 ; GCN-NEXT:    [[SUB0:%.*]] = extractelement <2 x half> [[TMP3]], i32 0
 ; GCN-NEXT:    [[EXP0:%.*]] = tail call half @llvm.amdgcn.exp2.f16(half [[SUB0]])
@@ -175,7 +175,7 @@ define amdgpu_kernel void @look_through_reuse_shuffle(
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(1) [[INPUT]], align 2
 ; GCN-NEXT:    [[TMP5:%.*]] = load <2 x half>, ptr addrspace(1) [[SCALES]], align 2
-; GCN-NEXT:    [[TMP6:%.*]] = fadd contract <2 x half> [[TMP4]], splat (half 0xH3E14)
+; GCN-NEXT:    [[TMP6:%.*]] = fadd contract <2 x half> [[TMP4]], splat (half 1.519530e+00)
 ; GCN-NEXT:    [[TMP3:%.*]] = fmul contract <2 x half> [[TMP6]], [[TMP5]]
 ; GCN-NEXT:    [[MUL0:%.*]] = extractelement <2 x half> [[TMP3]], i32 0
 ; GCN-NEXT:    [[EXP0:%.*]] = tail call half @llvm.amdgcn.exp2.f16(half [[MUL0]])
@@ -225,11 +225,11 @@ define amdgpu_kernel void @wider_exp2_f32(ptr addrspace(1) %input, ptr addrspace
 ; GCN-NEXT:    [[SPTR2:%.*]] = getelementptr float, ptr addrspace(1) [[SCALES]], i64 2
 ; GCN-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[INPUT]], align 4
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[SCALES]], align 4
-; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x float> [[TMP0]], splat (float 0x3FC0527DC0000000)
+; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x float> [[TMP0]], splat (float f0x3E0293EE)
 ; GCN-NEXT:    [[TMP3:%.*]] = fsub contract <2 x float> [[TMP2]], [[TMP1]]
 ; GCN-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr addrspace(1) [[PTR2]], align 4
 ; GCN-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr addrspace(1) [[SPTR2]], align 4
-; GCN-NEXT:    [[TMP6:%.*]] = fmul contract <2 x float> [[TMP4]], splat (float 0x3FC0527DC0000000)
+; GCN-NEXT:    [[TMP6:%.*]] = fmul contract <2 x float> [[TMP4]], splat (float f0x3E0293EE)
 ; GCN-NEXT:    [[TMP7:%.*]] = fsub contract <2 x float> [[TMP6]], [[TMP5]]
 ; GCN-NEXT:    [[SUB0:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
 ; GCN-NEXT:    [[EXP0:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[SUB0]])
@@ -293,11 +293,11 @@ define amdgpu_kernel void @wider_exp2_half(ptr addrspace(1) %input, ptr addrspac
 ; GCN-NEXT:    [[SPTR2:%.*]] = getelementptr half, ptr addrspace(1) [[SCALES]], i64 2
 ; GCN-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr addrspace(1) [[INPUT]], align 2
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[SCALES]], align 2
-; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x half> [[TMP0]], splat (half 0xH3E14)
+; GCN-NEXT:    [[TMP2:%.*]] = fmul contract <2 x half> [[TMP0]], splat (half 1.519530e+00)
 ; GCN-NEXT:    [[TMP3:%.*]] = fsub contract <2 x half> [[TMP2]], [[TMP1]]
 ; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR2]], align 2
 ; GCN-NEXT:    [[TMP5:%.*]] = load <2 x half>, ptr addrspace(1) [[SPTR2]], align 2
-; GCN-NEXT:    [[TMP6:%.*]] = fmul contract <2 x half> [[TMP4]], splat (half 0xH3E14)
+; GCN-NEXT:    [[TMP6:%.*]] = fmul contract <2 x half> [[TMP4]], splat (half 1.519530e+00)
 ; GCN-NEXT:    [[TMP7:%.*]] = fsub contract <2 x half> [[TMP6]], [[TMP5]]
 ; GCN-NEXT:    [[SUB0:%.*]] = extractelement <2 x half> [[TMP3]], i32 0
 ; GCN-NEXT:    [[EXP0:%.*]] = tail call half @llvm.amdgcn.exp2.f16(half [[SUB0]])

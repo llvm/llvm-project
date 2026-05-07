@@ -193,6 +193,8 @@ void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
 }
 
 void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  *GR = SPIRVGlobalRegistry(M.getDataLayout());
+
   if (Env != Unknown) {
     assert(!(isKernel() && any_of(M,
                                   [](const Function &F) {

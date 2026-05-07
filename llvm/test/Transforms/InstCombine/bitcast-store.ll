@@ -59,7 +59,7 @@ define void @ppcf128_ones_store(ptr %dest) {
 ; CHECK-LABEL: define void @ppcf128_ones_store
 ; CHECK-SAME: (ptr [[DEST:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store ppc_fp128 0xMFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ptr [[DEST]], align 16
+; CHECK-NEXT:    store ppc_fp128 f0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ptr [[DEST]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:

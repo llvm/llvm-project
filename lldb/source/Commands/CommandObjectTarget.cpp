@@ -3485,7 +3485,7 @@ public:
           m_cached = value;
         } else {
           return Status::FromErrorStringWithFormatv(
-              "invalid boolean value '%s' passed for -c option", option_arg);
+              "invalid boolean value '{}' passed for -c option", option_arg);
         }
         break;
 

@@ -914,7 +914,7 @@ void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
     return;
   if (address == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(log, "uuid={1} path='{2}' (UNLOADED)", uuid.GetAsString(),
+    LLDB_LOG(log, "uuid={} path='{}' (UNLOADED)", uuid.GetAsString(),
              file_spec.GetPath());
   } else {
     LLDB_LOG(log, "address={0:x+16} uuid={1} path='{2}'", address,
