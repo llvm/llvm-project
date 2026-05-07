@@ -748,7 +748,8 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   VPInstruction *Increment = nullptr;
   for (VPUser *U : CanIV->users()) {
     VPValue *Step;
-    if (match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
+    if (isa<VPInstruction>(U) &&
+        match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
         IsIncrementStep(Step)) {
       assert(!Increment && "There must be a unique increment");
       Increment = cast<VPInstruction>(U);

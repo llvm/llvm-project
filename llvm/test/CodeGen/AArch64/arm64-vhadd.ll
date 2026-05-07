@@ -1202,8 +1202,7 @@ define <2 x i16> @hadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    uzp1.4h v0, v1, v0
 ; CHECK-GI-NEXT:    sshr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = sext <2 x i8> %src2 to <2 x i16>
@@ -1229,8 +1228,7 @@ define <2 x i16> @hadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = zext <2 x i8> %src2 to <2 x i16>
@@ -1259,8 +1257,7 @@ define <2 x i16> @hadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    uzp1.4h v0, v1, v0
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = sext <2 x i8> %src2 to <2 x i16>
@@ -1286,8 +1283,7 @@ define <2 x i16> @hadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = zext <2 x i8> %src2 to <2 x i16>
@@ -1426,8 +1422,7 @@ define <2 x i16> @rhadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    add.2s v0, v1, v2
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    sshr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = sext <2 x i8> %src2 to <2 x i16>
@@ -1456,8 +1451,7 @@ define <2 x i16> @rhadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = zext <2 x i8> %src2 to <2 x i16>
@@ -1491,8 +1485,7 @@ define <2 x i16> @rhadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    add.2s v0, v1, v2
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = sext <2 x i8> %src2 to <2 x i16>
@@ -1521,8 +1514,7 @@ define <2 x i16> @rhadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
   %zextsrc2 = zext <2 x i8> %src2 to <2 x i16>

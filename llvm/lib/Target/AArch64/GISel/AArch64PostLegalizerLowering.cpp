@@ -77,32 +77,6 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo() = default;
 };
 
-/// Return true if a G_FCONSTANT instruction is known to be better-represented
-/// as a G_CONSTANT.
-bool matchFConstantToConstant(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
-  Register DstReg = MI.getOperand(0).getReg();
-  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-  if (DstSize != 16 && DstSize != 32 && DstSize != 64)
-    return false;
-
-  // When we're storing a value, it doesn't matter what register bank it's on.
-  // Since not all floating point constants can be materialized using a fmov,
-  // it makes more sense to just use a GPR.
-  return all_of(MRI.use_nodbg_instructions(DstReg),
-                [](const MachineInstr &Use) { return Use.mayStore(); });
-}
-
-/// Change a G_FCONSTANT into a G_CONSTANT.
-void applyFConstantToConstant(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
-  MachineIRBuilder MIB(MI);
-  const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
-  const Register DstReg = MI.getOperand(0).getReg();
-  MIB.buildConstant(DstReg, ImmValAPF.bitcastToAPInt());
-  MI.eraseFromParent();
-}
-
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
 std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
@@ -830,7 +804,9 @@ bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (SrcTy.getSizeInBits() != 128 && SrcTy.getSizeInBits() != 64)
     return false;
   return SrcTy.isVector() && !SrcTy.isScalable() &&
-         Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1;
+         (Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1 ||
+          (Unmerge.getNumDefs() == 2 && SrcTy.getSizeInBits() == 128 &&
+           MRI.getType(Unmerge.getReg(0)).getSizeInBits() == 64));
 }
 
 void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -838,11 +814,22 @@ void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
   auto &Unmerge = cast<GUnmerge>(MI);
   Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
   const LLT SrcTy = MRI.getType(Src1Reg);
+  const LLT DstTy = MRI.getType(Unmerge.getReg(0));
   assert((SrcTy.isVector() && !SrcTy.isScalable()) &&
          "Expected a fixed length vector");
 
-  for (int I = 0; I < SrcTy.getNumElements(); ++I)
-    B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
+  if (DstTy.isVector()) {
+    assert(Unmerge.getNumDefs() == 2);
+    if (!MRI.use_nodbg_empty(Unmerge.getReg(0)))
+      B.buildExtractSubvector(Unmerge.getReg(0), Src1Reg, 0);
+    if (!MRI.use_nodbg_empty(Unmerge.getReg(1)))
+      B.buildExtractSubvector(Unmerge.getReg(1), Src1Reg,
+                              SrcTy.getNumElements() / 2);
+  } else {
+    for (int I = 0; I < SrcTy.getNumElements(); ++I)
+      if (!MRI.use_nodbg_empty(Unmerge.getReg(I)))
+        B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
+  }
   MI.eraseFromParent();
 }
 

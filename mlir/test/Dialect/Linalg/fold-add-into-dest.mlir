@@ -297,3 +297,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+!type = tensor<2048x2048xf32>
+func.func @expect_no_fold_when_dominated_dest_is_block_arg(
+    %lhs: !type, %rhs: !type, %dest: !type, %other: !type) -> !type {
+  %0 = linalg.matmul ins(%lhs, %rhs : !type, !type) outs(%dest : !type) -> !type
+  %1 = tensor.empty() : !type
+  %2 = linalg.add ins(%0, %other : !type, !type) outs(%1 : !type) -> !type
+  return %2 : !type
+}
+
+// CHECK-LABEL: func.func @expect_no_fold_when_dominated_dest_is_block_arg
+// CHECK: linalg.matmul
+// CHECK-NEXT: tensor.empty
+// CHECK-NEXT: linalg.add
+// CHECK-NEXT: return
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.linalg.fold_add_into_dest
+    } : !transform.any_op
+    transform.yield
+  }
+}
