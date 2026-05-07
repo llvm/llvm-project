@@ -134,6 +134,40 @@ void CIRGenVTables::generateClassData(const CXXRecordDecl *rd) {
   cgm.getCXXABI().emitVTableDefinitions(*this, rd);
 }
 
+mlir::Attribute CIRGenVTables::getVTableIntegerOrNullComponent(
+    const VTableComponent &component) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  bool isRelative = cgm.getLangOpts().RelativeCXXABIVTables;
+
+  auto getOffsetAttr = [&](CharUnits offset) -> mlir::Attribute {
+    if (isRelative) {
+      return cir::IntAttr::get(builder.getSInt32Ty(), offset.getQuantity());
+    }
+    return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
+                                   offset.getQuantity());
+  };
+
+  switch (component.getKind()) {
+  case VTableComponent::CK_UnusedFunctionPointer:
+    if (isRelative)
+      return cir::IntAttr::get(builder.getSInt32Ty(), 0);
+
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+
+  case VTableComponent::CK_VCallOffset:
+    return getOffsetAttr(component.getVCallOffset());
+
+  case VTableComponent::CK_VBaseOffset:
+    return getOffsetAttr(component.getVBaseOffset());
+
+  case VTableComponent::CK_OffsetToTop:
+    return getOffsetAttr(component.getOffsetToTop());
+
+  default:
+    llvm_unreachable("expected integer or null vtable component");
+  }
+}
+
 mlir::Attribute CIRGenVTables::getVTableComponent(
     const VTableLayout &layout, unsigned componentIndex, mlir::Attribute rtti,
     unsigned &nextVTableThunkIndex, unsigned vtableAddressPoint,
@@ -286,7 +320,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
                            base.getBase(), out);
   SmallString<256> name(outName);
 
-  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  assert(!cir::MissingFeatures::vtableRelativeLayout()); // generateConstructionVTable
 
   cir::RecordType vtType = getVTableType(*vtLayout);
 
@@ -321,7 +355,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   cgm.setGVProperties(vtable, rd);
 
   assert(!cir::MissingFeatures::vtableEmitMetadata());
-  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  assert(!cir::MissingFeatures::vtableRelativeLayout()); // generateConstructionVTable
 
   return vtable;
 }

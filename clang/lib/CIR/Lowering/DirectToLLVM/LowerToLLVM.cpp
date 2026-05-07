@@ -4163,6 +4163,28 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult
+CIRToLLVMVTableGetRelativeVirtualFnAddrOpLowering::matchAndRewrite(
+    cir::VTableGetRelativeVirtualFnAddrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Location loc = op.getLoc();
+
+  mlir::Type targetType = getTypeConverter()->convertType(op.getType());
+
+  // llvm.load.relative.i32 takes a byte offset, not an entry index.
+  uint64_t byteOffset = op.getIndex() * 4;
+
+  mlir::Value offset = mlir::LLVM::ConstantOp::create(
+      rewriter, loc, rewriter.getI32Type(),
+      rewriter.getI32IntegerAttr(static_cast<int32_t>(byteOffset)));
+
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op.getOperation(),
+                                   "llvm.load.relative.i32", targetType,
+                                   mlir::ValueRange{adaptor.getVptr(), offset});
+
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
     cir::VTTAddrPointOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

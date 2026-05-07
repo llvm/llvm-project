@@ -3122,6 +3122,60 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetRelativeVirtualFnAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetRelativeVirtualFnAddrOp
+    : CIR_Op<"vtable.get_relative_virtual_fn_addr", [Pure]> {
+  let summary = "Resolve a virtual function pointer from a relative vtable";
+
+  let description = [{
+    The `vtable.get_relative_virtual_fn_addr` operation resolves a virtual
+    function pointer from a relative C++ ABI vtable.
+
+    Relative vtables store 32-bit signed offsets in their entries instead of
+    storing function pointers directly. The `vptr` operand is the vtable address
+    point. The `index` attribute is the virtual function index, counted in
+    vtable entries.
+
+    This operation returns the resolved function pointer. It does not return
+    the address of the vtable slot.
+
+    During CIR-to-LLVM lowering, this operation should lower to:
+
+    ```
+    call ptr @llvm.load.relative.i32(ptr %vptr, i32 index * 4)
+    ```
+
+    Example:
+    ```
+    %vptr.addr = cir.vtable.get_vptr %obj : !cir.ptr<!rec_C>
+                 -> !cir.ptr<!cir.vptr>
+    %vptr = cir.load %vptr.addr : !cir.ptr<!cir.vptr>, !cir.vptr
+    %fn = cir.vtable.get_relative_virtual_fn_addr %vptr[1]
+          : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    %ret = cir.call %fn(%obj)
+           : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
+              !cir.ptr<!rec_C>) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VPtrType:$vptr,
+    I64Attr:$index
+  );
+
+  let results = (outs
+    CIR_PointerType:$result
+  );
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableGetTypeInfoOp
 //===----------------------------------------------------------------------===//
 

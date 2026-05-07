@@ -708,11 +708,13 @@ LogicalResult cir::VTableAttr::verify(
     auto arrayElts = mlir::cast<ArrayAttr>(constArrayAttr.getElts());
     arrayElts.walkImmediateSubElements(
         [&](mlir::Attribute attr) {
-          if (mlir::isa<ConstPtrAttr, GlobalViewAttr>(attr))
+          if (mlir::isa<cir::ConstPtrAttr, cir::GlobalViewAttr,
+                        cir::IntAttr>(attr))
             return;
 
-          eltTypeCheck = emitError()
-                         << "expected GlobalViewAttr or ConstPtrAttr";
+          eltTypeCheck =
+              emitError()
+              << "expected GlobalViewAttr, ConstPtrAttr, or IntAttr";
         },
         [&](mlir::Type type) {});
     if (eltTypeCheck.failed())

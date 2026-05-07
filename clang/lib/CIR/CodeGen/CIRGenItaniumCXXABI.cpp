@@ -1949,10 +1949,19 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   } else {
     assert(!cir::MissingFeatures::emitTypeMetadataCodeForVCall());
 
-    mlir::Value vfuncLoad;
+    mlir::Value vfuncLoad{};
     if (cgm.getLangOpts().RelativeCXXABIVTables) {
-      assert(!cir::MissingFeatures::vtableRelativeLayout());
-      cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
+      // Relative vtables store 32-bit offsets in the vtable entries.
+      //
+      // Keep this as a CIR-level relative virtual call operation and let
+      // the CIR-to-LLVM lowering translate it to:
+      //
+      //   call ptr @llvm.load.relative.i32(ptr %vtable,
+      //                                   i32 (vtableIndex * 4))
+      //
+      // The result is the resolved virtual function pointer.
+      vfuncLoad = cir::VTableGetRelativeVirtualFnAddrOp::create(
+          builder, loc, tyPtr, vtable, vtableIndex);
     } else {
       auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
           builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
@@ -1976,6 +1985,7 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   CIRGenCallee callee(gd, vfunc.getDefiningOp());
   return callee;
 }
+
 
 mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
     CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
@@ -2636,7 +2646,7 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
         cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
-      assert(!cir::MissingFeatures::vtableRelativeLayout());
+      assert(!cir::MissingFeatures::vtableRelativeLayout()); // performTypeAdjustment
       cgf.cgm.errorNYI("virtual adjustment for relative layout vtables");
     } else {
       offset = builder.createAlignedLoad(loc, cgf.ptrDiffTy, offsetPtr,
