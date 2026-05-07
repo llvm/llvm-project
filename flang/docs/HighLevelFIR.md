@@ -960,45 +960,6 @@ LLVM.
 These high level optimization passes can be run any number of times in any
 order.
 
-## Transition (Historical)
-
-HLFIR is now the only lowering path; the legacy FIR-only expression lowering
-and the options that selected it have been removed. This section is kept for
-historical reference.
-
-The introduction of HLFIR required significant refactoring of lowering, but
-codegen was unaffected because the underlying FIR pipeline was preserved.
-
-Most lowering helpers were built around the `fir::ExtendedValue` concept --
-a collection of `mlir::Value`s describing a Fortran object (variable or
-evaluated expression result). The variable and expression concepts above
-allowed keeping a similar interface, with `fir::ExtendedValue` wrapping a
-single value or `mlir::Operation *` from which all object information could
-be inferred, so existing helpers carried over with minimal modification.
-
-The transition proceeded in roughly the following order:
-
-1. Introduce the new HLFIR operations.
-2. Refactor `fir::ExtendedValue` to work with the new variable and expression
-   concepts (requires part of 1).
-3. Introduce the new translation passes, using the `fir::ExtendedValue`
-   helpers (requires 1).
-   - 3.b Introduce the new optimization passes (requires 1).
-4. Introduce `fir.declare` and `hlfir.finalize` usage in lowering (requires
-   1, 2, and part of 3).
-5. Introduce `hlfir.designate` and `hlfir.associate` usage in lowering.
-6. Introduce lowering to `hlfir.assign` (with RHS that is not an `hlfir.expr`)
-   and `hlfir.ptr_assign`.
-7. Introduce lowering to `hlfir.expr` and related operations.
-8. Introduce lowering to `hlfir.forall`.
-9. Debug correctness.
-10. Debug execution performance.
-
-Steps 5-10 were done with the new lowering implemented alongside the old one
-behind an opt-in driver flag, so performance work on the legacy path was not
-disturbed until the new lowering reached parity. Once HLFIR was on by
-default, the opt-in flag and the legacy expression lowering were removed.
-
 ## Examples
 
 ### Example 1: simple array assignment
