@@ -736,14 +736,12 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     auto GPUsOrErr = getSystemGPUArchs(Args);
     if (!GPUsOrErr) {
       getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-          << llvm::Triple::getArchTypeName(getArch())
-          << llvm::toString(GPUsOrErr.takeError()) << "-mcpu";
+          << getArchName() << llvm::toString(GPUsOrErr.takeError()) << "-mcpu";
     } else {
       auto &GPUs = *GPUsOrErr;
       if (llvm::SmallSet<std::string, 1>(GPUs.begin(), GPUs.end()).size() > 1)
         getDriver().Diag(diag::warn_drv_multi_gpu_arch)
-            << llvm::Triple::getArchTypeName(getArch())
-            << llvm::join(GPUs, ", ") << "-mcpu";
+            << getArchName() << llvm::join(GPUs, ", ") << "-mcpu";
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ),
                         Args.MakeArgString(GPUs.front()));
     }
@@ -1075,7 +1073,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 ROCMToolChain::getCommonDeviceLibNames(
-    const llvm::opt::ArgList &DriverArgs, const std::string &GPUArch,
+    const llvm::opt::ArgList &DriverArgs, llvm::StringRef GPUArch,
     Action::OffloadKind DeviceOffloadingKind) const {
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
   const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);

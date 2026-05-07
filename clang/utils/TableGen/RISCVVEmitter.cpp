@@ -431,6 +431,17 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#pragma clang riscv intrinsic vector\n\n";
 
+  // This array includes all extensions that have intrinsics implemented. We
+  // need to update the list when any new intrinsic are defined.
+  static const char *const Exts[] = {
+      "v",        "zvabd",  "zvbb",    "zvbc",       "zvdot4a8i", "zve32f",
+      "zve32x",   "zve64d", "zve64f",  "zve64x",     "zvfbfa",    "zvfbfmin",
+      "zvfbfwma", "zvfh",   "zvfhmin", "zvfofp8min", "zvkb",      "zvkg",
+      "zvkn",     "zvknc",  "zvkned",  "zvkng",      "zvknha",    "zvknhb",
+      "zvks",     "zvksc",  "zvksed",  "zvksg",      "zvksh"};
+  for (const char *Ext : Exts)
+    OS << "#define __riscv_intrinsic_" << Ext << " 1\n";
+
   printHeaderCode(OS);
 
   auto printType = [&](auto T) {

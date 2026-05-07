@@ -1632,6 +1632,8 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
+  template_param_infos.SetParameterPack(
+      std::make_unique<TemplateParameterInfos>());
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
       ast, template_param_infos, template_param_decls);
 
@@ -7341,9 +7343,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
   clang::Expr *bit_width = nullptr;
   if (bitfield_bit_size != 0) {
     if (clang_ast.IntTy.isNull()) {
-      LLDB_LOG(
-          GetLog(LLDBLog::Expressions),
-          "{0} failed: builtin ASTContext types have not been initialized");
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "builtin ASTContext types have not been initialized");
       return nullptr;
     }
 
