@@ -1395,6 +1395,16 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
             return err;
         } break;
         }
+      } else if (ConstantPtrAuth *constant_ptr_auth =
+                     dyn_cast<ConstantPtrAuth>(constant)) {
+        // No need to handle ConstantPtrAuth users if old_constant is an address
+        // discriminator.
+        if (constant_ptr_auth->hasAddressDiscriminator() &&
+            constant_ptr_auth->getAddrDiscriminator() == old_constant)
+          continue;
+
+        return llvm::createStringErrorV("unhandled constant type \"{0}\".",
+                                        PrintValue(constant_ptr_auth));
       } else {
         return llvm::createStringErrorV("unhandled constant type \"{0}\".",
                                         PrintValue(constant));

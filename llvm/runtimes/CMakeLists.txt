@@ -344,6 +344,8 @@ function(runtime_register_target name)
       set(check-${runtime_name}-${name} check-${runtime_name} )
       list(APPEND ${name}_test_targets check-${runtime_name}-${name})
     endif()
+    string(TOUPPER ${runtime_name} runtime_prefix)
+    list(APPEND ${name}_prefixes ${runtime_prefix})
   endforeach()
 
   foreach(component IN LISTS SUB_COMPONENTS)
@@ -448,6 +450,7 @@ function(runtime_register_target name)
                                       ${${name}_extra_args}
                            EXTRA_TARGETS ${${name}_extra_targets}
                                          ${${name}_test_targets}
+                           PASSTHROUGH_PREFIXES ${${name}_prefixes}
                            USE_TOOLCHAIN
                            FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
