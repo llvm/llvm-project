@@ -57150,9 +57150,9 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Strip TRUNCATE/Z|S|ANY_EXTEND wrappers and `and x, C` where C preserves
-// the low log2(BW) bits; these are transparent to BT/BTR/BTS/BTC, which
-// implicitly mask the bit index to log2(BW) bits.
+// Strip TRUNCATE/ZERO_EXTEND/ANY_EXTEND wrappers and `and x, C` where C
+// preserves the low log2(BW) bits; these are transparent to BT/BTR/BTS/BTC,
+// which implicitly mask the bit index to log2(BW) bits.
 static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
   APInt LowBits =
       APInt::getLowBitsSet(V.getScalarValueSizeInBits(), Log2_32(BW));
@@ -57161,6 +57161,8 @@ static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
     if (Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
         Op == ISD::ANY_EXTEND) {
       V = V.getOperand(0);
+      assert(V.getScalarValueSizeInBits() >= Log2_32(BW) &&
+             "low bits constraint must survive width adjustment");
       LowBits = LowBits.zextOrTrunc(V.getScalarValueSizeInBits());
       continue;
     }
