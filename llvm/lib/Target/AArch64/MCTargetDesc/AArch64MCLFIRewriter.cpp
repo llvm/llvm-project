@@ -429,7 +429,7 @@ bool AArch64MCLFIRewriter::rewriteLoadStoreRoW(const MCInst &Inst,
     return false;
   }
 
-  // Case 2: Pre-index load/store.
+  // Case 2: Pre-index load/store with writeback.
   // ldr xN, [xM, #imm]! -> add xM, xM, #imm; ldr xN, [x27, wM, uxtw]
   if ((MemOp = convertPreToRoW(Op)) != AArch64::INSTRUCTION_LIST_END) {
     MCRegister BaseReg = Inst.getOperand(2).getReg();
