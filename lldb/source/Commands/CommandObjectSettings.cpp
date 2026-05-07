@@ -293,8 +293,10 @@ protected:
     uint32_t dump_mask = OptionValue::eDumpGroupValue;
     if (m_options.m_include_defaults)
       dump_mask |= OptionValue::eDumpOptionDefaultValue;
-    if (m_options.m_only_changed)
+    if (m_options.m_only_changed) {
       dump_mask |= OptionValue::eDumpOptionOnlyChanged;
+      dump_mask |= OptionValue::eDumpOptionDefaultValue;
+    }
 
     if (!args.empty()) {
       for (const auto &arg : args) {

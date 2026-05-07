@@ -256,11 +256,12 @@ class SettingsCommandTestCase(TestBase):
             substrs=[setting],
         )
 
-        # After explicitly changing the setting, it should show up.
+        # After explicitly changing the setting, it should show up along with
+        # the default value.
         self.runCmd("settings set %s 42" % setting)
         self.expect(
             "settings show --changed",
-            substrs=["%s (unsigned) = 42" % setting],
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
         )
 
         # After clearing, it should no longer show up.
@@ -278,11 +279,12 @@ class SettingsCommandTestCase(TestBase):
             substrs=[setting],
         )
 
-        # When the value has been changed, the explicit path prints normally.
+        # When the value has been changed, the explicit path prints the
+        # current value and default.
         self.runCmd("settings set %s 42" % setting)
         self.expect(
             "settings show --changed %s" % setting,
-            substrs=["%s (unsigned) = 42" % setting],
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
         )
 
     @skipIf(archs=no_match(["x86_64", "i386", "i686"]))
