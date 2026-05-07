@@ -2787,6 +2787,9 @@ ExpectedDecl ASTNodeImporter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
   Expr *ToAsmString = importChecked(Err, D->getAsmStringExpr());
   SourceLocation ToAsmLoc = importChecked(Err, D->getAsmLoc());
   SourceLocation ToRParenLoc = importChecked(Err, D->getRParenLoc());
+  if (Err)
+    return std::move(Err);
+
   auto DCOrErr = Importer.ImportContext(D->getDeclContext());
   if (!DCOrErr)
     return DCOrErr.takeError();
