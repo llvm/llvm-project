@@ -1560,7 +1560,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       std::unique_ptr<MemoryBuffer> Buf =
           MemoryBuffer::getMemBuffer(SR, "", false);
 
-      llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg");
+      llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg", Align(8));
     }
     SaveModule("dyndbg.2.outer", *M);
   }

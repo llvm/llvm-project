@@ -9,4 +9,4 @@
 // the special casing in LLVM.
 int e() { return 0; }
 
-// CHECK: @llvm.embedded.object = private constant {{.*}}, section ".debug_llvm_dyndbg", align 1, !exclude
+// CHECK: @llvm.embedded.object = private constant {{.*}}, section ".debug_llvm_dyndbg", align 8, !exclude
