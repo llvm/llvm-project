@@ -1,3 +1,6 @@
+// z/OS printf interprets octal escape sequences in EBCDIC encoding, not ASCII,
+// causing the magic bytes to be incorrect.
+UNSUPPORTED: system-zos
 RUN: printf '\201rforpl\377' > %t.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 // We should fail on this because the data buffer (profraw file) is not long

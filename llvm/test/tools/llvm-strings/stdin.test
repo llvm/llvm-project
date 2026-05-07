@@ -1,5 +1,9 @@
 ## Show that llvm-strings can handle stdin input properly.
 
+# z/OS printf interprets octal escape sequences in EBCDIC encoding, not ASCII,
+# causing the values to be incorrect.
+# UNSUPPORTED: system-zos
+
 ## Case 1: output with single string.
 RUN: printf "abcdefg" | llvm-strings - | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}
 CASE1: abcdefg

@@ -1,3 +1,6 @@
+// z/OS printf interprets octal escape sequences in EBCDIC encoding, not ASCII,
+// causing the magic bytes to be incorrect.
+UNSUPPORTED: system-zos
 // Magic
 RUN: printf '\377lprofr\201' > %t
 // Version

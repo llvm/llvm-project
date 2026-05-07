@@ -1,3 +1,7 @@
+# z/OS printf interprets octal escape sequences in EBCDIC encoding, not ASCII,
+# causing the values to be incorrect.
+# UNSUPPORTED: system-zos
+
 # RUN: yaml2obj %s -o %t1.o
 # RUN: yaml2obj %s -o %t2.o
 

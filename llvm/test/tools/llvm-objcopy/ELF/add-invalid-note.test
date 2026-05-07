@@ -1,5 +1,9 @@
 ## Verify that --add-section warns on invalid note sections.
 
+# z/OS printf interprets octal escape sequences in EBCDIC encoding, not ASCII,
+# causing the values to be incorrect.
+# UNSUPPORTED: system-zos
+
 ## Add [namesz, descsz, type, name, desc] for a build id.
 
 ## Notes should be padded to 8 bytes.

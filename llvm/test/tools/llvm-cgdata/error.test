@@ -1,5 +1,9 @@
 # Test various error cases
 
+# z/OS printf interprets octal escape sequences in EBCDIC encoding, not ASCII,
+# causing the magic bytes to be incorrect.
+# UNSUPPORTED: system-zos
+
 # Synthesize a header only cgdata.
 # struct Header {
 #   uint64_t Magic;
