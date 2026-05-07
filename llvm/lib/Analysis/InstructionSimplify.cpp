@@ -6839,7 +6839,7 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
 }
 
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                     Value *Op0, Value *Op1,
+                                     Value *Op0, Value *Op1, FastMathFlags FMF,
                                      const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
@@ -7130,10 +7130,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       MinMaxOptResult OptResult = MinMaxOptResult::CannotOptimize;
       Constant *NewConst = nullptr;
 
-      FastMathFlags FMF;
-      if (auto *FPMO = dyn_cast_if_present<FPMathOperator>(Q.CxtI))
-        FMF = FPMO->getFastMathFlags();
-
       if (VectorType *VTy = dyn_cast<VectorType>(C->getType())) {
         ElementCount ElemCount = VTy->getElementCount();
 
@@ -7254,9 +7250,13 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   if (NumOperands == 1)
     return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
 
-  if (NumOperands == 2)
+  if (NumOperands == 2) {
+    FastMathFlags FMF;
+    if (auto *FPMO = dyn_cast<FPMathOperator>(Call))
+      FMF = FPMO->getFastMathFlags();
     return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1],
-                                   Q.getWithInstruction(Call));
+                                   FMF, Q.getWithInstruction(Call));
+  }
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {

@@ -198,6 +198,7 @@ LLVM_ABI Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 /// The \p `Call` argument is optional and may be null.
 LLVM_ABI Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                         Value *Op0, Value *Op1,
+                                        FastMathFlags FMF,
                                         const SimplifyQuery &Q);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
