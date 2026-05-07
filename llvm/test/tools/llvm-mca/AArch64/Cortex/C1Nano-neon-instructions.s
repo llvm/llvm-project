@@ -300,7 +300,7 @@
 # CHECK-NEXT:  1      4     0.50                        fcvtzu	v27.8h, v6.8h, #11
 # CHECK-NEXT:  1      22    19.00                       fdiv	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      13    5.00                        fdiv	v0.2s, v0.2s, v0.2s
-# CHECK-NEXT:  1      8     5.00                        fdiv	v0.4h, v0.4h, v0.4h
+# CHECK-NEXT:  1      8     2.50                        fdiv	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      13    10.00                       fdiv	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      8     5.00                        fdiv	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        fmax	v0.2d, v0.2d, v0.2d
@@ -462,8 +462,8 @@
 # CHECK-NEXT:  1      4     0.50                        frsqrts	s21, s5, s12
 # CHECK-NEXT:  1      4     0.50                        frsqrts	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      22    19.00                       fsqrt	v0.2d, v0.2d
-# CHECK-NEXT:  1      12    9.00                        fsqrt	v0.2s, v0.2s
-# CHECK-NEXT:  1      8     5.00                        fsqrt	v0.4h, v0.4h
+# CHECK-NEXT:  1      12    4.50                        fsqrt	v0.2s, v0.2s
+# CHECK-NEXT:  1      8     2.50                        fsqrt	v0.4h, v0.4h
 # CHECK-NEXT:  1      12    9.00                        fsqrt	v0.4s, v0.4s
 # CHECK-NEXT:  1      8     5.00                        fsqrt	v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        fsub	v13.8h, v15.8h, v17.8h

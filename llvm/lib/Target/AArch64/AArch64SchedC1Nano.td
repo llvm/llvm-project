@@ -659,7 +659,7 @@ def : InstRW<[C1NanoWriteVMAC], (instregex "^FCMLAv")>;
 def : InstRW<[C1NanoWriteVMAC], (instregex "^FML(A|S)v")>;
 
 // ASIMD FP divide, D-form, F61
-def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnitVMC>], (instrs FDIVv4f16)>;
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnit2VMC>], (instrs FDIVv4f16)>;
 
 // ASIMD FP divide, D-form, F32
 def : InstRW<[C1NanoMC2Write<13, 5, C1NanoUnit2VMC>], (instrs FDIVv2f32)>;
@@ -674,10 +674,10 @@ def : InstRW<[C1NanoMC2Write<13, 10, C1NanoUnit2VMC>], (instrs FDIVv4f32)>;
 def : InstRW<[C1NanoMC2Write<22, 19, C1NanoUnit2VMC>], (instrs FDIVv2f64)>;
 
 // ASIMD FP square root, D-form, F16
-def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnitVMC>], (instrs FSQRTv4f16)>;
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnit2VMC>], (instrs FSQRTv4f16)>;
 
 // ASIMD FP square root, D-form, F32
-def : InstRW<[C1NanoMCWrite<12, 9, C1NanoUnitVMC>], (instrs FSQRTv2f32)>;
+def : InstRW<[C1NanoMCWrite<12, 9, C1NanoUnit2VMC>], (instrs FSQRTv2f32)>;
 
 // ASIMD FP square root, Q-form, F16
 def : InstRW<[C1NanoMC2Write<8, 5, C1NanoUnit2VMC>], (instrs FSQRTv8f16)>;
