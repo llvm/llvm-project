@@ -53,7 +53,11 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{
         Return the shape of the portion of the memref that is being accessed by
-        this operation, if known, ignoring leading unit dimensions.
+        this operation, if known. This shape describes the access dimensions
+        whose strides are semantically important for this operation.
+        Implementations shall omit dimensions whose strides do not affect the
+        operation semantics. (In particular, if an operation will access one
+        element of the base memref, this method should return `{}`.)
 
         Reindexing transformations may not modify the *strides* of the trailing
         N dimensions, where N is the size returned value, and should ensure that
