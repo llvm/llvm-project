@@ -56,8 +56,7 @@ void RTDEF(CUFRegisterExternalVariable)(
     void **module, char *varSym, const char *varName, int64_t size) {
   // Tell the CUDA driver to bind the device-side global <varName> to the
   // host-resident storage at <varSym>. Kernel accesses to <varName> then go
-  // through the host address; HMM/ATS handles migration. Mirrors classic
-  // nvfortran's walk_cuda_register() under DATA_UNIFIED.
+  // through the host address; HMM/ATS handles migration.
   __cudaRegisterHostVar(module, varName, varSym, size);
 }
 
