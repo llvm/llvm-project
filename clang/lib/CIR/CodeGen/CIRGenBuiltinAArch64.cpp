@@ -2106,13 +2106,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return mlir::Value{};
   }
 
-  if (builtinID == NEON::BI__builtin_neon_vfmaq_f16) {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
-  }
-
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   assert(!cir::MissingFeatures::msvcBuiltins());
