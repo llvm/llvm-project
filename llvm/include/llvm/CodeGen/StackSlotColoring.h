@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class StackSlotColoringPass : public PassInfoMixin<StackSlotColoringPass> {
+class StackSlotColoringPass
+    : public OptionalPassInfoMixin<StackSlotColoringPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
