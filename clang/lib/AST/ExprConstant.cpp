@@ -10549,6 +10549,12 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return ZeroInitialization(E);
   }
 
+  case Builtin::BI__builtin_start_lifetime_as:
+    // C++20/C++23 forbids evaluating lifetime-altering abstract machine magic
+    // inside a constant expression.
+    Info.FFDiag(E, diag::note_constexpr_invalid_function) << /*IsContexpr=*/0;
+    return false;
+
   case Builtin::BImemcpy:
   case Builtin::BImemmove:
   case Builtin::BIwmemcpy:

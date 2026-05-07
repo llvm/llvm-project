@@ -1251,6 +1251,12 @@ def Launder : Builtin {
   let Prototype = "void*(void*)";
 }
 
+def StartLifetimeAs : Builtin {
+  let Spellings = ["__builtin_start_lifetime_as"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void*(...)";
+}
+
 def IsConstantEvaluated : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_is_constant_evaluated"];
   let Attributes = [NoThrow, Constexpr];

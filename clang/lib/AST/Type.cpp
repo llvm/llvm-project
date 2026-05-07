@@ -5914,3 +5914,54 @@ StringRef PredefinedSugarType::getName(Kind KD) {
   }
   llvm_unreachable("unexpected kind");
 }
+
+bool Type::isImplicitLifetimeType() const {
+  // Scalar types (such as pointers, ints, floats, enums, etc.) asre always
+  // implicit-lifetime types.
+  if (isScalarType())
+    return true;
+
+  // Vector types act like scalars for lifetimes.
+  if (isVectorType() || isExtVectorType())
+    return true;
+
+  // Array types are implicit-lifetime if their base elemnt is also
+  // implicit-lifetime.
+  if (isArrayType())
+    return getBaseElementTypeUnsafe()->isImplicitLifetimeType();
+
+  if (const RecordType *RT = getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+
+    // dyn_cast returns nullptr if RD is not a CXXRecordDecl. If it's not a C++
+    // record, it's a standard C struct/union, which are always
+    // implicit-lifetime.
+    const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+    if (!CXXRD)
+      return true;
+
+    // We cannot determine lifetime if the class is incomplete.
+    if (!CXXRD->isCompleteDefinition())
+      return false;
+
+    // C++20 [class.prop]: A class S is an implicit-lifetime class if
+    // - a trivial, non-deleted destructor, AND
+    if (!CXXRD->hasTrivialDestructor())
+      return false;
+
+    // - it is an aggregate, OR
+    if (CXXRD->isAggregate())
+      return true;
+
+    // - has at least one trivial eligible constructor.
+    if (CXXRD->hasTrivialDefaultConstructor() ||
+        CXXRD->hasTrivialCopyConstructor() ||
+        CXXRD->hasTrivialMoveConstructor())
+      return true;
+
+    return false;
+  }
+
+  // References, function types and void are not implicit-lifetime.
+  return false;
+}

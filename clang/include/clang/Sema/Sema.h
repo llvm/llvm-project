@@ -2893,6 +2893,13 @@ public:
   bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, unsigned ArgNum,
                                            unsigned ArgBits);
 
+  /// BuiltinStartLifetimeAs - Check if the argument of the
+  /// __builtin_start_lifetime_as instrinsic is a valid pointer to an
+  /// implicit-lifetime type. Defers validation if the call is type-dependent.
+  /// Returns true if the argument is invalid and emits a diagnostic. Returns
+  /// false if the call is well-formed or its evaluation is deferred.
+  bool BuiltinStartLifetimeAs(CallExpr *Call);
+
   /// Checks that a call expression's argument count is at least the desired
   /// number. This is useful when doing custom type-checking on a variadic
   /// function. Returns true on error.
