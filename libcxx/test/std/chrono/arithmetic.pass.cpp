@@ -25,9 +25,17 @@ constexpr bool test_year() {
   return ymd == 2011y/January/1d;
 }
 
+constexpr bool doc_ambig_test(){
+  using decades = duration<int, std::ratio_multiply<std::ratio<10>, years::period>>;
+  auto ymd = 2001y/January/1d;
+  ymd += decades(1);
+  return true;
+}
+
 int main(int, char**) {
   static_assert(test_month(), "Month arithmetic failed");
   static_assert(test_year(), "Year arithmetic failed");
-
+  static_assert(doc_ambig_test(), "Doc");
+ 
   return 0;
 }
