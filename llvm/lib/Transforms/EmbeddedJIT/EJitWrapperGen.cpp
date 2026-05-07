@@ -22,9 +22,15 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+static cl::opt<bool> EJitNoInlineEntry(
+    "ejit-noinline-entry", cl::init(true), cl::Hidden,
+    cl::desc("Add noinline attribute to ejit_entry functions to prevent the "
+             "CGSCC inliner from duplicating the JIT wrapper into callers"));
 
 namespace {
 
@@ -112,6 +118,13 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     // predecessor blocks.
     if (isAlreadyWrapped(*F))
       continue;
+
+    // Prevent the CGSCC inliner from inlining the wrapped function into
+    // callers. Each call site would duplicate the JIT dispatch logic (alloca,
+    // ejit_compile_or_get call, indirect call) and the inliner may produce
+    // inconsistent AOT fallback code depending on call-site context.
+    if (EJitNoInlineEntry)
+      F->addFnAttr(Attribute::NoInline);
 
     auto PeriodInds = getPeriodArrIndInfo(*F);
     unsigned DimCount = PeriodInds.size();
