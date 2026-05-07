@@ -10,13 +10,13 @@ struct CtorDtor {
 template<typename T>
 thread_local T tls_templ = {get_i()};
 
-// CIR-BEFORE-LPP-LABEL:  cir.global linkonce_odr comdat tls_dyn dyn_tls_refs<"_ZTW9tls_templIiE", "_ZTH9tls_templIiE", "_ZGV9tls_templIiE"> @_Z9tls_templIiE = ctor : !s32i {
+// CIR-BEFORE-LPP-LABEL:  cir.global linkonce_odr comdat tls_dyn dyn_tls_refs = <"_ZTW9tls_templIiE", "_ZTH9tls_templIiE", "_ZGV9tls_templIiE"> @_Z9tls_templIiE = ctor : !s32i {
 // CIR-BEFORE-LPP:    %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templIiE : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:    %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:    cir.store{{.*}} %[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:  }
 //
-// CIR-BEFORE-LPP-LABEL:  cir.global linkonce_odr comdat tls_dyn dyn_tls_refs<"_ZTW9tls_templI8CtorDtorE", "_ZTH9tls_templI8CtorDtorE", "_ZGV9tls_templI8CtorDtorE"> @_Z9tls_templI8CtorDtorE = ctor : !rec_CtorDtor {
+// CIR-BEFORE-LPP-LABEL:  cir.global linkonce_odr comdat tls_dyn dyn_tls_refs = <"_ZTW9tls_templI8CtorDtorE", "_ZTH9tls_templI8CtorDtorE", "_ZGV9tls_templI8CtorDtorE"> @_Z9tls_templI8CtorDtorE = ctor : !rec_CtorDtor {
 // CIR-BEFORE-LPP:    %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templI8CtorDtorE : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:    %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:    cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]]) : (!cir.ptr<!rec_CtorDtor>

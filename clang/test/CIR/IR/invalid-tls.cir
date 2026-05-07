@@ -17,7 +17,7 @@ module {
 
 module {
   // expected-error@+1{{op cannot have both static local and dynamic tls references}}
-cir.global "private" internal tls_dyn dyn_tls_refs<"asdf", "asdf", "asdf"> static_local_guard<"asdf"> @_ZZ1fvE1y : !s32i
+cir.global "private" internal tls_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> static_local_guard<"asdf"> @_ZZ1fvE1y : !s32i
 }
 
 // -----
@@ -26,6 +26,6 @@ cir.global "private" internal tls_dyn dyn_tls_refs<"asdf", "asdf", "asdf"> stati
 
 module {
   // expected-error@+1{{'dyn_tls_refs' only valid for dynamic tls}}
-cir.global "private" internal tls_local_dyn dyn_tls_refs<"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
+cir.global "private" internal tls_local_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
 }
 

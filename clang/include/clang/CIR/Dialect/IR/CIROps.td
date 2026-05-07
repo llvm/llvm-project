@@ -2885,7 +2885,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     $linkage
     (`comdat` $comdat^)?
     ($tls_model^)?
-    (`dyn_tls_refs` `` $dyn_tls_refs^)?
+    (`dyn_tls_refs` `=` $dyn_tls_refs^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
     (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
