@@ -340,7 +340,7 @@ static bool isReceiverUnconsumedSelf(const CallEvent &Call) {
     // Check if the message is not consumed, we know it will not be used in
     // an assignment, ex: "self = [super init]".
     return MC->getMethodFamily() == OMF_init && MC->isReceiverSelfOrSuper() &&
-           !Call.getLocationContext()
+           !Call.getStackFrame()
                 ->getAnalysisDeclContext()
                 ->getParentMap()
                 .isConsumedExpr(Call.getOriginExpr());

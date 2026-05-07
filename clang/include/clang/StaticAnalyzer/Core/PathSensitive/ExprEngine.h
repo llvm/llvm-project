@@ -772,7 +772,7 @@ public:
   /// Create a new state in which the call return value is binded to the
   /// call origin expression.
   ProgramStateRef bindReturnValue(const CallEvent &Call,
-                                  const LocationContext *LCtx,
+                                  const StackFrame *SF,
                                   ProgramStateRef State);
 
   /// Evaluate a call, running pre- and post-call checkers and allowing checkers
@@ -800,7 +800,7 @@ public:
   /// row major order, so for arr[0][0] Idx is 0 and for arr[3][3] Idx is 8.
   SVal computeObjectUnderConstruction(const Expr *E, ProgramStateRef State,
                                       unsigned NumVisitedCaller,
-                                      const LocationContext *LCtx,
+                                      const StackFrame *SF,
                                       const ConstructionContext *CC,
                                       EvalCallOptions &CallOpts,
                                       unsigned Idx = 0);
@@ -818,12 +818,12 @@ public:
   /// and updateObjectsUnderConstruction.
   std::pair<ProgramStateRef, SVal> handleConstructionContext(
       const Expr *E, ProgramStateRef State, const NodeBuilderContext *BldrCtx,
-      const LocationContext *LCtx, const ConstructionContext *CC,
+      const StackFrame *SF, const ConstructionContext *CC,
       EvalCallOptions &CallOpts, unsigned Idx = 0) {
 
     SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(),
-                                            LCtx, CC, CallOpts, Idx);
-    State = updateObjectsUnderConstruction(V, E, State, LCtx, CC, CallOpts);
+                                            SF, CC, CallOpts, Idx);
+    State = updateObjectsUnderConstruction(V, E, State, SF, CC, CallOpts);
 
     return std::make_pair(State, V);
   }

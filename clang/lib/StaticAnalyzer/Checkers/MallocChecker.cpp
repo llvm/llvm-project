@@ -1491,7 +1491,7 @@ void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (const auto *BufArg = getPlacementNewBufferArg(CE, FD)) {
     // Placement new does not allocate memory
-    auto RetVal = State->getSVal(BufArg, Call.getLocationContext());
+    auto RetVal = State->getSVal(BufArg, Call.getStackFrame());
     State = State->BindExpr(CE, C.getLocationContext(), RetVal);
     C.addTransition(State);
     return;
@@ -1744,7 +1744,7 @@ ProgramStateRef MallocChecker::ProcessZeroAllocCheck(
   assert(Arg);
 
   auto DefArgVal =
-      State->getSVal(Arg, Call.getLocationContext()).getAs<DefinedSVal>();
+      State->getSVal(Arg, Call.getStackFrame()).getAs<DefinedSVal>();
 
   if (!DefArgVal)
     return State;
@@ -3936,7 +3936,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   if (!S && (!RSCurr || RSCurr->getAllocationFamily().Kind != AF_InnerBuffer))
     return nullptr;
 
-  const LocationContext *CurrentLC = N->getStackFrame();
+  const StackFrame *CurrentSF = N->getStackFrame();
 
   // If we find an atomic fetch_add or fetch_sub within the function in which
   // the pointer was released (before the release), this is likely a release
@@ -3946,8 +3946,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   // original reference count is positive, we should not report use-after-frees
   // on objects deleted in such functions. This can probably be improved
   // through better shared pointer modeling.
-  if (ReleaseFunctionLC && (ReleaseFunctionLC == CurrentLC ||
-                            ReleaseFunctionLC->isParentOf(CurrentLC))) {
+  if (ReleaseFunctionLC && (ReleaseFunctionLC == CurrentSF ||
+                            ReleaseFunctionLC->isParentOf(CurrentSF))) {
     if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
       // Check for manual use of atomic builtins.
       AtomicExpr::AtomicOp Op = AE->getOp();
@@ -4024,7 +4024,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
           } else if (const auto *CallE = dyn_cast<CallExpr>(S)) {
             auto &CEMgr = BRC.getStateManager().getCallEventManager();
             CallEventRef<> Call =
-                CEMgr.getSimpleCall(CallE, state, CurrentLC, {nullptr, 0});
+                CEMgr.getSimpleCall(CallE, state, CurrentSF, {nullptr, 0});
             if (const auto *D = dyn_cast_or_null<NamedDecl>(Call->getDecl()))
               OS << D->getDeclName();
             else
@@ -4048,10 +4048,10 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         //
         // Usually (e.g. in C) we say that the _responsible_ stack frame is the
         // current innermost stack frame:
-        ReleaseFunctionLC = CurrentLC->getStackFrame();
+        ReleaseFunctionLC = CurrentSF->getStackFrame();
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
-        for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
+        for (const LocationContext *LC = CurrentSF; LC; LC = LC->getParent()) {
           if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {
               // This immediately looks like a reference-counting destructor.

@@ -841,7 +841,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
       RegionAndSymbolInvalidationTraits::InvalidationKinds::
           TK_DoNotInvalidateSuperRegion;
 
-  const LocationContext *LCtx = Call.getLocationContext();
+  const LocationContext *LCtx = Call.getStackFrame();
   const ASTContext &Ctx = State->getStateManager().getContext();
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   auto &RegionManager = Buffer->getMemRegionManager();

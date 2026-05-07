@@ -631,16 +631,16 @@ ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
   if (!E || isa<CXXNewExpr>(E))
     return State;
 
-  const LocationContext *LC = Call.getLocationContext();
+  const StackFrame *SF = Call.getStackFrame();
   for (unsigned CallI = 0, CallN = Call.getNumArgs(); CallI != CallN; ++CallI) {
     unsigned I = Call.getASTArgumentIndex(CallI);
-    if (std::optional<SVal> V = getObjectUnderConstruction(State, {E, I}, LC)) {
+    if (std::optional<SVal> V = getObjectUnderConstruction(State, {E, I}, SF)) {
       SVal VV = *V;
       (void)VV;
       assert(cast<VarRegion>(VV.castAs<loc::MemRegionVal>().getRegion())
                  ->getStackFrame()->getParent()
-                 ->getStackFrame() == LC->getStackFrame());
-      State = finishObjectConstruction(State, {E, I}, LC);
+                 ->getStackFrame() == SF->getStackFrame());
+      State = finishObjectConstruction(State, {E, I}, SF);
     }
   }
 
@@ -660,10 +660,10 @@ void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
   }
 
   const Expr *E = Call.getOriginExpr();
-  const LocationContext *LC = Call.getLocationContext();
+  const StackFrame *SF = Call.getStackFrame();
   static SimpleProgramPointTag Tag("ExprEngine",
                                    "Finish argument construction");
-  Dst.insert(Engine.makeNode(PreStmt(E, LC, &Tag), CleanedState, Pred));
+  Dst.insert(Engine.makeNode(PreStmt(E, SF, &Tag), CleanedState, Pred));
 }
 
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -733,7 +733,7 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 }
 
 ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
-                                            const LocationContext *LCtx,
+                                            const StackFrame *SF,
                                             ProgramStateRef State) {
   const Expr *E = Call.getOriginExpr();
   const ConstCFGElementRef &Elem = Call.getCFGElementRef();
@@ -749,13 +749,13 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     case OMF_retain:
     case OMF_self: {
       // These methods return their receivers.
-      return State->BindExpr(E, LCtx, Msg->getReceiverSVal());
+      return State->BindExpr(E, SF, Msg->getReceiverSVal());
     }
     }
   } else if (const CXXConstructorCall *C = dyn_cast<CXXConstructorCall>(&Call)){
     SVal ThisV = C->getCXXThisVal();
     ThisV = State->getSVal(ThisV.castAs<Loc>());
-    return State->BindExpr(E, LCtx, ThisV);
+    return State->BindExpr(E, SF, ThisV);
   }
 
   SVal R;
@@ -767,7 +767,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     assert(RTC->getStmt() == Call.getOriginExpr());
     EvalCallOptions CallOpts; // FIXME: We won't really need those.
     std::tie(State, Target) = handleConstructionContext(
-        Call.getOriginExpr(), State, currBldrCtx, LCtx,
+        Call.getOriginExpr(), State, currBldrCtx, SF,
         RTC->getConstructionContext(), CallOpts);
     const MemRegion *TargetR = Target.getAsRegion();
     assert(TargetR);
@@ -779,7 +779,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     RegionAndSymbolInvalidationTraits ITraits;
     ITraits.setTrait(TargetR,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
-    State = State->invalidateRegions(TargetR, Elem, Count, LCtx,
+    State = State->invalidateRegions(TargetR, Elem, Count, SF,
                                      /* CausesPointerEscape=*/false, nullptr,
                                      &Call, &ITraits);
 
@@ -791,13 +791,13 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     // a regular unknown pointer.
     const auto *CNE = dyn_cast<CXXNewExpr>(E);
     if (CNE && CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
-      R = svalBuilder.getConjuredHeapSymbolVal(Elem, LCtx, E->getType(), Count);
+      R = svalBuilder.getConjuredHeapSymbolVal(Elem, SF, E->getType(), Count);
       const MemRegion *MR = R.getAsRegion()->StripCasts();
 
       // Store the extent of the allocated object(s).
       SVal ElementCount;
       if (const Expr *SizeExpr = CNE->getArraySize().value_or(nullptr)) {
-        ElementCount = State->getSVal(SizeExpr, LCtx);
+        ElementCount = State->getSVal(SizeExpr, SF);
       } else {
         ElementCount = svalBuilder.makeIntVal(1, /*IsUnsigned=*/true);
       }
@@ -815,10 +815,10 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
       State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>());
     } else {
-      R = svalBuilder.conjureSymbolVal(Elem, LCtx, ResultTy, Count);
+      R = svalBuilder.conjureSymbolVal(Elem, SF, ResultTy, Count);
     }
   }
-  return State->BindExpr(E, LCtx, R);
+  return State->BindExpr(E, SF, R);
 }
 
 // Conservatively evaluate call by invalidating regions and binding
@@ -1252,7 +1252,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
   // If we can't inline it, clean up the state traits used only if the function
   // is inlined.
   State = removeStateTraitsUsedForArrayEvaluation(
-      State, dyn_cast_or_null<CXXConstructExpr>(E), Call.getLocationContext());
+      State, dyn_cast_or_null<CXXConstructExpr>(E), Call.getStackFrame());
 
   // Also handle the return value and invalidate the regions.
   conservativeEvalCall(Call, Bldr, Pred, State);

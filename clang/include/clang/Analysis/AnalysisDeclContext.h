@@ -177,7 +177,7 @@ public:
   const ImplicitParamDecl *getSelfDecl() const;
 
   /// \copydoc LocationContextManager::getStackFrame()
-  const StackFrame *getStackFrame(LocationContext const *ParentLC,
+  const StackFrame *getStackFrame(const StackFrame *ParentSF,
                                   const void *Data, const Expr *E,
                                   const CFGBlock *Blk, unsigned BlockCount,
                                   unsigned Index);
@@ -214,12 +214,12 @@ private:
   // member.
   AnalysisDeclContext *Ctx;
 
-  const LocationContext *Parent;
+  const StackFrame *Parent;
   int64_t ID;
 
 protected:
   LocationContext(ContextKind k, AnalysisDeclContext *ctx,
-                  const LocationContext *parent, int64_t ID)
+                  const StackFrame *parent, int64_t ID)
       : Kind(k), Ctx(ctx), Parent(parent), ID(ID) {
     assert(ctx);
   }
@@ -235,7 +235,7 @@ public:
   AnalysisDeclContext *getAnalysisDeclContext() const { return Ctx; }
 
   /// It might return null.
-  const LocationContext *getParent() const { return Parent; }
+  const StackFrame *getParent() const { return Parent; }
 
   bool isParentOf(const LocationContext *LC) const;
 
@@ -307,7 +307,7 @@ class StackFrame : public LocationContext {
   // The index of the call site in the CFGBlock.
   const unsigned Index;
 
-  StackFrame(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
+  StackFrame(AnalysisDeclContext *ADC, const StackFrame *ParentLC,
              const void *Data, const Expr *E, const CFGBlock *Block,
              unsigned BlockCount, unsigned Index, int64_t ID)
       : LocationContext(StackFrameKind, ADC, ParentLC, ID), Data(Data),
@@ -347,7 +347,7 @@ public:
 };
 
 class LocationContextManager {
-  llvm::FoldingSet<LocationContext> Contexts;
+  llvm::FoldingSet<StackFrame> Contexts;
 
   // ID used for generating a new location context.
   int64_t NewID = 0;
@@ -369,12 +369,12 @@ public:
   ///                   statements of the CFGBlock \p Block.
   /// \returns The stack frame context corresponding to the call.
   const StackFrame *getStackFrame(AnalysisDeclContext *ADC,
-                                  const LocationContext *ParentLC,
+                                  const StackFrame *ParentLC,
                                   const void *Data, const Expr *E,
                                   const CFGBlock *Block, unsigned BlockCount,
                                   unsigned StmtIdx);
 
-  /// Discard all previously created LocationContext objects.
+  /// Discard all previously created StackFrame objects.
   void clear();
 };
 

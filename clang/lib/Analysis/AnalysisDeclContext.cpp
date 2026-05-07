@@ -311,9 +311,9 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
 const StackFrame *AnalysisDeclContext::getStackFrame(
-    const LocationContext *ParentLC, const void *Data, const Expr *E,
+    const StackFrame *ParentSF, const void *Data, const Expr *E,
     const CFGBlock *Blk, unsigned BlockCount, unsigned Index) {
-  return getLocationContextManager().getStackFrame(this, ParentLC, Data, E, Blk,
+  return getLocationContextManager().getStackFrame(this, ParentSF, Data, E, Blk,
                                                    BlockCount, Index);
 }
 
@@ -417,7 +417,7 @@ void StackFrame::Profile(llvm::FoldingSetNodeID &ID) {
 //===----------------------------------------------------------------------===//
 
 const StackFrame *LocationContextManager::getStackFrame(
-    AnalysisDeclContext *Ctx, const LocationContext *Parent, const void *Data,
+    AnalysisDeclContext *Ctx, const StackFrame *Parent, const void *Data,
     const Expr *E, const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
   StackFrame::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx);
@@ -656,7 +656,7 @@ LocationContextManager::~LocationContextManager() {
 }
 
 void LocationContextManager::clear() {
-  for (llvm::FoldingSet<LocationContext>::iterator I = Contexts.begin(),
+  for (llvm::FoldingSet<StackFrame>::iterator I = Contexts.begin(),
        E = Contexts.end(); I != E; ) {
     LocationContext *LC = &*I;
     ++I;

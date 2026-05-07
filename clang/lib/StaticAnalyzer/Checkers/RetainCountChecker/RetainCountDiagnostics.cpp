@@ -157,7 +157,7 @@ static std::string findAllocatedObjectName(const Stmt *S, QualType QT) {
 }
 
 static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
-                                           const LocationContext *LCtx,
+                                           const StackFrame *SF,
                                            const RefVal &CurrV, SymbolRef &Sym,
                                            const Stmt *S,
                                            llvm::raw_string_ostream &os) {
@@ -165,7 +165,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
     // Get the name of the callee (if it is available)
     // from the tracked SVal.
-    SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), LCtx);
+    SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), SF);
     const FunctionDecl *FD = X.getAsFunctionDecl();
 
     // If failed, try to get it from AST.
@@ -184,7 +184,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   } else {
     assert(isa<ObjCMessageExpr>(S));
     CallEventRef<ObjCMethodCall> Call = Mgr.getObjCMethodCall(
-        cast<ObjCMessageExpr>(S), CurrSt, LCtx, {nullptr, 0});
+        cast<ObjCMessageExpr>(S), CurrSt, SF, {nullptr, 0});
 
     switch (Call->getMessageKind()) {
     case OCM_Message:
@@ -199,8 +199,8 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     }
   }
 
-  std::optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, LCtx, {nullptr, 0});
-  auto Idx = findArgIdxOfSymbol(CurrSt, LCtx, Sym, CE);
+  std::optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, SF, {nullptr, 0});
+  auto Idx = findArgIdxOfSymbol(CurrSt, SF, Sym, CE);
 
   // If index is not found, we assume that the symbol was returned.
   if (!Idx) {
@@ -422,7 +422,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   const ExplodedNode *PrevNode = N->getFirstPred();
   ProgramStateRef PrevSt = PrevNode->getState();
   ProgramStateRef CurrSt = N->getState();
-  const LocationContext *LCtx = N->getStackFrame();
+  const StackFrame *SF = N->getStackFrame();
 
   const RefVal* CurrT = getRefBinding(CurrSt, Sym);
   if (!CurrT)
@@ -448,8 +448,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
 
     if (isa<ObjCIvarRefExpr>(S) &&
-        isSynthesizedAccessor(LCtx->getStackFrame())) {
-      S = LCtx->getStackFrame()->getCallSite();
+        isSynthesizedAccessor(SF->getStackFrame())) {
+      S = SF->getStackFrame()->getCallSite();
     }
 
     if (isa<ObjCArrayLiteral>(S)) {
@@ -477,7 +477,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     } else if (isa<ObjCIvarRefExpr>(S)) {
       os << "Object loaded from instance variable";
     } else {
-      generateDiagnosticsForCallLike(CurrSt, LCtx, CurrV, Sym, S, os);
+      generateDiagnosticsForCallLike(CurrSt, SF, CurrV, Sym, S, os);
     }
 
     PathDiagnosticLocation Pos(S, SM, N->getStackFrame());
@@ -508,7 +508,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 
         // Retrieve the value of the argument.  Is it the symbol
         // we are interested in?
-        if (CurrSt->getSValAsScalarOrLoc(*AI, LCtx).getAsLocSymbol() != Sym)
+        if (CurrSt->getSValAsScalarOrLoc(*AI, SF).getAsLocSymbol() != Sym)
           continue;
 
         // We have an argument.  Get the effect!
@@ -516,7 +516,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
       }
     } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
       if (const Expr *receiver = ME->getInstanceReceiver()) {
-        if (CurrSt->getSValAsScalarOrLoc(receiver, LCtx)
+        if (CurrSt->getSValAsScalarOrLoc(receiver, SF)
               .getAsLocSymbol() == Sym) {
           // The symbol we are tracking is the receiver.
           DeallocSent = true;
@@ -540,7 +540,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   // to Sym.
   for (const Stmt *Child : S->children())
     if (const Expr *Exp = dyn_cast_or_null<Expr>(Child))
-      if (CurrSt->getSValAsScalarOrLoc(Exp, LCtx).getAsLocSymbol() == Sym) {
+      if (CurrSt->getSValAsScalarOrLoc(Exp, SF).getAsLocSymbol() == Sym) {
         P->addRange(Exp->getSourceRange());
         break;
       }

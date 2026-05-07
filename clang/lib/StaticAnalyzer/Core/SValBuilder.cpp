@@ -201,7 +201,7 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const CallEvent &call,
                                                    unsigned visitCount,
                                                    const void *symbolTag) {
   return conjureSymbolVal(symbolTag, call.getCFGElementRef(),
-                          call.getLocationContext(), call.getResultType(),
+                          call.getStackFrame(), call.getResultType(),
                           visitCount);
 }
 
@@ -210,7 +210,7 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const CallEvent &call,
                                                    unsigned visitCount,
                                                    const void *symbolTag) {
   return conjureSymbolVal(symbolTag, call.getCFGElementRef(),
-                          call.getLocationContext(), type, visitCount);
+                          call.getStackFrame(), type, visitCount);
 }
 
 DefinedSVal SValBuilder::getConjuredHeapSymbolVal(ConstCFGElementRef elem,
