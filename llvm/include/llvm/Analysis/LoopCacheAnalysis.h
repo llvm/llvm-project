@@ -278,7 +278,8 @@ raw_ostream &operator<<(raw_ostream &OS, const IndexedReference &R);
 raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
 
 /// Printer pass for the \c CacheCost results.
-class LoopCachePrinterPass : public PassInfoMixin<LoopCachePrinterPass> {
+class LoopCachePrinterPass
+    : public RequiredPassInfoMixin<LoopCachePrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -286,8 +287,6 @@ public:
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

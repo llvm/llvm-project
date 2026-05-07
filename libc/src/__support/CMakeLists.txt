@@ -103,6 +103,7 @@ add_header_library(
     macros/config.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
 )
 
 add_header_library(
@@ -140,6 +141,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
 )
 
 add_header_library(
