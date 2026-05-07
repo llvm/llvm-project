@@ -12828,10 +12828,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
       SDValue Even =
           lowerZvzipVUNZIP(RISCVISD::VUNZIPE_VL, V, DL, DAG, Subtarget);
-      SDValue Odd =
-          lowerZvzipVUNZIP(RISCVISD::VUNZIPO_VL, V, DL, DAG, Subtarget);
-      if (Even && Odd)
-        return DAG.getMergeValues({Even, Odd}, DL);
+      if (Even) {
+        SDValue Odd =
+            lowerZvzipVUNZIP(RISCVISD::VUNZIPO_VL, V, DL, DAG, Subtarget);
+        if (Odd)
+          return DAG.getMergeValues({Even, Odd}, DL);
+      }
     }
   }
 
