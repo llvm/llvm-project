@@ -18,6 +18,8 @@
 
 ! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -flto -ffat-lto-objects -S %s -o - | FileCheck %s --check-prefixes=ASM
 
+! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -flto=thin -ffat-lto-objects -S %s -o - | FileCheck %s --check-prefixes=ASM
+
 !      ASM: .section        .llvm.lto,"e",@llvm_lto
 ! ASM-NEXT: .Lllvm.embedded.object:
 ! ASM-NEXT:        .asciz  "BC
