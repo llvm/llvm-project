@@ -483,8 +483,8 @@ defm SBarrierLeaveImm : AMDGPUSubtargetFeature<"s-barrier-leave-imm",
   "s_barrier_leave takes an immediate operand"
 >;
 
-defm MovB64Inst : AMDGPUSubtargetFeature<"mov-b64-inst",
-  "Has mov_b64 instruction"
+defm VMovB64Inst : AMDGPUSubtargetFeature<"v-mov-b64-inst",
+  "Has v_mov_b64 instruction"
 >;
 
 defm GFX950Insts : AMDGPUSubtargetFeature<"gfx950-insts",
@@ -1759,7 +1759,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureLshlAddU64Inst,
-   FeatureMovB64Inst,
+   FeatureVMovB64Inst,
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
@@ -2115,7 +2115,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureMcastLoadInsts,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
-   FeatureMovB64Inst,
+   FeatureVMovB64Inst,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
