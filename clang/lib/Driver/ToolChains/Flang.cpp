@@ -269,7 +269,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
 void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
-  DiagnosticsEngine &Diags = D.getDiags();
   LTOKind LTOMode = D.getLTOMode();
   // LTO mode is parsed by the Clang driver library.
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
