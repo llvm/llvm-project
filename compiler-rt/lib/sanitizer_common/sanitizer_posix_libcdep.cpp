@@ -188,12 +188,13 @@ static uptr GetAltStackSize() {
   return SIGSTKSZ * 4;
 }
 
-void* SetAlternateSignalStack() {
+AlternateSignalStack SetAlternateSignalStack() {
   stack_t altstack, oldstack;
   CHECK_EQ(0, sigaltstack(nullptr, &oldstack));
   // If the alternate stack is already in place, do nothing.
   // Android always sets an alternate stack, but it's too small for us.
-  if (!SANITIZER_ANDROID && !(oldstack.ss_flags & SS_DISABLE)) return nullptr;
+  if (!SANITIZER_ANDROID && !(oldstack.ss_flags & SS_DISABLE))
+    return {nullptr, 0};
   // TODO(glider): the mapped stack should have the MAP_STACK flag in the
   // future. It is not required by man 2 sigaltstack now (they're using
   // malloc()).
@@ -201,18 +202,31 @@ void* SetAlternateSignalStack() {
   altstack.ss_sp = (char *)MmapOrDie(altstack.ss_size, __func__);
   altstack.ss_flags = 0;
   CHECK_EQ(0, sigaltstack(&altstack, nullptr));
-  return altstack.ss_sp;
+  return {altstack.ss_sp, altstack.ss_size};
 }
 
-void UnsetAlternateSignalStack(void* altstack_base) {
-  stack_t altstack, oldstack;
-  altstack.ss_sp = nullptr;
-  altstack.ss_flags = SS_DISABLE;
-  altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
-  CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
-  if (altstack_base && altstack_base == oldstack.ss_sp) {
-    UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+void UnsetAlternateSignalStack(AlternateSignalStack altstack_handle) {
+  if (!altstack_handle.sp)
+    return;
+  // Only un-register the alt stack with the kernel if it still points at the
+  // buffer we installed. Another component (e.g. CreateSigAltStack in llvm)
+  // may have replaced our registration; SS_DISABLE'ing in that case would
+  // silently break their signal handling. Our buffer is always safe to
+  // unmap because the kernel no longer references it once it has been
+  // replaced.
+  stack_t current;
+  CHECK_EQ(0, sigaltstack(nullptr, &current));
+  bool still_ours = !(current.ss_flags & SS_DISABLE) &&
+                    current.ss_sp == altstack_handle.sp &&
+                    current.ss_size == altstack_handle.size;
+  if (still_ours) {
+    stack_t altstack;
+    altstack.ss_sp = nullptr;
+    altstack.ss_flags = SS_DISABLE;
+    altstack.ss_size = GetAltStackSize();  // Sane value required on Darwin.
+    CHECK_EQ(0, sigaltstack(&altstack, nullptr));
   }
+  UnmapOrDie(altstack_handle.sp, altstack_handle.size);
 }
 
 bool IsSignalHandlerFromSanitizer(int signum) {

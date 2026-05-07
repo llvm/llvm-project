@@ -1,9 +1,9 @@
 // RUN: %clangxx_asan %s -o %t && %env_asan_opts=use_sigaltstack=1 %run %t
 
+#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 char global_alt_stack[4096 * 4];
 

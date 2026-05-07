@@ -387,8 +387,12 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         const void *unwind_context);
 
 // Alternative signal stack (POSIX-only).
-void *SetAlternateSignalStack();
-void UnsetAlternateSignalStack(void *altstack_base);
+struct AlternateSignalStack {
+  void *sp;
+  uptr size;
+};
+AlternateSignalStack SetAlternateSignalStack();
+void UnsetAlternateSignalStack(AlternateSignalStack altstack);
 
 bool IsSignalHandlerFromSanitizer(int signum);
 bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
