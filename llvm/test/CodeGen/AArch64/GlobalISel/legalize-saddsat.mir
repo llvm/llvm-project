@@ -220,9 +220,8 @@ body:             |
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UADDE]](i32), [[SEXT_INREG2]]
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i8), [[UV5:%[0-9]+]]:_(i8), [[UV6:%[0-9]+]]:_(i8), [[UV7:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[UADDE]](i32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i32) = G_MERGE_VALUES [[UV4]](i8), [[UV5]](i8), [[UV6]](i8), [[DEF]](i8)
-    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(i32) = G_MERGE_VALUES [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8)
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(i32) = G_MERGE_VALUES [[DEF]](i8), [[DEF]](i8), [[DEF]](i8), [[DEF]](i8)
     ; CHECK-NEXT: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](i32), [[MV1]](i32)
     ; CHECK-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s64) = G_SEXT_INREG [[MV2]], 24
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 23
