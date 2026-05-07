@@ -96,9 +96,34 @@ define i64 @popcnt64_load_cmov(ptr %p0, i64 %a1) {
   ret i64 %res
 }
 
-declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
-declare i64 @llvm.ctlz.i64(i64, i1) nounwind readnone
-declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
-declare i64 @llvm.cttz.i64(i64, i1) nounwind readnone
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
+; --- negative: icmp against non-zero constant; load must NOT be folded ---
+
+define i32 @lzcnt32_no_fold_nonzero_cmp(ptr %p0, i32 %a1) {
+; CHECK-LABEL: lzcnt32_no_fold_nonzero_cmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %ecx
+; CHECK-NEXT:    lzcntl %ecx, %eax
+; CHECK-NEXT:    cmpl $1, %ecx
+; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    retq
+  %v = load i32, ptr %p0, align 4
+  %cnt = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %v, i1 true)
+  %isone = icmp eq i32 %v, 1
+  %res = select i1 %isone, i32 %a1, i32 %cnt
+  ret i32 %res
+}
+
+define i32 @lzcnt32_no_fold_var_cmp(ptr %p0, i32 %a1, i32 %a2) {
+; CHECK-LABEL: lzcnt32_no_fold_var_cmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %ecx
+; CHECK-NEXT:    lzcntl %ecx, %eax
+; CHECK-NEXT:    cmpl %edx, %ecx
+; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    retq
+  %v = load i32, ptr %p0, align 4
+  %cnt = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %v, i1 true)
+  %eq = icmp eq i32 %v, %a2
+  %res = select i1 %eq, i32 %a1, i32 %cnt
+  ret i32 %res
+}
