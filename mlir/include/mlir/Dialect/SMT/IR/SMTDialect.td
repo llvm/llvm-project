@@ -13,6 +13,7 @@ include "mlir/IR/DialectBase.td"
 
 def SMTDialect : Dialect {
   let name = "smt";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let summary = "a dialect that models satisfiability modulo theories";
   let cppNamespace = "mlir::smt";
 

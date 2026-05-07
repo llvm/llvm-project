@@ -21,6 +21,7 @@ include "mlir/IR/EnumAttr.td"
 
 def Shard_Dialect : Dialect {
   let name = "shard";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::shard";
 
   let description = [{

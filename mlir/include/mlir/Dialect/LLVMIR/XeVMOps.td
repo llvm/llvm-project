@@ -37,6 +37,7 @@ def XeVM_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
