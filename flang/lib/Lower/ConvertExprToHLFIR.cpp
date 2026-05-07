@@ -1875,12 +1875,14 @@ private:
     // defers these destroy ops until after the assign into the temp.
     builder.setInsertionPointToStart(&condOp.getThenRegion().front());
     getStmtCtx().pushScope();
-    const hlfir::Entity thenEntity{gen(condExpr.thenValue())};
+    const hlfir::Entity thenEntity{hlfir::derefPointersAndAllocatables(
+        loc, builder, hlfir::Entity{gen(condExpr.thenValue())})};
     getStmtCtx().finalizeAndPop();
     hlfir::YieldOp::create(builder, loc, thenEntity);
     builder.setInsertionPointToStart(&condOp.getElseRegion().front());
     getStmtCtx().pushScope();
-    const hlfir::Entity elseEntity{gen(condExpr.elseValue())};
+    const hlfir::Entity elseEntity{hlfir::derefPointersAndAllocatables(
+        loc, builder, hlfir::Entity{gen(condExpr.elseValue())})};
     getStmtCtx().finalizeAndPop();
     hlfir::YieldOp::create(builder, loc, elseEntity);
     builder.setInsertionPointAfter(condOp);

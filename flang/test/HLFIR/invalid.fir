@@ -1115,6 +1115,29 @@ func.func @bad_element_addr_4(%x: !fir.ref<!fir.array<20xf32>>, %y: !fir.ref<!fi
 }
 
 // -----
+func.func @bad_conditional_empty_then_region(%cond: i1, %v0: f32) {
+  // expected-error@+1 {{'hlfir.conditional' op region #0 ('then_region') failed to verify constraint: region with 1 blocks}}
+  %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<f32> {
+  } else {
+    hlfir.yield %v0 : f32
+  }
+  return
+}
+
+// -----
+func.func @bad_conditional_region_size(%cond: i1, %v0: f32, %v1: f32, %v2: f32) {
+  // expected-error@+1 {{'hlfir.conditional' op region #0 ('then_region') failed to verify constraint: region with 1 blocks}}
+  %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<f32> {
+    hlfir.yield %v0 : f32
+  ^bb1:
+    hlfir.yield %v1 : f32
+  } else {
+    hlfir.yield %v2 : f32
+  }
+  return
+}
+
+// -----
 func.func @bad_forall(%x : !fir.box<!fir.array<10xf32>>, %y: f32, %bad : !fir.ref<!fir.array<10xindex>>) {
   // expected-error@+1 {{'hlfir.forall' op region #0 ('lb_region') failed to verify constraint: single block region that yields an integer scalar value}}
   hlfir.forall lb {

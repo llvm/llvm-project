@@ -869,34 +869,6 @@ struct ConditionalOpConversion
     // by the nesting level of ConditionalOp's.
     setHasBoundedRewriteRecursion();
   }
-  /// Compute the MLIR type of the temp's DeclareOp base result,
-  /// given the hlfir.expr type of the conditional. This must match
-  /// what createAndDeclareTemp + hlfir::DeclareOp would produce.
-  static mlir::Type computeTempBaseType(fir::FirOpBuilder &builder,
-                                        hlfir::ExprType exprType) {
-    const mlir::Type eleTy{exprType.getEleTy()};
-    const bool isPolymorphic{exprType.isPolymorphic()};
-    const bool isArray{exprType.isArray()};
-    mlir::Type elemOrSeqType{eleTy};
-    if (isArray)
-      elemOrSeqType = fir::SequenceType::get(exprType.getShape(), eleTy);
-    // Polymorphic: runtime allocate produces fir.class<fir.heap<T>>,
-    // DeclareOp strips the heap attribute → fir.class<T>.
-    if (isPolymorphic)
-      return fir::ClassType::get(elemOrSeqType);
-    // Arrays (non-polymorphic): heap alloc → fir.heap<seqTy>,
-    // DeclareOp wraps in box → fir.box<seqTy>.
-    if (isArray)
-      return fir::BoxType::get(elemOrSeqType);
-    // Scalar, non-polymorphic.
-    if (auto charTy{mlir::dyn_cast<fir::CharacterType>(eleTy)})
-      if (charTy.hasDynamicLen())
-        return fir::BoxCharType::get(builder.getContext(), charTy.getFKind());
-    if (fir::isRecordWithTypeParameters(eleTy))
-      return fir::BoxType::get(eleTy);
-    return fir::ReferenceType::get(eleTy);
-  }
-
   llvm::LogicalResult
   matchAndRewrite(hlfir::ConditionalOp condOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
@@ -907,68 +879,118 @@ struct ConditionalOpConversion
     // Use ExprType to ensure both branches produce identical MLIR temp types.
     const auto exprType{
         mlir::cast<hlfir::ExprType>(condOp.getResult().getType())};
-    const bool isPolymorphic{exprType.isPolymorphic()};
-    const bool isArray{exprType.isArray()};
-    mlir::Type elemOrSeqType{exprType.getEleTy()};
-    if (isArray)
-      elemOrSeqType =
-          fir::SequenceType::get(exprType.getShape(), elemOrSeqType);
-    const bool useStack{!isArray && !isPolymorphic};
-    const mlir::Type tempBaseType{computeTempBaseType(builder, exprType)};
-    // Callback for hlfir::DeclareOp.
-    auto genTempDeclareOp =
-        [](fir::FirOpBuilder &bldr, mlir::Location l, mlir::Value memref,
-           llvm::StringRef name, mlir::Value shape,
-           llvm::ArrayRef<mlir::Value> typeParams,
-           fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
-      auto declareOp =
-          hlfir::DeclareOp::create(bldr, l, memref, name, shape, typeParams,
-                                   /*dummy_scope=*/nullptr, /*storage=*/nullptr,
-                                   /*storage_offset=*/0, attrs);
-      return declareOp.getBase();
-    };
+    const mlir::Type tempBaseType{hlfir::getVariableType(exprType)};
 
     // Emit one branch: clone ops, create temp, assign, run deferred
     // destroys, yield (temp, mustFree).
     auto emitBranch = [&](mlir::Region &region) {
       mlir::IRMapping mapper;
-      // Clone all ops except hlfir.destroy and the terminator.
-      for (auto &op : region.front().without_terminator())
-        if (!mlir::isa<hlfir::DestroyOp>(op))
-          builder.clone(op, mapper);
       auto yield{mlir::cast<hlfir::YieldOp>(region.front().getTerminator())};
-      // Dereference allocatable/pointer values.
-      const hlfir::Entity val{hlfir::derefPointersAndAllocatables(
-          loc, builder,
-          hlfir::Entity{mapper.lookupOrDefault(yield.getEntity())})};
-      // Obtain runtime length/shape from the actual yielded value.
-      llvm::SmallVector<mlir::Value> lenParams;
-      hlfir::genLengthParameters(loc, builder, val, lenParams);
-      mlir::Value shape{};
-      llvm::SmallVector<mlir::Value> extents;
-      if (isArray) {
-        shape = hlfir::genShape(loc, builder, val);
-        extents = hlfir::getExplicitExtentsFromShape(shape, builder);
+      const mlir::Value yieldedEntity{yield.getEntity()};
+      // Try to forward the yielded entity's storage directly to avoid using a
+      // temp.
+      hlfir::AsExprOp asExprToForward;
+      if (yieldedEntity.getType() == exprType) {
+        if (auto asExpr{yieldedEntity.getDefiningOp<hlfir::AsExprOp>()};
+            asExpr && asExpr.isMove() &&
+            asExpr->getBlock() == &region.front() &&
+            asExpr.getVar().getType() == tempBaseType &&
+            llvm::all_of(yieldedEntity.getUsers(), [&](mlir::Operation *user) {
+              return user == yield.getOperation() ||
+                     mlir::isa<hlfir::DestroyOp>(user);
+            }))
+          asExprToForward = asExpr;
       }
-      // Create temp with common MLIR type but runtime params from the yielded
-      // value.
-      const auto [base, isHeapAlloc]{builder.createAndDeclareTemp(
-          loc, elemOrSeqType, shape, extents, lenParams, genTempDeclareOp,
-          isPolymorphic ? val.getBase() : nullptr, useStack, ".tmp.cond")};
-      const hlfir::Entity temp{base};
-      assert(temp.getType() == tempBaseType &&
-             "temp type mismatch with fir.if result type");
+      // Ops after yieldDefOp are cleanups that must be deferred until after
+      // the temp assign to avoid use-after-free.
+      mlir::Operation *const yieldDefOp{yieldedEntity.getDefiningOp()};
+      const bool hasDeferredCleanups{!asExprToForward && yieldDefOp &&
+                                     yieldDefOp->getBlock() == &region.front()};
+      // Clone ops up to and including yieldDefOp, collecting deferred cleanups
+      // and the destroy of yieldedEntity for later replay.
+      llvm::SmallVector<mlir::Operation *> deferredOps;
+      mlir::Operation *destroyOfYielded{nullptr};
+      bool pastYieldDef{false};
+      for (auto &op : region.front().without_terminator()) {
+        if (auto destroy{mlir::dyn_cast<hlfir::DestroyOp>(op)};
+            destroy && destroy.getExpr() == yieldedEntity) {
+          destroyOfYielded = &op;
+          continue;
+        }
+        if (asExprToForward && &op == asExprToForward.getOperation())
+          continue;
+        if (hasDeferredCleanups && &op == yieldDefOp) {
+          builder.clone(op, mapper);
+          pastYieldDef = true;
+          continue;
+        }
+        if (pastYieldDef) {
+          deferredOps.push_back(&op);
+          continue;
+        }
+        builder.clone(op, mapper);
+      }
+      if (asExprToForward) {
+        // Forward storage and mustFree directly; ownership transfers to
+        // the caller so no destroy is needed.
+        const mlir::Value fwdVar{
+            mapper.lookupOrDefault(asExprToForward.getVar())};
+        const mlir::Value fwdMustFree{
+            mapper.lookupOrDefault(asExprToForward.getMustFree())};
+        fir::ResultOp::create(builder, loc,
+                              mlir::ValueRange{fwdVar, fwdMustFree});
+        return;
+      }
+      // If the yielded entity is an hlfir.as_expr, unwrap to its underlying
+      // variable — it carries type descriptor info needed for polymorphic
+      // temp allocation.  The value is never a mutable box because lowering
+      // applied derefPointersAndAllocatables before yielding.
+      const mlir::Value mappedYield{mapper.lookupOrDefault(yieldedEntity)};
+      auto asExprOp{mappedYield.getDefiningOp<hlfir::AsExprOp>()};
+      const hlfir::Entity val{asExprOp ? asExprOp.getVar() : mappedYield};
+      auto [temp, isHeapAlloc]{hlfir::createTempFromMold(loc, builder, val)};
       hlfir::AssignOp::create(builder, loc, val, temp,
                               /*realloc=*/false,
                               /*keep_lhs_length_if_realloc=*/false,
                               /*temporary_lhs=*/true);
-      // Clone hlfir.destroy ops after the assign to avoid
-      // use-after-free of the source operand.
-      for (auto &op : region.front().without_terminator())
-        if (mlir::isa<hlfir::DestroyOp>(op))
-          builder.clone(op, mapper);
-      // Return temp and mustFree as separate fir.result values.
-      mlir::Value mustFreeVal{builder.createBool(loc, isHeapAlloc)};
+      // Replay deferred cleanups after the assign; destroy last.
+      for (auto *op : deferredOps)
+        builder.clone(*op, mapper);
+      if (destroyOfYielded)
+        builder.clone(*destroyOfYielded, mapper);
+      // Cast temp to match the fir.if result type if needed (e.g. the mold
+      // may have static extents while ExprType prescribes dynamic ones).
+      if (temp.getType() != tempBaseType) {
+        if (mlir::isa<fir::BoxCharType>(tempBaseType)) {
+          llvm::SmallVector<mlir::Value> lenParams;
+          hlfir::genLengthParameters(loc, builder, temp, lenParams);
+          assert(!lenParams.empty() && "character must have length");
+          const mlir::Value ref{builder.createConvert(
+              loc, builder.getRefType(temp.getFortranElementType()), temp)};
+          temp = hlfir::Entity{fir::EmboxCharOp::create(
+              builder, loc, tempBaseType, ref, lenParams[0])};
+        } else if (mlir::isa<fir::BaseBoxType>(tempBaseType) &&
+                   !mlir::isa<fir::BaseBoxType>(temp.getType())) {
+          // Unboxed temp needs emboxing to satisfy the fir.if result type.
+          const mlir::Value shape{temp.isArray()
+                                      ? hlfir::genShape(loc, builder, temp)
+                                      : mlir::Value{}};
+          // Only pass length params for dynamic-length character elements;
+          // fir.embox rejects redundant length operands.
+          llvm::SmallVector<mlir::Value> lenParams;
+          hlfir::genLengthParameters(loc, builder, temp, lenParams);
+          const mlir::Type elemType{hlfir::getFortranElementType(tempBaseType)};
+          if (auto charTy{mlir::dyn_cast<fir::CharacterType>(elemType)};
+              charTy && charTy.hasConstantLen())
+            lenParams.clear();
+          temp = hlfir::Entity{
+              fir::EmboxOp::create(builder, loc, tempBaseType, temp, shape,
+                                   /*slice=*/nullptr, lenParams)};
+        } else {
+          temp = hlfir::Entity{builder.createConvert(loc, tempBaseType, temp)};
+        }
+      }
+      const mlir::Value mustFreeVal{builder.createBool(loc, isHeapAlloc)};
       fir::ResultOp::create(builder, loc, mlir::ValueRange{temp, mustFreeVal});
     };
 

@@ -2480,10 +2480,6 @@ llvm::LogicalResult hlfir::ConditionalOp::verify() {
     return emitOpError("result must be an hlfir.expr type");
   const auto checkRegion = [&](mlir::Region &region,
                                llvm::StringRef name) -> llvm::LogicalResult {
-    if (region.empty())
-      return emitOpError(name) << " region must not be empty";
-    if (!region.hasOneBlock())
-      return emitOpError(name) << " region must have exactly one block";
     if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(region)))
       return emitOpError(name)
              << " region must be terminated by an hlfir.yield";
