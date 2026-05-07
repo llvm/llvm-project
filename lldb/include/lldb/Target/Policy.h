@@ -84,17 +84,17 @@ struct Policy {
 /// thread's stack when the task starts.
 class PolicyStack {
 public:
-  static PolicyStack &GetForCurrentThread() {
+  static PolicyStack &Get() {
     static thread_local PolicyStack s_stack;
     return s_stack;
   }
 
-  Policy Current() const { return m_stack.back(); }
+  Policy Current() const;
 
   void Push(Policy policy) { m_stack.push_back(std::move(policy)); }
 
   void Pop() {
-    assert(!m_stack.empty() && "can't pop the last policy");
+    assert(!m_stack.empty() && "can't pop the base policy");
     m_stack.pop_back();
   }
 
@@ -103,8 +103,8 @@ public:
   /// RAII guard that pushes a policy on construction and pops on destruction.
   class Guard {
   public:
-    explicit Guard(Policy policy) { GetForCurrentThread().Push(policy); }
-    ~Guard() { GetForCurrentThread().Pop(); }
+    explicit Guard(Policy policy) { Get().Push(std::move(policy)); }
+    ~Guard() { Get().Pop(); }
 
     Guard(const Guard &) = delete;
     Guard &operator=(const Guard &) = delete;

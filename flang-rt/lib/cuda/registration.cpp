@@ -27,6 +27,8 @@ extern void __cudaRegisterVar(void **fatCubinHandle, char *hostVar,
 extern void __cudaRegisterManagedVar(void **fatCubinHandle,
     void **hostVarPtrAddress, char *deviceAddress, const char *deviceName,
     int ext, size_t size, int constant, int global);
+extern void __cudaRegisterHostVar(
+    void **fatCubinHandle, const char *deviceName, char *hostVar, size_t size);
 extern char __cudaInitModule(void **fatCubinHandle);
 
 void *RTDECL(CUFRegisterModule)(void *data) {
@@ -44,6 +46,14 @@ void RTDEF(CUFRegisterFunction)(
 void RTDEF(CUFRegisterVariable)(
     void **module, char *varSym, const char *varName, int64_t size) {
   __cudaRegisterVar(module, varSym, varName, varName, 0, size, 0, 0);
+}
+
+void RTDEF(CUFRegisterExternalVariable)(
+    void **module, char *varSym, const char *varName, int64_t size) {
+  // Tell the CUDA driver to bind the device-side global <varName> to the
+  // host-resident storage at <varSym>. Kernel accesses to <varName> then go
+  // through the host address; HMM/ATS handles migration.
+  __cudaRegisterHostVar(module, varName, varSym, size);
 }
 
 void RTDEF(CUFRegisterManagedVariable)(

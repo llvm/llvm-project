@@ -7,7 +7,7 @@ declare nofpclass(qnan inf norm sub zero) float @returns_snan()
 define nofpclass(inf norm sub zero) float @ret_nofpclass_only_nan__log(float %unknown) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_nofpclass_only_nan__log(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %result = call float @llvm.log.f32(float %unknown)
   ret float %result
@@ -37,7 +37,7 @@ define nofpclass(nan inf norm sub nzero) float @ret_nofpclass_only_pzero__log(fl
 define nofpclass(nan ninf norm sub zero) float @ret_nofpclass_only_pinf__log(float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) float @ret_nofpclass_only_pinf__log(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %result = call float @llvm.log.f32(float %unknown)
   ret float %result
@@ -47,7 +47,7 @@ define nofpclass(nan ninf norm sub zero) float @ret_nofpclass_only_pinf__log(flo
 define nofpclass(nan pinf norm sub zero) float @ret_nofpclass_only_ninf__log(float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) float @ret_nofpclass_only_ninf__log(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %result = call float @llvm.log.f32(float %unknown)
   ret float %result
@@ -161,7 +161,7 @@ define nofpclass(ninf norm zero) float @ret_nofpclass_nan_or_sub__log_select__fi
 define nofpclass(pinf nan norm zero) float @ret_ninf_or_sub__log_select__pinf_or_sub_orzero__else_not0__ieee(i1 %cond, float nofpclass(ninf norm nan) %must.be.pinf.or.sub.or.zero, float nofpclass(zero) %not.zero) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero norm) float @ret_ninf_or_sub__log_select__pinf_or_sub_orzero__else_not0__ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan ninf norm) [[MUST_BE_PINF_OR_SUB_OR_ZERO:%.*]], float nofpclass(zero) [[NOT_ZERO:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %select = select i1 %cond, float %must.be.pinf.or.sub.or.zero, float %not.zero
   %result = call float @llvm.log.f32(float %select)
@@ -171,7 +171,7 @@ define nofpclass(pinf nan norm zero) float @ret_ninf_or_sub__log_select__pinf_or
 define nofpclass(pinf nan norm zero) float @ret_ninf_or_sub__log_select__pinf_or_sub_orzero__else_not0__daz(i1 %cond, float nofpclass(ninf norm nan) %must.be.pinf.or.sub.or.zero, float nofpclass(zero) %not.zero) #0 {
 ; CHECK-LABEL: define nofpclass(nan pinf zero norm) float @ret_ninf_or_sub__log_select__pinf_or_sub_orzero__else_not0__daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan ninf norm) [[MUST_BE_PINF_OR_SUB_OR_ZERO:%.*]], float nofpclass(zero) [[NOT_ZERO:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %select = select i1 %cond, float %must.be.pinf.or.sub.or.zero, float %not.zero
   %result = call float @llvm.log.f32(float %select)
@@ -181,7 +181,7 @@ define nofpclass(pinf nan norm zero) float @ret_ninf_or_sub__log_select__pinf_or
 define nofpclass(pinf nan norm zero) float @ret_ninf_or_sub__log_select__pinf_or_sub_orzero__else_not0__dynamic(i1 %cond, float nofpclass(ninf norm nan) %must.be.pinf.or.sub.or.zero, float nofpclass(zero) %not.zero) #1 {
 ; CHECK-LABEL: define nofpclass(nan pinf zero norm) float @ret_ninf_or_sub__log_select__pinf_or_sub_orzero__else_not0__dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan ninf norm) [[MUST_BE_PINF_OR_SUB_OR_ZERO:%.*]], float nofpclass(zero) [[NOT_ZERO:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %select = select i1 %cond, float %must.be.pinf.or.sub.or.zero, float %not.zero
   %result = call float @llvm.log.f32(float %select)

@@ -23,20 +23,20 @@
 float f1 = FLT_SNAN;
 float f2 = +FLT_SNAN;
 float f3 = -FLT_SNAN;
-// CHECK: @f1 = {{.*}}global float 0x7FF4000000000000
-// CHECK: @f2 = {{.*}}global float 0x7FF4000000000000
-// CHECK: @f3 = {{.*}}global float 0xFFF4000000000000
+// CHECK: @f1 = {{.*}}global float +snan(0x200000)
+// CHECK: @f2 = {{.*}}global float +snan(0x200000)
+// CHECK: @f3 = {{.*}}global float -snan(0x200000)
 
 double d1 = DBL_SNAN;
 double d2 = +DBL_SNAN;
 double d3 = -DBL_SNAN;
-// CHECK: @d1 = {{.*}}global double 0x7FF4000000000000
-// CHECK: @d2 = {{.*}}global double 0x7FF4000000000000
-// CHECK: @d3 = {{.*}}global double 0xFFF4000000000000
+// CHECK: @d1 = {{.*}}global double +snan(0x4000000000000)
+// CHECK: @d2 = {{.*}}global double +snan(0x4000000000000)
+// CHECK: @d3 = {{.*}}global double -snan(0x4000000000000)
 
 long double ld1 = LDBL_SNAN;
 long double ld2 = +LDBL_SNAN;
 long double ld3 = -LDBL_SNAN;
-// CHECK: @ld1 = {{.*}}global {{double 0x7FF4000000000000|x86_fp80 0xK7FFFA000000000000000|fp128 0xL00000000000000007FFF400000000000|ppc_fp128 0xM7FF40000000000000000000000000000}}
-// CHECK: @ld2 = {{.*}}global {{double 0x7FF4000000000000|x86_fp80 0xK7FFFA000000000000000|fp128 0xL00000000000000007FFF400000000000|ppc_fp128 0xM7FF40000000000000000000000000000}}
-// CHECK: @ld3 = {{.*}}global {{double 0xFFF4000000000000|x86_fp80 0xKFFFFA000000000000000|fp128 0xL0000000000000000FFFF400000000000|ppc_fp128 0xMFFF40000000000008000000000000000}}
+// CHECK: @ld1 = {{.*}}global {{double|x86_fp80|fp128|ppc_fp128}} +snan(
+// CHECK: @ld2 = {{.*}}global {{double|x86_fp80|fp128|ppc_fp128}} +snan(
+// CHECK: @ld3 = {{.*}}global {{double|x86_fp80|fp128|ppc_fp128}} -snan(
