@@ -11065,6 +11065,7 @@ namespace {
     bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
     bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
                                          ArrayRef<Expr *> Args);
+    bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
   };
 }
 
@@ -11325,6 +11326,11 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
     ImplicitValueInitExpr VIE(HaveInit ? Info.Ctx.IntTy : Field->getType());
     const Expr *Init = HaveInit ? Args[ElementNo++] : &VIE;
 
+    // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+    // aren't supposed to be modified.
+    if (isa<NoInitExpr>(Init))
+      continue;
+
     if (Field->getType()->isIncompleteArrayType()) {
       if (auto *CAT = Info.Ctx.getAsConstantArrayType(Init->getType())) {
         if (!CAT->isZeroSize()) {
@@ -11520,6 +11526,13 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
     }
   }
   return Success;
+}
+
+bool RecordExprEvaluator::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  if (!Visit(E->getBase()))
+    return false;
+  return Visit(E->getUpdater());
 }
 
 static bool EvaluateRecord(const Expr *E, const LValue &This,
@@ -15073,6 +15086,11 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
     if (Init->isValueDependent())
       return EvaluateDependentExpr(Init, Info);
+
+    // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+    // aren't supposed to be modified.
+    if (isa<NoInitExpr>(Init))
+      return true;
 
     if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
                          Subobject, Init) ||

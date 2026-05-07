@@ -431,3 +431,17 @@ int gh173605(int x) {
   static int justincase = justincase; // expected-error {{initializer element is not a compile-time constant}}
   return x;
 }
+
+
+struct designated_init_A { int a; int b; int c : 2; double d; int e[5]; };
+struct designated_init_B { struct designated_init_A a; int y; };
+constexpr struct designated_init_A designated_init_a = {1, 2};
+constexpr struct designated_init_B designated_init_b =
+  {designated_init_a, .a.a = 3, .a.c = 4, .a.d = 5.0, .a.e[1] = 6, .y = 7}; // expected-warning 4 {{initializer partially overrides prior initialization of this subobject}} // expected-note 4 {{previous initialization}}
+static_assert(designated_init_b.a.a == 3);
+static_assert(designated_init_b.a.b == 2);
+static_assert(designated_init_b.a.c == 0);
+static_assert(designated_init_b.a.d == 5.0); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.a.e[0] == 0); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.a.e[1] == 6); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.y == 7);
