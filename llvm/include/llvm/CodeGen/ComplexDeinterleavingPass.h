@@ -22,7 +22,7 @@ class Function;
 class TargetMachine;
 
 struct ComplexDeinterleavingPass
-    : public PassInfoMixin<ComplexDeinterleavingPass> {
+    : public OptionalPassInfoMixin<ComplexDeinterleavingPass> {
 private:
   const TargetMachine *TM;
 

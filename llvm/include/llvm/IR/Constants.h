@@ -466,6 +466,9 @@ public:
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Val.isZero(); }
 
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Val.isPosZero(); }
+
   /// Return true if the sign bit is set.
   bool isNegative() const { return Val.isNegative(); }
 

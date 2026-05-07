@@ -78,7 +78,9 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 
 /// Check if a value represents device data.
 /// This checks if the value represents device data via the
-/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces.
+/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces,
+/// and whether the defining operation carries `acc.declare` with the deviceptr
+/// clause.
 /// \param val The value to check
 /// \return true if the value is device data, false otherwise
 bool isDeviceValue(mlir::Value val);

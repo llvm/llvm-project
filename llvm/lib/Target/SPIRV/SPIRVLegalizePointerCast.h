@@ -16,7 +16,7 @@ namespace llvm {
 class SPIRVTargetMachine;
 
 class SPIRVLegalizePointerCast
-    : public PassInfoMixin<SPIRVLegalizePointerCast> {
+    : public OptionalPassInfoMixin<SPIRVLegalizePointerCast> {
   const SPIRVTargetMachine &TM;
 
 public:
