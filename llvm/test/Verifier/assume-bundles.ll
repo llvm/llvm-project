@@ -34,5 +34,7 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
   call void @llvm.assume(i1 true) ["align"(ptr %P, i32 4), "dereferenceable"(ptr %P)]
 ; CHECK: assume with operand bundles must have i1 true condition
   call void @llvm.assume(i1 %cond) ["nonnull"(ptr %P)]
+; CHECK: Attribute 'nonnull' applied to incompatible type!
+  call void @llvm.assume(i1 true) ["nonnull"(i1 true)]
   ret void
 }

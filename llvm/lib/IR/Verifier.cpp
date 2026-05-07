@@ -5994,11 +5994,28 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               Call);
         continue;
       }
-      Check(Elem.Tag->getKey() == "ignore" ||
-                Attribute::isExistingAttribute(Elem.Tag->getKey()),
+      if (Elem.Tag->getKey() == "ignore")
+        break;
+      Check(Attribute::isExistingAttribute(Elem.Tag->getKey()),
             "tags must be valid attribute names", Call);
       Attribute::AttrKind Kind =
           Attribute::getAttrKindFromName(Elem.Tag->getKey());
+
+      // Reject assume bundles with incorrect types
+      if (Elem.Begin != Elem.End) {
+        AttributeSet AS = AttributeSet().addAttribute(Context, Kind);
+        AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
+            Call.getOperand(Elem.Begin)->getType(), AS);
+        for (Attribute Attr : AS) {
+          if (!Attr.isStringAttribute() &&
+              IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
+            CheckFailed("Attribute '" + Attr.getAsString() +
+                            "' applied to incompatible type!",
+                        Call.getOperand(Elem.Begin));
+          }
+        }
+      }
+
       if (Kind == Attribute::Alignment) {
         Check(ArgCount <= 3 && ArgCount >= 2,
               "alignment assumptions should have 2 or 3 arguments", Call);
