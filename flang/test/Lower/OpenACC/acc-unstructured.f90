@@ -289,7 +289,7 @@ end subroutine
 ! CHECK: fir.call @_FortranAStopStatementText
 ! CHECK: } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}
 
-! Test the standalone `acc loop collapse(N)` arm (no combined parallel/kernels).
+! Test orphaned `acc loop collapse(N)`
 subroutine test_unstructured_collapse_loop_only(a)
   integer :: i, j, jdiag
   real(8) :: a(:,:)
