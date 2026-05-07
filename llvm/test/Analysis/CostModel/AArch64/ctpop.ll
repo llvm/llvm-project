@@ -16,7 +16,7 @@ define i64 @test_ctpop_i64(i64 %a) {
 
 define i32 @test_ctpop_i32(i32 %a) {
 ; CHECK-LABEL: 'test_ctpop_i32'
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %ctpop = call i32 @llvm.ctpop.i32(i32 %a)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %ctpop = call i32 @llvm.ctpop.i32(i32 %a)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %ctpop
 ;
   %ctpop = call i32 @llvm.ctpop.i32(i32 %a)
@@ -34,7 +34,7 @@ define i16 @test_ctpop_i16(i16 %a) {
 
 define i8 @test_ctpop_i8(i8 %a) {
 ; CHECK-LABEL: 'test_ctpop_i8'
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %ctpop = call i8 @llvm.ctpop.i8(i8 %a)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %ctpop = call i8 @llvm.ctpop.i8(i8 %a)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %ctpop
 ;
   %ctpop = call i8 @llvm.ctpop.i8(i8 %a)
