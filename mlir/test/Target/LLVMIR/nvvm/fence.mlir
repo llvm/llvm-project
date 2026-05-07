@@ -10,9 +10,9 @@ llvm.func @llvm_nvvm_fence_sc_cluster() {
 // CHECK-LABEL: @nvvm_fence_sync_restrict
 llvm.func @nvvm_fence_sync_restrict() {
   // CHECK: call void @llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster()
-  nvvm.fence.sync_restrict <{order = #nvvm.mem_order<acquire>}>
+  nvvm.fence.sync_restrict #nvvm.mem_order<acquire>
   // CHECK: call void @llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster()
-  nvvm.fence.sync_restrict <{order = #nvvm.mem_order<release>}>
+  nvvm.fence.sync_restrict #nvvm.mem_order<release>
   llvm.return
 }
 
@@ -26,28 +26,28 @@ llvm.func @fence_mbarrier_init() {
 // CHECK-LABEL: @nvvm_fence_proxy
 llvm.func @nvvm_fence_proxy() {
   // CHECK: call void @llvm.nvvm.fence.proxy.alias()
-  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<alias>}>
+  nvvm.fence.proxy #nvvm.proxy_kind<alias>
 
   // CHECK: call void @llvm.nvvm.fence.proxy.async()
-  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<async>}>
+  nvvm.fence.proxy #nvvm.proxy_kind<async>
 
   // CHECK: call void @llvm.nvvm.fence.proxy.async.global()
-  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<async.global>}>
+  nvvm.fence.proxy #nvvm.proxy_kind<async.global>
 
   // CHECK: call void @llvm.nvvm.fence.proxy.async.shared_cta()
-  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}>
+  nvvm.fence.proxy #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>
 
   // CHECK: call void @llvm.nvvm.fence.proxy.async.shared_cluster()
-  nvvm.fence.proxy <{kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>}>
+  nvvm.fence.proxy #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>
   llvm.return
 }
 
 // CHECK-LABEL: @nvvm_fence_proxy_sync_restrict
 llvm.func @nvvm_fence_proxy_sync_restrict() {
   // CHECK: call void @llvm.nvvm.fence.proxy.async_generic.acquire.sync_restrict.space.cluster.scope.cluster()
-  nvvm.fence.proxy.sync_restrict <{order = #nvvm.mem_order<acquire>}>
+  nvvm.fence.proxy.sync_restrict #nvvm.mem_order<acquire>
   // CHECK: call void @llvm.nvvm.fence.proxy.async_generic.release.sync_restrict.space.cta.scope.cluster()
-  nvvm.fence.proxy.sync_restrict <{order = #nvvm.mem_order<release>}>
+  nvvm.fence.proxy.sync_restrict #nvvm.mem_order<release>
   llvm.return
 }
 

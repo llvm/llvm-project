@@ -177,7 +177,7 @@ llvm.func @llvm_nvvm_cluster_arrive() {
   // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()
   nvvm.cluster.arrive
   // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.aligned()
-  nvvm.cluster.arrive <{aligned}>
+  nvvm.cluster.arrive aligned
   llvm.return
 }
 
@@ -186,7 +186,7 @@ llvm.func @llvm_nvvm_cluster_arrive_relaxed() {
   // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed()
   nvvm.cluster.arrive.relaxed
   // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
-  nvvm.cluster.arrive.relaxed <{aligned}>
+  nvvm.cluster.arrive.relaxed aligned
   llvm.return
 }
 
@@ -195,7 +195,7 @@ llvm.func @llvm_nvvm_cluster_wait() {
   // CHECK: call void @llvm.nvvm.barrier.cluster.wait()
   nvvm.cluster.wait
   // CHECK: call void @llvm.nvvm.barrier.cluster.wait.aligned()
-  nvvm.cluster.wait <{aligned}>
+  nvvm.cluster.wait aligned
   llvm.return
 }
 
@@ -811,19 +811,19 @@ llvm.func @nvvm_redux_sync_f32(%value: f32, %offset: i32) {
   // CHECK: call float @llvm.nvvm.redux.sync.fmin(float %{{.*}}, i32 %{{.*}})
   %0 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmin.abs(float %{{.*}}, i32 %{{.*}})
-  %1 = nvvm.redux.sync fmin %value, %offset <{abs = true}>: f32 -> f32
+  %1 = nvvm.redux.sync fmin %value, %offset abs = true : f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmin.NaN(float %{{.*}}, i32 %{{.*}})
-  %2 = nvvm.redux.sync fmin %value, %offset <{nan = true}>: f32 -> f32
+  %2 = nvvm.redux.sync fmin %value, %offset nan = true : f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmin.abs.NaN(float %{{.*}}, i32 %{{.*}})
-  %3 = nvvm.redux.sync fmin %value, %offset <{abs = true, nan = true}>: f32 -> f32
+  %3 = nvvm.redux.sync fmin %value, %offset abs = true nan = true : f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmax(float %{{.*}}, i32 %{{.*}})
   %4 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs(float %{{.*}}, i32 %{{.*}})
-  %5 = nvvm.redux.sync fmax %value, %offset <{abs = true}>: f32 -> f32
+  %5 = nvvm.redux.sync fmax %value, %offset abs = true : f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmax.NaN(float %{{.*}}, i32 %{{.*}})
-  %6 = nvvm.redux.sync fmax %value, %offset <{nan = true}>: f32 -> f32
+  %6 = nvvm.redux.sync fmax %value, %offset nan = true : f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs.NaN(float %{{.*}}, i32 %{{.*}})
-  %7 = nvvm.redux.sync fmax %value, %offset <{abs = true, nan = true}>: f32 -> f32
+  %7 = nvvm.redux.sync fmax %value, %offset abs = true nan = true : f32 -> f32
   llvm.return
 }
 

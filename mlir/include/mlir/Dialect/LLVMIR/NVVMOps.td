@@ -309,7 +309,7 @@ class NVVM_F32UnaryApproxOp<string mnemonic, list<Trait> traits = []> :
   let arguments = (ins F32:$src,
                        DefaultValuedAttr<BoolAttr, "false">:$ftz);
   let results = (outs F32:$res);
-  let assemblyFormat = "$src prop-dict attr-dict `:` type($src)";
+  let assemblyFormat = "$src (`,` `ftz` `=` $ftz^)? attr-dict `:` type($src)";
 }
 
 
@@ -321,7 +321,7 @@ class NVVM_PureSpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
   let arguments = (ins);
   let results = (outs I32:$res);
-  let assemblyFormat = "prop-dict attr-dict `:` type($res)";
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 class NVVM_SpecialRegisterOp<string mnemonic, Type resultType = I32,
@@ -329,7 +329,7 @@ class NVVM_SpecialRegisterOp<string mnemonic, Type resultType = I32,
   NVVM_IntrOp<mnemonic, traits, 1> {
   let arguments = (ins);
   let results = (outs resultType:$res);
-  let assemblyFormat = "prop-dict attr-dict `:` type($res)";
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = []> :
@@ -337,7 +337,7 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
     !listconcat(traits,
       [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>])> {
   let arguments = (ins OptionalAttr<LLVM_ConstantRangeAttr>:$range);
-  let assemblyFormat = "(`range` $range^)? prop-dict attr-dict `:` type($res)";
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
   let llvmBuilder = baseLlvmBuilder # setRangeRetAttrCode # baseLlvmBuilderCoda;
   let mlirBuilder = baseMlirBuilder # importRangeRetAttrCode # baseMlirBuilderCoda;
   let hasVerifier = 1;
@@ -506,7 +506,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     ( `ro` `(` $readOnlyArgs^ `:` type($readOnlyArgs) `)` )?
     ( `rw` `(` $readWriteArgs^ `:` type($readWriteArgs) `)` )?
     (`,` `predicate` `=` $predicate^)? 
-    prop-dict attr-dict
+    attr-dict
     ( `->` type($writeOnlyArgs)^ )?
   }];
   
@@ -529,7 +529,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
 def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
   let arguments = (ins F32:$arg);
   let results = (outs F32:$res);
-  let assemblyFormat = "$arg prop-dict attr-dict `:` type($res)";
+  let assemblyFormat = "$arg attr-dict `:` type($res)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -611,7 +611,8 @@ def NVVM_ReduxOp :
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
   }];
   let assemblyFormat = [{
-    $kind $val `,` $mask_and_clamp  prop-dict attr-dict `:` type($val) `->` type($res)
+    $kind $val `,` $mask_and_clamp (`abs` `=` $abs^)?
+    (`nan` `=` $nan^)? attr-dict `:` type($val) `->` type($res)
    }];   
 }
 
@@ -640,7 +641,7 @@ def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
       createIntrinsicCall(builder, 
                           llvm::Intrinsic::nvvm_nanosleep, {$duration});
   }];
-  let assemblyFormat = "prop-dict attr-dict $duration";
+  let assemblyFormat = "attr-dict $duration";
 }
 
 //===----------------------------------------------------------------------===//
@@ -665,7 +666,7 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent)
   }];
   
-  let assemblyFormat = "prop-dict attr-dict (`id` `=` $eventId^)? (`mask` `=` $maskedEventId^)?";
+  let assemblyFormat = "attr-dict (`id` `=` $eventId^)? (`mask` `=` $maskedEventId^)?";
   let hasVerifier = 1;
 }
 
@@ -699,7 +700,7 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
   }];
-  let assemblyFormat = "$addr `,` $count (`,` `predicate` `=` $predicate^)? prop-dict attr-dict `:` type(operands)";
+  let assemblyFormat = "$addr `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
 
   let extraClassDeclaration = [{
     bool hasIntrinsic() { if(getPredicate()) return false; return true; }
@@ -736,7 +737,7 @@ def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-inval)
   }];
 
-  let assemblyFormat = "$addr prop-dict attr-dict `:` type(operands)";
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
 }
 
 def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx"> {
@@ -890,7 +891,7 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arr
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
   }];
 
-  let assemblyFormat = "$addr `,` $count prop-dict attr-dict `:` type(operands) `->` type($res)";
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
 def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.nocomplete">,
@@ -907,7 +908,7 @@ def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
 
-  let assemblyFormat = "$addr `,` $count prop-dict attr-dict `:` type(operands) `->` type($res)";
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx",
@@ -1054,7 +1055,7 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
   }];  
-  let assemblyFormat = "$addr `,` $phase `,` $ticks prop-dict attr-dict `:` type(operands)";
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
 }
 
 def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait"> {
@@ -1225,7 +1226,7 @@ def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
-      "(qualified($reductionOp)^ $reductionPredicate)? (`->` type($res)^)? prop-dict attr-dict";
+      "(qualified($reductionOp)^ $reductionPredicate)? (`->` type($res)^)? attr-dict";
 
   let builders = [OpBuilder<(ins), [{
       return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{});
@@ -1249,7 +1250,7 @@ def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive">
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
   
-  let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads prop-dict attr-dict";
+  let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads attr-dict";
 
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
@@ -1281,7 +1282,7 @@ def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
       else
         createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
   }];
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
 }
 
 def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequiresSM<90>]> {
@@ -1307,7 +1308,7 @@ def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequire
       else
         createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
   }];
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
 }
 
 def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<90>]> {
@@ -1328,7 +1329,7 @@ def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<90>]> {
       else
         createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
   }];
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1346,7 +1347,7 @@ def NVVM_MembarOp : NVVM_Op<"memory.barrier">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "$scope prop-dict attr-dict";
+  let assemblyFormat = "$scope attr-dict";
   let llvmBuilder = [{
     createIntrinsicCall(builder, getMembarIntrinsicID($scope));
   }];
@@ -1356,7 +1357,7 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_fence_sc_cluster);
   }];
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "attr-dict";
 }
 
 defvar MemOrderAcquireOrRelease =
@@ -1375,7 +1376,7 @@ def NVVM_FenceSyncRestrictOp : NVVM_Op<"fence.sync_restrict">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "$order attr-dict";
   let llvmBuilder = [{
     createIntrinsicCall(builder, getFenceSyncRestrictID($order));
   }];
@@ -1388,7 +1389,7 @@ def NVVM_FenceMbarrierInitOp : NVVM_Op<"fence.mbarrier.init"> {
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "attr-dict";
   let llvmBuilder = [{
     createIntrinsicCall(builder, llvm::Intrinsic::nvvm_fence_mbarrier_init_release_cluster);
   }];
@@ -1429,7 +1430,7 @@ def NVVM_FenceProxyOp : NVVM_Op<"fence.proxy">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
   
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "$kind (`,` `space` `=` $space^)? attr-dict";
 
   let llvmBuilder = [{
     createIntrinsicCall(builder, getFenceProxyID($kind, $space));
@@ -1460,7 +1461,7 @@ def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "$scope $addr `,` $size (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? prop-dict attr-dict";
+  let assemblyFormat = "$scope $addr `,` $size (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
   let llvmBuilder = [{
     createIntrinsicCall(
         builder,
@@ -1488,7 +1489,7 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "$scope (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? prop-dict attr-dict";
+  let assemblyFormat = "$scope (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
   let llvmBuilder = [{
     createIntrinsicCall(builder, getUnidirectionalFenceProxyID(
                                      $fromProxy, $toProxy, $scope, true));
@@ -1511,7 +1512,7 @@ def NVVM_FenceProxySyncRestrictOp : NVVM_Op<"fence.proxy.sync_restrict">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = "$order (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
   let llvmBuilder = [{
     createIntrinsicCall(builder, getFenceProxySyncRestrictID($order));
   }];
@@ -1530,7 +1531,7 @@ def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "act
 
 def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
   let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
-  let assemblyFormat = "$action $regCount prop-dict attr-dict";
+  let assemblyFormat = "$action $regCount attr-dict";
   let hasVerifier = 1;
   string llvmBuilder = [{
     auto intId = (op.getAction() == NVVM::SetMaxRegisterAction::increase) ?

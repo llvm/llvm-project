@@ -62,8 +62,8 @@ llvm.func @llvm_nvvm_barrier_arrive(%barId : i32, %numberOfThreads : i32) {
 func.func @llvm_nvvm_cluster_arrive() {
   // CHECK: nvvm.cluster.arrive
   nvvm.cluster.arrive
-  // CHECK: nvvm.cluster.arrive <{aligned}>
-  nvvm.cluster.arrive <{aligned}>
+  // CHECK: nvvm.cluster.arrive aligned
+  nvvm.cluster.arrive aligned
   llvm.return
 }
 
@@ -71,8 +71,8 @@ func.func @llvm_nvvm_cluster_arrive() {
 func.func @llvm_nvvm_cluster_arrive_relaxed() {
   // CHECK: nvvm.cluster.arrive.relaxed
   nvvm.cluster.arrive.relaxed
-  // CHECK: nvvm.cluster.arrive.relaxed <{aligned}>
-  nvvm.cluster.arrive.relaxed <{aligned}>
+  // CHECK: nvvm.cluster.arrive.relaxed aligned
+  nvvm.cluster.arrive.relaxed aligned
   llvm.return
 }
 
@@ -80,8 +80,8 @@ func.func @llvm_nvvm_cluster_arrive_relaxed() {
 func.func @llvm_nvvm_cluster_wait() {
   // CHECK: nvvm.cluster.wait
   nvvm.cluster.wait
-  // CHECK: nvvm.cluster.wait <{aligned}>
-  nvvm.cluster.wait <{aligned}>
+  // CHECK: nvvm.cluster.wait aligned
+  nvvm.cluster.wait aligned
   llvm.return
 }
 
@@ -380,19 +380,19 @@ llvm.func @redux_sync_f32(%value: f32, %offset: i32) -> f32 {
   // CHECK: nvvm.redux.sync fmin %{{.*}}
   %r1 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
   // CHECK: nvvm.redux.sync fmin %{{.*}}
-  %r2 = nvvm.redux.sync fmin %value, %offset <{abs = true}>: f32 -> f32
+  %r2 = nvvm.redux.sync fmin %value, %offset abs = true : f32 -> f32
   // CHECK: nvvm.redux.sync fmin %{{.*}}
-  %r3 = nvvm.redux.sync fmin %value, %offset <{nan = true}>: f32 -> f32
+  %r3 = nvvm.redux.sync fmin %value, %offset nan = true : f32 -> f32
   // CHECK: nvvm.redux.sync fmin %{{.*}}
-  %r4 = nvvm.redux.sync fmin %value, %offset <{abs = true, nan = true}>: f32 -> f32
+  %r4 = nvvm.redux.sync fmin %value, %offset abs = true nan = true : f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
   %r5 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
-  %r6 = nvvm.redux.sync fmax %value, %offset <{abs = true}>: f32 -> f32
+  %r6 = nvvm.redux.sync fmax %value, %offset abs = true : f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
-  %r7 = nvvm.redux.sync fmax %value, %offset <{nan = true}>: f32 -> f32
+  %r7 = nvvm.redux.sync fmax %value, %offset nan = true : f32 -> f32
   // CHECK: nvvm.redux.sync fmax %{{.*}}
-  %r8 = nvvm.redux.sync fmax %value, %offset <{abs = true, nan = true}>: f32 -> f32
+  %r8 = nvvm.redux.sync fmax %value, %offset abs = true nan = true : f32 -> f32
   llvm.return %r1 : f32
 }
 
