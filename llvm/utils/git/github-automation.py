@@ -268,6 +268,26 @@ Thank you for submitting a Pull Request (PR) to the LLVM Project. Since this is 
 
 Please reply to this message to confirm that you have read these policies, especially the LLVM AI Tool Use Policy, and that any AI tool usage has been noted in the PR description.
 
+---
+
+### Frequently asked questions
+
+**How do I add reviewers?**
+
+This PR will be automatically labeled, and the relevant teams will be notified. For some parts of the project, reviewers may also be added automatically.
+
+You can also add reviewers manually using the **Reviewers** section on this page. If you cannot use that section, it is probably because you do not have write permissions for the repository. In that case, you can request a review by tagging reviewers in a comment using `@` followed by their GitHub username.
+
+**What if there are no comments?**
+
+If you have not received any comments on your PR after a week, you can request a review by pinging the PR with a comment such as “Ping”. The common courtesy ping rate is once a week. Please remember that you are asking for volunteer time from other developers.
+
+**Are any special GitHub settings required to contribute to LLVM?**
+
+We only require contributors to have a public email address associated with their GitHub commits, see this [section](https://llvm.org/docs/DeveloperPolicy.html#email-addresses) of LLVM Developer Policy for details.
+
+---
+
 If you have questions, feel free to leave a comment on this PR, or ask on [LLVM Discord](https://discord.com/invite/xS7Z362) or [LLVM Discourse](https://discourse.llvm.org/).
 
 Thank you,
