@@ -2214,7 +2214,8 @@ public:
                         const OMPTaskDataTy &Data) override;
 
   /// Emit code for 'taskgraph' directive.
-  /// \param IfCond Expression evaluated in if clause associated with the target
+  /// \param IfCond Expression evaluated in if clause associated with the
+  // taskgraph.
   /// \param D Directive to emit.
   void emitTaskgraphCall(CodeGenFunction &CGF, SourceLocation Loc,
                          const OMPExecutableDirective &D,

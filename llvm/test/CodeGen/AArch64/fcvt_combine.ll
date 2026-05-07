@@ -323,35 +323,10 @@ define <2 x i32> @test14(<2 x float> %f) {
 }
 
 define <3 x i32> @test_illegal_fp_to_int(<3 x float> %in) {
-; CHECK-NO16-SD-LABEL: test_illegal_fp_to_int:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #2
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test_illegal_fp_to_int:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #2
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test_illegal_fp_to_int:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
-; CHECK-NO16-GI-NEXT:    fmov s2, #4.00000000
-; CHECK-NO16-GI-NEXT:    mov v2.s[1], v1.s[0]
-; CHECK-NO16-GI-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v2.4s
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_illegal_fp_to_int:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #4.00000000
-; CHECK-FP16-GI-NEXT:    fmov s2, #4.00000000
-; CHECK-FP16-GI-NEXT:    mov v2.s[1], v1.s[0]
-; CHECK-FP16-GI-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-FP16-GI-NEXT:    fmul v0.4s, v0.4s, v2.4s
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test_illegal_fp_to_int:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #2
+; CHECK-NEXT:    ret
   %scale = fmul <3 x float> %in, <float 4.0, float 4.0, float 4.0>
   %val = fptosi <3 x float> %scale to <3 x i32>
   ret <3 x i32> %val
@@ -937,35 +912,10 @@ define <2 x i32> @test14_sat(<2 x float> %f) {
 }
 
 define <3 x i32> @test_illegal_fp_to_int_sat_sat(<3 x float> %in) {
-; CHECK-NO16-SD-LABEL: test_illegal_fp_to_int_sat_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #2
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test_illegal_fp_to_int_sat_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #2
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test_illegal_fp_to_int_sat_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
-; CHECK-NO16-GI-NEXT:    fmov s2, #4.00000000
-; CHECK-NO16-GI-NEXT:    mov v2.s[1], v1.s[0]
-; CHECK-NO16-GI-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v2.4s
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_illegal_fp_to_int_sat_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #4.00000000
-; CHECK-FP16-GI-NEXT:    fmov s2, #4.00000000
-; CHECK-FP16-GI-NEXT:    mov v2.s[1], v1.s[0]
-; CHECK-FP16-GI-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-FP16-GI-NEXT:    fmul v0.4s, v0.4s, v2.4s
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test_illegal_fp_to_int_sat_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #2
+; CHECK-NEXT:    ret
   %mul.i = fmul <3 x float> %in, <float 4.0, float 4.0, float 4.0>
   %vcvt.i = call <3 x i32> @llvm.fptosi.sat.v3i32.v3f32(<3 x float> %mul.i)
   ret <3 x i32> %vcvt.i

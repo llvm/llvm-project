@@ -12,17 +12,16 @@ body:             |
     ; LOWER-LABEL: name: same_reg
     ; LOWER: liveins: $d0
     ; LOWER-NEXT: {{  $}}
-    ; LOWER-NEXT: %r:_(i8) = G_IMPLICIT_DEF
-    ; LOWER-NEXT: %build_vector:_(<8 x i8>) = G_DUP %r(i8)
+    ; LOWER-NEXT: [[DEF:%[0-9]+]]:_(<8 x i8>) = G_IMPLICIT_DEF
+    ; LOWER-NEXT: %build_vector:_(<8 x i8>) = COPY [[DEF]](<8 x i8>)
     ; LOWER-NEXT: $d0 = COPY %build_vector(<8 x i8>)
     ; LOWER-NEXT: RET_ReallyLR implicit $d0
     ;
     ; SELECT-LABEL: name: same_reg
     ; SELECT: liveins: $d0
     ; SELECT-NEXT: {{  $}}
-    ; SELECT-NEXT: %r:gpr32 = IMPLICIT_DEF
-    ; SELECT-NEXT: %build_vector:fpr64 = DUPv8i8gpr %r
-    ; SELECT-NEXT: $d0 = COPY %build_vector
+    ; SELECT-NEXT: [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
+    ; SELECT-NEXT: $d0 = COPY [[DEF]]
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
     %r:_(i8) = G_IMPLICIT_DEF
     %build_vector:_(<8 x i8>) = G_BUILD_VECTOR %r, %r, %r, %r, %r, %r, %r, %r

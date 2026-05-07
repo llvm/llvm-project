@@ -19,6 +19,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -470,10 +471,14 @@ bool formatters::LibStdcppVariantSummaryProvider(
   if (!index_obj || !data_obj)
     return false;
 
-  auto index_bytes = index_obj->GetByteSize();
-  if (!index_bytes)
+  auto index_bytes_or_err = index_obj->GetByteSize();
+  if (!index_bytes_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   index_bytes_or_err.takeError(),
+                   "failed to get variant index byte size: {0}");
     return false;
-  auto npos_value = LibStdcppVariantNposValue(*index_bytes);
+  }
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes_or_err);
   auto index = index_obj->GetValueAsUnsigned(0);
   if (index == npos_value) {
     stream.Printf(" No Value");
