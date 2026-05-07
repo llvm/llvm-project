@@ -47,6 +47,12 @@ ConstantBuffer<ContainsResource> cb_res;
 ConstantBuffer<Texture2D> cb_tex;
 // expected-note@* {{template declaration from hidden source}}
 
+// Invalid: intangible type
+// expected-error@+1 {{constraints not satisfied for class template 'ConstantBuffer'}}
+ConstantBuffer<Texture2D<float>> cb_tex;
+// expected-note@* {{because 'Texture2D<float>' does not satisfy '__is_constant_buffer_element_compatible'}}
+// expected-note@*:* {{because '__builtin_hlsl_is_constant_buffer_element_compatible(hlsl::Texture2D<float>)' evaluated to false}}
+
 // Invalid: union
 // expected-error@+1 {{constraints not satisfied for class template 'ConstantBuffer'}}
 ConstantBuffer<U> cb_union;
