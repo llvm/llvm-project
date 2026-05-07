@@ -6116,16 +6116,16 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
 }
 
 void CXXNameMangler::mangleReferenceToPack(const NamedDecl *Pack) {
-    if (const TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(Pack))
-          mangleTemplateParameter(TTP->getDepth(), TTP->getIndex());
-    else if (const NonTypeTemplateParmDecl *NTTP
-                = dyn_cast<NonTypeTemplateParmDecl>(Pack))
-      mangleTemplateParameter(NTTP->getDepth(), NTTP->getIndex());
-    else if (const TemplateTemplateParmDecl *TempTP
-                                    = dyn_cast<TemplateTemplateParmDecl>(Pack))
-      mangleTemplateParameter(TempTP->getDepth(), TempTP->getIndex());
-    else
-      mangleFunctionParam(cast<ParmVarDecl>(Pack));
+  if (const TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(Pack))
+    mangleTemplateParameter(TTP->getDepth(), TTP->getIndex());
+  else if (const NonTypeTemplateParmDecl *NTTP =
+               dyn_cast<NonTypeTemplateParmDecl>(Pack))
+    mangleTemplateParameter(NTTP->getDepth(), NTTP->getIndex());
+  else if (const TemplateTemplateParmDecl *TempTP =
+               dyn_cast<TemplateTemplateParmDecl>(Pack))
+    mangleTemplateParameter(TempTP->getDepth(), TempTP->getIndex());
+  else
+    mangleFunctionParam(cast<ParmVarDecl>(Pack));
 }
 
 // Helper to provide ancillary information on a template used to mangle its
