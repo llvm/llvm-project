@@ -239,6 +239,7 @@ define i32 @test7b(ptr nocapture noalias %x, ptr nocapture %y, ptr noalias nocap
 ; CHECK-LABEL: define i32 @test7b(
 ; CHECK-SAME: ptr noalias captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]], ptr noalias captures(none) [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 5, ptr [[X]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[VALA:%.*]] = load atomic i32, ptr [[Y]] monotonic, align 4
@@ -247,7 +248,6 @@ define i32 @test7b(ptr nocapture noalias %x, ptr nocapture %y, ptr noalias nocap
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    [[VALA_LCSSA1:%.*]] = phi i32 [ [[VALA]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[VALA_LCSSA:%.*]] = phi i32 [ [[VALA]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 5, ptr [[X]], align 4
 ; CHECK-NEXT:    store atomic i32 [[VALA_LCSSA1]], ptr [[Z]] unordered, align 4
 ; CHECK-NEXT:    ret i32 [[VALA_LCSSA]]
 ;
