@@ -604,7 +604,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
-    libc.src.math.lgammaf16
     libc.src.math.llogb
     libc.src.math.llogbf
     libc.src.math.llogbl
@@ -786,6 +785,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.iscanonicalf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16

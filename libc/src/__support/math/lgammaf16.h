@@ -49,14 +49,10 @@ LIBC_INLINE constexpr bool is_integer(float16 x) {
 //   > P = fpminimax(sin(pi*(x+0.5))/(pi*(0.25-x^2)),
 //                   [|0,2,4,6,8,10,12,14|], [|D...|], [-0.5, 0.5]);
 LIBC_INLINE constexpr double lg_sinpi(double x) {
-  constexpr double COEFFS[8] = {0x1p+2,
-                                -0x1.de9e64df22ea4p+1,
-                                0x1.472be122401f8p+0,
-                                -0x1.d4fcd82df91bp-3,
-                                0x1.9f05c97e0aab2p-6,
-                                -0x1.f3091c427b611p-10,
-                                0x1.b22c9bfdca547p-14,
-                                -0x1.15484325ef569p-18};
+  constexpr double COEFFS[8] = {0x000000000000001p+2,  -0x1.de9e64df22ea4p+1,
+                                0x1.472be122401f8p+0,  -0x1.d4fcd82df91bp-3,
+                                0x1.9f05c97e0aab2p-6,  -0x1.f3091c427b611p-10,
+                                0x1.b22c9bfdca547p-14, -0x1.15484325ef569p-18};
   double u = x - 0.5;
   double u2 = u * u, u4 = u2 * u2, u8 = u4 * u4;
   double p01 = fputil::multiply_add(u2, COEFFS[1], COEFFS[0]);
