@@ -762,6 +762,17 @@ public:
         *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLastPrivate);
     return false;
   }
+  bool Pre(const parser::OmpClause::Detach &x) {
+    // OpenMP 5.0: Variables in detach clause have predetermined shared
+    // data-sharing attribute
+    if (const auto *name{parser::Unwrap<parser::Name>(x.v.v)}) {
+      if (auto *symbol{name->symbol})
+        SetSymbolDSA(*symbol,
+            Symbol::Flags{
+                Symbol::Flag::OmpShared, Symbol::Flag::OmpPreDetermined});
+    }
+    return false;
+  }
   bool Pre(const parser::OmpClause::Copyin &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyIn);
     return false;
@@ -844,8 +855,8 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Nontemporal &x) {
-    const auto &nontemporalNameList{x.v};
-    ResolveOmpNameList(nontemporalNameList, Symbol::Flag::OmpNontemporal);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpNontemporal);
     return false;
   }
 

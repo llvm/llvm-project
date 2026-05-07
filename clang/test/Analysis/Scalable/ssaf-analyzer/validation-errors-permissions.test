@@ -1,0 +1,28 @@
+// Tests for clang-ssaf-analyzer input validation requiring file permission support.
+// UNSUPPORTED: system-windows
+// REQUIRES: non-root-user
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// Output parent directory exists but is not writable.
+// RUN: mkdir -p %t/output-dir
+// RUN: chmod -w %t/output-dir
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -o %t/output-dir/output.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-WRITE-PERM
+// RUN: chmod +w %t/output-dir
+// NO-WRITE-PERM: clang-ssaf-analyzer: error: failed to validate path '{{.*}}output.json': Parent directory is not writable
+
+// Input is a broken symlink.
+// RUN: ln -sf %t/lu-nonexistent %t/lu-dangling.json
+// RUN: not clang-ssaf-analyzer %t/lu-dangling.json -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=BROKEN-SYMLINK
+// BROKEN-SYMLINK: clang-ssaf-analyzer: error: failed to validate path '{{.*}}lu-dangling.json': Path does not exist
+
+// Input file exists but is not readable.
+// RUN: cp %S/Inputs/lu.json %t/lu-unreadable.json
+// RUN: chmod -r %t/lu-unreadable.json
+// RUN: not clang-ssaf-analyzer %t/lu-unreadable.json -o %t/out2.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-READ-PERM
+// RUN: chmod +r %t/lu-unreadable.json
+// NO-READ-PERM: clang-ssaf-analyzer: error: reading LUSummary from file '{{.*}}lu-unreadable.json'

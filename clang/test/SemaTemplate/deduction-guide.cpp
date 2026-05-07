@@ -267,8 +267,8 @@ template <typename X = int>
 using BG = G<int>;
 BG bg(1.0);
 // CHECK-LABEL: Dumping <deduction guide for BG>
-// CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for BG>
-// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' aggregate
+// CHECK-NOT: FunctionTemplateDecl
+// CHECK: CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' aggregate
 
 template <typename D>
 requires (sizeof(D) == 4)
@@ -325,7 +325,7 @@ namespace TTP {
 // CHECK-NEXT:    |-TemplateArgument type 'int'
 // CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'{{$}}
 // CHECK-NEXT:    |-TemplateArgument template 'TTP::A'{{$}}
-// CHECK-NEXT:    | `-ClassTemplateDecl {{.+}} A{{$}}
+// CHECK-NEXT:    | `-ClassTemplateDecl {{.+}} A external-linkage{{$}}
 // CHECK-NEXT:    `-ParmVarDecl {{.+}} 'TTP::A<int>'{{$}}
 // CHECK-NEXT:  FunctionProtoType {{.+}} 'auto (TT<T>) -> TTP::B<T>' dependent trailing_return cdecl{{$}}
 // CHECK-NEXT:  |-InjectedClassNameType {{.+}} 'TTP::B<T>' dependent{{$}}
