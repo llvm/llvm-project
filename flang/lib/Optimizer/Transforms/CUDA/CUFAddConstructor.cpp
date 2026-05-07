@@ -102,8 +102,7 @@ static mlir::Value buildGlobalNameLiteral(fir::FirOpBuilder &builder,
                                           fir::GlobalOp globalOp) {
   std::string nameStr = globalOp.getSymbol().getValue().str();
   nameStr += '\0';
-  return fir::getBase(
-      fir::factory::createStringLiteral(builder, loc, nameStr));
+  return fir::getBase(fir::factory::createStringLiteral(builder, loc, nameStr));
 }
 
 /// Compute the storage size in bytes of \p globalOp. For a box-typed
@@ -133,23 +132,21 @@ static mlir::Value computeGlobalSize(fir::FirOpBuilder &builder,
 /// addrGlobal taken via fir.address_of and name/size describe \p nameGlobal.
 /// Used both for CUFRegisterVariable / CUFRegisterManagedVariable / and
 /// CUFRegisterExternalVariable.
-static void emitCUFRegistrationCall(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, mlir::Type idxTy,
-                                    const mlir::DataLayout &dl,
-                                    const fir::KindMapping &kindMap,
-                                    fir::LLVMTypeConverter &typeConverter,
-                                    mlir::Value registeredMod,
-                                    mlir::func::FuncOp func,
-                                    fir::GlobalOp addrGlobal,
-                                    fir::GlobalOp nameGlobal) {
+static void
+emitCUFRegistrationCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::Type idxTy, const mlir::DataLayout &dl,
+                        const fir::KindMapping &kindMap,
+                        fir::LLVMTypeConverter &typeConverter,
+                        mlir::Value registeredMod, mlir::func::FuncOp func,
+                        fir::GlobalOp addrGlobal, fir::GlobalOp nameGlobal) {
   mlir::Value gblName = buildGlobalNameLiteral(builder, loc, nameGlobal);
   mlir::Value sizeVal = computeGlobalSize(builder, loc, idxTy, dl, kindMap,
                                           typeConverter, nameGlobal);
   mlir::Value addr = fir::AddrOfOp::create(
       builder, loc, addrGlobal.resultType(), addrGlobal.getSymbol());
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-      builder, loc, func.getFunctionType(), registeredMod, addr, gblName,
-      sizeVal)};
+  llvm::SmallVector<mlir::Value> args{
+      fir::runtime::createArguments(builder, loc, func.getFunctionType(),
+                                    registeredMod, addr, gblName, sizeVal)};
   fir::CallOp::create(builder, loc, func, args);
 }
 
