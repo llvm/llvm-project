@@ -127,14 +127,19 @@ class Tool(TestToolBase):
                 self.context.options.test_files[0],
                 self.context.options.source_root_dir,
             )
-            # Functionality not yet implemented.
-            return step_collection
-
-        step_collection.commands, new_source_files = get_command_infos(
-            self.context.options.test_files, self.context.options.source_root_dir
-        )
+            assert (
+                self.context.options.skip_run
+            ), "Debugging not yet supported with --use-script"
+        else:
+            step_collection.commands, new_source_files = get_command_infos(
+                self.context.options.test_files, self.context.options.source_root_dir
+            )
 
         self.context.options.source_files.extend(list(new_source_files))
+
+        # If we are not running a debugger, return the DextIR instead of a DebuggerController.
+        if self.context.options.skip_run:
+            return step_collection
 
         cond_controller_cmds = ["DexLimitSteps", "DexStepFunction", "DexContinue"]
         if any(c in step_collection.commands for c in cond_controller_cmds):

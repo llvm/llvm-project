@@ -45,7 +45,7 @@ class DexterNodeError(Error):
 
 
 class Where:
-    """ "One or more instances of this class define a range of steps in a debugging session. Any expects in the script
+    """One or more instances of this class define a range of steps in a debugging session. Any expects in the script
     within scope of a "Where" will only be evaluated for the steps where the Where applies.
     """
 
@@ -110,7 +110,9 @@ class Where:
             return range(-1)
         if isinstance(self.lines, int):
             return range(self.lines, self.lines + 1)
-        assert isinstance(self.lines, DexRange), f"Invalid type for lines: {self.lines}: ({type(self.lines)})"
+        assert isinstance(
+            self.lines, DexRange
+        ), f"Invalid type for lines: {self.lines}: ({type(self.lines)})"
         return self.lines.to_range()
 
 

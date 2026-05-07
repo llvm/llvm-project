@@ -81,7 +81,7 @@ class DexterScript:
         # exception if it sees anything unexpected.
         self.visit_script()
 
-    # If a truthy value is returned, abort further visiting and return that value..
+    # If a truthy value is returned, abort further visiting and return that value.
     def _visit_script(
         self, script, scope: Scope, visit_where=None, visit_expect=None, visit_then=None
     ) -> Any:
@@ -115,9 +115,9 @@ class DexterScript:
     ) -> Any:
         """Visits all nodes in the script in pre-order traversal, calling any non-none provided visitor functions for
         each respective node type. Note that we do not visit expected values independently of their associated expect;
-        instead, visit_expect accepts the Expect node and it's expected value as an argument.
+        instead, visit_expect accepts the Expect node and its expected value as an argument.
 
-        If any visit function returns a truth-y value, traversal will early-exit and this function returns that value;
+        If any visit function returns a truthy value, traversal will early-exit and this function returns that value;
         otherwise, this function returns None."""
         return self._visit_script(
             self.script_obj, self.root_scope, visit_where, visit_expect
