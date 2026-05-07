@@ -304,6 +304,114 @@ spirv.module Physical64 GLSL450 attributes {
     !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>
 }
 
+//===----------------------------------------------------------------------===//
+// Image type capabilities
+//===----------------------------------------------------------------------===//
+
+// 2D + MultiSampled + NoSampler requires StorageImageMultisample.
+// CHECK: requires #spirv.vce<v1.0, [Shader, StorageImageMultisample, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, StorageImageMultisample], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_ms_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, MultiSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 2D + MultiSampled + Arrayed + NoSampler requires both StorageImageMultisample
+// and ImageMSArray.
+// CHECK: requires #spirv.vce<v1.0, [Shader, StorageImageMultisample, ImageMSArray, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, StorageImageMultisample, ImageMSArray], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_ms_arrayed_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, Arrayed, MultiSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 2D + SingleSampled does not request multisample-related caps.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// Cube without Arrayed requires Shader but not ImageCubeArray.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_cube bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Cube, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, UniformConstant>
+}
+
+// Cube + Arrayed requires ImageCubeArray (which transitively implies
+// SampledCubeArray).
+// CHECK: requires #spirv.vce<v1.0, [Shader, ImageCubeArray, Matrix, SampledCubeArray], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, ImageCubeArray], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_cube_arrayed bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Cube, NoDepth, Arrayed, SingleSampled, NeedSampler, Unknown>, UniformConstant>
+}
+
+// 1D + NoSampler requires Image1D directly (and pulls in Sampled1D as an
+// implied capability, but the target_env need not list Sampled1D).
+// CHECK: requires #spirv.vce<v1.0, [Shader, Image1D, Matrix, Sampled1D], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Image1D], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_1d_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 1D + NeedSampler requires Sampled1D.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Sampled1D, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Sampled1D], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_1d_sampled bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, UniformConstant>
+}
+
+// Buffer + NoSampler requires ImageBuffer (which transitively implies
+// SampledBuffer).
+// CHECK: requires #spirv.vce<v1.0, [Shader, ImageBuffer, Matrix, SampledBuffer], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, ImageBuffer], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_buffer_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 64-bit integer sampled type requires Int64ImageEXT and the
+// SPV_EXT_shader_image_int64 extension.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Int64ImageEXT, Int64, Matrix], [SPV_EXT_shader_image_int64]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Int64, Int64ImageEXT], [SPV_EXT_shader_image_int64]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_i64 bind(0, 0) :
+    !spirv.ptr<!spirv.image<i64, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
 // CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_KHR_linkonce_odr]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<

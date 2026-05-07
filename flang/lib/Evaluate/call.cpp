@@ -158,6 +158,20 @@ bool ProcedureDesignator::IsPure() const {
   return false;
 }
 
+bool ProcedureDesignator::IsSimple() const {
+  if (const Symbol *interface{GetInterfaceSymbol()}) {
+    return IsSimpleProcedure(*interface);
+  } else if (const Symbol *symbol{GetSymbol()}) {
+    return IsSimpleProcedure(*symbol);
+  } else if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
+    return intrinsic->characteristics.value().attrs.test(
+        characteristics::Procedure::Attr::Simple);
+  } else {
+    DIE("ProcedureDesignator::IsSimple(): no case");
+  }
+  return false;
+}
+
 const SpecificIntrinsic *ProcedureDesignator::GetSpecificIntrinsic() const {
   return std::get_if<SpecificIntrinsic>(&u);
 }

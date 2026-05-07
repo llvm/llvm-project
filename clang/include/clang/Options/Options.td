@@ -3037,10 +3037,10 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
 defm directives_only : OptInCC1FFlag<"directives-only", "">;
 
 defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
-  CodeGenOpts<"NullPointerIsValid">, DefaultFalse,
+  CodeGenOpts<"NullPointerIsValid">, Default<"LangOpts->Kernel">,
   NegFlag<SetTrue, [], [ClangOption, CC1Option],
           "Do not treat usage of null pointers as undefined behavior">,
-  PosFlag<SetFalse, [], [ClangOption], "Treat usage of null pointers as undefined behavior (default)">,
+  PosFlag<SetFalse, [], [ClangOption, CC1Option], "Treat usage of null pointers as undefined behavior (default)">,
   BothFlags<[], [ClangOption, CLOption]>>,
   DocBrief<[{When enabled, treat null pointer dereference, creation of a reference to null,
 or passing a null pointer to a function parameter annotated with the "nonnull"
@@ -6410,7 +6410,7 @@ def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;
 def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
   HelpText<"Print the full library path of <file>">, MetaVarName<"<file>">,
-  Visibility<[ClangOption, CLOption]>;
+  Visibility<[ClangOption, FlangOption, CLOption]>;
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">,
