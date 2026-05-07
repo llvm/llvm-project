@@ -95,10 +95,22 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     break;
   }
   // Zknh
-  case RISCV::BI__builtin_riscv_sha256sig0:
-  case RISCV::BI__builtin_riscv_sha256sig1:
-  case RISCV::BI__builtin_riscv_sha256sum0:
-  case RISCV::BI__builtin_riscv_sha256sum1:
+  case RISCV::BI__builtin_riscv_sha256sig0: {
+    intrinsicName = "riscv.sha256sig0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sig1: {
+    intrinsicName = "riscv.sha256sig1";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum0: {
+    intrinsicName = "riscv.sha256sum0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum1: {
+    intrinsicName = "riscv.sha256sum1";
+    break;
+  }
   // Zksed
   case RISCV::BI__builtin_riscv_sm4ks:
   case RISCV::BI__builtin_riscv_sm4ed:

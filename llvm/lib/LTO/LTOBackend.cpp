@@ -264,7 +264,8 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
 static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
-                           const ModuleSummaryIndex *ImportSummary) {
+                           const ModuleSummaryIndex *ImportSummary,
+                           const DenseSet<StringRef> &BitcodeLibFuncs) {
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
@@ -306,6 +307,20 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
       new TargetLibraryInfoImpl(TM->getTargetTriple(), TM->Options.VecLib));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
+
+  // Determine whether or not its safe to emit calls to each libfunc. Libfuncs
+  // that might have been present in the current LTO unit, but are not, have
+  // lost their only opportunity to be defined, and calls must not be emitted to
+  // them.
+  // FIXME: BitcodeLibFuncs isn't yet set for distributed ThinLTO.
+  TargetLibraryInfo TLI(*TLII);
+  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
+       ++I) {
+    LibFunc F = static_cast<LibFunc>(I);
+    if (BitcodeLibFuncs.contains(TLI.getName(F)))
+      TLII->setUnavailable(F);
+  }
+
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Parse a custom AA pipeline if asked to.
@@ -389,7 +404,8 @@ static bool isEmptyModule(const Module &Mod) {
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
-              const std::vector<uint8_t> &CmdArgs) {
+              const std::vector<uint8_t> &CmdArgs,
+              ArrayRef<StringRef> BitcodeLibFuncs) {
   llvm::TimeTraceScope timeScope("opt");
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
     // FIXME: the motivation for capturing post-merge bitcode and command line
@@ -414,9 +430,11 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   // analysis in the case of a ThinLTO build where this might be an empty
   // regular LTO combined module, with a large combined index from ThinLTO.
   if (!isEmptyModule(Mod)) {
+    DenseSet<StringRef> BitcodeLibFuncsSet(BitcodeLibFuncs.begin(),
+                                           BitcodeLibFuncs.end());
     // FIXME: Plumb the combined index into the new pass manager.
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
+                   ImportSummary, BitcodeLibFuncsSet);
   }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
@@ -599,12 +617,13 @@ Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
 
 static bool backendOpt(
     const Config &C, std::unique_ptr<TargetMachine> &TM, Module &Mod,
-    ModuleSummaryIndex *ExportSummary = nullptr) {
+    ModuleSummaryIndex *ExportSummary,
+    ArrayRef<StringRef> BitcodeLibFuncs) {
   if (C.CodeGenOnly)
     return true;
   return opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/ExportSummary, /*ImportSummary=*/nullptr,
-             /*CmdArgs*/ std::vector<uint8_t>());
+             /*CmdArgs*/ std::vector<uint8_t>(), BitcodeLibFuncs);
 }
 
 static std::unique_ptr<CachedFileStream> GenAsmFilename(
@@ -627,7 +646,8 @@ static std::unique_ptr<CachedFileStream> GenAsmFilename(
 
 Error lto::backend(const Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel, Module &Mod,
-                   ModuleSummaryIndex &CombinedIndex) {
+                   ModuleSummaryIndex &CombinedIndex,
+                   ArrayRef<StringRef> BitcodeLibFuncs) {
   llvm::TimeTraceScope timeScope("LTO backend");
   Expected<const Target *> TOrErr = initAndLookupTarget(C, Mod);
   if (!TOrErr)
@@ -642,7 +662,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   CodegenConfig CodegenC(C);
-  if (!backendOpt(C, TM, Mod, &CombinedIndex)) {
+  if (!backendOpt(C, TM, Mod, &CombinedIndex, BitcodeLibFuncs)) {
     return Error::success();
   }
   if (ParallelCodeGenParallelismLevel == 1) {
@@ -661,7 +681,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
       return GenAsmFilename(C.AsmFile, Task, ModuleName);
     };
 
-    if (!backendOpt(C, TM, *AsmMod)) {
+    if (!backendOpt(C, TM, *AsmMod, nullptr, BitcodeLibFuncs)) {
       return Error::success();
     }
     if (ParallelCodeGenParallelismLevel == 1) {
@@ -702,7 +722,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
-                       bool CodeGenOnly, AddStreamFn IRAddStream,
+                       bool CodeGenOnly, ArrayRef<StringRef> BitcodeLibFuncs,
+                       AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
   llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
@@ -741,7 +762,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs))
+                 CmdArgs, BitcodeLibFuncs))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
         // Save the current module before the first codegen round.

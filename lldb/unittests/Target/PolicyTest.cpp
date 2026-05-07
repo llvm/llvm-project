@@ -59,96 +59,93 @@ TEST(PolicyTest, PublicStateRunningExpression) {
 }
 
 TEST(PolicyTest, StackDefaultIsPublicState) {
-  PolicyStack &stack = PolicyStack::GetForCurrentThread();
-  Policy current = stack.Current();
+  Policy current = PolicyStack::Get().Current();
   EXPECT_EQ(current.view, Policy::View::Public);
   EXPECT_TRUE(current.capabilities.can_evaluate_expressions);
   EXPECT_TRUE(current.capabilities.can_load_frame_providers);
 }
 
 TEST(PolicyTest, StackPushPop) {
-  PolicyStack &stack = PolicyStack::GetForCurrentThread();
+  PolicyStack::Get().Push(Policy::PrivateState());
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
+  EXPECT_FALSE(
+      PolicyStack::Get().Current().capabilities.can_load_frame_providers);
 
-  stack.Push(Policy::PrivateState());
-  EXPECT_EQ(stack.Current().view, Policy::View::Private);
-  EXPECT_FALSE(stack.Current().capabilities.can_load_frame_providers);
+  PolicyStack::Get().Push(Policy::PublicStateRunningExpression());
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Public);
+  EXPECT_FALSE(
+      PolicyStack::Get().Current().capabilities.can_run_breakpoint_actions);
 
-  stack.Push(Policy::PublicStateRunningExpression());
-  EXPECT_EQ(stack.Current().view, Policy::View::Public);
-  EXPECT_FALSE(stack.Current().capabilities.can_run_breakpoint_actions);
+  PolicyStack::Get().Pop();
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
 
-  stack.Pop();
-  EXPECT_EQ(stack.Current().view, Policy::View::Private);
-
-  stack.Pop();
-  EXPECT_EQ(stack.Current().view, Policy::View::Public);
+  PolicyStack::Get().Pop();
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Public);
 }
 
 TEST(PolicyTest, GuardRAII) {
-  PolicyStack &stack = PolicyStack::GetForCurrentThread();
-  EXPECT_EQ(stack.Current().view, Policy::View::Public);
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Public);
 
   {
     PolicyStack::Guard guard(Policy::PrivateState());
-    EXPECT_EQ(stack.Current().view, Policy::View::Private);
-    EXPECT_FALSE(stack.Current().capabilities.can_load_frame_providers);
+    EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
+    EXPECT_FALSE(
+        PolicyStack::Get().Current().capabilities.can_load_frame_providers);
 
     {
       PolicyStack::Guard inner(Policy::PublicStateRunningExpression());
-      EXPECT_EQ(stack.Current().view, Policy::View::Public);
-      EXPECT_FALSE(stack.Current().capabilities.can_run_breakpoint_actions);
+      EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Public);
+      EXPECT_FALSE(
+          PolicyStack::Get().Current().capabilities.can_run_breakpoint_actions);
     }
 
-    EXPECT_EQ(stack.Current().view, Policy::View::Private);
+    EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
   }
 
-  EXPECT_EQ(stack.Current().view, Policy::View::Public);
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Public);
 }
 
 TEST(PolicyTest, StackIsPerThread) {
-  PolicyStack &main_stack = PolicyStack::GetForCurrentThread();
-  main_stack.Push(Policy::PrivateState());
+  PolicyStack::Get().Push(Policy::PrivateState());
 
   Policy::View other_thread_view;
   std::thread t([&other_thread_view]() {
-    PolicyStack &stack = PolicyStack::GetForCurrentThread();
-    other_thread_view = stack.Current().view;
+    other_thread_view = PolicyStack::Get().Current().view;
   });
   t.join();
 
-  EXPECT_EQ(main_stack.Current().view, Policy::View::Private);
+  EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
   EXPECT_EQ(other_thread_view, Policy::View::Public);
 
-  main_stack.Pop();
+  PolicyStack::Get().Pop();
 }
 
 TEST(PolicyTest, DumpPublicState) {
   StreamString s;
   Policy::PublicState().Dump(s);
   EXPECT_EQ(s.GetString(),
-            "view=public, capabilities={"
-            "eval_expr=1 run_all=1 try_all=1 "
-            "bp_actions=1 frame_providers=1 frame_recognizers=1}");
+            "policy: view=public, capabilities={"
+            "eval_expr=true run_all=true try_all=true "
+            "bp_actions=true frame_providers=true frame_recognizers=true}");
 }
 
 TEST(PolicyTest, DumpPrivateState) {
   StreamString s;
   Policy::PrivateState().Dump(s);
   EXPECT_EQ(s.GetString(),
-            "view=private, capabilities={"
-            "eval_expr=1 run_all=1 try_all=1 "
-            "bp_actions=1 frame_providers=0 frame_recognizers=0}");
+            "policy: view=private, capabilities={"
+            "eval_expr=true run_all=true try_all=true "
+            "bp_actions=true frame_providers=false frame_recognizers=false}");
 }
 
 TEST(PolicyTest, DumpStack) {
-  PolicyStack &stack = PolicyStack::GetForCurrentThread();
-  stack.Push(Policy::PrivateState());
+  PolicyStack::Get().Push(Policy::PrivateState());
 
   StreamString s;
-  stack.Dump(s);
+  PolicyStack::Get().Dump(s);
   EXPECT_NE(s.GetString().find("depth=2"), std::string::npos);
-  EXPECT_NE(s.GetString().find("[0] view=public"), std::string::npos);
-  EXPECT_NE(s.GetString().find("[1] view=private"), std::string::npos);
+  EXPECT_NE(s.GetString().find("[0] policy: view=public"), std::string::npos);
+  EXPECT_NE(s.GetString().find("[1] policy: view=private"), std::string::npos);
 
-  stack.Pop();
+  PolicyStack::Get().Pop();
 }
