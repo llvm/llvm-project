@@ -131,11 +131,11 @@ define i1 @add_ugecmp_i32_i16_i8(i16 %xx) nounwind {
 ; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: add_ugecmp_i32_i16_i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mvn r1, #127
-; CHECK-NEXT:    uxtah r1, r1, r0
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    cmn r1, #256
-; CHECK-NEXT:    movwhs r0, #1
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    sxtb r1, r0
+; CHECK-NEXT:    sub r0, r1, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
   %x = zext i16 %xx to i32
   %tmp0 = add i32 %x, -128 ; ~0U << (8-1)
@@ -158,10 +158,10 @@ define i1 @add_ugecmp_i32_i16(i32 %x) nounwind {
 ; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: add_ugecmp_i32_i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sub r1, r0, #32768
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    cmn r1, #65536
-; CHECK-NEXT:    movwhs r0, #1
+; CHECK-NEXT:    sxth r1, r0
+; CHECK-NEXT:    sub r0, r1, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
   %tmp0 = add i32 %x, -32768 ; ~0U << (16-1)
   %tmp1 = icmp uge i32 %tmp0, -65536 ; ~0U << 16
@@ -183,10 +183,10 @@ define i1 @add_ugecmp_i32_i8(i32 %x) nounwind {
 ; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: add_ugecmp_i32_i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sub r1, r0, #128
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    cmn r1, #256
-; CHECK-NEXT:    movwhs r0, #1
+; CHECK-NEXT:    sxtb r1, r0
+; CHECK-NEXT:    sub r0, r1, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
   %tmp0 = add i32 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp uge i32 %tmp0, -256 ; ~0U << 8
@@ -248,11 +248,12 @@ define i1 @add_ultcmp_i16_i8(i16 %x) nounwind {
 ; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: add_ultcmp_i16_i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r0, r0, #128
-; CHECK-NEXT:    uxth r1, r0
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    cmp r1, #256
-; CHECK-NEXT:    movwlo r0, #1
+; CHECK-NEXT:    sxtb r1, r0
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    sub r0, r1, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ult i16 %tmp0, 256 ; 1U << 8
@@ -274,10 +275,10 @@ define i1 @add_ultcmp_i32_i16(i32 %x) nounwind {
 ; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: add_ultcmp_i32_i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r1, r0, #32768
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    cmp r1, #65536
-; CHECK-NEXT:    movwlo r0, #1
+; CHECK-NEXT:    sxth r1, r0
+; CHECK-NEXT:    sub r0, r1, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
   %tmp0 = add i32 %x, 32768 ; 1U << (16-1)
   %tmp1 = icmp ult i32 %tmp0, 65536 ; 1U << 16
@@ -299,10 +300,10 @@ define i1 @add_ultcmp_i32_i8(i32 %x) nounwind {
 ; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: add_ultcmp_i32_i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r1, r0, #128
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    cmp r1, #256
-; CHECK-NEXT:    movwlo r0, #1
+; CHECK-NEXT:    sxtb r1, r0
+; CHECK-NEXT:    sub r0, r1, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
   %tmp0 = add i32 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ult i32 %tmp0, 256 ; 1U << 8
@@ -311,28 +312,14 @@ define i1 @add_ultcmp_i32_i8(i32 %x) nounwind {
 
 ; Slightly more canonical variant
 define i1 @add_ulecmp_i16_i8(i16 %x) nounwind {
-; CHECK-SD-LABEL: add_ulecmp_i16_i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sxtb w8, w0
-; CHECK-SD-NEXT:    and w8, w8, #0xffff
-; CHECK-SD-NEXT:    cmp w8, w0, uxth
-; CHECK-SD-NEXT:    cset w0, eq
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_ulecmp_i16_i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add w8, w0, #128
-; CHECK-GI-NEXT:    and w8, w8, #0xffff
-; CHECK-GI-NEXT:    cmp w8, #255
-; CHECK-GI-NEXT:    cset w0, ls
-; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: add_ulecmp_i16_i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r0, r0, #128
-; CHECK-NEXT:    uxth r1, r0
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    cmp r1, #256
-; CHECK-NEXT:    movwlo r0, #1
+; CHECK-NEXT:    sxtb r1, r0
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    sub r0, r1, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsr r0, r0, #5
 ; CHECK-NEXT:    bx lr
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ule i16 %tmp0, 255 ; (1U << 8) - 1

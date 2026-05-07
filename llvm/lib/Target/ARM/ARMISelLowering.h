@@ -436,6 +436,9 @@ class VectorType;
     preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                        unsigned ExpansionFactor) const override;
 
+    bool shouldTransformSignedTruncationCheck(EVT XVT,
+                                              unsigned KeptBits) const override;
+
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
 

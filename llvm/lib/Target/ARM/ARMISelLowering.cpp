@@ -13773,6 +13773,27 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   return false;
 }
 
+bool ARMTargetLowering::shouldTransformSignedTruncationCheck(
+    EVT XVT, unsigned KeptBits) const {
+  // For vectors, we don't have a preference.
+  if (XVT.isVector())
+    return false;
+
+  // Prefer the transform only when scalar SIGN_EXTEND_INREG maps to
+  // SXTB/SXTH-style operations.
+  if (!Subtarget->hasV6Ops())
+    return false;
+
+  auto VTIsOk = [](EVT VT) -> bool {
+    return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32;
+  };
+
+  // We are ok with KeptBitsVT being byte/word/dword, what SXT supports.
+  // XVT will be larger than KeptBitsVT.
+  MVT KeptBitsVT = MVT::getIntegerVT(KeptBits);
+  return VTIsOk(XVT) && VTIsOk(KeptBitsVT);
+}
+
 bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
     unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
     SDValue Y) const {
