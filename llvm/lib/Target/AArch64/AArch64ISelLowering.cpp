@@ -1935,6 +1935,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
 
+    // Neon doesn't have dedicated instructions for vectors of this size but SVE
+    // does.
+    for (auto VT :
+         {MVT::v4i16, MVT::v8i16, MVT::v2i32, MVT::v4i32, MVT::v2i64}) {
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
+    }
+
     // With SVE2 we can try lowering these to pairwise operations (e.g. smaxp).
     if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
       setOperationAction(ISD::VECREDUCE_SMAX, MVT::v2i64, Custom);
@@ -11825,8 +11832,7 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
   EVT VT = Op.getValueType();
 
   if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(
-          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()))
+      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::BITREVERSE_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
