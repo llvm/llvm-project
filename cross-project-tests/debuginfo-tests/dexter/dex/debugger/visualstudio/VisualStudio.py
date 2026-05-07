@@ -394,10 +394,14 @@ class VisualStudio(
         )
 
     def get_stack_frames(self, step_index: int) -> StepIR:
-        raise NotImplementedError("--use-script debugging not supported in visual studio yet.")
+        raise NotImplementedError(
+            "--use-script debugging not supported in visual studio yet."
+        )
 
     def collect_watches(self, step: StepIR, watches: List[str]):
-        raise NotImplementedError("--use-script debugging not supported in visual studio yet.")
+        raise NotImplementedError(
+            "--use-script debugging not supported in visual studio yet."
+        )
 
     @property
     def is_running(self):

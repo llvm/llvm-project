@@ -12,7 +12,13 @@ from dex.dextIR.LocIR import LocIR
 class FrameIR:
     """Data class which represents a frame in the call stack"""
 
-    def __init__(self, function: str, is_inlined: bool, loc: LocIR, instruction_addr: Optional[str] = None):
+    def __init__(
+        self,
+        function: str,
+        is_inlined: bool,
+        loc: LocIR,
+        instruction_addr: Optional[str] = None,
+    ):
         self.function = function
         self.is_inlined = is_inlined
         self.loc = loc

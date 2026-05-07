@@ -971,7 +971,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 function=self._sanitize_function_name(stackframe["name"]),
                 is_inlined=stackframe["name"].startswith("[Inline Frame]"),
                 loc=loc,
-                instruction_addr=stackframe.get("instructionPointerReference", None)
+                instruction_addr=stackframe.get("instructionPointerReference", None),
             )
 
             # We skip frames that are below "main", since we do not expect those to be user code.
