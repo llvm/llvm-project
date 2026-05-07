@@ -86,7 +86,7 @@ void *EJitCompileDriver::getOrCompile(
     return nullptr;
   }
 
-  auto addrOrErr = syncEngine_->lookup(funcName);
+  auto addrOrErr = syncEngine_->lookup(cacheKey, funcName);
   syncEngine_->setActiveContext(nullptr);
 
   if (!addrOrErr) {

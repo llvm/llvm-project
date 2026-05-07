@@ -22,10 +22,10 @@ struct EJitOrcEngine::Impl {
   PeriodArrayRegistry *periodReg = nullptr;
   EJitRuntimeState *runtimeState = nullptr;
   const SpecializationContext *activeCtx = nullptr;
-  /// Per-function resource trackers so re-specializing the same function
-  /// removes the old module (avoiding symbol conflicts), while different
-  /// functions can coexist without invalidating each other's code.
-  std::map<std::string, orc::ResourceTrackerSP> funcTrackers;
+  /// Per-specialization JITDylib pointers so each specialization is
+  /// independently compiled and symbols from different specializations
+  /// never conflict.
+  std::map<std::string, orc::JITDylib *> specDylibs;
 };
 
 EJitOrcEngine::EJitOrcEngine() : P(std::make_unique<Impl>()) {}
@@ -120,38 +120,41 @@ EJitOrcEngine::Create(const Config &config,
 }
 
 Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
-                                       const std::string &moduleId,
+                                       const std::string &cacheKey,
                                        const std::string &origFnName) {
-  // Remove the previous specialization for the same original function
-  // so symbols don't conflict. Different functions (different origFnName)
-  // have independent trackers and can coexist.
-  auto it = P->funcTrackers.find(origFnName);
-  if (it != P->funcTrackers.end()) {
-    if (auto Err = it->second->remove())
-      return Err;
-    P->funcTrackers.erase(it);
-  }
-
   auto Ctx = std::make_unique<LLVMContext>();
-  auto Buf = MemoryBuffer::getMemBuffer(bitcodeData, moduleId + ".bc");
+  auto Buf = MemoryBuffer::getMemBuffer(bitcodeData, cacheKey + ".bc");
   auto ModuleOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
   if (!ModuleOrErr)
     return ModuleOrErr.takeError();
 
-  auto RT = P->J->getMainJITDylib().createResourceTracker();
-  if (auto Err = P->J->addIRModule(RT,
+  // Each specialization gets its own JITDylib so that symbols from
+  // different specializations (same TU bitcode loaded multiple times)
+  // never conflict. Helper functions and globals coexist independently.
+  auto JDOrErr = P->J->createJITDylib("spec_" + cacheKey);
+  if (!JDOrErr)
+    return JDOrErr.takeError();
+
+  if (auto Err = P->J->addIRModule(*JDOrErr,
       orc::ThreadSafeModule(std::move(*ModuleOrErr), std::move(Ctx))))
     return Err;
 
-  P->funcTrackers[origFnName] = std::move(RT);
+  P->specDylibs[cacheKey] = &*JDOrErr;
   return Error::success();
 }
 
-Expected<void *> EJitOrcEngine::lookup(const std::string &name) {
-  auto sym = P->J->lookup(name);
-  if (!sym)
-    return sym.takeError();
-  return reinterpret_cast<void *>(sym->getValue());
+Expected<void *> EJitOrcEngine::lookup(const std::string &cacheKey,
+                                       const std::string &name) {
+  auto it = P->specDylibs.find(cacheKey);
+  if (it == P->specDylibs.end())
+    return make_error<StringError>(
+        "No specialization JITDylib found for: " + cacheKey,
+        inconvertibleErrorCode());
+
+  auto addr = P->J->lookup(*it->second, name);
+  if (!addr)
+    return addr.takeError();
+  return reinterpret_cast<void *>(addr->getValue());
 }
 
 void EJitOrcEngine::setActiveContext(const SpecializationContext *ctx) {

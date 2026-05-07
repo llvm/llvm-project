@@ -23,7 +23,7 @@ EJitSyncCompiler::compile(EJitOrcEngine &engine,
     return result;
   }
 
-  auto addrOrErr = engine.lookup(ctx.fnName);
+  auto addrOrErr = engine.lookup(cacheKey, ctx.fnName);
   engine.setActiveContext(nullptr);
 
   if (!addrOrErr)

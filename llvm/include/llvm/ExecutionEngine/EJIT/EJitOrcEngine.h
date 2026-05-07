@@ -45,14 +45,16 @@ public:
          PeriodArrayRegistry &periodReg,
          EJitRuntimeState &runtimeState);
 
-  /// Load a bitcode module. The entry function named origFnName is renamed
-  /// to moduleId to give each specialization a unique symbol.
+  /// Load a bitcode module into a per-specialization JITDylib identified
+  /// by cacheKey. Each specialization gets its own JITDylib so symbols
+  /// from the same TU bitcode can be defined multiple times without conflict.
   Error loadBitcodeModule(StringRef bitcodeData,
-                          const std::string &moduleId,
+                          const std::string &cacheKey,
                           const std::string &origFnName);
 
-  /// Look up a compiled function symbol.
-  Expected<void *> lookup(const std::string &name);
+  /// Look up a compiled function symbol in the specialization JITDylib
+  /// identified by cacheKey.
+  Expected<void *> lookup(const std::string &cacheKey, const std::string &name);
 
   /// Set the active specialization context (used during compilation).
   void setActiveContext(const SpecializationContext *ctx);
