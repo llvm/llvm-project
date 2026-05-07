@@ -3928,6 +3928,28 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       BaseOps.clear();
     }
 
+    // FMAXNUM_IEEE/FMINNUM_IEEE differ from FMAXIMUMNUM/FMINIMUMNUM
+    // only in signaling-NaN handling, try emitting FMAXNUM_IEEE/FMINNUM_IEEE
+    // directly when both operands are known never signaling NaNs.
+    if (!IsUnaryAbs && OpCode != Opc &&
+        (Opc == ISD::FMAXIMUMNUM || Opc == ISD::FMINIMUMNUM) &&
+        hasOnlySelectUsers(cast<SelectInst>(I).getCondition())) {
+      unsigned IEEEOpc =
+          (Opc == ISD::FMAXIMUMNUM) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+      if (TLI.isOperationLegalOrCustom(IEEEOpc, VT) ||
+          (UseScalarMinMax &&
+           TLI.isOperationLegalOrCustom(IEEEOpc, VT.getScalarType()))) {
+        SDValue L = getValue(LHS);
+        SDValue R = getValue(RHS);
+        if (DAG.isKnownNeverSNaN(L) && DAG.isKnownNeverSNaN(R)) {
+          OpCode = static_cast<ISD::NodeType>(IEEEOpc);
+          LHSVal = L;
+          RHSVal = R;
+          BaseOps.clear();
+        }
+      }
+    }
+
     if (IsUnaryAbs) {
       OpCode = Opc;
       LHSVal = getValue(LHS);

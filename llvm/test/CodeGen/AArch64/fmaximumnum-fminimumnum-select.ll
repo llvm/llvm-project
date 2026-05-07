@@ -10,30 +10,27 @@
 define float @maxmin_after_fmul(float %a, float %b) {
 ; CHECK-LABEL: maxmin_after_fmul:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmul s0, s0, s1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
 ; CHECK-NEXT:    fmov s1, #1.00000000
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fcsel s0, s0, s1, mi
+; CHECK-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul float %a, %b
   %cmp1 = fcmp nsz ogt float %mul, 0.000000e+00
   %max = select i1 %cmp1, float %mul, float 0.000000e+00
   %cmp2 = fcmp nsz olt float %max, 1.000000e+00
-  %clamp = select i1 %cmp2, float %max, float 1.000000e+00
-  ret float %clamp
+  %min = select i1 %cmp2, float %max, float 1.000000e+00
+  ret float %min
 }
 
 define float @max_after_fadd(float %a, float %b) {
 ; CHECK-LABEL: max_after_fadd:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
+; CHECK-NEXT:    fmaxnm s0, s0, s2
 ; CHECK-NEXT:    ret
 entry:
   %add = fadd float %a, %b
@@ -46,10 +43,9 @@ entry:
 define double @max_after_fmul_double(double %a, double %b) {
 ; CHECK-LABEL: max_after_fmul_double:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmul d0, d0, d1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    fcsel d0, d0, d1, gt
+; CHECK-NEXT:    fmaxnm d0, d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul double %a, %b
@@ -79,8 +75,7 @@ define float @min_after_fmul(float %a, float %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #1.00000000
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fcsel s0, s0, s1, mi
+; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul float %a, %b
