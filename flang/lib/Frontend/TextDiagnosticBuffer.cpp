@@ -22,7 +22,8 @@
 using namespace Fortran::frontend;
 
 static void printWarningOption(llvm::raw_ostream &os,
-    clang::DiagnosticsEngine::Level level, const clang::Diagnostic &info) {
+                               clang::DiagnosticsEngine::Level level,
+                               const clang::Diagnostic &info) {
   auto &diagIDs = *info.getDiags()->getDiagnosticIDs();
 
   if (level == clang::DiagnosticsEngine::Warning) {

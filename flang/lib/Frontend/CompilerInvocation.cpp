@@ -40,8 +40,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -1570,8 +1570,9 @@ static bool parseLangOptionsArgs(CompilerInvocation &invoc,
 
 // Copied from clang/lib/Frontend/CompilerInvocation.cpp.
 static void addDiagnosticArgs(llvm::opt::ArgList &Args,
-    llvm::opt::OptSpecifier Group, llvm::opt::OptSpecifier GroupWithValue,
-    std::vector<std::string> &Diagnostics) {
+                              llvm::opt::OptSpecifier Group,
+                              llvm::opt::OptSpecifier GroupWithValue,
+                              std::vector<std::string> &Diagnostics) {
   for (auto *A : Args.filtered(Group)) {
     if (A->getOption().getKind() == llvm::opt::Option::FlagClass) {
       // The argument is a pure flag (such as OPT_Wall or OPT_Wdeprecated). Add
@@ -1634,7 +1635,7 @@ bool CompilerInvocation::createFromArgs(
 
   // Handle -Wno-<warning> flags.
   addDiagnosticArgs(args, clang::options::OPT_W_Group,
-      clang::options::OPT_W_value_Group, diagOpts.Warnings);
+                    clang::options::OPT_W_value_Group, diagOpts.Warnings);
   auto vfs = llvm::vfs::getRealFileSystem();
   clang::ProcessWarningOptions(diags, diagOpts, *vfs, /*ReportDiags=*/false);
 
