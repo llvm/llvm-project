@@ -76,7 +76,9 @@ void *EJitCompileDriver::getOrCompile(
 
   syncEngine_->setActiveContext(&ctx);
 
-  if (auto Err = syncEngine_->loadBitcodeModule(bitcode, funcName)) {
+  // Load module with cacheKey as module ID and original funcName for
+  // symbol renaming (each specialization gets a unique symbol).
+  if (auto Err = syncEngine_->loadBitcodeModule(bitcode, cacheKey, funcName)) {
     syncEngine_->setActiveContext(nullptr);
     if (logger_)
       logger_->log(ErrorCode::CompilationFailed,

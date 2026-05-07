@@ -45,9 +45,11 @@ public:
          PeriodArrayRegistry &periodReg,
          EJitRuntimeState &runtimeState);
 
-  /// Load a bitcode module by function name.
+  /// Load a bitcode module. The entry function named origFnName is renamed
+  /// to moduleId to give each specialization a unique symbol.
   Error loadBitcodeModule(StringRef bitcodeData,
-                          const std::string &funcName);
+                          const std::string &moduleId,
+                          const std::string &origFnName);
 
   /// Look up a compiled function symbol.
   Expected<void *> lookup(const std::string &name);

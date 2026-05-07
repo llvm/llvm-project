@@ -6,12 +6,13 @@
 
 ```
 ejit_test/
-  README.md            — 本文件
-  build_demo.sh        — 一键编译+链接+体积测量脚本
-  ejit_demo.c          — 最小 EJIT Runtime C API 示例
-  ejit_attr_test.c     — 6 种 EJIT 属性基础功能测试
-  ejit_trace_test.c    — 运行时 trace 测试 (验证 JIT dispatch/fallback/生命周期)
-  ejit_complex_test.c  — 复杂场景测试 (4 维度/多数组共享/多 return/外部输入)
+  README.md              — 本文件
+  build_demo.sh          — 一键编译+链接+体积测量脚本
+  ejit_demo.c            — 最小 EJIT Runtime C API 示例
+  ejit_attr_test.c       — 6 种 EJIT 属性基础功能测试
+  ejit_trace_test.c      — 运行时 trace 测试 (验证 JIT dispatch/fallback/生命周期)
+  ejit_complex_test.c    — 复杂场景测试 (4 维度/多数组共享/多 return/外部输入)
+  ejit_opt_level_test.c  — 优化等级测试 (L1/L2/L3, 每个等级独立验证 JIT 激活)
 ```
 
 ## 环境要求
@@ -104,6 +105,30 @@ build/bin/clang -O2 -S -emit-llvm ejit_test/ejit_complex_test.c -o - | grep 'eji
 | | **D: 多 return 生命周期** — 3 个 return 点的 deactivate/activate |
 | | **E: 仅改非 may_const 字段** — 仍触发生命周期 hook |
 | 特性 | 多数组共享时间窗 / 三层结构体嵌套 / 混合类型 may_const / switch-case |
+
+### ejit_opt_level_test.c — 优化等级测试
+
+| 目的 | 验证 L1/L2/L3 三级 JIT 优化均能正确激活并产出正确结果 |
+|------|------------------------------------------------------|
+| 对应 | SPEC4 §4.4 (优化能力), §3.4 (编译接口) |
+| 运行 | `./ejit_opt_level L1 \| L2 \| L3` 每个等级独立进程 |
+| 验证点 | JIT entries > 0 / 结果 MATCH / per-carrierIdx 独立 specialization |
+
+```
+# 编译
+build/bin/clang -O2 -c ejit_test/ejit_opt_level_test.c -o /tmp/opt_level.o
+
+# 链接
+LIBS=$(ls build_x86/lib/*.a)
+clang++ -Os -Wl,--gc-sections /tmp/opt_level.o \
+  -Wl,--whole-archive $LIBS -Wl,--no-whole-archive \
+  -lpthread -ldl -o /tmp/ejit_opt_level
+
+# 运行
+/tmp/ejit_opt_level L1
+/tmp/ejit_opt_level L2
+/tmp/ejit_opt_level L3
+```
 
 ## IR 验证清单
 

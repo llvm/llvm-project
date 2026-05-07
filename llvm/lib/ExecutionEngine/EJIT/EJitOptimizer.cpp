@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 
 using namespace llvm;
@@ -146,11 +147,15 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
   }
 
   if (static_cast<int>(level) >= 3) {
-    // L3: Loop unrolling + Promote + SimplifyCFG
+    // L3: LoopSimplify + LoopFullUnroll + Promote + SimplifyCFG
+    // LoopSimplify runs as a function pass; LoopFullUnroll as a loop pass.
     FunctionPassManager FPM3;
-    LoopPassManager LPM;
-    LPM.addPass(LoopFullUnrollPass());
-    FPM3.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+    FPM3.addPass(LoopSimplifyPass());
+    {
+      LoopPassManager LPM;
+      LPM.addPass(LoopFullUnrollPass());
+      FPM3.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+    }
     FPM3.addPass(PromotePass());
     FPM3.addPass(SimplifyCFGPass());
     for (Function &F : M.functions()) {

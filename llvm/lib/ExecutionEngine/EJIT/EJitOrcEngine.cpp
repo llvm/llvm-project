@@ -12,6 +12,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"
+#include <map>
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -21,6 +22,10 @@ struct EJitOrcEngine::Impl {
   PeriodArrayRegistry *periodReg = nullptr;
   EJitRuntimeState *runtimeState = nullptr;
   const SpecializationContext *activeCtx = nullptr;
+  /// Per-function resource trackers so re-specializing the same function
+  /// removes the old module (avoiding symbol conflicts), while different
+  /// functions can coexist without invalidating each other's code.
+  std::map<std::string, orc::ResourceTrackerSP> funcTrackers;
 };
 
 EJitOrcEngine::EJitOrcEngine() : P(std::make_unique<Impl>()) {}
@@ -78,8 +83,9 @@ EJitOrcEngine::Create(const Config &config,
           // 3. Inline: expand callees so StructFieldPass can trace GEP chains
           opt.runInline(M);
 
-          // 4. EJitStructFieldPass: replace ejit_may_const loads with
-          //    runtime constants (one per function)
+          // 4. First EJitStructFieldPass: replace ejit_may_const loads
+          //    before the optimization pipeline so SCCP/ADCE can propagate
+          //    the resulting constants.
           for (Function &F : M.functions()) {
             if (!F.isDeclaration()) {
               EJitStructFieldPass structField(periodReg);
@@ -90,8 +96,22 @@ EJitOrcEngine::Create(const Config &config,
             }
           }
 
-          // 5. Run the standard optimization pipeline at the configured level
+          // 5. Run the standard optimization pipeline at the configured level.
+          //    L3 LoopFullUnroll may expose new constant-index GEP chains.
           opt.runOptimizationPipeline(M, ctx->optLevel);
+
+          // 6. Second EJitStructFieldPass + InstCombine: catch loads that
+          //    became constant-indexed after loop unrolling (L3) or inlining.
+          for (Function &F : M.functions()) {
+            if (!F.isDeclaration()) {
+              EJitStructFieldPass structField(periodReg);
+              FunctionAnalysisManager FAM;
+              PassBuilder PB;
+              PB.registerFunctionAnalyses(FAM);
+              structField.run(F, FAM);
+            }
+          }
+          opt.runInstCombine(M);
         });
         return std::move(TSM);
       });
@@ -100,14 +120,31 @@ EJitOrcEngine::Create(const Config &config,
 }
 
 Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
-                                       const std::string &funcName) {
+                                       const std::string &moduleId,
+                                       const std::string &origFnName) {
+  // Remove the previous specialization for the same original function
+  // so symbols don't conflict. Different functions (different origFnName)
+  // have independent trackers and can coexist.
+  auto it = P->funcTrackers.find(origFnName);
+  if (it != P->funcTrackers.end()) {
+    if (auto Err = it->second->remove())
+      return Err;
+    P->funcTrackers.erase(it);
+  }
+
   auto Ctx = std::make_unique<LLVMContext>();
-  auto Buf = MemoryBuffer::getMemBuffer(bitcodeData, funcName + ".bc");
+  auto Buf = MemoryBuffer::getMemBuffer(bitcodeData, moduleId + ".bc");
   auto ModuleOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
   if (!ModuleOrErr)
     return ModuleOrErr.takeError();
-  return P->J->addIRModule(
-      orc::ThreadSafeModule(std::move(*ModuleOrErr), std::move(Ctx)));
+
+  auto RT = P->J->getMainJITDylib().createResourceTracker();
+  if (auto Err = P->J->addIRModule(RT,
+      orc::ThreadSafeModule(std::move(*ModuleOrErr), std::move(Ctx))))
+    return Err;
+
+  P->funcTrackers[origFnName] = std::move(RT);
+  return Error::success();
 }
 
 Expected<void *> EJitOrcEngine::lookup(const std::string &name) {

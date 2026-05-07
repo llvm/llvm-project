@@ -18,7 +18,7 @@ EJitSyncCompiler::compile(EJitOrcEngine &engine,
 
   engine.setActiveContext(&ctx);
 
-  if (auto Err = engine.loadBitcodeModule(bitcodeData, ctx.fnName)) {
+  if (auto Err = engine.loadBitcodeModule(bitcodeData, cacheKey, ctx.fnName)) {
     engine.setActiveContext(nullptr);
     return result;
   }
