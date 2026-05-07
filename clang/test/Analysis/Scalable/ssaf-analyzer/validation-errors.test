@@ -1,0 +1,45 @@
+// Tests for clang-ssaf-analyzer input validation.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// No extension on output.
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -o lu 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-EXT-OUTPUT
+// NO-EXT-OUTPUT: clang-ssaf-analyzer: error: failed to validate path 'lu': Extension not supplied
+
+// No extension on input.
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu-noext -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-EXT-INPUT
+// NO-EXT-INPUT: clang-ssaf-analyzer: error: failed to validate path '{{.*}}lu-noext': Extension not supplied
+
+// Invalid extension on output.
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -o out.txt 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=BAD-EXT-OUTPUT
+// BAD-EXT-OUTPUT: clang-ssaf-analyzer: error: failed to validate path 'out.txt': No format registered for extension 'txt'
+
+// Invalid extension on input.
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu-badext.txt -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=BAD-EXT-INPUT
+// BAD-EXT-INPUT: clang-ssaf-analyzer: error: failed to validate path '{{.*}}lu-badext.txt': No format registered for extension 'txt'
+
+// Output directory does not exist.
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -o %S/Outputs/NonExistentDirectory/out.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-PARENT-DIR-MISSING
+// OUTPUT-PARENT-DIR-MISSING: clang-ssaf-analyzer: error: failed to validate path '{{.*}}out.json': Parent directory does not exist
+
+// Input is a directory, not a file.
+// RUN: not clang-ssaf-analyzer %S/Inputs -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INPUT-IS-DIR
+// INPUT-IS-DIR: clang-ssaf-analyzer: error: failed to validate path '{{.*}}Inputs': Path is not a file
+
+// Input file does not exist.
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu-nonexistent.json -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-INPUT-FILE
+// NO-INPUT-FILE: clang-ssaf-analyzer: error: failed to validate path '{{.*}}lu-nonexistent.json': Path does not exist
+
+// Output file already exists.
+// RUN: touch %t/already-exists.json
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -o %t/already-exists.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-EXISTS
+// OUTPUT-EXISTS: clang-ssaf-analyzer: error: failed to validate path '{{.*}}already-exists.json': File already exists

@@ -3674,13 +3674,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!UO || isa<Argument>(UO))
           continue;
 
-        // Compute known bits for the pointer, passing nullptr as context to
-        // avoid computeKnownBits using the assumption we are about to remove
-        // for reasoning.
-        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
-        unsigned TZ = std::min(Known.countMinTrailingZeros(),
-                               Value::MaxAlignmentExponent);
-        if ((1ULL << TZ) < RK.ArgValue)
+        // Compute known bits for the pointer and drop the assume if the
+        // known alignment isn't increased by it.
+        if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
+            RK.ArgValue)
           continue;
         return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
@@ -3718,13 +3715,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(IIOperand,
               m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
         A->getType()->isPointerTy()) {
-      if (auto *Replacement = buildAssumeFromKnowledge(
-              {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
-
-        InsertNewInstBefore(Replacement, Next->getIterator());
-        AC.registerAssumption(Replacement);
-        return RemoveConditionFromAssume(II);
-      }
+      Builder.CreateNonnullAssumption(A);
+      return eraseInstFromFunction(*II);
     }
 
     // Convert alignment assume like:
