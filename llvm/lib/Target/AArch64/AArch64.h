@@ -290,7 +290,8 @@ public:
 
 class AArch64SLSHardeningPass : public PassInfoMixin<AArch64SLSHardeningPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class AArch64PostCoalescerPass

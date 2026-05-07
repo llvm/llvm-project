@@ -17,11 +17,11 @@
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -507,7 +507,8 @@ bool SLSHardeningInserter::hardenBLRs(MachineModuleInfo &MMI,
 }
 
 namespace {
-class AArch64SLSHardeningLegacy : public ThunkInserterPass<SLSHardeningInserter> {
+class AArch64SLSHardeningLegacy
+    : public ThunkInserterPass<SLSHardeningInserter> {
 public:
   static char ID;
 
@@ -527,7 +528,9 @@ FunctionPass *llvm::createAArch64SLSHardeningLegacyPass() {
   return new AArch64SLSHardeningLegacy();
 }
 
-PreservedAnalyses AArch64SLSHardeningPass::run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+PreservedAnalyses
+AArch64SLSHardeningPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
   auto *MMI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
                   .getCachedResult<MachineModuleAnalysis>(
                       *MF.getFunction().getParent());
