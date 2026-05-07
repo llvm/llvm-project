@@ -380,6 +380,9 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Fixed false positives when pointers were later passed or bound through
+    ``const``-qualified pointer references.
+
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
@@ -408,12 +411,21 @@ Changes in existing checks
   Because it only sees one file at a time, the check can't be sure
   such entities aren't referenced in any other files of that module.
 
+- Improved :doc:`modernize-deprecated-headers
+  <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false
+  positives on project headers that use the same name as a standard library
+  header.
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
 
 - Improved :doc:`modernize-redundant-void-arg
   <clang-tidy/checks/modernize/redundant-void-arg>` check to work in C23.
+
+- Improved :doc:`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
+  when type qualifiers and/or reference modifiers are used with parameters.
 
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on
@@ -439,8 +451,12 @@ Changes in existing checks
   macros appearing in the return type of a function.
 
 - Improved :doc:`modernize-use-using
-  <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
-  of invalid code for function types with redundant parentheses.
+  <clang-tidy/checks/modernize/use-using>` check:
+
+  - Avoid generating invalid code for function types with redundant
+    parentheses.
+
+  - Preserve inline comment blocks that appear between the ``typedef``'s parts.
 
 - Improved :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check:
@@ -485,9 +501,13 @@ Changes in existing checks
     ``empty`` function.
 
 - Improved :doc:`readability-convert-member-functions-to-static
-  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
-  avoiding false positive on ``const`` member functions to static when they are
-  a part of const/non-const overload pair.
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check:
+
+  - Fixing a false positive where ``const`` member functions were incorrectly
+    flagged when they are part of a const/non-const overload pair.
+
+  - Correctly detecting ``this`` usage when a generic lambda calls an overloaded
+    member function.
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
@@ -546,6 +566,9 @@ Changes in existing checks
   - Added `AllowLogicalOperatorConversion` option to suppress warnings on
     implicit conversions of logical operator results (``&&``, ``||``, ``!``)
     to ``bool`` in C.
+
+  - Fixed a false positive where ``bool`` conditions in C conditional
+    operators were diagnosed as implicit conversions to ``int``.
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:

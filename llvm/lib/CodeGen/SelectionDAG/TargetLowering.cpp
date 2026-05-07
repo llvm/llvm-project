@@ -10667,17 +10667,21 @@ SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
     // Use a rotate by 8. This can be further expanded if necessary.
     return DAG.getNode(ISD::ROTL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
   case MVT::i32:
-    // This is meant for ARM speficially, which has ROTR but no ROTL.
+    // This is meant for ARM specifically, which has ROTR but no ROTL.
+    //   t = x ^ rotr(x, 16)
+    //   t = bic(t, 0x00ff0000)
+    //   t = lshr(t, 8)
+    //   x = t ^ rotr(x, 8)
     if (isOperationLegalOrCustom(ISD::ROTR, VT)) {
-      SDValue Mask = DAG.getConstant(0x00FF00FF, dl, VT);
-      // (x & 0x00FF00FF) rotr 8 | (x rotl 8) & 0x00FF00FF
-      SDValue And = DAG.getNode(ISD::AND, dl, VT, Op, Mask);
-      SDValue Rotr =
-          DAG.getNode(ISD::ROTR, dl, VT, And, DAG.getConstant(8, dl, SHVT));
-      SDValue Rotl =
-          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
-      SDValue And2 = DAG.getNode(ISD::AND, dl, VT, Rotl, Mask);
-      return DAG.getNode(ISD::OR, dl, VT, Rotr, And2);
+      SDValue Rotr16 =
+          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(16, dl, SHVT));
+      SDValue Tmp = DAG.getNode(ISD::XOR, dl, VT, Op, Rotr16);
+      Tmp = DAG.getNode(ISD::AND, dl, VT, Tmp,
+                        DAG.getConstant(0xFF00FFFF, dl, VT));
+      Tmp = DAG.getNode(ISD::SRL, dl, VT, Tmp, DAG.getConstant(8, dl, SHVT));
+      SDValue Rotr8 =
+          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
+      return DAG.getNode(ISD::XOR, dl, VT, Tmp, Rotr8);
     }
     Tmp4 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
     Tmp3 = DAG.getNode(ISD::AND, dl, VT, Op,
@@ -12367,6 +12371,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   ISD::NodeType BaseOpcode = ISD::getVecReduceBaseOpcode(Node->getOpcode());
   SDValue Op = Node->getOperand(0);
+  SDNodeFlags Flags = Node->getFlags();
   EVT VT = Op.getValueType();
 
   // Try to use a shuffle reduction for power of two vectors.
@@ -12403,7 +12408,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
             std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
             Lo = DAG.getInsertSubvector(dl, DAG.getPOISON(WideVT), Lo, 0);
             Hi = DAG.getInsertSubvector(dl, DAG.getPOISON(WideVT), Hi, 0);
-            Op = DAG.getNode(BaseOpcode, dl, WideVT, Lo, Hi, Node->getFlags());
+            Op = DAG.getNode(BaseOpcode, dl, WideVT, Lo, Hi, Flags);
             Op = DAG.getExtractSubvector(dl, HalfVT, Op, 0);
             VT = HalfVT;
             continue;
@@ -12414,13 +12419,13 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
 
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
-      Op = DAG.getNode(BaseOpcode, dl, HalfVT, Lo, Hi, Node->getFlags());
+      Op = DAG.getNode(BaseOpcode, dl, HalfVT, Lo, Hi, Flags);
       VT = HalfVT;
 
       // Stop if splitting is enough to make the reduction legal.
       if (isOperationLegalOrCustom(Node->getOpcode(), HalfVT))
         return DAG.getNode(Node->getOpcode(), dl, Node->getValueType(0), Op,
-                           Node->getFlags());
+                           Flags);
     }
   }
 
@@ -12436,7 +12441,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
 
   SDValue Res = Ops[0];
   for (unsigned i = 1; i < NumElts; i++)
-    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res, Ops[i], Node->getFlags());
+    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res, Ops[i], Flags);
 
   // Result type may be wider than element type.
   if (EltVT != Node->getValueType(0))

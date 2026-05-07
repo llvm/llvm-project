@@ -2690,7 +2690,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
     return ts->GetPersistentExpressionState();
 
   LLDB_LOG(GetLog(LLDBLog::Target),
-           "Unable to get persistent expression state for language {1}: {0}",
+           "Unable to get persistent expression state for language {}:",
            Language::GetNameForLanguageType(language));
   return nullptr;
 }
@@ -4267,8 +4267,11 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
-  if (!should_stop_or_err)
+  if (!should_stop_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), should_stop_or_err.takeError(),
+                   "scripted stop hook HandleStop failed: {0}");
     return StopHookResult::KeepStopped;
+  }
 
   return *should_stop_or_err ? StopHookResult::KeepStopped
                              : StopHookResult::RequestContinue;

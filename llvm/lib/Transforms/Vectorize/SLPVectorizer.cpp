@@ -19728,7 +19728,9 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
     }
     SmallBitVector ExtractMask(VecTy->getNumElements(), true);
     ExtractMask.reset(*Idx);
-    if (isUndefVector(EI->getVectorOperand(), ExtractMask).all()) {
+    if (isUndefVector</*IsPoisonOnly=*/true>(EI->getVectorOperand(),
+                                             ExtractMask)
+            .all()) {
       UndefVectorExtracts.push_back(I);
       continue;
     }
@@ -31124,11 +31126,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       Type *ScalarTy = getValueType(PostProcessStores.front());
       if (!::isValidElementType(ScalarTy))
         return Changed;
+      auto *IF =
+          dyn_cast<Instruction>(PostProcessStores.front()->getValueOperand());
+      auto *IB =
+          dyn_cast<Instruction>(PostProcessStores.back()->getValueOperand());
       if (!NonVectReductions && PostProcessStores.size() == 2 &&
-          cast<Instruction>(PostProcessStores.front()->getValueOperand())
-                  ->getOpcode() !=
-              cast<Instruction>(PostProcessStores.back()->getValueOperand())
-                  ->getOpcode())
+          (!IF || !IB || IF->getOpcode() != IB->getOpcode()))
         return Changed;
       ScalarTy =
           IntegerType::get(ScalarTy->getContext(),

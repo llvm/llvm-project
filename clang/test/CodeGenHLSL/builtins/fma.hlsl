@@ -25,10 +25,15 @@ double3 fma_double3(double3 a, double3 b, double3 c) { return fma(a, b, c); }
 // CHECK: ret <4 x double>
 double4 fma_double4(double4 a, double4 b, double4 c) { return fma(a, b, c); }
 
-// CHECK-LABEL: define {{.*}} <1 x double> @{{.*}}fma_double1x1{{.*}}(
-// CHECK: call reassoc nnan ninf nsz arcp afn <1 x double> @llvm.fma.v1f64(<1 x double>
-// CHECK: ret <1 x double>
-double1x1 fma_double1x1(double1x1 a, double1x1 b, double1x1 c) {
+// No double1x1 fma overload exists, so overload resolution picks the scalar
+// double overload. The double1x1 matrix arguments are truncated to scalar.
+// CHECK-LABEL: define {{.*}} double @{{.*}}fma_double1x1{{.*}}(
+// CHECK: %cast.mtrunc = extractelement <1 x double>
+// CHECK: %cast.mtrunc{{[0-9]+}} = extractelement <1 x double>
+// CHECK: %cast.mtrunc{{[0-9]+}} = extractelement <1 x double>
+// CHECK: call reassoc nnan ninf nsz arcp afn double @llvm.fma.f64(double
+// CHECK: ret double
+double fma_double1x1(double1x1 a, double1x1 b, double1x1 c) {
   return fma(a, b, c);
 }
 

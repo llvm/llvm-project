@@ -248,8 +248,8 @@ func.func @insert_strided_slice_inst_data_with_packing(%arg0: memref<8x64xi8>) {
   %cst_small = arith.constant dense<1> : vector<4x64xi8>
   %cst_large = arith.constant dense<0> : vector<8x64xi8>
   %insert = vector.insert_strided_slice %cst_small, %cst_large {offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
-  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x64xi8> -> !xegpu.tensor_desc<8x64xi8, #xegpu.layout<inst_data = [8, 64]>>
-  xegpu.store_nd %insert, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [8, 64]>}>: vector<8x64xi8>, !xegpu.tensor_desc<8x64xi8, #xegpu.layout<inst_data = [8, 64]>>
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x64xi8> -> !xegpu.tensor_desc<8x64xi8>
+  xegpu.store_nd %insert, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [8, 64]>}>: vector<8x64xi8>, !xegpu.tensor_desc<8x64xi8>
   return
 }
 }
@@ -333,7 +333,7 @@ func.func @vector_shape_cast_expand_and_merge(%arg0: memref<256xf16>, %arg1: mem
 
     %4 = vector.shape_cast %2 : vector<2x4x32xf16> to vector<1x256xf16>
     %5 = vector.shape_cast %4 : vector<1x256xf16> to vector<256xf16>
-    xegpu.store %5, %arg1[%0], %cst <{layout = #xegpu.layout<inst_data = [32] >}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
+    xegpu.store %5, %arg1[%0], %cst <{layout = #xegpu.layout<inst_data = [32]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
     return
   }
 }

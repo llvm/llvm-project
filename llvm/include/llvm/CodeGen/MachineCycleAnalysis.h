@@ -63,14 +63,13 @@ public:
 };
 
 class MachineCycleInfoPrinterPass
-    : public PassInfoMixin<MachineCycleInfoPrinterPass> {
+    : public RequiredPassInfoMixin<MachineCycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MachineCycleInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm
