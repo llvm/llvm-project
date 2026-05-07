@@ -33,7 +33,7 @@ static void printWarningOption(llvm::raw_ostream &os,
       llvm::StringRef optValue = info.getFlagValue();
       if (!optValue.empty())
         os << "=" << optValue;
-      os << ']';
+      os << "]";
     }
   }
 }
