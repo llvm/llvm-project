@@ -154,7 +154,7 @@ New checks
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
 - New :doc:`misc-static-initialization-cycle
-  <clang-tidy/checks/misc/misc-static-initialization-cycle>` check.
+  <clang-tidy/checks/misc/static-initialization-cycle>` check.
 
   Finds cyclical initialization of static variables.
 
