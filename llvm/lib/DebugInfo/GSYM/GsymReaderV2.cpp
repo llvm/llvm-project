@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
 #include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -48,7 +49,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     assert(GDOrErr && "GlobalData::decode() should not fail");
     const GlobalData &GD = *GDOrErr;
 
-    OS << format("%-15s ", getNameForGlobalInfoType(GD.Type).data())
+    OS << formatv("{0,-15} ", getNameForGlobalInfoType(GD.Type).data())
        << HEX64(GD.FileOffset) << "  " << HEX64(GD.FileSize) << "\n";
 
     // Stop printing after the end of list entry.
@@ -87,7 +88,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << " (ADDRESS 64)\n";
   OS << "====== ========================================\n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    OS << format("[%4u] ", I);
+    OS << formatv("[{0,4}] ", I);
     switch (getAddressOffsetSize()) {
     case 1:
       OS << HEX8(getAddrOffsets<uint8_t>()[I]);
@@ -113,7 +114,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     uint64_t RelOffset = I * getAddressInfoOffsetSize();
     uint64_t RelValue =
         AddrInfoOffsetsData.getUnsigned(&RelOffset, getAddressInfoOffsetSize());
-    OS << format("[%4u] ", I) << HEX64(RelValue) << " ("
+    OS << formatv("[{0,4}] ", I) << HEX64(RelValue) << " ("
        << HEX64(*getAddressInfoOffset(I)) << ")\n";
   }
   OS << "\nFiles:\n";
@@ -126,7 +127,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     auto FE = getFile(I);
     if (!FE)
       break;
-    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' ' << HEX32(FE->Base)
+    OS << formatv("[{0,4}] ", I) << HEX32(FE->Dir) << ' ' << HEX32(FE->Base)
        << ' ';
     dump(OS, FE);
     OS << "\n";

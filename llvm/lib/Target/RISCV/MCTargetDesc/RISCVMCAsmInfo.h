@@ -24,7 +24,8 @@ class RISCVMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit RISCVMCAsmInfo(const Triple &TargetTriple);
+  explicit RISCVMCAsmInfo(const Triple &TargetTriple,
+                          const MCTargetOptions &Options);
 
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const override;
@@ -56,7 +57,7 @@ StringRef getSpecifierName(Specifier Kind);
 
 class RISCVMCAsmInfoDarwin : public MCAsmInfoDarwin {
 public:
-  explicit RISCVMCAsmInfoDarwin();
+  explicit RISCVMCAsmInfoDarwin(const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
 };

@@ -40,11 +40,11 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   let summary = "Bit pattern-preserving type conversion.";
 
   let description = [{
-    Result Type must be an OpTypePointer, or a scalar or vector of
-    numerical-type.
+    Result Type must be an OpTypePointer, cooperative matrix, or a scalar or
+    vector of numerical-type.
 
-    Operand must have a type of OpTypePointer, or a scalar or vector of
-    numerical-type. It must be a different type than Result Type.
+    Operand must have a type of OpTypePointer, cooperative matrix, or a scalar
+    or vector of numerical-type. It must be a different type than Result Type.
 
     If either Result Type or Operand is a pointer, the other must be a
     pointer (diverges from the SPIR-V spec).
@@ -71,11 +71,11 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOrPtr:$operand
+    SPIRV_ScalarOrVectorOrPtrOrCoopMatrix:$operand
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOrPtr:$result
+    SPIRV_ScalarOrVectorOrPtrOrCoopMatrix:$result
   );
 
   let assemblyFormat = [{

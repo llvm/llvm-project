@@ -9,6 +9,11 @@ mlir_tablegen(TransformTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_mlir_dialect_tablegen_target(MLIRTransformDialectTypeInterfacesIncGen)
 add_mlir_doc(TransformInterfaces TransformTypeInterfaces Dialects/ -gen-type-interface-docs)
 
+mlir_tablegen(TransformAttrInterfaces.h.inc -gen-attr-interface-decls)
+mlir_tablegen(TransformAttrInterfaces.cpp.inc -gen-attr-interface-defs)
+add_mlir_dialect_tablegen_target(MLIRTransformDialectAttrInterfacesIncGen)
+add_mlir_doc(TransformInterfaces TransformAttrInterfaces Dialects/ -gen-attr-interface-docs)
+
 add_mlir_interface(MatchInterfaces)
 add_dependencies(MLIRMatchInterfacesIncGen MLIRTransformInterfacesIncGen)
 add_dependencies(mlir-headers MLIRMatchInterfacesIncGen)

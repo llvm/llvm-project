@@ -2358,22 +2358,9 @@ void CombinerHelper::applyCombineUnmergeConstant(
   assert((MI.getNumOperands() - 1 == Csts.size()) &&
          "Not enough operands to replace all defs");
   unsigned NumElems = MI.getNumOperands() - 1;
-
-  Register SrcReg = MI.getOperand(NumElems).getReg();
-
-  if (MRI.getType(SrcReg).isFloat()) {
-    APFloat Val(getFltSemanticForLLT(MRI.getType(MI.getOperand(0).getReg())));
-
-    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-      Register DstReg = MI.getOperand(Idx).getReg();
-      Val.convertFromAPInt(Csts[Idx], false, detail::rmTowardZero);
-      Builder.buildFConstant(DstReg, Val);
-    }
-  } else {
-    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-      Register DstReg = MI.getOperand(Idx).getReg();
-      Builder.buildConstant(DstReg, Csts[Idx]);
-    }
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Register DstReg = MI.getOperand(Idx).getReg();
+    Builder.buildConstant(DstReg, Csts[Idx]);
   }
 
   MI.eraseFromParent();
@@ -5333,6 +5320,23 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                                 BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), MRI.getType(Dst),
+                                     MI.getOperand(1).getReg(), MRI);
+  if (Csts.empty())
+    return false;
+
+  MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+    if (Csts.size() == 1)
+      B.buildConstant(Dst, Csts[0]);
+    else
+      B.buildBuildVectorConstant(Dst, Csts);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
                                             APInt &MatchInfo) const {
   Register Op1 = MI.getOperand(1).getReg();
@@ -5445,7 +5449,7 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
   unsigned NarrowWidth = Mask.countr_one();
   if (NarrowWidth == WideTy.getSizeInBits())
     return false;
-  LLT NarrowTy = LLT::scalar(NarrowWidth);
+  LLT NarrowTy = LLT::integer(NarrowWidth);
 
   // Check if adding the zext + truncates could be harmful.
   auto &MF = *MI.getMF();
@@ -5746,7 +5750,8 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   auto One = MIB.buildConstant(Ty, 1);
   auto IsOne = MIB.buildICmp(
       CmpInst::Predicate::ICMP_EQ,
-      Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
+      Ty.isScalar() ? LLT::integer(1) : Ty.changeElementType(LLT::integer(1)),
+      RHS, One);
   auto ret = MIB.buildSelect(Ty, IsOne, LHS, Q);
 
   if (Opcode == TargetOpcode::G_UREM) {
@@ -6033,8 +6038,8 @@ void CombinerHelper::applySDivByPow2(MachineInstr &MI) const {
   Register RHS = SDiv.getReg(2);
   LLT Ty = MRI.getType(Dst);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  LLT CCVT =
-      Ty.isVector() ? LLT::vector(Ty.getElementCount(), 1) : LLT::scalar(1);
+  LLT CCVT = Ty.isVector() ? LLT::vector(Ty.getElementCount(), LLT::integer(1))
+                           : LLT::integer(1);
 
   // Effectively we want to lower G_SDIV %lhs, %rhs, where %rhs is a power of 2,
   // to the following version:
@@ -6909,9 +6914,13 @@ bool CombinerHelper::matchRepeatedFPDivisor(
   if (!MI.getFlag(MachineInstr::MIFlag::FmArcp))
     return false;
 
+  auto IsOne = [this](Register X) {
+    auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
+    return N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0));
+  };
+
   // Skip if current node is a reciprocal/fneg-reciprocal.
-  auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
-  if (N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0)))
+  if (IsOne(X))
     return false;
 
   // Exit early if the target does not want this transform or if there can't
@@ -6928,7 +6937,8 @@ bool CombinerHelper::matchRepeatedFPDivisor(
     if (&U == &MI || U.getParent() != MI.getParent())
       continue;
     if (U.getOpcode() == TargetOpcode::G_FDIV &&
-        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y) {
+        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y &&
+        !IsOne(U.getOperand(1).getReg())) {
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
       if (U.getFlag(MachineInstr::MIFlag::FmArcp)) {

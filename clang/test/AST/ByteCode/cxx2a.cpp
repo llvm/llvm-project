@@ -210,7 +210,8 @@ namespace PureVirtual {
 namespace Dtor {
   constexpr bool pseudo(bool read, bool recreate) {
     using T = bool;
-    bool b = false; // both-note {{lifetime has already ended}}
+    bool b = false; // both-note {{lifetime has already ended}} \
+                    // both-note {{declared here}}
     // This evaluates the store to 'b'...
     (b = true).~T();
     // ... and ends the lifetime of the object.

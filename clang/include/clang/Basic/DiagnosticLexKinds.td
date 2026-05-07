@@ -506,7 +506,7 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<"embedding a %select{#|C++ }0%1 directive "
+def err_embedded_directive : Error<"embedding a %select{|#}0%1 directive "
                                    "within macro arguments is not supported">;
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
@@ -880,6 +880,13 @@ def err_mmap_module_redefinition : Error<
 def note_mmap_prev_definition : Note<"previously defined here">;
 def err_mmap_umbrella_clash : Error<
   "umbrella for module '%0' already covers this directory">;
+def warn_mmap_duplicate_header_ownership : Warning<
+  "header '%0' is owned by multiple modules">,
+  InGroup<DiagGroup<"duplicate-header-ownership">>, DefaultIgnore;
+def note_mmap_header_owned_by : Note<
+  "header owned by module '%0' here">;
+def note_mmap_header_covered_by_umbrella : Note<
+  "header covered by umbrella for module '%0' here">;
 def err_mmap_module_id : Error<
   "expected a module name or '*'">;
 def err_mmap_expected_library_name : Error<
@@ -992,6 +999,8 @@ def err_undeclared_use_of_module : Error<
   "module %0 does not depend on a module exporting '%1'">;
 def err_undeclared_use_of_module_indirect : Error<
   "module %0 does not directly depend on a module exporting '%1', which is part of indirectly-used module %2">;
+def err_undeclared_use_of_module_private : Error<
+  "module %0 does not depend on a module exporting '%1', which is part of module %2, although its private module does">;
 def warn_non_modular_include_in_framework_module : Warning<
   "include of non-modular header inside framework module '%0': '%1'">,
   InGroup<NonModularIncludeInFrameworkModule>, DefaultIgnore;

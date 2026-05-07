@@ -12,12 +12,13 @@ import os
 import re
 import sys
 import subprocess
-from typing import Dict
+from typing import Dict, Tuple
 
 # LLDB modules
 import lldb
 from . import lldbtest_config
 from . import configuration
+from lldbsuite.test.gdbclientutils import escape_binary
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -903,7 +904,7 @@ def run_to_breakpoint_make_target(test, exe_name="a.out", in_cwd=True):
 
 def run_to_breakpoint_do_run(
     test, target, bkpt, launch_info=None, only_one_thread=True, extra_images=None
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
         launch_info = target.GetLaunchInfo()
@@ -986,7 +987,7 @@ def run_to_name_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by name on bkpt_name restricted to bkpt_module.
 
@@ -1039,7 +1040,7 @@ def run_to_source_breakpoint(
     only_one_thread=True,
     extra_images=None,
     has_locations_before_run=True,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by source regex bkpt_pattern.
 
@@ -1073,7 +1074,7 @@ def run_to_line_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by (source_spec, line_number(, column)).
 
@@ -1869,3 +1870,25 @@ def launch_exe_in_apple_simulator(
                 break
 
     return exe_path, matched_strings
+
+
+# Binary escapes `packet_str`, sends it to the remote and returns the reply.
+def send_packet_get_reply(test, packet_str):
+    packet_str = escape_binary(packet_str)
+    test.runCmd(f"proc plugin packet send '{packet_str}'", check=False)
+    # The output is of the form:
+    #  packet: <packet_str>
+    #  response: <response>
+    output = test.res.GetOutput()
+    reply = output.split("\n")
+    packet = reply[0].strip()
+    response = reply[1].strip()
+
+    test.assertTrue(packet.startswith("packet: "), output)
+    test.assertTrue(response.startswith("response: "), output)
+    return response[len("response: ") :].strip()
+
+
+def get_qsupported_capabilities(test):
+    reply = send_packet_get_reply(test, "qSupported")
+    return reply.strip().split(";")
