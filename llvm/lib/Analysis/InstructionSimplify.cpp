@@ -3874,7 +3874,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
 
   const APInt *C;
   if (match(RHS, m_APIntAllowPoison(C)) &&
-      ICmpInst::isNonStrictPredicate(Pred) && !C->isZero()) {
+      ICmpInst::isNonStrictPredicate(Pred)) {
     if (auto Flipped = getFlippedStrictnessPredicateAndConstant(
             Pred, ConstantInt::get(LHS->getType(), *C))) {
       Pred = Flipped->first;
