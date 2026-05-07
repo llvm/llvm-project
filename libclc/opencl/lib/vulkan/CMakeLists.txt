@@ -1,8 +1,8 @@
 set(_gen ${CMAKE_CURRENT_SOURCE_DIR}/../generic)
 
-# CLSPV uses a curated subset of generic builtins plus its own overrides,
+# Vulkan uses a curated subset of generic builtins plus its own overrides,
 # so this list is self-contained rather than merged with the generic set.
-libclc_configure_source_list(_clspv_sources
+libclc_configure_source_list(_vulkan_sources
   ${CMAKE_CURRENT_SOURCE_DIR}
   conversion/convert_float2float.cl
   conversion/convert_float2int.cl
@@ -85,4 +85,4 @@ libclc_configure_source_list(_gen_sources
   math/tgamma.cl
 )
 
-set(OPENCL_CLSPV_SOURCES ${_clspv_sources} ${_gen_sources} PARENT_SCOPE)
+set(OPENCL_VULKAN_SOURCES ${_vulkan_sources} ${_gen_sources} PARENT_SCOPE)

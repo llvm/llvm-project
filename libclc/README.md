@@ -50,12 +50,11 @@ cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release
   -DLLVM_RUNTIME_TARGETS="nvptx64-nvidia-cuda"
 ```
 
-#### Configure for CLSPV targets
+#### Configure for Vulkan (clspv) targets
 ```
 cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
-  -DRUNTIMES_clspv--_LLVM_ENABLE_RUNTIMES=libclc \
-  -DRUNTIMES_clspv64--_LLVM_ENABLE_RUNTIMES=libclc \
-  -DLLVM_RUNTIME_TARGETS="clspv--;clspv64--"
+  -DRUNTIMES_spirv64-unknown-vulkan_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="spirv64-unknown-vulkan"
 ```
 
 #### Configure for SPIR-V targets
