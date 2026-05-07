@@ -122,7 +122,10 @@ define i64 @ctpop_x_and_negx_nz(i64 %x) {
 ; issue #128152
 define i1 @ctpop_assume_eq_1_extra_use(i32 %x) {
 ; CHECK-LABEL: @ctpop_assume_eq_1_extra_use(
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[CTPOP]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
