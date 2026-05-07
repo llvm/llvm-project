@@ -298,7 +298,8 @@ typedef __char32_t char32_t;
         defined(__APPLE__) ||                                                                                          \
         defined(__MVS__) ||                                                                                            \
         defined(_AIX) ||                                                                                               \
-        defined(__EMSCRIPTEN__)
+        defined(__EMSCRIPTEN__) ||                                                                                     \
+        defined(__HAIKU__)
 // clang-format on
 #      undef _LIBCPP_HAS_THREAD_API_PTHREAD
 #      define _LIBCPP_HAS_THREAD_API_PTHREAD 1
