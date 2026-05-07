@@ -57159,7 +57159,7 @@ static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
   for (;;) {
     unsigned Op = V.getOpcode();
     if (Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
-        Op == ISD::SIGN_EXTEND || Op == ISD::ANY_EXTEND) {
+        Op == ISD::ANY_EXTEND) {
       V = V.getOperand(0);
       LowBits = LowBits.zextOrTrunc(V.getScalarValueSizeInBits());
       continue;
