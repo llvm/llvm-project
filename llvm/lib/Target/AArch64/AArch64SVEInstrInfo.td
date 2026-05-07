@@ -4845,8 +4845,8 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm UABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b1, "uabal", int_aarch64_sve_uabal>;
 
   // SVE2 integer dot product
-  def SDOT_ZZZ_BtoH : sve_intx_dot<0b01, 0b00000, 0b0, "sdot", ZPR16, ZPR8>;
-  def UDOT_ZZZ_BtoH : sve_intx_dot<0b01, 0b00000, 0b1, "udot", ZPR16, ZPR8>;
+  defm SDOT_ZZZ_BtoH : sve2p3_two_way_dot_vv<"sdot", 0b0, int_aarch64_sve_sdot_x2>;
+  defm UDOT_ZZZ_BtoH : sve2p3_two_way_dot_vv<"udot", 0b1, int_aarch64_sve_udot_x2>;
 
   def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
             (UDOT_ZZZ_BtoH $Acc, $MulLHS, $MulRHS)>;
@@ -4854,8 +4854,8 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
             (SDOT_ZZZ_BtoH $Acc, $MulLHS, $MulRHS)>;
 
   // SVE2 integer indexed dot product
-  def SDOT_ZZZI_BtoH : sve_intx_dot_by_indexed_elem_x<0b0, "sdot">;
-  def UDOT_ZZZI_BtoH : sve_intx_dot_by_indexed_elem_x<0b1, "udot">;
+  defm SDOT_ZZZI_BtoH : sve2p3_two_way_dot_vvi<"sdot", 0b0, int_aarch64_sve_sdot_lane_x2>;
+  defm UDOT_ZZZI_BtoH : sve2p3_two_way_dot_vvi<"udot", 0b1, int_aarch64_sve_udot_lane_x2>;
 
   // SVE2 fp convert, narrow and interleave to integer, rounding toward zero
   defm FCVTZSN_Z2Z : sve2_fp_to_int_downcvt<"fcvtzsn", 0b0>;

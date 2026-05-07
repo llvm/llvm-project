@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class EarlyIfConverterPass : public PassInfoMixin<EarlyIfConverterPass> {
+class EarlyIfConverterPass
+    : public OptionalPassInfoMixin<EarlyIfConverterPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
