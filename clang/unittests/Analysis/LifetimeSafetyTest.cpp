@@ -209,15 +209,12 @@ public:
       llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
       llvm::StringRef StartOriginVar, llvm::StringRef EndLoanVar) {
     const CFG *CurrCFG = Runner.getAnalysisContext().getCFG();
-    AssignmentQueryContext Context = {Runner.getAnalysis().getLoanPropagation(),
-                                      Runner.getAnalysis().getFactManager()};
-
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
     for (const CFGBlock *CurrCFGBlock : *CurrCFG) {
-      for (LoanID &LID : EndLoanIDs) {
-        trackAssignmentHistory(Context, AssignmentList, CurrCFGBlock,
+      for (const LoanID &LID : EndLoanIDs) {
+        trackAssignmentHistory(Runner.getAnalysis().getFactManager(), Runner.getAnalysis().getLoanPropagation(), AssignmentList, CurrCFGBlock,
                                *StartOriginID, LID);
         if (!AssignmentList.empty())
           return;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the LifetimeChecker, which detects use-after-free
-// errors by checking if live origins hold loans that have expired.
+// This file defines functions for tracing assignment history,
+// as well as future data structures or other helper functions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,17 +20,14 @@
 namespace clang::lifetimes::internal {
 using AssignmentPair = std::pair<DestOriginEntity, SrcOriginEntity>;
 
-struct AssignmentQueryContext {
-  const LoanPropagationAnalysis &LoanPropagation;
-  FactManager &FactMgr;
-};
-
-/// Get assignment history when an error is detected.
+/// Traces the provenance of a pointer to provide contextual notes for
+/// lifetime-related diagnostics.
 ///
 /// To help user understand the data flow, we track where the problematic
 /// address originated.
 void trackAssignmentHistory(
-    const AssignmentQueryContext &Context,
+    const FactManager &FactMgr,
+    const LoanPropagationAnalysis &LoanPropagation,
     llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
     const CFGBlock *StartBlock, const OriginID StartOID,
     const LoanID EndLoanID);

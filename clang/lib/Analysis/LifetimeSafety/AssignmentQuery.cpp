@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the LifetimeChecker, which detects use-after-free
-// errors by checking if live origins hold loans that have expired.
+// This file implements trackAssignmentHistory.
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,12 +63,12 @@ DestOriginEntity getDestEntity(const UseFact *UF, const OriginID &OID) {
   return nullptr;
 }
 
-DestOriginEntity getDestEntity(const AssignmentQueryContext &Context,
+DestOriginEntity getDestEntity(const FactManager &FactMgr,
                                const OriginFlowFact *OFF) {
   const Origin &DestOrigin =
-      Context.FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
+      FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
   const Origin &SrcOrigin =
-      Context.FactMgr.getOriginMgr().getOrigin(OFF->getSrcOriginID());
+      FactMgr.getOriginMgr().getOrigin(OFF->getSrcOriginID());
 
   if (const ValueDecl *DestDecl = DestOrigin.getDecl();
       DestDecl && DestDecl->getLocation().isValid()) {
@@ -94,15 +93,15 @@ DestOriginEntity getDestEntity(const AssignmentQueryContext &Context,
   return nullptr;
 }
 
-SrcOriginEntity getSrcEntity(const AssignmentQueryContext &Context,
+SrcOriginEntity getSrcEntity(const FactManager &FactMgr,
                              const OriginFlowFact *OFF) {
   const Origin &DestOrigin =
-      Context.FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
+      FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
 
   const Expr *SExpr = getRootSrcExpr(DestOrigin.getExpr());
   if (!SExpr) {
     const Origin &SrcOrigin =
-        Context.FactMgr.getOriginMgr().getOrigin(OFF->getSrcOriginID());
+        FactMgr.getOriginMgr().getOrigin(OFF->getSrcOriginID());
     SExpr = getRootSrcExpr(SrcOrigin.getExpr());
   }
 
@@ -110,29 +109,30 @@ SrcOriginEntity getSrcEntity(const AssignmentQueryContext &Context,
 }
 
 bool trackAssignmentHistoryCore(
-    const AssignmentQueryContext &Context,
+    const FactManager &FactMgr,
+    const LoanPropagationAnalysis &LoanPropagation,
     llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
     const CFGBlock *Block, OriginID *TargetOID, const LoanID EndLoanID) {
   DestOriginEntity CurrDestEntity = nullptr;
   bool NeedSearchOriginDestWithoutLoan = false;
   std::optional<OriginID> CurrOriginID = std::nullopt;
-  llvm::ArrayRef<const Fact *> Facts = Context.FactMgr.getFacts(Block);
+  llvm::ArrayRef<const Fact *> Facts = FactMgr.getFacts(Block);
 
   const auto TryInsertAssignmentList = [&](const OriginFlowFact *OFF) {
     if (NeedSearchOriginDestWithoutLoan) {
       if (const MemberExpr *DestMemberExpr =
               dyn_cast_or_null<const MemberExpr *>(
-                  getDestEntity(Context, OFF))) {
+                  getDestEntity(FactMgr, OFF))) {
         CurrDestEntity = DestMemberExpr;
         NeedSearchOriginDestWithoutLoan = false;
       }
     }
 
     if (OFF->getDestOriginID() == *TargetOID &&
-        Context.LoanPropagation.getLoans(OFF->getSrcOriginID(), OFF)
+        LoanPropagation.getLoans(OFF->getSrcOriginID(), OFF)
             .contains(EndLoanID)) {
       if (!CurrDestEntity) {
-        DestOriginEntity DestEntity = getDestEntity(Context, OFF);
+        DestOriginEntity DestEntity = getDestEntity(FactMgr, OFF);
         auto *DestValueDecl = dyn_cast_or_null<const ValueDecl *>(DestEntity);
         if (DestValueDecl)
           CurrOriginID = *TargetOID;
@@ -142,7 +142,7 @@ bool trackAssignmentHistoryCore(
         else
           CurrDestEntity = DestEntity;
       } else {
-        SrcOriginEntity CurrSrcEntity = getSrcEntity(Context, OFF);
+        SrcOriginEntity CurrSrcEntity = getSrcEntity(FactMgr, OFF);
         if (CurrSrcEntity) {
           AssignmentList.push_back({CurrDestEntity, CurrSrcEntity});
           CurrDestEntity = nullptr;
@@ -175,10 +175,11 @@ bool trackAssignmentHistoryCore(
 namespace clang::lifetimes::internal {
 
 void trackAssignmentHistory(
-    const AssignmentQueryContext &Context,
+    const FactManager &FactMgr,
+    const LoanPropagationAnalysis &LoanPropagation,
     llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
     const CFGBlock *StartBlock, OriginID StartOID, const LoanID EndLoanID) {
-  if (!trackAssignmentHistoryCore(Context, AssignmentList, StartBlock,
+  if (!trackAssignmentHistoryCore(FactMgr, LoanPropagation, AssignmentList, StartBlock,
                                   &StartOID, EndLoanID))
     llvm::errs() << "Assignment History Tracking may have failed\n";
   std::reverse(AssignmentList.begin(), AssignmentList.end());
