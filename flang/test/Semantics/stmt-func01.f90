@@ -98,3 +98,9 @@ subroutine s5
   !ERROR: 'k' is already declared in this scoping unit
   k() = 0.0
 end
+
+subroutine s6(b)
+  !ERROR: Dummy argument 'b' may not be used as a statement function
+  !ERROR: 'b' is not a callable procedure
+  b(c) = 0
+end
