@@ -174,8 +174,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         LLVM_PRETTY_FUNCTION,
         llvm::Twine(
             "StackFrame array size (" + llvm::Twine(arr_size) +
-            llvm::Twine(
-                ") is greater than maximum authorized for a StackFrameList."))
+            ") is greater than maximum authorized for a StackFrameList.")
             .str(),
         error, LLDBLog::Thread);
 
@@ -265,8 +264,10 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       if (!frame_from_script_obj_or_err) {
         return ScriptedInterface::ErrorWithMessage<bool>(
             LLVM_PRETTY_FUNCTION,
-            llvm::Twine("Couldn't add artificial frame (" + llvm::Twine(idx) +
-                        llvm::Twine(") to ScriptedThread StackFrameList."))
+            llvm::Twine(
+                "Couldn't add artificial frame (" + llvm::Twine(idx) +
+                llvm::Twine(") to ScriptedThread StackFrameList: ") +
+                llvm::toString(frame_from_script_obj_or_err.takeError()))
                 .str(),
             error, LLDBLog::Thread);
       } else {

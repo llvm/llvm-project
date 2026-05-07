@@ -29,6 +29,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
@@ -503,8 +504,13 @@ MicrosoftMangleContextImpl::MicrosoftMangleContextImpl(ASTContext &Context,
   // which are something like "?A0x01234567@".
   SourceManager &SM = Context.getSourceManager();
   if (OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID())) {
+    SmallString<256> Path(FE->getName());
+    // Do a path substitution from the MacroPrefixMap if needed.
+    clang::Preprocessor::processPathForFileMacro(Path, Context.getLangOpts(),
+                                                 Context.getTargetInfo());
+
     // Truncate the hash so we get 8 characters of hexadecimal.
-    uint32_t TruncatedHash = uint32_t(xxh3_64bits(FE->getName()));
+    uint32_t TruncatedHash = uint32_t(xxh3_64bits(Path));
     AnonymousNamespaceHash = llvm::utohexstr(TruncatedHash);
   } else {
     // If we don't have a path to the main file, we'll just use 0.

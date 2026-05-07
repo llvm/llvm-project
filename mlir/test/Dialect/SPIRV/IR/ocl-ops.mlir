@@ -169,6 +169,56 @@ func.func @sabs(%arg0 : i32) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.clz
+//===----------------------------------------------------------------------===//
+
+func.func @clz(%arg0 : i32) -> () {
+  // CHECK: spirv.CL.clz {{%.*}} : i32
+  %2 = spirv.CL.clz %arg0 : i32
+  return
+}
+
+func.func @clzvec(%arg0 : vector<3xi16>) -> () {
+  // CHECK: spirv.CL.clz {{%.*}} : vector<3xi16>
+  %2 = spirv.CL.clz %arg0 : vector<3xi16>
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : f32) -> () {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values}}
+  %2 = spirv.CL.clz %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : vector<5xi32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  %2 = spirv.CL.clz %arg0 : vector<5xi32>
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : i32, %arg1 : i32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.clz %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.clz %arg0 :
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.fma
 //===----------------------------------------------------------------------===//
 
