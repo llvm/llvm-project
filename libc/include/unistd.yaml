@@ -149,6 +149,13 @@ functions:
       - type: int
       - type: uid_t
       - type: gid_t
+  - name: fpathconf
+    standards:
+      - POSIX
+    return_type: long
+    arguments:
+      - type: int
+      - type: int
   - name: fork
     standards:
       - POSIX
@@ -277,6 +284,13 @@ functions:
     arguments:
       - type: int
       - type: off_t
+      - type: int
+  - name: pathconf
+    standards:
+      - POSIX
+    return_type: long
+    arguments:
+      - type: const char *
       - type: int
   - name: pipe
     standards:

@@ -675,6 +675,15 @@ func.func @transpose_load(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16
   func.return %0 : vector<4xf16>
 }
 
+// CHECK-LABEL: func @global_transpose_load
+func.func @global_transpose_load(%i : index, %j : index,
+    %mem : memref<128x256xf16, #gpu.address_space<global>>) -> vector<8xf16> {
+  // CHECK: amdgpu.global_transpose_load
+  %0 = amdgpu.global_transpose_load %mem[%i, %j]
+         : memref<128x256xf16, #gpu.address_space<global>> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
 // CHECK-LABEL: func @gather_to_lds
 func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %mem2 : memref<32x32xf16>, %smem1 : memref<32xf16, #gpu.address_space<workgroup>>, %smem2 : memref<32x32xf16, #gpu.address_space<workgroup>>, %smem3 : memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>) {
   // CHECK: amdgpu.gather_to_lds async %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
