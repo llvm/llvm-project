@@ -3467,10 +3467,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
   // We want to exclude the tail folding case, as we don't need to drop flags
   // for operations computing the first lane in this case: the first lane of the
   // header mask must always be true.
-  VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
-  auto IsNotHeaderMask = [HeaderMask](VPValue *Mask) {
-    return Mask && !match(Mask, m_CombineOr(m_Specific(HeaderMask),
-                                            m_Reverse(m_Specific(HeaderMask))));
+  auto IsNotHeaderMask = [&Plan](VPValue *Mask) {
+    return Mask && !vputils::isHeaderMask(Mask, Plan);
   };
 
   // Traverse all the recipes in the VPlan and collect the poison-generating
