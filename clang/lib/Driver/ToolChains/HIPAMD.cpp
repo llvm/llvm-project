@@ -80,7 +80,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // Add features to mattr such as cumode
   std::string MAttrString = "-plugin-opt=-mattr=";
   for (auto OneFeature : unifyTargetFeatures(Features)) {
-    MAttrString.append(Args.MakeArgString(OneFeature));
+    MAttrString.append(Args.MakeArgStringRef(OneFeature));
     if (OneFeature != Features.back())
       MAttrString.append(",");
   }
@@ -91,10 +91,9 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // Since AMDGPU backend currently does not support ISA-level linking, all
   // called functions need to be imported.
   if (IsThinLTO) {
-    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
-    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
-    LldArgs.push_back(Args.MakeArgString(
-        "-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
+    LldArgs.push_back("-plugin-opt=-force-import-all");
+    LldArgs.push_back("-plugin-opt=-avail-extern-to-local");
+    LldArgs.push_back("-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3");
   }
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
@@ -126,7 +125,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
       LldArgs.push_back(
           Args.MakeArgString(Twine("-plugin-opt=") + SplitArg.second));
     } else {
-      LldArgs.push_back(Args.MakeArgString(ArgVal));
+      LldArgs.push_back(Args.MakeArgStringRef(ArgVal));
     }
     Arg->claim();
   }
@@ -143,7 +142,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   LldArgs.push_back("--no-whole-archive");
 
-  const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
+  const char *Lld = Args.MakeArgStringRef(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Lld, LldArgs, Inputs, Output));
 }
@@ -175,11 +174,10 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     // compiled to SPIR-V.
 
     llvm::opt::ArgStringList CmdArgs;
-    const char *Triple =
-        C.getArgs().MakeArgString("-triple=spirv64-amd-amdhsa");
 
-    CmdArgs.append({"-cc1", Triple, "-emit-obj", "-disable-llvm-optzns",
-                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
+    CmdArgs.append({"-cc1", "-triple=spirv64-amd-amdhsa", "-emit-obj",
+                    "-disable-llvm-optzns", LinkedBCFile.getFilename(), "-o",
+                    Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
     const char *Exec = Driver.getClangProgramPath();
@@ -254,9 +252,8 @@ void HIPAMDToolChain::addClangTargetOptions(
   StringRef MaxThreadsPerBlock =
       DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
   if (!MaxThreadsPerBlock.empty()) {
-    std::string ArgStr =
-        (Twine("--gpu-max-threads-per-block=") + MaxThreadsPerBlock).str();
-    CC1Args.push_back(DriverArgs.MakeArgStringRef(ArgStr));
+    CC1Args.push_back(DriverArgs.MakeArgString(
+        Twine("--gpu-max-threads-per-block=") + MaxThreadsPerBlock));
   }
 
   // Default to "hidden" visibility, as object level linking will not be
@@ -287,7 +284,7 @@ void HIPAMDToolChain::addClangTargetOptions(
   for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
-    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
+    CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
   }
 }
 
@@ -389,7 +386,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
   for (StringRef Path : RocmInstallation->getRocmDeviceLibPathArg())
-    LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
+    LibraryPaths.push_back(DriverArgs.MakeArgStringRef(Path));
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 
