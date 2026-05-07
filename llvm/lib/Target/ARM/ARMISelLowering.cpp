@@ -17748,13 +17748,16 @@ SDValue ARMTargetLowering::PerformIntrinsicCombine(SDNode *N,
 
 bool ARMTargetLowering::hasAndNot(SDValue Y) const {
   EVT VT = Y.getValueType();
-  if (!VT.isVector())
-    return hasAndNotCompare(Y);
-  if (Subtarget->hasMVEIntegerOps())
-    return VT.is128BitVector();
-  if (Subtarget->hasNEON())
-    return VT.is64BitVector() || VT.is128BitVector();
-  return false;
+
+  if (VT.isVector()) {
+    if (Subtarget->hasMVEIntegerOps())
+      return VT.getFixedSizeInBits() >= 128;
+    if (Subtarget->hasNEON())
+      return VT.getFixedSizeInBits() >= 64;
+  }
+
+  // We can use bic for any scalar.
+  return true;
 }
 
 /// PerformShiftCombine - Checks for immediate versions of vector shifts and
