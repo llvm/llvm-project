@@ -3416,17 +3416,15 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   bool isFunction = isa<FunctionDecl>(d);
 
   // Get the linkage and the type of the alias.
-  cir::GlobalLinkageKind linkage;
   mlir::Type declTy;
+  cir::GlobalLinkageKind linkage;
   if (isFunction) {
     declTy = getTypes().getFunctionType(gd);
     linkage = getFunctionLinkage(gd);
   } else {
     declTy = getTypes().convertTypeForMem(d->getType());
-    if (const auto *vd = dyn_cast<VarDecl>(d))
-      linkage = getCIRLinkageVarDefinition(vd);
-    else
-      linkage = getFunctionLinkage(gd);
+    const auto *vd = cast<VarDecl>(d);
+    linkage = getCIRLinkageVarDefinition(vd);
   }
 
   // Aliases that target weak symbols must themselves be marked weak.
