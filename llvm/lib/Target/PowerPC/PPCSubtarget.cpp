@@ -146,7 +146,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
                        false);
 
   if (NoInlineGlue && !getTargetTriple().isOSAIX())
-    report_fatal_error("no-inline-glue feature is only supported on AIX\n",
+    report_fatal_error("use-ptrgl-helper feature is only supported on AIX\n",
                        false);
 }
 

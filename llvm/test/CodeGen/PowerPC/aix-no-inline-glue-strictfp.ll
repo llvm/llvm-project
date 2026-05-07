@@ -1,8 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
-; RUN:   -stop-after=finalize-isel -mattr=+no-inline-glue < %s | FileCheck %s
+; RUN:   -stop-after=finalize-isel -mattr=+use-ptrgl-helper < %s | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:   -stop-after=finalize-isel -mattr=+no-inline-glue < %s | \
+; RUN:   -stop-after=finalize-isel -mattr=+use-ptrgl-helper < %s | \
 ; RUN:  FileCheck --check-prefix=CHECK64 %s
 
 define i32 @has_strictfp(ptr noundef readonly captures(none) %fp) #0 {

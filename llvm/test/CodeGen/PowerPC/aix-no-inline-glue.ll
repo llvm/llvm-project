@@ -1,21 +1,21 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
-; RUN:   -mattr=+no-inline-glue < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
+; RUN:   -mattr=+use-ptrgl-helper < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:   -mattr=+no-inline-glue < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
+; RUN:   -mattr=+use-ptrgl-helper < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
 
 ; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
-; RUN:   -mtriple powerpc-ibm-aix-xcoff -mattr=+no-inline-glue < %s | \
+; RUN:   -mtriple powerpc-ibm-aix-xcoff -mattr=+use-ptrgl-helper < %s | \
 ; RUN:   FileCheck --check-prefix=MIR32 %s
 
 ; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
-; RUN:   -mtriple powerpc64-ibm-aix-xcoff -mattr=+no-inline-glue < %s | \
+; RUN:   -mtriple powerpc64-ibm-aix-xcoff -mattr=+use-ptrgl-helper < %s | \
 ; RUN:   FileCheck --check-prefix=MIR64 %s
 
 ; RUN: not llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-unknown-linux \
-; RUN:   -mattr=+no-inline-glue 2>&1 < %s | FileCheck --check-prefix=ERROR %s
+; RUN:   -mattr=+use-ptrgl-helper 2>&1 < %s | FileCheck --check-prefix=ERROR %s
 
-; ERROR: no-inline-glue feature is only supported on AIX
+; ERROR: use-ptrgl-helper feature is only supported on AIX
 
 @a = dso_local global i32 55, align 4
 @d = dso_local global double 3.141590e+00, align 8
