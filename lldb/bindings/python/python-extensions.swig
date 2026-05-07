@@ -282,6 +282,60 @@ def command(command_name=None, doc=None):
 
     return callable
 
+
+def _add_formatter(kind: str, type_name: str, options: dict):
+    import shlex
+
+    type_name = shlex.quote(type_name)
+
+    flag_list = []
+    # Convert `option=True` to "--option", all other cases convert to "--option value".
+    for key, value in options.values():
+        flag = key.replace("_", "-")
+        if value is True:
+            flag_list.append(f"--{flag}")
+        else:
+            flag_list.extend((f"--{flag}", value))
+
+    def decorator(obj):
+        qualified = f"{obj.__module__}.{obj.__qualname__}"
+        if isinstance(obj, type):
+            flag_list.extend(("--python-class", qualified))
+        elif callable(obj):
+            flag_list.extend(("--python-function", qualified))
+
+        result = SBCommandReturnObject()
+        flags = " ".join(flag_list)
+        interp = debugger.GetCommandInterpreter()
+        interp.HandleCommand(f"type {kind} add {flags} {type_name}", result)
+        if not result.Succeeded():
+            raise RuntimeError(result.GetError())
+        return obj
+
+    return decorator
+
+
+def summary(type_name, **kwargs):
+    """A decorator that registers a function as an LLDB type summary provider.
+
+    @lldb.summary("MyType")
+    def MyTypeSummary(valobj, _):
+        return "summary string"
+    """
+    return _add_formatter("summary", type_name, kwargs)
+
+
+def synthetic(type_name, **kwargs):
+    """A decorator that registers a class as an LLDB synthetic child provider.
+
+    @lldb.synthetic("MyType")
+    class MyTypeSynthetic:
+        def __init__(self, valobj, _):
+            ...
+    """
+    return _add_formatter("synthetic", type_name, kwargs)
+
+
 class declaration(object):
     '''A class that represents a source declaration location with file, line and column.'''
     def __init__(self, file, line, col):
@@ -608,45 +662,5 @@ def is_numeric_type(basic_type):
 %}
 
 %pythoncode %{
-
-def _type_spec(type_name, regex):
-    type_spec = f"'{type_name}'"
-    if regex:
-        type_spec = f"-x {type_spec}"
-    return type_spec
-
-def summary(type_name, regex=False):
-    """A decorator that registers a function as an LLDB type summary provider.
-
-    @lldb.summary("MyType")
-    def MyTypeSummary(valobj, internal_dict):
-        return "summary string"
-    """
-    type_spec = _type_spec(type_name, regex)
-    def decorator(func):
-        qualified = f"{func.__module__}.{func.__qualname__}"
-        func._lldb_register_command = f"type summary add -F {qualified} {type_spec}"
-        return func
-    return decorator
-
-def synthetic(type_name, regex=False):
-    """A decorator that registers a class as an LLDB synthetic child provider.
-
-    @lldb.synthetic("MyType")
-    class MyTypeSynthetic:
-        def __init__(self, valobj, internal_dict):
-            ...
-    """
-    type_spec = _type_spec(type_name, regex)
-    def decorator(cls):
-        qualified = f"{cls.__module__}.{cls.__qualname__}"
-        cls._lldb_register_command = f"type synthetic add -l {qualified} {type_spec}"
-        return cls
-    return decorator
-
-def _register_lldb_decorators(module, debugger):
-    for obj in vars(module).values():
-        if cmd := getattr(obj, '_lldb_register_command', None):
-            debugger.HandleCommand(cmd)
 
 %}
