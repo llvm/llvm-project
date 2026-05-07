@@ -130,8 +130,8 @@ int main()
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[MAX1_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[MIN1_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
-// CHECK-NEXT:    store float 0xC7EFFFFFE0000000, ptr [[MAX12_ASCAST]], align 4
-// CHECK-NEXT:    store float 0x47EFFFFFE0000000, ptr [[MIN13_ASCAST]], align 4
+// CHECK-NEXT:    store float f0xFF7FFFFF, ptr [[MAX12_ASCAST]], align 4
+// CHECK-NEXT:    store float f0x7F7FFFFF, ptr [[MIN13_ASCAST]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 999, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
@@ -305,8 +305,8 @@ int main()
 // CHECK-NEXT:    store i32 [[CONV1]], ptr [[DOTOMP_UB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST_ASCAST]], align 4
-// CHECK-NEXT:    store float 0xC7EFFFFFE0000000, ptr [[MAX12_ASCAST]], align 4
-// CHECK-NEXT:    store float 0x47EFFFFFE0000000, ptr [[MIN13_ASCAST]], align 4
+// CHECK-NEXT:    store float f0xFF7FFFFF, ptr [[MAX12_ASCAST]], align 4
+// CHECK-NEXT:    store float f0x7F7FFFFF, ptr [[MIN13_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 // CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr addrspacecast (ptr addrspace(1) @[[GLOB3:[0-9]+]] to ptr), i32 [[TMP6]], i32 33, ptr [[DOTOMP_IS_LAST_ASCAST]], ptr [[DOTOMP_LB_ASCAST]], ptr [[DOTOMP_UB_ASCAST]], ptr [[DOTOMP_STRIDE_ASCAST]], i32 1, i32 1)

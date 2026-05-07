@@ -15,7 +15,8 @@
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
     !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__) &&      \
-    !defined(__wasi__) && !defined(__NVPTX__) && !defined(__AMDGPU__)
+    !defined(__wasi__) && !defined(__NVPTX__) && !defined(__AMDGPU__) &&    \
+    !defined(__SPIRV__)
 #  error "This operating system is not supported"
 #endif
 
@@ -312,6 +313,12 @@
 #  define SANITIZER_NVPTX 1
 #else
 #  define SANITIZER_NVPTX 0
+#endif
+
+#if defined(__SPIRV__)
+#  define SANITIZER_SPIRV 1
+#else
+#  define SANITIZER_SPIRV 0
 #endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.

@@ -126,8 +126,8 @@ int main()
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[MIN1_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM1_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
-// CHECK-NEXT:    store float 0xC7EFFFFFE0000000, ptr [[MAX11_ASCAST]], align 4
-// CHECK-NEXT:    store float 0x47EFFFFFE0000000, ptr [[MIN12_ASCAST]], align 4
+// CHECK-NEXT:    store float f0xFF7FFFFF, ptr [[MAX11_ASCAST]], align 4
+// CHECK-NEXT:    store float f0x7F7FFFFF, ptr [[MIN12_ASCAST]], align 4
 // CHECK-NEXT:    store float 0.000000e+00, ptr [[SUM13_ASCAST]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 999, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
@@ -316,8 +316,8 @@ int main()
 // CHECK-NEXT:    store i32 [[CONV1]], ptr [[DOTOMP_UB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST_ASCAST]], align 4
-// CHECK-NEXT:    store float 0xC7EFFFFFE0000000, ptr [[MAX12_ASCAST]], align 4
-// CHECK-NEXT:    store float 0x47EFFFFFE0000000, ptr [[MIN13_ASCAST]], align 4
+// CHECK-NEXT:    store float f0xFF7FFFFF, ptr [[MAX12_ASCAST]], align 4
+// CHECK-NEXT:    store float f0x7F7FFFFF, ptr [[MIN13_ASCAST]], align 4
 // CHECK-NEXT:    store float 0.000000e+00, ptr [[SUM14_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4

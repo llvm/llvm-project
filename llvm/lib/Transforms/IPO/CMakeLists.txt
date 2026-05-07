@@ -29,6 +29,7 @@ add_llvm_component_library(LLVMipo
   Inliner.cpp
   Instrumentor.cpp
   InstrumentorConfigFile.cpp
+  InstrumentorStubPrinter.cpp
   Internalize.cpp
   LoopExtractor.cpp
   LowerTypeTests.cpp

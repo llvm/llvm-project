@@ -367,11 +367,14 @@ namespace llvm {
 
     bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
         SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, unsigned Depth) const override;
+        UndefPoisonKind Kind, unsigned Depth) const override;
 
-    bool canCreateUndefOrPoisonForTargetNode(
-        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
+    bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             UndefPoisonKind Kind,
+                                             bool ConsiderFlags,
+                                             unsigned Depth) const override;
 
     bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
                                    APInt &UndefElts, const SelectionDAG &DAG,

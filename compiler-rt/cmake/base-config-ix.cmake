@@ -290,8 +290,10 @@ macro(test_targets)
         test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
-      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto"
-                       "-fconvergent-functions" "-c")
+      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto" "-c"
+                               "-fconvergent-functions")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "spirv64")
+      test_target_arch(spirv64 "" "--spirv64-unknown-unknown" "-nogpulib" "-flto" "-c")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")
