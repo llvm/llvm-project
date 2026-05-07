@@ -2001,23 +2001,31 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 
 // This is a shortcut for integer division because we have fast i32<->f32
 // conversions, and fast f32 reciprocal instructions. The fractional part of a
-// float is enough to accurately represent up to a 24-bit signed integer.
+// float is enough to accurately represent up to a 24-bit integer.
 SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
                                             bool Sign) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
+  assert(VT == MVT::i32 && "LowerDIVREM24 expects an i32");
+
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   MVT IntVT = MVT::i32;
   MVT FltVT = MVT::f32;
 
   unsigned LHSSignBits = DAG.ComputeNumSignBits(LHS);
-  if (LHSSignBits < 9)
-    return SDValue();
-
   unsigned RHSSignBits = DAG.ComputeNumSignBits(RHS);
-  if (RHSSignBits < 9)
-    return SDValue();
+
+  if (Sign) {
+    if (LHSSignBits < 9 || RHSSignBits < 9)
+      return SDValue();
+  } else {
+    APInt MustBeZero = APInt::getHighBitsSet(32, 8);
+    if (!DAG.MaskedValueIsZero(LHS, MustBeZero) ||
+        !DAG.MaskedValueIsZero(RHS, MustBeZero)) {
+      return SDValue();
+    }
+  }
 
   unsigned BitSize = VT.getSizeInBits();
   unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
