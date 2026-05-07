@@ -856,32 +856,8 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
     attrs["cir.target-features"] = llvm::join(features, ",");
     addedAttr = true;
   }
-  // Add metadata for AArch64 Function Multi Versioning. An empty string value
-  // for "cir.fmv-features" represents the default version (matches OGCG's
-  // value-less LLVM attribute).
-  if (getTarget().getTriple().isAArch64()) {
-    llvm::SmallVector<llvm::StringRef, 8> feats;
-    bool isDefault = false;
-    if (tv) {
-      isDefault = tv->isDefaultVersion();
-      tv->getFeatures(feats);
-    } else if (tc) {
-      isDefault = tc->isDefaultVersion(gd.getMultiVersionIndex());
-      tc->getFeatures(feats, gd.getMultiVersionIndex());
-    }
-    if (isDefault) {
-      attrs["cir.fmv-features"] = "";
-      addedAttr = true;
-    } else if (!feats.empty()) {
-      // Sort features and remove duplicates.
-      std::set<llvm::StringRef> orderedFeats(feats.begin(), feats.end());
-      std::string fmvFeatures;
-      llvm::raw_string_ostream os(fmvFeatures);
-      llvm::interleaveComma(orderedFeats, os);
-      attrs["cir.fmv-features"] = fmvFeatures;
-      addedAttr = true;
-    }
-  }
+  // TODO(cir): add metadata for AArch64 Function Multi Versioning.
+  assert(!cir::MissingFeatures::opFuncMultiVersioning());
   return addedAttr;
 }
 
