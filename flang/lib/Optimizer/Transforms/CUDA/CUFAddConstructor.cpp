@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -76,12 +77,34 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   return ptrGlobal;
 }
 
+/// Return true if \p hostGlobal is a host module-scope global that has been
+/// mirrored in the GPU module as an external (no-body) declaration by the
+/// CUFDeviceGlobal pass under -gpu=mem:unified. Such globals must be
+/// registered with the CUDA driver via CUFRegisterExternalVariable so the
+/// device-side `.extern` symbol resolves to the host pointer at module-load
+/// time and HMM/ATS handles migration.
+static bool isCudaUnifiedExternalGlobal(fir::GlobalOp hostGlobal,
+                                        mlir::SymbolTable &gpuSymTable) {
+  if (hostGlobal.getDataAttrAttr())
+    return false;
+  if (hostGlobal.getConstant())
+    return false;
+  auto gpuGlobal = gpuSymTable.lookup<fir::GlobalOp>(hostGlobal.getSymName());
+  if (!gpuGlobal)
+    return false;
+  return !gpuGlobal.isInitialized();
+}
+
 static bool hasRegisteredGlobals(mlir::ModuleOp mod,
-                                 mlir::SymbolTable gpuSymTable) {
+                                 mlir::SymbolTable gpuSymTable,
+                                 bool cudaUnified) {
   for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
     auto attr = globalOp.getDataAttrAttr();
-    if (!attr)
+    if (!attr) {
+      if (cudaUnified && isCudaUnifiedExternalGlobal(globalOp, gpuSymTable))
+        return true;
       continue;
+    }
     if (!gpuSymTable.lookup(globalOp.getSymName()))
       continue;
     if (attr.getValue() == cuf::DataAttribute::Managed &&
@@ -109,6 +132,8 @@ static bool hasKernel(mlir::gpu::GPUModuleOp gpuMod) {
 
 struct CUFAddConstructor
     : public fir::impl::CUFAddConstructorBase<CUFAddConstructor> {
+
+  using CUFAddConstructorBase::CUFAddConstructorBase;
 
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
@@ -151,7 +176,8 @@ struct CUFAddConstructor
     if (gpuMod) {
       mlir::SymbolTable gpuSymTable(gpuMod);
       bool needsModuleRegistration =
-          hasKernel(gpuMod) || hasRegisteredGlobals(mod, gpuSymTable);
+          hasKernel(gpuMod) ||
+          hasRegisteredGlobals(mod, gpuSymTable, cudaUnified);
       if (needsModuleRegistration) {
         auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
         auto registeredMod = cuf::RegisterModuleOp::create(
@@ -238,6 +264,47 @@ struct CUFAddConstructor
           } break;
           default:
             break;
+          }
+        }
+
+        // Register externally-linked module globals under -gpu=mem:unified.
+        // CUFDeviceGlobal cloned them into the GPU module with external
+        // linkage so PTX emits .extern; the CUDA driver patches the device
+        // reference to the host pointer at module-load time after this call.
+        // Works uniformly for fixed-shape (e.g. fir.array<5xi32>) and
+        // allocatable (fir.box<fir.heap<...>>) module globals -- the size
+        // computation is the same as the managed path above.
+        if (cudaUnified) {
+          for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
+            if (!isCudaUnifiedExternalGlobal(globalOp, gpuSymTable))
+              continue;
+
+            std::string gblNameStr = globalOp.getSymbol().getValue().str();
+            gblNameStr += '\0';
+            mlir::Value gblName = fir::getBase(
+                fir::factory::createStringLiteral(builder, loc, gblNameStr));
+
+            std::optional<uint64_t> size;
+            if (auto boxTy =
+                    mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+              mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+              size = dl->getTypeSizeInBits(structTy) / 8;
+            }
+            if (!size) {
+              size = fir::getTypeSizeAndAlignmentOrCrash(
+                         loc, globalOp.getType(), *dl, kindMap)
+                         .first;
+            }
+            auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
+
+            mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
+                CUFRegisterExternalVariable)>(loc, builder);
+            auto fTy = func.getFunctionType();
+            mlir::Value addr = fir::AddrOfOp::create(
+                builder, loc, globalOp.resultType(), globalOp.getSymbol());
+            llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+                builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
+            fir::CallOp::create(builder, loc, func, args);
           }
         }
 
