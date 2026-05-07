@@ -824,11 +824,8 @@ void AddDebugInfoPass::handleOnlyClause(
     mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
     llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
 
-  auto onlySymbols = useOp.getOnlySymbols();
-  auto renames = useOp.getRenames();
-
   // Process ONLY symbols (without renames)
-  if (onlySymbols) {
+  if (auto onlySymbols = useOp.getOnlySymbols()) {
     for (mlir::Attribute attr : *onlySymbols) {
       auto symbolRef = mlir::cast<mlir::FlatSymbolRefAttr>(attr);
 
@@ -840,7 +837,7 @@ void AddDebugInfoPass::handleOnlyClause(
   }
 
   // Process renames within ONLY clause
-  if (renames) {
+  if (auto renames = useOp.getRenames()) {
     for (auto attr : *renames) {
       auto renameAttr = mlir::cast<fir::UseRenameAttr>(attr);
       if (auto importedDecl = createImportedDeclForGlobal(
