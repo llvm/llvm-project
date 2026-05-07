@@ -287,6 +287,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.accept4
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.getpeername
+    libc.src.sys.socket.getsockname
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.listen
     libc.src.sys.socket.recv

@@ -95,6 +95,32 @@ add_header_library(
 )
 
 add_header_library(
+  getpeername
+  HDRS
+    getpeername.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  getsockname
+  HDRS
+    getsockname.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
   listen
   HDRS
     listen.h
