@@ -37,13 +37,13 @@ Options
 
 .. option:: AdditionalFunctions
 
-  A semicolon-separated list of additional functions to check, beyond
-  ``llvm::formatv``. Each entry has the form `name:index`, where `name` is the
-  fully qualified function name and `index` is the zero-based parameter
-  position of the format string.
+  A semicolon-separated list of additional fully qualified function names to
+  check, beyond ``llvm::formatv`` and ``llvm::createStringErrorV``. Each
+  function must be a variadic template whose last parameter is a parameter
+  pack. The format string is assumed to be the parameter immediately preceding
+  the pack.
 
-  For example, to check `mylib::log(Level, const char *Fmt, ...)` set this
-  option to `mylib::log:1`. The value `1` indicates the format string is found
-  in the second parameter.
+  For example, to check ``mylib::log(Level, const char *Fmt, Ts&&...)`` set
+  this option to ``mylib::log``.
 
   Default is the empty string.

@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_FORMATVSTRINGCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace clang::tidy::llvm_check {
 
@@ -38,9 +38,7 @@ public:
   }
 
 private:
-  // Map from fully-qualified function name to the 0-based index of the format
-  // string parameter.
-  llvm::StringMap<unsigned> Functions;
+  llvm::StringSet<> Functions;
   const std::string AdditionalFunctions;
 };
 

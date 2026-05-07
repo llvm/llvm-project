@@ -56,3 +56,9 @@ void non_literal_format_string(const char *fmt) {
   // No warning for non-literal format strings.
   llvm::formatv(fmt, 1, 2);
 }
+
+void bool_overload() {
+  llvm::formatv(false, "{0} {1}", 1, 2);
+  llvm::formatv(true, "{0}", 1, 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: formatv() format string requires 1 argument, but 2 arguments were provided
+}

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s llvm-formatv-string %t -- \
-// RUN:   -config='{CheckOptions: {llvm-formatv-string.AdditionalFunctions: "mylib::log:1"}}'
+// RUN:   -config='{CheckOptions: {llvm-formatv-string.AdditionalFunctions: "mylib::log"}}'
 
 namespace llvm {
 

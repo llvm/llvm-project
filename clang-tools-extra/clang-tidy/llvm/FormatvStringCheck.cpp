@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatvStringCheck.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -93,25 +94,17 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AdditionalFunctions(Options.get("AdditionalFunctions", "")) {
-  // Always check llvm::formatv (both overloads).
-  Functions["llvm::formatv"] = 0;
+  Functions.insert("llvm::formatv");
+  Functions.insert("llvm::createStringErrorV");
 
-  // Parse "name1:idx1;name2:idx2;..." from AdditionalFunctions.
-  llvm::StringRef Input(AdditionalFunctions);
-  while (!Input.empty()) {
-    const auto [Entry, Rest] = Input.split(';');
-    Input = Rest;
-    if (Entry.empty())
-      continue;
-    const auto [Name, IndexStr] = Entry.rsplit(':');
-    unsigned Index = 0;
-    if (Name.empty() || IndexStr.empty() || IndexStr.getAsInteger(10, Index)) {
-      configurationDiag("invalid entry '%0' in option AdditionalFunctions, "
-                        "expected 'fully::qualified::name:fmt_arg_index'")
-          << Entry;
-      continue;
-    }
-    Functions[Name] = Index;
+  // Parse semicolon-separated function names from AdditionalFunctions.
+  const llvm::StringRef Input(AdditionalFunctions);
+  llvm::SmallVector<llvm::StringRef, 8> Entries;
+  Input.split(Entries, ';', -1, false);
+  for (llvm::StringRef Entry : Entries) {
+    Entry = Entry.trim();
+    if (!Entry.empty())
+      Functions.insert(Entry);
   }
 }
 
@@ -126,7 +119,9 @@ void FormatvStringCheck::registerMatchers(MatchFinder *Finder) {
   llvm::copy(Functions.keys(), std::back_inserter(Names));
 
   Finder->addMatcher(
-      callExpr(callee(functionDecl(hasAnyName(Names))), argumentCountAtLeast(1))
+      callExpr(callee(functionDecl(hasAnyName(Names),
+                                   ast_matchers::isTemplateInstantiation())),
+               argumentCountAtLeast(1))
           .bind("call"),
       this);
 }
@@ -138,16 +133,21 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FD = Call->getDirectCallee();
   assert(FD);
 
-  // Look up the index of the format string parameter for this function.
-  const std::string QualName = FD->getQualifiedNameAsString();
-  assert(Functions.contains(QualName) &&
-         "matched function not in Functions map");
-  unsigned FmtStringIndex = Functions.lookup(QualName);
+  // Find the format string index from the template signature: it's the
+  // parameter immediately before the trailing parameter pack.
+  const FunctionDecl *TemplateDecl = FD;
+  if (const FunctionTemplateDecl *Primary = FD->getPrimaryTemplate())
+    TemplateDecl = Primary->getTemplatedDecl();
 
-  // For llvm::formatv, also handle the (bool, const char*, ...) overload.
-  if (QualName == "llvm::formatv" && FD->getNumParams() > 0 &&
-      FD->getParamDecl(0)->getType()->isBooleanType())
-    FmtStringIndex = 1;
+  const unsigned NumDeclParams = TemplateDecl->getNumParams();
+  if (NumDeclParams < 2)
+    return;
+
+  const unsigned PackParamIndex = NumDeclParams - 1;
+  if (!TemplateDecl->getParamDecl(PackParamIndex)->isParameterPack())
+    return;
+
+  const unsigned FmtStringIndex = PackParamIndex - 1;
 
   if (Call->getNumArgs() <= FmtStringIndex)
     return;
@@ -159,8 +159,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const llvm::StringRef FmtString = FmtLiteral->getString();
-  const unsigned FirstFmtArgIndex = FmtStringIndex + 1;
-  const int NumFmtArgs = Call->getNumArgs() - FirstFmtArgIndex;
+  const int NumFmtArgs = Call->getNumArgs() - PackParamIndex;
 
   auto ParsedOrErr = parseFormatvString(FmtString);
   if (!ParsedOrErr) {
@@ -189,7 +188,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
     const int UnusedIndex = UsedIndices.find_first_unset();
     if (0 <= UnusedIndex && UnusedIndex < NumRequiredArgs) {
       // Point to the unused argument.
-      const Expr *UnusedArg = Call->getArg(FirstFmtArgIndex + UnusedIndex);
+      const Expr *UnusedArg = Call->getArg(PackParamIndex + UnusedIndex);
       diag(UnusedArg->getBeginLoc(),
            "formatv() argument unused in format string");
       return;
