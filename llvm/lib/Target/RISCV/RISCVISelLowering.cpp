@@ -23121,11 +23121,15 @@ static MachineBasicBlock *emitReadCounterWidePseudo(MachineInstr &MI,
   return DoneMBB;
 }
 
-static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
-                                             MachineBasicBlock *BB,
-                                             const RISCVSubtarget &Subtarget) {
-  assert(MI.getOpcode() == RISCV::SplitF64Pseudo && "Unexpected instruction");
+static MachineBasicBlock *
+emitSplitF2XLenPseudo(MachineInstr &MI, MachineBasicBlock *BB,
+                      const RISCVSubtarget &Subtarget) {
+  unsigned XLen = Subtarget.getXLen();
+  assert(((MI.getOpcode() == RISCV::SplitF64Pseudo && XLen == 32) ||
+          (MI.getOpcode() == RISCV::SplitF128Pseudo && XLen == 64)) &&
+         "Unexpected instruction");
 
+  unsigned XLenInBytes = XLen / 8;
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
   const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
@@ -23133,39 +23137,51 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   Register HiReg = MI.getOperand(1).getReg();
   Register SrcReg = MI.getOperand(2).getReg();
 
-  const TargetRegisterClass *SrcRC = &RISCV::FPR64RegClass;
-  int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
+  const TargetRegisterClass *SrcRC = nullptr;
+  int FI = 0;
+  if (XLen == 32) {
+    SrcRC = &RISCV::FPR64RegClass;
+    FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
+  } else {
+    SrcRC = &RISCV::FPR128RegClass;
+    FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF128FrameIndex(MF);
+  }
 
   TII.storeRegToStackSlot(*BB, MI, SrcReg, MI.getOperand(2).isKill(), FI, SrcRC,
                           Register());
   MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-  MachineMemOperand *MMOLo =
-      MF.getMachineMemOperand(MPI, MachineMemOperand::MOLoad, 4, Align(8));
+  MachineMemOperand *MMOLo = MF.getMachineMemOperand(
+      MPI, MachineMemOperand::MOLoad, XLenInBytes, Align(XLenInBytes * 2));
   MachineMemOperand *MMOHi = MF.getMachineMemOperand(
-      MPI.getWithOffset(4), MachineMemOperand::MOLoad, 4, Align(8));
+      MPI.getWithOffset(XLenInBytes), MachineMemOperand::MOLoad, XLenInBytes,
+      Align(XLenInBytes * 2));
 
   // For big-endian, the high part is at offset 0 and the low part at offset 4.
   if (!Subtarget.isLittleEndian())
     std::swap(LoReg, HiReg);
 
-  BuildMI(*BB, MI, DL, TII.get(RISCV::LW), LoReg)
+  auto LoadOpCode = XLen == 32 ? RISCV::LW : RISCV::LD;
+  BuildMI(*BB, MI, DL, TII.get(LoadOpCode), LoReg)
       .addFrameIndex(FI)
       .addImm(0)
       .addMemOperand(MMOLo);
-  BuildMI(*BB, MI, DL, TII.get(RISCV::LW), HiReg)
+  BuildMI(*BB, MI, DL, TII.get(LoadOpCode), HiReg)
       .addFrameIndex(FI)
-      .addImm(4)
+      .addImm(XLenInBytes)
       .addMemOperand(MMOHi);
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
-static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
-                                                 MachineBasicBlock *BB,
-                                                 const RISCVSubtarget &Subtarget) {
-  assert(MI.getOpcode() == RISCV::BuildPairF64Pseudo &&
+static MachineBasicBlock *
+emitBuildPairF2XLenPseudo(MachineInstr &MI, MachineBasicBlock *BB,
+                          const RISCVSubtarget &Subtarget) {
+  unsigned XLen = Subtarget.getXLen();
+  assert(((MI.getOpcode() == RISCV::BuildPairF64Pseudo && XLen == 32) ||
+          (MI.getOpcode() == RISCV::BuildPairF128Pseudo && XLen == 64)) &&
          "Unexpected instruction");
 
+  unsigned XLenInBytes = XLen / 8;
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
   const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
@@ -23175,14 +23191,22 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   bool KillLo = MI.getOperand(1).isKill();
   bool KillHi = MI.getOperand(2).isKill();
 
-  const TargetRegisterClass *DstRC = &RISCV::FPR64RegClass;
-  int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
+  const TargetRegisterClass *DstRC = nullptr;
+  int FI = 0;
+  if (XLen == 32) {
+    DstRC = &RISCV::FPR64RegClass;
+    FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
+  } else {
+    DstRC = &RISCV::FPR128RegClass;
+    FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF128FrameIndex(MF);
+  }
 
   MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-  MachineMemOperand *MMOLo =
-      MF.getMachineMemOperand(MPI, MachineMemOperand::MOStore, 4, Align(8));
+  MachineMemOperand *MMOLo = MF.getMachineMemOperand(
+      MPI, MachineMemOperand::MOStore, XLenInBytes, Align(XLenInBytes * 2));
   MachineMemOperand *MMOHi = MF.getMachineMemOperand(
-      MPI.getWithOffset(4), MachineMemOperand::MOStore, 4, Align(8));
+      MPI.getWithOffset(XLenInBytes), MachineMemOperand::MOStore, XLenInBytes,
+      Align(XLenInBytes * 2));
 
   // For big-endian, store the high part at offset 0 and the low part at
   // offset 4.
@@ -23191,100 +23215,16 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
     std::swap(KillLo, KillHi);
   }
 
-  BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
+  auto StoreOpCode = XLen == 32 ? RISCV::SW : RISCV::SD;
+  BuildMI(*BB, MI, DL, TII.get(StoreOpCode))
       .addReg(LoReg, getKillRegState(KillLo))
       .addFrameIndex(FI)
       .addImm(0)
       .addMemOperand(MMOLo);
-  BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
+  BuildMI(*BB, MI, DL, TII.get(StoreOpCode))
       .addReg(HiReg, getKillRegState(KillHi))
       .addFrameIndex(FI)
-      .addImm(4)
-      .addMemOperand(MMOHi);
-  TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, Register());
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-static MachineBasicBlock *emitSplitF128Pseudo(MachineInstr &MI,
-                                             MachineBasicBlock *BB,
-                                             const RISCVSubtarget &Subtarget) {
-  assert(MI.getOpcode() == RISCV::SplitF128Pseudo && "Unexpected instruction");
-
-  MachineFunction &MF = *BB->getParent();
-  DebugLoc DL = MI.getDebugLoc();
-  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
-  Register LoReg = MI.getOperand(0).getReg();
-  Register HiReg = MI.getOperand(1).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
-
-  const TargetRegisterClass *SrcRC = &RISCV::FPR64RegClass;
-  int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF128FrameIndex(MF);
-
-  TII.storeRegToStackSlot(*BB, MI, SrcReg, MI.getOperand(2).isKill(), FI, SrcRC,
-                          Register());
-  MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-  MachineMemOperand *MMOLo =
-      MF.getMachineMemOperand(MPI, MachineMemOperand::MOLoad, 8, Align(16));
-  MachineMemOperand *MMOHi = MF.getMachineMemOperand(
-      MPI.getWithOffset(8), MachineMemOperand::MOLoad, 8, Align(16));
-
-  // For big-endian, the high part is at offset 0 and the low part at offset 4.
-  if (!Subtarget.isLittleEndian())
-    std::swap(LoReg, HiReg);
-
-  BuildMI(*BB, MI, DL, TII.get(RISCV::LD), LoReg)
-      .addFrameIndex(FI)
-      .addImm(0)
-      .addMemOperand(MMOLo);
-  BuildMI(*BB, MI, DL, TII.get(RISCV::LD), HiReg)
-      .addFrameIndex(FI)
-      .addImm(8)
-      .addMemOperand(MMOHi);
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-static MachineBasicBlock *emitBuildPairF128Pseudo(MachineInstr &MI,
-                                                 MachineBasicBlock *BB,
-                                                 const RISCVSubtarget &Subtarget) {
-  assert(MI.getOpcode() == RISCV::BuildPairF128Pseudo &&
-         "Unexpected instruction");
-
-  MachineFunction &MF = *BB->getParent();
-  DebugLoc DL = MI.getDebugLoc();
-  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
-  Register DstReg = MI.getOperand(0).getReg();
-  Register LoReg = MI.getOperand(1).getReg();
-  Register HiReg = MI.getOperand(2).getReg();
-  bool KillLo = MI.getOperand(1).isKill();
-  bool KillHi = MI.getOperand(2).isKill();
-
-  const TargetRegisterClass *DstRC = &RISCV::FPR128RegClass;
-  int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF128FrameIndex(MF);
-
-  MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-  MachineMemOperand *MMOLo =
-      MF.getMachineMemOperand(MPI, MachineMemOperand::MOStore, 8, Align(16));
-  MachineMemOperand *MMOHi = MF.getMachineMemOperand(
-      MPI.getWithOffset(8), MachineMemOperand::MOStore, 8, Align(16));
-
-  // For big-endian, store the high part at offset 0 and the low part at
-  // offset 4.
-  if (!Subtarget.isLittleEndian()) {
-    std::swap(LoReg, HiReg);
-    std::swap(KillLo, KillHi);
-  }
-
-  BuildMI(*BB, MI, DL, TII.get(RISCV::SD))
-      .addReg(LoReg, getKillRegState(KillLo))
-      .addFrameIndex(FI)
-      .addImm(0)
-      .addMemOperand(MMOLo);
-  BuildMI(*BB, MI, DL, TII.get(RISCV::SD))
-      .addReg(HiReg, getKillRegState(KillHi))
-      .addFrameIndex(FI)
-      .addImm(8)
+      .addImm(XLenInBytes)
       .addMemOperand(MMOHi);
   TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, Register());
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -23820,13 +23760,11 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::Select_FPR64IN32X_Using_CC_GPR:
     return emitSelectPseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF64Pseudo:
-    return emitBuildPairF64Pseudo(MI, BB, Subtarget);
-  case RISCV::SplitF64Pseudo:
-    return emitSplitF64Pseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF128Pseudo:
-    return emitBuildPairF128Pseudo(MI, BB, Subtarget);
+    return emitBuildPairF2XLenPseudo(MI, BB, Subtarget);
   case RISCV::SplitF128Pseudo:
-    return emitSplitF128Pseudo(MI, BB, Subtarget);
+  case RISCV::SplitF64Pseudo:
+    return emitSplitF2XLenPseudo(MI, BB, Subtarget);
   case RISCV::PseudoQuietFLE_H:
     return emitQuietFCMP(MI, BB, RISCV::FLE_H, RISCV::FEQ_H, Subtarget);
   case RISCV::PseudoQuietFLE_H_INX:
