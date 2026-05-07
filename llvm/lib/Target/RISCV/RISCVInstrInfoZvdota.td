@@ -16,7 +16,7 @@
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 // op vd, vs2, vs1, vm
 class ZvdotVALUVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : RVInstVV<funct6, opv, (outs VR:$vd),
+    : RVInstVV<funct6, opv, (outs VR:$vd_wb),
                (ins VR:$vs2, VR:$vs1, VMaskOp:$vm),
                opcodestr, "$vd, $vs2, $vs1$vm"> {
   let Inst{6-0} = OPC_OP_VE.Value;
