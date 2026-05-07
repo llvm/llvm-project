@@ -1165,8 +1165,8 @@ static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                       EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
-         capturesNothing(
-             EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt*/ true));
+         capturesNothing(EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt=*/true,
+                                              /*ReturnCaptures=*/false));
 }
 
 DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,

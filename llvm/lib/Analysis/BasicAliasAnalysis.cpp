@@ -197,24 +197,18 @@ static bool areBothVScale(const Value *V1, const Value *V2) {
 
 CaptureAnalysis::~CaptureAnalysis() = default;
 
-CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
-                                                           const Instruction *I,
-                                                           bool OrAt) {
+CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(
+    const Value *Object, const Instruction *I, bool OrAt, bool ReturnCaptures) {
   if (!isIdentifiedFunctionLocal(Object))
     return CaptureComponents::Provenance;
 
-  auto [CacheIt, Inserted] =
-      IsCapturedCache.insert({Object, CaptureComponents::Provenance});
-  if (!Inserted)
-    return CacheIt->second;
+  auto [CacheIt, Inserted] = IsCapturedCache.try_emplace(Object);
+  if (Inserted)
+    CacheIt->second = PointerMayBeCaptured(
+        Object, CaptureComponents::Provenance,
+        [](CaptureComponents CC) { return capturesFullProvenance(CC); });
 
-  CaptureComponents Ret =
-      PointerMayBeCaptured(
-          Object, CaptureComponents::Provenance,
-          [](CaptureComponents CC) { return capturesFullProvenance(CC); })
-          .WithoutRet;
-  CacheIt->second = Ret;
-  return Ret;
+  return ReturnCaptures ? CacheIt->second.WithRet : CacheIt->second.WithoutRet;
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
@@ -228,9 +222,8 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
          !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
-CaptureComponents
-EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
-                                          const Instruction *I, bool OrAt) {
+CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
+    const Value *Object, const Instruction *I, bool OrAt, bool ReturnCaptures) {
   if (!isIdentifiedFunctionLocal(Object))
     return CaptureComponents::Provenance;
 
@@ -241,8 +234,12 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
                             CaptureComponents::Provenance);
     if (EarliestCapture.first)
       Inst2Obj[EarliestCapture.first].push_back(Object);
-    Iter.first->second = {EarliestCapture.first,
-                          EarliestCapture.second.WithoutRet};
+    Iter.first->second = {EarliestCapture.first, EarliestCapture.second};
+  }
+
+  if (ReturnCaptures) {
+    assert(!I && "Context instruction not supported if ReturnCaptures");
+    return Iter.first->second.second.WithRet;
   }
 
   auto IsNotCapturedBefore = [&]() {
@@ -265,7 +262,7 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
-  return Iter.first->second.second;
+  return Iter.first->second.second.WithoutRet;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
@@ -973,8 +970,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // non-volatile stores for them.
   if (isModOrRefSet(OtherMR) && !isa<Constant>(Object) && Call != Object &&
       (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice))) {
-    CaptureComponents CC =
-        AAQI.CA->getCapturesBefore(Object, Call, /*OrAt=*/false);
+    CaptureComponents CC = AAQI.CA->getCapturesBefore(
+        Object, Call, /*OrAt=*/false, /*ReturnCaptures=*/false);
     if (capturesNothing(CC))
       OtherMR = ModRefInfo::NoModRef;
     else if (capturesReadProvenanceOnly(CC))
@@ -1668,13 +1665,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) &&
-        capturesNothing(AAQI.CA->getCapturesBefore(
-            O2, dyn_cast<Instruction>(O1), /*OrAt*/ true)))
+    if (isEscapeSource(O1) && capturesNothing(AAQI.CA->getCapturesBefore(
+                                  O2, dyn_cast<Instruction>(O1), /*OrAt=*/true,
+                                  /*ReturnCaptures=*/false)))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) &&
-        capturesNothing(AAQI.CA->getCapturesBefore(
-            O1, dyn_cast<Instruction>(O2), /*OrAt*/ true)))
+    if (isEscapeSource(O2) && capturesNothing(AAQI.CA->getCapturesBefore(
+                                  O1, dyn_cast<Instruction>(O2), /*OrAt=*/true,
+                                  /*ReturnCaptures=*/false)))
       return AliasResult::NoAlias;
   }
 
