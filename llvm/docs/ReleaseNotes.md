@@ -120,7 +120,7 @@ Makes programs 10x faster by doing Special New Thing.
   ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
   there are still issues with invalid compiler reasoning about some functions
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
+  distributed ThinLTO.
 
 ### Changes to building LLVM
 
@@ -252,6 +252,7 @@ Makes programs 10x faster by doing Special New Thing.
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
 * The `apropos` command now highlights matching keywords in its output when color is enabled.
+* The TUI mode (enabled with the `gui` command) now has a real-time console output pane. stdout / stderr messages get redirected to this pane when it is enabled.
 
 #### Deprecated APIs
 
