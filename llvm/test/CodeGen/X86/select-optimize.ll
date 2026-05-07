@@ -49,20 +49,35 @@ define i32 @weighted_select2(i32 %a, i32 %b, i1 %cmp) {
   ret i32 %sel
 }
 
-; Not obvioulsy predictable select.
+; Select at exactly the predictable threshold should form a branch.
 define i32 @weighted_select3(i32 %a, i32 %b, i1 %cmp) {
 ; CHECK-LABEL: @weighted_select3(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], !prof [[PROF18:![0-9]+]]
+; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]], !prof [[PROF18:![0-9]+]]
+; CHECK:       select.false:
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[A:%.*]], [[TMP0:%.*]] ], [ [[B:%.*]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %sel = select i1 %cmp, i32 %a, i32 %b, !prof !17
   ret i32 %sel
 }
 
+; Select below the predictable threshold should not form a branch.
+define i32 @weighted_select_below_threshold(i32 %a, i32 %b, i1 %cmp) {
+; CHECK-LABEL: @weighted_select_below_threshold(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], !prof [[PROF19:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !31
+  ret i32 %sel
+}
+
 ; Unpredictable select should not form a branch.
 define i32 @unpred_select(i32 %a, i32 %b, i1 %cmp) {
 ; CHECK-LABEL: @unpred_select(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], !unpredictable [[META19:![0-9]+]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], !unpredictable [[META20:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %sel = select i1 %cmp, i32 %a, i32 %b, !unpredictable !20
@@ -129,7 +144,7 @@ define i32 @weighted_select_group(i32 %a, i32 %b, i32 %c, i1 %cmp) !prof !19 {
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[SEL1:%.*]] = phi i32 [ [[A1]], [[SELECT_TRUE_SINK]] ], [ [[B1]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[SEL2:%.*]] = phi i32 [ [[C1]], [[SELECT_TRUE_SINK]] ], [ [[A1]], [[SELECT_FALSE_SINK]] ]
-; CHECK-NEXT:      #dbg_value(i32 [[SEL1]], [[META22:![0-9]+]], !DIExpression(), [[META26:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 [[SEL1]], [[META23:![0-9]+]], !DIExpression(), [[META29:![0-9]+]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -188,8 +203,13 @@ define i32 @expensive_val_operand1(ptr nocapture %a, i32 %y, i1 %cmp) {
 ; Expensive hot value operand and cheap cold value operand.
 define i32 @expensive_val_operand2(ptr nocapture %a, i32 %x, i1 %cmp) {
 ; CHECK-LABEL: @expensive_val_operand2(
+; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE_SINK:%.*]], !prof [[PROF18]]
+; CHECK:       select.false.sink:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[X:%.*]], i32 [[LOAD]], !prof [[PROF18]]
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X:%.*]], [[TMP0:%.*]] ], [ [[LOAD]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %load = load i32, ptr %a, align 8
@@ -334,7 +354,7 @@ define double @cmov_on_critical_path(i32 %n, double %x, ptr nocapture %a) {
 ; CHECK-NEXT:    [[R:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt double [[X1]], [[R]]
 ; CHECK-NEXT:    [[CMP2_FROZEN:%.*]] = freeze i1 [[CMP2]]
-; CHECK-NEXT:    br i1 [[CMP2_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END]], !prof [[PROF27:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END]], !prof [[PROF30:![0-9]+]]
 ; CHECK:       select.true.sink:
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[X1]], [[R]]
 ; CHECK-NEXT:    br label [[SELECT_END]]
@@ -397,13 +417,18 @@ define double @small_gain(i32 %n, double %x, ptr nocapture %a) {
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[X1:%.*]] = phi double [ [[X2:%.*]], [[FOR_BODY]] ], [ [[X]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[SELECT_END:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[X1:%.*]] = phi double [ [[X2:%.*]], [[SELECT_END]] ], [ [[X]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[R:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[X1]], [[R]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ole double [[X1]], [[R]]
-; CHECK-NEXT:    [[X2]] = select i1 [[CMP2]], double [[X1]], double [[SUB]], !prof [[PROF18]]
+; CHECK-NEXT:    [[CMP2_FROZEN:%.*]] = freeze i1 [[CMP2]]
+; CHECK-NEXT:    br i1 [[CMP2_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE_SINK:%.*]], !prof [[PROF18]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[X1]], [[R]]
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[X2]] = phi double [ [[X1]], [[FOR_BODY]] ], [ [[SUB]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
@@ -566,3 +591,4 @@ declare void @free(ptr nocapture)
 !26 = !{i32 2, !"Dwarf Version", i32 4}
 !27 = !{i32 1, !"Debug Info Version", i32 3}
 !28 = !{!"branch_weights", i32 30, i32 70}
+!31 = !{!"branch_weights", i32 1, i32 98}
