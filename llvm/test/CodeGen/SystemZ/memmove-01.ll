@@ -609,10 +609,14 @@ define void @fun18_unalignedDst(ptr %Dst, ptr %Src) {
 define void @fun19(ptr %Dst, ptr %Src) {
 ; CHECK-LABEL: fun19:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    l %r0, 15(%r3)
-; CHECK-NEXT:    st %r0, 15(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    .cfi_def_cfa_offset 320
+; CHECK-NEXT:    lghi %r4, 19
+; CHECK-NEXT:    brasl %r14, memmove@PLT
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memmove.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 19, i1 false)
   ret void
@@ -680,10 +684,14 @@ define void @fun20_localDst(ptr %Src) {
 define void @fun21(ptr %Dst, ptr %Src) {
 ; CHECK-LABEL: fun21:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    lg %r0, 13(%r3)
-; CHECK-NEXT:    stg %r0, 13(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    .cfi_def_cfa_offset 320
+; CHECK-NEXT:    lghi %r4, 21
+; CHECK-NEXT:    brasl %r14, memmove@PLT
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memmove.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 21, i1 false)
   ret void
@@ -708,10 +716,14 @@ define void @fun21_unaligned(ptr %Dst, ptr %Src) {
 define void @fun22(ptr %Dst, ptr %Src) {
 ; CHECK-LABEL: fun22:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    lg %r0, 14(%r3)
-; CHECK-NEXT:    stg %r0, 14(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    .cfi_def_cfa_offset 320
+; CHECK-NEXT:    lghi %r4, 22
+; CHECK-NEXT:    brasl %r14, memmove@PLT
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memmove.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 22, i1 false)
   ret void
@@ -736,10 +748,14 @@ define void @fun22_unaligned(ptr %Dst, ptr %Src) {
 define void @fun23(ptr %Dst, ptr %Src) {
 ; CHECK-LABEL: fun23:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    lg %r0, 15(%r3)
-; CHECK-NEXT:    stg %r0, 15(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    .cfi_def_cfa_offset 320
+; CHECK-NEXT:    lghi %r4, 23
+; CHECK-NEXT:    brasl %r14, memmove@PLT
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memmove.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 23, i1 false)
   ret void
