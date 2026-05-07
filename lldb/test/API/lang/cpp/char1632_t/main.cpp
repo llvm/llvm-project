@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <cstring>
 #include <string>
 
 #define UASZ 64
