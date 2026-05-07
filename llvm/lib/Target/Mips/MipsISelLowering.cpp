@@ -268,6 +268,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
   }
 
+  if (Subtarget.hasMips32r2())
+    setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
+
   if (Subtarget.isGP64bit()) {
     setOperationAction(ISD::GlobalAddress,      MVT::i64,   Custom);
     setOperationAction(ISD::BlockAddress,       MVT::i64,   Custom);
@@ -1260,6 +1263,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
+  case ISD::ConstantFP:
+    return lowerConstantFP(Op, DAG);
   }
   return SDValue();
 }
@@ -2041,6 +2046,43 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   MI.eraseFromParent(); // The instruction is gone now.
 
   return exitMBB;
+}
+
+SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Op);
+  const APFloat &FPVal = CFP->getValueAPF();
+
+  if (!isPositionIndependent())
+    return SDValue();
+
+  if (FPVal.isZero())
+    return SDValue();
+
+  SDLoc DL(CFP);
+  APInt INTVal = FPVal.bitcastToAPInt();
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unknown floating point type!");
+    break;
+  case MVT::f64: {
+    if (!Subtarget.hasMTHC1() || !Subtarget.hasMips32r2() ||
+        !Subtarget.isFP64bit())
+      return SDValue();
+    uint64_t Bits = INTVal.getZExtValue();
+    uint32_t Lo = Bits & 0xFFFFFFFF;
+    if (Lo != 0 || Bits == 0)
+      return SDValue();
+
+    SDValue ZeroReg = DAG.getConstant(0, DL, MVT::i32);
+    SDValue LowPart = DAG.getNode(MipsISD::MTC1_D64, DL, VT, ZeroReg);
+    SDValue HiReg = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
+    return DAG.getNode(MipsISD::MTHC1_D64, DL, VT, LowPart, HiReg);
+  }
+  }
+
+  return SDValue();
 }
 
 SDValue MipsTargetLowering::lowerREADCYCLECOUNTER(SDValue Op,
