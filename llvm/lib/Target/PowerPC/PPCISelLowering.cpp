@@ -5726,18 +5726,20 @@ SDValue PPCTargetLowering::FinishCall(
 
   if (!CFlags.IsIndirect)
     Callee = transformCallee(Callee, DAG, dl, Subtarget);
-  else if (Subtarget.usesFunctionDescriptors())
+  else if (Subtarget.usesFunctionDescriptors()) {
     if (Subtarget.noInlineGlue()) {
       prepareOutOfLineGlueCall(DAG, Callee, Glue, Chain, CallSeqStart, CB, dl,
                                CFlags.HasNest, Subtarget);
       SDValue PtrGlueCallee =
           DAG.getExternalSymbol("_ptrgl", getPointerTy(DAG.getDataLayout()));
       Callee = transformCallee(PtrGlueCallee, DAG, dl, Subtarget);
-    } else
+    } else {
       prepareDescriptorIndirectCall(DAG, Callee, Glue, Chain, CallSeqStart, CB,
                                     dl, CFlags.HasNest, Subtarget);
-  else
+    }
+  } else {
     prepareIndirectCall(DAG, Callee, Glue, Chain, dl);
+  }
 
   // Build the operand list for the call instruction.
   SmallVector<SDValue, 8> Ops;
