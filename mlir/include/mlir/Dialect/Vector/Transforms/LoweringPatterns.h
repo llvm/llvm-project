@@ -49,6 +49,11 @@ namespace vector {
 /// [ContractionOpToOuterProductOpLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
 /// linearized `vector.extract` + `vector.outerproduct` + `vector.insert`.
+
+/// A `VectorContractLoweringFilter` lets clients compose multiple lowering
+/// strategies by benefit. Returning failure means this strategy silently
+/// declines the op without consuming it or diagnosing invalid IR; lower-benefit
+/// strategies may still match the same op.
 using VectorContractLoweringFilter =
     std::function<LogicalResult(ContractionOp)>;
 

@@ -171,17 +171,21 @@ struct TestVectorContractLoweringComposition final
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    if (mode == "dot-outerproduct") {
+    if (mode == "composed") {
       populateVectorContractToDotPatterns(
           patterns,
           [](vector::ContractionOp op) {
             return success(!parentFunctionNameContains(op, "dot_reject"));
           },
-          PatternBenefit(2));
+          PatternBenefit(3));
       populateVectorContractToOuterProductPatterns(
+          patterns, acceptAllVectorContractLoweringFilter, PatternBenefit(2));
+      populateVectorContractGenericLoweringPatterns(
           patterns, acceptAllVectorContractLoweringFilter, PatternBenefit(1));
     } else if (mode == "generic") {
       populateVectorContractGenericLoweringPatterns(patterns);
+    } else if (mode == "parallel-arith") {
+      populateVectorContractToParallelArithPatterns(patterns);
     } else if (mode == "parallel-arith-reject") {
       populateVectorContractToParallelArithPatterns(
           patterns, [](vector::ContractionOp) { return failure(); });

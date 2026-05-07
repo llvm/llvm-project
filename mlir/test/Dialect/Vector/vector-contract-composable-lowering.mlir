@@ -1,6 +1,7 @@
-// RUN: mlir-opt %s --test-vector-contract-lowering-composition="mode=dot-outerproduct" --split-input-file | FileCheck %s --check-prefix=DOT
+// RUN: mlir-opt %s --test-vector-contract-lowering-composition="mode=composed" --split-input-file | FileCheck %s --check-prefix=COMPOSED
 // RUN: mlir-opt %s --test-vector-contract-lowering-composition="mode=generic" --split-input-file | FileCheck %s --check-prefix=GENERIC
-// RUN: mlir-opt %s --test-vector-contract-lowering-composition="mode=parallel-arith-reject" --split-input-file | FileCheck %s --check-prefix=PARALLEL
+// RUN: mlir-opt %s --test-vector-contract-lowering-composition="mode=parallel-arith" --split-input-file | FileCheck %s --check-prefix=PARALLEL_ACCEPT
+// RUN: mlir-opt %s --test-vector-contract-lowering-composition="mode=parallel-arith-reject" --split-input-file | FileCheck %s --check-prefix=PARALLEL_REJECT
 
 #matmat_accesses = [
   affine_map<(m, n, k) -> (m, k)>,
@@ -12,9 +13,9 @@
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 
-// DOT-LABEL: func @dot_accept
-// DOT-NOT: vector.outerproduct
-// DOT: vector.reduction <add>
+// COMPOSED-LABEL: func @dot_accept
+// COMPOSED-NOT: vector.outerproduct
+// COMPOSED: vector.reduction <add>
 func.func @dot_accept(%A: vector<2x4xf32>,
                       %B: vector<4x3xf32>,
                       %C: vector<2x3xf32>) -> vector<2x3xf32> {
@@ -23,8 +24,8 @@ func.func @dot_accept(%A: vector<2x4xf32>,
   return %0 : vector<2x3xf32>
 }
 
-// DOT-LABEL: func @dot_reject_to_outerproduct
-// DOT: vector.outerproduct
+// COMPOSED-LABEL: func @dot_reject_to_outerproduct
+// COMPOSED: vector.outerproduct
 func.func @dot_reject_to_outerproduct(%A: vector<2x4xf32>,
                                       %B: vector<4x3xf32>,
                                       %C: vector<2x3xf32>)
@@ -32,6 +33,29 @@ func.func @dot_reject_to_outerproduct(%A: vector<2x4xf32>,
   %0 = vector.contract #matmat_trait %A, %B, %C
     : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
+}
+
+#batch_matmul_accesses = [
+  affine_map<(b, m, n, k) -> (b, m, k)>,
+  affine_map<(b, m, n, k) -> (b, k, n)>,
+  affine_map<(b, m, n, k) -> (b, m, n)>
+]
+#batch_matmul_trait = {
+  indexing_maps = #batch_matmul_accesses,
+  iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+}
+
+// COMPOSED-LABEL: func @dot_structural_failure_to_generic
+// COMPOSED-NOT: vector.outerproduct
+// COMPOSED: vector.extract
+// COMPOSED: vector.reduction <add>
+func.func @dot_structural_failure_to_generic(%A: vector<2x2x4xf32>,
+                                             %B: vector<2x4x3xf32>,
+                                             %C: vector<2x2x3xf32>)
+                                             -> vector<2x2x3xf32> {
+  %0 = vector.contract #batch_matmul_trait %A, %B, %C
+    : vector<2x2x4xf32>, vector<2x4x3xf32> into vector<2x2x3xf32>
+  return %0 : vector<2x2x3xf32>
 }
 
 // -----
@@ -73,9 +97,12 @@ func.func @generic_non_add(%A: vector<4xf32>, %B: vector<4xf32>,
 
 // -----
 
-// PARALLEL-LABEL: func @parallel_arith_filter_reject
-// PARALLEL: vector.contract
-func.func @parallel_arith_filter_reject(
+// PARALLEL_ACCEPT-LABEL: func @parallel_arith
+// PARALLEL_ACCEPT-NOT: vector.contract
+// PARALLEL_ACCEPT: vector.fma
+// PARALLEL_REJECT-LABEL: func @parallel_arith
+// PARALLEL_REJECT: vector.contract
+func.func @parallel_arith(
     %A: vector<1x1x4xf32>, %B: vector<1x1x4xf32>,
     %C: vector<4xf32>) -> vector<4xf32> {
   %0 = vector.contract {
