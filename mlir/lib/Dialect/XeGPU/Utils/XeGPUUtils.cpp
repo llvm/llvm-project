@@ -136,10 +136,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
-  if (auto tdescTy =
-          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
-    return tdescTy.getLayoutAttr();
-
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
@@ -162,9 +158,13 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
-        return getDistributeLayoutAttr(tiedInit->get());
+        return getTemporaryLayout(*tiedInit);
     }
   }
+
+  if (auto tdescTy =
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
 
   return nullptr;
 }
@@ -182,6 +182,31 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
       } else if (idx == 2) {
         return dpasOp.getLayoutCdAttr();
       }
+    }
+    if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
+      // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional
+      // scale_b
+      unsigned currentIdx = 0;
+
+      if (idx == currentIdx++)
+        return dpasMxOp.getLayoutAAttr();
+
+      if (idx == currentIdx++)
+        return dpasMxOp.getLayoutBAttr();
+
+      if (dpasMxOp.getAcc())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutCdAttr();
+
+      if (dpasMxOp.getScaleA())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutAScaleAttr();
+
+      if (dpasMxOp.getScaleB())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutBScaleAttr();
+
+      return nullptr;
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
       return convertOp.getInputLayoutAttr();
