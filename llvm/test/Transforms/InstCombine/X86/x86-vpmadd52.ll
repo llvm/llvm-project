@@ -106,6 +106,17 @@ define <4 x i64> @nofold_multi_use(<4 x i64> %x, <4 x i64> %a, <4 x i64> %b, ptr
   ret <4 x i64> %r
 }
 
+define <4 x i64> @nofold_madd_double_use(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: @nofold_madd_double_use(
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shl <4 x i64> [[M]], splat (i64 1)
+; CHECK-NEXT:    ret <4 x i64> [[R]]
+;
+  %m = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> %a, <4 x i64> %b)
+  %r = add <4 x i64> %m, %m
+  ret <4 x i64> %r
+}
+
 define <4 x i64> @nofold_sub(<4 x i64> %x, <4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: @nofold_sub(
 ; CHECK-NEXT:    [[M:%.*]] = call <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> zeroinitializer, <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]])

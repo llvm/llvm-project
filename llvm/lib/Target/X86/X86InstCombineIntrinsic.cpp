@@ -3216,11 +3216,9 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     auto *Add = dyn_cast<BinaryOperator>(*II.user_begin());
-    if (!Add || Add->getOpcode() != Instruction::Add)
+    Value *X;
+    if (!Add || !match(Add, m_c_Add(m_Specific(&II), m_Value(X))))
       break;
-
-    Value *X =
-        Add->getOperand(0) == &II ? Add->getOperand(1) : Add->getOperand(0);
 
     Value *NewCall = IC.Builder.CreateIntrinsic(
         IID, {}, {X, II.getArgOperand(1), II.getArgOperand(2)});
