@@ -700,10 +700,6 @@ uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
       return LLDB_INVALID_INDEX64;
     }
     
-    ScriptedBreakpointResolverOverride *new_override =
-        new ScriptedBreakpointResolverOverride(*target_sp.get(),
-                                               std::string(description ? description : "<No Description>"),
-                                               std::string(class_name), impl);
     llvm::Expected<lldb::user_id_t> id_or_err = 
         target_sp->AddBreakpointResolverOverride(class_name, args_dict, 
             description ? description : "<No Description>");
