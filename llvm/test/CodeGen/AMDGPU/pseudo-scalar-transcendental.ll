@@ -419,18 +419,13 @@ define amdgpu_cs float @v_s_rsq_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_rsq_f16(half inreg %src) {
-; GFX12-SDAG-LABEL: v_s_rsq_f16:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_s_rsq_f16 s0, s0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: v_s_rsq_f16:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_rsq_f16_e32 v0.l, s0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: v_s_rsq_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_s_rsq_f16 s0, s0
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_rsq_f16:
 ; GCN-GISEL:       ; %bb.0:
