@@ -21,7 +21,7 @@ entry:
 
 ; A function with an Acquire load is not readonly.
 define i32 @test2(ptr %x) uwtable ssp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind ssp willreturn memory(argmem: readwrite) uwtable
+; CHECK: Function Attrs: mustprogress norecurse nounwind ssp willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X:%.*]] seq_cst, align 4
