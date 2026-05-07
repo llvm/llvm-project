@@ -698,7 +698,7 @@ private:
 
   std::unique_ptr<DependencyTracker> Dependencies;
 
-  /// \defgroup Data Members accessed asinchronously.
+  /// \defgroup Data Members accessed asynchronously.
   ///
   /// @{
   OffsetToUnitTy getUnitFromOffset;

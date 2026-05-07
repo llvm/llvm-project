@@ -71,13 +71,6 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
-    - name: Install Windows ARM64 dependencies
-      if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      run: |
-        # Some of the python modules we install require this package to be installed on the system.
-        vcpkg install openssl:arm64-windows-static-md
-        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
-
     - name: Checkout LLVM
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
