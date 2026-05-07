@@ -251,13 +251,13 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
     auto branchOp = mlir::dyn_cast<mlir::RegionBranchOpInterface>(
         mlir::cast<mlir::OpResult>(fallbackValue).getOwner());
     assert(branchOp && "merge region-branch sources expects branch op result");
-    unsigned originsOutsideBranch =
-        llvm::count_if(sources, [&](const fir::AliasAnalysis::Source &s) {
+    bool hasOriginOutsideBranch =
+        llvm::any_of(sources, [&](const fir::AliasAnalysis::Source &s) {
           return !originIsInsideRegionBranch(branchOp, s);
         });
     bool keepAllocate =
         sources[0].kind == fir::AliasAnalysis::SourceKind::Allocate &&
-        originsOutsideBranch == 0u;
+        !hasOriginOutsideBranch;
     mergedKind = keepAllocate ? fir::AliasAnalysis::SourceKind::Allocate
                               : fir::AliasAnalysis::SourceKind::Indirect;
     mergedAttrs = sources[0].attributes;
