@@ -2096,7 +2096,8 @@ multiclass OneBitFlagPats<RegisterClass rc, Instruction btr_inst,
   def : Pat<(X86btc rc:$src1, rc:$src2), (btc_inst rc:$src1, rc:$src2)>;
 }
 
-defm : OneBitFlagPats<GR16, BTR16rr, BTS16rr, BTC16rr>;
+// Only i32/i64 are relevant: getBT promotes <32-bit Src to i32 before
+// creating X86ISD::BT, so an i16 BT can never reach combineBTToBitOpFlag.
 defm : OneBitFlagPats<GR32, BTR32rr, BTS32rr, BTC32rr>;
 defm : OneBitFlagPats<GR64, BTR64rr, BTS64rr, BTC64rr>;
 
