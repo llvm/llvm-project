@@ -360,27 +360,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     });
   }
 
-  void visitFPUnOp(Instruction &I,
-                   function_ref<APFloat(const APFloat &)> ScalarFn) {
-    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
-
-    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
-      if (Operand.isPoison())
-        return AnyValue::poison();
-
-      // We don't flush denormals here since the only floating-point unary
-      // operation is fneg. And fneg is specified as a bitwise operation which
-      // only flips the sign bit of the input.
-
-      AnyValue ValidatedOperand =
-          handleFMFFlags(Operand, FMF, /*IsInput=*/true);
-      if (ValidatedOperand.isPoison())
-        return ValidatedOperand;
-
-      APFloat Result = ScalarFn(ValidatedOperand.asFloat());
-
-      return handleFMFFlags(Result, FMF, /*IsInput=*/false);
-    });
+  void visitBitwiseFPUnOp(Instruction &I,
+                          function_ref<APFloat(const APFloat &)> ScalarFn) {
+    setResult(I, visitBitwiseFPUnOpWithResult(
+                     I.getType(), cast<FPMathOperator>(I).getFastMathFlags(),
+                     getValue(I.getOperand(0)), ScalarFn));
   }
 
   AnyValue
@@ -402,10 +386,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           if (OperandInner.isPoison())
             return AnyValue::poison();
 
-          // We don't flush denormals here since the only
-          // floating-point unary operation is llvm.fabs. And llvm.fabs is
-          // specified as a bitwise operation which only flips
-          // the sign bit of the input.
+          // We don't flush denormals here since bitwise floating-point
+          // operations only manipulate on certain bits of the operand.
 
           AnyValue ValidatedOperand =
               handleFMFFlags(OperandInner, FMF, /*IsInput=*/true);
@@ -1534,11 +1516,7 @@ public:
         return AnyValue::poison();
       QuietRes = FinalRes.asFloat();
 
-      SmallVector<const APFloat *, 16> QuietedInputVec;
-      QuietedInputVec.reserve(QuietedInputFloats.size());
-      for (const APFloat &V : QuietedInputFloats)
-        QuietedInputVec.push_back(&V);
-      return applyNaNPropagation(QuietRes, QuietedInputVec);
+      return applyNaNPropagation(QuietRes, InputVec);
     }
     case Intrinsic::fabs: {
       return visitBitwiseFPUnOpWithResult(
@@ -1634,7 +1612,7 @@ public:
             Result = FResult.asFloat();
 
             if ((FLHS.isSignaling() || FRHS.isSignaling()) &&
-                (!Ctx.mayUseNonDeterminism() || !Ctx.getRandomBool())) {
+                Ctx.getRandomBool()) {
               APFloat QuietLHS = propagateInputNaN(FLHS, FLHS.getSemantics(),
                                                    /*QuietingMode=*/true,
                                                    /*FlipSign=*/false);
@@ -1651,7 +1629,7 @@ public:
               if (FinalResult.isPoison())
                 return FinalResult;
               QuietResult = FinalResult.asFloat();
-              return applyNaNPropagation(QuietResult, {&QuietLHS, &QuietRHS});
+              return applyNaNPropagation(QuietResult, {&FLHS, &FRHS});
             }
             return applyNaNPropagation(Result, {&FLHS, &FRHS});
           });
@@ -2109,7 +2087,8 @@ public:
   }
 
   void visitFNeg(UnaryOperator &I) {
-    visitFPUnOp(I, [](const APFloat &Operand) -> APFloat { return -Operand; });
+    visitBitwiseFPUnOp(
+        I, [](const APFloat &Operand) -> APFloat { return -Operand; });
   }
 
   void visitTruncInst(TruncInst &Trunc) {
