@@ -913,15 +913,18 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
     // (like wbinvl1)
     if (VDataIdx == -1)
       return -1;
-    // For MUBUF/MTBUF instructions this hazard only exists if the
-    // instruction is not using a register in the soffset field.
-    const MachineOperand *SOffset =
-        TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
-    // If we have no soffset operand, then assume this field has been
-    // hardcoded to zero.
-    if (AMDGPU::getRegBitWidth(VDataRCID) > 64 &&
-        (!SOffset || !SOffset->isReg()))
-      return VDataIdx;
+    if (AMDGPU::getRegBitWidth(VDataRCID) > 64) {
+      // On gfx940-family the BUFFER_STORE source-vgpr WAR hazard exists for
+      // every SOFFSET shape; the wait-state count differs by SOFFSET, and is
+      // computed in checkVALUHazardsHelper. Pre-gfx940 keeps the original
+      // narrow gate.
+      if (ST.hasGFX940Insts())
+        return VDataIdx;
+      const MachineOperand *SOffset =
+          TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
+      if (!SOffset || !SOffset->isReg())
+        return VDataIdx;
+    }
   }
 
   // MIMG instructions create a hazard if they don't use a 256-bit T# and
@@ -949,25 +952,51 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
 
 int GCNHazardRecognizer::checkVALUHazardsHelper(
     const MachineOperand &Def, const MachineRegisterInfo &MRI) const {
-  // Helper to check for the hazard where VMEM instructions that store more than
-  // 8 bytes can have there store data over written by the next instruction.
+  // Helper to check for the hazard where VMEM instructions that store more
+  // than 8 bytes can have their store data overwritten by the next
+  // instruction. On gfx940-family the window depends on the producer's
+  // SOFFSET shape:
+  //   - MUBUF/MTBUF wide store with sgpr SOFFSET: 1 wait state.
+  //   - MUBUF/MTBUF wide store with literal/absent SOFFSET, and FLAT wide
+  //     store: 2 wait states.
+  // Pre-gfx940 keeps a single 1-wait-state window. The 1-cycle sgpr-SOFFSET
+  // window was measured on gfx950 (MI350X); the same gate is applied to the
+  // rest of the gfx940 family to match the existing rule's granularity.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
 
-  const int VALUWaitStates = ST.hasGFX940Insts() ? 2 : 1;
   int WaitStatesNeeded = 0;
-
   if (!TRI->isVectorRegister(MRI, Def.getReg()))
     return WaitStatesNeeded;
-  Register Reg = Def.getReg();
-  auto IsHazardFn = [this, Reg, TRI](const MachineInstr &MI) {
-    int DataIdx = createsVALUHazard(MI);
-    return DataIdx >= 0 &&
-           TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
+  const Register Reg = Def.getReg();
+
+  const int MaxWaitStates = ST.hasGFX940Insts() ? 2 : 1;
+
+  auto WindowFor = [this, TII](const MachineInstr &MI) -> int {
+    if (!ST.hasGFX940Insts())
+      return 1;
+    if (TII->isBUF(MI)) {
+      const MachineOperand *SOffset =
+          TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
+      if (SOffset && SOffset->isReg())
+        return 1;
+    }
+    return 2;
   };
 
-  int WaitStatesNeededForDef =
-    VALUWaitStates - getWaitStatesSince(IsHazardFn, VALUWaitStates);
-  WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+  for (int Window = 1; Window <= MaxWaitStates; ++Window) {
+    auto IsHazardFn = [this, Reg, TRI, Window,
+                       &WindowFor](const MachineInstr &MI) {
+      int DataIdx = createsVALUHazard(MI);
+      if (DataIdx < 0)
+        return false;
+      if (WindowFor(MI) != Window)
+        return false;
+      return TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
+    };
+    int Elapsed = getWaitStatesSince(IsHazardFn, Window);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, Window - Elapsed);
+  }
 
   return WaitStatesNeeded;
 }
