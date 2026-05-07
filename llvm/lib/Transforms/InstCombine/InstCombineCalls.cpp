@@ -3674,9 +3674,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!UO || isa<Argument>(UO))
           continue;
 
-        // Compute known bits for the pointer, passing nullptr as context to
-        // avoid computeKnownBits using the assumption we are about to remove
-        // for reasoning.
+        // Compute known bits for the pointer and drop the assume if the
+        // known alignment isn't increased by it.
         if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
             RK.ArgValue)
           continue;
