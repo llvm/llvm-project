@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IRBuilder.h"
@@ -23979,80 +23980,57 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   return convertLocVTToValVT(DAG, Val, VA, DL, TLI.getSubtarget());
 }
 
-static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
+static SDValue unpackF2XLenOnSoftABI(SelectionDAG &DAG, SDValue Chain,
                                        const CCValAssign &VA,
                                        const CCValAssign &HiVA,
                                        const SDLoc &DL) {
-  assert(VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64 &&
-         "Unexpected VA");
+  const RISCVSubtarget &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
+  unsigned XLen = Subtarget.getXLen();
+  assert(
+      ((XLen == 32 && VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64) ||
+       (XLen == 64 && VA.getLocVT() == MVT::i64 &&
+        VA.getValVT() == MVT::f128)) &&
+      "Unexpected VA");
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
 
   assert(VA.isRegLoc() && "Expected register VA assignment");
 
+  MVT RegMVT = XLen == 32 ? MVT::i32 : MVT::i64;
   Register LoVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
   RegInfo.addLiveIn(VA.getLocReg(), LoVReg);
-  SDValue Lo = DAG.getCopyFromReg(Chain, DL, LoVReg, MVT::i32);
+  SDValue Lo = DAG.getCopyFromReg(Chain, DL, LoVReg, RegMVT);
   SDValue Hi;
   if (HiVA.isMemLoc()) {
-    // Second half of f64 is passed on the stack.
+    // Second half of float is passed on the stack.
     int FI = MFI.CreateFixedObject(4, HiVA.getLocMemOffset(),
                                    /*IsImmutable=*/true);
-    SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
-    Hi = DAG.getLoad(MVT::i32, DL, Chain, FIN,
+    SDValue FIN = DAG.getFrameIndex(FI, RegMVT);
+    Hi = DAG.getLoad(RegMVT, DL, Chain, FIN,
                      MachinePointerInfo::getFixedStack(MF, FI));
   } else {
-    // Second half of f64 is passed in another GPR.
+    // Second half of float is passed in another GPR.
     Register HiVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
     RegInfo.addLiveIn(HiVA.getLocReg(), HiVReg);
-    Hi = DAG.getCopyFromReg(Chain, DL, HiVReg, MVT::i32);
+    Hi = DAG.getCopyFromReg(Chain, DL, HiVReg, RegMVT);
   }
 
   // For big-endian, swap the order of Lo and Hi when building the pair.
-  const RISCVSubtarget &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
   if (!Subtarget.isLittleEndian())
     std::swap(Lo, Hi);
 
-  return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
-}
-
-static SDValue unpackF128OnRV64DSoftABI(SelectionDAG &DAG, SDValue Chain,
-                                       const CCValAssign &VA,
-                                       const CCValAssign &HiVA,
-                                       const SDLoc &DL) {
-  assert(VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f128 &&
-         "Unexpected VA");
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineRegisterInfo &RegInfo = MF.getRegInfo();
-
-  assert(VA.isRegLoc() && "Expected register VA assignment");
-
-  Register LoVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
-  RegInfo.addLiveIn(VA.getLocReg(), LoVReg);
-  SDValue Lo = DAG.getCopyFromReg(Chain, DL, LoVReg, MVT::i64);
-  SDValue Hi;
-  if (HiVA.isMemLoc()) {
-    // Second half of f64 is passed on the stack.
-    int FI = MFI.CreateFixedObject(4, HiVA.getLocMemOffset(),
-                                   /*IsImmutable=*/true);
-    SDValue FIN = DAG.getFrameIndex(FI, MVT::i64);
-    Hi = DAG.getLoad(MVT::i64, DL, Chain, FIN,
-                     MachinePointerInfo::getFixedStack(MF, FI));
+  unsigned BuildPairOP = 0;
+  MVT FPType;
+  if (XLen == 32) {
+    BuildPairOP = RISCVISD::BuildPairF64;
+    FPType = MVT::f64;
   } else {
-    // Second half of f64 is passed in another GPR.
-    Register HiVReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
-    RegInfo.addLiveIn(HiVA.getLocReg(), HiVReg);
-    Hi = DAG.getCopyFromReg(Chain, DL, HiVReg, MVT::i64);
+    BuildPairOP = RISCVISD::BuildPairF128;
+    FPType = MVT::f128;
   }
 
-  // For big-endian, swap the order of Lo and Hi when building the pair.
-  const RISCVSubtarget &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
-  if (!Subtarget.isLittleEndian())
-    std::swap(Lo, Hi);
-
-  return DAG.getNode(RISCVISD::BuildPairF128, DL, MVT::f128, Lo, Hi);
+  return DAG.getNode(BuildPairOP, DL, FPType, Lo, Hi);
 }
 
 // Transform physical registers into virtual registers.
@@ -24150,14 +24128,11 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     SDValue ArgValue;
     // Passing f64 on RV32D with a soft float ABI must be handled as a special
     // case.
-    // unpackF128OnRV64DSoftABI
-    if (VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64) {
+    if ((VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64) ||
+        (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f128)) {
       assert(VA.needsCustom());
-      ArgValue = unpackF64OnRV32DSoftABI(DAG, Chain, VA, ArgLocs[++i], DL);
-    } else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f128) {
-      assert(VA.needsCustom());
-      ArgValue = unpackF128OnRV64DSoftABI(DAG, Chain, VA, ArgLocs[++i], DL);
-    }else if (VA.isRegLoc())
+      ArgValue = unpackF2XLenOnSoftABI(DAG, Chain, VA, ArgLocs[++i], DL);
+    } else if (VA.isRegLoc())
       ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, Ins[InsIdx], *this);
     else
       ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL, *this);
@@ -24709,13 +24684,15 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     const MVT &LocVT = VA.getLocVT();
     const MVT &ValVT = VA.getValVT();
-    if ((LocVT == MVT::i32 && ValVT == MVT::f64) || (LocVT == MVT::i64 && ValVT == MVT::f128)) {
+    if ((LocVT == MVT::i32 && ValVT == MVT::f64) ||
+        (LocVT == MVT::i64 && ValVT == MVT::f128)) {
       // Handle returning f64 on RV32D with a soft float ABI.
       assert(VA.isRegLoc() && "Expected return via registers");
       assert(VA.needsCustom());
-      auto SplitNode = ValVT == MVT::f64 ? RISCVISD::SplitF64 : RISCVISD::SplitF128;
-      SDValue SplitF64 = DAG.getNode(SplitNode, DL,
-                                     DAG.getVTList(LocVT, LocVT), Val);
+      auto SplitNode =
+          ValVT == MVT::f64 ? RISCVISD::SplitF64 : RISCVISD::SplitF128;
+      SDValue SplitF64 =
+          DAG.getNode(SplitNode, DL, DAG.getVTList(LocVT, LocVT), Val);
       SDValue Lo = SplitF64.getValue(0);
       SDValue Hi = SplitF64.getValue(1);
 
