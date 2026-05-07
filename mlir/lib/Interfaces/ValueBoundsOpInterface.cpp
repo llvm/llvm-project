@@ -77,6 +77,14 @@ static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   return std::nullopt;
 }
 
+static bool isIndexOrIntegerType(Type type) {
+  return type.isIndex() || type.isInteger();
+}
+
+static bool isIndexLikeType(Type type, ValueBoundsOptions options) {
+  return type.isIndex() || (options.allowIntegerType && type.isInteger());
+}
+
 ValueBoundsConstraintSet::Variable::Variable(OpFoldResult ofr)
     : Variable(ofr, std::nullopt) {}
 
@@ -90,7 +98,7 @@ ValueBoundsConstraintSet::Variable::Variable(OpFoldResult ofr,
                                              std::optional<int64_t> dim) {
   Builder b(ofr.getContext());
   if (auto constInt = ::getConstantIntValue(ofr)) {
-    assert(!dim && "expected no dim for index-typed values");
+    assert(!dim && "expected no dim for index/integer-typed values");
     map = AffineMap::get(/*dimCount=*/0, /*symbolCount=*/0,
                          b.getAffineConstantExpr(*constInt));
     return;
@@ -100,7 +108,8 @@ ValueBoundsConstraintSet::Variable::Variable(OpFoldResult ofr,
   if (dim) {
     assert(isa<ShapedType>(value.getType()) && "expected shaped type");
   } else {
-    assert(value.getType().isIndex() && "expected index type");
+    assert(isIndexOrIntegerType(value.getType()) &&
+           "expected index or integer type");
   }
 #endif // NDEBUG
   map = AffineMap::get(/*dimCount=*/0, /*symbolCount=*/1,
@@ -158,8 +167,8 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
 
 ValueBoundsConstraintSet::ValueBoundsConstraintSet(
     MLIRContext *ctx, const StopConditionFn &stopCondition,
-    bool addConservativeSemiAffineBounds)
-    : builder(ctx), stopCondition(stopCondition),
+    ValueBoundsOptions options, bool addConservativeSemiAffineBounds)
+    : builder(ctx), stopCondition(stopCondition), options(options),
       addConservativeSemiAffineBounds(addConservativeSemiAffineBounds) {
   assert(stopCondition && "expected non-null stop condition");
 }
@@ -167,8 +176,9 @@ ValueBoundsConstraintSet::ValueBoundsConstraintSet(
 char ValueBoundsConstraintSet::ID = 0;
 
 #ifndef NDEBUG
-static void assertValidValueDim(Value value, std::optional<int64_t> dim) {
-  if (value.getType().isIndex()) {
+static void assertValidValueDim(Value value, std::optional<int64_t> dim,
+                                ValueBoundsOptions options) {
+  if (isIndexLikeType(value.getType(), options)) {
     assert(!dim.has_value() && "invalid dim value");
   } else if (auto shapedType = dyn_cast<ShapedType>(value.getType())) {
     assert(*dim >= 0 && "invalid dim value");
@@ -206,7 +216,7 @@ void ValueBoundsConstraintSet::addBound(BoundType type, int64_t pos,
 AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
                                              std::optional<int64_t> dim) {
 #ifndef NDEBUG
-  assertValidValueDim(value, dim);
+  assertValidValueDim(value, dim, options);
 #endif // NDEBUG
 
   // Check if the value/dim is statically known. In that case, an affine
@@ -268,7 +278,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
                                          std::optional<int64_t> dim,
                                          bool isSymbol, bool addToWorklist) {
 #ifndef NDEBUG
-  assertValidValueDim(value, dim);
+  assertValidValueDim(value, dim, options);
 #endif // NDEBUG
 
   ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
@@ -344,7 +354,7 @@ int64_t ValueBoundsConstraintSet::insert(const Variable &var, bool isSymbol) {
 int64_t ValueBoundsConstraintSet::getPos(Value value,
                                          std::optional<int64_t> dim) const {
 #ifndef NDEBUG
-  assertValidValueDim(value, dim);
+  assertValidValueDim(value, dim, options);
 #endif // NDEBUG
   LDBG() << "Getting pos for: " << value
          << " (dim: " << dim.value_or(kIndexValue)
@@ -471,15 +481,16 @@ void ValueBoundsConstraintSet::projectOutAnonymous(
 
 LogicalResult ValueBoundsConstraintSet::computeBound(
     AffineMap &resultMap, ValueDimList &mapOperands, presburger::BoundType type,
-    const Variable &var, StopConditionFn stopCondition, bool closedUB) {
+    const Variable &var, StopConditionFn stopCondition,
+    ValueBoundsOptions options) {
   MLIRContext *ctx = var.getContext();
-  int64_t ubAdjustment = closedUB ? 0 : 1;
+  int64_t ubAdjustment = options.closedUB ? 0 : 1;
   Builder b(ctx);
   mapOperands.clear();
 
   // Process the backward slice of `value` (i.e., reverse use-def chain) until
   // `stopCondition` is met.
-  ValueBoundsConstraintSet cstr(ctx, stopCondition);
+  ValueBoundsConstraintSet cstr(ctx, stopCondition, options);
   int64_t pos = cstr.insert(var, /*isSymbol=*/false);
   assert(pos == 0 && "expected first column");
   cstr.processWorklist();
@@ -573,9 +584,10 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
     Value value = valueDim.first;
     int64_t dim = valueDim.second;
     if (dim == ValueBoundsConstraintSet::kIndexValue) {
-      // An index-type value is used: can be used directly in the affine.apply
-      // op.
-      assert(value.getType().isIndex() && "expected index type");
+      // An index-typed/integer-typed value is used: it can be used directly in
+      // the computed bound.
+      assert(isIndexLikeType(value.getType(), options) &&
+             "expected index or integer type");
       mapOperands.push_back(std::make_pair(value, std::nullopt));
       continue;
     }
@@ -592,18 +604,20 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
 
 LogicalResult ValueBoundsConstraintSet::computeDependentBound(
     AffineMap &resultMap, ValueDimList &mapOperands, presburger::BoundType type,
-    const Variable &var, ValueDimList dependencies, bool closedUB) {
+    const Variable &var, ValueDimList dependencies,
+    ValueBoundsOptions options) {
   return computeBound(
       resultMap, mapOperands, type, var,
       [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
         return llvm::is_contained(dependencies, std::make_pair(v, d));
       },
-      closedUB);
+      options);
 }
 
 LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
     AffineMap &resultMap, ValueDimList &mapOperands, presburger::BoundType type,
-    const Variable &var, ValueRange independencies, bool closedUB) {
+    const Variable &var, ValueRange independencies,
+    ValueBoundsOptions options) {
   // Return "true" if the given value is independent of all values in
   // `independencies`. I.e., neither the value itself nor any value in the
   // backward slice (reverse use-def chain) is contained in `independencies`.
@@ -632,12 +646,12 @@ LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
       [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
         return isIndependent(v);
       },
-      closedUB);
+      options);
 }
 
 FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
     presburger::BoundType type, const Variable &var,
-    const StopConditionFn &stopCondition, bool closedUB) {
+    const StopConditionFn &stopCondition, ValueBoundsOptions options) {
   // Default stop condition if none was specified: Keep adding constraints until
   // a bound could be computed.
   int64_t pos = 0;
@@ -647,12 +661,13 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
   };
 
   ValueBoundsConstraintSet cstr(
-      var.getContext(), stopCondition ? stopCondition : defaultStopCondition);
+      var.getContext(), stopCondition ? stopCondition : defaultStopCondition,
+      options);
   pos = cstr.populateConstraints(var.map, var.mapOperands);
   assert(pos == 0 && "expected `map` is the first column");
 
   // Compute constant bound for `valueDim`.
-  int64_t ubAdjustment = closedUB ? 0 : 1;
+  int64_t ubAdjustment = options.closedUB ? 0 : 1;
   if (auto bound = cstr.cstr.getConstantBound64(type, pos))
     return type == BoundType::UB ? *bound + ubAdjustment : *bound;
   return failure();
@@ -661,7 +676,7 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
 void ValueBoundsConstraintSet::populateConstraints(Value value,
                                                    std::optional<int64_t> dim) {
 #ifndef NDEBUG
-  assertValidValueDim(value, dim);
+  assertValidValueDim(value, dim, options);
 #endif // NDEBUG
 
   // `getExpr` pushes the value/dim onto the worklist (unless it was already
@@ -686,8 +701,8 @@ ValueBoundsConstraintSet::computeConstantDelta(Value value1, Value value2,
                                                std::optional<int64_t> dim1,
                                                std::optional<int64_t> dim2) {
 #ifndef NDEBUG
-  assertValidValueDim(value1, dim1);
-  assertValidValueDim(value2, dim2);
+  assertValidValueDim(value1, dim1, /*options=*/{});
+  assertValidValueDim(value2, dim2, /*options=*/{});
 #endif // NDEBUG
 
   Builder b(value1.getContext());
@@ -973,14 +988,14 @@ ValueBoundsConstraintSet::BoundBuilder::operator[](int64_t dim) {
   assert(!this->dim.has_value() && "dim was already set");
   this->dim = dim;
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim);
+  assertValidValueDim(value, this->dim, cstr.options);
 #endif // NDEBUG
   return *this;
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator<(AffineExpr expr) {
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim);
+  assertValidValueDim(value, this->dim, cstr.options);
 #endif // NDEBUG
   cstr.addBound(BoundType::UB, cstr.getPos(value, this->dim), expr);
 }
@@ -995,14 +1010,14 @@ void ValueBoundsConstraintSet::BoundBuilder::operator>(AffineExpr expr) {
 
 void ValueBoundsConstraintSet::BoundBuilder::operator>=(AffineExpr expr) {
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim);
+  assertValidValueDim(value, this->dim, cstr.options);
 #endif // NDEBUG
   cstr.addBound(BoundType::LB, cstr.getPos(value, this->dim), expr);
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator==(AffineExpr expr) {
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim);
+  assertValidValueDim(value, this->dim, cstr.options);
 #endif // NDEBUG
   cstr.addBound(BoundType::EQ, cstr.getPos(value, this->dim), expr);
 }

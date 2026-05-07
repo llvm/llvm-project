@@ -938,13 +938,14 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // historically assume that llvm::getLoopEstimatedTripCount always returns a
   // positive count or std::nullopt.  Thus, return std::nullopt when
   // llvm.loop.estimated_trip_count is 0.
-  if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
+  if (std::optional<unsigned> TC =
+          getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
                       << "count of " << *TC
                       << (*TC == 0 ? " (returning std::nullopt)" : "")
                       << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : std::optional(*TC);
+    return *TC == 0 ? std::nullopt : TC;
   }
 
   // Estimate the trip count from latch branch weights.
