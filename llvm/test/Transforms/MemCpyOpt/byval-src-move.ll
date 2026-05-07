@@ -12,16 +12,15 @@ define void @byval_to_sret_full_cover(ptr noalias sret([3 x i32]) %ret,
 ; CHECK-SAME: ptr noalias sret([3 x i32]) [[RET:%.*]], ptr noalias byval([3 x i32]) [[A:%.*]], ptr noalias readonly [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    store i32 [[V0]], ptr [[A]], align 4
+; CHECK-NEXT:    store i32 [[V0]], ptr [[RET]], align 4
 ; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[PB1]], align 4
-; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i32, ptr [[RET]], i64 1
 ; CHECK-NEXT:    store i32 [[V1]], ptr [[PA1]], align 4
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[RET]], i64 2
 ; CHECK-NEXT:    store i32 [[V2]], ptr [[PA2]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RET]], ptr align 4 [[A]], i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   ptr noalias byval([3 x i32]) %a,
@@ -47,16 +46,15 @@ define void @byval_to_writable_full_cover(ptr noalias align 4 writable dereferen
 ; CHECK-SAME: ptr noalias writable align 4 dereferenceable(12) [[RET:%.*]], ptr noalias byval([3 x i32]) [[A:%.*]], ptr noalias readonly [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    store i32 [[V0]], ptr [[A]], align 4
+; CHECK-NEXT:    store i32 [[V0]], ptr [[RET]], align 4
 ; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[PB1]], align 4
-; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i32, ptr [[RET]], i64 1
 ; CHECK-NEXT:    store i32 [[V1]], ptr [[PA1]], align 4
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[RET]], i64 2
 ; CHECK-NEXT:    store i32 [[V2]], ptr [[PA2]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RET]], ptr align 4 [[A]], i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   ptr noalias byval([3 x i32]) %a,
