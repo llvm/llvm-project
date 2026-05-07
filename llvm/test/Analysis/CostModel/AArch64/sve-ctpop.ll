@@ -7,8 +7,8 @@ define void @ctpop_scalable() {
 ; CHECK-LABEL: 'ctpop_scalable'
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i8 = call <vscale x 4 x i8> @llvm.ctpop.nxv4i8(<vscale x 4 x i8> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i8 = call <vscale x 8 x i8> @llvm.ctpop.nxv8i8(<vscale x 8 x i8> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i8 = call <vscale x 16 x i8> @llvm.ctpop.nxv16i8(<vscale x 16 x i8> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv32i8 = call <vscale x 32 x i8> @llvm.ctpop.nxv32i8(<vscale x 32 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = call <vscale x 16 x i8> @llvm.ctpop.nxv16i8(<vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv32i8 = call <vscale x 32 x i8> @llvm.ctpop.nxv32i8(<vscale x 32 x i8> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2i16 = call <vscale x 2 x i16> @llvm.ctpop.nxv2i16(<vscale x 2 x i16> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i16 = call <vscale x 4 x i16> @llvm.ctpop.nxv4i16(<vscale x 4 x i16> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = call <vscale x 8 x i16> @llvm.ctpop.nxv8i16(<vscale x 8 x i16> poison)

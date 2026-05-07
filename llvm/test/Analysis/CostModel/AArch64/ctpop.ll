@@ -255,9 +255,17 @@ define <16 x i16> @test_ctpop_v16i16(<16 x i16> %a) {
 }
 
 define <32 x i8> @test_ctpop_v32i8(<32 x i8> %a) {
-; CHECK-LABEL: 'test_ctpop_v32i8'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %ctpop = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %a)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %ctpop
+; BASE-LABEL: 'test_ctpop_v32i8'
+; BASE-NEXT:  Cost Model: Found costs of 2 for: %ctpop = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %a)
+; BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %ctpop
+;
+; SVE-LABEL: 'test_ctpop_v32i8'
+; SVE-NEXT:  Cost Model: Found costs of 2 for: %ctpop = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %a)
+; SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %ctpop
+;
+; SVE-256-LABEL: 'test_ctpop_v32i8'
+; SVE-256-NEXT:  Cost Model: Found costs of 1 for: %ctpop = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %a)
+; SVE-256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %ctpop
 ;
   %ctpop = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %a)
   ret <32 x i8> %ctpop
