@@ -198,9 +198,8 @@ public:
   LIBC_INLINE constexpr size_t index(Key key) const {
     auto slot = this->index_no_remap(key);
 
-    if (slot < n_) {
+    if (slot < n_)
       return slot;
-    }
 
     return this->remap[slot - n_];
   }
@@ -223,11 +222,11 @@ public:
   LIBC_INLINE constexpr cpp::optional<cpp::tuple<uint64_t, PilotsTypeV, F>>
   compute_pilots(const cpp::array<Key, n_> &keys) {
     cpp::array<cpp::array<bool, slots_>, parts_> taken{};
-    for (cpp::array<bool, slots_> &t : taken) {
-      for (size_t i = 0; i < slots_; i++) {
+
+    for (cpp::array<bool, slots_> &t : taken)
+      for (size_t i = 0; i < slots_; i++)
         t[i] = 0;
-      }
-    }
+
     PilotsTypeV pilots{};
 
     size_t tries = 0;
@@ -243,9 +242,8 @@ public:
     bool contd = true;
     while (contd) {
       tries += 1;
-      if (tries > MAX_TRIES) {
+      if (tries > MAX_TRIES)
         return {};
-      }
 
       this->seed = STDRNG[tries - 1];
       pilots = PilotsTypeV{0};
@@ -256,11 +254,9 @@ public:
 
       auto shard_hashes = this->shards(keys);
 
-      if (!this->try_build_shards(shard_hashes, pilots, taken)) {
-        contd = true;
-      } else {
-        contd = !this->remap_free_slots(taken);
-      }
+      contd = !this->try_build_shards(shard_hashes, pilots, taken)
+                  ? true
+                  : !this->remap_free_slots(taken);
     }
 
     this->pilots = pilots;
@@ -272,18 +268,18 @@ public:
     cpp::array<size_t, parts_> val{};
     for (size_t i = 0; i < taken.size(); ++i) {
       size_t counter = 0;
-      for (auto element : taken[i]) {
-        if (!element) {
+
+      for (auto element : taken[i])
+        if (!element)
           counter++;
-        }
-      }
+
       val[i] = counter;
     }
 
     size_t acc = 0;
-    for (const auto &item : val) {
+
+    for (const auto &item : val)
       acc += item;
-    }
 
     if (acc != slots_total_ - n_) {
 #ifdef DEBUGDEBUG
@@ -297,9 +293,8 @@ public:
       return false;
     }
 
-    if (slots_total_ == n_) {
+    if (slots_total_ == n_)
       return true;
-    }
 
     cpp::array<uint64_t, slots_total_ - n_> v{};
     size_t v_idx = 0;
@@ -324,9 +319,8 @@ public:
       p++;
     }
 
-    for (size_t i = 0; i < v.size(); i++) {
+    for (size_t i = 0; i < v.size(); i++)
       this->remap[i] = static_cast<uint32_t>(v[i]);
-    }
 
     return true;
   }
@@ -338,9 +332,10 @@ public:
   LIBC_INLINE constexpr cpp::array<cpp::array<uint64_t, n_>, 1>
   no_sharding(const cpp::array<Key, n_> &keys) const {
     cpp::array<uint64_t, n_> ret{};
-    for (size_t i = 0; i < keys.size(); i++) {
+
+    for (size_t i = 0; i < keys.size(); i++)
       ret[i] = this->hash_key(keys[i]);
-    }
+
     return {ret};
   }
 
@@ -445,17 +440,16 @@ public:
       cpp::optional<cpp::tuple<cpp::array<uint64_t, n_>,
                                cpp::array<uint32_t, parts_per_shard_ + 1>>>
           sorted_parts = this->sort_parts(shard, hashes);
-      if (!sorted_parts) {
+
+      if (!sorted_parts)
         return false;
-      }
 
       auto &[new_hashes, part_starts] = sorted_parts.value();
 
       if (!this->build_shard(shard, new_hashes, part_starts, pilots,
                              pilots_begin, pilots_end, taken_begin, taken_end,
-                             taken)) {
+                             taken))
         return false;
-      }
     }
 
     return true;
@@ -510,9 +504,9 @@ public:
     constexpr uint16_t KMAX = 256;
 
     cpp::array<uint32_t, slots_> slots{};
-    for (size_t i = 0; i < slots_; i++) {
+
+    for (size_t i = 0; i < slots_; i++)
       slots[i] = BUCKET_IDX_NONE;
-    }
 
     auto bucket_len = [&](uint32_t b) constexpr -> size_t {
       return starts[b + 1] - starts[b];
@@ -687,20 +681,18 @@ public:
           break;
         }
       }
-      if (bad) {
-        continue;
-      }
 
-      for (auto hx : bucket.subspan(r)) {
+      if (bad)
+        continue;
+
+      for (auto hx : bucket.subspan(r))
         bad |= check(hx);
-      }
-      if (bad) {
-        continue;
-      }
 
-      if (this->try_take_pilot(bucket, hp, taken)) {
+      if (bad)
+        continue;
+
+      if (this->try_take_pilot(bucket, hp, taken))
         return cpp::tuple<size_t, uint64_t>{p, hp};
-      }
     }
     return cpp::nullopt;
   }
