@@ -897,7 +897,6 @@ def : InstRW<[C1NanoWrite<2, C1NanoUnitMAC>], (instregex "^CRC32")>;
 // Note Correction to what is stated in the Arm C1-Nano Core Software Optimization
 //      Guide issue 4, section 22.4 SVE Predicate instructions:
 //      - PALU should be ALU0
-//      - VALU should be ALU0
 
 // Loop control, based on predicate
 def : InstRW<[C1NanoWrite<2, C1NanoUnitALU0>], (instrs BRKA_PPmP, BRKA_PPzP,
@@ -940,19 +939,19 @@ def : InstRW<[C1NanoWrite<1, C1NanoUnitALU0>],
 def : InstRW<[C1NanoWrite<1, C1NanoUnitALU0>],
              (instregex "^(DEC|INC)P_XP_[BHSD]")>;
 
-def : InstRW<[C1NanoWrite<2, C1NanoUnitALU0>],
+def : InstRW<[C1NanoMC2Write<2, 1, C1NanoUnitVALU>],
              (instregex "^(SQDEC|SQINC|UQDEC|UQINC)P_XP_[BHSD]",
                         "^(UQDEC|UQINC)P_WP_[BHSD]")>;
 
 // Predicate counting scalar, active predicate, saturating, 32-bit.
-def : InstRW<[C1NanoWrite<1, C1NanoUnitALU0>],
+def : InstRW<[C1NanoMC2Write<1, 1, C1NanoUnitVALU>],
              (instregex "^(SQDEC|SQINC)P_XPWd_[BHSD]")>;
 
 // Predicate counting vector, active predicate
 def : InstRW<[C1NanoWrite<3, C1NanoUnitALU0>],
              (instregex "^(DEC|INC)P_ZP_[HSD]")>;
 
-def : InstRW<[C1NanoWrite<4, C1NanoUnitALU0>],
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>],
              (instregex "^(SQDEC|SQINC|UQDEC|UQINC)P_ZP_[HSD]")>;
 
 // Predicate logical
@@ -1159,7 +1158,7 @@ def : InstRW<[C1NanoMC2Write<9, 7, C1NanoUnitVALU>], (instregex "^CNT_ZPmZ_D")>;
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instrs DUPM_ZI)>;
 
 // Compare and set flags
-def : InstRW<[C1NanoWrite<5, C1NanoUnitVALU1>],
+def : InstRW<[C1NanoMC2Write<5, 1, C1NanoUnitVALU>],
              (instregex "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_PPzZ[IZ]_[BHSD]",
                         "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_WIDE_PPzZZ_[BHS]")>;
 
