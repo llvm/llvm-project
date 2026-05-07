@@ -244,7 +244,7 @@ void Target::PrimeFromDummyTarget(Target &target) {
     BreakpointResolverOverrideUP new_override_up 
         = elem.second->CopyIntoNewTarget(*this);
     if (new_override_up->Validate())
-      AddBreakpointResolverOverride(new_override_up);
+      AddBreakpointResolverOverride(std::move(new_override_up));
   }
 
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(

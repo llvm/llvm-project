@@ -1035,7 +1035,7 @@ public:
 
   /// Add a breakpoint override resolver.  This version can't fail.
   lldb::user_id_t
-  AddBreakpointResolverOverride(BreakpointResolverOverrideUP &override_up) {
+  AddBreakpointResolverOverride(BreakpointResolverOverrideUP override_up) {
     lldb::user_id_t id_used = m_override_id;
     m_breakpoint_overrides.emplace(
         m_override_id, std::move(override_up));
