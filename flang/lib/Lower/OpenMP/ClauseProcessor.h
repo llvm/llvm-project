@@ -217,7 +217,8 @@ private:
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
       llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
-      llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
+      llvm::omp::Directive directive = llvm::omp::OMPD_unknown,
+      llvm::omp::Clause clause = llvm::omp::OMPC_unknown) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
