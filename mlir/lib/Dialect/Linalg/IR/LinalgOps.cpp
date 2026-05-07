@@ -4544,65 +4544,67 @@ void ContractOp::print(OpAsmPrinter &p) {
       /*elidedAttrs=*/{"indexing_maps", "operandSegmentSizes"});
 }
 
-LogicalResult ContractOp::verify() {
-  int iterationSpaceDims = -1;
-  // Map iter space dims to #occurrences in inputs' and output's affine_maps:
-  // e.g., inOccurrences[0] will hold #times that dim (with index) 0 is used to
-  // access an input operand (so occurrence count can be at most 2) and
-  // outOccurrences[1] will indicate whether dim 1 occurred in the output, etc.
-  SmallVector<size_t> inOccurrences;
-  SmallVector<size_t> outOccurrences;
+/// Validate contraction operands indexing maps and shapes.
+/// For a given affine_map and type, checks that:
+///   - the affine_map is a projected permutation;
+///   - the rank of the affine_map's results and the corresponding type match;
+///   - the rank of the affine_map's domain is consistent with prior maps.
+/// Also updates the per-dim input/output occurrence counts.
+static LogicalResult
+checkContractionAffineMapAndType(AffineMap affineMap, Type operandType,
+                                 bool isInput, int &iterationSpaceDims,
+                                 SmallVector<size_t> &inOccurrences,
+                                 SmallVector<size_t> &outOccurrences,
+                                 function_ref<InFlightDiagnostic()> emitError) {
+  if (!affineMap.isProjectedPermutation())
+    return emitError() << "provided affine_map is not a projected permutation";
 
-  // A helper so that for each operand's affine_map and type we check that ...
-  auto checkAffineMapAndType = [&](AffineMap affineMap, Type operandType,
-                                   bool isInput) -> LogicalResult {
-    // ... the affine_map is a projected permutation;
-    if (!affineMap.isProjectedPermutation())
-      return emitError("provided affine_map is not a projected permutation");
-
-    // ... the rank of the affine_map's results and corresponding type match;
-    if (auto shapedType = dyn_cast<ShapedType>(operandType)) {
-      if (affineMap.getNumResults() != shapedType.getRank())
-        return emitError("ranks of shaped operand and results of corresponding "
-                         "affine_map differ");
-    } else if (affineMap.getNumResults() != 0) {
-      return emitError("affine_map specifies shaped access while operand has "
-                       "non-shaped type");
-    }
-
-    // ... the rank of the affine_map's domain is the same as those seen prior;
-    if (iterationSpaceDims == -1) {
-      iterationSpaceDims = affineMap.getNumDims();
-      inOccurrences = SmallVector<size_t>(iterationSpaceDims, 0);
-      outOccurrences = SmallVector<size_t>(iterationSpaceDims, 0);
-    } else if (iterationSpaceDims != (int)affineMap.getNumDims()) {
-      return emitError("iteration spaces of provided affine_maps differ");
-    }
-
-    // ... update counts of dims used to access either an input or the output.
-    for (AffineExpr affineExpr : affineMap.getResults()) {
-      auto affineDimExpr = dyn_cast<AffineDimExpr>(affineExpr);
-      if (!affineDimExpr)
-        llvm_unreachable("affine_map is a projected permutation");
-
-      if (isInput)
-        inOccurrences[affineDimExpr.getPosition()] += 1;
-      else
-        outOccurrences[affineDimExpr.getPosition()] += 1;
-    }
-
-    return success();
-  };
-
-  for (auto &&[affineMap, operandType, isInput] :
-       llvm::zip(getIndexingMapsArray(), getOperandTypes(),
-                 SmallVector<bool>{true, true, false})) {
-    if (failed(checkAffineMapAndType(affineMap, operandType, isInput)))
-      return failure(); // NB: checkAffineMapAndType will emit relevant error.
+  if (auto shapedType = dyn_cast<ShapedType>(operandType)) {
+    if (affineMap.getNumResults() != shapedType.getRank())
+      return emitError()
+             << "ranks of shaped operand and results of corresponding "
+                "affine_map differ";
+  } else if (affineMap.getNumResults() != 0) {
+    return emitError()
+           << "affine_map specifies shaped access while operand has "
+              "non-shaped type";
   }
 
+  if (iterationSpaceDims == -1) {
+    iterationSpaceDims = affineMap.getNumDims();
+    inOccurrences = SmallVector<size_t>(iterationSpaceDims, 0);
+    outOccurrences = SmallVector<size_t>(iterationSpaceDims, 0);
+  } else if (iterationSpaceDims != (int)affineMap.getNumDims()) {
+    return emitError() << "iteration spaces of provided affine_maps differ";
+  }
+
+  // Update counts of dims used to access either an input or the output.
+  for (AffineExpr affineExpr : affineMap.getResults()) {
+    auto affineDimExpr = dyn_cast<AffineDimExpr>(affineExpr);
+    if (!affineDimExpr)
+      llvm_unreachable("affine_map is a projected permutation");
+
+    if (isInput)
+      inOccurrences[affineDimExpr.getPosition()] += 1;
+    else
+      outOccurrences[affineDimExpr.getPosition()] += 1;
+  }
+
+  return success();
+}
+
+/// Validates the contracting dimension constraints given the per-dim
+/// occurrence counts. Checks that:
+///   - every iteration-space dimension is used by at least one operand;
+///   - every dimension is either contracting (appears in both inputs, not in
+///     output) or parallel (appears in exactly one input and in the output);
+///   - at least one contracting dimension exists.
+static LogicalResult
+verifyContractionDims(size_t iterationSpaceDims, ArrayRef<size_t> inOccurrences,
+                      ArrayRef<size_t> outOccurrences,
+                      function_ref<InFlightDiagnostic()> emitError) {
   bool hasContractingDim = false;
-  for (size_t dimIndex = 0; dimIndex < (size_t)iterationSpaceDims; dimIndex++) {
+  for (size_t dimIndex = 0; dimIndex < iterationSpaceDims; dimIndex++) {
     size_t inOccCount = inOccurrences[dimIndex];
     size_t outOccCount = outOccurrences[dimIndex];
 
@@ -4629,9 +4631,33 @@ LogicalResult ContractOp::verify() {
   }
 
   if (!hasContractingDim)
-    return emitError("'indexing_maps' do not specify a contracting dimension");
+    return emitError()
+           << "'indexing_maps' do not specify a contracting dimension";
 
   return success();
+}
+
+LogicalResult ContractOp::verify() {
+  int iterationSpaceDims = -1;
+  // Map iter space dims to #occurrences in inputs' and output's affine_maps:
+  // e.g., inOccurrences[0] will hold #times that dim (with index) 0 is used to
+  // access an input operand (so occurrence count can be at most 2) and
+  // outOccurrences[1] will indicate whether dim 1 occurred in the output, etc.
+  SmallVector<size_t> inOccurrences;
+  SmallVector<size_t> outOccurrences;
+
+  for (auto &&[affineMap, operandType, isInput] :
+       llvm::zip(getIndexingMapsArray(), getOperandTypes(),
+                 SmallVector<bool>{true, true, false})) {
+    if (failed(checkContractionAffineMapAndType(
+            affineMap, operandType, isInput, iterationSpaceDims, inOccurrences,
+            outOccurrences, [&]() { return emitError(); })))
+      return failure(); // NB: Validation helper emits relevant error.
+  }
+
+  return verifyContractionDims(static_cast<size_t>(iterationSpaceDims),
+                               inOccurrences, outOccurrences,
+                               [&]() { return emitError(); });
 }
 
 LogicalResult ContractOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
@@ -6799,6 +6825,280 @@ void BatchReduceMatmulOp::getEffects(
 }
 
 Speculation::Speculatability BatchReduceMatmulOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+//===----------------------------------------------------------------------===//
+// ScaledContractOp
+//===----------------------------------------------------------------------===//
+
+SmallVector<utils::IteratorType> ScaledContractOp::getIteratorTypesArray() {
+  AffineMap outAffineMap = getIndexingMapsArray().pop_back_val();
+  // Infer iterator types based on the output.
+  SmallVector<bool> dimsInOutput(outAffineMap.getNumDims(), false);
+  for (auto result : outAffineMap.getResults()) {
+    auto dimExpr = dyn_cast<AffineDimExpr>(result);
+    assert(dimExpr && "affine_map is a projected permutation");
+    dimsInOutput[dimExpr.getPosition()] = true;
+  }
+
+  SmallVector<utils::IteratorType> iteratorTypes;
+  for (auto dimOccursInOutput : dimsInOutput)
+    iteratorTypes.push_back(dimOccursInOutput ? utils::IteratorType::parallel
+                                              : utils::IteratorType::reduction);
+
+  return iteratorTypes;
+}
+
+unsigned ScaledContractOp::getNumRegionArgs() { return 5; }
+
+/// Implement block region builder, which is called by 'fillStructuredOpRegion'.
+void ScaledContractOp::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 5) {
+    emitError() << "ScaledContractOp regionBuilder expects 5 args, got "
+                << block.getNumArguments();
+    return;
+  }
+  assert(block.getNumArguments() == 5 &&
+         "ScaledContractOp regionBuilder expects 5 args");
+  RegionBuilderHelper helper(b, block);
+
+  TypeFn castSignedness = TypeFn::cast_signed;
+  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+    return attr.getName() == "cast";
+  });
+  if (castIter != attrs.end()) {
+    if (auto attr = llvm::dyn_cast<TypeFnAttr>(castIter->getValue()))
+      castSignedness = attr.getValue();
+  }
+
+  // TODO: Support fields with operators besides mult & add.
+  Type outType = block.getArgument(4).getType();
+  Value lhsAtOutType =
+      helper.buildTypeFn(castSignedness, outType, block.getArgument(0));
+  Value lhsScaleAtOutType =
+      helper.buildTypeFn(castSignedness, outType, block.getArgument(1));
+  Value scaledLhs = helper.buildBinaryFn(BinaryFn::mul, lhsAtOutType,
+                                         lhsScaleAtOutType, emitError);
+  if (!scaledLhs)
+    return;
+  Value rhsAtOutType =
+      helper.buildTypeFn(castSignedness, outType, block.getArgument(2));
+  Value rhsScaleAtOutType =
+      helper.buildTypeFn(castSignedness, outType, block.getArgument(3));
+  Value scaledRhs = helper.buildBinaryFn(BinaryFn::mul, rhsAtOutType,
+                                         rhsScaleAtOutType, emitError);
+  if (!scaledRhs)
+    return;
+  Value productAtOutType =
+      helper.buildBinaryFn(BinaryFn::mul, scaledLhs, scaledRhs, emitError);
+  if (!productAtOutType)
+    return;
+  Value result = helper.buildBinaryFn(BinaryFn::add, block.getArgument(4),
+                                      productAtOutType, emitError);
+  if (!result)
+    return;
+  helper.yieldOutputs({result});
+}
+
+ParseResult ScaledContractOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
+  FailureOr<ArrayAttr> indexingMapsAttr = parseIndexingMapsAttr(parser);
+  if (failed(indexingMapsAttr) || *indexingMapsAttr == nullptr)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected 'indexing_maps' attribute");
+  result.addAttribute("indexing_maps", *indexingMapsAttr);
+
+  return parseNamedStructuredOp(parser, result, getNumRegionArgs(),
+                                regionBuilder);
+}
+
+void ScaledContractOp::print(OpAsmPrinter &p) {
+  p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
+  printNamedStructuredOp(
+      p, getOperation(), getInputs(), getOutputs(),
+      /*elidedAttrs=*/{"indexing_maps", "operandSegmentSizes"});
+}
+
+LogicalResult ScaledContractOp::verify() {
+  int iterationSpaceDims = -1;
+  // Map iter space dims to #occurrences in inputs' and output's affine_maps:
+  // e.g., inOccurrences[0] will hold #times that dim (with index) 0 is used to
+  // access an input operand (so occurrence count can be at most 2) and
+  // outOccurrences[1] will indicate whether dim 1 occurred in the output, etc.
+  SmallVector<size_t> inOccurrences;
+  SmallVector<size_t> outOccurrences;
+
+  // Validate inputs and contraction semantics.
+  SmallVector<AffineMap, 5> maps = getIndexingMapsArray();
+  SmallVector<Type, 5> types = llvm::to_vector(getOperandTypes());
+  for (auto &&[affineMap, operandType, isInput] :
+       llvm::zip(SmallVector<AffineMap>{maps[0], maps[2], maps[4]},
+                 SmallVector<Type>{types[0], types[2], types[4]},
+                 SmallVector<bool>{true, true, false})) {
+    if (failed(checkContractionAffineMapAndType(
+            affineMap, operandType, isInput, iterationSpaceDims, inOccurrences,
+            outOccurrences, [&]() { return emitError(); })))
+      return failure(); // NB: Validation helper emits relevant error.
+  }
+
+  if (failed(verifyContractionDims(static_cast<size_t>(iterationSpaceDims),
+                                   inOccurrences, outOccurrences,
+                                   [&]() { return emitError(); })))
+    return failure(); // NB: Validation helper emits relevant error.
+
+  // Validate scales and scaling semantics.
+  auto checkScaleAffineMapAndType = [&](AffineMap affineMap, Type operandType,
+                                        bool isInput) -> LogicalResult {
+    // If scale's map is not a projected permutation, then it must follow
+    // specific scaling scheme semantics.
+    if (!affineMap.isProjectedPermutation()) {
+      if (affineMap.getNumSymbols() > 0)
+        return emitError("scale affine_map must not contain symbols");
+      if (affineMap.getNumResults() > affineMap.getNumInputs())
+        return emitError(
+            "scale affine_map must not have more results than inputs");
+
+      SmallVector<bool, 8> seen(affineMap.getNumInputs(), false);
+      // Allow, at most, only one instance of each input dimension in the result
+      // expressions.
+      for (auto expr : affineMap.getResults()) {
+        AffineDimExpr dim = nullptr;
+        if (isa<AffineDimExpr>(expr)) {
+          // Scaling over whole dimesion.
+          dim = dyn_cast<AffineDimExpr>(expr);
+        } else if (auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr)) {
+          // Scaling over a part of the dimension.
+          // Note: Currently support limited to block scaling i.e.,
+          //       one scale per a fixed number of contiguous scalar elements
+          //       in a given dimension.
+          if (binExpr.getKind() != AffineExprKind::FloorDiv)
+            return emitError(
+                "only block scale with floordiv is supported for now");
+          auto scaleDim = dyn_cast<AffineDimExpr>(binExpr.getLHS());
+          if (!scaleDim)
+            return emitError("block scale LHS must be dim");
+          auto scaleFactor = dyn_cast<AffineConstantExpr>(binExpr.getRHS());
+          if (!scaleFactor)
+            return emitError("block scale RHS must be constant");
+          if (scaleFactor.getValue() <= 0)
+            return emitError("block scale factor must be positive");
+          dim = scaleDim;
+        } else {
+          return emitError("unsupported scaling variant");
+        }
+
+        if (!dim)
+          return emitError("invalid scale affine_map result expression");
+        if (seen[dim.getPosition()])
+          return emitError(
+              "scale affine_map must not have duplicate result dimensions");
+        seen[dim.getPosition()] = true;
+      }
+    }
+
+    if (auto shapedType = dyn_cast<ShapedType>(operandType)) {
+      if (affineMap.getNumResults() != shapedType.getRank())
+        return emitError(
+            "scale ranks of shaped operand and results of corresponding "
+            "affine_map differ");
+    } else if (affineMap.getNumResults() != 0) {
+      return emitError(
+          "scale affine_map specifies shaped access while operand has "
+          "non-shaped type");
+    }
+
+    return success();
+  };
+
+  // Validate scales' maps.
+  for (auto &&[affineMap, operandType] :
+       llvm::zip(SmallVector<AffineMap>{maps[1], maps[3]},
+                 SmallVector<Type>{types[1], types[3]})) {
+    if (failed(checkScaleAffineMapAndType(affineMap, operandType,
+                                          /*isInput=*/true)))
+      return failure(); // NB: Validation helper emits relevant error.
+  }
+
+  // Cross-validate maps of operand and their scale.
+  for (auto &&[inputMap, inputType, scaleMap, scaleType] :
+       llvm::zip(SmallVector<AffineMap>{maps[0], maps[2]},
+                 SmallVector<Type>{types[0], types[2]},
+                 SmallVector<AffineMap>{maps[1], maps[3]},
+                 SmallVector<Type>{types[1], types[3]})) {
+    if (inputMap.getNumResults() < scaleMap.getNumResults())
+      return emitError("scale must have at most the same rank as input");
+    if (scaleMap.getNumResults() == 0)
+      continue;
+
+    auto inputShape = dyn_cast<ShapedType>(inputType).getShape();
+    auto scaleShape = dyn_cast<ShapedType>(scaleType).getShape();
+
+    // Each scale dim must reference a dim present in the input map:
+    //   - a missing scale dim indicates scaling over the whole input dimension
+    //   - a scale dim with floordiv indicates reusing the scaling factor over
+    //     parts of the input dimension; the factor must match the ratio of
+    //     input dim and scale dim sizes.
+    for (auto [scaleIdx, scaleExpr] : llvm::enumerate(scaleMap.getResults())) {
+      AffineDimExpr scaleDimExpr = nullptr;
+      std::optional<int64_t> scaleFactor;
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(scaleExpr)) {
+        // Scaling over the whole dimension.
+        scaleDimExpr = dimExpr;
+      } else if (auto scaleBinExpr = dyn_cast<AffineBinaryOpExpr>(scaleExpr)) {
+        // Block scaling over a part of the dimension.
+        assert(scaleBinExpr.getKind() == AffineExprKind::FloorDiv &&
+               "only floordiv is supported for now");
+        auto scaleDim = dyn_cast<AffineDimExpr>(scaleBinExpr.getLHS());
+        assert(scaleDim && "block scale LHS is a dim expression");
+        scaleDimExpr = scaleDim;
+        scaleFactor =
+            dyn_cast<AffineConstantExpr>(scaleBinExpr.getRHS()).getValue();
+      } else {
+        llvm_unreachable("unknown scale expression");
+      }
+      assert(scaleDimExpr && "failed to find scale dim expression");
+
+      std::optional<unsigned> inputIdx =
+          inputMap.getResultPosition(scaleDimExpr);
+      if (!inputIdx)
+        return emitError(
+            "scale map must contain corresponding input dimensions only");
+
+      // Validate block scaling factor for static shapes.
+      // For dynamic shapes, it is assumed that all sizes are correct.
+      if (scaleFactor && inputShape[*inputIdx] != ShapedType::kDynamic &&
+          scaleShape[scaleIdx] != ShapedType::kDynamic &&
+          llvm::divideCeilSigned(inputShape[*inputIdx], *scaleFactor) !=
+              static_cast<int64_t>(scaleShape[scaleIdx])) {
+        return emitError() << "Invalid scale shape at dim " << *inputIdx
+                           << ", expected "
+                           << llvm::divideCeilSigned(inputShape[*inputIdx],
+                                                     *scaleFactor)
+                           << " but got " << scaleShape[scaleIdx];
+      }
+    }
+  }
+
+  return success();
+}
+
+LogicalResult ScaledContractOp::fold(FoldAdaptor,
+                                     SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+
+void ScaledContractOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability ScaledContractOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 

@@ -1279,3 +1279,52 @@ func.func @preserve_discardable_attrs(%A : tensor<16x8xf32>,
 // CHECK-LABEL: func @preserve_discardable_attrs
 // CHECK:         linalg.generic
 // CHECK-SAME:        attrs = {another_attr = 42 : i64, my_custom_attr = "preserved"}
+
+// -----
+
+func.func @generalize_scaled_contract(
+    %A: tensor<8x16xf8E5M2>, %sA: tensor<8xf8E8M0FNU>,
+    %B: tensor<4x16xf8E5M2>, %sB: tensor<4xf8E8M0FNU>,
+    %C: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB
+        : tensor<8x16xf8E5M2>, tensor<8xf8E8M0FNU>,
+          tensor<4x16xf8E5M2>, tensor<4xf8E8M0FNU>)
+      outs(%C : tensor<8x4xf32>) -> tensor<8x4xf32>
+  return %D : tensor<8x4xf32>
+}
+
+// CHECK-DAG: #[[$A_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$SA_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0)>
+// CHECK-DAG: #[[$B_MAP:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$SB_MAP:.+]] = affine_map<(d0, d1, d2) -> (d1)>
+// CHECK-DAG: #[[$C_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: func @generalize_scaled_contract
+//  CHECK-SAME: %[[A:.+]]: tensor<8x16xf8E5M2>
+//  CHECK-SAME: %[[SA:.+]]: tensor<8xf8E8M0FNU>
+//  CHECK-SAME: %[[B:.+]]: tensor<4x16xf8E5M2>
+//  CHECK-SAME: %[[SB:.+]]: tensor<4xf8E8M0FNU>
+//  CHECK-SAME: %[[C:.+]]: tensor<8x4xf32>
+
+// CHECK: linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$A_MAP]], #[[$SA_MAP]], #[[$B_MAP]], #[[$SB_MAP]], #[[$C_MAP]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
+// CHECK-SAME: ins(%[[A]], %[[SA]], %[[B]], %[[SB]]
+// CHECK-SAME:  : tensor<8x16xf8E5M2>, tensor<8xf8E8M0FNU>, tensor<4x16xf8E5M2>, tensor<4xf8E8M0FNU>)
+// CHECK-SAME: outs(%[[C]] : tensor<8x4xf32>)
+//      CHECK: ^{{.*}}(%[[A_ARG:.+]]: f8E5M2, %[[SA_ARG:.+]]: f8E8M0FNU, %[[B_ARG:.+]]: f8E5M2, %[[SB_ARG:.+]]: f8E8M0FNU, %[[C_ARG:.+]]: f32)
+//      CHECK:   %[[A_EXT:.+]] = arith.extf %[[A_ARG]] : f8E5M2 to f32
+//      CHECK:   %[[SA_EXT:.+]] = arith.extf %[[SA_ARG]] : f8E8M0FNU to f32
+//      CHECK:   %[[SLHS:.+]] = arith.mulf %[[A_EXT]], %[[SA_EXT]] : f32
+//      CHECK:   %[[B_EXT:.+]] = arith.extf %[[B_ARG]] : f8E5M2 to f32
+//      CHECK:   %[[SB_EXT:.+]] = arith.extf %[[SB_ARG]] : f8E8M0FNU to f32
+//      CHECK:   %[[SRHS:.+]] = arith.mulf %[[B_EXT]], %[[SB_EXT]] : f32
+//      CHECK:   %[[PROD:.+]] = arith.mulf %[[SLHS]], %[[SRHS]] : f32
+//      CHECK:   %[[ACC:.+]] = arith.addf %[[C_ARG]], %[[PROD]] : f32
+//      CHECK:   linalg.yield %[[ACC]] : f32

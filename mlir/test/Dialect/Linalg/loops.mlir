@@ -674,6 +674,64 @@ func.func @batch_reduce_matmul_as_contract(
 //       CHECKPARALLEL:         %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
 //       CHECKPARALLEL:         store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
 
+func.func @scaled_contract_as_loops(
+    %A: memref<?x?xf32>, %sA: memref<?xf32>,
+    %B: memref<?x?xf32>, %sB: memref<?xf32>, %C: memref<?x?xf32>) {
+  linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : memref<?x?xf32>, memref<?xf32>, memref<?x?xf32>, memref<?xf32>)
+      outs(%C : memref<?x?xf32>)
+  return
+}
+// CHECK-LABEL: @scaled_contract_as_loops
+//  CHECK-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME: %[[msA:[a-zA-Z0-9]+]]: memref<?xf32>
+//  CHECK-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME: %[[msB:[a-zA-Z0-9]+]]: memref<?xf32>
+//  CHECK-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//       CHECK: %[[M:.*]] = memref.dim %[[mA]], %c0 : memref<?x?xf32>
+//       CHECK: %[[K:.*]] = memref.dim %[[mA]], %c1 : memref<?x?xf32>
+//       CHECK: %[[N:.*]] = memref.dim %[[mB]], %c0 : memref<?x?xf32>
+//       CHECK: scf.for %[[m:.*]] = %{{.*}} to %[[M]]
+//       CHECK:   scf.for %[[n:.*]] = %{{.*}} to %[[N]]
+//       CHECK:     scf.for %[[k:.*]] = %{{.*}} to %[[K]]
+//       CHECK:       %[[va:.*]] = memref.load %[[mA]][%[[m]], %[[k]]] : memref<?x?xf32>
+//       CHECK:       %[[vsa:.*]] = memref.load %[[msA]][%[[m]]] : memref<?xf32>
+//       CHECK:       %[[vb:.*]] = memref.load %[[mB]][%[[n]], %[[k]]] : memref<?x?xf32>
+//       CHECK:       %[[vsb:.*]] = memref.load %[[msB]][%[[n]]] : memref<?xf32>
+//       CHECK:       %[[vc:.*]] = memref.load %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+//       CHECK:       %[[sa:.*]] = arith.mulf %[[va]], %[[vsa]] : f32
+//       CHECK:       %[[sb:.*]] = arith.mulf %[[vb]], %[[vsb]] : f32
+//       CHECK:       %[[prod:.*]] = arith.mulf %[[sa]], %[[sb]] : f32
+//       CHECK:       %[[res:.*]] = arith.addf %[[vc]], %[[prod]] : f32
+//       CHECK:       store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+
+// CHECKPARALLEL-LABEL: @scaled_contract_as_loops
+//  CHECKPARALLEL-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECKPARALLEL-SAME: %[[msA:[a-zA-Z0-9]+]]: memref<?xf32>
+//  CHECKPARALLEL-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECKPARALLEL-SAME: %[[msB:[a-zA-Z0-9]+]]: memref<?xf32>
+//  CHECKPARALLEL-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//       CHECKPARALLEL: %[[M:.*]] = memref.dim %[[mA]], %c0 : memref<?x?xf32>
+//       CHECKPARALLEL: %[[K:.*]] = memref.dim %[[mA]], %c1 : memref<?x?xf32>
+//       CHECKPARALLEL: %[[N:.*]] = memref.dim %[[mB]], %c0 : memref<?x?xf32>
+//       CHECKPARALLEL: scf.parallel (%[[m:.*]], %[[n:.*]]) = ({{.*}}) to (%[[M]], %[[N]]) step ({{.*}}) {
+//       CHECKPARALLEL:   scf.for %[[k:.*]] = %{{.*}} to %[[K]]
+//       CHECKPARALLEL:     %[[va:.*]] = memref.load %[[mA]][%[[m]], %[[k]]] : memref<?x?xf32>
+//       CHECKPARALLEL:     %[[vsa:.*]] = memref.load %[[msA]][%[[m]]] : memref<?xf32>
+//       CHECKPARALLEL:     %[[vb:.*]] = memref.load %[[mB]][%[[n]], %[[k]]] : memref<?x?xf32>
+//       CHECKPARALLEL:     %[[vsb:.*]] = memref.load %[[msB]][%[[n]]] : memref<?xf32>
+//       CHECKPARALLEL:     %[[vc:.*]] = memref.load %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+//       CHECKPARALLEL:     %[[sa:.*]] = arith.mulf %[[va]], %[[vsa]] : f32
+//       CHECKPARALLEL:     %[[sb:.*]] = arith.mulf %[[vb]], %[[vsb]] : f32
+//       CHECKPARALLEL:     %[[prod:.*]] = arith.mulf %[[sa]], %[[sb]] : f32
+//       CHECKPARALLEL:     %[[res:.*]] = arith.addf %[[vc]], %[[prod]] : f32
+//       CHECKPARALLEL:     store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+
 func.func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
   linalg.batch_matmul ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
                      outs(%C : memref<?x?x?xf32>)
