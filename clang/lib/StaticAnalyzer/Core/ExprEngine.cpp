@@ -3736,30 +3736,17 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
                                          StoreE, AtDeclInit, *this, *PP);
 
-  // If the location is not a 'Loc', it will already be handled by
-  // the checkers.  There is nothing left to do.
-  if (!isa<Loc>(location)) {
-    Dst.insert(CheckedSet);
-
-    const ProgramPoint L = PostStore(StoreE, LC, /*Loc*/nullptr,
-                                     /*tag*/nullptr);
-    ProgramStateRef state = Pred->getState();
-    state = processPointerEscapedOnBind(state, location, Val, LC);
-    Dst.erase(Pred);
-    Dst.insert(Engine.makeNode(L, state, Pred));
-    return;
-  }
-
   for (const auto PredI : CheckedSet) {
     ProgramStateRef state = PredI->getState();
 
     state = processPointerEscapedOnBind(state, location, Val, LC);
 
-    // When binding the value, pass on the hint that this is a initialization.
-    // For initializations, we do not need to inform clients of region
-    // changes.
-    state = state->bindLoc(location.castAs<Loc>(), Val, LC,
-                           /* notifyChanges = */ !AtDeclInit);
+    if (std::optional<Loc> AsLoc = location.getAs<Loc>()) {
+      // When binding the value, pass on the hint that this is a
+      // initialization. For initializations, we do not need to inform clients
+      // of region changes.
+      state = state->bindLoc(*AsLoc, Val, LC, /*notifyChanges=*/!AtDeclInit);
+    }
 
     const MemRegion *LocReg = nullptr;
     if (std::optional<loc::MemRegionVal> LocRegVal =
