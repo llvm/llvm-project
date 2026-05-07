@@ -13,7 +13,6 @@
 #include "clang/Analysis/CallGraph.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
-#include <sstream>
 
 using namespace clang;
 using namespace clang::ast_matchers;
