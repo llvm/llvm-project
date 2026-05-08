@@ -388,7 +388,7 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
 
 // Alternative signal stack (POSIX-only).
 struct AlternateSignalStack {
-  void *sp;
+  void* sp;
   uptr size;
 };
 AlternateSignalStack SetAlternateSignalStack();
