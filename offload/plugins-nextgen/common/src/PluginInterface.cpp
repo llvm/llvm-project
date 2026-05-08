@@ -120,16 +120,6 @@ GenericKernelTy::getKernelLaunchEnvironment(
     return nullptr;
 
   const auto &RedCfg = KernelEnvironment.Configuration;
-  // ReductionDataSize is the single source of truth for whether a teams-
-  // reduction buffer is needed; ReductionBufferLength is only a static
-  // upper bound on the number of teams and is meaningless without a
-  // non-zero data size. Reject the malformed combination explicitly so we
-  // never hand the device a null ReductionBuffer that the reduction
-  // runtime would then dereference.
-  if (RedCfg.ReductionBufferLength && !RedCfg.ReductionDataSize)
-    return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "kernel environment has a non-zero "
-                         "ReductionBufferLength but ReductionDataSize is 0");
   const bool NeedsReductionBuffer = RedCfg.ReductionDataSize != 0;
   if (NeedsReductionBuffer && KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
     return Plugin::error(ErrorCode::INVALID_BINARY,
@@ -160,15 +150,9 @@ GenericKernelTy::getKernelLaunchEnvironment(
   LocalKLE.ReductionBuffer = nullptr;
 
   if (NeedsReductionBuffer) {
-    // Size the teams-reduction buffer. ReductionBufferLength is the
-    // statically known upper bound on the number of teams. When it is 0
-    // (i.e. num_teams was not a compile-time constant), we size the buffer
-    // to exactly match the number of teams for this launch (NumBlocks0).
-    uint32_t BufferElements = RedCfg.ReductionBufferLength
-                                  ? RedCfg.ReductionBufferLength
-                                  : NumBlocks0;
+    // Use number of teams many buffer elements.
     auto AllocOrErr = GenericDevice.dataAlloc(
-        uint64_t(RedCfg.ReductionDataSize) * BufferElements,
+        uint64_t(RedCfg.ReductionDataSize) * NumBlocks0,
         /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
     if (!AllocOrErr)
       return AllocOrErr.takeError();

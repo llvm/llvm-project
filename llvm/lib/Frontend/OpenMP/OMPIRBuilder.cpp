@@ -8143,8 +8143,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   Constant *MaxTeams = ConstantInt::getSigned(Int32, Attrs.MaxTeams.front());
   Constant *ReductionDataSize =
       ConstantInt::getSigned(Int32, Attrs.ReductionDataSize);
-  Constant *ReductionBufferLength =
-      ConstantInt::getSigned(Int32, Attrs.ReductionBufferLength);
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
@@ -8176,7 +8174,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
                                     MinTeams,
                                     MaxTeams,
                                     ReductionDataSize,
-                                    ReductionBufferLength,
                                 });
   Constant *KernelEnvironmentInitializer = ConstantStruct::get(
       KernelEnvironment, {
@@ -8241,8 +8238,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
 }
 
 void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
-                                         int32_t TeamsReductionDataSize,
-                                         int32_t TeamsReductionBufferLength) {
+                                         int32_t TeamsReductionDataSize) {
   if (!updateToLocation(Loc))
     return;
 
@@ -8251,9 +8247,6 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
 
   createRuntimeFunctionCall(Fn, {});
 
-  // A zero-valued TeamsReductionBufferLength is legal: it signals the plugin
-  // to size the teams-reduction buffer dynamically from the actual number of
-  // teams at launch. The reduction data size, however, is required.
   if (!TeamsReductionDataSize)
     return;
 
@@ -8270,9 +8263,6 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
   auto *NewInitializer = ConstantFoldInsertValueInstruction(
       KernelEnvironmentInitializer,
       ConstantInt::get(Int32, TeamsReductionDataSize), {0, 7});
-  NewInitializer = ConstantFoldInsertValueInstruction(
-      NewInitializer, ConstantInt::get(Int32, TeamsReductionBufferLength),
-      {0, 8});
   KernelEnvironmentGV->setInitializer(NewInitializer);
 }
 

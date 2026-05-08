@@ -788,12 +788,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
           ? 0
           : DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
-  // The teams-reduction buffer is sized at kernel launch by the offload
-  // plugin to match the actual number of teams, so we always pass 0 as the
-  // buffer length (signal for dynamic sizing) regardless of any value
-  // supplied via the deprecated -fopenmp-cuda-teams-reduction-recs-num flag.
-  OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
-                                /*TeamsReductionBufferLength=*/0);
+  OMPBuilder.createTargetDeinit(Bld, ReductionDataSize);
   TeamsReductions.clear();
 }
 
