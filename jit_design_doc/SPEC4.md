@@ -105,7 +105,9 @@ __attribute__((ejit_entry))
 1. 在函数入口插入 JIT 编译触发代码
 2. 为该函数生成包含必要符号的 IR 并嵌入二进制文件
 
-**约束**: 不支持递归。
+**约束**:
+- 不支持递归
+- 异步编译模式下，首次调用执行 AOT 路径（fallback），Cache 命中后执行特化版本。因此 `ejit_entry` 函数的**副作用必须是幂等的**——相同参数下多次执行的副作用效果一致。若函数包含非幂等操作（如修改全局计数器、写入硬件寄存器），应使用同步编译模式或避免标记为 `ejit_entry`
 
 **默认依赖**: 每个 `ejit_entry` 函数自动依赖 `static` 时间窗。对 `ejit_period_arr` 时间窗的依赖通过 `ejit_period_arr_ind` 在函数参数上显式声明。
 
@@ -233,6 +235,8 @@ typedef struct {
 | `ejit_is_active(period_name, cell_idx)` | 检查时间窗实例是否激活 |
 
 **`ejit_activate` vs `ejit_activate_array`**: 同一时间窗名称可关联多个 `ejit_period_arr` 数组。`ejit_activate` 按 name + index 激活该名称下所有数组的对应实例；`ejit_activate_array` 通过额外传入数组指针，仅激活指定数组。
+
+**数组越界行为**: `ejit_activate(period_name, cell_idx)` 激活该名称下所有数组的第 `cell_idx` 个实例。若不同数组大小不同（如 `g_cellCfg[16]` 和 `g_cellCfg2[8]`），`cell_idx` 对较小数组越界时，该数组实例被**静默跳过**（不报错，不激活），仅激活大小足够的数组实例。`cell_idx` 为负数时返回 `EJIT_ERR_INVALID_PARAM`。
 
 **状态流**:
 

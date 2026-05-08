@@ -107,14 +107,14 @@ PreservedAnalyses EJitWrapperGenPass::run(Module& M, ModuleAnalysisManager& AM) 
         // Step 1: 识别 period_arr_ind 参数
         DimInfo dims = parsePeriodArrIndParams(F);
 
-        // Step 2: 拆分为 wrapper + fallback
-        BasicBlock* fallbackBB = splitFunction(F);
+        // Step 2: 拆分为 wrapper + fallback + dispatch
+        auto [fallbackBB, dispatchBB] = splitFunction(F);
 
-        // Step 3: 生成 wrapper prologue
-        insertWrapperPrologue(F, dims, fallbackBB);
+        // Step 3: 生成 wrapper prologue (dims 构建 + compile_or_get)
+        auto wr = insertWrapperPrologue(F, dims, fallbackBB, dispatchBB);
 
-        // Step 4: 特化函数签名匹配 + 调用
-        insertDispatchLogic(F, dims, fallbackBB);
+        // Step 4: 特化函数调用
+        insertDispatchLogic(F, wr.dispatchBB, wr.jitResult);
     }
 
     return entryFuncs.empty() ? PreservedAnalyses::all() : PreservedAnalyses::none();
@@ -152,7 +152,8 @@ splitFunction 将原函数结构从:
 ```
 
 ```cpp
-BasicBlock* splitFunction(Function* F) {
+// 返回 (fallback 块, dispatch 块)
+std::pair<BasicBlock*, BasicBlock*> splitFunction(Function* F) {
     LLVMContext& Ctx = F->getContext();
     BasicBlock* origEntry = &F->getEntryBlock();
 
@@ -170,17 +171,24 @@ BasicBlock* splitFunction(Function* F) {
     // 删除原 entry (已空)
     origEntry->eraseFromParent();
 
-    // 新的布局: jit_entry → [dispatch_call 或 fallback]
-    // jit_entry 中生成 wrapper 逻辑，根据 pfn 结果跳转到 dispatch_call 或 fallback
+    // 新的布局: jit_entry → [jit_dispatch 或 jit_fallback]
+    // jit_entry 中生成 wrapper 逻辑，根据 pfn 结果跳转
 
-    return fallback;
+    return {fallback, dispatchCall};
 }
 ```
 
 ### 3.4 Wrapper Prologue 生成
 
 ```cpp
-void insertWrapperPrologue(Function* F, const DimInfo& dims, BasicBlock* fallback) {
+// 返回 (dispatchCall 块, jit_result 值) 供 insertDispatchLogic 使用
+struct WrapperResult {
+    BasicBlock* dispatchBB;
+    Value* jitResult;
+};
+
+WrapperResult insertWrapperPrologue(Function* F, const DimInfo& dims,
+                                     BasicBlock* fallback, BasicBlock* dispatchCall) {
     LLVMContext& Ctx = F->getContext();
     IRBuilder<> Builder(Ctx);
     BasicBlock* jitEntry = &F->getEntryBlock();
@@ -190,7 +198,7 @@ void insertWrapperPrologue(Function* F, const DimInfo& dims, BasicBlock* fallbac
     unsigned dimCount = dims.params.size();
     Value* dimsArray = nullptr;
     if (dimCount > 0) {
-        // ejit_dim_t 的 LLVM 类型: { i8*, i32 }
+        // ejit_dim_t 的 LLVM 类型: { ptr, i32 }
         StructType* dimTy = StructType::get(Ctx, {
             PointerType::getUnqual(Ctx),  // name: const char*
             Type::getInt32Ty(Ctx)         // index: int
@@ -237,42 +245,33 @@ void insertWrapperPrologue(Function* F, const DimInfo& dims, BasicBlock* fallbac
     Value* result = Builder.CreateCall(compileFn,
         {funcNamePtr, dimsPtr, countVal, outPfn}, "jit_result");
 
-    // Step 8: 判空分支
+    // Step 8: 判空分支 → fallback 或 dispatchCall
     Value* isNull = Builder.CreateICmpEQ(result,
         ConstantPointerNull::get(PointerType::getUnqual(Ctx)), "jit_is_null");
 
     Builder.CreateCondBr(isNull, fallback, dispatchCall);
+
+    return {dispatchCall, result};
 }
 ```
 
 ### 3.5 Dispatch 逻辑生成
 
 ```cpp
-void insertDispatchLogic(Function* F, const DimInfo& dims, BasicBlock* fallback) {
+void insertDispatchLogic(Function* F, BasicBlock* dispatchBB, Value* jitResult) {
     LLVMContext& Ctx = F->getContext();
     IRBuilder<> Builder(Ctx);
+    Builder.SetInsertPoint(dispatchBB);
 
-    // jit_dispatch 块已经由 insertWrapperPrologue 中的条件分支跳转到
-    // 需要在生成 wrapper prologue 之前创建 dispatchCall 块
-    // 此处假设已经创建
-
-    BasicBlock* dispatchCall = /* 从步骤3.3创建的 dispatchCall 块获取 */;
-    Builder.SetInsertPoint(dispatchCall);
-
-    // Step 1: 找到之前 ejit_compile_or_get 的返回值
-    // (通过 F 中查找名为 "jit_result" 的 call 指令)
-    Value* result = findJitResultCall(F);
-
-    // Step 2: 调用特化函数，传递原始参数
     // opaque pointer 模型下无需类型转换，直接用 ptr 调用
     std::vector<Value*> args;
     for (Argument& arg : F->args()) {
         args.push_back(&arg);
     }
 
-    CallInst* pfnCall = Builder.CreateCall(F->getFunctionType(), result, args);
+    CallInst* pfnCall = Builder.CreateCall(F->getFunctionType(), jitResult, args);
 
-    // Step 4: 处理返回值并返回
+    // 处理返回值
     if (F->getReturnType()->isVoidTy()) {
         Builder.CreateRetVoid();
     } else {

@@ -655,7 +655,7 @@ void EJitAsyncCompiler::compileOne(const CompileRequest& req) {
 | LLVMContext | 调用线程拥有 (单实例) | 后台线程拥有独立实例 |
 | LLJIT (ExecutionSession) | 调用线程使用 | 后台线程拥有独立 LLJIT |
 | TargetMachine | 调用线程使用 | 后台线程独立创建 |
-| MemoryManager (JITLink) | 调用线程使用 | 共享同一个 slab (mutex 保护) |
+| MemoryManager (JITLink) | 调用线程使用 | **独立 slab**（同步/异步引擎各自拥有 JITLinkMemoryManager，避免 bump-allocator 空间竞争） |
 | Code Cache | 调用线程访问 | 共享 (mutex 保护) |
 | PeriodArrayRegistry | 调用线程更新 (activate/deactivate) | 只读快照 |
 

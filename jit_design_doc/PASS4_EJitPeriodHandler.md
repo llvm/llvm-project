@@ -197,16 +197,16 @@ void insertActivateAtExits(Function* F,
     }
 
     // 在每个 return 指令之前插入 activate 调用
-    // 注意: 插入顺序与 deactivate 相反 (后进先出)
+    // 同序插入 activate (与 deactivate 相同顺序)
+    // 注: 时间窗之间无嵌套依赖关系，同序和逆序语义等价，同序更简单
     for (ReturnInst* RI : returnInsts) {
         IRBuilder<> Builder(Ctx);
         Builder.SetInsertPoint(RI); // 插入点: return 之前
 
-        // 逆序插入 activate (配对: deactivate(A)→deactivate(B)→activate(B)→activate(A))
-        for (auto it = lcInfoList.rbegin(); it != lcInfoList.rend(); ++it) {
-            Value* periodNameStr = Builder.CreateGlobalStringPtr(it->periodName);
-            Value* argVal = F->getArg(it->argIdx);
-            Value* arrayPtr = getArrayPtrForPeriod(M, it->periodName);
+        for (auto& lcInfo : lcInfoList) {
+            Value* periodNameStr = Builder.CreateGlobalStringPtr(lcInfo.periodName);
+            Value* argVal = F->getArg(lcInfo.argIdx);
+            Value* arrayPtr = getArrayPtrForPeriod(M, lcInfo.periodName);
             if (!arrayPtr) {
                 arrayPtr = ConstantPointerNull::get(PointerType::getUnqual(Ctx));
             }
@@ -307,15 +307,15 @@ entry:
 
 body:
   ; ... 函数体 ...
-  ; activate 逆序 (trp 先, cell 后)
-  call void @ejit_activate_array(ptr @".str.trp",  ptr bitcast (%TrpConfig* @g_trpCfg to ptr),   i32 %trpIdx)
+  ; activate 同序 (cell 先, trp 后，与 deactivate 顺序一致)
   call void @ejit_activate_array(ptr @".str.cell", ptr bitcast (%CellConfig* @g_cellCfg to ptr), i32 %cellIdx)
+  call void @ejit_activate_array(ptr @".str.trp",  ptr bitcast (%TrpConfig* @g_trpCfg to ptr),   i32 %trpIdx)
   ret void
 
 early_exit:
-  ; 所有 return 前均插入 activate (同样逆序)
-  call void @ejit_activate_array(ptr @".str.trp",  ptr bitcast (%TrpConfig* @g_trpCfg to ptr),   i32 %trpIdx)
+  ; 所有 return 前均插入 activate (同样同序)
   call void @ejit_activate_array(ptr @".str.cell", ptr bitcast (%CellConfig* @g_cellCfg to ptr), i32 %cellIdx)
+  call void @ejit_activate_array(ptr @".str.trp",  ptr bitcast (%TrpConfig* @g_trpCfg to ptr),   i32 %trpIdx)
   ret void
 }
 ```
@@ -402,9 +402,9 @@ EJitPeriodHandlerPass    →  处理生命周期函数 (本 Pass - 最后一步)
 ; TEST 2: 多 ejit_period_lc (cell + trp) + 多出口
 ;   CHECK-DAG: call void @ejit_deactivate_array(ptr @".str.cell"
 ;   CHECK-DAG: call void @ejit_deactivate_array(ptr @".str.trp"
-;   CHECK-DAG: call void @ejit_activate_array(ptr @".str.trp"
 ;   CHECK-DAG: call void @ejit_activate_array(ptr @".str.cell"
-;   验证逆序: activate 顺序为 trp 先 cell 后
+;   CHECK-DAG: call void @ejit_activate_array(ptr @".str.trp"
+;   验证同序: activate 顺序与 deactivate 一致 (cell 先 trp 后)
 ;
 ; TEST 3: 无 ejit_period_lc 函数的 Module
 ;   CHECK-NOT: call void @ejit_deactivate_array
@@ -427,7 +427,7 @@ EJitPeriodHandlerPass    →  处理生命周期函数 (本 Pass - 最后一步)
 
 ## 9. 实施注意事项
 
-1. **Deactivate/Activate 顺序**: 对于多时间窗函数，deactivate 按 metadata 出现顺序，activate 逆序。这是经典的 RAII 配对模式。若 cellIdx/trpIdx 的 activate 之间有依赖，可改为显式的顺序配对（同序），但逆序是更安全的默认。
+1. **Deactivate/Activate 顺序**: 对于多时间窗函数，deactivate 和 activate 均按 metadata 出现顺序执行（同序）。EmbeddedJIT 的时间窗之间无嵌套依赖关系（不像 mutex），同序语义等价且实现更简单。
 
 2. **Return 指令定位**: 使用 `BasicBlock::getTerminator()` 获取 return / unreachable 指令，`Builder.SetInsertPoint(RI)` 在 return 之前插入 activate 调用。
 

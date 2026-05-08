@@ -297,7 +297,9 @@ void insertBitcodeRegisterCall(Module& M, GlobalVariable* bitcodeGV,
     Builder.SetInsertPoint(BB);
 
     for (Function* F : entryFuncs) {
-        // 创建 func_name 字符串常量
+        // 每个 ejit_entry 函数注册一次，但指向同一份 bitcode 数据
+        // 运行时 BitcodeTracker 维护 funcName → bitcode 映射
+        // JIT 编译时按 funcName 从 bitcode Module 中定位目标函数
         Constant* nameStr = Builder.CreateGlobalStringPtr(F->getName());
 
         // bitcode 指针 (从全局变量首地址)

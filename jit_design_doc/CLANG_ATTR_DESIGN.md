@@ -474,7 +474,7 @@ static void handleEjitEntryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     // 仅声明不报错，CodeGen 时再处理
   }
 
-  // 检查 2: 递归检测
+  // 检查 2: 递归检测 (仅检测直接自递归，间接递归 A→B→A 需在 LLVM Pass 层补充)
   if (FD->isRecursive()) {
     S.Diag(AL.getLoc(), diag::err_ejit_entry_recursive) << FD;
     return;
@@ -652,26 +652,9 @@ if (LV.getBaseInfo() && E->getType().hasMayConstAttr()) {
 }
 ```
 
-**判断逻辑**：需要从 `MemberExpr` 回溯到 `FieldDecl`，检查是否有 `EjitMayConstAttr`。由于 Clang 的 `FieldDecl` 上已挂载属性，CodeGen 可通过以下方式检查：
+**判断逻辑**：需要从 `MemberExpr` 回溯到 `FieldDecl`，检查是否有 `EjitMayConstAttr`。由于 Clang 的 `FieldDecl` 上已挂载属性，CodeGen 可通过以下方式检查。
 
-```cpp
-// 辅助函数: 检查 Expr 的基是否为 ejit_may_const 字段
-static bool isEjitMayConstLoad(const Expr *E) {
-  if (const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParens())) {
-    if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      return FD->hasAttr<EjitMayConstAttr>() &&
-             !FD->getType().isVolatileQualified();
-    }
-  }
-  // 处理数组下标 + 成员访问组合: g_cells[idx].field
-  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E->IgnoreParens())) {
-    // 递归检查 base
-  }
-  return false;
-}
-```
-
-更准确的方案是在 `LValue` 对象中传递 may_const 标记。在 `LValue` 类中添加：
+**推荐方案**：在 `LValue` 对象中传递 may_const 标记（覆盖多层访问链场景）。
 
 ```cpp
 // clang/lib/CodeGen/LValue.h (或类似位置)
