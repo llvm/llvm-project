@@ -3175,6 +3175,53 @@ bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
   return true;
 }
 
+NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
+                                                         CXXRecordDecl *RD) {
+  QualType AddrSpaceType =
+      SemaRef.Context.getCanonicalType(SemaRef.Context.getAddrSpaceQualType(
+          Type.withConst(), LangAS::hlsl_constant));
+  QualType ReturnTy = SemaRef.Context.getCanonicalType(
+      SemaRef.Context.getLValueReferenceType(AddrSpaceType));
+
+  DeclarationName ConvName =
+      SemaRef.Context.DeclarationNames.getCXXConversionFunctionName(
+          CanQualType::CreateUnsafe(ReturnTy));
+  LookupResult ConvR(SemaRef, ConvName, SourceLocation(),
+                     Sema::LookupOrdinaryName);
+  bool LookupSucceeded = SemaRef.LookupQualifiedName(ConvR, RD);
+  assert(LookupSucceeded);
+
+  for (NamedDecl *D : ConvR) {
+    if (isa<CXXConversionDecl>(D->getUnderlyingDecl()))
+      return D;
+  }
+  return nullptr;
+}
+
+std::optional<ExprResult>
+SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
+  QualType BaseType = BaseExpr.get()->getType();
+  const HLSLAttributedResourceType *ResTy =
+      HLSLAttributedResourceType::findHandleTypeOnResource(
+          BaseType.getTypePtr());
+  if (!ResTy ||
+      ResTy->getAttrs().ResourceClass != llvm::dxil::ResourceClass::CBuffer)
+    return std::nullopt;
+
+  QualType TemplateType = ResTy->getContainedType();
+
+  NamedDecl *NamedConversionDecl = getConstantBufferConversionFunction(
+      TemplateType, BaseType->getAsCXXRecordDecl());
+  assert(NamedConversionDecl &&
+         "Could not find conversion function for ConstantBuffer.");
+  auto *ConversionDecl =
+      cast<CXXConversionDecl>(NamedConversionDecl->getUnderlyingDecl());
+
+  return SemaRef.BuildCXXMemberCallExpr(BaseExpr.get(), NamedConversionDecl,
+                                        ConversionDecl,
+                                        /*HadMultipleCandidates=*/false);
+}
+
 void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
   // Skip running the diagnostics scan if the diagnostic mode is
   // strict (-fhlsl-strict-availability) and the target shader stage is known

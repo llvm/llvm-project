@@ -339,8 +339,8 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-    ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+    ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
     ; GFX6-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
@@ -349,8 +349,8 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
     ; GFX8-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
