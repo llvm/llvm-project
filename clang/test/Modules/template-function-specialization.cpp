@@ -42,7 +42,7 @@ export template <typename T>
 void foo4() {
 }
 
-export template <>
+template <>
 void foo4<int>() {
 }
 

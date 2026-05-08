@@ -238,7 +238,7 @@ export class Temp {
 
 export class ExportedClass {};
 
-export template<> class A<ExportedClass> {
+template<> class A<ExportedClass> {
    A<MayBeLoaded> AS;
    A<B>           AB;
 };

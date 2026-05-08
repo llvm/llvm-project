@@ -132,7 +132,7 @@ enum class EmbedResult {
 };
 
 struct CXXStandardLibraryVersionInfo {
-  enum Library { Unknown, LibStdCXX };
+  enum Library { Unknown, LibStdCXX, MsvcStl };
   Library Lib;
   std::uint64_t Version;
 };
@@ -2823,9 +2823,29 @@ private:
   // Standard Library Identification
   std::optional<CXXStandardLibraryVersionInfo> CXXStandardLibraryVersion;
 
+  void ComputeCXXStandardLibraryVersion();
+
+  bool NeedsCXXStandardLibraryWorkaroundBefore(
+      uint64_t FixedVersion, CXXStandardLibraryVersionInfo::Library Lib) {
+    ComputeCXXStandardLibraryVersion();
+    return CXXStandardLibraryVersion && CXXStandardLibraryVersion->Lib == Lib &&
+           CXXStandardLibraryVersion->Version < FixedVersion;
+  }
+
 public:
-  std::optional<std::uint64_t> getStdLibCxxVersion();
-  bool NeedsStdLibCxxWorkaroundBefore(std::uint64_t FixedVersion);
+  bool NeedsStdLibCxxWorkaroundBefore(std::uint64_t FixedVersion) {
+    assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
+           "invalid value for __GLIBCXX__");
+    return NeedsCXXStandardLibraryWorkaroundBefore(
+        FixedVersion, CXXStandardLibraryVersionInfo::LibStdCXX);
+  }
+
+  bool NeedsMsvcStlWorkaroundBefore(std::uint64_t FixedVersion) {
+    assert(FixedVersion >= 2000'00 && FixedVersion <= 2100'00 &&
+           "invalid value for _MSVC_STL_UPDATE");
+    return NeedsCXXStandardLibraryWorkaroundBefore(
+        FixedVersion, CXXStandardLibraryVersionInfo::MsvcStl);
+  }
 
 private:
   //===--------------------------------------------------------------------===//

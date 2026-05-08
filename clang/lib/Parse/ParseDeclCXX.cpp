@@ -339,9 +339,11 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
     // ... but anyway remember that such an "extern" was seen.
     DS.setExternInLinkageSpec(true);
     ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs, &DS);
-    return LinkageSpec ? Actions.ActOnFinishLinkageSpecification(
-                             getCurScope(), LinkageSpec, SourceLocation())
-                       : nullptr;
+    if (!LinkageSpec)
+      return nullptr;
+    CheckUnbracedLinkageOrExportDeclaration(LinkageSpec);
+    return Actions.ActOnFinishLinkageSpecification(getCurScope(), LinkageSpec,
+                                                   SourceLocation());
   }
 
   DS.abort();
@@ -420,6 +422,7 @@ Decl *Parser::ParseExportDeclaration() {
     MaybeParseCXX11Attributes(DeclAttrs);
     ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
     ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
+    CheckUnbracedLinkageOrExportDeclaration(ExportDecl);
     return Actions.ActOnFinishExportDecl(getCurScope(), ExportDecl,
                                          SourceLocation());
   }
@@ -438,6 +441,62 @@ Decl *Parser::ParseExportDeclaration() {
   T.consumeClose();
   return Actions.ActOnFinishExportDecl(getCurScope(), ExportDecl,
                                        T.getCloseLocation());
+}
+
+void Parser::CheckUnbracedLinkageOrExportDeclaration(
+    Decl *LinkageOrExportDecl) {
+  const auto *DC = cast<DeclContext>(LinkageOrExportDecl);
+  if (DC->decls_empty())
+    return;
+
+  const Decl *D = *DC->decls_begin();
+
+  // Nested export declarations are diagnosed elsewhere.
+  if (isa<LinkageSpecDecl>(LinkageOrExportDecl) && isa<ExportDecl>(D)) {
+    Diag(LinkageOrExportDecl->getLocation(),
+         diag::warn_invalid_decl_in_linkage_spec)
+        << /*export declaration*/ 2;
+    return;
+  }
+
+  // [module.interface]/1 says:
+  //
+  //     The name-declaration of an export-declaration shall not declare a
+  //     partial specialization.
+  //
+  // But there's no equivalent wording for linkage-specification.
+  if (isa<ClassTemplatePartialSpecializationDecl,
+          VarTemplatePartialSpecializationDecl>(D) &&
+      isa<LinkageSpecDecl>(LinkageOrExportDecl))
+    return;
+
+  TemplateSpecializationKind TSK = getTemplateSpecializationKind(D);
+  if (TSK == TSK_Undeclared)
+    return;
+
+  if (const auto *ED = dyn_cast<ExportDecl>(LinkageOrExportDecl)) {
+    Diag(ED->getExportLoc(), diag::warn_meaningless_export)
+        << (TSK == TSK_ExplicitSpecialization)
+        << FixItHint::CreateRemoval(ED->getExportLoc());
+    Diag(ED->getExportLoc(), diag::note_meaningless_export_explanation);
+    return;
+  }
+
+  if (const auto *LS = dyn_cast<LinkageSpecDecl>(LinkageOrExportDecl)) {
+    // Old versions of the MSVC STL used to have linkage specifications
+    // on some template specializations, but it would be too disruptive to
+    // reject them. This was fixed in
+    // https://github.com/microsoft/STL/pull/6074, merged on 2026-02-11.
+    if (getLangOpts().MicrosoftExt && LinkageOrExportDecl->isInStdNamespace() &&
+        getPreprocessor().NeedsMsvcStlWorkaroundBefore(2026'03))
+      return;
+
+    Diag(LS->getLocation(), diag::warn_invalid_decl_in_linkage_spec)
+        << (TSK == TSK_ExplicitSpecialization);
+    return;
+  }
+
+  llvm_unreachable("Expected either an ExportDecl or a LinkageSpecDecl");
 }
 
 Parser::DeclGroupPtrTy Parser::ParseUsingDirectiveOrDeclaration(

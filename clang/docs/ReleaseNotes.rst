@@ -49,6 +49,10 @@ C++ Specific Potentially Breaking Changes
 - Clang now correctly rejects ``export`` declarations in module implementation
   partitions. (#GH107602)
 
+- Clang now correctly rejects explicit instantiations and specializations
+  marked with ``export`` or a language linkage specification, completing
+  its implementation of P2615. (#GH160016)
+
 ABI Changes in This Version
 ---------------------------
 
