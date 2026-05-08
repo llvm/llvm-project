@@ -86,6 +86,8 @@ body:             |
     // returns early on a failure to reset.
     EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), Dbg1, &MBB1LiveIns));
     EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), Dbg1, nullptr));
+    EXPECT_FALSE(RPTracker.advance(Dbg1));
+    EXPECT_FALSE(RPTrackerNoLiveIns.advance(Dbg1));
 
     // In that case, the maximum pressure is unchanged from the beginning since
     // reset was unsuccessful.
