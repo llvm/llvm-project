@@ -27,3 +27,95 @@ define void @uitofp_v2i64_v2f64(ptr %res, ptr %in){
   store <2 x double> %v1, ptr %res
   ret void
 }
+
+define <2 x double> @uitofp_v2i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v2i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa1, $a0
+; CHECK-NEXT:    ffint.d.w $fa1, $fa1
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    ffint.d.w $fa0, $fa0
+; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <2 x i32> <i32 0, i32 1>
+  %cvt = uitofp <2 x i8> %shuf to <2 x double>
+  ret <2 x double> %cvt
+}
+
+define <2 x double> @uitofp_v16i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v16i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa1, $a0
+; CHECK-NEXT:    ffint.d.w $fa1, $fa1
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    ffint.d.w $fa0, $fa0
+; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
+; CHECK-NEXT:    ret
+  %cvt = uitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <4 x double> @uitofp_v4i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v4i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa1, $a0
+; CHECK-NEXT:    ffint.d.w $fa1, $fa1
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa2, $a0
+; CHECK-NEXT:    ffint.d.w $fa2, $fa2
+; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa1, $a0
+; CHECK-NEXT:    ffint.d.w $fa3, $fa1
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    ffint.d.w $fa1, $fa0
+; CHECK-NEXT:    vextrins.d $vr1, $vr3, 16
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cvt = uitofp <4 x i8> %shuf to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @uitofp_v16i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v16i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa1, $a0
+; CHECK-NEXT:    ffint.d.w $fa1, $fa1
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa2, $a0
+; CHECK-NEXT:    ffint.d.w $fa2, $fa2
+; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa1, $a0
+; CHECK-NEXT:    ffint.d.w $fa3, $fa1
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
+; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    ffint.d.w $fa1, $fa0
+; CHECK-NEXT:    vextrins.d $vr1, $vr3, 16
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+  %cvt = uitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %shuf
+}
