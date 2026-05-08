@@ -3188,7 +3188,8 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
           CanQualType::CreateUnsafe(ReturnTy));
   LookupResult ConvR(SemaRef, ConvName, SourceLocation(),
                      Sema::LookupOrdinaryName);
-  bool LookupSucceeded = SemaRef.LookupQualifiedName(ConvR, RD);
+  [[maybe_unused]] bool LookupSucceeded =
+      SemaRef.LookupQualifiedName(ConvR, RD);
   assert(LookupSucceeded);
 
   for (NamedDecl *D : ConvR) {

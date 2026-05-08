@@ -105,6 +105,7 @@ uint64_t FuncBranchData::getNumExecutedBranches() const {
 void FuncBranchData::setEntryCounts(BinaryFunction &BF) const {
   uint64_t ExecCount = 0;
   uint64_t ExternEntryCount = 0;
+  // If destination is the function start - update execution count.
   // NB: the data is skewed since we cannot tell tail recursion from
   //     branches to the function start.
   for (const BranchInfo &BI : EntryData) {
