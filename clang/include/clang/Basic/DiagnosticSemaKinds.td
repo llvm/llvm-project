@@ -3566,10 +3566,13 @@ def err_capture_by_implicit_this_not_available : Error<
   "'lifetime_capture_by' argument references unavailable implicit 'this'">;
 def err_capture_by_attribute_argument_unknown : Error<
   "'lifetime_capture_by' attribute argument %0 is not a known function parameter"
-  "; must be a function parameter, 'this', 'global' or 'unknown'">;
+  "; must be a function parameter, 'this', '__global__' or '__unknown__'">;
 def err_capture_by_references_itself : Error<"'lifetime_capture_by' argument references itself">;
 def err_capture_by_param_uses_reserved_name : Error<
-  "parameter cannot be named '%select{global|unknown}0' while using 'lifetime_capture_by(%select{global|unknown}0)'">;
+  "parameter cannot be named '%0' while using 'lifetime_capture_by(%0)'">;
+def warn_deprecated_capture_by_special_entity : Warning<
+  "'lifetime_capture_by(%0)' is deprecated; use 'lifetime_capture_by(%1)' instead">,
+  InGroup<DeprecatedAttributes>;
 
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;

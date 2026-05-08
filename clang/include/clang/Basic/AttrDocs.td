@@ -4732,15 +4732,18 @@ The capturing entity ``X`` can be one of the following:
 
   Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
 
-- `global`, `unknown`.
+- ``__global__``, ``__unknown__``.
 
   .. code-block:: c++
 
     std::set<std::string_view> s;
-    void addToSet(std::string_view a [[clang::lifetime_capture_by(global)]]) {
+    void addToSet(std::string_view a [[clang::lifetime_capture_by(__global__)]]) {
       s.insert(a);
     }
-    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(unknown)]]);
+    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(__unknown__)]]);
+
+  The older spellings ``global`` and ``unknown`` are deprecated, but remain
+  accepted for compatibility.
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:

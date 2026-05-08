@@ -4426,6 +4426,15 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
     }
     assert(AL.isArgIdent(I));
     IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
+    StringRef Name = IdLoc->getIdentifierInfo()->getName();
+    StringRef Replacement;
+    if (Name == "global")
+      Replacement = "__global__";
+    else if (Name == "unknown")
+      Replacement = "__unknown__";
+    if (!Replacement.empty())
+      Diag(IdLoc->getLoc(), diag::warn_deprecated_capture_by_special_entity)
+          << Name << Replacement;
     if (IdLoc->getIdentifierInfo()->getName() == ParamName) {
       Diag(IdLoc->getLoc(), diag::err_capture_by_references_itself)
           << IdLoc->getLoc();
@@ -4481,7 +4490,9 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
     return;
   llvm::StringMap<int> NameIdxMapping = {
       {"global", LifetimeCaptureByAttr::Global},
-      {"unknown", LifetimeCaptureByAttr::Unknown}};
+      {"unknown", LifetimeCaptureByAttr::Unknown},
+      {"__global__", LifetimeCaptureByAttr::Global},
+      {"__unknown__", LifetimeCaptureByAttr::Unknown}};
   int Idx = 0;
   if (HasImplicitThisParam) {
     NameIdxMapping["this"] = 0;
@@ -4493,7 +4504,7 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
     for (const ParmVarDecl *PVD : FD->parameters())
       if (PVD->getName() == Reserved)
         Diag(PVD->getLocation(), diag::err_capture_by_param_uses_reserved_name)
-            << (PVD->getName() == "unknown");
+            << PVD->getName();
   };
   for (auto *CapturedBy : Attrs) {
     const auto &Entities = CapturedBy->getArgIdents();
@@ -4509,7 +4520,8 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
               << Entities[I] << Loc;
         continue;
       }
-      if (Name == "unknown" || Name == "global")
+      if (Name == "unknown" || Name == "global" || Name == "__unknown__" ||
+          Name == "__global__")
         DisallowReservedParams(Name);
       CapturedBy->setParamIdx(I, It->second);
     }

@@ -161,8 +161,8 @@ void test() {
 // Capture by Global and Unknown.
 // ****************************************************************************
 namespace capture_by_global_unknown {
-void captureByGlobal(std::string_view s [[clang::lifetime_capture_by(global)]]);
-void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(unknown)]]);
+void captureByGlobal(std::string_view s [[clang::lifetime_capture_by(__global__)]]);
+void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(__unknown__)]]);
 
 std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
 
