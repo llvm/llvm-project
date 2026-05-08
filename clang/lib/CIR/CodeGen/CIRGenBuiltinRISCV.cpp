@@ -71,22 +71,55 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   // Zbkx
   case RISCV::BI__builtin_riscv_xperm4_32:
-  case RISCV::BI__builtin_riscv_xperm4_64:
+  case RISCV::BI__builtin_riscv_xperm4_64: {
+    intrinsicName = "riscv.xperm4";
+    break;
+  }
   case RISCV::BI__builtin_riscv_xperm8_32:
-  case RISCV::BI__builtin_riscv_xperm8_64:
+  case RISCV::BI__builtin_riscv_xperm8_64: {
+    intrinsicName = "riscv.xperm8";
+    break;
+  }
   // Zbkb
   case RISCV::BI__builtin_riscv_brev8_32:
-  case RISCV::BI__builtin_riscv_brev8_64:
-  case RISCV::BI__builtin_riscv_zip_32:
-  case RISCV::BI__builtin_riscv_unzip_32:
+  case RISCV::BI__builtin_riscv_brev8_64: {
+    intrinsicName = "riscv.brev8";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_zip_32: {
+    intrinsicName = "riscv.zip";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_unzip_32: {
+    intrinsicName = "riscv.unzip";
+    break;
+  }
   // Zknh
-  case RISCV::BI__builtin_riscv_sha256sig0:
-  case RISCV::BI__builtin_riscv_sha256sig1:
-  case RISCV::BI__builtin_riscv_sha256sum0:
-  case RISCV::BI__builtin_riscv_sha256sum1:
+  case RISCV::BI__builtin_riscv_sha256sig0: {
+    intrinsicName = "riscv.sha256sig0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sig1: {
+    intrinsicName = "riscv.sha256sig1";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum0: {
+    intrinsicName = "riscv.sha256sum0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum1: {
+    intrinsicName = "riscv.sha256sum1";
+    break;
+  }
   // Zksed
-  case RISCV::BI__builtin_riscv_sm4ks:
-  case RISCV::BI__builtin_riscv_sm4ed:
+  case RISCV::BI__builtin_riscv_sm4ks: {
+    intrinsicName = "riscv.sm4ks";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sm4ed: {
+    intrinsicName = "riscv.sm4ed";
+    break;
+  }
   // Zksh
   case RISCV::BI__builtin_riscv_sm3p0:
   case RISCV::BI__builtin_riscv_sm3p1:

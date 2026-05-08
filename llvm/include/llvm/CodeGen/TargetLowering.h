@@ -4467,19 +4467,18 @@ public:
       SelectionDAG &DAG, unsigned Depth) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
-  /// argument limits the check to the requested vector elements.
+  /// and, \p Kind can be used to track poison and/or undef bits. The
+  /// DemandedElts argument limits the check to the requested vector elements.
   virtual bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-      bool PoisonOnly, unsigned Depth) const;
+      UndefPoisonKind Kind, unsigned Depth) const;
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
   /// operands. The DemandedElts argument limits the check to the requested
   /// vector elements.
-  virtual bool
-  canCreateUndefOrPoisonForTargetNode(SDValue Op, const APInt &DemandedElts,
-                                      const SelectionDAG &DAG, bool PoisonOnly,
-                                      bool ConsiderFlags, unsigned Depth) const;
+  virtual bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const;
 
   /// Tries to build a legal vector shuffle using the provided parameters
   /// or equivalent variations. The Mask argument maybe be modified as the
@@ -5538,10 +5537,12 @@ public:
                  SDValue LL = SDValue(), SDValue LH = SDValue(),
                  SDValue RL = SDValue(), SDValue RH = SDValue()) const;
 
-  /// Attempt to expand an n-bit div/rem/divrem by constant using a n/2-bit
-  /// urem by constant and other arithmetic ops. The n/2-bit urem by constant
-  /// will be expanded by DAGCombiner. This is not possible for all constant
-  /// divisors.
+  /// Attempt to expand an n-bit div/rem/divrem by constant using an n/2-bit
+  /// algorithm. First, attempt to expand the division using a n/2-bit urem by
+  /// constant and other arithmetic ops. The n/2-bit urem by constant will be
+  /// expanded by DAGCombiner. As this is not possible for all constant
+  /// divisors, this method falls back to an implementation of the magic
+  /// algorithm using n/2-bit operations.
   /// \param N Node to expand
   /// \param Result A vector that will be filled with the lo and high parts of
   ///        the results. For *DIVREM, this will be the quotient parts followed
@@ -5645,6 +5646,12 @@ public:
   /// \param NodeNode to expand
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
+                                          SelectionDAG &DAG) const;
 
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
@@ -6039,6 +6046,15 @@ private:
   SDValue buildSREMEqFold(EVT SETCCVT, SDValue REMNode, SDValue CompTargetNode,
                           ISD::CondCode Cond, DAGCombinerInfo &DCI,
                           const SDLoc &DL) const;
+
+  bool expandUDIVREMByConstantViaUREMDecomposition(
+      SDNode *N, APInt Divisor, SmallVectorImpl<SDValue> &Result, EVT HiLoVT,
+      SelectionDAG &DAG, SDValue LL, SDValue LH) const;
+
+  bool expandUDIVREMByConstantViaUMulHiMagic(SDNode *N, const APInt &Divisor,
+                                             SmallVectorImpl<SDValue> &Result,
+                                             EVT HiLoVT, SelectionDAG &DAG,
+                                             SDValue LL, SDValue LH) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

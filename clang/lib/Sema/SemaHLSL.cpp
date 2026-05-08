@@ -77,6 +77,19 @@ static RegisterType getRegisterType(const HLSLAttributedResourceType *ResTy) {
   return getRegisterType(ResTy->getAttrs().ResourceClass);
 }
 
+static LangAS getLangASFromResourceClass(ResourceClass RC) {
+  switch (RC) {
+  case ResourceClass::SRV:
+  case ResourceClass::UAV:
+    return LangAS::hlsl_device;
+  case ResourceClass::CBuffer:
+    return LangAS::hlsl_constant;
+  case ResourceClass::Sampler:
+    return LangAS::hlsl_device;
+  }
+  llvm_unreachable("unexpected ResourceClass value");
+}
+
 // Converts the first letter of string Slot to RegisterType.
 // Returns false if the letter does not correspond to a valid register type.
 static bool convertToRegisterType(StringRef Slot, RegisterType *RT) {
@@ -3162,6 +3175,54 @@ bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
   return true;
 }
 
+NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
+                                                         CXXRecordDecl *RD) {
+  QualType AddrSpaceType =
+      SemaRef.Context.getCanonicalType(SemaRef.Context.getAddrSpaceQualType(
+          Type.withConst(), LangAS::hlsl_constant));
+  QualType ReturnTy = SemaRef.Context.getCanonicalType(
+      SemaRef.Context.getLValueReferenceType(AddrSpaceType));
+
+  DeclarationName ConvName =
+      SemaRef.Context.DeclarationNames.getCXXConversionFunctionName(
+          CanQualType::CreateUnsafe(ReturnTy));
+  LookupResult ConvR(SemaRef, ConvName, SourceLocation(),
+                     Sema::LookupOrdinaryName);
+  [[maybe_unused]] bool LookupSucceeded =
+      SemaRef.LookupQualifiedName(ConvR, RD);
+  assert(LookupSucceeded);
+
+  for (NamedDecl *D : ConvR) {
+    if (isa<CXXConversionDecl>(D->getUnderlyingDecl()))
+      return D;
+  }
+  return nullptr;
+}
+
+std::optional<ExprResult>
+SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
+  QualType BaseType = BaseExpr.get()->getType();
+  const HLSLAttributedResourceType *ResTy =
+      HLSLAttributedResourceType::findHandleTypeOnResource(
+          BaseType.getTypePtr());
+  if (!ResTy ||
+      ResTy->getAttrs().ResourceClass != llvm::dxil::ResourceClass::CBuffer)
+    return std::nullopt;
+
+  QualType TemplateType = ResTy->getContainedType();
+
+  NamedDecl *NamedConversionDecl = getConstantBufferConversionFunction(
+      TemplateType, BaseType->getAsCXXRecordDecl());
+  assert(NamedConversionDecl &&
+         "Could not find conversion function for ConstantBuffer.");
+  auto *ConversionDecl =
+      cast<CXXConversionDecl>(NamedConversionDecl->getUnderlyingDecl());
+
+  return SemaRef.BuildCXXMemberCallExpr(BaseExpr.get(), NamedConversionDecl,
+                                        ConversionDecl,
+                                        /*HadMultipleCandidates=*/false);
+}
+
 void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
   // Skip running the diagnostics scan if the diagnostic mode is
   // strict (-fhlsl-strict-availability) and the target shader stage is known
@@ -3891,19 +3952,19 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
-    if (SemaRef.checkArgCount(TheCall, 2) ||
+    if (SemaRef.checkArgCountRange(TheCall, 1, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckIndexType(&SemaRef, TheCall, 1))
+        (TheCall->getNumArgs() == 2 && CheckIndexType(&SemaRef, TheCall, 1)))
       return true;
 
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ContainedTy = ResourceTy->getContainedType();
-    auto ReturnType =
-        SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
+    auto ReturnType = SemaRef.Context.getAddrSpaceQualType(
+        ContainedTy,
+        getLangASFromResourceClass(ResourceTy->getAttrs().ResourceClass));
     ReturnType = SemaRef.Context.getPointerType(ReturnType);
     TheCall->setType(ReturnType);
-    TheCall->setValueKind(VK_LValue);
 
     break;
   }
@@ -3924,8 +3985,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
           cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
           diag::err_invalid_use_of_array_type);
 
-    auto ReturnType =
-        SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+    auto ReturnType = SemaRef.Context.getAddrSpaceQualType(
+        ElementTy,
+        getLangASFromResourceClass(ResourceTy->getAttrs().ResourceClass));
     ReturnType = SemaRef.Context.getPointerType(ReturnType);
     TheCall->setType(ReturnType);
 

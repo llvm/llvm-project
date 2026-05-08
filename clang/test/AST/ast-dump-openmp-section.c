@@ -9,7 +9,7 @@ void test(void) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-section.c:3:1, line:9:1> line:3:6 test 'void (void)'
+// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-section.c:3:1, line:9:1> line:3:6 test 'void (void)' external-linkage
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:17, line:9:1>
 // CHECK-NEXT:     `-OMPSectionsDirective {{.*}} <line:4:1, col:21>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:5:3, line:8:3>

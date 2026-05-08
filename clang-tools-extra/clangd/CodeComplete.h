@@ -59,10 +59,7 @@ struct CodeCompleteOptions {
   bool ForceLoadPreamble = false;
 
   /// Combine overloads into a single completion item where possible.
-  /// If none, the implementation may choose an appropriate behavior.
-  /// (In practice, ClangdLSPServer enables bundling if the client claims
-  /// to supports signature help).
-  std::optional<bool> BundleOverloads;
+  bool BundleOverloads = false;
 
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.

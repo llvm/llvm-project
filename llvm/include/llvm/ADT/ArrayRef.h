@@ -23,83 +23,81 @@
 #include <vector>
 
 namespace llvm {
-  template<typename T> class [[nodiscard]] MutableArrayRef;
+template <typename T> class [[nodiscard]] MutableArrayRef;
 
-  /// ArrayRef - Represent a constant reference to an array (0 or more elements
-  /// consecutively in memory), i.e. a start pointer and a length.  It allows
-  /// various APIs to take consecutive elements easily and conveniently.
-  ///
-  /// This class does not own the underlying data, it is expected to be used in
-  /// situations where the data resides in some other buffer, whose lifetime
-  /// extends past that of the ArrayRef. For this reason, it is not in general
-  /// safe to store an ArrayRef.
-  ///
-  /// This is intended to be trivially copyable, so it should be passed by
-  /// value.
-  template<typename T>
-  class LLVM_GSL_POINTER [[nodiscard]] ArrayRef {
-  public:
-    using value_type = T;
-    using pointer = value_type *;
-    using const_pointer = const value_type *;
-    using reference = value_type &;
-    using const_reference = const value_type &;
-    using iterator = const_pointer;
-    using const_iterator = const_pointer;
-    using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    using size_type = size_t;
-    using difference_type = ptrdiff_t;
+/// Represent a constant reference to an array (0 or more elements
+/// consecutively in memory), i.e. a start pointer and a length.  It allows
+/// various APIs to take consecutive elements easily and conveniently.
+///
+/// This class does not own the underlying data, it is expected to be used in
+/// situations where the data resides in some other buffer, whose lifetime
+/// extends past that of the ArrayRef. For this reason, it is not in general
+/// safe to store an ArrayRef.
+///
+/// This is intended to be trivially copyable, so it should be passed by
+/// value.
+template <typename T> class LLVM_GSL_POINTER [[nodiscard]] ArrayRef {
+public:
+  using value_type = T;
+  using pointer = value_type *;
+  using const_pointer = const value_type *;
+  using reference = value_type &;
+  using const_reference = const value_type &;
+  using iterator = const_pointer;
+  using const_iterator = const_pointer;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
 
-  private:
-    /// The start of the array, in an external buffer.
-    const T *Data = nullptr;
+private:
+  /// The start of the array, in an external buffer.
+  const T *Data = nullptr;
 
-    /// The number of elements.
-    size_type Length = 0;
+  /// The number of elements.
+  size_type Length = 0;
 
-  public:
-    /// @name Constructors
-    /// @{
+public:
+  /// @name Constructors
+  /// @{
 
-    /// Construct an empty ArrayRef.
-    /*implicit*/ ArrayRef() = default;
+  /// Construct an empty ArrayRef.
+  /*implicit*/ ArrayRef() = default;
 
-    /// Construct an ArrayRef from a single element.
-    /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
-        : Data(&OneElt), Length(1) {}
+  /// Construct an ArrayRef from a single element.
+  /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
+      : Data(&OneElt), Length(1) {}
 
-    /// Construct an ArrayRef from a pointer and length.
-    constexpr /*implicit*/ ArrayRef(const T *data LLVM_LIFETIME_BOUND,
-                                    size_t length)
-        : Data(data), Length(length) {}
+  /// Construct an ArrayRef from a pointer and length.
+  constexpr /*implicit*/ ArrayRef(const T *data LLVM_LIFETIME_BOUND,
+                                  size_t length)
+      : Data(data), Length(length) {}
 
-    /// Construct an ArrayRef from a range.
-    constexpr ArrayRef(const T *begin LLVM_LIFETIME_BOUND, const T *end)
-        : Data(begin), Length(end - begin) {
-      assert(begin <= end);
-    }
+  /// Construct an ArrayRef from a range.
+  constexpr ArrayRef(const T *begin LLVM_LIFETIME_BOUND, const T *end)
+      : Data(begin), Length(end - begin) {
+    assert(begin <= end);
+  }
 
-    /// Construct an ArrayRef from a type that has a data() method that returns
-    /// a pointer convertible to const T *.
-    template <
-        typename C,
-        typename = std::enable_if_t<
-            std::conjunction_v<
-                std::is_convertible<
-                    decltype(std::declval<const C &>().data()) *,
-                    const T *const *>,
-                std::is_integral<decltype(std::declval<const C &>().size())>>,
-            void>>
-    /*implicit*/ constexpr ArrayRef(const C &V)
-        : Data(V.data()), Length(V.size()) {}
+  /// Construct an ArrayRef from a type that has a data() method that returns
+  /// a pointer convertible to const T *.
+  template <
+      typename C,
+      typename = std::enable_if_t<
+          std::conjunction_v<
+              std::is_convertible<decltype(std::declval<const C &>().data()) *,
+                                  const T *const *>,
+              std::is_integral<decltype(std::declval<const C &>().size())>>,
+          void>>
+  /*implicit*/ constexpr ArrayRef(const C &V)
+      : Data(V.data()), Length(V.size()) {}
 
-    /// Construct an ArrayRef from a C array.
-    template <size_t N>
-    /*implicit*/ constexpr ArrayRef(const T (&Arr LLVM_LIFETIME_BOUND)[N])
-        : Data(Arr), Length(N) {}
+  /// Construct an ArrayRef from a C array.
+  template <size_t N>
+  /*implicit*/ constexpr ArrayRef(const T (&Arr LLVM_LIFETIME_BOUND)[N])
+      : Data(Arr), Length(N) {}
 
-    /// Construct an ArrayRef from a std::initializer_list.
+  /// Construct an ArrayRef from a std::initializer_list.
 #if LLVM_GNUC_PREREQ(9, 0, 0)
 // Disable gcc's warning in this constructor as it generates an enormous amount
 // of messages. Anyone using ArrayRef should already be aware of the fact that
@@ -107,489 +105,479 @@ namespace llvm {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winit-list-lifetime"
 #endif
-    constexpr /*implicit*/ ArrayRef(
-        std::initializer_list<T> Vec LLVM_LIFETIME_BOUND)
-        : Data(Vec.begin() == Vec.end() ? (T *)nullptr : Vec.begin()),
-          Length(Vec.size()) {}
+  constexpr /*implicit*/ ArrayRef(
+      std::initializer_list<T> Vec LLVM_LIFETIME_BOUND)
+      : Data(Vec.begin() == Vec.end() ? (T *)nullptr : Vec.begin()),
+        Length(Vec.size()) {}
 #if LLVM_GNUC_PREREQ(9, 0, 0)
 #pragma GCC diagnostic pop
 #endif
 
-    /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
-    /// to ensure that this is only used for iterator ranges over plain pointer
-    /// iterators.
-    template <typename U, typename = std::enable_if_t<
-                              std::is_convertible_v<U *const *, T *const *>>>
-    ArrayRef(const iterator_range<U *> &Range)
-        : Data(Range.begin()), Length(llvm::size(Range)) {}
+  /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
+  /// to ensure that this is only used for iterator ranges over plain pointer
+  /// iterators.
+  template <typename U, typename = std::enable_if_t<
+                            std::is_convertible_v<U *const *, T *const *>>>
+  ArrayRef(const iterator_range<U *> &Range)
+      : Data(Range.begin()), Length(llvm::size(Range)) {}
 
-    /// @}
-    /// @name Simple Operations
-    /// @{
+  /// @}
+  /// @name Simple Operations
+  /// @{
 
-    iterator begin() const { return Data; }
-    iterator end() const { return Data + Length; }
+  iterator begin() const { return Data; }
+  iterator end() const { return Data + Length; }
 
-    reverse_iterator rbegin() const { return reverse_iterator(end()); }
-    reverse_iterator rend() const { return reverse_iterator(begin()); }
+  reverse_iterator rbegin() const { return reverse_iterator(end()); }
+  reverse_iterator rend() const { return reverse_iterator(begin()); }
 
-    /// empty - Check if the array is empty.
-    bool empty() const { return Length == 0; }
+  /// Check if the array is empty.
+  bool empty() const { return Length == 0; }
 
-    const T *data() const { return Data; }
+  const T *data() const { return Data; }
 
-    /// size - Get the array size.
-    size_t size() const { return Length; }
+  /// Get the array size.
+  size_t size() const { return Length; }
 
-    /// front - Get the first element.
-    const T &front() const {
-      assert(!empty());
-      return Data[0];
-    }
+  /// Get the first element.
+  const T &front() const {
+    assert(!empty());
+    return Data[0];
+  }
 
-    /// back - Get the last element.
-    const T &back() const {
-      assert(!empty());
-      return Data[Length-1];
-    }
+  /// Get the last element.
+  const T &back() const {
+    assert(!empty());
+    return Data[Length - 1];
+  }
 
-    /// consume_front() - Returns the first element and drops it from ArrayRef.
-    const T &consume_front() {
-      const T &Ret = front();
-      *this = drop_front();
-      return Ret;
-    }
+  /// consume_front() - Returns the first element and drops it from ArrayRef.
+  const T &consume_front() {
+    const T &Ret = front();
+    *this = drop_front();
+    return Ret;
+  }
 
-    /// consume_back() - Returns the last element and drops it from ArrayRef.
-    const T &consume_back() {
-      const T &Ret = back();
-      *this = drop_back();
-      return Ret;
-    }
+  /// consume_back() - Returns the last element and drops it from ArrayRef.
+  const T &consume_back() {
+    const T &Ret = back();
+    *this = drop_back();
+    return Ret;
+  }
 
-    // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
-    template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
-      T *Buff = A.template Allocate<T>(Length);
-      llvm::uninitialized_copy(*this, Buff);
-      return MutableArrayRef<T>(Buff, Length);
-    }
+  // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
+  template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
+    T *Buff = A.template Allocate<T>(Length);
+    llvm::uninitialized_copy(*this, Buff);
+    return MutableArrayRef<T>(Buff, Length);
+  }
 
-    /// equals - Check for element-wise equality.
-    bool equals(ArrayRef RHS) const {
-      if (Length != RHS.Length)
-        return false;
-      return std::equal(begin(), end(), RHS.begin());
-    }
+  /// Check for element-wise equality.
+  bool equals(ArrayRef RHS) const {
+    if (Length != RHS.Length)
+      return false;
+    return std::equal(begin(), end(), RHS.begin());
+  }
 
-    /// slice(n, m) - Chop off the first N elements of the array, and keep M
-    /// elements in the array.
-    ArrayRef<T> slice(size_t N, size_t M) const {
-      assert(N+M <= size() && "Invalid specifier");
-      return ArrayRef<T>(data()+N, M);
-    }
+  /// slice(n, m) - Chop off the first N elements of the array, and keep M
+  /// elements in the array.
+  ArrayRef<T> slice(size_t N, size_t M) const {
+    assert(N + M <= size() && "Invalid specifier");
+    return ArrayRef<T>(data() + N, M);
+  }
 
-    /// slice(n) - Chop off the first N elements of the array.
-    ArrayRef<T> slice(size_t N) const { return drop_front(N); }
+  /// slice(n) - Chop off the first N elements of the array.
+  ArrayRef<T> slice(size_t N) const { return drop_front(N); }
 
-    /// Drop the first \p N elements of the array.
-    ArrayRef<T> drop_front(size_t N = 1) const {
-      assert(size() >= N && "Dropping more elements than exist");
-      return slice(N, size() - N);
-    }
+  /// Drop the first \p N elements of the array.
+  ArrayRef<T> drop_front(size_t N = 1) const {
+    assert(size() >= N && "Dropping more elements than exist");
+    return slice(N, size() - N);
+  }
 
-    /// Drop the last \p N elements of the array.
-    ArrayRef<T> drop_back(size_t N = 1) const {
-      assert(size() >= N && "Dropping more elements than exist");
-      return slice(0, size() - N);
-    }
+  /// Drop the last \p N elements of the array.
+  ArrayRef<T> drop_back(size_t N = 1) const {
+    assert(size() >= N && "Dropping more elements than exist");
+    return slice(0, size() - N);
+  }
 
-    /// Return a copy of *this with the first N elements satisfying the
-    /// given predicate removed.
-    template <class PredicateT> ArrayRef<T> drop_while(PredicateT Pred) const {
-      return ArrayRef<T>(find_if_not(*this, Pred), end());
-    }
+  /// Return a copy of *this with the first N elements satisfying the
+  /// given predicate removed.
+  template <class PredicateT> ArrayRef<T> drop_while(PredicateT Pred) const {
+    return ArrayRef<T>(find_if_not(*this, Pred), end());
+  }
 
-    /// Return a copy of *this with the first N elements not satisfying
-    /// the given predicate removed.
-    template <class PredicateT> ArrayRef<T> drop_until(PredicateT Pred) const {
-      return ArrayRef<T>(find_if(*this, Pred), end());
-    }
+  /// Return a copy of *this with the first N elements not satisfying
+  /// the given predicate removed.
+  template <class PredicateT> ArrayRef<T> drop_until(PredicateT Pred) const {
+    return ArrayRef<T>(find_if(*this, Pred), end());
+  }
 
-    /// Return a copy of *this with only the first \p N elements.
-    ArrayRef<T> take_front(size_t N = 1) const {
-      if (N >= size())
-        return *this;
-      return drop_back(size() - N);
-    }
+  /// Return a copy of *this with only the first \p N elements.
+  ArrayRef<T> take_front(size_t N = 1) const {
+    if (N >= size())
+      return *this;
+    return drop_back(size() - N);
+  }
 
-    /// Return a copy of *this with only the last \p N elements.
-    ArrayRef<T> take_back(size_t N = 1) const {
-      if (N >= size())
-        return *this;
-      return drop_front(size() - N);
-    }
+  /// Return a copy of *this with only the last \p N elements.
+  ArrayRef<T> take_back(size_t N = 1) const {
+    if (N >= size())
+      return *this;
+    return drop_front(size() - N);
+  }
 
-    /// Return the first N elements of this Array that satisfy the given
-    /// predicate.
-    template <class PredicateT> ArrayRef<T> take_while(PredicateT Pred) const {
-      return ArrayRef<T>(begin(), find_if_not(*this, Pred));
-    }
+  /// Return the first N elements of this Array that satisfy the given
+  /// predicate.
+  template <class PredicateT> ArrayRef<T> take_while(PredicateT Pred) const {
+    return ArrayRef<T>(begin(), find_if_not(*this, Pred));
+  }
 
-    /// Return the first N elements of this Array that don't satisfy the
-    /// given predicate.
-    template <class PredicateT> ArrayRef<T> take_until(PredicateT Pred) const {
-      return ArrayRef<T>(begin(), find_if(*this, Pred));
-    }
+  /// Return the first N elements of this Array that don't satisfy the
+  /// given predicate.
+  template <class PredicateT> ArrayRef<T> take_until(PredicateT Pred) const {
+    return ArrayRef<T>(begin(), find_if(*this, Pred));
+  }
 
-    /// @}
-    /// @name Operator Overloads
-    /// @{
-    const T &operator[](size_t Index) const {
-      assert(Index < Length && "Invalid index!");
-      return Data[Index];
-    }
+  /// @}
+  /// @name Operator Overloads
+  /// @{
+  const T &operator[](size_t Index) const {
+    assert(Index < Length && "Invalid index!");
+    return Data[Index];
+  }
 
-    /// Disallow accidental assignment from a temporary.
-    ///
-    /// The declaration here is extra complicated so that "arrayRef = {}"
-    /// continues to select the move assignment operator.
-    template <typename U>
-    std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
-    operator=(U &&Temporary) = delete;
-
-    /// Disallow accidental assignment from a temporary.
-    ///
-    /// The declaration here is extra complicated so that "arrayRef = {}"
-    /// continues to select the move assignment operator.
-    template <typename U>
-    std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
-    operator=(std::initializer_list<U>) = delete;
-
-    /// @}
-    /// @name Expensive Operations
-    /// @{
-    std::vector<T> vec() const {
-      return std::vector<T>(Data, Data+Length);
-    }
-
-    /// @}
-    /// @name Conversion operators
-    /// @{
-    operator std::vector<T>() const {
-      return std::vector<T>(Data, Data+Length);
-    }
-
-    /// @}
-  };
-
-  /// MutableArrayRef - Represent a mutable reference to an array (0 or more
-  /// elements consecutively in memory), i.e. a start pointer and a length.  It
-  /// allows various APIs to take and modify consecutive elements easily and
-  /// conveniently.
+  /// Disallow accidental assignment from a temporary.
   ///
-  /// This class does not own the underlying data, it is expected to be used in
-  /// situations where the data resides in some other buffer, whose lifetime
-  /// extends past that of the MutableArrayRef. For this reason, it is not in
-  /// general safe to store a MutableArrayRef.
+  /// The declaration here is extra complicated so that "arrayRef = {}"
+  /// continues to select the move assignment operator.
+  template <typename U>
+  std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
+  operator=(U &&Temporary) = delete;
+
+  /// Disallow accidental assignment from a temporary.
   ///
-  /// This is intended to be trivially copyable, so it should be passed by
-  /// value.
-  template<typename T>
-  class [[nodiscard]] MutableArrayRef : public ArrayRef<T> {
-  public:
-    using value_type = T;
-    using pointer = value_type *;
-    using const_pointer = const value_type *;
-    using reference = value_type &;
-    using const_reference = const value_type &;
-    using iterator = pointer;
-    using const_iterator = const_pointer;
-    using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    using size_type = size_t;
-    using difference_type = ptrdiff_t;
+  /// The declaration here is extra complicated so that "arrayRef = {}"
+  /// continues to select the move assignment operator.
+  template <typename U>
+  std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
+  operator=(std::initializer_list<U>) = delete;
 
-    /// Construct an empty MutableArrayRef.
-    /*implicit*/ MutableArrayRef() = default;
+  /// @}
+  /// @name Expensive Operations
+  /// @{
+  std::vector<T> vec() const { return std::vector<T>(Data, Data + Length); }
 
-    /// Construct a MutableArrayRef from a single element.
-    /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
+  /// @}
+  /// @name Conversion operators
+  /// @{
+  operator std::vector<T>() const {
+    return std::vector<T>(Data, Data + Length);
+  }
 
-    /// Construct a MutableArrayRef from a pointer and length.
-    /*implicit*/ MutableArrayRef(T *data, size_t length)
+  /// @}
+};
+
+/// Represent a mutable reference to an array (0 or more elements
+/// consecutively in memory), i.e. a start pointer and a length.  It allows
+/// various APIs to take and modify consecutive elements easily and
+/// conveniently.
+///
+/// This class does not own the underlying data, it is expected to be used in
+/// situations where the data resides in some other buffer, whose lifetime
+/// extends past that of the MutableArrayRef. For this reason, it is not in
+/// general safe to store a MutableArrayRef.
+///
+/// This is intended to be trivially copyable, so it should be passed by
+/// value.
+template <typename T> class [[nodiscard]] MutableArrayRef : public ArrayRef<T> {
+public:
+  using value_type = T;
+  using pointer = value_type *;
+  using const_pointer = const value_type *;
+  using reference = value_type &;
+  using const_reference = const value_type &;
+  using iterator = pointer;
+  using const_iterator = const_pointer;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+
+  /// Construct an empty MutableArrayRef.
+  /*implicit*/ MutableArrayRef() = default;
+
+  /// Construct a MutableArrayRef from a single element.
+  /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
+
+  /// Construct a MutableArrayRef from a pointer and length.
+  /*implicit*/ MutableArrayRef(T *data, size_t length)
       : ArrayRef<T>(data, length) {}
 
-    /// Construct a MutableArrayRef from a range.
-    MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
+  /// Construct a MutableArrayRef from a range.
+  MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
 
-    /// Construct a MutableArrayRef from a type that has data() and size(),
-    /// where data() returns a pointer convertible to T *const *.
-    template <typename C,
-              typename = std::enable_if_t<
-                  std::conjunction_v<
-                      std::is_convertible<
-                          decltype(std::declval<C &>().data()) *, T *const *>,
-                      std::is_integral<decltype(std::declval<C &>().size())>>,
-                  void>>
-    /*implicit*/ constexpr MutableArrayRef(C &&V) : ArrayRef<T>(V) {}
+  /// Construct a MutableArrayRef from a type that has data() and size(),
+  /// where data() returns a pointer convertible to T *const *.
+  template <typename C,
+            typename = std::enable_if_t<
+                std::conjunction_v<
+                    std::is_convertible<decltype(std::declval<C &>().data()) *,
+                                        T *const *>,
+                    std::is_integral<decltype(std::declval<C &>().size())>>,
+                void>>
+  /*implicit*/ constexpr MutableArrayRef(C &&V) : ArrayRef<T>(V) {}
 
-    /// Construct a MutableArrayRef from a C array.
-    template <size_t N>
-    /*implicit*/ constexpr MutableArrayRef(T (&Arr)[N]) : ArrayRef<T>(Arr) {}
+  /// Construct a MutableArrayRef from a C array.
+  template <size_t N>
+  /*implicit*/ constexpr MutableArrayRef(T (&Arr)[N]) : ArrayRef<T>(Arr) {}
 
-    T *data() const { return const_cast<T*>(ArrayRef<T>::data()); }
+  T *data() const { return const_cast<T *>(ArrayRef<T>::data()); }
 
-    iterator begin() const { return data(); }
-    iterator end() const { return data() + this->size(); }
+  iterator begin() const { return data(); }
+  iterator end() const { return data() + this->size(); }
 
-    reverse_iterator rbegin() const { return reverse_iterator(end()); }
-    reverse_iterator rend() const { return reverse_iterator(begin()); }
+  reverse_iterator rbegin() const { return reverse_iterator(end()); }
+  reverse_iterator rend() const { return reverse_iterator(begin()); }
 
-    /// front - Get the first element.
-    T &front() const {
-      assert(!this->empty());
-      return data()[0];
-    }
-
-    /// back - Get the last element.
-    T &back() const {
-      assert(!this->empty());
-      return data()[this->size()-1];
-    }
-
-    /// consume_front() - Returns the first element and drops it from ArrayRef.
-    T &consume_front() {
-      T &Ret = front();
-      *this = drop_front();
-      return Ret;
-    }
-
-    /// consume_back() - Returns the last element and drops it from ArrayRef.
-    T &consume_back() {
-      T &Ret = back();
-      *this = drop_back();
-      return Ret;
-    }
-
-    /// slice(n, m) - Chop off the first N elements of the array, and keep M
-    /// elements in the array.
-    MutableArrayRef<T> slice(size_t N, size_t M) const {
-      assert(N + M <= this->size() && "Invalid specifier");
-      return MutableArrayRef<T>(this->data() + N, M);
-    }
-
-    /// slice(n) - Chop off the first N elements of the array.
-    MutableArrayRef<T> slice(size_t N) const {
-      return slice(N, this->size() - N);
-    }
-
-    /// Drop the first \p N elements of the array.
-    MutableArrayRef<T> drop_front(size_t N = 1) const {
-      assert(this->size() >= N && "Dropping more elements than exist");
-      return slice(N, this->size() - N);
-    }
-
-    MutableArrayRef<T> drop_back(size_t N = 1) const {
-      assert(this->size() >= N && "Dropping more elements than exist");
-      return slice(0, this->size() - N);
-    }
-
-    /// Return a copy of *this with the first N elements satisfying the
-    /// given predicate removed.
-    template <class PredicateT>
-    MutableArrayRef<T> drop_while(PredicateT Pred) const {
-      return MutableArrayRef<T>(find_if_not(*this, Pred), end());
-    }
-
-    /// Return a copy of *this with the first N elements not satisfying
-    /// the given predicate removed.
-    template <class PredicateT>
-    MutableArrayRef<T> drop_until(PredicateT Pred) const {
-      return MutableArrayRef<T>(find_if(*this, Pred), end());
-    }
-
-    /// Return a copy of *this with only the first \p N elements.
-    MutableArrayRef<T> take_front(size_t N = 1) const {
-      if (N >= this->size())
-        return *this;
-      return drop_back(this->size() - N);
-    }
-
-    /// Return a copy of *this with only the last \p N elements.
-    MutableArrayRef<T> take_back(size_t N = 1) const {
-      if (N >= this->size())
-        return *this;
-      return drop_front(this->size() - N);
-    }
-
-    /// Return the first N elements of this Array that satisfy the given
-    /// predicate.
-    template <class PredicateT>
-    MutableArrayRef<T> take_while(PredicateT Pred) const {
-      return MutableArrayRef<T>(begin(), find_if_not(*this, Pred));
-    }
-
-    /// Return the first N elements of this Array that don't satisfy the
-    /// given predicate.
-    template <class PredicateT>
-    MutableArrayRef<T> take_until(PredicateT Pred) const {
-      return MutableArrayRef<T>(begin(), find_if(*this, Pred));
-    }
-
-    /// @}
-    /// @name Operator Overloads
-    /// @{
-    T &operator[](size_t Index) const {
-      assert(Index < this->size() && "Invalid index!");
-      return data()[Index];
-    }
-  };
-
-  /// @name ArrayRef Deduction guides
-  /// @{
-  /// Deduction guide to construct an ArrayRef from a single element.
-  template <typename T> ArrayRef(const T &OneElt) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from a pointer and length
-  template <typename T> ArrayRef(const T *data, size_t length) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from a range
-  template <typename T> ArrayRef(const T *data, const T *end) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from a SmallVector
-  template <typename T> ArrayRef(const SmallVectorImpl<T> &Vec) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from a SmallVector
-  template <typename T, unsigned N>
-  ArrayRef(const SmallVector<T, N> &Vec) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from a std::vector
-  template <typename T> ArrayRef(const std::vector<T> &Vec) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from a std::array
-  template <typename T, std::size_t N>
-  ArrayRef(const std::array<T, N> &Vec) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from an ArrayRef (const)
-  template <typename T> ArrayRef(const ArrayRef<T> &Vec) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from an ArrayRef
-  template <typename T> ArrayRef(ArrayRef<T> &Vec) -> ArrayRef<T>;
-
-  /// Deduction guide to construct an ArrayRef from a C array.
-  template <typename T, size_t N> ArrayRef(const T (&Arr)[N]) -> ArrayRef<T>;
-
-  /// @}
-
-  /// @name MutableArrayRef Deduction guides
-  /// @{
-  /// Deduction guide to construct a `MutableArrayRef` from a single element
-  template <class T> MutableArrayRef(T &OneElt) -> MutableArrayRef<T>;
-
-  /// Deduction guide to construct a `MutableArrayRef` from a pointer and
-  /// length.
-  template <class T>
-  MutableArrayRef(T *data, size_t length) -> MutableArrayRef<T>;
-
-  /// Deduction guide to construct a `MutableArrayRef` from a `SmallVector`.
-  template <class T>
-  MutableArrayRef(SmallVectorImpl<T> &Vec) -> MutableArrayRef<T>;
-
-  template <class T, unsigned N>
-  MutableArrayRef(SmallVector<T, N> &Vec) -> MutableArrayRef<T>;
-
-  /// Deduction guide to construct a `MutableArrayRef` from a `std::vector`.
-  template <class T> MutableArrayRef(std::vector<T> &Vec) -> MutableArrayRef<T>;
-
-  /// Deduction guide to construct a `MutableArrayRef` from a `std::array`.
-  template <class T, std::size_t N>
-  MutableArrayRef(std::array<T, N> &Vec) -> MutableArrayRef<T>;
-
-  /// Deduction guide to construct a `MutableArrayRef` from a C array.
-  template <typename T, size_t N>
-  MutableArrayRef(T (&Arr)[N]) -> MutableArrayRef<T>;
-
-  /// @}
-  /// @name ArrayRef Comparison Operators
-  /// @{
-
-  template<typename T>
-  inline bool operator==(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-    return LHS.equals(RHS);
+  /// Get the first element.
+  T &front() const {
+    assert(!this->empty());
+    return data()[0];
   }
 
-  template <typename T>
-  [[nodiscard]] inline bool operator==(const SmallVectorImpl<T> &LHS,
-                                       ArrayRef<T> RHS) {
-    return ArrayRef<T>(LHS).equals(RHS);
+  /// Get the last element.
+  T &back() const {
+    assert(!this->empty());
+    return data()[this->size() - 1];
   }
 
-  template <typename T>
-  inline bool operator!=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-    return !(LHS == RHS);
+  /// Returns the first element and drops it from ArrayRef.
+  T &consume_front() {
+    T &Ret = front();
+    *this = drop_front();
+    return Ret;
   }
 
-  template <typename T>
-  [[nodiscard]] inline bool operator!=(const SmallVectorImpl<T> &LHS,
-                                       ArrayRef<T> RHS) {
-    return !(LHS == RHS);
+  /// Returns the last element and drops it from ArrayRef.
+  T &consume_back() {
+    T &Ret = back();
+    *this = drop_back();
+    return Ret;
   }
 
-  template <typename T>
-  inline bool operator<(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-    return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
-                                        RHS.end());
+  /// Chop off the first \p N elements of the array, and keep \p M elements
+  /// in the array.
+  MutableArrayRef<T> slice(size_t N, size_t M) const {
+    assert(N + M <= this->size() && "Invalid specifier");
+    return MutableArrayRef<T>(this->data() + N, M);
   }
 
-  template <typename T>
-  inline bool operator>(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-    return RHS < LHS;
+  /// Chop off the first \p N elements of the array.
+  MutableArrayRef<T> slice(size_t N) const {
+    return slice(N, this->size() - N);
   }
 
-  template <typename T>
-  inline bool operator<=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-    return !(LHS > RHS);
+  /// Drop the first \p N elements of the array.
+  MutableArrayRef<T> drop_front(size_t N = 1) const {
+    assert(this->size() >= N && "Dropping more elements than exist");
+    return slice(N, this->size() - N);
   }
 
-  template <typename T>
-  inline bool operator>=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-    return !(LHS < RHS);
+  MutableArrayRef<T> drop_back(size_t N = 1) const {
+    assert(this->size() >= N && "Dropping more elements than exist");
+    return slice(0, this->size() - N);
+  }
+
+  /// Return a copy of *this with the first N elements satisfying the
+  /// given predicate removed.
+  template <class PredicateT>
+  MutableArrayRef<T> drop_while(PredicateT Pred) const {
+    return MutableArrayRef<T>(find_if_not(*this, Pred), end());
+  }
+
+  /// Return a copy of *this with the first N elements not satisfying
+  /// the given predicate removed.
+  template <class PredicateT>
+  MutableArrayRef<T> drop_until(PredicateT Pred) const {
+    return MutableArrayRef<T>(find_if(*this, Pred), end());
+  }
+
+  /// Return a copy of *this with only the first \p N elements.
+  MutableArrayRef<T> take_front(size_t N = 1) const {
+    if (N >= this->size())
+      return *this;
+    return drop_back(this->size() - N);
+  }
+
+  /// Return a copy of *this with only the last \p N elements.
+  MutableArrayRef<T> take_back(size_t N = 1) const {
+    if (N >= this->size())
+      return *this;
+    return drop_front(this->size() - N);
+  }
+
+  /// Return the first N elements of this Array that satisfy the given
+  /// predicate.
+  template <class PredicateT>
+  MutableArrayRef<T> take_while(PredicateT Pred) const {
+    return MutableArrayRef<T>(begin(), find_if_not(*this, Pred));
+  }
+
+  /// Return the first N elements of this Array that don't satisfy the
+  /// given predicate.
+  template <class PredicateT>
+  MutableArrayRef<T> take_until(PredicateT Pred) const {
+    return MutableArrayRef<T>(begin(), find_if(*this, Pred));
   }
 
   /// @}
+  /// @name Operator Overloads
+  /// @{
+  T &operator[](size_t Index) const {
+    assert(Index < this->size() && "Invalid index!");
+    return data()[Index];
+  }
+};
 
-  template <typename T> hash_code hash_value(ArrayRef<T> S) {
-    return hash_combine_range(S);
+/// @name ArrayRef Deduction guides
+/// @{
+/// Deduction guide to construct an ArrayRef from a single element.
+template <typename T> ArrayRef(const T &OneElt) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from a pointer and length
+template <typename T> ArrayRef(const T *data, size_t length) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from a range
+template <typename T> ArrayRef(const T *data, const T *end) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from a SmallVector
+template <typename T> ArrayRef(const SmallVectorImpl<T> &Vec) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from a SmallVector
+template <typename T, unsigned N>
+ArrayRef(const SmallVector<T, N> &Vec) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from a std::vector
+template <typename T> ArrayRef(const std::vector<T> &Vec) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from a std::array
+template <typename T, std::size_t N>
+ArrayRef(const std::array<T, N> &Vec) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from an ArrayRef (const)
+template <typename T> ArrayRef(const ArrayRef<T> &Vec) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from an ArrayRef
+template <typename T> ArrayRef(ArrayRef<T> &Vec) -> ArrayRef<T>;
+
+/// Deduction guide to construct an ArrayRef from a C array.
+template <typename T, size_t N> ArrayRef(const T (&Arr)[N]) -> ArrayRef<T>;
+
+/// @}
+
+/// @name MutableArrayRef Deduction guides
+/// @{
+/// Deduction guide to construct a `MutableArrayRef` from a single element
+template <class T> MutableArrayRef(T &OneElt) -> MutableArrayRef<T>;
+
+/// Deduction guide to construct a `MutableArrayRef` from a pointer and
+/// length.
+template <class T>
+MutableArrayRef(T *data, size_t length) -> MutableArrayRef<T>;
+
+/// Deduction guide to construct a `MutableArrayRef` from a `SmallVector`.
+template <class T>
+MutableArrayRef(SmallVectorImpl<T> &Vec) -> MutableArrayRef<T>;
+
+template <class T, unsigned N>
+MutableArrayRef(SmallVector<T, N> &Vec) -> MutableArrayRef<T>;
+
+/// Deduction guide to construct a `MutableArrayRef` from a `std::vector`.
+template <class T> MutableArrayRef(std::vector<T> &Vec) -> MutableArrayRef<T>;
+
+/// Deduction guide to construct a `MutableArrayRef` from a `std::array`.
+template <class T, std::size_t N>
+MutableArrayRef(std::array<T, N> &Vec) -> MutableArrayRef<T>;
+
+/// Deduction guide to construct a `MutableArrayRef` from a C array.
+template <typename T, size_t N>
+MutableArrayRef(T (&Arr)[N]) -> MutableArrayRef<T>;
+
+/// @}
+/// @name ArrayRef Comparison Operators
+/// @{
+
+template <typename T> inline bool operator==(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+  return LHS.equals(RHS);
+}
+
+template <typename T>
+[[nodiscard]] inline bool operator==(const SmallVectorImpl<T> &LHS,
+                                     ArrayRef<T> RHS) {
+  return ArrayRef<T>(LHS).equals(RHS);
+}
+
+template <typename T> inline bool operator!=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+  return !(LHS == RHS);
+}
+
+template <typename T>
+[[nodiscard]] inline bool operator!=(const SmallVectorImpl<T> &LHS,
+                                     ArrayRef<T> RHS) {
+  return !(LHS == RHS);
+}
+
+template <typename T> inline bool operator<(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+  return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
+                                      RHS.end());
+}
+
+template <typename T> inline bool operator>(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+  return RHS < LHS;
+}
+
+template <typename T> inline bool operator<=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+  return !(LHS > RHS);
+}
+
+template <typename T> inline bool operator>=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+  return !(LHS < RHS);
+}
+
+/// @}
+
+template <typename T> hash_code hash_value(ArrayRef<T> S) {
+  return hash_combine_range(S);
+}
+
+// Provide DenseMapInfo for ArrayRefs.
+template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
+  static inline ArrayRef<T> getEmptyKey() {
+    return ArrayRef<T>(reinterpret_cast<const T *>(~static_cast<uintptr_t>(0)),
+                       size_t(0));
   }
 
-  // Provide DenseMapInfo for ArrayRefs.
-  template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
-    static inline ArrayRef<T> getEmptyKey() {
-      return ArrayRef<T>(
-          reinterpret_cast<const T *>(~static_cast<uintptr_t>(0)), size_t(0));
-    }
+  static inline ArrayRef<T> getTombstoneKey() {
+    return ArrayRef<T>(reinterpret_cast<const T *>(~static_cast<uintptr_t>(1)),
+                       size_t(0));
+  }
 
-    static inline ArrayRef<T> getTombstoneKey() {
-      return ArrayRef<T>(
-          reinterpret_cast<const T *>(~static_cast<uintptr_t>(1)), size_t(0));
-    }
+  static unsigned getHashValue(ArrayRef<T> Val) {
+    assert(Val.data() != getEmptyKey().data() && "Cannot hash the empty key!");
+    assert(Val.data() != getTombstoneKey().data() &&
+           "Cannot hash the tombstone key!");
+    return (unsigned)(hash_value(Val));
+  }
 
-    static unsigned getHashValue(ArrayRef<T> Val) {
-      assert(Val.data() != getEmptyKey().data() &&
-             "Cannot hash the empty key!");
-      assert(Val.data() != getTombstoneKey().data() &&
-             "Cannot hash the tombstone key!");
-      return (unsigned)(hash_value(Val));
-    }
-
-    static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-      if (RHS.data() == getEmptyKey().data())
-        return LHS.data() == getEmptyKey().data();
-      if (RHS.data() == getTombstoneKey().data())
-        return LHS.data() == getTombstoneKey().data();
-      return LHS == RHS;
-    }
-  };
+  static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    if (RHS.data() == getEmptyKey().data())
+      return LHS.data() == getEmptyKey().data();
+    if (RHS.data() == getTombstoneKey().data())
+      return LHS.data() == getTombstoneKey().data();
+    return LHS == RHS;
+  }
+};
 
 } // end namespace llvm
 
