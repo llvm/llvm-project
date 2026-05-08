@@ -147,8 +147,6 @@ void DWARFTypePrinter<DieType>::appendArrayType(const DieType &D) {
   EndedWithTemplate = false;
 }
 
-constexpr unsigned kMaxTypedefUnwrapDepth = 256;
-
 namespace detail {
 template <typename DieType>
 DieType resolveReferencedType(DieType D,
@@ -174,8 +172,7 @@ const char *toString(std::optional<DWARFFormValueType> F) {
 /// DW_TAG_typedef. Gives up after 256 typedefs to guard against cycles in
 /// malformed DWARF.
 template <typename DieType>
-DieType unwrapReferencedTypedefType(DieType D,
-                                    unsigned Depth = kMaxTypedefUnwrapDepth) {
+DieType unwrapReferencedTypedefType(DieType D, unsigned Depth = 256) {
   auto TypeAttr = D.find(dwarf::DW_AT_type);
   if (!TypeAttr)
     return DieType();
