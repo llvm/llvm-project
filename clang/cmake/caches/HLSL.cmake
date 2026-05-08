@@ -15,26 +15,18 @@ if (HLSL_ENABLE_DISTRIBUTION)
       CACHE STRING "")
 endif()
 
-# Enable the offload test suite distribution. This produces a portable
-# install prefix containing all binaries and test files needed to run the
-# HLSL offload test suite on another machine.
-#
-# Install with:
-#   cmake --build build --target install-distribution
-#   cmake --build build --target install-offload-tools
-#   cmake --build build --target install-offload-test-suite
-#
-# Prerequisites on the target machine:
-#   - Python 3.6+
-#   - pip install lit pyyaml
-#   - GPU drivers (D3D12, Vulkan, or Metal depending on test suite)
-#   - For non-clang test suites: a DXC executable (clang-dxc is included)
-#
-# After installing, configure and run tests:
-#   cd <prefix>/share/hlsl-test-suite
-#   ./configure-test-suite.py --suite clang-d3d12
-#   lit run/test/clang-d3d12
+# Enable the offload test suite distribution. Produces a portable install
+# prefix containing the binaries and test data needed to run the HLSL
+# offload test suite on another machine. See the offload-test-suite repo
+# (docs/offload-distribution.md) for setup, prerequisites, and run
+# instructions.
 if (HLSL_ENABLE_OFFLOAD_DISTRIBUTION)
+  if (NOT "OffloadTest" IN_LIST LLVM_EXTERNAL_PROJECTS)
+    message(FATAL_ERROR
+      "HLSL_ENABLE_OFFLOAD_DISTRIBUTION requires OffloadTest to be enabled "
+      "as an external project. Pass -DLLVM_EXTERNAL_PROJECTS=OffloadTest "
+      "and -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=<path-to-offload-test-suite>.")
+  endif()
   # Lit utilities (FileCheck, split-file, etc.) require LLVM_INSTALL_UTILS.
   set(LLVM_INSTALL_UTILS ON CACHE BOOL "")
   set(LLVM_DISTRIBUTION_COMPONENTS
