@@ -10076,7 +10076,7 @@ let CategoryName = "Inline Assembly Issue" in {
     "invalid input constraint '%0' in asm">;
   def err_asm_constraint_embedded_null : Error<
     "%select{output constraint|input constraint|clobber}0 contains "
-    "embedded null character">;
+    "an embedded null character">;
   def err_asm_tying_incompatible_types : Error<
     "unsupported inline asm: input with type "
     "%diff{$ matching output with type $|}0,1">;
