@@ -15044,12 +15044,6 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   bool Success = true;
 
-  assert((!Result.isArray() || Result.getArrayInitializedElts() == 0) &&
-         "zero-initialized array shouldn't have any initialized elts");
-  APValue Filler;
-  if (Result.isArray() && Result.hasArrayFiller())
-    Filler = Result.getArrayFiller();
-
   unsigned NumEltsToInit = Args.size();
   unsigned NumElts = CAT->getZExtSize();
 
@@ -15059,26 +15053,50 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
       MaybeElementDependentArrayFiller(ArrayFiller)) {
     NumEltsToInit = NumElts;
   } else {
+    // Add additional elements represented by EmbedExpr.
     for (auto *Init : Args) {
       if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts()))
         NumEltsToInit += EmbedS->getDataElementCount() - 1;
     }
+    // If we have extra elements in the list, they will be discarded.
     if (NumEltsToInit > NumElts)
       NumEltsToInit = NumElts;
+    // If we're overwriting memory which already has an object, make sure we
+    // don't reduce the number of non-filler elements.  (It's possible to
+    // optimize this in some cases, but the logic gets really complicated.)
+    if (Result.hasValue() && NumEltsToInit < Result.getArrayInitializedElts())
+      NumEltsToInit = Result.getArrayInitializedElts();
   }
 
   LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
                           << NumEltsToInit << ".\n");
 
-  Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
-
-  // If the array was previously zero-initialized, preserve the
-  // zero-initialized values.
-  if (Filler.hasValue()) {
-    for (unsigned I = 0, E = Result.getArrayInitializedElts(); I != E; ++I)
-      Result.getArrayInitializedElt(I) = Filler;
-    if (Result.hasArrayFiller())
-      Result.getArrayFiller() = Filler;
+  if (!Result.hasValue()) {
+    Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
+  } else if (Result.getArrayInitializedElts() != NumEltsToInit) {
+    // Number of inititalized elts changed. Recreate the APValue, and copy over
+    // the relevant elements.  (This is essentially just fixing the internal
+    // representation of the value, because it's tied to the number of
+    // non-filler elements.)
+    //
+    // This should be hit rarely, but there are some edge cases:
+    //
+    // - The array could be zero-initialized.
+    // - There could be a DesignatedInitListExpr.
+    // - operator new[] can be used to start the lifetime early.
+    APValue NewResult = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
+    // First copy existing elements.
+    unsigned NumOldElts = Result.getArrayInitializedElts();
+    for (unsigned I = 0; I < NumOldElts; ++I) {
+      NewResult.getArrayInitializedElt(I) =
+          std::move(Result.getArrayInitializedElt(I));
+    }
+    // Then copy the array filler over the remaining elements.
+    for (unsigned I = Result.getArrayInitializedElts(); I < NumEltsToInit; ++I)
+      NewResult.getArrayInitializedElt(I) = Result.getArrayFiller();
+    if (NewResult.hasArrayFiller() && Result.hasArrayFiller())
+      NewResult.getArrayFiller() = Result.getArrayFiller();
+    Result = std::move(NewResult);
   }
 
   LValue Subobject = This;
