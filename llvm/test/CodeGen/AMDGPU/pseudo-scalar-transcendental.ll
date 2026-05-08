@@ -104,6 +104,54 @@ define amdgpu_cs half @v_s_amdgcn_exp_f16(half inreg %src) {
   ret half %result
 }
 
+define void @v_amdgcn_exp_f16_div(half %src, ptr addrspace(1) %out) {
+; GFX12-LABEL: v_amdgcn_exp_f16_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_exp_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_amdgcn_exp_f16_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_exp_f16_e32 v0, v0
+; GCN-GISEL-NEXT:    flat_store_short v[1:2], v0
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call half @llvm.amdgcn.exp2.f16(half %src)
+  store half %result, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_amdgcn_exp_f32_div(float %src, ptr addrspace(1) %out) {
+; GFX12-LABEL: v_amdgcn_exp_f32_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_exp_f32_e32 v0, v0
+; GFX12-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_amdgcn_exp_f32_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_exp_f32_e32 v0, v0
+; GCN-GISEL-NEXT:    flat_store_dword v[1:2], v0
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call float @llvm.amdgcn.exp2.f32(float %src)
+  store float %result, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_cs float @v_s_log_f32(float inreg %src) {
 ; GFX12-SDAG-LABEL: v_s_log_f32:
 ; GFX12-SDAG:       ; %bb.0:
@@ -436,6 +484,144 @@ define amdgpu_cs half @v_s_rsq_f16(half inreg %src) {
   ret half %result
 }
 
+define void @v_rsq_f16_div(half %src, ptr addrspace(1) %out) {
+; GFX12-LABEL: v_rsq_f16_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_rsq_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_rsq_f16_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_rsq_f16_e32 v0, v0
+; GCN-GISEL-NEXT:    flat_store_short v[1:2], v0
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call fast half @llvm.sqrt.f16(half %src)
+  %result = fdiv fast half 1.0, %sqrt
+  store half %result, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_rsq_f32_div(float %src, ptr addrspace(1) %out) {
+; GFX12-SDAG-LABEL: v_rsq_f32_div:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; GFX12-SDAG-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_rsq_f32_div:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX12-GISEL-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_rsq_f32_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; GCN-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-GISEL-NEXT:    flat_store_dword v[1:2], v0
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call fast float @llvm.sqrt.f32(float %src)
+  %result = fdiv fast float 1.0, %sqrt
+  store float %result, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_rsq_f64_div(double %src, ptr addrspace(1) %out) {
+; GFX12-LABEL: v_rsq_f64_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_rsq_f64_e32 v[4:5], v[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_mul_f64_e64 v[0:1], v[0:1], -v[4:5]
+; GFX12-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 1.0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_mul_f64_e32 v[6:7], v[0:1], v[4:5]
+; GFX12-NEXT:    v_fma_f64 v[0:1], 0x3fd80000, v[0:1], 0.5
+; GFX12-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[4:5]
+; GFX12-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_rsq_f64_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_rsq_f64_e32 v[4:5], v[0:1]
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v7, 0x3fd80000
+; GCN-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], -v[4:5]
+; GCN-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 1.0
+; GCN-GISEL-NEXT:    v_mul_f64 v[8:9], v[0:1], v[4:5]
+; GCN-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[6:7], 0.5
+; GCN-GISEL-NEXT:    v_fma_f64 v[0:1], v[8:9], v[0:1], v[4:5]
+; GCN-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call fast double @llvm.sqrt.f64(double %src)
+  %result = fdiv fast double 1.0, %sqrt
+  store double %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs double @v_s_rsq_f64(double inreg %src) {
+; GFX12-LABEL: v_s_rsq_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_mul_f64_e64 v[2:3], s[0:1], -v[0:1]
+; GFX12-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_mul_f64_e32 v[4:5], v[2:3], v[0:1]
+; GFX12-NEXT:    v_fma_f64 v[2:3], 0x3fd80000, v[2:3], 0.5
+; GFX12-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GCN-GISEL-LABEL: v_s_rsq_f64:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; GCN-GISEL-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
+; GCN-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
+; GCN-GISEL-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
+; GCN-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
+; GCN-GISEL-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; GCN-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GCN-GISEL-NEXT:    ; return to shader part epilog
+  %sqrt = call fast double @llvm.sqrt.f64(double %src)
+  %result = fdiv fast double 1.0, %sqrt
+  ret double %result
+}
+
 ; TODO: Should avoid generating v_cmp_class_f32.
 define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ; GFX12-SDAG-LABEL: v_s_sqrt_f32:
@@ -597,6 +783,98 @@ define amdgpu_cs half @v_amdgcn_sqrt_f16(half inreg %src)  {
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
   %result = call half @llvm.amdgcn.sqrt.f16(half %src)
   ret half %result
+}
+
+define void @v_amdgcn_sqrt_f16_div(half %src, ptr addrspace(1) %out) {
+; GFX12-LABEL: v_amdgcn_sqrt_f16_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_amdgcn_sqrt_f16_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_sqrt_f16_e32 v0, v0
+; GCN-GISEL-NEXT:    flat_store_short v[1:2], v0
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call half @llvm.amdgcn.sqrt.f16(half %src)
+  store half %result, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_amdgcn_sqrt_f32_div(float %src, ptr addrspace(1) %out) {
+; GFX12-LABEL: v_amdgcn_sqrt_f32_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX12-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_amdgcn_sqrt_f32_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; GCN-GISEL-NEXT:    flat_store_dword v[1:2], v0
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call float @llvm.amdgcn.sqrt.f32(float %src)
+  store float %result, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_amdgcn_sqrt_f64_div(double %src, ptr addrspace(1) %out) {
+; GFX12-LABEL: v_amdgcn_sqrt_f64_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f64_e32 v[0:1], v[0:1]
+; GFX12-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_amdgcn_sqrt_f64_div:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_sqrt_f64_e32 v[0:1], v[0:1]
+; GCN-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call double @llvm.amdgcn.sqrt.f64(double %src)
+  store double %result, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs double @v_s_amdgcn_sqrt_f64(double inreg %src) {
+; GFX12-LABEL: v_s_amdgcn_sqrt_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_sqrt_f64_e32 v[0:1], s[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GCN-GISEL-LABEL: v_s_amdgcn_sqrt_f64:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_sqrt_f64_e32 v[0:1], s[0:1]
+; GCN-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GCN-GISEL-NEXT:    ; return to shader part epilog
+  %result = call double @llvm.amdgcn.sqrt.f64(double %src)
+  ret double %result
 }
 
 define amdgpu_cs float @srcmods_abs_f32(float inreg %src) {
