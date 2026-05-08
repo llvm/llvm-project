@@ -35,4 +35,9 @@ std::string inferLanguage(StringRef Path);
 /// Extract the target triple from compiler arguments.
 std::string inferTargetTriple(ArrayRef<std::string> Arguments);
 
+/// Parse compiler arguments to find the output path specified by -o.
+/// Returns an empty string if no output flag is present.
+std::string resolveOutputPath(ArrayRef<std::string> Arguments,
+                              StringRef BaseDir = {});
+
 } // namespace llvm::advisor

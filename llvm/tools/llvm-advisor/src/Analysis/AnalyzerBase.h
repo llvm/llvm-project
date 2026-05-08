@@ -86,6 +86,12 @@ std::unique_ptr<JSONCapabilityResult>
 makeUnavailableResult(StringRef CapabilityID, StringRef UnitID,
                       StringRef Reason);
 
+/// Same as the three-argument overload, but includes an optional summary
+/// field when non-empty.
+std::unique_ptr<JSONCapabilityResult>
+makeUnavailableResult(StringRef CapabilityID, StringRef UnitID,
+                      StringRef Reason, StringRef Summary);
+
 /// Build a JSON capability result with the standard envelope fields already
 /// populated.  Additional properties are merged from Data.
 inline std::unique_ptr<JSONCapabilityResult>

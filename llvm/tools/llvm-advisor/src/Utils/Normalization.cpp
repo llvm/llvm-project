@@ -38,22 +38,20 @@ llvm::advisor::canonicalizePath(StringRef Path,
                                 ArrayRef<StringRef> AllowedRoots) {
   SmallString<256> RealPath;
   if (std::error_code EC = sys::fs::real_path(Path, RealPath))
-    return createStringError(EC, "path does not exist: %s", Path.str().c_str());
+    return createStringError(EC, Twine("path does not exist: ") + Path);
   sys::path::remove_dots(RealPath, true);
 
   for (StringRef Root : AllowedRoots) {
     SmallString<256> RealRoot;
     if (std::error_code EC = sys::fs::real_path(Root, RealRoot))
-      return createStringError(EC, "path root does not exist: %s",
-                               Root.str().c_str());
+      return createStringError(EC, Twine("path root does not exist: ") + Root);
     sys::path::remove_dots(RealRoot, true);
     if (isInside(RealPath, RealRoot))
       return RealPath.str().str();
   }
 
   return createStringError(inconvertibleErrorCode(),
-                           "path escapes allowed roots: %s",
-                           Path.str().c_str());
+                           Twine("path escapes allowed roots: ") + Path);
 }
 
 SmallVector<std::string, 16>
@@ -95,6 +93,18 @@ std::string llvm::advisor::inferTargetTriple(ArrayRef<std::string> Arguments) {
       return Arg.drop_front(LongTargetPrefix.size()).str();
     if (Arg.starts_with(ShortTargetPrefix))
       return Arg.drop_front(ShortTargetPrefix.size()).str();
+  }
+  return {};
+}
+
+std::string llvm::advisor::resolveOutputPath(ArrayRef<std::string> Arguments,
+                                             StringRef BaseDir) {
+  for (size_t I = 0, E = Arguments.size(); I != E; ++I) {
+    StringRef Arg(Arguments[I]);
+    if (Arg == "-o" && I + 1 < E)
+      return normalizePath(Arguments[I + 1], BaseDir);
+    if (Arg.starts_with("-o") && Arg.size() > 2)
+      return normalizePath(Arg.drop_front(2), BaseDir);
   }
   return {};
 }

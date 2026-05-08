@@ -1,5 +1,4 @@
-//===------------------- CapabilityRegistry.cpp - LLVM Advisor
-//-------------------===//
+//===--- CapabilityRegistry.cpp - LLVM Advisor ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -139,8 +138,8 @@ Error CapabilityRegistry::loadDirectory(StringRef ConfigDir) {
       return Err;
   }
   if (EC)
-    return createStringError(EC, "cannot read capability directory '%s'",
-                             ConfigDir.str().c_str());
+    return createStringError(EC, Twine("cannot read capability directory '") +
+                                      ConfigDir + "'");
   return Error::success();
 }
 
@@ -203,8 +202,8 @@ Error CapabilityRegistry::addSpec(CapabilitySpec Spec) {
 Expected<CapabilitySpec> CapabilityRegistry::getSpec(StringRef ID) const {
   StringMap<CapabilitySpec>::const_iterator I = Specs.find(ID);
   if (I == Specs.end())
-    return createStringError(inconvertibleErrorCode(), "unknown capability: %s",
-                             ID.str().c_str());
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("unknown capability: ") + ID);
   return I->second;
 }
 
@@ -220,6 +219,9 @@ Error CapabilityRegistry::addRunner(std::unique_ptr<CapabilityRunner> Runner) {
     return createStringError(inconvertibleErrorCode(),
                              "null capability runner");
   StringRef ID = Runner->getCapabilityID();
+  if (Runners.contains(ID))
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("runner already registered: ") + ID);
   Runners[ID] = std::move(Runner);
   RunnerKinds[ID] = Runners[ID].get();
   return Error::success();
@@ -231,6 +233,9 @@ Error CapabilityRegistry::addRunner(StringRef RunnerKind,
     return createStringError(inconvertibleErrorCode(),
                              "null capability runner");
   std::string ID = Runner->getCapabilityID().str();
+  if (Runners.contains(ID))
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("runner already registered: ") + ID);
   Runners[ID] = std::move(Runner);
   RunnerKinds[RunnerKind] = Runners[ID].get();
   return Error::success();
