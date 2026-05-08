@@ -20,7 +20,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 #include <__stacktrace/stacktrace_entry.h>
-#include <array>
 #include <cstdint>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -60,17 +59,13 @@ struct _Image {
  */
 struct _Images {
   constexpr static size_t k_max_images = 256;
-  std::array<_Image, k_max_images + 2> images_{}; // space for the L/R sentinels
-  unsigned count_{0};                             // image count, including sentinels
+  _Image images_[k_max_images + 2]{}; // includes space for the L/R sentinels
+  unsigned count_{};                  // image count, including sentinels
 
   /** An OS-specific constructor is defined. */
   _LIBCPP_EXPORTED_FROM_ABI _Images();
 
-  /** Get prog_image by index (0 <= index < count_) */
-  _Image& operator[](size_t __index) {
-    _LIBCPP_ASSERT(__index < count_, "index out of range");
-    return images_.at(__index);
-  }
+  _Image& operator[](size_t __index) { return images_[__index]; }
 
   /** Image representing the main program, or nullptr if we couldn't find it */
   _Image* main_prog_image() {
