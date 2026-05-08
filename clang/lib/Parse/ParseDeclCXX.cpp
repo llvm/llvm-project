@@ -1001,6 +1001,8 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
         return nullptr;
       }
     } else if (tokenIsLikeStringLiteral(Tok, getLangOpts())) {
+      SaveAndRestore<ConversionAction> SavedTranslationState(
+          ParserConversionAction, CA_NoConversion);
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
     } else {
       Diag(Tok, diag::err_expected_string_literal)

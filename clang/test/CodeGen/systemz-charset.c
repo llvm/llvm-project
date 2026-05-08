@@ -66,3 +66,8 @@ const char* hello_macro = HELLO;
 const char* preprocessor_concatenation = HELLO_WORLD;
 //CHECK: c"\C8\85\93\93\96@\E6\96\99\93\84Z\00"
 //CHECK-UTF8: c"Hello World!\00"
+
+void test1() {
+  printf(__FUNCTION__);
+}
+//CHECK: @__FUNCTION__.test1 = private unnamed_addr constant [6 x i8] c"\A3\85\A2\A3\F1\00"
