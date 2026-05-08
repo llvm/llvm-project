@@ -1163,7 +1163,7 @@ public:
     // A designated initializer was provided for a non-aggregate type.
     FK_DesignatedInitForNonAggregate,
 
-    /// HLSL intialization list flattening failed.
+    /// HLSL initialization list flattening failed.
     FK_HLSLInitListFlatteningFailed,
   };
 

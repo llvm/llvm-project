@@ -35,7 +35,9 @@ __all__ = [
     "Region",
     "Type",
     "Attribute",
+    "Pure",
     "result",
+    "infer_result",
     "operand",
     "attribute",
 ]
@@ -128,23 +130,28 @@ class FieldSpecifier:
 
 def result(
     *,
-    infer_type: bool = False,
     default_factory: Optional[Callable[[], Any]] = None,
     kw_only: bool = False,
 ) -> Result:
     """
     A field specifier for `Result` definitions.
     """
-    if infer_type and default_factory:
-        raise ValueError(
-            "a result field cannot have both infer_type and default_factory"
-        )
 
     return FieldSpecifier(
         type_=Result,
-        infer_type=infer_type,
         default_factory=default_factory,
         kw_only=kw_only,
+    )
+
+
+def infer_result() -> Result:
+    """
+    A field specifier for `Result` definitions with type inference enabled.
+    """
+
+    return FieldSpecifier(
+        type_=Result,
+        infer_type=True,
     )
 
 
@@ -894,12 +901,12 @@ class Dialect(ir.Dialect):
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: Result[i32]
+        cst: Result[i32] = infer_result()
 
     class AddOp(MyInt.Operation, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
-        res: Result[i32]
+        res: Result[i32] = infer_result()
     ```
     """
 
@@ -986,3 +993,22 @@ class Dialect(ir.Dialect):
         for op in cls.operations:
             _cext.register_operation(cls, replace=reload)(op)
             _cext.register_op_adaptor(op, replace=reload)(op.Adaptor)
+
+
+class Pure:
+    """Always speculatable operation that does not touch memory."""
+
+    class NoMemoryEffect(ir.MemoryEffectsOpInterface):
+        @staticmethod
+        def get_effects(op, effects):
+            pass
+
+    class AlwaysSpeculatable(ir.ConditionallySpeculatable):
+        @staticmethod
+        def get_speculatability(op):
+            return ir.Speculatability.Speculatable
+
+    @staticmethod
+    def attach(op_name):
+        Pure.NoMemoryEffect.attach(op_name)
+        Pure.AlwaysSpeculatable.attach(op_name)

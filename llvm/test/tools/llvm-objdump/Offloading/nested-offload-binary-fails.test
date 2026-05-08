@@ -1,10 +1,7 @@
 ## Test that llvm-objdump will display an error for incorrect nested OffloadBinary images.
 
-# Before the error the root image is displayed which is currently 7 lines.
-
 # RUN: yaml2obj %s -o %t.bin 
-# RUN: llvm-objdump --offloading %t.bin 2> %t.err | count 7
-# RUN: FileCheck -DFILENAME=%t.bin %s --input-file=%t.err
+# RUN: llvm-objdump --offloading %t.bin 2>&1 | FileCheck %s -DFILENAME=%t.bin "-DROOT=OFFLOADING IMAGE"
 
 !Offload
 Members:
@@ -17,4 +14,6 @@ Members:
       Value:          "none"
     Content:        10ff10ad
 
-# CHECK:warning: '[[FILENAME]]': failed to extract nested OffloadBinary: Invalid data was encountered while parsing the file
+# CHECK:     [[ROOT]]
+# CHECK-NOT: [[ROOT]]
+# CHECK: warning: '[[FILENAME]]': failed to extract nested OffloadBinary: Invalid data was encountered while parsing the file

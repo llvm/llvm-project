@@ -105,6 +105,18 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
+  Result = Builder.CreateFAbs(V);
+  II = cast<IntrinsicInst>(Result);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fabs);
+  EXPECT_FALSE(II->hasNoInfs());
+  EXPECT_FALSE(II->hasNoNaNs());
+
+  Result = Builder.CreateFAbs(V, I);
+  II = cast<IntrinsicInst>(Result);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fabs);
+  EXPECT_TRUE(II->hasNoInfs());
+  EXPECT_FALSE(II->hasNoNaNs());
+
   Result = Builder.CreateBinaryIntrinsic(Intrinsic::pow, V, V);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::pow);

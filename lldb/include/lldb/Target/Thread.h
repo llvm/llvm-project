@@ -1027,6 +1027,10 @@ public:
   ///     A pointer to the next executed plan.
   ThreadPlan *GetCurrentPlan() const;
 
+  /// Returns true if this thread has a ThreadPlanCallFunction on its
+  /// plan stack, indicating it is running a debugger-injected expression.
+  bool IsRunningCallFunctionPlan() const;
+
   /// Unwinds the thread stack for the innermost expression plan currently
   /// on the thread plan stack.
   ///
@@ -1185,6 +1189,21 @@ public:
                              uint32_t num_frames, bool show_frame_info,
                              uint32_t num_frames_with_source, bool show_hidden);
 
+  /// If this thread stopped on a binary-loaded breakpoint, the
+  /// addresses of the newly added binaries may have already been
+  /// provided by the gdb stub in the stop-packet.
+  virtual std::vector<lldb::addr_t> FetchNewlyAddedBinaries() { return {}; }
+
+  /// If this thread stopped on a binary-loaded breakpoint, the
+  /// detailed information about the new binaries may be provided.
+  /// If any detailed information about binaries is provided, it must
+  /// be provided for all binaries that have been loaded at this stop.
+  /// Detailed information is likely to only be provided when the number
+  /// of new binaries is small.
+  virtual lldb_private::StructuredData::ObjectSP FetchDetailedBinariesInfo() {
+    return {};
+  }
+
   // We need a way to verify that even though we have a thread in a shared
   // pointer that the object itself is still valid. Currently this won't be the
   // case if DestroyThread() was called. DestroyThread is called when a thread
@@ -1324,6 +1343,25 @@ public:
   /// Returns true if any host thread is currently inside a provider.
   bool IsAnyProviderActive();
 
+  /// Get the ordered chain of provider descriptors and their frame list IDs.
+  ///
+  /// Each element is a pair of:
+  ///   - \b ScriptedFrameProviderDescriptor: metadata for the provider
+  ///     (class name, description, priority, thread specs).
+  ///   - \b frame_list_id_t: the sequential frame list identifier assigned
+  ///     to that provider in the chain (1 for the first provider, 2 for the
+  ///     second, etc.). ID 0 is reserved for the base unwinder and is never
+  ///     present in this vector.
+  ///
+  /// The vector is ordered by provider chain position (registration order
+  /// adjusted by priority). It persists across \c ClearStackFrames() so that
+  /// provider IDs remain stable for the lifetime of the thread.
+  const std::vector<
+      std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>> &
+  GetProviderChainIds() const {
+    return m_provider_chain_ids;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1457,10 +1495,6 @@ protected:
   /// Map from frame list identifier to frame list weak pointer.
   mutable llvm::DenseMap<lldb::frame_list_id_t, lldb::StackFrameListWP>
       m_frame_lists_by_id;
-
-  /// Counter for assigning unique provider IDs. Starts at 1 since 0 is
-  /// reserved for normal unwinder frames. Persists across ClearStackFrames.
-  lldb::frame_list_id_t m_next_provider_id = 1;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

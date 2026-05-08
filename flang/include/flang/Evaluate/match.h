@@ -140,11 +140,11 @@ public:
 };
 
 /// Matches any input of type Expr<T>
-/// The indent if this pattern is to be a leaf in multi-operand patterns.
+/// The intent of this pattern is to be a leaf in multi-operand patterns.
 template <typename T> //
 struct ExprPattern : public TypePattern<evaluate::Expr<T>> {};
 
-/// Matches evaluate::Expr<T> that contains evaluate::Opreration<OpType>.
+/// Matches evaluate::Expr<T> that contains evaluate::Operation<OpType>.
 template <typename OpType, typename... Ops>
 struct OperationPattern : public TypePattern<OpType> {
 private:

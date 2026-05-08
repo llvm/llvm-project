@@ -86,9 +86,9 @@ class DerivedAnalysis : public DerivedAnalysisBase {
 
 public:
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
-  AnalysisName analysisName() const final { return ResultT::analysisName(); }
+  AnalysisName getAnalysisName() const final { return ResultT::analysisName(); }
 
-  const std::vector<AnalysisName> &dependencyNames() const final {
+  const std::vector<AnalysisName> &getDependencyNames() const final {
     static const std::vector<AnalysisName> Names = {
         DepResultTs::analysisName()...};
     return Names;
@@ -97,19 +97,12 @@ public:
   /// Called once with the fixed dependency results before the step() loop.
   virtual llvm::Error initialize(const DepResultTs &...) = 0;
 
-  /// Performs one step. Returns true if another step is needed; false when
-  /// converged. Single-step analyses always return false.
-  virtual llvm::Expected<bool> step() = 0;
-
-  /// Called after the step() loop converges. Override for post-processing.
-  virtual llvm::Error finalize() { return llvm::Error::success(); }
-
 protected:
   /// Read-only access to the result being built.
-  const ResultT &result() const & { return *Result; }
+  const ResultT &getResult() const & { return *Result; }
 
   /// Mutable access to the result being built.
-  ResultT &result() & { return *Result; }
+  ResultT &getResult() & { return *Result; }
 
 private:
   /// Seals the type-erased base overload, downcasts, and dispatches to the
@@ -130,7 +123,7 @@ private:
   }
 
   /// Type-erased result extraction for the driver.
-  std::unique_ptr<AnalysisResult> result() && final {
+  std::unique_ptr<AnalysisResult> takeResult() && final {
     return std::move(Result);
   }
 };

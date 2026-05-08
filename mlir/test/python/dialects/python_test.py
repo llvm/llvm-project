@@ -14,6 +14,7 @@ from mlir._mlir_libs._mlirPythonTestNanobind import (
     TestType,
     TestTensorValue,
     TestIntegerRankedTensorType,
+    take_module_or_operation,
 )
 
 test.register_python_test_dialect(get_dialect_registry())
@@ -1033,3 +1034,37 @@ def testVariadicAndNormalRegionOp():
 
             assert isinstance(region_op.opview, OpView)
             assert isinstance(region_op.operation.opview, OpView)
+
+
+# Regression test for the dirty-error-state crash in `NanobindAdaptors.h`
+# `from_python` type casters (#191764).
+#
+# !!! This only fails with a debug version of Python. !!!
+#
+# Uses an overloaded function: overload 1 takes `MlirOperation`, overload 2
+# takes `MlirModule`. When called with an `ir.Module`:
+#
+#   1. `nanobind` tries overload 1 (`MlirOperation`). `from_python` gets the
+#      `Module`'s `_CAPIPtr` capsule, then `mlirPythonCapsuleToOperation` calls
+#      `PyCapsule_GetPointer` with `"mlir.ir.Operation._CAPIPtr"` — but the
+#      capsule is named `"mlir.ir.Module._CAPIPtr"`. `PyCapsule_GetPointer`
+#      returns `NULL` and sets `PyErr_Occurred()`. `from_python` returns `false`.
+#
+#   2. `nanobind` tries overload 2 (`MlirModule`). `from_python` calls
+#      `mlirApiObjectToCapsule` --> `nanobind::getattr(obj, "_CAPIPtr")` -->
+#      `_PyType_LookupRef`.
+#
+# Without the fix:
+#   `_PyType_LookupRef` asserts `!PyErr_Occurred()` --> `SIGABRT`.
+#
+# With the fix (`PyErr_Clear` in `from_python` after failed capsule conversion):
+#   Overload 2 succeeds and returns `"module"`.
+# CHECK-LABEL: testOverloadWithWrongPythonCapsule
+@run
+def testOverloadWithWrongPythonCapsule():
+    with Context():
+        module = Module.parse("module {}")
+
+    # CHECK: result = module
+    result = take_module_or_operation(module)
+    print(f"result = {result}")

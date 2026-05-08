@@ -533,6 +533,65 @@ Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
   return Error::success();
 }
 
+Error DwarfLinkerForBinary::copyEmbeddedResources() const {
+  if (!Options.ResourceDir || Options.EmbedResources.empty())
+    return Error::success();
+
+  auto copyOneFile = [&](StringRef SrcPath,
+                         StringRef DstPath) -> std::error_code {
+    if (auto EC = sys::fs::create_directories(sys::path::parent_path(DstPath),
+                                              true, sys::fs::perms::all_all))
+      return EC;
+
+    if (Options.Verbose)
+      outs() << "embed resource " << SrcPath << " -> " << DstPath << '\n';
+
+    return sys::fs::copy_file(SrcPath, DstPath);
+  };
+
+  for (const auto &Entry : Options.EmbedResources) {
+    StringRef Dst = Entry.first();
+    StringRef Src = Entry.second;
+    bool IsDir = false;
+    if (auto EC = sys::fs::is_directory(Src, IsDir))
+      return make_error<StringError>("cannot embed resource " + Src + ": " +
+                                         toString(errorCodeToError(EC)),
+                                     EC);
+
+    if (IsDir) {
+      std::error_code EC;
+      for (sys::fs::recursive_directory_iterator I(Src, EC), E; I != E && !EC;
+           I.increment(EC)) {
+        if (I->type() == sys::fs::file_type::directory_file)
+          continue;
+        StringRef FilePath = I->path();
+        StringRef Relative = FilePath.substr(StringRef(Src).size());
+        if (!Relative.empty() && sys::path::is_separator(Relative.front()))
+          Relative = Relative.drop_front();
+        SmallString<128> DestPath;
+        sys::path::append(DestPath, *Options.ResourceDir, Dst, Relative);
+        if (auto CopyEC = copyOneFile(FilePath, DestPath))
+          return make_error<StringError>("cannot embed resource " + FilePath +
+                                             ": " +
+                                             toString(errorCodeToError(CopyEC)),
+                                         CopyEC);
+      }
+      if (EC)
+        return make_error<StringError>("cannot read directory " + Src + ": " +
+                                           toString(errorCodeToError(EC)),
+                                       EC);
+    } else {
+      SmallString<128> DestPath;
+      sys::path::append(DestPath, *Options.ResourceDir, Dst);
+      if (auto EC = copyOneFile(Src, DestPath))
+        return make_error<StringError>("cannot embed resource " + Src + ": " +
+                                           toString(errorCodeToError(EC)),
+                                       EC);
+    }
+  }
+  return Error::success();
+}
+
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
     const llvm::dsymutil::DebugMapObject *Obj, classic::DwarfStreamer *Streamer,
     std::vector<uint64_t> &SectionToOffsetInDwarf,
@@ -876,6 +935,9 @@ bool DwarfLinkerForBinary::linkImpl(
     if (auto E = copySwiftInterfaces(ArchName))
       return error(toString(std::move(E)));
   }
+
+  if (auto E = copyEmbeddedResources())
+    return error(toString(std::move(E)));
 
   auto MapTriple = Map.getTriple();
   if ((MapTriple.isOSDarwin() || MapTriple.isOSBinFormatMachO()) &&

@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+
+
+
 // CHECK: @a = global i32 10
 int a = 10;
 // CHECK: @ar = constant ptr @a
@@ -50,7 +56,7 @@ namespace test2 {
 }
 
 // We don't expect to fold this in the frontend, but make sure it doesn't crash.
-// CHECK: @PR9558 = global float 0.000000e+0
+// CHECK: @PR9558 = global float 0.000000e+00
 float PR9558 = reinterpret_cast<const float&>("asd");
 
 // An initialized const automatic variable cannot be promoted to a constant

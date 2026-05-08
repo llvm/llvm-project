@@ -677,6 +677,8 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  APInt getNaNPayload() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -922,6 +924,8 @@ public:
   LLVM_ABI bool isSmallestNormalized() const;
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
+
+  APInt getNaNPayload() const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
@@ -1404,7 +1408,25 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
 
-  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
+  /// Fill this APFloat with the result of a string conversion.
+  ///
+  /// The following strings are accepted for conversion purposes:
+  /// * Decimal floating-point literals (e.g., `0.1e-5`)
+  /// * Hexadecimal floating-point literals (e.g., `0x1.0p-5`)
+  /// * Positive infinity via "inf", "INFINITY", "Inf", "+Inf", or "+inf".
+  /// * Negative infinity via "-inf", "-INFINITY", or "-Inf".
+  /// * Quiet NaNs via "nan", "NaN", "nan(...)", or "NaN(...)", where the
+  ///   "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  /// * Signaling NaNs via "snan", "sNaN", "snan(...)", or "sNaN(...)", where
+  ///   the "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  ///
+  /// If the input string is none of these forms, then an error is returned.
+  ///
+  /// If a floating-point exception occurs during conversion, then no error is
+  /// returned, and the exception is indicated via opStatus.
+  Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
@@ -1534,6 +1556,14 @@ public:
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
+  }
+
+  /// If the value is a NaN value, return an integer containing the payload of
+  /// this value. This payload will include the quiet bit as part of the
+  /// returned integer.
+  APInt getNaNPayload() const {
+    assert(isNaN() && "Can only call this on a NaN value");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getNaNPayload());
   }
 
   /// Return the FPClassTest which will return true for the value.

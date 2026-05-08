@@ -7,6 +7,12 @@
 // RUN: %clang -target x86_64-apple-darwin -arch armv7em -fPIC -mfloat-abi=softfp -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
 // RUN: %clang -target x86_64-apple-none-macho -arch armv7 -mhard-float -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
 // RUN: %clang -target x86_64-apple-none-macho -arch armv7 -msoft-float -fPIC -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
+// RUN: %clang -target x86_64-apple-darwin -arch armv8m.base -fPIC -mfloat-abi=hard -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
+// RUN: %clang -target x86_64-apple-darwin -arch armv8m.base -fPIC -mfloat-abi=softfp -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
+// RUN: %clang -target x86_64-apple-darwin -arch armv8m.main -fPIC -mfloat-abi=hard -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
+// RUN: %clang -target x86_64-apple-darwin -arch armv8m.main -fPIC -mfloat-abi=softfp -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
+// RUN: %clang -target x86_64-apple-darwin -arch armv8.1m.main -fPIC -mfloat-abi=hard -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
+// RUN: %clang -target x86_64-apple-darwin -arch armv8.1m.main -fPIC -mfloat-abi=softfp -resource-dir=%S/Inputs/resource_dir %s -### 2>> %t
 
 
 // RUN: FileCheck %s < %t
@@ -57,5 +63,42 @@
 
 // CHECK-LABEL: Target:
 // CHECK-NOT: warning: unknown platform
+// CHECK: "-mfloat-abi" "soft"
+// CHECK: libclang_rt.soft_pic.a
+
+// ARMv8(.1).m(base|main) has float
+// CHECK-LABEL: Target: armv8m.base
+// CHECK-NOT: warning: unknown platform
+// CHECK: "-mfloat-abi" "hard"
+// CHECK: libclang_rt.hard_pic.a
+
+// but the ABI can be overridden
+// CHECK-LABEL: Target: armv8m.base
+// CHECK-NOT: warning: unknown platform
+// CHECK: "-target-feature" "+soft-float-abi"
+// CHECK: "-mfloat-abi" "soft"
+// CHECK: libclang_rt.soft_pic.a
+
+// CHECK-LABEL: Target: armv8m.main
+// CHECK-NOT: warning: unknown platform
+// CHECK: "-mfloat-abi" "hard"
+// CHECK: libclang_rt.hard_pic.a
+
+// but the ABI can be overridden
+// CHECK-LABEL: Target: armv8m.main
+// CHECK-NOT: warning: unknown platform
+// CHECK: "-target-feature" "+soft-float-abi"
+// CHECK: "-mfloat-abi" "soft"
+// CHECK: libclang_rt.soft_pic.a
+
+// CHECK-LABEL: Target: armv8.1m.main
+// CHECK-NOT: warning: unknown platform
+// CHECK: "-mfloat-abi" "hard"
+// CHECK: libclang_rt.hard_pic.a
+
+// but the ABI can be overridden
+// CHECK-LABEL: Target: armv8.1m.main
+// CHECK-NOT: warning: unknown platform
+// CHECK: "-target-feature" "+soft-float-abi"
 // CHECK: "-mfloat-abi" "soft"
 // CHECK: libclang_rt.soft_pic.a
