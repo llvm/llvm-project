@@ -1332,8 +1332,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTLS, VT, Legal);
     setOperationAction(ISD::BITREVERSE, MVT::v8i8, Legal);
     setOperationAction(ISD::BITREVERSE, MVT::v16i8, Legal);
-    setOperationAction(ISD::BITREVERSE, MVT::v4i16, Custom);
-    setOperationAction(ISD::BITREVERSE, MVT::v8i16, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v2i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v4i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v1i64, Custom);
@@ -1932,6 +1930,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MULHS, VT, Custom);
       setOperationAction(ISD::MULHU, VT, Custom);
     }
+
+    for (auto VT : {MVT::v4i16, MVT::v8i16, MVT::v2i32, MVT::v4i32, MVT::v1i64,
+                    MVT::v2i64})
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
 
     // NEON doesn't support 64-bit vector integer muls, but SVE does.
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
@@ -11821,9 +11823,7 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(
-          VT, /*OverrideNEON=*/Subtarget->isSVEorStreamingSVEAvailable()))
+  if (Subtarget->isSVEorStreamingSVEAvailable())
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::BITREVERSE_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
@@ -11833,20 +11833,6 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
   switch (VT.getSimpleVT().SimpleTy) {
   default:
     llvm_unreachable("Invalid type for bitreverse!");
-
-  case MVT::v4i16: {
-    SDValue Bswap = DAG.getNode(ISD::BSWAP, DL, VT, Op.getOperand(0));
-    VST = MVT::v8i8;
-    REVB = DAG.getBitcast(VST, Bswap);
-    break;
-  }
-
-  case MVT::v8i16: {
-    SDValue Bswap = DAG.getNode(ISD::BSWAP, DL, VT, Op.getOperand(0));
-    VST = MVT::v16i8;
-    REVB = DAG.getBitcast(VST, Bswap);
-    break;
-  }
 
   case MVT::v2i32: {
     VST = MVT::v8i8;
