@@ -42,11 +42,13 @@ else()
   endif()
 endif()
 
-# LLVM is built with -fno-rtti by default; matching that here avoids
-# undefined references to LLVM type_info symbols when linking against
-# libLLVM*.a / .so. gtest itself does not require user-side RTTI
-# (-DGTEST_HAS_RTTI=0 is set when gtest is built).
-function(comgr_match_llvm_rtti target)
+# Pin C++17 and mirror LLVM's RTTI setting (avoids type_info link errors
+# against libLLVM*).
+function(comgr_configure_test_target target)
+  set_target_properties(${target} PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED Yes
+    CXX_EXTENSIONS No)
   if(NOT LLVM_ENABLE_RTTI)
     if(MSVC)
       target_compile_options(${target} PRIVATE /GR-)
@@ -78,11 +80,12 @@ target_link_libraries(HotswapElfTests PRIVATE
   ${LLVM_PTHREAD_LIB})
 
 target_include_directories(HotswapElfTests PRIVATE
+  ${LLVM_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/../src
   ${COMGR_GTEST_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
 
-comgr_match_llvm_rtti(HotswapElfTests)
+comgr_configure_test_target(HotswapElfTests)
 
 # -- HotswapMCTests -----------------------------------------------------------
 #
@@ -118,11 +121,12 @@ target_link_libraries(HotswapMCTests PRIVATE
   ${LLVM_PTHREAD_LIB})
 
 target_include_directories(HotswapMCTests PRIVATE
+  ${LLVM_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/../src
   ${COMGR_GTEST_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
 
-comgr_match_llvm_rtti(HotswapMCTests)
+comgr_configure_test_target(HotswapMCTests)
 
 # Register both test binaries with the test-unit / check-comgr plumbing.
 add_custom_target(test-unit
