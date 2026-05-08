@@ -938,7 +938,8 @@ def SMFMACOutTypes : AnyTypeOf<[
 
 def SMFMACIdxTypes : AnyTypeOf<[
     FixedVectorOfLengthAndType<[4], [I8]>,
-    FixedVectorOfLengthAndType<[2], [I16]>
+    FixedVectorOfLengthAndType<[2], [I16]>,
+    I32
 ]>;
 
 // scaled_mfma
@@ -1091,6 +1092,63 @@ def AMDGPU_WMMAOp :
   let hasVerifier = 1;
 }
 
+def DotInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F16, BF16, I16]>,
+                            VectorOfLengthAndType<[4], [I8, F8E4M3FN, F8E5M2]>,
+                            VectorOfLengthAndType<[8], [I<4>]>]>;
+
+def DotOutTypes : AnyTypeOf<[F32, F16, BF16, I32]>;
+
+def AMDGPU_DotOp :
+    AMDGPU_Op<"dot", [AllTypesMatch<["destC", "destD"]>, Pure]>,
+    Arguments<(ins DotInTypes:$sourceA,
+                   DotInTypes:$sourceB,
+                   DotOutTypes:$destC,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$clamp)>,
+    Results<(outs DotOutTypes:$destD)> {
+  let summary = "MLIR wrapper for AMDGPU v_dot* intrinsics";
+  let description = [{
+    The `amdgpu.dot` op is an MLIR wrapper over the `v_dot*` family of intrinsics,
+    which compute `D = sum_i A[i] * B[i] + C`. 
+
+    Variants (source, dest, signedness, chipset -> intrinsic).
+
+    ```text
+    | A elem   | B elem   | destC | signedness | chipset                   | ROCDL op                     |
+    |----------|----------|-------|------------|---------------------------|------------------------------|
+    | f16      | f16      | f32   | n/a        | gfx906+                   | fdot2                        |
+    | f16      | f16      | f16   | n/a        | gfx11+                    | fdot2.f16.f16                |
+    | bf16     | bf16     | f32   | n/a        | gfx11+, gfx950+           | fdot2.f32.bf16               |
+    | bf16     | bf16     | bf16  | n/a        | gfx11+                    | fdot2.bf16.bf16              |
+    | i16      | i16      | i32   | s / u      | gfx906+, no gfx11+/gfx12+ | sdot2 / udot2                |
+    | i8       | i8       | i32   | s / u      | gfx906+                   | sdot4 / udot4                |
+    | i8       | i8       | i32   | mixed      | gfx11+                    | sudot4                       |
+    | i4       | i4       | i32   | s / u      | gfx906+                   | sdot8 / udot8                |
+    | i4       | i4       | i32   | mixed      | gfx11+                    | sudot8                       |
+    | fp8/bf8  | fp8/bf8  | f32   | n/a        | gfx11.7, gfx12+           | dot4.f32.{fp8,bf8}.{fp8,bf8} |
+    ```
+
+    Example:
+    ```mlir
+    %r0 = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
+    %r1 = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp}
+        : vector<8xi4>, vector<8xi4>, i32
+    %r2 = amdgpu.dot %a * %b + %c {unsignedB}
+        : vector<4xi8>, vector<4xi8>, i32
+    %r3 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
+    %r4 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
+    %r5 = amdgpu.dot %a * %b + %c
+        : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+    ```
+  }];
+  let assemblyFormat = [{
+    $sourceA `*` $sourceB `+` $destC attr-dict
+      `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_SparseMFMAOp :
     AMDGPU_Op<"sparse_mfma", [AllTypesMatch<["destC", "destD"]>,
                               Pure]>,
@@ -1120,14 +1178,24 @@ def AMDGPU_SparseMFMAOp :
       - M=N=16, K=64 and M=N=32, K=32 for f16 and bf16 sources
       - M=N=16, K=128 and M=N=32, K=64 for i8 and fp8 sources
 
-    The `sparseIdx` parameter contains packed indices identifying the positions
-    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
-    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
-    `vector<2xi16>` (two 16-bit indices).
+    The `sparseIdx` parameter contains packed 2-bit indices identifying which
+    of every 4 dense-K positions are non-zero in the 2:4 sparse matrix A.
+    The required `sparseIdx` type depends on the variant:
+      - gfx942 16-bit (`(m,k)` in `{(16,32), (32,16)}`): 8 bits per lane,
+        carried as `vector<4xi8>` (one 8-bit set per i8 element).
+      - gfx942 8-bit (`(m,k)` in `{(16,64), (32,32)}`) and gfx950 16-bit
+        (`(m,k)` in `{(16,64), (32,32)}`): 16 bits per lane, carried as
+        `vector<2xi16>` (one 16-bit set per i16 element).
+      - gfx950 8-bit (`(m,k)` in `{(16,128), (32,64)}`): 32 bits per lane (a
+        full VGPR with no internal set structure), carried as `i32`.
 
-    The `cbsz` and `abid` parameters are repurposed to select the index set.
-    If `cbsz == 0`, then `abid[1:0]` selects which index set to use.
-    If `cbsz != 0`, then the very first is selected.
+    The `cbsz` and `abid` parameters select which index set within the VGPR is
+    used:
+      - gfx942 16-bit: `cbsz == 0` selects one of four 8-bit sets via
+        `abid[1:0]` (range `[0, 3]`); `cbsz != 0` selects the first set.
+      - gfx942 8-bit and gfx950 16-bit: `cbsz == 0` selects one of two 16-bit
+        sets via `abid[0]` (range `[0, 1]`); `cbsz != 0` selects the first set.
+      - gfx950 8-bit: hardware ignores both `cbsz` and `abid`; both must be 0.
 
     Example:
     ```mlir
@@ -1140,6 +1208,9 @@ def AMDGPU_SparseMFMAOp :
       %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
         { cbsz = 0 : i32, abid = 1 : i32 }
         : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+
+      %3 = amdgpu.sparse_mfma 16x16x128 %matA * %matB + %matC sparse(%idx : i32)
+        : vector<16xf8E4M3FN>, vector<32xf8E4M3FN>, vector<4xf32>
     ```
   }];
   let assemblyFormat = [{
@@ -1200,7 +1271,7 @@ def AMDGPU_SparseWMMAOp :
                    UnitAttr:$clamp,
                    UnitAttr:$wave64)>,
     Results<(outs SWMMACOutTypes: $destD)> {
-  let summary = "MLIR wrapper for CDNA sparse mfma (smfmac) instructions";
+  let summary = "MLIR wrapper for gfx12+ sparse wmma instructions";
   let description = [{
     The `amdgpu.sparse_wmma` op is an MLIR wrapper around intrinsics for various
     `swmmac` instructions in the AMDGPU architecture, which perform matrix
@@ -1371,6 +1442,55 @@ def AMDGPU_TransposeLoadOp :
     * `$result`: target register this transpose load instruction will write to.
 
     Note: Lowering is only supported on gfx950 and up.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_GlobalTransposeLoadOp :
+    AMDGPU_Op<"global_transpose_load", [SameVariadicOperandSize]>,
+    Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src,
+                      Variadic<Index>:$srcIndices)>,
+    Results<(outs AnyTypeOf<[
+      FixedVectorOfLengthAndType<[8], [I8, F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2,
+                                       F8E4M3FN, F16, BF16, I16]>,
+      FixedVectorOfLengthAndType<[16], [I<4>, F4E2M1FN, I<6>, F6E2M3FN, F6E3M2FN]>
+    ]>:$result)> {
+  let summary = "MLIR wrapper for global memory transpose load instructions";
+  let description = [{
+    The `amdgpu.global_transpose_load` op is a wrapper around the
+    `global_load_tr` family of instructions introduced in gfx1200.
+
+    Each thread reads a column of a matrix stored in global memory and receives
+    the corresponding row of the transposed matrix in its result register.
+    The subgroup collectively performs a transpose of the tile.
+
+    This op is a direct wrapper around the ROCDL `global.load.tr` family
+    intrinsics. Refer to the ISA manual for exact semantics.
+
+    Format example:
+    ```mlir
+    %0 = amdgpu.global_transpose_load %src[%i, %j]
+           : memref<128x256xf16, #gpu.address_space<global>> -> vector<8xf16>
+    ```
+
+    Operands:
+    * `$src`: Global address space memref to read from.
+    * `$srcIndices`: indices into `$src` for this thread. Indices must be
+      non-negative and in-bounds for the corresponding dimension of `$src`,
+      matching the constraints of `memref.load`.
+    * `$result`: register this transpose load instruction writes to.
+
+    Valid (element bits, num elements) pairs:
+    * (4, 16)  -> global_load_tr4_b64  (gfx1250+)
+    * (6, 16)  -> global_load_tr6_b96  (gfx1250+)
+    * (8, 8)   -> global_load_tr_b64   (gfx1200+)
+    * (16, 8)  -> global_load_tr_b128  (gfx1200+)
+
+    Note: 8-bit and 16-bit element lowering requires gfx1200+.
+          4-bit and 6-bit element lowering requires gfx1250+.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)

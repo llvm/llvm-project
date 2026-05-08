@@ -117,7 +117,7 @@ private:
   DiagHandlerTy DiagHandler;
 
   /// The MCAsmInfo for this target.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// The MCRegisterInfo for this target.
   const MCRegisterInfo *MRI = nullptr;
@@ -376,9 +376,9 @@ private:
   DenseSet<StringRef> ELFSeenGenericMergeableSections;
 
 public:
-  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo *MAI,
-                              const MCRegisterInfo *MRI,
-                              const MCSubtargetInfo *MSTI,
+  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo &MAI,
+                              const MCRegisterInfo &MRI,
+                              const MCSubtargetInfo &MSTI,
                               const SourceMgr *Mgr = nullptr,
                               bool DoAutoReset = true,
                               StringRef Swift5ReflSegmentName = {});
@@ -406,7 +406,7 @@ public:
 
   void setObjectFileInfo(const MCObjectFileInfo *Mofi) { MOFI = Mofi; }
 
-  const MCAsmInfo *getAsmInfo() const { return MAI; }
+  const MCAsmInfo &getAsmInfo() const { return MAI; }
 
   const MCRegisterInfo *getRegisterInfo() const { return MRI; }
 
@@ -414,7 +414,7 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
-  LLVM_ABI const MCTargetOptions *getTargetOptions() const;
+  LLVM_ABI const MCTargetOptions &getTargetOptions() const;
 
   LLVM_ABI CodeViewContext &getCVContext();
 

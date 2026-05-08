@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Hash.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/xxhash.h"
 
 using namespace llvm;

@@ -241,11 +241,16 @@ bool DerivedTypeSpec::HasDestruction() const {
   if (!FinalsForDerivedTypeInstantiation(*this).empty()) {
     return true;
   }
-  DirectComponentIterator components{*this};
-  return bool{std::find_if(
-      components.begin(), components.end(), [&](const Symbol &component) {
-        return IsDestructible(component, &typeSymbol());
-      })};
+  const Scope *scope{GetScope()};
+  if (!scope) {
+    return false;
+  }
+  for (const auto &[_, symbolRef] : *scope) {
+    if (IsDestructible(*symbolRef, &typeSymbol())) {
+      return true;
+    }
+  }
+  return false;
 }
 
 ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
@@ -731,7 +736,7 @@ static const DeclTypeSpec *CloneDerivedTypeForUseDeviceImpl(
   if (path.size() == 1) {
     if (Symbol * comp{newScope.FindComponent(path[0])}) {
       if (auto *details{comp->detailsIf<ObjectEntityDetails>()}) {
-        details->set_cudaDataAttr(common::CUDADataAttr::Device);
+        details->set_cudaDataAttr(common::CUDADataAttr::UseDevice);
       }
     }
   }

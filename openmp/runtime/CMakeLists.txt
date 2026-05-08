@@ -382,9 +382,9 @@ if(LIBOMP_OMPD_SUPPORT AND ((NOT LIBOMP_OMPT_SUPPORT) OR (NOT "${CMAKE_SYSTEM_NA
   set(LIBOMP_OMPD_SUPPORT FALSE)
 endif()
 
-# OMPX Taskgraph support
-# Whether to build with OMPX Taskgraph (e.g. task record & replay)
-set(LIBOMP_OMPX_TASKGRAPH FALSE CACHE BOOL "OMPX-taskgraph (task record & replay)?")
+# OMP Taskgraph support
+# Whether to build with OMP Taskgraph (e.g. task record & replay)
+set(LIBOMP_TASKGRAPH_EXPERIMENTAL FALSE CACHE BOOL "Experimental OMP taskgraph (task record & replay)")
 
 # Error check hwloc support after config-ix has run
 if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))

@@ -18,6 +18,78 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
+using namespace cir;
+
+static mlir::Value emitBinaryExpMaybeConstrainedFPBuiltin(
+    CIRGenFunction &cgf, const CallExpr *e, llvm::StringRef intrinsicName,
+    llvm::StringRef constrainedIntrinsicName) {
+  mlir::Value src0 = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Value src1 = cgf.emitScalarExpr(e->getArg(1));
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, e);
+
+  if (builder.getIsFPConstrained()) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "constrained FP intrinsic support is NYI.");
+  }
+
+  return builder.emitIntrinsicCallOp(loc, intrinsicName, src0.getType(),
+                                     mlir::ValueRange{src0, src1});
+}
+
+static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
+                                   const llvm::fltSemantics &fSem) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+  mlir::Value src0 = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Type srcTy = src0.getType();
+  mlir::Type int32Ty = builder.getSInt32Ty();
+
+  cir::RecordType frExpResTy =
+      builder.getAnonRecordTy({srcTy, int32Ty}, false, false);
+
+  mlir::Value frExpResult = builder.emitIntrinsicCallOp(
+      loc, "frexp", frExpResTy, mlir::ValueRange{src0});
+
+  mlir::Value exp =
+      cir::ExtractMemberOp::create(builder, loc, int32Ty, frExpResult, 1);
+
+  mlir::Value negativeOne =
+      builder.getConstant(loc, cir::IntAttr::get(int32Ty, -1));
+  mlir::Value expMinus1 = builder.createAdd(loc, exp, negativeOne);
+
+  mlir::Value siToFp = cir::CastOp::create(
+      builder, loc, srcTy, cir::CastKind::int_to_float, expMinus1);
+
+  mlir::Value fabs = cir::FAbsOp::create(builder, loc, srcTy, src0);
+
+  llvm::APFloat infVal = llvm::APFloat::getInf(fSem);
+  mlir::Value inf = builder.getConstant(loc, cir::FPAttr::get(srcTy, infVal));
+
+  mlir::Value fabsNegInf =
+      builder.createCompare(loc, cir::CmpOpKind::ne, fabs, inf);
+
+  mlir::Value sel = builder.createSelect(loc, fabsNegInf, siToFp, fabs);
+
+  llvm::APFloat zeroValue = llvm::APFloat::getZero(fSem);
+  mlir::Value zero =
+      builder.getConstant(loc, cir::FPAttr::get(srcTy, zeroValue));
+
+  mlir::Value srcEqZero =
+      builder.createCompare(loc, cir::CmpOpKind::eq, src0, zero);
+
+  llvm::APFloat negInfVal = llvm::APFloat::getInf(fSem, true);
+  mlir::Value negInf =
+      builder.getConstant(loc, cir::FPAttr::get(srcTy, negInfVal));
+
+  mlir::Value res = builder.createSelect(loc, srcEqZero, negInf, sel);
+
+  return res;
+}
 
 std::optional<mlir::Value>
 CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
@@ -48,17 +120,46 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_div_scale:
   case AMDGPU::BI__builtin_amdgcn_div_scalef: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    Address flagOutPtr = emitPointerWithAlignment(expr->getArg(3));
+    llvm::StringRef intrinsicName = "amdgcn.div.scale";
+    mlir::Value x = emitScalarExpr(expr->getArg(0));
+    mlir::Value y = emitScalarExpr(expr->getArg(1));
+    mlir::Value z = emitScalarExpr(expr->getArg(2));
+
+    auto i1Ty = builder.getUIntNTy(1);
+    cir::RecordType resTy = builder.getAnonRecordTy(
+        {x.getType(), i1Ty}, /*packed=*/false, /*padded=*/false);
+
+    mlir::Value structResult =
+        cir::LLVMIntrinsicCallOp::create(builder, getLoc(expr->getExprLoc()),
+                                         builder.getStringAttr(intrinsicName),
+                                         resTy, {x, y, z})
+            .getResult();
+
+    mlir::Value result = cir::ExtractMemberOp::create(
+        builder, getLoc(expr->getExprLoc()), x.getType(), structResult, 0);
+    mlir::Value flag = cir::ExtractMemberOp::create(
+        builder, getLoc(expr->getExprLoc()), i1Ty, structResult, 1);
+
+    mlir::Type flagType = flagOutPtr.getElementType();
+    mlir::Value flagToStore =
+        cir::CastOp::create(builder, getLoc(expr->getExprLoc()), flagType,
+                            cir::CastKind::int_to_bool, flag);
+    builder.createStore(getLoc(expr->getExprLoc()), flagToStore, flagOutPtr);
+    return result;
   }
   case AMDGPU::BI__builtin_amdgcn_div_fmas:
   case AMDGPU::BI__builtin_amdgcn_div_fmasf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
+    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
+    mlir::Value src2 = emitScalarExpr(expr->getArg(2));
+    mlir::Value src3 = emitScalarExpr(expr->getArg(3));
+    mlir::Value result = cir::LLVMIntrinsicCallOp::create(
+                             builder, getLoc(expr->getExprLoc()),
+                             builder.getStringAttr("amdgcn.div.fmas"),
+                             src0.getType(), {src0, src1, src2, src3})
+                             .getResult();
+    return result;
   }
   case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
@@ -808,20 +909,17 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case Builtin::BIlogbf:
-  case Builtin::BI__builtin_logbf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case Builtin::BI__builtin_logbf:
+    return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEsingle());
+  case Builtin::BIlogb:
+  case Builtin::BI__builtin_logb:
+    return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEdouble());
   case Builtin::BIscalbnf:
   case Builtin::BI__builtin_scalbnf:
   case Builtin::BIscalbn:
   case Builtin::BI__builtin_scalbn: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBinaryExpMaybeConstrainedFPBuiltin(
+        *this, expr, "ldexp", "experimental.constrained.ldexp");
   }
   default:
     return std::nullopt;

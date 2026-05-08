@@ -586,6 +586,12 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
+def LifetimeSafetyUseAfterFree : DiagGroup<"lifetime-safety-use-after-free"> {
+    code Documentation = [{
+Warning to detect use-after-free, introduced by freeing an object and later using it.
+    }];
+}
+
 // Dangling-Field (aka Escape-To-Field)
 def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   code Documentation = [{
@@ -622,13 +628,14 @@ def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
                                          LifetimeSafetyDanglingField,
-                                         LifetimeSafetyDanglingGlobal]>;
+                                         LifetimeSafetyDanglingGlobal,
+                                         LifetimeSafetyUseAfterFree]>;
 
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
-                                    [LifetimeSafetyUseAfterScopeMoved,
+                                    [LifetimeSafetyPermissive,
+                                    LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
-                                    LifetimeSafetyDanglingGlobal,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
