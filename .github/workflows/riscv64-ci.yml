@@ -1,0 +1,121 @@
+# Note: this runner is provided externally, so we minimize its access to
+# secrets.
+
+name: CI (riscv64)
+
+on:
+  push:
+    branches: [main]
+
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  LLVM_SRC: ${{ github.workspace }}
+  LLVM_BUILD_DIR: ${{ github.workspace }}/llvm-build
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: [self-hosted, linux, RISCV64]
+
+    # Optional:
+    # isolate runner environment
+    environment: riscv64
+
+    steps:
+      - name: Print environment
+        shell: bash
+        run: |
+          echo "------ uname ------"
+          uname -a
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 300
+          submodules: false
+
+      - name: Show compiler versions
+        shell: bash
+        run: |
+          gcc --version || true
+          clang --version || true
+          cmake --version
+          ninja --version
+          python3 --version
+
+      - name: Setup ccache
+        shell: bash
+        run: |
+          mkdir -p ~/.ccache
+
+          cat >> ~/.ccache/ccache.conf <<EOF
+          max_size = 20G
+          compression = true
+          hash_dir = false
+          EOF
+
+          ccache -z
+
+      - name: Setup Python env
+        shell: bash
+        run: |
+          source /home/jenkins/venv/bin/activate
+
+          python -m pip install -U pip wheel setuptools
+          python -m pip install nanobind numpy
+
+      - name: Configure LLVM
+        shell: bash
+        run: |
+          source /home/jenkins/venv/bin/activate
+          rm -rf "$LLVM_BUILD_DIR"
+
+          GCC_INSTALL_DIR="$(dirname "$(g++ -print-libgcc-file-name)")"
+
+          LLVM_RUNTIMES_CMAKE_ARGS_VALUE=""
+          LLVM_RUNTIMES_CMAKE_ARGS_VALUE="-DCMAKE_C_FLAGS=--gcc-install-dir=${GCC_INSTALL_DIR}"
+          LLVM_RUNTIMES_CMAKE_ARGS_VALUE="${LLVM_RUNTIMES_CMAKE_ARGS_VALUE};-DCMAKE_CXX_FLAGS=--gcc-install-dir=${GCC_INSTALL_DIR}"
+          LLVM_RUNTIMES_CMAKE_ARGS_VALUE="${LLVM_RUNTIMES_CMAKE_ARGS_VALUE};-DCMAKE_HAVE_LIBC_PTHREAD=TRUE"
+          LLVM_RUNTIMES_CMAKE_ARGS_VALUE="${LLVM_RUNTIMES_CMAKE_ARGS_VALUE};-DCMAKE_USE_PTHREADS_INIT=TRUE"
+          LLVM_RUNTIMES_CMAKE_ARGS_VALUE="${LLVM_RUNTIMES_CMAKE_ARGS_VALUE};-DCMAKE_THREAD_LIBS_INIT="
+
+          cmake -G Ninja \
+            -S "$LLVM_SRC/llvm" \
+            -B "$LLVM_BUILD_DIR/build" \
+            \
+            -DLLVM_ENABLE_PROJECTS="mlir;clang" \
+            -DLLVM_ENABLE_RUNTIMES="openmp" \
+            -DLLVM_TARGETS_TO_BUILD="host;RISCV" \
+            \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            \
+            -DMLIR_ENABLE_BINDINGS_PYTHON=ON \
+            -DPython3_EXECUTABLE=$(which python3) \
+            \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            \
+            -DLLVM_RUNTIMES_CMAKE_ARGS="${LLVM_RUNTIMES_CMAKE_ARGS_VALUE}"
+
+      - name: Run LLVM tests
+        shell: bash
+        run: |
+          ninja -C "$LLVM_BUILD_DIR/build" \
+            check-clang \
+            check-mlir
+
+      - name: Show ccache stats
+        if: always()
+        shell: bash
+        run: |
+          ccache -s || true
