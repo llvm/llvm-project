@@ -1629,14 +1629,6 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
-  // User-specified or default resource dir
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::options::OPT_resource_dir))
-    invoc.resourceDir = a->getValue();
-  else
-    invoc.resourceDir = clang::GetResourcesPath(
-        llvm::sys::fs::getMainExecutable(argv0, nullptr));
-
   // -flang-experimental-hlfir
   if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
       args.hasArg(clang::options::OPT_emit_hlfir)) {
