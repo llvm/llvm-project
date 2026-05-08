@@ -69,7 +69,8 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
   if (ErrorOrConverter)
     TE.FromIBM1047Converter =
         std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
-  else
+    TInfo.ExecStrConverter = TEC.ToLiteralEncodingConverter.get();
+  } else
     return ErrorOrConverter.getError();
 
   return std::error_code();
