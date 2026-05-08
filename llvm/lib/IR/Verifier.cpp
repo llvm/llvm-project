@@ -1657,8 +1657,9 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
   else
     CheckDI(N.getLine() == 0, "line specified with no file", &N, N.getLine());
-  if (auto *T = N.getRawType())
-    CheckDI(isa<DISubroutineType>(T), "invalid subroutine type", &N, T);
+  auto *T = N.getRawType();
+  CheckDI(T, "DISubprogram requires a non-null type", &N);
+  CheckDI(isa<DISubroutineType>(T), "invalid subroutine type", &N, T);
   CheckDI(isType(N.getRawContainingType()), "invalid containing type", &N,
           N.getRawContainingType());
   if (auto *Params = N.getRawTemplateParams())
@@ -4488,6 +4489,11 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
 }
 
 void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          GEP.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical getelementptr disallowed for this module.");
+
   Type *TargetTy = GEP.getPointerOperandType()->getScalarType();
 
   Check(isa<PointerType>(TargetTy),
@@ -4749,6 +4755,11 @@ void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
 }
 
 void Verifier::visitAllocaInst(AllocaInst &AI) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          AI.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical alloca disallowed for this module.");
+
   Type *Ty = AI.getAllocatedType();
   SmallPtrSet<Type*, 4> Visited;
   Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
@@ -4791,20 +4802,30 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
+  Type *ScalarTy = ElTy;
+  if (RMWI.isElementwise()) {
+    auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+    Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
+          &RMWI, ElTy);
+    if (VecTy)
+      ScalarTy = VecTy->getElementType();
+  }
+
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ElTy->isIntegerTy() || ElTy->isFloatingPointTy() ||
-              ElTy->isPointerTy(),
+    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
+              ScalarTy->isPointerTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or floating point type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
     Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have floating-point or fixed vector of floating-point "
+              " operand must have floating-point or fixed vector of "
+              "floating-point "
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ElTy->isIntegerTy(),
+    Check(ScalarTy->isIntegerTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer type!",
           &RMWI, ElTy);

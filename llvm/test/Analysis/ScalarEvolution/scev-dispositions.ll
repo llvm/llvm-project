@@ -40,11 +40,11 @@ define void @nested_loop(ptr %p, i64 %m) {
 ; CHECK:  %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Computable, %bb: Invariant }
 ; CHECK:  %i = phi i64 [ 0, %outer.loop ], [ %i.next, %bb ]
-; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %bb: Computable, %outer.loop: Variant }
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %bb: Computable, %outer.loop: Uniform }
 ; CHECK:  %j.add = add i64 %j, 100
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %bb: Invariant, %outer.loop: Computable }
 ; CHECK:  %i.next = add i64 %i, 1
-; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %bb: Computable, %outer.loop: Variant }
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %bb: Computable, %outer.loop: Uniform }
 ; CHECK:  %j.next = add i64 %j, 91
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Computable, %bb: Invariant }
 

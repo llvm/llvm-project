@@ -37,6 +37,14 @@
 
 using namespace llvm;
 
+// Forward declaration of static functions.
+static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                              bool Consume);
+static bool isSignatureValid(FunctionType *FTy,
+                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             SmallVectorImpl<Type *> &OverloadTys,
+                             raw_ostream &OS);
+
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
@@ -601,21 +609,15 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
                                  ArrayRef<Type *> OverloadTys) {
   SmallVector<IITDescriptor, 8> Table;
   getIntrinsicInfoTableEntries(id, Table);
-
   ArrayRef<IITDescriptor> TableRef = Table;
+
+  bool IsVarArg = isIntrinsicVarArg(TableRef, /*Consume=*/true);
+
   Type *ResultTy = DecodeFixedType(TableRef, OverloadTys, Context);
 
   SmallVector<Type *, 8> ArgTys;
   while (!TableRef.empty())
     ArgTys.push_back(DecodeFixedType(TableRef, OverloadTys, Context));
-
-  // VarArg intrinsics encode a void type as the last argument type. Detect that
-  // and then drop the void argument.
-  bool IsVarArg = false;
-  if (!ArgTys.empty() && ArgTys.back()->isVoidTy()) {
-    ArgTys.pop_back();
-    IsVarArg = true;
-  }
   return FunctionType::get(ResultTy, ArgTys, IsVarArg);
 }
 
@@ -779,9 +781,6 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
   return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FT);
 }
 
-static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                              bool Consume);
-
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
                                             ArrayRef<Type *> ArgTys) {
   // If the intrinsic is not overloaded, use the non-overloaded version.
@@ -798,9 +797,9 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
 
   // Automatically determine the overloaded types.
   SmallVector<Type *, 4> OverloadTys;
-  [[maybe_unused]] bool MatchResult =
-      matchIntrinsicSignature(FTy, TableRef, OverloadTys, nulls());
-  assert(MatchResult == false && "intrinsic signature mismatch");
+  [[maybe_unused]] bool IsValid =
+      ::isSignatureValid(FTy, TableRef, OverloadTys, nulls());
+  assert(IsValid && "intrinsic signature mismatch");
   return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FTy);
 }
 
@@ -1094,16 +1093,23 @@ static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   return false;
 }
 
-bool Intrinsic::matchIntrinsicSignature(
-    FunctionType *FTy, ArrayRef<Intrinsic::IITDescriptor> &Infos,
-    SmallVectorImpl<Type *> &OverloadTys, raw_ostream &OS) {
+/// Return true if the function type \p FTy is a valid type signature for the
+/// type constraints specified in the .td file, represented by \p Infos.
+/// The overloaded type for the intrinsic are pushed to the OverloadTys vector.
+///
+/// If the type is not valid, returns false and prints an error message to
+/// \p OS.
+static bool isSignatureValid(FunctionType *FTy,
+                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             SmallVectorImpl<Type *> &OverloadTys,
+                             raw_ostream &OS) {
   bool IsVarArg = isIntrinsicVarArg(Infos, /*Consume=*/true);
 
   SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
   if (matchIntrinsicType(FTy->getReturnType(), Infos, OverloadTys,
                          DeferredChecks, false)) {
     OS << "intrinsic has incorrect return type!";
-    return true;
+    return false;
   }
 
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
@@ -1111,7 +1117,7 @@ bool Intrinsic::matchIntrinsicSignature(
   for (Type *Ty : FTy->params()) {
     if (matchIntrinsicType(Ty, Infos, OverloadTys, DeferredChecks, false)) {
       OS << "intrinsic has incorrect argument type!";
-      return true;
+      return false;
     }
   }
 
@@ -1124,12 +1130,12 @@ bool Intrinsic::matchIntrinsicSignature(
       OS << "intrinsic has incorrect return type!";
     else
       OS << "intrinsic has incorrect argument type!";
-    return true;
+    return false;
   }
 
   if (!Infos.empty()) {
     OS << "intrinsic has too few arguments!";
-    return true;
+    return false;
   }
 
   if (FTy->isVarArg() != IsVarArg) {
@@ -1137,10 +1143,17 @@ bool Intrinsic::matchIntrinsicSignature(
       OS << "intrinsic was not defined with variable arguments!";
     else
       OS << "intrinsic was defined with variable arguments!";
-    return true;
+    return false;
   }
 
-  return false;
+  return true;
+}
+
+bool Intrinsic::hasStructReturnType(ID id) {
+  using namespace Intrinsic;
+  SmallVector<IITDescriptor> Table;
+  getIntrinsicInfoTableEntries(id, Table);
+  return !Table.empty() && Table[0].Kind == IITDescriptor::Struct;
 }
 
 bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
@@ -1153,7 +1166,7 @@ bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
   getIntrinsicInfoTableEntries(ID, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
-  return !matchIntrinsicSignature(FT, TableRef, OverloadTys, OS);
+  return ::isSignatureValid(FT, TableRef, OverloadTys, OS);
 }
 
 bool Intrinsic::isSignatureValid(Function *F,

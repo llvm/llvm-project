@@ -1553,6 +1553,17 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     mlir::Region &partialDtor = arrayCtor.getPartialDtor();
     if (!partialDtor.empty())
       partialDtorBlock = &partialDtor.front();
+  } else if (auto arrayDtor = mlir::dyn_cast<cir::ArrayDtor>(op)) {
+    // When the element destructor may throw, reuse the body block as the
+    // partial-dtor block so that an exception thrown by an element's dtor
+    // continues the reverse-destruction loop in the EH cleanup region. The
+    // body block already stores the next element pointer to `tmpAddr`
+    // before invoking the dtor, so when an exception unwinds from the
+    // dtor call `tmpAddr` already points at the element that threw, and
+    // the cleanup loop picks up from `tmpAddr - 1` and walks back to
+    // `begin`.
+    if (arrayDtor.getDtorMayThrow())
+      partialDtorBlock = bodyBlock;
   }
 
   auto emitCtorDtorLoop = [&]() {
@@ -1958,7 +1969,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
                                         GlobalLinkageKind::PrivateLinkage);
   fatbinStr.setAlignment(8);
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
-      fatbinType, builder.getStringAttr(gpuBinary->getBuffer())));
+      fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -2198,8 +2209,8 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
         /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
 
     // We must make the string zero-terminated.
-    tmpString.setInitialValueAttr(ConstArrayAttr::get(
-        strType, StringAttr::get(&getContext(), str + "\0")));
+    tmpString.setInitialValueAttr(
+        ConstArrayAttr::get(strType, StringAttr::get(str + "\0", strType)));
     tmpString.setPrivate();
     return tmpString;
   };

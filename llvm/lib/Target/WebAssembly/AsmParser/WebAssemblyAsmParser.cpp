@@ -706,7 +706,15 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
+    } else if (Name == "call_ref" || Name == "return_call_ref") {
+      // The typed function references forms take a function signature as
+      // their sole explicit operand (the funcref is popped from the stack).
+      ExpectFuncType = true;
     } else if (Name == "ref.test") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
+    } else if (Name == "ref.cast") {
       // When we get support for wasm-gc types, this should become
       // ExpectRefType.
       ExpectFuncType = true;

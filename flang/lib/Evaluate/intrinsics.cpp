@@ -1030,6 +1030,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         IntrinsicClass::transformationalFunction},
     {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"timef", {}, TypePattern{RealType, KindCode::exactKind, 8}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -2865,6 +2867,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   if (elementalRank > 0) {
     attrs.set(characteristics::Procedure::Attr::Elemental);
   }
+  // TODO: Mark intrinsic procedures that are SIMPLE per F2023
   if (call.isSubroutineCall) {
     if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */ ||
         intrinsicClass == IntrinsicClass::elementalSubroutine /* MVBITS */) {
@@ -3498,11 +3501,26 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
     CHECK(arguments.size() == 1);
     CheckForCoindexedObject(context.messages(), arguments[0], "c_loc", "x");
     const auto *expr{arguments[0].value().UnwrapExpr()};
+    SpecificCall specificCall{
+        SpecificIntrinsic{"__builtin_c_loc"s,
+            characteristics::Procedure{
+                characteristics::FunctionResult{DynamicType{
+                    GetBuiltinDerivedType(builtinsScope_, "__builtin_c_ptr")}},
+                characteristics::DummyArguments{},
+                characteristics::Procedure::Attrs{
+                    characteristics::Procedure::Attr::Pure}}},
+        {/*arguments*/}};
     if (expr &&
         !(IsObjectPointer(*expr) ||
             (IsVariable(*expr) && GetLastTarget(GetSymbolVector(*expr))))) {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "C_LOC() argument must be a data pointer or target"_err_en_US);
+      if (context.languageFeatures().IsEnabled(
+              common::LanguageFeature::RelaxedCLoc)) {
+        context.Warn(common::UsageWarning::CLoc, arguments[0]->sourceLocation(),
+            "C_LOC() argument should be a data pointer or target"_warn_en_US);
+      } else {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "C_LOC() argument must be a data pointer or target"_err_en_US);
+      }
     }
     if (auto typeAndShape{characteristics::TypeAndShape::Characterize(
             arguments[0], context)}) {
@@ -3539,20 +3557,28 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
               "C_LOC() argument has non-interoperable intrinsic type or kind"_warn_en_US);
         }
       }
-
       characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
       ddo.intent = common::Intent::In;
-      return SpecificCall{
-          SpecificIntrinsic{"__builtin_c_loc"s,
-              characteristics::Procedure{
-                  characteristics::FunctionResult{
-                      DynamicType{GetBuiltinDerivedType(
-                          builtinsScope_, "__builtin_c_ptr")}},
-                  characteristics::DummyArguments{
-                      characteristics::DummyArgument{"x"s, std::move(ddo)}},
-                  characteristics::Procedure::Attrs{
-                      characteristics::Procedure::Attr::Pure}}},
-          std::move(arguments)};
+      specificCall.specificIntrinsic.characteristics.value()
+          .dummyArguments.emplace_back(
+              characteristics::DummyArgument{"x", std::move(ddo)});
+      specificCall.arguments.emplace_back(std::move(arguments[0]));
+      return specificCall;
+    } else if (context.languageFeatures().IsEnabled(
+                   common::LanguageFeature::RelaxedCLoc)) {
+      if (!expr || !IsProcedurePointer(*expr)) {
+        // There are more specific errors as to why the expression doesn't exist
+        // or isn't characterizable as a data object or procedure.
+      } else if (auto proc{characteristics::Procedure::Characterize(
+                     *expr, context)}) {
+        characteristics::DummyProcedure dProc{std::move(*proc)};
+        dProc.intent = common::Intent::In;
+        specificCall.specificIntrinsic.characteristics.value()
+            .dummyArguments.emplace_back(
+                characteristics::DummyArgument{"x", std::move(dProc)});
+        specificCall.arguments.emplace_back(std::move(arguments[0]));
+        return specificCall;
+      }
     }
   }
   return std::nullopt;

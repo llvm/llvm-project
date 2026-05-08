@@ -279,8 +279,28 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.setrlimit
 
-    # sys/sendfile entrypoints
+    # sys/sendfile.h entrypoints
     libc.src.sys.sendfile.sendfile
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.accept
+    libc.src.sys.socket.accept4
+    libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
+    libc.src.sys.socket.getsockopt
+    libc.src.sys.socket.listen
+    libc.src.sys.socket.recv
+    libc.src.sys.socket.recvfrom
+    libc.src.sys.socket.send
+    libc.src.sys.socket.sendto
+    libc.src.sys.socket.setsockopt
+    libc.src.sys.socket.shutdown
+    libc.src.sys.socket.socket
+    libc.src.sys.socket.socketpair
+    # TODO: These functions are not compatible with 64-bit musl. They need to
+    # be excluded if overlaying musl.
+    libc.src.sys.socket.recvmsg
+    libc.src.sys.socket.sendmsg
 
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
@@ -1222,17 +1242,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
-
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.accept
-    libc.src.sys.socket.accept4
-    libc.src.sys.socket.bind
-    libc.src.sys.socket.connect
-    libc.src.sys.socket.getsockopt
-    libc.src.sys.socket.listen
-    libc.src.sys.socket.setsockopt
-    libc.src.sys.socket.shutdown
-    libc.src.sys.socket.socket
   )
 endif()
 

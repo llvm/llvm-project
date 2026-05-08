@@ -2008,6 +2008,23 @@ static void emitClangAttrLateParsedExperimentalList(const RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_LATE_PARSED_EXPERIMENTAL_EXT_LIST\n\n";
 }
 
+// Emits a list of attributes whose argument list is parsed inside a function
+// prototype scope so it can refer to the enclosing function's parameters.
+static void
+emitClangAttrParseArgsInFunctionScopeList(const RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST)\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    if (!Attr->getValueAsBit("ParseArgsInFunctionScope"))
+      continue;
+    // FIXME: Handle non-GNU attributes
+    for (const auto &I : GetFlattenedSpellings(*Attr))
+      if (I.variety() == "GNU")
+        OS << ".Case(\"" << I.name() << "\", 1)\n";
+  }
+  OS << "#endif // CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST\n\n";
+}
+
 static bool hasGNUorCXX11Spelling(const Record &Attribute) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attribute);
   for (const auto &I : Spellings) {
@@ -5268,6 +5285,7 @@ void EmitClangAttrParserStringSwitches(const RecordKeeper &Records,
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
   emitClangAttrLateParsedExperimentalList(Records, OS);
+  emitClangAttrParseArgsInFunctionScopeList(Records, OS);
   emitClangAttrStrictIdentifierArgList(Records, OS);
 }
 

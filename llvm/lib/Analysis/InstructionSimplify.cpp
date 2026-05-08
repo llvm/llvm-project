@@ -1708,8 +1708,7 @@ static Value *simplifyAndOrOfICmpsWithCtpop(ICmpInst *Cmp0, ICmpInst *Cmp1,
   CmpPredicate Pred0, Pred1;
   Value *X;
   const APInt *C;
-  if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                          m_APInt(C))) ||
+  if (!match(Cmp0, m_ICmp(Pred0, m_Ctpop(m_Value(X)), m_APInt(C))) ||
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())) || C->isZero())
     return nullptr;
 

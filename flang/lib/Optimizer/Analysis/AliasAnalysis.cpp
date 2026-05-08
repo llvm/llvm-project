@@ -365,6 +365,22 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
   return false;
 }
 
+/// Walk backward from \p val through FortranObjectViewOpInterface ops
+/// that have zero offset (i.e. they access the same base address).
+/// Return the root value at the end of the chain.
+static mlir::Value getZeroOffsetViewRoot(mlir::Value val) {
+  while (auto *defOp = val.getDefiningOp()) {
+    auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
+    if (!viewOp)
+      break;
+    auto offset = viewOp.getViewOffset(mlir::cast<mlir::OpResult>(val));
+    if (!offset || *offset != 0)
+      break;
+    val = viewOp.getViewSource(mlir::cast<mlir::OpResult>(val));
+  }
+  return val;
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
@@ -379,6 +395,15 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
+
+  // If both values trace back to the same root through zero-offset view
+  // operations (e.g. embox without slice, declare, convert), they access
+  // the same underlying memory. This check avoids the case where
+  // getSource() traces through upstream operations (e.g. a sliced embox)
+  // that set approximateSource, conservatively preventing MustAlias.
+  if (lhs == rhs || getZeroOffsetViewRoot(lhs) == getZeroOffsetViewRoot(rhs))
+    return AliasResult::MustAlias;
+
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
@@ -868,6 +893,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op.getArray();
           defOp = v.getDefiningOp();
           approximateSource = true;
+        })
+        .Case([&](fir::AbsentOp op) {
+          // Although fir.absent is not a local allocation, we treat it
+          // similarly so that it can be disambiguated that it doesn't alias any
+          // other values. Two entities coming from separate fir.absent ops
+          // also do not alias each other.
+          type = SourceKind::Allocate;
+          breakFromLoop = true;
         })
         .Case([&](fir::LoadOp op) {
           // If load is inside target and it points to mapped item,

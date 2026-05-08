@@ -75,6 +75,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <algorithm>
 #include <cassert>
@@ -2635,8 +2636,7 @@ static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
                                              bool CondIsTrue) {
   CmpPredicate Pred;
   const APInt *RHSC;
-  if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
-                          m_APInt(RHSC))))
+  if (!match(Cond, m_ICmp(Pred, m_Ctpop(m_Specific(V)), m_APInt(RHSC))))
     return false;
   if (!CondIsTrue)
     Pred = ICmpInst::getInversePredicate(Pred);
@@ -7633,20 +7633,6 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
   return Safe;
 }
 
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
-}
-
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
 
@@ -10621,7 +10607,7 @@ void llvm::findValuesAffectedByCondition(
         }
       }
 
-      if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
+      if (HasRHSC && match(A, m_Ctpop(m_Value(X))))
         AddAffected(X);
     } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);

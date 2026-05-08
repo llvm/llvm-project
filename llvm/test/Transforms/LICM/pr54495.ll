@@ -6,7 +6,6 @@
 define void @test(ptr %p1, ptr %p2, ptr noalias %p3) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store ptr [[P3:%.*]], ptr [[P3]], align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[P1:%.*]], [[ENTRY:%.*]] ], [ [[P2:%.*]], [[LOOP]] ]
@@ -14,6 +13,7 @@ define void @test(ptr %p1, ptr %p2, ptr noalias %p3) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop.exit:
+; CHECK-NEXT:    store ptr [[P3:%.*]], ptr [[P3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

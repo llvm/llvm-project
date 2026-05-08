@@ -750,6 +750,11 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
+  if (isa<spirv::NamedBarrierType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeNamedBarrier;
+    return success();
+  }
+
   if (auto sampledImageType = dyn_cast<spirv::SampledImageType>(type)) {
     typeEnum = spirv::Opcode::OpTypeSampledImage;
     uint32_t imageTypeID = 0;

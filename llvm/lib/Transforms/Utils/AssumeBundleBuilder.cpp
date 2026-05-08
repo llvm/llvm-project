@@ -74,7 +74,7 @@ RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK,
   default:
     return RK;
   case Attribute::NonNull:
-    RK.WasOn = getUnderlyingObject(RK.WasOn);
+    RK.WasOn = RK.WasOn->stripInBoundsOffsets();
     return RK;
   case Attribute::Alignment: {
     Value *V = RK.WasOn->stripInBoundsOffsets([&](const Value *Strip) {

@@ -257,22 +257,13 @@ namespace Intrinsic {
     }
   };
 
+  /// Returns true if \p id has a struct return type.
+  LLVM_ABI bool hasStructReturnType(ID id);
+
   /// Return the IIT table descriptor for the specified intrinsic into an array
   /// of IITDescriptors.
   LLVM_ABI void getIntrinsicInfoTableEntries(ID id,
                                              SmallVectorImpl<IITDescriptor> &T);
-
-  /// Match the specified function type with the type constraints specified by
-  /// the .td file. If the given type is an overloaded type it is pushed to the
-  /// OverloadTys vector.
-  ///
-  /// Returns false if the given type matches with the constraints, true
-  /// otherwise. If returning true, an error message to indicate the reason of
-  /// mismatch is printed to \p OS.
-  LLVM_ABI bool matchIntrinsicSignature(FunctionType *FTy,
-                                        ArrayRef<IITDescriptor> &Infos,
-                                        SmallVectorImpl<Type *> &OverloadTys,
-                                        raw_ostream &OS);
 
   /// Returns true if \p FT is a valid function type for intrinsic \p ID. If
   /// `ID` is an overloaded intrinsic, the overload types are pushed into the

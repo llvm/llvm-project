@@ -41,6 +41,11 @@ defm REF_TEST_FUNCREF : I<(outs I32:$res), (ins TypeIndex:$type, FUNCREF:$ref),
                           "ref.test\t$type, $ref", "ref.test $type", 0xfb14>,
                         Requires<[HasGC]>;
 
+defm REF_CAST_FUNCREF : I<(outs FUNCREF:$res), (ins TypeIndex:$type, FUNCREF:$ref),
+                          (outs), (ins TypeIndex:$type), [],
+                          "ref.cast\t$type, $ref", "ref.cast $type", 0xfb16>,
+                        Requires<[HasGC]>;
+
 defm REF_FUNC : I<(outs FUNCREF:$res), (ins function32_op:$func),
                     (outs), (ins function32_op:$func), [],
                     "ref.func\t$func", "ref.func $func", 0xd2>,

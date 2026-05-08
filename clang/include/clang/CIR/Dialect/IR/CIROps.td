@@ -487,7 +487,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
 // SignBitOp
 //===----------------------------------------------------------------------===//
 
-def SignBitOp : CIR_Op<"signbit", [Pure]> {
+def CIR_SignBitOp : CIR_Op<"signbit", [Pure]> {
   let summary = "Checks the sign of a floating-point number";
   let description = [{
     It returns whether the sign bit (i.e. the highest bit) of the input operand
@@ -3944,15 +3944,20 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     The `delete_fn` attribute specifies the operator delete function to call.
     The `delete_params` attribute describes the parameters needed by the
     operator delete call.
+
     The `element_dtor` attribute, when present, specifies the destructor to call
     on each array element before deallocation.
+
+    The `dtor_may_throw` unit property, when present, indicates that the
+    element destructor may throw exceptions.
   }];
 
   let arguments = (ins
     CIR_PointerType:$address,
     FlatSymbolRefAttr:$delete_fn,
     CIR_UsualDeleteParamsAttr:$delete_params,
-    OptionalAttr<FlatSymbolRefAttr>:$element_dtor
+    OptionalAttr<FlatSymbolRefAttr>:$element_dtor,
+    UnitProp:$dtor_may_throw
   );
 
   let builders = [
@@ -3960,14 +3965,17 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
                    "mlir::FlatSymbolRefAttr":$delete_fn,
                    "cir::UsualDeleteParamsAttr":$delete_params), [{
       build($_builder, $_state, address, delete_fn, delete_params,
-            /*element_dtor=*/mlir::FlatSymbolRefAttr{});
+            /*element_dtor=*/mlir::FlatSymbolRefAttr{},
+            /*dtor_may_throw=*/false);
     }]>
   ];
 
   let assemblyFormat = [{
-    $address `:` qualified(type($address)) attr-dict
+    $address `:` qualified(type($address)) (`dtor_may_throw` $dtor_may_throw^)?
+    attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
   let hasCXXABILowering = true;
 }
@@ -4861,6 +4869,9 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor", [
     and `num_elements` provides the runtime element count (e.g. from an array
     cookie for `delete[]`).
 
+    When `dtor_may_throw` is present, the element destructor call may throw
+    an exception.
+
     Elements are destroyed in reverse order.
 
     Examples:
@@ -4877,19 +4888,27 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor", [
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
     }
+
+    // Dynamic count (delete[] with throwing destructor):
+    cir.array.dtor %ptr, %n : !cir.ptr<!rec_S>, !u64i dtor_may_throw {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
+    }
     ```
   }];
 
   let arguments = (ins
     Arg<CIR_AnyPtrType, "array or element address", [MemWrite, MemRead]>:$addr,
-    Optional<CIR_AnyIntType>:$num_elements
+    Optional<CIR_AnyIntType>:$num_elements,
+    UnitProp:$dtor_may_throw
   );
 
   let regions = (region SizedRegion<1>:$body);
 
   let assemblyFormat = [{
     $addr (`,` $num_elements^)? `:` qualified(type($addr))
-    (`,` type($num_elements)^)? $body attr-dict
+    (`,` type($num_elements)^)? (`dtor_may_throw` $dtor_may_throw^)? $body
+    attr-dict
   }];
 
   let builders = [
@@ -7699,6 +7718,57 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let assemblyFormat = [{
     $kind $exn_ptr `to` $param_addr `:`
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// EH Operations: ConstructCatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Construct a catch parameter from the in-flight exception";
+  let description = [{
+    `cir.construct_catch_param` abstractly represents the target-specific work
+    that must be performed before `cir.begin_catch` to bind the in-flight
+    exception object to the local alloca used for the catch parameter.
+
+    For example: for non-pointer, non-reference catch parameters whose type has
+    a non-trivial copy constructor, the Itanium C++ ABI requires
+    calling `__cxa_get_exception_ptr` to obtain the adjusted exception pointer
+    and then invoking the catch parameter's copy constructor to create a local
+    copy of the object before `__cxa_begin_catch` is invoked.
+
+    This operation takes a `!cir.eh_token` that represents the in-flight
+    exception and the alloca value that is used for the local copy of the
+    exception object. The `copy_fn` attribute is a flat symbol reference to a
+    `cir.func` thunk that copies the exception object to a local alloca value.
+
+    This operation is replaced with a target-specific representation during
+    the EHABI lowering pass. For some targets, such as the Microsoft ABI,
+    this operation is a no-op and is simply erased during lowering.
+
+    Example:
+
+    ```
+    cir.construct_catch_param non_trivial_copy %eh_token to %param_addr
+      using @__clang_cir_catch_init_T : !cir.ptr<!rec_T>
+    ```
+  }];
+
+  let arguments = (ins
+      CIR_EhTokenType:$eh_token,
+      CIR_PointerType:$param_addr,
+      CIR_InitCatchKind:$kind,
+      FlatSymbolRefAttr:$copy_fn
+  );
+
+  let assemblyFormat = [{
+    $kind $eh_token `to` $param_addr `using` $copy_fn `:`
+      qualified(type($param_addr)) attr-dict
   }];
 
   let hasLLVMLowering = false;

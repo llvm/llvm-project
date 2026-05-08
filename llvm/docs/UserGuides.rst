@@ -19,6 +19,7 @@ intermediate LLVM representation.
    AliasAnalysis
    AMDGPUUsage
    AMDGPUAsyncOperations
+   AMDGPUExecutionSynchronization
    Benchmarking
    BigEndianNEON
    BuildingADistribution
@@ -300,6 +301,9 @@ Additional Topics
    This document describes a DWARF extension to allow location descriptions on
    the DWARF expression stack. It is part of
    :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`.
+
+:doc:`AMDGPUExecutionSynchronization`
+   This document describes how execution of threads can be synchronized on AMD GPUs.
 
 :doc:`SPIRVUsage`
    This document describes using the SPIR-V target to compile GPU kernels.

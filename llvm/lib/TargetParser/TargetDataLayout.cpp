@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -263,9 +264,8 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
 static std::string computeAMDDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::r600) {
     // 32-bit pointers.
-    return "e-m:e-p:32:32-po2:32:32-po3:32:32-po5:32:32-i64:64"
-           "-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512"
-           "-v1024:1024-v2048:2048-n32:64-S32-A5-G1";
+    return "e-m:e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
+           "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1";
   }
 
   // 32-bit private, local, and region pointers. 64-bit global, constant and
@@ -274,10 +274,10 @@ static std::string computeAMDDataLayout(const Triple &TT) {
   // (address space 7), and 128-bit non-integral buffer resourcees (address
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
   // like getelementptr.
-  return "e-m:e-p:64:64-p1:64:64-po2:32:32-po3:32:32-p4:64:64-po5:32:32"
-         "-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32"
-         "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256"
-         "-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
+  return "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
+         "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
+         "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
+         "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
 
 static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
@@ -299,19 +299,19 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
 
   // TODO: Maybe we should move RISCVABI to TargetParser, so we can reuse that
   // logic here instead of duplicating the string handling?
-  bool IsRVYPurecapABI =
-      ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128");
+  bool IsPureCapABI = ABIName.starts_with("il32pc64") ||
+                      ABIName.starts_with("l64pc128") ||
+                      ABIName.starts_with("cheriot");
 
-  // Pointer and integer sizes.
   if (TT.isRISCV64()) {
     Ret += "-p:64:64";
-    if (IsRVYPurecapABI)
+    if (IsPureCapABI)
       Ret += "-pe200:128:128:128:64";
     Ret += "-i64:64-i128:128-n32:64";
   } else {
     assert(TT.isRISCV32() && "only RV32 and RV64 are currently supported");
     Ret += "-p:32:32";
-    if (IsRVYPurecapABI)
+    if (IsPureCapABI)
       Ret += "-pe200:64:64:64:32";
     Ret += "-i64:64-n32";
   }
@@ -324,7 +324,8 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
   else
     Ret += "-S128";
 
-  if (IsRVYPurecapABI)
+  // TODO: Support non-purecap CHERI ABIs.
+  if (IsPureCapABI)
     Ret += "-A200-P200-G200";
 
   return Ret;

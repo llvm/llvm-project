@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -4504,4 +4504,341 @@ uint64_t test_vrshrd_n_u64(uint64_t a) {
 // CHECK-SAME: i64 {{.*}} [[A:%.*]])
 // CHECK-NEXT:    [[VRSHR_N:%.*]] = call i64 @llvm.aarch64.neon.urshl.i64(i64 [[A]], i64 -63)
   return (uint64_t)vrshrd_n_u64(a, 63);
+}
+
+//===----------------------------------------------------------------------===//
+// 2.1.1.13.1 Addition across vector
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#addition-across-vector
+//===----------------------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vaddv_s8(
+// CIR-LABEL: @vaddv_s8(
+int8_t test_vaddv_s8(int8x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<8 x !s8i>) -> !s8i
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDV_I:%.*]] = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VADDV_I]]
+  return vaddv_s8(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_s8(
+// CIR-LABEL: @vaddvq_s8(
+int8_t test_vaddvq_s8(int8x16_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<16 x !s8i>) -> !s8i
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VADDVQ_I]]
+  return vaddvq_s8(a);
+}
+
+// LLVM-LABEL: @test_vaddv_s16(
+// CIR-LABEL: @vaddv_s16(
+int16_t test_vaddv_s16(int16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<4 x !s16i>) -> !s16i
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDV_I:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VADDV_I]]
+  return vaddv_s16(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_s16(
+// CIR-LABEL: @vaddvq_s16(
+int16_t test_vaddvq_s16(int16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<8 x !s16i>) -> !s16i
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VADDVQ_I]]
+  return vaddvq_s16(a);
+}
+
+// LLVM-LABEL: @test_vaddv_s32(
+// CIR-LABEL: @vaddv_s32(
+int32_t test_vaddv_s32(int32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<2 x !s32i>) -> !s32i
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDV_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDV_I]]
+  return vaddv_s32(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_s32(
+// CIR-LABEL: @vaddvq_s32(
+int32_t test_vaddvq_s32(int32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<4 x !s32i>) -> !s32i
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDVQ_I]]
+  return vaddvq_s32(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_s64(
+// CIR-LABEL: @vaddvq_s64(
+int64_t test_vaddvq_s64(int64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<2 x !s64i>) -> !s64i
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
+// LLVM-NEXT:    ret i64 [[VADDVQ_I]]
+  return vaddvq_s64(a);
+}
+
+// LLVM-LABEL: @test_vaddv_u8(
+// CIR-LABEL: @vaddv_u8(
+uint8_t test_vaddv_u8(uint8x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<8 x !u8i>) -> !u8i
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDV_I:%.*]] = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VADDV_I]]
+  return vaddv_u8(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_u8(
+// CIR-LABEL: @vaddvq_u8(
+uint8_t test_vaddvq_u8(uint8x16_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<16 x !u8i>) -> !u8i
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VADDVQ_I]]
+  return vaddvq_u8(a);
+}
+
+// LLVM-LABEL: @test_vaddv_u16(
+// CIR-LABEL: @vaddv_u16(
+uint16_t test_vaddv_u16(uint16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<4 x !u16i>) -> !u16i
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDV_I:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VADDV_I]]
+  return vaddv_u16(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_u16(
+// CIR-LABEL: @vaddvq_u16(
+uint16_t test_vaddvq_u16(uint16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<8 x !u16i>) -> !u16i
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VADDVQ_I]]
+  return vaddvq_u16(a);
+}
+
+// LLVM-LABEL: @test_vaddv_u32(
+// CIR-LABEL: @vaddv_u32(
+uint32_t test_vaddv_u32(uint32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<2 x !u32i>) -> !u32i
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDV_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDV_I]]
+  return vaddv_u32(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_u32(
+// CIR-LABEL: @vaddvq_u32(
+uint32_t test_vaddvq_u32(uint32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<4 x !u32i>) -> !u32i
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDVQ_I]]
+  return vaddvq_u32(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_u64(
+// CIR-LABEL: @vaddvq_u64(
+uint64_t test_vaddvq_u64(uint64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.add" %{{.*}} : (!cir.vector<2 x !u64i>) -> !u64i
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
+// LLVM-NEXT:    ret i64 [[VADDVQ_I]]
+  return vaddvq_u64(a);
+}
+
+// LLVM-LABEL: @test_vaddv_f32(
+// CIR-LABEL: @vaddv_f32(
+float32_t test_vaddv_f32(float32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.faddv" %{{.*}} : (!cir.vector<2 x !cir.float>) -> !cir.float
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDV_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v2f32(<2 x float> [[A]])
+// LLVM-NEXT:    ret float [[VADDV_F32_I]]
+  return vaddv_f32(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_f32(
+// CIR-LABEL: @vaddvq_f32(
+float32_t test_vaddvq_f32(float32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.faddv" %{{.*}} : (!cir.vector<4 x !cir.float>) -> !cir.float
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> [[A]])
+// LLVM-NEXT:    ret float [[VADDVQ_F32_I]]
+  return vaddvq_f32(a);
+}
+
+// LLVM-LABEL: @test_vaddvq_f64(
+// CIR-LABEL: @vaddvq_f64(
+float64_t test_vaddvq_f64(float64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.faddv" %{{.*}} : (!cir.vector<2 x !cir.double>) -> !cir.double
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> [[A]])
+// LLVM-NEXT:    ret double [[VADDVQ_F64_I]]
+  return vaddvq_f64(a);
+}
+
+//===----------------------------------------------------------------------===//
+// 2.1.1.13.2 Addition across vector widening
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#addition-across-vector-widening
+//===----------------------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vaddlv_s8(
+// CIR-LABEL: @vaddlv_s8(
+int16_t test_vaddlv_s8(int8x8_t a) {
+// CIR: [[VADDLV_I:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.saddlv" %{{.*}} : (!cir.vector<8 x !s8i>) -> !s32i
+// CIR: cir.cast integral [[VADDLV_I]] : !s32i -> !s16i
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.saddlv.i32.v8i8(<8 x i8> [[A]])
+// LLVM-NEXT:    [[TMP0:%.*]] = trunc i32 [[VADDLV_I]] to i16
+// LLVM-NEXT:    ret i16 [[TMP0]]
+  return vaddlv_s8(a);
+}
+
+// LLVM-LABEL: @test_vaddlv_s16(
+// CIR-LABEL: @vaddlv_s16(
+int32_t test_vaddlv_s16(int16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.saddlv" %{{.*}} : (!cir.vector<4 x !s16i>) -> !s32i
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.saddlv.i32.v4i16(<4 x i16> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDLV_I]]
+  return vaddlv_s16(a);
+}
+
+// LLVM-LABEL: @test_vaddlv_s32(
+// CIR-LABEL: @vaddlv_s32(
+int64_t test_vaddlv_s32(int32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.saddlv" %{{.*}} : (!cir.vector<2 x !s32i>) -> !s64i
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_S32_I:%.*]] = call i64 @llvm.aarch64.neon.saddlv.i64.v2i32(<2 x i32> [[A]])
+// LLVM-NEXT:    ret i64 [[VADDLV_S32_I]]
+  return vaddlv_s32(a);
+}
+
+// LLVM-LABEL: @test_vaddlv_u8(
+// CIR-LABEL: @vaddlv_u8(
+uint16_t test_vaddlv_u8(uint8x8_t a) {
+// CIR: [[VADDLV_I:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.uaddlv" %{{.*}} : (!cir.vector<8 x !u8i>) -> !u32i
+// CIR: cir.cast integral [[VADDLV_I]] : !u32i -> !u16i
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> [[A]])
+// LLVM-NEXT:    [[TMP0:%.*]] = trunc i32 [[VADDLV_I]] to i16
+// LLVM-NEXT:    ret i16 [[TMP0]]
+  return vaddlv_u8(a);
+}
+
+// LLVM-LABEL: @test_vaddlv_u16(
+// CIR-LABEL: @vaddlv_u16(
+uint32_t test_vaddlv_u16(uint16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uaddlv" %{{.*}} : (!cir.vector<4 x !u16i>) -> !u32i
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.uaddlv.i32.v4i16(<4 x i16> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDLV_I]]
+  return vaddlv_u16(a);
+}
+
+// LLVM-LABEL: @test_vaddlv_u32(
+// CIR-LABEL: @vaddlv_u32(
+uint64_t test_vaddlv_u32(uint32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uaddlv" %{{.*}} : (!cir.vector<2 x !u32i>) -> !u64i
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_U32_I:%.*]] = call i64 @llvm.aarch64.neon.uaddlv.i64.v2i32(<2 x i32> [[A]])
+// LLVM-NEXT:    ret i64 [[VADDLV_U32_I]]
+  return vaddlv_u32(a);
+}
+
+// LLVM-LABEL: @test_vaddlvq_s8(
+// CIR-LABEL: @vaddlvq_s8(
+int16_t test_vaddlvq_s8(int8x16_t a) {
+// CIR: [[VADDLV_I:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.saddlv" %{{.*}} : (!cir.vector<16 x !s8i>) -> !s32i
+// CIR: cir.cast integral [[VADDLV_I]] : !s32i -> !s16i
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.saddlv.i32.v16i8(<16 x i8> [[A]])
+// LLVM-NEXT:    [[TMP0:%.*]] = trunc i32 [[VADDLV_I]] to i16
+// LLVM-NEXT:    ret i16 [[TMP0]]
+  return vaddlvq_s8(a);
+}
+
+// LLVM-LABEL: @test_vaddlvq_s16(
+// CIR-LABEL: @vaddlvq_s16(
+int32_t test_vaddlvq_s16(int16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.saddlv" %{{.*}} : (!cir.vector<8 x !s16i>) -> !s32i
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.saddlv.i32.v8i16(<8 x i16> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDLV_I]]
+  return vaddlvq_s16(a);
+}
+
+// LLVM-LABEL: @test_vaddlvq_s32(
+// CIR-LABEL: @vaddlvq_s32(
+int64_t test_vaddlvq_s32(int32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.saddlv" %{{.*}} : (!cir.vector<4 x !s32i>) -> !s64i
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLVQ_S32_I:%.*]] = call i64 @llvm.aarch64.neon.saddlv.i64.v4i32(<4 x i32> [[A]])
+// LLVM-NEXT:    ret i64 [[VADDLVQ_S32_I]]
+  return vaddlvq_s32(a);
+}
+
+// LLVM-LABEL: @test_vaddlvq_u8(
+// CIR-LABEL: @vaddlvq_u8(
+uint16_t test_vaddlvq_u8(uint8x16_t a) {
+// CIR: [[VADDLV_I:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.uaddlv" %{{.*}} : (!cir.vector<16 x !u8i>) -> !u32i
+// CIR: cir.cast integral [[VADDLV_I]] : !u32i -> !u16i
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.uaddlv.i32.v16i8(<16 x i8> [[A]])
+// LLVM-NEXT:    [[TMP0:%.*]] = trunc i32 [[VADDLV_I]] to i16
+// LLVM-NEXT:    ret i16 [[TMP0]]
+  return vaddlvq_u8(a);
+}
+
+// LLVM-LABEL: @test_vaddlvq_u16(
+// CIR-LABEL: @vaddlvq_u16(
+uint32_t test_vaddlvq_u16(uint16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uaddlv" %{{.*}} : (!cir.vector<8 x !u16i>) -> !u32i
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.uaddlv.i32.v8i16(<8 x i16> [[A]])
+// LLVM-NEXT:    ret i32 [[VADDLV_I]]
+  return vaddlvq_u16(a);
+}
+
+// LLVM-LABEL: @test_vaddlvq_u32(
+// CIR-LABEL: @vaddlvq_u32(
+uint64_t test_vaddlvq_u32(uint32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uaddlv" %{{.*}} : (!cir.vector<4 x !u32i>) -> !u64i
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VADDLVQ_U32_I:%.*]] = call i64 @llvm.aarch64.neon.uaddlv.i64.v4i32(<4 x i32> [[A]])
+// LLVM-NEXT:    ret i64 [[VADDLVQ_U32_I]]
+  return vaddlvq_u32(a);
 }

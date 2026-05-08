@@ -1977,13 +1977,15 @@ public:
   AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr,
                                  Value *Val, MaybeAlign Align,
                                  AtomicOrdering Ordering,
-                                 SyncScope::ID SSID = SyncScope::System) {
+                                 SyncScope::ID SSID = SyncScope::System,
+                                 bool Elementwise = false) {
     if (!Align) {
       const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
+    return Insert(
+        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
   CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
@@ -2822,10 +2824,14 @@ public:
                                                Value *Alignment,
                                                Value *OffsetValue = nullptr);
 
-  /// Create an assume intrinsic call that represents an dereferencable
+  /// Create an assume intrinsic call that represents a dereferencable
   /// assumption on the provided pointer.
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
+
+  /// Create an assume intrinsic call that represents a nonnull assumption on
+  /// the provided pointer.
+  LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting
