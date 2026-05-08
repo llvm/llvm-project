@@ -111,6 +111,16 @@ define i1 @squared_nuw_eq_sqr(i8 %x) {
   ret i1 %r
 }
 
+define i1 @squared_nuw_eq_negative_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_eq_negative_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 15
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp eq i8 %m, -31
+  ret i1 %r
+}
+
 ; negative test - signed compare
 
 define i1 @squared_nuw_slt_sqr(i8 %x) {

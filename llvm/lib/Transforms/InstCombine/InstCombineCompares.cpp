@@ -2197,8 +2197,7 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
 
   // If unsigned compare or equality comparison of self multiply and square,
   // compare square roots
-  if (!Cmp.isSigned() && X == Mul->getOperand(1) && Mul->hasNoUnsignedWrap() &&
-      !C.isNegative()) {
+  if (!Cmp.isSigned() && X == Mul->getOperand(1) && Mul->hasNoUnsignedWrap()) {
     APInt R = C.sqrt();
     if (C == R * R)
       return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
