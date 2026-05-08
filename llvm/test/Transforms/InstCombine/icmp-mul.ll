@@ -91,6 +91,54 @@ define i1 @squared_nsw_sgt0(i5 %x) {
   ret i1 %r
 }
 
+define i1 @squared_nuw_ult_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[M]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ult i8 %m, 9
+  ret i1 %r
+}
+
+define i1 @squared_nuw_eq_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_eq_sqr(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp eq i8 %m, 9
+  ret i1 %r
+}
+
+; negative test - signed compare
+
+define i1 @squared_nuw_slt_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_slt_sqr(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[M]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp slt i8 %m, 9
+  ret i1 %r
+}
+
+; negative test - no nuw
+
+define i1 @squared_ult_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ult_sqr(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[M]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul i8 %x, %x
+  %r = icmp ult i8 %m, 9
+  ret i1 %r
+}
+
 ; Tests for slt/ult
 
 define i1 @slt_positive_multip_rem_zero(i8 %x) {
