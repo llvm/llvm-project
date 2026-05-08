@@ -366,8 +366,7 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
-- Fixed a duplicate diagnostic when performing typo correction on function template
-  calls with explicit template arguments. Fixes #GH139226.
+- Clang now explains why template deduction fails for explicit template arguments.
 
 Improvements to Clang's time-trace
 ----------------------------------
