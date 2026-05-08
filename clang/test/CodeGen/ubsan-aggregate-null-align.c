@@ -16,6 +16,9 @@ extern "C" {
 #endif
 
 // LHS checks - C only
+// Note: In C++, aggregate assignment goes through operator=
+// which is a different code path (CGExprCXX.cpp).
+// LHS checks for C++ will be addressed in a follow-up PR.
 
 // C-LABEL: define {{.*}}@test_lhs_ptrcheck_deref(
 // C: [[DEST:%.*]] = load ptr, ptr %dest.addr
