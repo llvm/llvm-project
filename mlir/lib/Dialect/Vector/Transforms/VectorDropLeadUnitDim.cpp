@@ -140,7 +140,7 @@ static Value dropLeadingUnitDims0DIsScalar(OpBuilder &b, Location loc,
 
   if (k == oldType.getRank()) {
     llvm::Repeated<int64_t> zeros(static_cast<size_t>(k), 0);
-    return vector::ExtractOp::create(b, loc, operand, llvm::to_vector(zeros));
+    return vector::ExtractOp::create(b, loc, operand, zeros);
   }
 
   VectorType newType = VectorType::get(oldType.getShape().drop_front(k),
