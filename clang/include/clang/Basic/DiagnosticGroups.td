@@ -673,7 +673,8 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
 }
 
 def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                          [LifetimeSafetyNoescape, LifetimeSafetyLifetimeboundViolation]> {
+                                          [LifetimeSafetyNoescape,
+                                           LifetimeSafetyLifetimeboundViolation]> {
   code Documentation = [{
 Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
 like verifying [[clang::noescape]] and [[clang::lifetimebound]].
