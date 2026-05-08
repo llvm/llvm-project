@@ -9,7 +9,7 @@
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) half @_Z17test_reflect_halfDhDh(
 // CHECK-SAME: half noundef nofpclass(nan inf) [[I:%.*]], half noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[I]], 0xH4000
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[I]], 2.000000e+00
 // CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[N]], [[N]]
 // CHECK-NEXT:    [[MUL2_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[TMP0]], [[MUL_I]]
 // CHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[I]], [[MUL2_I]]
@@ -18,7 +18,7 @@
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) half @_Z17test_reflect_halfDhDh(
 // SPVCHECK-SAME: half noundef nofpclass(nan inf) [[I:%.*]], half noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[I]], 0xH4000
+// SPVCHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[I]], 2.000000e+00
 // SPVCHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[N]], [[N]]
 // SPVCHECK-NEXT:    [[MUL2_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[TMP0]], [[MUL_I]]
 // SPVCHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[I]], [[MUL2_I]]
@@ -32,7 +32,7 @@ half test_reflect_half(half I, half N) {
 // CHECK-SAME: <2 x half> noundef nofpclass(nan inf) [[I:%.*]], <2 x half> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[HLSL_DOT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn half @llvm.dx.fdot.v2f16(<2 x half> nofpclass(nan inf) [[I]], <2 x half> nofpclass(nan inf) [[N]])
-// CHECK-NEXT:    [[DOTSCALAR:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_DOT_I]], 0xH4000
+// CHECK-NEXT:    [[DOTSCALAR:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_DOT_I]], 2.000000e+00
 // CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x half> poison, half [[DOTSCALAR]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[TMP0]], <2 x half> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[MUL1_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> [[TMP1]], [[N]]
@@ -53,7 +53,7 @@ half2 test_reflect_half2(half2 I, half2 N) {
 // CHECK-SAME: <3 x half> noundef nofpclass(nan inf) [[I:%.*]], <3 x half> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[HLSL_DOT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn half @llvm.dx.fdot.v3f16(<3 x half> nofpclass(nan inf) [[I]], <3 x half> nofpclass(nan inf) [[N]])
-// CHECK-NEXT:    [[DOTSCALAR:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_DOT_I]], 0xH4000
+// CHECK-NEXT:    [[DOTSCALAR:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_DOT_I]], 2.000000e+00
 // CHECK-NEXT:    [[TMP0:%.*]] = insertelement <3 x half> poison, half [[DOTSCALAR]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x half> [[TMP0]], <3 x half> poison, <3 x i32> zeroinitializer
 // CHECK-NEXT:    [[MUL1_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> [[TMP1]], [[N]]
@@ -74,7 +74,7 @@ half3 test_reflect_half3(half3 I, half3 N) {
 // CHECK-SAME: <4 x half> noundef nofpclass(nan inf) [[I:%.*]], <4 x half> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[HLSL_DOT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn half @llvm.dx.fdot.v4f16(<4 x half> nofpclass(nan inf) [[I]], <4 x half> nofpclass(nan inf) [[N]])
-// CHECK-NEXT:    [[DOTSCALAR:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_DOT_I]], 0xH4000
+// CHECK-NEXT:    [[DOTSCALAR:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_DOT_I]], 2.000000e+00
 // CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x half> poison, half [[DOTSCALAR]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[TMP0]], <4 x half> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[MUL1_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> [[TMP1]], [[N]]

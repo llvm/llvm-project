@@ -459,6 +459,8 @@ private:
   // Utilities
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             SPIRVTypeInst ResType = nullptr) const;
+  Register buildI32ConstantInEntryBlock(uint32_t Val, MachineInstr &I,
+                                        SPIRVTypeInst ResType = nullptr) const;
 
   Register buildZerosVal(SPIRVTypeInst ResType, MachineInstr &I) const;
   bool isScalarOrVectorIntConstantZero(Register Reg) const;
@@ -702,6 +704,7 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_radians:
   case Intrinsic::spv_reflect:
   case Intrinsic::spv_refract:
+  case Intrinsic::spv_resource_getbasepointer:
   case Intrinsic::spv_resource_getpointer:
   case Intrinsic::spv_resource_handlefrombinding:
   case Intrinsic::spv_resource_handlefromimplicitbinding:
@@ -1891,7 +1894,9 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
   auto *PtrDef = getVRegDef(*MRI, Ptr);
   auto *IntPtrDef = dyn_cast<GIntrinsic>(PtrDef);
   if (IntPtrDef &&
-      IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      (IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getbasepointer ||
+       IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer)) {
+
     Register HandleReg = IntPtrDef->getOperand(2).getReg();
     SPIRVTypeInst HandleType = GR.getSPIRVTypeForVReg(HandleReg);
     if (HandleType->getOpcode() == SPIRV::OpTypeImage) {
@@ -1948,11 +1953,6 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
-  // TODO: This must be relaxed since the volatile attribute on atomic load is
-  // supported with the VulkanMemoryModelKHR capability.
-  if (MemOp.isVolatile())
-    return diagnoseUnsupported(I, "Lowering to SPIR-V of atomic load of "
-                                  "volatile memory is not supported");
 
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
@@ -1962,6 +1962,8 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
       addressSpaceToStorageClass(MemOp.getAddrSpace(), STI)));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
+  if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
+    MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
@@ -1983,7 +1985,9 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
   auto *PtrDef = getVRegDef(*MRI, Ptr);
   auto *IntPtrDef = dyn_cast<GIntrinsic>(PtrDef);
   if (IntPtrDef &&
-      IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      (IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getbasepointer ||
+       IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer)) {
+
     Register HandleReg = IntPtrDef->getOperand(2).getReg();
     Register NewHandleReg =
         MRI->createVirtualRegister(MRI->getRegClass(HandleReg));
@@ -2048,12 +2052,6 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
 
-  // TODO: This must be relaxed since the volatile attribute on atomic store is
-  // supported with the VulkanMemoryModelKHR capability.
-  if (MemOp.isVolatile())
-    return diagnoseUnsupported(I, "Lowering to SPIR-V of atomic store of "
-                                  "volatile memory is not supported");
-
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
   Register ScopeReg = buildI32Constant(Scope, I);
@@ -2062,6 +2060,8 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
       addressSpaceToStorageClass(MemOp.getAddrSpace(), STI)));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
+  if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
+    MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
@@ -4002,6 +4002,39 @@ SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
   return NewReg;
 }
 
+// Like buildI32Constant, but always inserts the constant definition in the
+// entry block so it dominates all uses regardless of block ordering.
+Register SPIRVInstructionSelector::buildI32ConstantInEntryBlock(
+    uint32_t Val, MachineInstr &I, SPIRVTypeInst ResType) const {
+  Type *LLVMTy = IntegerType::get(GR.CurMF->getFunction().getContext(), 32);
+  SPIRVTypeInst SpvI32Ty =
+      ResType ? ResType : GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  auto *ConstInt = ConstantInt::get(LLVMTy, Val);
+  Register NewReg = GR.find(ConstInt, GR.CurMF);
+  if (!NewReg.isValid()) {
+    NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+    auto InsertIt = getOpVariableMBBIt(*I.getMF());
+    MachineBasicBlock &EntryBB = *InsertIt->getParent();
+    MachineInstr *MI = nullptr;
+    Register TypeReg = GR.getSPIRVTypeID(SpvI32Ty);
+    DebugLoc DbgLoc = I.getDebugLoc();
+    if (Val == 0) {
+      MI = BuildMI(EntryBB, InsertIt, DbgLoc, TII.get(SPIRV::OpConstantNull))
+               .addDef(NewReg)
+               .addUse(TypeReg);
+    } else {
+      uint64_t ImmVal = APInt(32, Val).getZExtValue();
+      MI = BuildMI(EntryBB, InsertIt, DbgLoc, TII.get(SPIRV::OpConstantI))
+               .addDef(NewReg)
+               .addUse(TypeReg)
+               .addImm(ImmVal);
+    }
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    GR.add(ConstInt, MI);
+  }
+  return NewReg;
+}
+
 bool SPIRVInstructionSelector::selectFCmp(Register ResVReg,
                                           SPIRVTypeInst ResType,
                                           MachineInstr &I) const {
@@ -5100,6 +5133,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_gather:
   case Intrinsic::spv_resource_gather_cmp:
     return selectGatherIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_getbasepointer:
   case Intrinsic::spv_resource_getpointer: {
     return selectResourceGetPointer(ResVReg, ResType, I);
   }
@@ -5905,16 +5939,20 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
   assert(ResType->getOpcode() == SPIRV::OpTypePointer);
   MachineIRBuilder MIRBuilder(I);
 
-  Register IndexReg = I.getOperand(3).getReg();
   Register ZeroReg =
       buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAccessChain))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(ResourcePtr)
-      .addUse(ZeroReg)
-      .addUse(IndexReg)
-      .constrainAllUses(TII, TRI, RBI);
+  auto MIB =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAccessChain))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(ResourcePtr)
+          .addUse(ZeroReg);
+
+  if (I.getNumExplicitOperands() > 3) {
+    Register IndexReg = I.getOperand(3).getReg();
+    MIB.addUse(IndexReg);
+  }
+  MIB.constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
@@ -6412,7 +6450,8 @@ bool SPIRVInstructionSelector::selectTrap(MachineInstr &I) const {
     MsgVal = static_cast<uint32_t>(I.getOperand(0).getImm());
 
   SPIRVTypeInst MsgType = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register MsgReg = buildI32Constant(MsgVal, I, MsgType);
+  Register MsgReg = buildI32ConstantInEntryBlock(MsgVal, I, MsgType);
+
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAbortKHR))
       .addUse(GR.getSPIRVTypeID(MsgType))

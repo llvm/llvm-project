@@ -31,7 +31,6 @@ void registerToLLVMIRTranslation() {
         if (!llvmModule)
           return failure();
 
-        llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();
       },

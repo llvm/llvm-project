@@ -19,6 +19,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/IVDescriptors.h"
@@ -1995,12 +1996,10 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   }
 
   Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
-  SmallVector<Type *> ParamTys;
-  for (const VPValue *Op : Operands) {
-    ParamTys.push_back(VF.isVector()
-                           ? toVectorTy(Ctx.Types.inferScalarType(Op), VF)
-                           : Ctx.Types.inferScalarType(Op));
-  }
+  SmallVector<Type *> ParamTys =
+      map_to_vector(Operands, [&](const VPValue *Op) {
+        return toVectorTy(Ctx.Types.inferScalarType(Op), VF);
+      });
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(

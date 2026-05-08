@@ -362,6 +362,17 @@ LogicalResult cir::ArrayCtor::verify() {
 LogicalResult cir::ArrayDtor::verify() { return verifyArrayCtorDtor(*this); }
 
 //===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::DeleteArrayOp::verify() {
+  if (getDtorMayThrow() && !getElementDtorAttr())
+    return emitOpError(
+        "'dtor_may_throw' requires an 'element_dtor' to be present");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BreakOp
 //===----------------------------------------------------------------------===//
 
@@ -415,6 +426,7 @@ void cir::ConditionOp::getSuccessorRegions(
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody());
     regions.push_back(RegionSuccessor::parent());
+    return;
   }
 
   // Parent is an await: condition may branch to resume or suspend regions.
@@ -1365,11 +1377,10 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getThenRegion()));
-  // If the else region does not exist, it is not a viable successor.
   if (elseRegion)
     regions.push_back(RegionSuccessor(elseRegion));
-
-  return;
+  else
+    regions.push_back(RegionSuccessor::parent());
 }
 
 mlir::ValueRange cir::IfOp::getSuccessorInputs(RegionSuccessor successor) {
@@ -1899,6 +1910,13 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "with a constructor or destructor, they require in-function "
         "initialization via LocalInitOp");
 
+  if (getAliasee().has_value()) {
+    if (getInitialValue().has_value() || !getCtorRegion().empty() ||
+        !getDtorRegion().empty())
+      return emitOpError("global alias shall not have an initializer or "
+                         "constructor/destructor regions");
+  }
+
   // TODO(CIR): Many other checks for properties that haven't been upstreamed
   // yet.
 
@@ -1980,29 +1998,32 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
                                              mlir::Region &ctorRegion,
                                              mlir::Region &dtorRegion) {
   auto printType = [&]() { p << ": " << type; };
-  if (!op.isDeclaration()) {
-    p << "= ";
-    if (!ctorRegion.empty()) {
-      p << "ctor ";
-      printType();
-      p << " ";
-      p.printRegion(ctorRegion,
-                    /*printEntryBlockArgs=*/false,
-                    /*printBlockTerminators=*/false);
-    } else {
-      // This also prints the type...
-      if (initAttr)
-        printConstant(p, initAttr);
-    }
-
-    if (!dtorRegion.empty()) {
-      p << " dtor ";
-      p.printRegion(dtorRegion,
-                    /*printEntryBlockArgs=*/false,
-                    /*printBlockTerminators=*/false);
-    }
-  } else {
+  // Aliases are definitions but they have no initial value or ctor/dtor; the
+  // assembly prints them like declarations (`: type`).
+  if (op.isDeclaration() || op.getAliasee()) {
     printType();
+    return;
+  }
+
+  p << "= ";
+  if (!ctorRegion.empty()) {
+    p << "ctor ";
+    printType();
+    p << " ";
+    p.printRegion(ctorRegion,
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
+  } else {
+    // This also prints the type...
+    if (initAttr)
+      printConstant(p, initAttr);
+  }
+
+  if (!dtorRegion.empty()) {
+    p << " dtor ";
+    p.printRegion(dtorRegion,
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
   }
 }
 
@@ -4304,6 +4325,10 @@ LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
   if (!fn)
     return emitOpError("'")
            << getCopyFn() << "' does not reference a valid cir.func";
+
+  if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
+    return emitOpError("catch-init copy_fn must be tagged with the ")
+           << cir::CIRDialect::getCatchCopyThunkAttrName() << " attribute";
 
   cir::FuncType fnType = fn.getFunctionType();
   if (fnType.getNumInputs() != 2 || !fnType.hasVoidReturn())
