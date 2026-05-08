@@ -368,8 +368,11 @@ public:
     for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {
       if (!PVD->hasAttr<LifetimeBoundAttr>())
         continue;
-      if (!PVD->getAttr<LifetimeBoundAttr>()->isImplicit() &&
-          !VerifiedLiftimeboundEscapes.contains(PVD))
+      bool isImplicit = PVD->getAttr<LifetimeBoundAttr>()->isImplicit();
+      bool Escapes = VerifiedLiftimeboundEscapes.contains(PVD);
+      if (isImplicit && !Escapes && !isInStlNamespace(FD))
+        assert(false && "Implicit lifetimebound parameters should be verified");
+      if (!isImplicit && !Escapes)
         SemaHelper->reportLifetimeboundViolation(PVD);
     }
   }
