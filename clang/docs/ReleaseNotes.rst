@@ -481,6 +481,11 @@ Improvements to Clang's diagnostics
 
 - Removed the body of lambdas from some diagnostic messages.
 
+- Added a new ``-ast-dump-filter-path`` option to filter AST dump output
+  based on the source file path of declarations. The filter uses glob-style
+  matching on the presumed source location (accounting for macro expansions
+  and ``#line`` directives).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

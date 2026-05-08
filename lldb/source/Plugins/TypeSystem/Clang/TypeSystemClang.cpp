@@ -8494,6 +8494,7 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
 
   auto consumer =
       clang::CreateASTDumper(output, filter,
+                             /*FilterPath=*/"",
                              /*DumpDecls=*/true,
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,

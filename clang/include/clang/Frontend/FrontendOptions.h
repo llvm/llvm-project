@@ -451,6 +451,9 @@ public:
   /// If given, filter dumped AST Decl nodes by this substring.
   std::string ASTDumpFilter;
 
+  /// If given, filter dumped AST Decl nodes by source file path (glob pattern).
+  std::string ASTDumpFilterPath;
+
   /// If given, enable code completion at the provided location.
   ParsedSourceLocation CodeCompletionAt;
 
