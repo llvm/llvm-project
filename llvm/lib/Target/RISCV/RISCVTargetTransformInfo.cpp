@@ -1107,13 +1107,12 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
-
+  auto *VTy = cast<VectorType>(VecTy);
   // The interleaved memory access pass will lower (de)interleave ops combined
   // with an adjacent appropriate memory to vlseg/vsseg intrinsics. vlseg/vsseg
   // only support masking per-iteration (i.e. condition), not per-segment (i.e.
   // gap).
   if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    auto *VTy = cast<VectorType>(VecTy);
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
     if (LT.second.isVector()) {
@@ -1145,12 +1144,6 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     }
   }
 
-  // TODO: Return the cost of interleaved accesses for scalable vector when
-  // unable to convert to segment accesses instructions.
-  if (isa<ScalableVectorType>(VecTy))
-    return InstructionCost::getInvalid();
-
-  auto *FVTy = cast<FixedVectorType>(VecTy);
   // When gaps are only at the tail, for interleaved load, we can emit a wide
   // masked load and shufflevectors. For interleaved store, we can emit
   // shufflevectors and a wide masked store. The interleaved memory access pass
@@ -1163,22 +1156,28 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     bool IsTailGapOnly = NumOfFields > 1 && (NumOfFields == Indices.back() + 1);
     if (IsTailGapOnly &&
         NumOfFields <= TLI->getMaxSupportedInterleaveFactor()) {
-      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(FVTy);
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
       if (LT.second.isVector() &&
-          FVTy->getElementCount().isKnownMultipleOf(Factor)) {
-        auto *SubVecTy = VectorType::get(
-            FVTy->getElementType(),
-            FVTy->getElementCount().divideCoefficientBy(Factor));
+          VTy->getElementCount().isKnownMultipleOf(Factor)) {
+        auto *SubVecTy =
+            VectorType::get(VTy->getElementType(),
+                            VTy->getElementCount().divideCoefficientBy(Factor));
         if (TLI->isLegalInterleavedAccessType(SubVecTy, NumOfFields, Alignment,
                                               AddressSpace, DL)) {
           // The cost is proportional to the total number of element accesses.
-          unsigned NumAccesses = getEstimatedVLFor(FVTy);
+          unsigned NumAccesses = getEstimatedVLFor(VTy);
           return NumAccesses * TTI::TCC_Basic;
         }
       }
     }
   }
 
+  // TODO: Return the cost of interleaved accesses for scalable vector when
+  // unable to convert to segment accesses instructions.
+  if (isa<ScalableVectorType>(VecTy))
+    return InstructionCost::getInvalid();
+
+  auto *FVTy = cast<FixedVectorType>(VecTy);
   InstructionCost MemCost =
       getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
   unsigned VF = FVTy->getNumElements() / Factor;

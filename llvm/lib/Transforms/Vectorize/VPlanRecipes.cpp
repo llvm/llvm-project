@@ -4405,8 +4405,6 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void VPInterleaveRecipe::execute(VPTransformState &State) {
-  assert((!needsMaskForGaps() || !State.VF.isScalable()) &&
-         "Masking gaps for scalable vectors is not yet supported.");
   const InterleaveGroup<Instruction> *Group = getInterleaveGroup();
   Instruction *Instr = Group->getInsertPos();
 
@@ -4419,25 +4417,42 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   VPValue *Addr = getAddr();
   Value *ResAddr = State.get(Addr, VPLane(0));
 
+  // Compute the mask for gaps in the interleave group, if needed.
+  Value *MaskForGaps = nullptr;
+  if (needsMaskForGaps()) {
+    if (State.VF.isScalable()) {
+      auto *MaskTy = VectorType::get(State.Builder.getInt1Ty(), State.VF);
+      SmallVector<Value *> Ops;
+      for (unsigned I = 0; I < InterleaveFactor; I++)
+        Ops.push_back(Group->getMember(I) ? Constant::getAllOnesValue(MaskTy)
+                                          : Constant::getNullValue(MaskTy));
+      MaskForGaps =
+          interleaveVectors(State.Builder, Ops, "interleaved.gaps.mask");
+    } else {
+      MaskForGaps =
+          createBitMaskForGaps(State.Builder, State.VF.getFixedValue(), *Group);
+    }
+    assert(MaskForGaps && "Mask for Gaps is required but it is null");
+  }
+
   auto CreateGroupMask = [&BlockInMask, &State,
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
-    if (State.VF.isScalable()) {
-      assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
-      assert(InterleaveFactor <= 8 &&
-             "Unsupported deinterleave factor for scalable vectors");
-      auto *ResBlockInMask = State.get(BlockInMask);
-      SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
-      return interleaveVectors(State.Builder, Ops, "interleaved.mask");
-    }
-
     if (!BlockInMask)
       return MaskForGaps;
 
-    Value *ResBlockInMask = State.get(BlockInMask);
-    Value *ShuffledMask = State.Builder.CreateShuffleVector(
-        ResBlockInMask,
-        createReplicatedMask(InterleaveFactor, State.VF.getFixedValue()),
-        "interleaved.mask");
+    auto *ResBlockInMask = State.get(BlockInMask);
+    Value *ShuffledMask;
+    if (State.VF.isScalable()) {
+      assert(InterleaveFactor <= 8 &&
+             "Unsupported deinterleave factor for scalable vectors");
+      SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
+      ShuffledMask = interleaveVectors(State.Builder, Ops, "interleaved.mask");
+    } else {
+      ShuffledMask = State.Builder.CreateShuffleVector(
+          ResBlockInMask,
+          createReplicatedMask(InterleaveFactor, State.VF.getFixedValue()),
+          "interleaved.mask");
+    }
     return MaskForGaps ? State.Builder.CreateBinOp(Instruction::And,
                                                    ShuffledMask, MaskForGaps)
                        : ShuffledMask;
@@ -4446,13 +4461,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   const DataLayout &DL = Instr->getDataLayout();
   // Vectorize the interleaved load group.
   if (isa<LoadInst>(Instr)) {
-    Value *MaskForGaps = nullptr;
-    if (needsMaskForGaps()) {
-      MaskForGaps =
-          createBitMaskForGaps(State.Builder, State.VF.getFixedValue(), *Group);
-      assert(MaskForGaps && "Mask for Gaps is required but it is null");
-    }
-
     Instruction *NewLoad;
     if (BlockInMask || MaskForGaps) {
       Value *GroupMask = CreateGroupMask(MaskForGaps);
@@ -4520,12 +4528,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 
   // The sub vector type for current instruction.
   auto *SubVT = VectorType::get(ScalarTy, State.VF);
-
   // Vectorize the interleaved store group.
-  Value *MaskForGaps =
-      createBitMaskForGaps(State.Builder, State.VF.getKnownMinValue(), *Group);
-  assert(((MaskForGaps != nullptr) == needsMaskForGaps()) &&
-         "Mismatch between NeedsMaskForGaps and MaskForGaps");
   ArrayRef<VPValue *> StoredValues = getStoredValues();
   // Collect the stored vector from each member.
   SmallVector<Value *, 4> StoredVecs;
@@ -4605,8 +4608,6 @@ void VPInterleaveRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   assert(State.VF.isScalable() &&
          "Only support scalable VF for EVL tail-folding.");
-  assert(!needsMaskForGaps() &&
-         "Masking gaps for scalable vectors is not yet supported.");
   const InterleaveGroup<Instruction> *Group = getInterleaveGroup();
   Instruction *Instr = Group->getInsertPos();
 
@@ -4626,6 +4627,19 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
       /* NUW= */ true, /* NSW= */ true);
   LLVMContext &Ctx = State.Builder.getContext();
 
+  // Compute the mask for gaps in the interleave group, if needed.
+  Value *MaskForGaps = nullptr;
+  if (needsMaskForGaps()) {
+    auto *MaskTy = VectorType::get(State.Builder.getInt1Ty(), State.VF);
+    SmallVector<Value *> Ops;
+    for (unsigned I = 0; I < InterleaveFactor; I++)
+      Ops.push_back(Group->getMember(I) ? Constant::getAllOnesValue(MaskTy)
+                                        : Constant::getNullValue(MaskTy));
+    MaskForGaps =
+        interleaveVectors(State.Builder, Ops, "interleaved.gaps.mask");
+    assert(MaskForGaps && "Mask for Gaps is required but it is null");
+  }
+
   Value *GroupMask = nullptr;
   if (VPValue *BlockInMask = getMask()) {
     SmallVector<Value *> Ops(InterleaveFactor, State.get(BlockInMask));
@@ -4634,6 +4648,8 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
     GroupMask =
         State.Builder.CreateVectorSplat(WideVF, State.Builder.getTrue());
   }
+  if (MaskForGaps)
+    GroupMask = State.Builder.CreateAnd(GroupMask, MaskForGaps);
 
   // Vectorize the interleaved load group.
   if (isa<LoadInst>(Instr)) {
