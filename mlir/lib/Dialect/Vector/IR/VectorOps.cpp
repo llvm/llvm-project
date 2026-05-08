@@ -23,6 +23,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -5625,11 +5626,94 @@ struct TransferReadAfterWriteToBroadcast
     return success();
   }
 };
+
+/// Folds a transfer_read that reads from the result of a transfer_write on
+/// the same region (Read-After-Write) into arithmetic on the written value,
+/// the original tensor, the masks, and the read's padding.
+///
+/// The general semantics are:
+///
+///   written_tensor[i] = wMask[i] ? valToStore[i] : original[i]
+///   result[i]         = rMask[i] ? written_tensor[i] : rPad
+///
+/// Which gives:
+///   result = select(rMask, select(wMask, valToStore, original),
+///   broadcast(rPad))
+///
+/// Special cases avoid emitting unnecessary IR:
+///   - No wMask (unmasked write): wMask is implicitly all-true, inner select
+///     collapses to valToStore.
+///   - No rMask (unmasked read): rMask is implicitly all-true, outer select
+///     collapses away.
+///   - wMask == rMask: the original tensor is never needed (anywhere rMask is
+///     true, wMask is also true), so the inner select collapses to valToStore.
+///
+/// After bufferization, this generally removes the need for materializing the
+/// write to memory.
+struct FoldTransferReadAfterTransferWrite
+    : public OpRewritePattern<TransferReadOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(TransferReadOp readOp,
+                                PatternRewriter &rewriter) const override {
+    if (!readOp.hasPureTensorSemantics())
+      return failure();
+
+    auto writeOp =
+        dyn_cast_if_present<TransferWriteOp>(readOp.getBase().getDefiningOp());
+    if (!writeOp || !writeOp.hasPureTensorSemantics())
+      return failure();
+
+    Value valToStore = writeOp.getValueToStore();
+    if (valToStore.getType() != readOp.getType())
+      return failure();
+
+    if ((llvm::any_of(readOp.getIndices(),
+                      [](Value v) { return !isZeroInteger(v); }) ||
+         llvm::any_of(writeOp.getIndices(),
+                      [](Value v) { return !isZeroInteger(v); })) &&
+        (readOp.getIndices() != writeOp.getIndices()))
+      return failure();
+
+    if (!readOp.getPermutationMap().isMinorIdentity() ||
+        !writeOp.getPermutationMap().isMinorIdentity())
+      return failure();
+
+    TypedValue<VectorType> wMask = writeOp.getMask();
+    TypedValue<VectorType> rMask = readOp.getMask();
+
+    // Build the inner value: select(wMask, valToStore, original).
+    // When wMask is absent (unmasked write) or wMask == rMask (original is
+    // never accessed), this simplifies to just valToStore.
+    Value inner = valToStore;
+    bool needsOriginal = wMask && wMask != rMask;
+    if (needsOriginal) {
+      Value originalRead = TransferReadOp::create(
+          rewriter, readOp.getLoc(), readOp.getType(), writeOp.getBase(),
+          readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
+          /*mask=*/Value(), readOp.getInBoundsAttr());
+      inner = arith::SelectOp::create(rewriter, readOp.getLoc(), wMask,
+                                      valToStore, originalRead);
+    }
+
+    if (!rMask) {
+      rewriter.replaceOp(readOp, inner);
+      return success();
+    }
+
+    Value rPad = readOp.getPadding();
+    Value padVal = BroadcastOp::create(rewriter, rPad.getLoc(),
+                                       valToStore.getType(), rPad);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(readOp, rMask, inner, padVal);
+    return success();
+  }
+};
 } // namespace
 
 void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add<TransferReadAfterWriteToBroadcast>(context);
+  results.add<TransferReadAfterWriteToBroadcast,
+              FoldTransferReadAfterTransferWrite>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>

@@ -1991,24 +1991,6 @@ func.func @negative_store_to_load_tensor_memref(
 
 // -----
 
-// CHECK-LABEL: func @negative_store_to_load_tensor_no_actual_broadcast
-//   CHECK-NOT:   vector.broadcast
-//   CHECK-NOT:   vector.transpose
-//       CHECK:   vector.transfer_write
-//       CHECK:   vector.transfer_read
-func.func @negative_store_to_load_tensor_no_actual_broadcast(%arg0 : tensor<?x?xf32>,
-  %v0 : vector<4x2xf32>) -> vector<4x2xf32> {
-  %c0 = arith.constant 0 : index
-  %cf0 = arith.constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0] :
-    vector<4x2xf32>, tensor<?x?xf32>
-  %0 = vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true]} :
-    tensor<?x?xf32>, vector<4x2xf32>
-  return %0 : vector<4x2xf32>
-}
-
-// -----
-
 // CHECK-LABEL: func @negative_store_to_load_tensor_broadcast_out_of_bounds
 //   CHECK-NOT:   vector.broadcast
 //   CHECK-NOT:   vector.transpose
@@ -2102,6 +2084,145 @@ func.func @store_to_load_tensor_forwarding_unit_dim_broadcast(
   %write = vector.transfer_write %vec, %mem[%c0, %c0, %c0, %c0] : vector<4x8xf32>, tensor<1x1x4x8xf32>
   %read = vector.transfer_read %write[%c0, %c0, %c0, %c0], %cst_0 : tensor<1x1x4x8xf32>, vector<1x1x4x8xf32>
   return %read : vector<1x1x4x8xf32>
+}
+
+// -----
+
+// Both write and read are masked with the same mask: the original tensor is
+// never needed, so the inner select collapses. Result is
+// select(mask, val, broadcast(pad)).
+// CHECK-LABEL: func @fold_transfer_raw_both_masked
+// CHECK-SAME:    %[[T:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<128xf16>
+// CHECK-DAG:     %[[CST_1:.*]] = arith.constant dense<1.000000e+00> : vector<128xf16>
+// CHECK:         %[[SEL:.*]] = arith.select %[[MASK]], %[[CST_1]], %[[CST_0]]
+// CHECK:         return %[[SEL]]
+func.func @fold_transfer_raw_both_masked(%t: tensor<128xf16>, %mask: vector<128xi1>) -> vector<128xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %val = arith.constant dense<1.0> : vector<128xf16>
+  %w = vector.transfer_write %val, %t[%c0], %mask {in_bounds = [true]}
+     : vector<128xf16>, tensor<128xf16>
+  %r = vector.transfer_read %w[%c0], %cst, %mask {in_bounds = [true]}
+     : tensor<128xf16>, vector<128xf16>
+  return %r : vector<128xf16>
+}
+
+// -----
+
+// Masked write, unmasked read: replace with select(wMask, val, read(original)).
+// CHECK-LABEL: func @fold_transfer_raw_masked_write_unmasked_read
+// CHECK-SAME:    %[[T:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[CST:.*]] = arith.constant 0.000000e+00 : f16
+// CHECK-DAG:     %[[VAL:.*]] = arith.constant dense<1.000000e+00> : vector<128xf16>
+// CHECK:         %[[READ:.*]] = vector.transfer_read %[[T]]{{.*}}, %[[CST]] {in_bounds = [true]}
+// CHECK-SAME:      : tensor<128xf16>, vector<128xf16>
+// CHECK:         %[[SEL:.*]] = arith.select %[[MASK]], %[[VAL]], %[[READ]]
+// CHECK:         return %[[SEL]]
+func.func @fold_transfer_raw_masked_write_unmasked_read(%t: tensor<128xf16>, %mask: vector<128xi1>) -> vector<128xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %val = arith.constant dense<1.0> : vector<128xf16>
+  %w = vector.transfer_write %val, %t[%c0], %mask {in_bounds = [true]}
+     : vector<128xf16>, tensor<128xf16>
+  %r = vector.transfer_read %w[%c0], %cst {in_bounds = [true]}
+     : tensor<128xf16>, vector<128xf16>
+  return %r : vector<128xf16>
+}
+
+// -----
+
+// Both unmasked: the read is directly replaced by the written value.
+// CHECK-LABEL: func @fold_transfer_raw_both_unmasked
+// CHECK-DAG:     %[[VAL:.*]] = arith.constant dense<1.000000e+00> : vector<128xf16>
+// CHECK-NOT:     vector.transfer_write
+// CHECK-NOT:     vector.transfer_read
+// CHECK:         return %[[VAL]]
+func.func @fold_transfer_raw_both_unmasked(%t: tensor<128xf16>) -> vector<128xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %val = arith.constant dense<1.0> : vector<128xf16>
+  %w = vector.transfer_write %val, %t[%c0] {in_bounds = [true]}
+     : vector<128xf16>, tensor<128xf16>
+  %r = vector.transfer_read %w[%c0], %cst {in_bounds = [true]}
+     : tensor<128xf16>, vector<128xf16>
+  return %r : vector<128xf16>
+}
+
+// -----
+
+// Unmasked write, masked read: result is select(rMask, val, broadcast(pad)).
+// CHECK-LABEL: func @fold_transfer_raw_unmasked_write_masked_read
+// CHECK-SAME:    %[[T:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[VAL:.*]] = arith.constant dense<1.000000e+00> : vector<128xf16>
+// CHECK-DAG:     %[[PAD:.*]] = arith.constant dense<0.000000e+00> : vector<128xf16>
+// CHECK-NOT:     vector.transfer_write
+// CHECK-NOT:     vector.transfer_read
+// CHECK:         %[[RES:.+]] = arith.select %[[MASK]], %[[VAL]], %[[PAD]]
+// CHECK:         return %[[RES]]
+func.func @fold_transfer_raw_unmasked_write_masked_read(%t: tensor<128xf16>, %mask: vector<128xi1>) -> vector<128xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %val = arith.constant dense<1.0> : vector<128xf16>
+  %w = vector.transfer_write %val, %t[%c0] {in_bounds = [true]}
+     : vector<128xf16>, tensor<128xf16>
+  %r = vector.transfer_read %w[%c0], %cst, %mask {in_bounds = [true]}
+     : tensor<128xf16>, vector<128xf16>
+  return %r : vector<128xf16>
+}
+
+// -----
+
+// Negative test: memref semantics — pattern must not fire.
+// CHECK-LABEL: func @negative_fold_transfer_raw_memref
+// CHECK:         vector.transfer_write
+// CHECK:         vector.transfer_read
+func.func @negative_fold_transfer_raw_memref(%m: memref<128xf16>, %mask: vector<128xi1>) -> vector<128xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %val = arith.constant dense<1.0> : vector<128xf16>
+  vector.transfer_write %val, %m[%c0], %mask {in_bounds = [true]}
+     : vector<128xf16>, memref<128xf16>
+  %r = vector.transfer_read %m[%c0], %cst, %mask {in_bounds = [true]}
+     : memref<128xf16>, vector<128xf16>
+  return %r : vector<128xf16>
+}
+
+// -----
+
+// Negative test: type mismatch between written and read vectors.
+// CHECK-LABEL: func @negative_fold_transfer_raw_type_mismatch
+// CHECK:         vector.transfer_write
+// CHECK:         vector.transfer_read
+func.func @negative_fold_transfer_raw_type_mismatch(%t: tensor<128xf16>) -> vector<64xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %val = arith.constant dense<1.0> : vector<128xf16>
+  %w = vector.transfer_write %val, %t[%c0] {in_bounds = [true]}
+     : vector<128xf16>, tensor<128xf16>
+  %r = vector.transfer_read %w[%c0], %cst {in_bounds = [true]}
+     : tensor<128xf16>, vector<64xf16>
+  return %r : vector<64xf16>
+}
+
+// -----
+
+// Negative test: different non-zero indices between write and read.
+// CHECK-LABEL: func @negative_fold_transfer_raw_different_indices
+// CHECK:         vector.transfer_write
+// CHECK:         vector.transfer_read
+func.func @negative_fold_transfer_raw_different_indices(
+    %t: tensor<256xf16>, %i: index, %j: index) -> vector<128xf16> {
+  %cst = arith.constant 0.0 : f16
+  %val = arith.constant dense<1.0> : vector<128xf16>
+  %w = vector.transfer_write %val, %t[%i] {in_bounds = [true]}
+     : vector<128xf16>, tensor<256xf16>
+  %r = vector.transfer_read %w[%j], %cst {in_bounds = [true]}
+     : tensor<256xf16>, vector<128xf16>
+  return %r : vector<128xf16>
 }
 
 // -----
