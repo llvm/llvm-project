@@ -46,7 +46,7 @@ define i16 @foo3(i16 %a, i16 %b, i16 %c, i16 %d) {
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    in r16, 63
 ; CHECK-NEXT:    subi r28, 251
 ; CHECK-NEXT:    sbci r29, 255
@@ -79,7 +79,7 @@ define i32 @foo4(i32 %a, i32 %b) {
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    in r16, 63
 ; CHECK-NEXT:    subi r28, 251
 ; CHECK-NEXT:    sbci r29, 255
@@ -122,7 +122,7 @@ define i8 @foo5([5 x i8] %0, i8 %1) {
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    mov r26, r28
 ; CHECK-NEXT:    mov r27, r29
 ; CHECK-NEXT:    subi r26, 251
@@ -157,7 +157,7 @@ define i8 @foo7([3 x i8] %0, [3 x i8] %1) {
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    mov r26, r28
 ; CHECK-NEXT:    mov r27, r29
 ; CHECK-NEXT:    subi r26, 251
@@ -181,7 +181,7 @@ define i8 @foo8([3 x i8] %0, i8 %1, i8 %2) {
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    add r22, r20
 ; CHECK-NEXT:    mov r26, r28
 ; CHECK-NEXT:    mov r27, r29
@@ -205,7 +205,7 @@ define i8 @foo9([7 x i8] %0) {
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    mov r26, r28
 ; CHECK-NEXT:    mov r27, r29
 ; CHECK-NEXT:    subi r26, 250
@@ -233,7 +233,7 @@ define i8 @fooa([6 x i8] %0, i8 %1, i8 %2) {
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    mov r26, r28
 ; CHECK-NEXT:    mov r27, r29
 ; CHECK-NEXT:    subi r26, 251

@@ -15,11 +15,13 @@ module iso_c_binding
     c_funloc => __builtin_c_funloc, &
     c_funptr => __builtin_c_funptr, &
     c_f_pointer => __builtin_c_f_pointer, &
+    c_f_strpointer => __builtin_c_f_strpointer, &
     c_loc => __builtin_c_loc, &
     c_null_funptr => __builtin_c_null_funptr, &
     c_null_ptr => __builtin_c_null_ptr, &
     c_ptr => __builtin_c_ptr, &
     c_sizeof => sizeof, &
+    f_c_string => __builtin_f_c_string, &
     operator(==), operator(/=)
 
   implicit none
@@ -28,8 +30,8 @@ module iso_c_binding
   ! to be exported by this MODULE.
   private
 
-  public :: c_associated, c_funloc, c_funptr, c_f_pointer, c_loc, &
-    c_null_funptr, c_null_ptr, c_ptr, c_sizeof, &
+  public :: c_associated, c_funloc, c_funptr, c_f_pointer, c_f_strpointer, &
+    c_loc, c_null_funptr, c_null_ptr, c_ptr, c_sizeof, f_c_string, &
     operator(==), operator(/=)
 
   ! Table 18.2 (in clause 18.3.1)
@@ -43,7 +45,11 @@ module iso_c_binding
   integer, parameter, public :: &
     c_int = c_int32_t, &
     c_short = c_int16_t, &
+#if defined(_WIN32)
+    c_long = c_int32_t, &
+#else
     c_long = c_int64_t, &
+#endif
     c_long_long = c_int64_t, &
     c_signed_char = c_int8_t, &
     c_size_t = kind(c_sizeof(1)), &
@@ -74,8 +80,10 @@ module iso_c_binding
   integer, parameter, public :: &
     c_float = 4, &
     c_double = 8, &
-#if __x86_64__
+#if defined(__x86_64__)
     c_long_double = 10
+#elif defined(_WIN32) && defined(__aarch64__)
+    c_long_double = 8
 #else
     c_long_double = 16
 #endif
@@ -117,9 +125,13 @@ module iso_c_binding
     c_unsigned_char = c_uint8_t, &
     c_unsigned_short = c_uint16_t, &
     c_unsigned = c_uint32_t, &
+#if defined(_WIN32)
+    c_unsigned_long = c_uint32_t, &
+#else
     c_unsigned_long = c_uint64_t, &
-    c_unsigned_long_long = c_unsigned_long, &
-#if __powerpc__
+#endif
+    c_unsigned_long_long = c_uint64_t, &
+#if defined(__powerpc__) || defined(_WIN32)
     c_uintmax_t = c_uint64_t
 #else
     c_uintmax_t = c_uint128_t

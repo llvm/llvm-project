@@ -33,3 +33,8 @@ define internal void @f2() {
 
 ; M1: !0 = !{i32 0, !"typeid"}
 !0 = !{i32 0, !"typeid"}
+
+; test that the GUID of f.<hash> is the same in the summaries of the 2 split
+; modules
+; M0: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd", {{.*}} ; guid = 11302379072751562722
+; M1: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd") ; guid = 11302379072751562722

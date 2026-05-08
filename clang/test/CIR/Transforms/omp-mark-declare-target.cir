@@ -1,0 +1,53 @@
+// RUN: cir-opt --omp-mark-declare-target %s -o - | FileCheck %s
+
+// Test that the MarkDeclareTarget pass propagates the declare_target
+// attribute from explicitly marked functions to functions they call,
+// and from omp.target regions to functions called within them.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // A helper function with no declare_target attribute initially.
+  // After the pass, it should be marked because @caller calls it.
+  // CHECK-LABEL: cir.func @helper
+  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)
+  cir.func @helper() {
+    cir.return
+  }
+
+  // Explicitly marked as declare_target; calls @helper.
+  // CHECK-LABEL: cir.func @caller
+  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>
+  cir.func @caller() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
+    cir.call @helper() : () -> ()
+    cir.return
+  }
+
+  // Called from within an omp.target region; should be marked as nohost.
+  // CHECK-LABEL: cir.func @device_helper
+  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)
+  cir.func @device_helper() {
+    cir.return
+  }
+
+  // Contains an omp.target region that calls @device_helper.
+  // The function itself should NOT be marked as declare_target.
+  // CHECK-LABEL: cir.func @target_caller
+  // CHECK-NOT: omp.declare_target
+  // CHECK-SAME: {
+  cir.func @target_caller() {
+    omp.target {
+      cir.call @device_helper() : () -> ()
+      omp.terminator
+    }
+    cir.return
+  }
+
+  // Not called by any declare_target function or target region.
+  // CHECK-LABEL: cir.func @unrelated
+  // CHECK-NOT: omp.declare_target
+  // CHECK-SAME: {
+  cir.func @unrelated() {
+    cir.return
+  }
+}

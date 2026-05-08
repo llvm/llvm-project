@@ -30,7 +30,12 @@ struct Struct {
     // CHECK-NEXT: %[[DEV_PTR_LOC_INT:.*]] = acc.deviceptr varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "LocalInt"}
     // CHECK-NEXT: %[[ENTER:.*]] = acc.declare_enter dataOperands(%[[DEV_PTR_ARG_HSE]], %[[DEV_PTR_ARG_INT]], %[[DEV_PTR_LOC_HSE]], %[[DEV_PTR_LOC_INT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>)
 
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER]])
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER]])
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
   }
   void MemFunc2(HasSideEffects *ArgHSE, int *ArgInt);
 };
@@ -59,12 +64,24 @@ void Struct::MemFunc2(HasSideEffects *ArgHSE, int *ArgInt) {
     // CHECK-NEXT: %[[ENTER1:.*]] = acc.declare_enter dataOperands(%[[DEV_PTR_ARG_HSE]], %[[DEV_PTR_ARG_INT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>)
 
 #pragma acc declare deviceptr(LocalHSE, LocalInt)
-    // CHECK-NEXT: %[[DEV_PTR_LOC_HSE:.*]] = acc.deviceptr varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) -> !cir.ptr<!cir.ptr<!rec_HasSideEffects>> {name = "LocalHSE"}
-    // CHECK-NEXT: %[[DEV_PTR_LOC_INT:.*]] = acc.deviceptr varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "LocalInt"}
-    // CHECK-NEXT: %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[DEV_PTR_LOC_HSE]], %[[DEV_PTR_LOC_INT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>)
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   %[[DEV_PTR_LOC_HSE:.*]] = acc.deviceptr varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) -> !cir.ptr<!cir.ptr<!rec_HasSideEffects>> {name = "LocalHSE"}
+    // CHECK-NEXT:   %[[DEV_PTR_LOC_INT:.*]] = acc.deviceptr varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "LocalInt"}
+    // CHECK-NEXT:   %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[DEV_PTR_LOC_HSE]], %[[DEV_PTR_LOC_INT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>)
     //
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER2]])
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER1]])
+    // CHECK-NEXT:   cir.cleanup.scope {
+    // CHECK-NEXT:     cir.yield
+    // CHECK-NEXT:   cleanup normal {
+    // CHECK-NEXT:     acc.declare_exit token(%[[ENTER2]])
+    // CHECK-NEXT:     cir.yield
+    // CHECK-NEXT:   }
+
+    // CHECK-NEXT:   cir.yield
+
+    // CHECK-NEXT: cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER1]])
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
 }
 
 extern "C" void do_thing();
@@ -84,14 +101,22 @@ void NormalFunc(HasSideEffects *ArgHSE, int *ArgInt) {
     // CHECK-NEXT: %[[DEV_PTR_ARG_INT:.*]] = acc.deviceptr varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ArgInt"}
     // CHECK-NEXT: %[[ENTER1:.*]] = acc.declare_enter dataOperands(%[[DEV_PTR_ARG_HSE]], %[[DEV_PTR_ARG_INT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>)
     {
-      // CHECK-NEXT: cir.scope {
+
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT: cir.scope {
 #pragma acc declare deviceptr(LocalHSE, LocalInt)
-    // CHECK-NEXT: %[[DEV_PTR_LOC_HSE:.*]] = acc.deviceptr varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) -> !cir.ptr<!cir.ptr<!rec_HasSideEffects>> {name = "LocalHSE"}
-    // CHECK-NEXT: %[[DEV_PTR_LOC_INT:.*]] = acc.deviceptr varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "LocalInt"}
-    // CHECK-NEXT: %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[DEV_PTR_LOC_HSE]], %[[DEV_PTR_LOC_INT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>)
+    // CHECK-NEXT:   %[[DEV_PTR_LOC_HSE:.*]] = acc.deviceptr varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) -> !cir.ptr<!cir.ptr<!rec_HasSideEffects>> {name = "LocalHSE"}
+    // CHECK-NEXT:   %[[DEV_PTR_LOC_INT:.*]] = acc.deviceptr varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "LocalInt"}
+    // CHECK-NEXT:   %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[DEV_PTR_LOC_HSE]], %[[DEV_PTR_LOC_INT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.ptr<!s32i>>)
+
     do_thing();
-    // CHECK-NEXT: cir.call @do_thing
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER2]])
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.call @do_thing
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: } cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER2]])
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
 
     }
     // CHECK-NEXT: }
@@ -99,6 +124,9 @@ void NormalFunc(HasSideEffects *ArgHSE, int *ArgInt) {
     // Make sure that cleanup gets put in the right scope.
     do_thing();
     // CHECK-NEXT: cir.call @do_thing
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER1]])
+    // CHECK-NEXT: cir.yield
+    // CHECK-NEXT: cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER1]])
+    // CHECK-NEXT:   cir.yield
 }
 

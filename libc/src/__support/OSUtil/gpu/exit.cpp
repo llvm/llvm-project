@@ -24,7 +24,6 @@ namespace internal {
   port.send([&](rpc::Buffer *buffer, uint32_t) {
     reinterpret_cast<uint32_t *>(buffer->data)[0] = status;
   });
-  port.close();
 
   gpu::end_program();
 }

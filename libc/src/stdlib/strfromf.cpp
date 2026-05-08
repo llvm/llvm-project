@@ -22,9 +22,7 @@ LLVM_LIBC_FUNCTION(int, strfromf,
 
   printf_core::FormatSection section =
       internal::parse_format_string(format, fp);
-  printf_core::WriteBuffer<printf_core::Mode<
-      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
-      wb(s, (n > 0 ? n - 1 : 0));
+  printf_core::DropOverflowBuffer wb(s, (n > 0 ? n - 1 : 0));
   printf_core::Writer writer(wb);
 
   int result = 0;

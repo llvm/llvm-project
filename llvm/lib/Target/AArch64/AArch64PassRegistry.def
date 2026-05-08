@@ -1,0 +1,55 @@
+//===- AArch64PassRegistry.def - Registry of AArch64 passes -----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the AArch64
+// backend.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+#undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("aarch64-a57-fp-load-balancing", AArch64A57FPLoadBalancingPass())
+MACHINE_FUNCTION_PASS("aarch64-branch-targets", AArch64BranchTargetsPass())
+MACHINE_FUNCTION_PASS("aarch64-ccmp", AArch64ConditionalComparesPass())
+MACHINE_FUNCTION_PASS("aarch64-collect-loh", AArch64CollectLOHPass())
+MACHINE_FUNCTION_PASS("aarch64-condopt", AArch64ConditionOptimizerPass())
+MACHINE_FUNCTION_PASS("aarch64-copyelim", AArch64RedundantCopyEliminationPass())
+MACHINE_FUNCTION_PASS("aarch64-dead-defs", AArch64DeadRegisterDefinitionsPass())
+MACHINE_FUNCTION_PASS("aarch64-expand-pseudo", AArch64ExpandPseudoPass())
+MACHINE_FUNCTION_PASS("aarch64-fix-cortex-a53-835769", AArch64A53Fix835769Pass())
+MACHINE_FUNCTION_PASS("aarch64-jump-tables", AArch64CompressJumpTablesPass())
+MACHINE_FUNCTION_PASS("aarch64-ldst-opt", AArch64LoadStoreOptPass())
+MACHINE_FUNCTION_PASS("aarch64-mi-peephole-opt", AArch64MIPeepholeOptPass())
+MACHINE_FUNCTION_PASS("aarch64-post-coalescer", AArch64PostCoalescerPass())
+MACHINE_FUNCTION_PASS("aarch64-post-select-optimize",
+                      AArch64PostSelectOptimizePass())
+MACHINE_FUNCTION_PASS("aarch64-postlegalizer-lowering",
+                      AArch64PostLegalizerLoweringPass())
+MACHINE_FUNCTION_PASS("aarch64-prelegalizer-combiner",
+                      AArch64PreLegalizerCombinerPass())
+MACHINE_FUNCTION_PASS("aarch64-ptrauth", AArch64PointerAuthPass())
+MACHINE_FUNCTION_PASS("aarch64-redundantcondbranch", AArch64RedundantCondBranchPass())
+MACHINE_FUNCTION_PASS("aarch64-simd-instr-opt", AArch64SIMDInstrOptPass())
+MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
+MACHINE_FUNCTION_PASS("aarch64-stack-tagging-pre-ra", AArch64StackTaggingPreRAPass())
+MACHINE_FUNCTION_PASS("aarch64-O0-prelegalizer-combiner",
+                      AArch64O0PreLegalizerCombinerPass())
+#undef MACHINE_FUNCTION_PASS

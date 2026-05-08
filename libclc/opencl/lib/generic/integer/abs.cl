@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/integer/clc_abs.h>
-#include <clc/opencl/integer/abs.h>
+#include "clc/integer/clc_abs.h"
 
-#define __CLC_BODY <abs.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "abs.inc"
+#include "clc/integer/gentype.inc"

@@ -69,7 +69,8 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
     Reader->addInMemoryBuffer(sr, std::move(MemBufs[ti]));
   }
   Reader->setDeserializationListener(deserialListener);
-  switch (Reader->ReadAST(pchFile, serialization::MK_PCH, SourceLocation(),
+  switch (Reader->ReadAST(ModuleFileName::makeExplicit(pchFile),
+                          serialization::MK_PCH, SourceLocation(),
                           ASTReader::ARR_None)) {
   case ASTReader::Success:
     // Set the predefines buffer as suggested by the PCH reader.
@@ -124,7 +125,9 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
 
     auto Clang = std::make_unique<CompilerInstance>(
         std::move(CInvok), CI.getPCHContainerOperations());
-    Clang->createVirtualFileSystem();
+    // Inherit the VFS as-is: code below does not make changes to the VFS or to
+    // the VFS-affecting options.
+    Clang->setVirtualFileSystem(CI.getVirtualFileSystemPtr());
     Clang->setDiagnostics(Diags);
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));

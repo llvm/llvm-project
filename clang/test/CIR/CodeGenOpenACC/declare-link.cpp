@@ -117,7 +117,7 @@ int AnonNSInt1;
 struct Struct {
 
   void MemFunc1() {
-    // CHECK: cir.func {{.*}}MemFunc1{{.*}}({{.*}}) {
+    // CHECK: cir.func {{.*}}MemFunc1{{.*}}({{.*}}) {{.*}}{
     // CHECK-NEXT: cir.alloca{{.*}}["this"
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.load
@@ -143,8 +143,13 @@ struct Struct {
     // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "LocalHSEArr[1:1]"}
     //
     // CHECK-NEXT: %[[ENTER:.*]] = acc.declare_enter dataOperands(%[[HSE_LINK]], %[[INT_LINK]], %[[ARR_LINK]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
-    //
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER]])
+    // 
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: } cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER]])
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
   }
 
   void MemFunc2();
@@ -155,7 +160,7 @@ void use() {
 }
 
 void Struct::MemFunc2() {
-    // CHECK: cir.func {{.*}}MemFunc2{{.*}}({{.*}}) {
+    // CHECK: cir.func {{.*}}MemFunc2{{.*}}({{.*}}) {{.*}}{
     // CHECK-NEXT: cir.alloca{{.*}}["this"
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.load
@@ -181,14 +186,19 @@ void Struct::MemFunc2() {
     // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "LocalHSEArr2[1:1]"}
     //
     // CHECK-NEXT: %[[ENTER:.*]] = acc.declare_enter dataOperands(%[[HSE_LINK]], %[[INT_LINK]], %[[ARR_LINK]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
-    //
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER]])
+    // 
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: } cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER]])
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
 }
 
 extern "C" void do_thing();
 
 void NormalFunc() {
-    // CHECK: cir.func {{.*}}NormalFunc{{.*}}()
+    // CHECK: cir.func {{.*}}{{.*}}NormalFunc{{.*}}()
     extern HasSideEffects LocalHSE3;
     extern HasSideEffects LocalHSEArr3[5];
     extern int LocalInt3;
@@ -220,9 +230,13 @@ void NormalFunc() {
     // CHECK
 
     do_thing();
-    // CHECK-NEXT: cir.call @do_thing
-
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER]])
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.call @do_thing
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: } cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER]])
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
     }
     // CHECK-NEXT: }
 

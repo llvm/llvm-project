@@ -74,7 +74,7 @@ int f_va_callee(int, ...);
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[COERCE_DIVE]], align 16
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[DOTCOMPOUNDLITERAL6]], i64 32, i1 false)
-// CHECK-NEXT:    [[CALL:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i64 [[TMP0]], [2 x i64] [[TMP1]], i128 [[TMP2]], ptr dead_on_return noundef [[BYVAL_TEMP]])
+// CHECK-NEXT:    [[CALL:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i64 [[TMP0]], [2 x i64] [[TMP1]], i128 [[TMP2]], ptr noundef dead_on_return [[BYVAL_TEMP]])
 // CHECK-NEXT:    [[CALL11:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, fp128 noundef 0xL00000000000000004001400000000000, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
 // CHECK-NEXT:    [[A13:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL12]], i32 0, i32 0
 // CHECK-NEXT:    store i128 5, ptr [[A13]], align 16

@@ -68,7 +68,7 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
 
-  unsigned getCSRFirstUseCost() const override {
+  unsigned getCSRCost() const override {
     // The cost will be compared against BlockFrequency where entry has the
     // value of 1 << 14. A value of 5 will choose to spill or split cold
     // path instead of using a callee-saved register.
@@ -76,6 +76,12 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   }
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+
+  const TargetRegisterClass *getConstrainedRegClassForOperand(
+      const MachineOperand &MO, const MachineRegisterInfo &MRI) const override;
+
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB, bool Is64Bit) const;
 
   const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
 

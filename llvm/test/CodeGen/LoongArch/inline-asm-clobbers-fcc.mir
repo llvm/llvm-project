@@ -18,14 +18,14 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $fcc0 = FCMP_CLT_D renamable $f1_64, renamable $f0_64
     ; CHECK-NEXT: PseudoST_CFR $fcc0, %stack.0, 0 :: (store (s64) into %stack.0)
-    ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $fcc0
+    ; CHECK-NEXT: INLINEASM &nop, sideeffect attdialect, clobber, implicit-def dead early-clobber $fcc0
     ; CHECK-NEXT: $fcc0 = PseudoLD_CFR %stack.0, 0 :: (load (s64) from %stack.0)
     ; CHECK-NEXT: $r4 = COPY killed renamable $fcc0
     ; CHECK-NEXT: PseudoRET implicit killed $r4
     %1:fpr64 = COPY $f1_64
     %0:fpr64 = COPY $f0_64
     %2:cfr = FCMP_CLT_D %1, %0
-    INLINEASM &"nop", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $fcc0
+    INLINEASM &"nop", sideeffect attdialect, clobber, implicit-def dead early-clobber $fcc0
     $r4 = COPY %2
     PseudoRET implicit killed $r4
 

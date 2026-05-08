@@ -8,7 +8,8 @@ declare i8 @llvm.ctlz.i8(i8)
 declare i16 @llvm.ctlz.i16(i16)
 declare i32 @llvm.ctlz.i32(i32)
 declare i42 @llvm.ctlz.i42(i42)  ; Not a power-of-2
-
+declare i32 @llvm.ctlz.i32.p0(i32, i1 immarg)
+declare i32 @llvm.cttz.i32.p0(i32, i1 immarg)
 
 define void @test.ctlz(i8 %a, i16 %b, i32 %c, i42 %d) {
 ; CHECK: @test.ctlz
@@ -214,6 +215,49 @@ define void @test.prefetch.unnamed(ptr %ptr) {
 ; CHECK: @llvm.prefetch.p0(ptr %ptr, i32 0, i32 3, i32 1)
   call void @llvm.prefetch.unnamed(ptr %ptr, i32 0, i32 3, i32 1)
   ret void
+}
+
+define void @test.vector.splice(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @test.vector.splice
+; CHECK: @llvm.vector.splice.left.v4i32(<4 x i32> %a, <4 x i32> %b, i32 3)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 3)
+; CHECK: @llvm.vector.splice.right.v4i32(<4 x i32> %a, <4 x i32> %b, i32 2)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 -2)
+; CHECK: @llvm.vector.splice.left.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  call <4 x i32> @llvm.vector.splice.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  ret void
+}
+
+define i32 @ctlz(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A)
+  ret i32 %for.body.i
+}
+
+define i32 @ctlz_with_isZeroPoison(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A, i1 false)
+  ret i32 %for.body.i
+}
+
+define i32 @cttz(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.cttz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.cttz.i32.p0(i32 %A)
+  ret i32 %for.body.i
+}
+
+define i32 @cttz_with_isZeroPoison(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.cttz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.cttz.i32.p0(i32 %A, i1 false)
+  ret i32 %for.body.i
+}
+
+define <8 x double> @preserve_fmf_on_x86_intrin(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3){
+; CHECK: %1 = fneg fast
+; CHECK: %2 = call fast
+; CHECK: %4 = select fast
+  %res = call fast <8 x double> @llvm.x86.avx512.mask3.vfmsubadd.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 4)
+  ret <8 x double> %res
 }
 
 ; This is part of @test.objectsize(), since llvm.objectsize declaration gets

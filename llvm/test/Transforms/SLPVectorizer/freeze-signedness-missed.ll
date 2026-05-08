@@ -7,8 +7,7 @@ define i32 @test(i1 %.b, i8 %conv18, i32 %k.promoted61) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i1> poison, i1 [[DOTB]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i8>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i1> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i8> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> poison, i8 [[CONV18]], i32 0

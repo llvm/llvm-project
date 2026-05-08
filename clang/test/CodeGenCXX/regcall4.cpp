@@ -25,6 +25,30 @@ int __regcall foo (int i){
 // CHECK-WIN64: define dso_local x86_regcallcc noundef {{.+}}@"?foo@@YxHH@Z"
 // CHECK-WIN32: define dso_local x86_regcallcc noundef {{.+}}@"?foo@@YxHH@Z"
 
+struct DynBase { int x; virtual void v() = 0; };
+struct Dyn : public DynBase { double a; void v() {} };
+void __regcall f1(Dyn a) { a.x = 42; }
+// CHECK-LIN64: define dso_local x86_regcallcc void @_Z14__regcall4__f13Dyn(ptr noundef byval(%struct.Dyn) align 8 %a)
+// CHECK-LIN32: define dso_local x86_regcallcc void @_Z14__regcall4__f13Dyn(ptr inreg noundef dead_on_return %a)
+// CHECK-WIN64: define dso_local x86_regcallcc void @"?f1@@YxXUDyn@@@Z"(ptr noundef dead_on_return %a)
+// CHECK-WIN32: define dso_local x86_regcallcc void @"?f1@@YxXUDyn@@@Z"(ptr inalloca(<{ %struct.Dyn }>) %0)
+
+struct Base { int x; };
+struct Derived : public Base { double a; };
+void __regcall f2(Derived a) { a.x = 42; }
+// CHECK-LIN64: define dso_local x86_regcallcc void @_Z14__regcall4__f27Derived(i32 %a.coerce0, double %a.coerce1)
+// CHECK-LIN32: define dso_local x86_regcallcc void @_Z14__regcall4__f27Derived(ptr noundef byval(%struct.Derived) align 4 %a)
+// CHECK-WIN64: define dso_local x86_regcallcc void @"?f2@@YxXUDerived@@@Z"(ptr noundef dead_on_return %a)
+// CHECK-WIN32: define dso_local x86_regcallcc void @"?f2@@YxXUDerived@@@Z"(ptr noundef byval(%struct.Derived) align 4 %0)
+
+struct Empty {};
+struct NestedEmpty : public Empty { int x; };
+void __regcall f3(NestedEmpty a) { a.x = 42; }
+// CHECK-LIN64: define dso_local x86_regcallcc void @_Z14__regcall4__f311NestedEmpty(i32 %a.coerce)
+// CHECK-LIN32: define dso_local x86_regcallcc void @_Z14__regcall4__f311NestedEmpty(ptr noundef byval(%struct.NestedEmpty) align 4 %a)
+// CHECK-WIN64: define dso_local x86_regcallcc void @"?f3@@YxXUNestedEmpty@@@Z"(i32 %a.coerce)
+// CHECK-WIN32: define dso_local x86_regcallcc void @"?f3@@YxXUNestedEmpty@@@Z"(i32 %a.0)
+
 // used to give a body to test_class functions
 static int x = 0;
 class test_class {

@@ -1147,20 +1147,6 @@ TEST(ParameterHints, CopyOrMoveConstructor) {
   )cpp");
 }
 
-TEST(ParameterHints, AggregateInit) {
-  // FIXME: This is not implemented yet, but it would be a natural
-  // extension to show member names as hints here.
-  assertParameterHints(R"cpp(
-    struct Point {
-      int x;
-      int y;
-    };
-    void bar() {
-      Point p{41, 42};
-    }
-  )cpp");
-}
-
 TEST(ParameterHints, UserDefinedLiteral) {
   // Do not hint call to user-defined literal operator.
   assertParameterHints(R"cpp(
@@ -1820,6 +1806,63 @@ TEST(DesignatorHints, NoCrash) {
     }
   )cpp",
                         ExpectedHint{".b=", "b"});
+}
+
+TEST(DesignatorHints, ParenInit) {
+  assertDesignatorHints(R"cpp(
+    struct S { 
+      int x;
+      int y;
+      int z; 
+    };
+    S s ($x[[1]], $y[[2+2]], $z[[4]]);
+  )cpp",
+                        ExpectedHint{".x=", "x"}, ExpectedHint{".y=", "y"},
+                        ExpectedHint{".z=", "z"});
+}
+
+TEST(DesignatorHints, ParenInitDerived) {
+  assertDesignatorHints(R"cpp(
+    struct S1 {
+      int a;
+      int b;
+    };
+
+    struct S2 : S1 { 
+      int c;
+      int d; 
+    };
+    S2 s2 ({$a[[0]], $b[[0]]}, $c[[0]], $d[[0]]);
+  )cpp",
+                        // ExpectedHint{"S1:", "S1"},
+                        ExpectedHint{".a=", "a"}, ExpectedHint{".b=", "b"},
+                        ExpectedHint{".c=", "c"}, ExpectedHint{".d=", "d"});
+}
+
+TEST(DesignatorHints, ParenInitTemplate) {
+  assertDesignatorHints(R"cpp(
+    template <typename T>
+    struct S1 {
+      int a;
+      int b;
+      T* ptr;
+    };
+
+    struct S2 : S1<S2> {
+      int c;
+      int d;
+      S1<int> mem;
+    };
+
+    int main() {
+      S2 sa ({$a1[[0]], $b1[[0]]}, $c[[0]], $d[[0]], $mem[[S1<int>($a2[[1]], $b2[[2]], $ptr[[nullptr]])]]);
+    }
+  )cpp",
+                        ExpectedHint{".a=", "a1"}, ExpectedHint{".b=", "b1"},
+                        ExpectedHint{".c=", "c"}, ExpectedHint{".d=", "d"},
+                        ExpectedHint{".mem=", "mem"}, ExpectedHint{".a=", "a2"},
+                        ExpectedHint{".b=", "b2"},
+                        ExpectedHint{".ptr=", "ptr"});
 }
 
 TEST(InlayHints, RestrictRange) {

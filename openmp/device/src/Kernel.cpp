@@ -35,13 +35,38 @@ enum OMPTgtExecModeFlags : unsigned char {
 };
 
 static void
-inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
-                    KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
+initializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+                  KernelLaunchEnvironmentTy *KernelLaunchEnvironment) {
   // Order is important here.
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
   state::init(IsSPMD, KernelEnvironment, KernelLaunchEnvironment);
   workshare::init(IsSPMD);
+}
+
+/// Returns true if the current thread should enter the generic state machine.
+static bool shouldEnterStateMachine(bool IsSPMD) {
+#if defined(__NVPTX__) || defined(__AMDGPU__)
+  // This check is important for NVIDIA Pascal (but not Volta) and AMD
+  // GPU. In those cases, a single thread can apparently satisfy a barrier on
+  // behalf of all threads in the same warp. Thus, it would not be safe for
+  // other threads in the main thread's warp to reach the first
+  // synchronize::threads call in genericStateMachine before the main thread
+  // reaches its corresponding synchronize::threads call: that would permit all
+  // active worker threads to proceed before the main thread has actually set
+  // state::ParallelRegionFn, and then they would immediately quit without
+  // doing any work.  mapping::getMaxTeamThreads() does not include any of the
+  // main thread's warp, so none of its threads can ever be active worker
+  // threads.
+  return mapping::getThreadIdInBlock() < mapping::getMaxTeamThreads(IsSPMD);
+#else
+  // On other architectures (e.g., Intel GPUs) all threads must enter the state
+  // machine to satisfy the requirements of workgroup of synchronize::threads
+  // call in genericStateMachine. Otherwise, the workers will wait on the
+  // call to synchronize::threads forever and never proceed.
+  (void)IsSPMD;
+  return true;
+#endif
 }
 
 /// Simple generic state machine for worker threads.
@@ -80,17 +105,17 @@ extern "C" {
 /// \param Ident               Source location identification, can be NULL.
 ///
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
-                           KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
+                           KernelLaunchEnvironmentTy *KernelLaunchEnvironment) {
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
   bool IsSPMD = Configuration.ExecMode & OMP_TGT_EXEC_MODE_SPMD;
   bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
-    inititializeRuntime(/*IsSPMD=*/true, KernelEnvironment,
-                        KernelLaunchEnvironment);
+    initializeRuntime(/*IsSPMD=*/true, KernelEnvironment,
+                      KernelLaunchEnvironment);
     synchronize::threadsAligned(atomic::relaxed);
   } else {
-    inititializeRuntime(/*IsSPMD=*/false, KernelEnvironment,
-                        KernelLaunchEnvironment);
+    initializeRuntime(/*IsSPMD=*/false, KernelEnvironment,
+                      KernelLaunchEnvironment);
     // No need to wait since only the main threads will execute user
     // code and workers will run into a barrier right away.
   }
@@ -108,21 +133,10 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
     return -1;
 
   // Enter the generic state machine if enabled and if this thread can possibly
-  // be an active worker thread.
-  //
-  // The latter check is important for NVIDIA Pascal (but not Volta) and AMD
-  // GPU.  In those cases, a single thread can apparently satisfy a barrier on
-  // behalf of all threads in the same warp.  Thus, it would not be safe for
-  // other threads in the main thread's warp to reach the first
-  // synchronize::threads call in genericStateMachine before the main thread
-  // reaches its corresponding synchronize::threads call: that would permit all
-  // active worker threads to proceed before the main thread has actually set
-  // state::ParallelRegionFn, and then they would immediately quit without
-  // doing any work.  mapping::getMaxTeamThreads() does not include any of the
-  // main thread's warp, so none of its threads can ever be active worker
-  // threads.
-  if (UseGenericStateMachine &&
-      mapping::getThreadIdInBlock() < mapping::getMaxTeamThreads(IsSPMD))
+  // be an active worker thread. The shouldEnterStateMachine check is
+  // architecture-specific and handles platforms where warp-level barrier
+  // forwarding could cause races during state machine initialization.
+  if (UseGenericStateMachine && shouldEnterStateMachine(IsSPMD))
     genericStateMachine(KernelEnvironment.Ident);
 
   return mapping::getThreadIdInBlock();

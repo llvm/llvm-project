@@ -45,4 +45,7 @@
 #define S_IWOTH 00002
 #define S_IXOTH 00001
 
+#define UTIME_NOW ((1L << 30) - 1L)
+#define UTIME_OMIT ((1L << 30) - 2L)
+
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H

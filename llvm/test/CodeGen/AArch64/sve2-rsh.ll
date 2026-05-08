@@ -43,7 +43,7 @@ define <vscale x 2 x i64> @neg_urshr_3(<vscale x 2 x i64> %x, <vscale x 2 x i64>
 define <vscale x 2 x i64> @neg_urshr_4(<vscale x 2 x i64> %x, ptr %p) {
 ; CHECK-LABEL: neg_urshr_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    add z1.d, z1.d, #32 // =0x20
 ; CHECK-NEXT:    lsr z0.d, z1.d, #6
 ; CHECK-NEXT:    str z1, [x0]

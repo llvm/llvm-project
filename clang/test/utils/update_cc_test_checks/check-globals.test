@@ -75,7 +75,6 @@ BOTH-EMPTY:
  BOTH-NEXT:// CHECK: attributes {{.*}}
  BOTH-NEXT://.
  BOTH-NEXT:// CHECK: {{\[\[META0:!\[0-9\]\+\]\]}} = {{.*}}
- BOTH-NEXT:// CHECK: {{\[\[META1:!\[0-9\]\+\]\]}} = {{.*}}
  BOTH-NEXT://.
   BOTH-NOT:{{.}}
 

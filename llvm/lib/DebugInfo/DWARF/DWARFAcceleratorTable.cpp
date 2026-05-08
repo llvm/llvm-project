@@ -32,7 +32,7 @@ static raw_ostream &operator<<(raw_ostream &OS, const Atom &A) {
   StringRef Str = dwarf::AtomTypeString(A.Value);
   if (!Str.empty())
     return OS << Str;
-  return OS << "DW_ATOM_unknown_" << format("%x", A.Value);
+  return OS << "DW_ATOM_unknown_" << formatv("{0:x-}", A.Value);
 }
 } // namespace
 
@@ -185,7 +185,7 @@ bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
     return false; // End of list
 
   DictScope NameScope(W, ("Name@0x" + Twine::utohexstr(NameOffset)).str());
-  W.startLine() << format("String: 0x%08" PRIx64, StringOffset);
+  W.startLine() << formatv("String: {0:x8}", StringOffset);
   W.getOStream() << " \"" << StringSection.getCStr(&StringOffset) << "\"\n";
 
   unsigned NumData = AccelSection.getU32(DataOffset);
@@ -193,7 +193,7 @@ bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
     ListScope DataScope(W, ("Data " + Twine(Data)).str());
     unsigned i = 0;
     for (auto &Atom : AtomForms) {
-      W.startLine() << format("Atom[%d]: ", i);
+      W.startLine() << formatv("Atom[{0}]: ", i);
       if (Atom.extractValue(AccelSection, DataOffset, FormParams)) {
         Atom.dump(W.getOStream());
         if (std::optional<uint64_t> Val = Atom.getAsUnsignedConstant()) {
@@ -321,17 +321,29 @@ void AppleAcceleratorTable::Iterator::prepareNextEntryOrEnd() {
 }
 
 void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
-  std::optional<uint32_t> StrOffset = getTable().readStringOffsetAt(Offset);
+  const AppleAcceleratorTable &Table = getTable();
+  if (Offset == 0) {
+    // Always start looking for strings using a valid offset from the Offsets
+    // table. Entries are not always consecutive.
+    std::optional<uint64_t> OptOffset = Table.readIthOffset(OffsetIdx++);
+    if (!OptOffset)
+      return setToEnd();
+    Offset = *OptOffset;
+  }
+  std::optional<uint32_t> StrOffset = Table.readStringOffsetAt(Offset);
   if (!StrOffset)
     return setToEnd();
 
-  // A zero denotes the end of the collision list. Read the next string
-  // again.
-  if (*StrOffset == 0)
+  // A zero denotes the end of the collision list. Skip to the next offset
+  // in the offsets table by setting the Offset to zero so we will grab the
+  // next offset from the offsets table.
+  if (*StrOffset == 0) {
+    Offset = 0;
     return prepareNextStringOrEnd();
+  }
   Current.StrOffset = *StrOffset;
 
-  std::optional<uint32_t> MaybeNumEntries = getTable().readU32FromAccel(Offset);
+  std::optional<uint32_t> MaybeNumEntries = Table.readU32FromAccel(Offset);
   if (!MaybeNumEntries || *MaybeNumEntries == 0)
     return setToEnd();
   NumEntriesToCome = *MaybeNumEntries;
@@ -339,7 +351,7 @@ void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
 
 AppleAcceleratorTable::Iterator::Iterator(const AppleAcceleratorTable &Table,
                                           bool SetEnd)
-    : Current(Table), Offset(Table.getEntriesBase()), NumEntriesToCome(0) {
+    : Current(Table), Offset(0), NumEntriesToCome(0) {
   if (SetEnd)
     setToEnd();
   else
@@ -847,7 +859,7 @@ void DWARFDebugNames::NameIndex::dumpName(ScopedPrinter &W,
   if (Hash)
     W.printHex("Hash", *Hash);
 
-  W.startLine() << format("String: 0x%08" PRIx64, NTE.getStringOffset());
+  W.startLine() << formatv("String: {0:x8}", NTE.getStringOffset());
   W.getOStream() << " \"" << NTE.getString() << "\"\n";
 
   uint64_t EntryOffset = NTE.getEntryOffset();
@@ -858,7 +870,7 @@ void DWARFDebugNames::NameIndex::dumpName(ScopedPrinter &W,
 void DWARFDebugNames::NameIndex::dumpCUs(ScopedPrinter &W) const {
   ListScope CUScope(W, "Compilation Unit offsets");
   for (uint32_t CU = 0; CU < Hdr.CompUnitCount; ++CU)
-    W.startLine() << format("CU[%u]: 0x%08" PRIx64 "\n", CU, getCUOffset(CU));
+    W.startLine() << formatv("CU[{0}]: {1:x8}\n", CU, getCUOffset(CU));
 }
 
 void DWARFDebugNames::NameIndex::dumpLocalTUs(ScopedPrinter &W) const {
@@ -867,8 +879,8 @@ void DWARFDebugNames::NameIndex::dumpLocalTUs(ScopedPrinter &W) const {
 
   ListScope TUScope(W, "Local Type Unit offsets");
   for (uint32_t TU = 0; TU < Hdr.LocalTypeUnitCount; ++TU)
-    W.startLine() << format("LocalTU[%u]: 0x%08" PRIx64 "\n", TU,
-                            getLocalTUOffset(TU));
+    W.startLine() << formatv("LocalTU[{0}]: {1:x8}\n", TU,
+                             getLocalTUOffset(TU));
 }
 
 void DWARFDebugNames::NameIndex::dumpForeignTUs(ScopedPrinter &W) const {
@@ -877,8 +889,8 @@ void DWARFDebugNames::NameIndex::dumpForeignTUs(ScopedPrinter &W) const {
 
   ListScope TUScope(W, "Foreign Type Unit signatures");
   for (uint32_t TU = 0; TU < Hdr.ForeignTypeUnitCount; ++TU) {
-    W.startLine() << format("ForeignTU[%u]: 0x%016" PRIx64 "\n", TU,
-                            getForeignTUSignature(TU));
+    W.startLine() << formatv("ForeignTU[{0}]: {1:x16}\n", TU,
+                             getForeignTUSignature(TU));
   }
 }
 
@@ -1138,5 +1150,8 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   while (NumLeftAnglesToSkip--)
     StartOfTemplate = Name.find('<', StartOfTemplate) + 1;
 
-  return Name.substr(0, StartOfTemplate - 1);
+  StringRef Result = Name.substr(0, StartOfTemplate - 1);
+  if (Result.empty())
+    return std::nullopt;
+  return Result;
 }

@@ -75,7 +75,6 @@ struct Shape {
 
     SwiftErrorOps.clear();
 
-    FrameTy = nullptr;
     FramePtr = nullptr;
     AllocaSpillBlock = nullptr;
   }
@@ -83,8 +82,7 @@ struct Shape {
   // Scan the function and collect the above intrinsics for later processing
   LLVM_ABI void analyze(Function &F,
                         SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                        SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                        CoroPromiseInst *&CoroPromise);
+                        SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
   // If for some reason, we were not able to find coro.begin, bailout.
   LLVM_ABI void
   invalidateCoroutine(Function &F,
@@ -92,28 +90,12 @@ struct Shape {
   // Perform ABI related initial transformation
   LLVM_ABI void initABI();
   // Remove orphaned and unnecessary intrinsics
-  LLVM_ABI void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                               SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                               CoroPromiseInst *CoroPromise);
-
-  // Field indexes for special fields in the switch lowering.
-  struct SwitchFieldIndex {
-    enum {
-      Resume,
-      Destroy
-
-      // The promise field is always at a fixed offset from the start of
-      // frame given its type, but the index isn't a constant for all
-      // possible frames.
-
-      // The switch-index field isn't at a fixed offset or index, either;
-      // we just work it in where it fits best.
-    };
-  };
+  LLVM_ABI void
+  cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                 SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
 
   coro::ABI ABI;
 
-  StructType *FrameTy = nullptr;
   Align FrameAlign;
   uint64_t FrameSize = 0;
   Value *FramePtr = nullptr;
@@ -123,7 +105,9 @@ struct Shape {
     SwitchInst *ResumeSwitch;
     AllocaInst *PromiseAlloca;
     BasicBlock *ResumeEntryBlock;
-    unsigned IndexField;
+    IntegerType *IndexType;
+    // ResumeOffset always 0;
+    unsigned DestroyOffset;
     unsigned IndexAlign;
     unsigned IndexOffset;
     bool HasFinalSuspend;
@@ -172,15 +156,10 @@ struct Shape {
     return cast<CoroIdAsyncInst>(CoroBegin->getId());
   }
 
-  unsigned getSwitchIndexField() const {
-    assert(ABI == coro::ABI::Switch);
-    assert(FrameTy && "frame type not assigned");
-    return SwitchLowering.IndexField;
-  }
   IntegerType *getIndexType() const {
     assert(ABI == coro::ABI::Switch);
-    assert(FrameTy && "frame type not assigned");
-    return cast<IntegerType>(FrameTy->getElementType(getSwitchIndexField()));
+    assert(SwitchLowering.IndexType && "index type not assigned");
+    return SwitchLowering.IndexType;
   }
   ConstantInt *getIndex(uint64_t Value) const {
     return ConstantInt::get(getIndexType(), Value);
@@ -188,15 +167,15 @@ struct Shape {
 
   PointerType *getSwitchResumePointerType() const {
     assert(ABI == coro::ABI::Switch);
-    assert(FrameTy && "frame type not assigned");
-    return cast<PointerType>(FrameTy->getElementType(SwitchFieldIndex::Resume));
+    assert(CoroBegin && "CoroBegin not assigned");
+    return PointerType::getUnqual(CoroBegin->getContext());
   }
 
   FunctionType *getResumeFunctionType() const {
     switch (ABI) {
     case coro::ABI::Switch:
-      return FunctionType::get(Type::getVoidTy(FrameTy->getContext()),
-                               PointerType::getUnqual(FrameTy->getContext()),
+      return FunctionType::get(Type::getVoidTy(CoroBegin->getContext()),
+                               PointerType::getUnqual(CoroBegin->getContext()),
                                /*IsVarArg=*/false);
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
@@ -274,14 +253,13 @@ struct Shape {
   explicit Shape(Function &F) {
     SmallVector<CoroFrameInst *, 8> CoroFrames;
     SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
-    CoroPromiseInst *CoroPromise = nullptr;
 
-    analyze(F, CoroFrames, UnusedCoroSaves, CoroPromise);
+    analyze(F, CoroFrames, UnusedCoroSaves);
     if (!CoroBegin) {
       invalidateCoroutine(F, CoroFrames);
       return;
     }
-    cleanCoroutine(CoroFrames, UnusedCoroSaves, CoroPromise);
+    cleanCoroutine(CoroFrames, UnusedCoroSaves);
   }
 };
 

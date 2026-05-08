@@ -16,11 +16,10 @@ define void @test(ptr %A) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP3]], 1
@@ -31,10 +30,10 @@ define void @test(ptr %A) {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[STRIDED_VEC]], splat (i32 2)
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP13]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP13]], i64 2
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP13]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP10]], align 4

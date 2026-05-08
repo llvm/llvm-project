@@ -1,0 +1,88 @@
+// RUN: cir-opt %s -cir-cxxabi-lowering -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!rec_Other = !cir.record<struct "Other" padded {!u8i}>
+!rec_Struct = !cir.record<struct "Struct" {!cir.data_member<!s32i in !rec_Other>}>
+// CHECK: !rec_Struct = !cir.record<struct "Struct" {!s64i}>
+
+!dmp = !cir.data_member<!s32i in !rec_Other>
+!dmp_ptr = !cir.ptr<!cir.data_member<!s32i in !rec_Other>>
+
+// cir::GlobalViewAttr
+#global = #cir.global_view<@whatever> : !cir.ptr<!rec_Struct>
+#global2 = #cir.global_view<@whatever> : !cir.ptr<!dmp>
+#global3 = #cir.global_view<@whatever> : !cir.ptr<!dmp_ptr>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+  cir.func @helper() {
+    // cir::ZeroAttr: Needs struct, array, vector, or complex, so no dmp.
+    %zero1 = cir.const #cir.zero : !rec_Struct
+    // CHECK: cir.const #cir.zero : !rec_Struct
+
+    // cir::PoisonAttr
+    %poison1 = cir.const #cir.poison : !rec_Struct
+    // CHECK: cir.const #cir.poison : !rec_Struct
+
+    // cir::UndefAttr
+    %undef1 = cir.const #cir.undef : !rec_Struct
+    // CHECK: cir.const #cir.undef : !rec_Struct
+
+    // cir::ConstPtrAttr
+    %constptr1 = cir.const #cir.ptr<null> : !cir.ptr<!rec_Struct>
+    // CHECK: cir.const #cir.ptr<null> : !cir.ptr<!rec_Struct>
+    %constptr2 = cir.const #cir.ptr<null> : !dmp_ptr
+    // CHECK: cir.const #cir.ptr<null> : !cir.ptr<!s64i>
+
+    // cir::ConstRecordAttr
+    %constrecord = cir.const #cir.const_record<{#cir.data_member<null> : !dmp }> : !rec_Struct
+    // CHECK: cir.const #cir.const_record<{#cir.int<-1> : !s64i}> : !rec_Struct
+
+    // Array, ConstArray, Dictionary, VTable, DynamicCastInfo, and TypeInfo
+    // Attrs don't really allow getting a 'bad' type into them.  We attempt to
+    // transform them anyway, but they'll probably never fail the legalizer.
+
+    cir.trap
+  }
+
+  // cir::TypeAttr: function type is a type attr, so this shows it converting.
+cir.func @TypeAttrs(%arg0 : !rec_Struct, %arg1 : !dmp, %arg2 : !dmp_ptr) -> (!rec_Struct) {
+  // CHECK: cir.func @TypeAttrs(%arg0: !rec_Struct, %arg1: !s64i, %arg2: !cir.ptr<!s64i>) -> !rec_Struct {
+  cir.trap
+}
+
+  // cir::CXXCtorAttr
+cir.func @ctor() special_member<#cir.cxx_ctor<!rec_Struct, default>> {
+// CHECK: cir.func @ctor() special_member<#cir.cxx_ctor<!rec_Struct, default>> {
+  cir.trap
+}
+
+cir.func @ctor2() special_member<#cir.cxx_ctor<!dmp, default>> {
+// CHECK: cir.func @ctor2() special_member<#cir.cxx_ctor<!s64i, default>> {
+  cir.trap
+}
+
+  // cir::CXXDtorAttr
+cir.func @dtor() special_member<#cir.cxx_dtor<!rec_Struct>> {
+// CHECK: cir.func @dtor() special_member<#cir.cxx_dtor<!rec_Struct>> {
+  cir.trap
+}
+
+cir.func @dtor2() special_member<#cir.cxx_dtor<!dmp>> {
+// CHECK: cir.func @dtor2() special_member<#cir.cxx_dtor<!s64i>> {
+  cir.trap
+}
+
+  // cir::CXXAssignAttr
+cir.func @assign() special_member<#cir.cxx_assign<!rec_Struct, move>> {
+// CHECK: cir.func @assign() special_member<#cir.cxx_assign<!rec_Struct, move>> {
+  cir.trap
+}
+
+cir.func @assign2() special_member<#cir.cxx_assign<!dmp, move>> {
+// CHECK: cir.func @assign2() special_member<#cir.cxx_assign<!s64i, move>> {
+  cir.trap
+}
+}

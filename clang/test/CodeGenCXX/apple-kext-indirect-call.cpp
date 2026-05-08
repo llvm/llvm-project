@@ -12,7 +12,7 @@ void FUNC(Base* p) {
   p->Base::abc();
 }
 
-// CHECK: getelementptr inbounds (ptr, ptr @_ZTV4Base, i64 2)
+// CHECK: getelementptr inbounds nuw (i8, ptr @_ZTV4Base, i64 16)
 // CHECK-NOT: call void @_ZNK4Base3abcEv
 
 template<class T>
@@ -37,6 +37,6 @@ void f(SubTempl<int>* t) {
   t->Templ::f();
 }
 
-// CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
+// CHECK: getelementptr inbounds nuw (i8, ptr @_ZTV5TemplIiE, i64 16)
 // CHECK: define internal void @_ZN5TemplIiE1fEv(ptr {{[^,]*}} %this)
 // CHECK: define internal void @_ZN5TemplIiE1gEv(ptr {{[^,]*}} %this)

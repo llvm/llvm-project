@@ -195,22 +195,18 @@ define void @unaligned_memmove7(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV32-FAST-LABEL: unaligned_memmove7:
 ; RV32-FAST:       # %bb.0: # %entry
-; RV32-FAST-NEXT:    lw a2, 0(a1)
-; RV32-FAST-NEXT:    lh a3, 4(a1)
-; RV32-FAST-NEXT:    lbu a1, 6(a1)
-; RV32-FAST-NEXT:    sw a2, 0(a0)
-; RV32-FAST-NEXT:    sh a3, 4(a0)
-; RV32-FAST-NEXT:    sb a1, 6(a0)
+; RV32-FAST-NEXT:    lw a2, 3(a1)
+; RV32-FAST-NEXT:    lw a1, 0(a1)
+; RV32-FAST-NEXT:    sw a2, 3(a0)
+; RV32-FAST-NEXT:    sw a1, 0(a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memmove7:
 ; RV64-FAST:       # %bb.0: # %entry
-; RV64-FAST-NEXT:    lw a2, 0(a1)
-; RV64-FAST-NEXT:    lh a3, 4(a1)
-; RV64-FAST-NEXT:    lbu a1, 6(a1)
-; RV64-FAST-NEXT:    sw a2, 0(a0)
-; RV64-FAST-NEXT:    sh a3, 4(a0)
-; RV64-FAST-NEXT:    sb a1, 6(a0)
+; RV64-FAST-NEXT:    lw a2, 3(a1)
+; RV64-FAST-NEXT:    lw a1, 0(a1)
+; RV64-FAST-NEXT:    sw a2, 3(a0)
+; RV64-FAST-NEXT:    sw a1, 0(a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 7, i1 false)
@@ -289,28 +285,22 @@ define void @unaligned_memmove15(ptr nocapture %dest, ptr %src) nounwind {
 ;
 ; RV32-FAST-LABEL: unaligned_memmove15:
 ; RV32-FAST:       # %bb.0: # %entry
-; RV32-FAST-NEXT:    lbu a2, 14(a1)
+; RV32-FAST-NEXT:    lw a2, 11(a1)
 ; RV32-FAST-NEXT:    lw a3, 0(a1)
 ; RV32-FAST-NEXT:    lw a4, 4(a1)
-; RV32-FAST-NEXT:    lw a5, 8(a1)
-; RV32-FAST-NEXT:    lh a1, 12(a1)
-; RV32-FAST-NEXT:    sb a2, 14(a0)
+; RV32-FAST-NEXT:    lw a1, 8(a1)
+; RV32-FAST-NEXT:    sw a2, 11(a0)
 ; RV32-FAST-NEXT:    sw a3, 0(a0)
 ; RV32-FAST-NEXT:    sw a4, 4(a0)
-; RV32-FAST-NEXT:    sw a5, 8(a0)
-; RV32-FAST-NEXT:    sh a1, 12(a0)
+; RV32-FAST-NEXT:    sw a1, 8(a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memmove15:
 ; RV64-FAST:       # %bb.0: # %entry
-; RV64-FAST-NEXT:    ld a2, 0(a1)
-; RV64-FAST-NEXT:    lw a3, 8(a1)
-; RV64-FAST-NEXT:    lh a4, 12(a1)
-; RV64-FAST-NEXT:    lbu a1, 14(a1)
-; RV64-FAST-NEXT:    sd a2, 0(a0)
-; RV64-FAST-NEXT:    sw a3, 8(a0)
-; RV64-FAST-NEXT:    sh a4, 12(a0)
-; RV64-FAST-NEXT:    sb a1, 14(a0)
+; RV64-FAST-NEXT:    ld a2, 7(a1)
+; RV64-FAST-NEXT:    ld a1, 0(a1)
+; RV64-FAST-NEXT:    sd a2, 7(a0)
+; RV64-FAST-NEXT:    sd a1, 0(a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 15, i1 false)
@@ -353,30 +343,46 @@ entry:
 }
 
 define void @unaligned_memmove31(ptr nocapture %dest, ptr %src) nounwind {
-; RV32-BOTH-LABEL: unaligned_memmove31:
-; RV32-BOTH:       # %bb.0: # %entry
-; RV32-BOTH-NEXT:    li a2, 31
-; RV32-BOTH-NEXT:    tail memmove
+; RV32-LABEL: unaligned_memmove31:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a2, 31
+; RV32-NEXT:    tail memmove
 ;
 ; RV64-LABEL: unaligned_memmove31:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    li a2, 31
 ; RV64-NEXT:    tail memmove
 ;
+; RV32-FAST-LABEL: unaligned_memmove31:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 16(a1)
+; RV32-FAST-NEXT:    lw a3, 20(a1)
+; RV32-FAST-NEXT:    lw a4, 24(a1)
+; RV32-FAST-NEXT:    lw a5, 27(a1)
+; RV32-FAST-NEXT:    lw a6, 0(a1)
+; RV32-FAST-NEXT:    lw a7, 4(a1)
+; RV32-FAST-NEXT:    lw t0, 8(a1)
+; RV32-FAST-NEXT:    lw a1, 12(a1)
+; RV32-FAST-NEXT:    sw a5, 27(a0)
+; RV32-FAST-NEXT:    sw a2, 16(a0)
+; RV32-FAST-NEXT:    sw a3, 20(a0)
+; RV32-FAST-NEXT:    sw a4, 24(a0)
+; RV32-FAST-NEXT:    sw a6, 0(a0)
+; RV32-FAST-NEXT:    sw a7, 4(a0)
+; RV32-FAST-NEXT:    sw t0, 8(a0)
+; RV32-FAST-NEXT:    sw a1, 12(a0)
+; RV32-FAST-NEXT:    ret
+;
 ; RV64-FAST-LABEL: unaligned_memmove31:
 ; RV64-FAST:       # %bb.0: # %entry
-; RV64-FAST-NEXT:    lh a2, 28(a1)
-; RV64-FAST-NEXT:    lbu a3, 30(a1)
-; RV64-FAST-NEXT:    ld a4, 0(a1)
-; RV64-FAST-NEXT:    ld a5, 8(a1)
-; RV64-FAST-NEXT:    ld a6, 16(a1)
-; RV64-FAST-NEXT:    lw a1, 24(a1)
-; RV64-FAST-NEXT:    sh a2, 28(a0)
-; RV64-FAST-NEXT:    sb a3, 30(a0)
-; RV64-FAST-NEXT:    sd a4, 0(a0)
-; RV64-FAST-NEXT:    sd a5, 8(a0)
-; RV64-FAST-NEXT:    sd a6, 16(a0)
-; RV64-FAST-NEXT:    sw a1, 24(a0)
+; RV64-FAST-NEXT:    ld a2, 23(a1)
+; RV64-FAST-NEXT:    ld a3, 0(a1)
+; RV64-FAST-NEXT:    ld a4, 8(a1)
+; RV64-FAST-NEXT:    ld a1, 16(a1)
+; RV64-FAST-NEXT:    sd a2, 23(a0)
+; RV64-FAST-NEXT:    sd a3, 0(a0)
+; RV64-FAST-NEXT:    sd a4, 8(a0)
+; RV64-FAST-NEXT:    sd a1, 16(a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 31, i1 false)
@@ -472,25 +478,41 @@ entry:
 }
 
 define void @aligned_memmove7(ptr nocapture %dest, ptr %src) nounwind {
-; RV32-BOTH-LABEL: aligned_memmove7:
-; RV32-BOTH:       # %bb.0: # %entry
-; RV32-BOTH-NEXT:    lw a2, 0(a1)
-; RV32-BOTH-NEXT:    lh a3, 4(a1)
-; RV32-BOTH-NEXT:    lbu a1, 6(a1)
-; RV32-BOTH-NEXT:    sw a2, 0(a0)
-; RV32-BOTH-NEXT:    sh a3, 4(a0)
-; RV32-BOTH-NEXT:    sb a1, 6(a0)
-; RV32-BOTH-NEXT:    ret
+; RV32-LABEL: aligned_memmove7:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lh a3, 4(a1)
+; RV32-NEXT:    lbu a1, 6(a1)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sh a3, 4(a0)
+; RV32-NEXT:    sb a1, 6(a0)
+; RV32-NEXT:    ret
 ;
-; RV64-BOTH-LABEL: aligned_memmove7:
-; RV64-BOTH:       # %bb.0: # %entry
-; RV64-BOTH-NEXT:    lw a2, 0(a1)
-; RV64-BOTH-NEXT:    lh a3, 4(a1)
-; RV64-BOTH-NEXT:    lbu a1, 6(a1)
-; RV64-BOTH-NEXT:    sw a2, 0(a0)
-; RV64-BOTH-NEXT:    sh a3, 4(a0)
-; RV64-BOTH-NEXT:    sb a1, 6(a0)
-; RV64-BOTH-NEXT:    ret
+; RV64-LABEL: aligned_memmove7:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lw a2, 0(a1)
+; RV64-NEXT:    lh a3, 4(a1)
+; RV64-NEXT:    lbu a1, 6(a1)
+; RV64-NEXT:    sw a2, 0(a0)
+; RV64-NEXT:    sh a3, 4(a0)
+; RV64-NEXT:    sb a1, 6(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: aligned_memmove7:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 3(a1)
+; RV32-FAST-NEXT:    lw a1, 0(a1)
+; RV32-FAST-NEXT:    sw a2, 3(a0)
+; RV32-FAST-NEXT:    sw a1, 0(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: aligned_memmove7:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    lw a2, 3(a1)
+; RV64-FAST-NEXT:    lw a1, 0(a1)
+; RV64-FAST-NEXT:    sw a2, 3(a0)
+; RV64-FAST-NEXT:    sw a1, 0(a0)
+; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memmove.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 7, i1 false)
   ret void
@@ -500,8 +522,8 @@ define void @aligned_memmove8(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: aligned_memmove8:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    lw a2, 0(a1)
-; RV32-BOTH-NEXT:    sw a2, 0(a0)
 ; RV32-BOTH-NEXT:    lw a1, 4(a1)
+; RV32-BOTH-NEXT:    sw a2, 0(a0)
 ; RV32-BOTH-NEXT:    sw a1, 4(a0)
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -516,31 +538,51 @@ entry:
 }
 
 define void @aligned_memmove15(ptr nocapture %dest, ptr %src) nounwind {
-; RV32-BOTH-LABEL: aligned_memmove15:
-; RV32-BOTH:       # %bb.0: # %entry
-; RV32-BOTH-NEXT:    lw a2, 0(a1)
-; RV32-BOTH-NEXT:    lw a3, 8(a1)
-; RV32-BOTH-NEXT:    lh a4, 12(a1)
-; RV32-BOTH-NEXT:    lbu a5, 14(a1)
-; RV32-BOTH-NEXT:    sw a2, 0(a0)
-; RV32-BOTH-NEXT:    lw a1, 4(a1)
-; RV32-BOTH-NEXT:    sw a1, 4(a0)
-; RV32-BOTH-NEXT:    sw a3, 8(a0)
-; RV32-BOTH-NEXT:    sh a4, 12(a0)
-; RV32-BOTH-NEXT:    sb a5, 14(a0)
-; RV32-BOTH-NEXT:    ret
+; RV32-LABEL: aligned_memmove15:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lbu a2, 14(a1)
+; RV32-NEXT:    lw a3, 0(a1)
+; RV32-NEXT:    lw a4, 4(a1)
+; RV32-NEXT:    lw a5, 8(a1)
+; RV32-NEXT:    lh a1, 12(a1)
+; RV32-NEXT:    sb a2, 14(a0)
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a4, 4(a0)
+; RV32-NEXT:    sw a5, 8(a0)
+; RV32-NEXT:    sh a1, 12(a0)
+; RV32-NEXT:    ret
 ;
-; RV64-BOTH-LABEL: aligned_memmove15:
-; RV64-BOTH:       # %bb.0: # %entry
-; RV64-BOTH-NEXT:    ld a2, 0(a1)
-; RV64-BOTH-NEXT:    lw a3, 8(a1)
-; RV64-BOTH-NEXT:    lh a4, 12(a1)
-; RV64-BOTH-NEXT:    lbu a1, 14(a1)
-; RV64-BOTH-NEXT:    sd a2, 0(a0)
-; RV64-BOTH-NEXT:    sw a3, 8(a0)
-; RV64-BOTH-NEXT:    sh a4, 12(a0)
-; RV64-BOTH-NEXT:    sb a1, 14(a0)
-; RV64-BOTH-NEXT:    ret
+; RV64-LABEL: aligned_memmove15:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    ld a2, 0(a1)
+; RV64-NEXT:    lw a3, 8(a1)
+; RV64-NEXT:    lh a4, 12(a1)
+; RV64-NEXT:    lbu a1, 14(a1)
+; RV64-NEXT:    sd a2, 0(a0)
+; RV64-NEXT:    sw a3, 8(a0)
+; RV64-NEXT:    sh a4, 12(a0)
+; RV64-NEXT:    sb a1, 14(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: aligned_memmove15:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 11(a1)
+; RV32-FAST-NEXT:    lw a3, 0(a1)
+; RV32-FAST-NEXT:    lw a4, 4(a1)
+; RV32-FAST-NEXT:    lw a1, 8(a1)
+; RV32-FAST-NEXT:    sw a2, 11(a0)
+; RV32-FAST-NEXT:    sw a3, 0(a0)
+; RV32-FAST-NEXT:    sw a4, 4(a0)
+; RV32-FAST-NEXT:    sw a1, 8(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: aligned_memmove15:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    ld a2, 7(a1)
+; RV64-FAST-NEXT:    ld a1, 0(a1)
+; RV64-FAST-NEXT:    sd a2, 7(a0)
+; RV64-FAST-NEXT:    sd a1, 0(a0)
+; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memmove.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 15, i1 false)
   ret void
@@ -550,12 +592,12 @@ define void @aligned_memmove16(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: aligned_memmove16:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    lw a2, 0(a1)
-; RV32-BOTH-NEXT:    lw a3, 8(a1)
-; RV32-BOTH-NEXT:    sw a2, 0(a0)
-; RV32-BOTH-NEXT:    lw a2, 4(a1)
+; RV32-BOTH-NEXT:    lw a3, 4(a1)
+; RV32-BOTH-NEXT:    lw a4, 8(a1)
 ; RV32-BOTH-NEXT:    lw a1, 12(a1)
-; RV32-BOTH-NEXT:    sw a2, 4(a0)
-; RV32-BOTH-NEXT:    sw a3, 8(a0)
+; RV32-BOTH-NEXT:    sw a2, 0(a0)
+; RV32-BOTH-NEXT:    sw a3, 4(a0)
+; RV32-BOTH-NEXT:    sw a4, 8(a0)
 ; RV32-BOTH-NEXT:    sw a1, 12(a0)
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -572,26 +614,58 @@ entry:
 }
 
 define void @aligned_memmove31(ptr nocapture %dest, ptr %src) nounwind {
-; RV32-BOTH-LABEL: aligned_memmove31:
-; RV32-BOTH:       # %bb.0: # %entry
-; RV32-BOTH-NEXT:    li a2, 31
-; RV32-BOTH-NEXT:    tail memmove
+; RV32-LABEL: aligned_memmove31:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a2, 31
+; RV32-NEXT:    tail memmove
 ;
-; RV64-BOTH-LABEL: aligned_memmove31:
-; RV64-BOTH:       # %bb.0: # %entry
-; RV64-BOTH-NEXT:    lh a2, 28(a1)
-; RV64-BOTH-NEXT:    lbu a3, 30(a1)
-; RV64-BOTH-NEXT:    ld a4, 0(a1)
-; RV64-BOTH-NEXT:    ld a5, 8(a1)
-; RV64-BOTH-NEXT:    ld a6, 16(a1)
-; RV64-BOTH-NEXT:    lw a1, 24(a1)
-; RV64-BOTH-NEXT:    sh a2, 28(a0)
-; RV64-BOTH-NEXT:    sb a3, 30(a0)
-; RV64-BOTH-NEXT:    sd a4, 0(a0)
-; RV64-BOTH-NEXT:    sd a5, 8(a0)
-; RV64-BOTH-NEXT:    sd a6, 16(a0)
-; RV64-BOTH-NEXT:    sw a1, 24(a0)
-; RV64-BOTH-NEXT:    ret
+; RV64-LABEL: aligned_memmove31:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lh a2, 28(a1)
+; RV64-NEXT:    lbu a3, 30(a1)
+; RV64-NEXT:    ld a4, 0(a1)
+; RV64-NEXT:    ld a5, 8(a1)
+; RV64-NEXT:    ld a6, 16(a1)
+; RV64-NEXT:    lw a1, 24(a1)
+; RV64-NEXT:    sh a2, 28(a0)
+; RV64-NEXT:    sb a3, 30(a0)
+; RV64-NEXT:    sd a4, 0(a0)
+; RV64-NEXT:    sd a5, 8(a0)
+; RV64-NEXT:    sd a6, 16(a0)
+; RV64-NEXT:    sw a1, 24(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: aligned_memmove31:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 16(a1)
+; RV32-FAST-NEXT:    lw a3, 20(a1)
+; RV32-FAST-NEXT:    lw a4, 24(a1)
+; RV32-FAST-NEXT:    lw a5, 27(a1)
+; RV32-FAST-NEXT:    lw a6, 0(a1)
+; RV32-FAST-NEXT:    lw a7, 4(a1)
+; RV32-FAST-NEXT:    lw t0, 8(a1)
+; RV32-FAST-NEXT:    lw a1, 12(a1)
+; RV32-FAST-NEXT:    sw a5, 27(a0)
+; RV32-FAST-NEXT:    sw a2, 16(a0)
+; RV32-FAST-NEXT:    sw a3, 20(a0)
+; RV32-FAST-NEXT:    sw a4, 24(a0)
+; RV32-FAST-NEXT:    sw a6, 0(a0)
+; RV32-FAST-NEXT:    sw a7, 4(a0)
+; RV32-FAST-NEXT:    sw t0, 8(a0)
+; RV32-FAST-NEXT:    sw a1, 12(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: aligned_memmove31:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    ld a2, 23(a1)
+; RV64-FAST-NEXT:    ld a3, 0(a1)
+; RV64-FAST-NEXT:    ld a4, 8(a1)
+; RV64-FAST-NEXT:    ld a1, 16(a1)
+; RV64-FAST-NEXT:    sd a2, 23(a0)
+; RV64-FAST-NEXT:    sd a3, 0(a0)
+; RV64-FAST-NEXT:    sd a4, 8(a0)
+; RV64-FAST-NEXT:    sd a1, 16(a0)
+; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memmove.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 31, i1 false)
   ret void
@@ -638,31 +712,160 @@ entry:
 }
 
 define i32 @memmove11_align8(ptr nocapture %dest, ptr %src) {
-; RV32-BOTH-LABEL: memmove11_align8:
-; RV32-BOTH:       # %bb.0: # %entry
-; RV32-BOTH-NEXT:    lw a2, 0(a1)
-; RV32-BOTH-NEXT:    lh a3, 8(a1)
-; RV32-BOTH-NEXT:    lbu a4, 10(a1)
-; RV32-BOTH-NEXT:    sw a2, 0(a0)
-; RV32-BOTH-NEXT:    lw a1, 4(a1)
-; RV32-BOTH-NEXT:    sw a1, 4(a0)
-; RV32-BOTH-NEXT:    sh a3, 8(a0)
-; RV32-BOTH-NEXT:    sb a4, 10(a0)
-; RV32-BOTH-NEXT:    li a0, 0
-; RV32-BOTH-NEXT:    ret
+; RV32-LABEL: memmove11_align8:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a3, 4(a1)
+; RV32-NEXT:    lh a4, 8(a1)
+; RV32-NEXT:    lbu a1, 10(a1)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a3, 4(a0)
+; RV32-NEXT:    sh a4, 8(a0)
+; RV32-NEXT:    sb a1, 10(a0)
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    ret
 ;
-; RV64-BOTH-LABEL: memmove11_align8:
-; RV64-BOTH:       # %bb.0: # %entry
-; RV64-BOTH-NEXT:    ld a2, 0(a1)
-; RV64-BOTH-NEXT:    lh a3, 8(a1)
-; RV64-BOTH-NEXT:    lbu a1, 10(a1)
-; RV64-BOTH-NEXT:    sd a2, 0(a0)
-; RV64-BOTH-NEXT:    sh a3, 8(a0)
-; RV64-BOTH-NEXT:    sb a1, 10(a0)
-; RV64-BOTH-NEXT:    li a0, 0
-; RV64-BOTH-NEXT:    ret
+; RV64-LABEL: memmove11_align8:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    ld a2, 0(a1)
+; RV64-NEXT:    lh a3, 8(a1)
+; RV64-NEXT:    lbu a1, 10(a1)
+; RV64-NEXT:    sd a2, 0(a0)
+; RV64-NEXT:    sh a3, 8(a0)
+; RV64-NEXT:    sb a1, 10(a0)
+; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: memmove11_align8:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 7(a1)
+; RV32-FAST-NEXT:    lw a3, 0(a1)
+; RV32-FAST-NEXT:    lw a1, 4(a1)
+; RV32-FAST-NEXT:    sw a2, 7(a0)
+; RV32-FAST-NEXT:    sw a3, 0(a0)
+; RV32-FAST-NEXT:    sw a1, 4(a0)
+; RV32-FAST-NEXT:    li a0, 0
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: memmove11_align8:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    lw a2, 7(a1)
+; RV64-FAST-NEXT:    ld a1, 0(a1)
+; RV64-FAST-NEXT:    sw a2, 7(a0)
+; RV64-FAST-NEXT:    sd a1, 0(a0)
+; RV64-FAST-NEXT:    li a0, 0
+; RV64-FAST-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 11, i1 false)
   ret i32 0
 }
 
+; ----------------------------------------------------------------------
+; Volatile memmove tests - should NOT use overlapping loads/stores
+; Volatile operations must access each byte exactly once
+
+define void @unaligned_memmove7_volatile(ptr nocapture %dest, ptr %src) nounwind {
+; RV32-LABEL: unaligned_memmove7_volatile:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lbu a2, 0(a1)
+; RV32-NEXT:    lbu a3, 1(a1)
+; RV32-NEXT:    lbu a4, 2(a1)
+; RV32-NEXT:    lbu a5, 3(a1)
+; RV32-NEXT:    lbu a6, 4(a1)
+; RV32-NEXT:    lbu a7, 5(a1)
+; RV32-NEXT:    lbu a1, 6(a1)
+; RV32-NEXT:    sb a1, 6(a0)
+; RV32-NEXT:    sb a7, 5(a0)
+; RV32-NEXT:    sb a6, 4(a0)
+; RV32-NEXT:    sb a5, 3(a0)
+; RV32-NEXT:    sb a4, 2(a0)
+; RV32-NEXT:    sb a3, 1(a0)
+; RV32-NEXT:    sb a2, 0(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: unaligned_memmove7_volatile:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lbu a2, 0(a1)
+; RV64-NEXT:    lbu a3, 1(a1)
+; RV64-NEXT:    lbu a4, 2(a1)
+; RV64-NEXT:    lbu a5, 3(a1)
+; RV64-NEXT:    lbu a6, 4(a1)
+; RV64-NEXT:    lbu a7, 5(a1)
+; RV64-NEXT:    lbu a1, 6(a1)
+; RV64-NEXT:    sb a1, 6(a0)
+; RV64-NEXT:    sb a7, 5(a0)
+; RV64-NEXT:    sb a6, 4(a0)
+; RV64-NEXT:    sb a5, 3(a0)
+; RV64-NEXT:    sb a4, 2(a0)
+; RV64-NEXT:    sb a3, 1(a0)
+; RV64-NEXT:    sb a2, 0(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: unaligned_memmove7_volatile:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 0(a1)
+; RV32-FAST-NEXT:    lh a3, 4(a1)
+; RV32-FAST-NEXT:    lbu a1, 6(a1)
+; RV32-FAST-NEXT:    sb a1, 6(a0)
+; RV32-FAST-NEXT:    sh a3, 4(a0)
+; RV32-FAST-NEXT:    sw a2, 0(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: unaligned_memmove7_volatile:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    lw a2, 0(a1)
+; RV64-FAST-NEXT:    lh a3, 4(a1)
+; RV64-FAST-NEXT:    lbu a1, 6(a1)
+; RV64-FAST-NEXT:    sb a1, 6(a0)
+; RV64-FAST-NEXT:    sh a3, 4(a0)
+; RV64-FAST-NEXT:    sw a2, 0(a0)
+; RV64-FAST-NEXT:    ret
+entry:
+  tail call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 7, i1 true)
+  ret void
+}
+
+define void @aligned_memmove7_volatile(ptr nocapture %dest, ptr %src) nounwind {
+; RV32-LABEL: aligned_memmove7_volatile:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lh a3, 4(a1)
+; RV32-NEXT:    lbu a1, 6(a1)
+; RV32-NEXT:    sb a1, 6(a0)
+; RV32-NEXT:    sh a3, 4(a0)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: aligned_memmove7_volatile:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lw a2, 0(a1)
+; RV64-NEXT:    lh a3, 4(a1)
+; RV64-NEXT:    lbu a1, 6(a1)
+; RV64-NEXT:    sb a1, 6(a0)
+; RV64-NEXT:    sh a3, 4(a0)
+; RV64-NEXT:    sw a2, 0(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: aligned_memmove7_volatile:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 0(a1)
+; RV32-FAST-NEXT:    lh a3, 4(a1)
+; RV32-FAST-NEXT:    lbu a1, 6(a1)
+; RV32-FAST-NEXT:    sb a1, 6(a0)
+; RV32-FAST-NEXT:    sh a3, 4(a0)
+; RV32-FAST-NEXT:    sw a2, 0(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: aligned_memmove7_volatile:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    lw a2, 0(a1)
+; RV64-FAST-NEXT:    lh a3, 4(a1)
+; RV64-FAST-NEXT:    lbu a1, 6(a1)
+; RV64-FAST-NEXT:    sb a1, 6(a0)
+; RV64-FAST-NEXT:    sh a3, 4(a0)
+; RV64-FAST-NEXT:    sw a2, 0(a0)
+; RV64-FAST-NEXT:    ret
+entry:
+  tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 7, i1 true)
+  ret void
+}

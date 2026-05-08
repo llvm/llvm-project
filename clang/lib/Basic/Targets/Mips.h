@@ -23,24 +23,6 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
-  void setDataLayout() {
-    StringRef Layout;
-
-    if (ABI == "o32")
-      Layout = "m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64";
-    else if (ABI == "n32")
-      Layout = "m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
-    else if (ABI == "n64")
-      Layout = "m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
-    else
-      llvm_unreachable("Invalid ABI");
-
-    if (BigEndian)
-      resetDataLayout(("E-" + Layout).str());
-    else
-      resetDataLayout(("e-" + Layout).str());
-  }
-
   std::string CPU;
   bool IsMips16;
   bool IsMicromips;
@@ -392,7 +374,7 @@ public:
       Features.push_back("+fp64");
     }
 
-    setDataLayout();
+    resetDataLayout();
 
     return true;
   }

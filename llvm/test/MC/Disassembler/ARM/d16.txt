@@ -1,5 +1,5 @@
-# RUN: llvm-mc < %s -triple thumbv7-unknown-unknown -disassemble -mattr=+vfp4,-d16 2>&1 | FileCheck %s --check-prefix=D32
-# RUN: llvm-mc < %s -triple thumbv7-unknown-unknown -disassemble -mattr=+vfp4,-d16 2>&1 | FileCheck %s --check-prefix=D32
+# RUN: llvm-mc < %s -triple thumbv7-unknown-unknown -disassemble -mattr=+vfp4,+d32 2>&1 | FileCheck %s --check-prefix=D32
+# RUN: not llvm-mc < %s -triple thumbv7-unknown-unknown -disassemble -mattr=+vfp4,-d32 2>&1 | FileCheck %s --check-prefix=D16
 
 
 # D32: vadd.f64 d1, d2, d16

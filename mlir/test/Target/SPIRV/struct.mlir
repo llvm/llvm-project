@@ -5,7 +5,7 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Addresses, Float64, Int64, Linkage], [SPV_KHR_storage_buffer_storage_class]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Addresses, Float64, Int64, Linkage, VariablePointers], [SPV_KHR_storage_buffer_storage_class, SPV_KHR_variable_pointers]> {
   // CHECK: !spirv.ptr<!spirv.struct<(!spirv.array<128 x f32, stride=4> [0])>, Input>
   spirv.GlobalVariable @var0 bind(0, 1) : !spirv.ptr<!spirv.struct<(!spirv.array<128 x f32, stride=4> [0])>, Input>
 
@@ -39,14 +39,14 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Addresses, Float
   // CHECK: !spirv.ptr<!spirv.struct<test_id, (!spirv.array<128 x f32, stride=4> [0])>, Input>
   spirv.GlobalVariable @id_var0 : !spirv.ptr<!spirv.struct<test_id, (!spirv.array<128 x f32, stride=4> [0])>, Input>
 
-  // CHECK: !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer> [0]), Block>, StorageBuffer>
-  spirv.GlobalVariable @recursive_simple : !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer> [0]), Block>, StorageBuffer>
+  // CHECK: !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer> [0]), Block>, Private>
+  spirv.GlobalVariable @recursive_simple : !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer> [0]), Block>, Private>
 
-  // CHECK: !spirv.ptr<!spirv.struct<a, (!spirv.ptr<!spirv.struct<b, (!spirv.ptr<!spirv.struct<a>, Uniform> [0]), Block>, Uniform> [0]), Block>, Uniform>
-  spirv.GlobalVariable @recursive_2 : !spirv.ptr<!spirv.struct<a, (!spirv.ptr<!spirv.struct<b, (!spirv.ptr<!spirv.struct<a>, Uniform> [0]), Block>, Uniform> [0]), Block>, Uniform>
+  // CHECK: !spirv.ptr<!spirv.struct<a, (!spirv.ptr<!spirv.struct<b, (!spirv.ptr<!spirv.struct<a>, StorageBuffer> [0]), Block>, StorageBuffer> [0]), Block>, Private>
+  spirv.GlobalVariable @recursive_2 : !spirv.ptr<!spirv.struct<a, (!spirv.ptr<!spirv.struct<b, (!spirv.ptr<!spirv.struct<a>, StorageBuffer> [0]), Block>, StorageBuffer> [0]), Block>, Private>
 
-  // CHECK: !spirv.ptr<!spirv.struct<axx, (!spirv.ptr<!spirv.struct<bxx, (!spirv.ptr<!spirv.struct<axx>, Uniform> [0], !spirv.ptr<!spirv.struct<bxx>, Uniform> [8]), Block>, Uniform> [0]), Block>, Uniform>
-  spirv.GlobalVariable @recursive_3 : !spirv.ptr<!spirv.struct<axx, (!spirv.ptr<!spirv.struct<bxx, (!spirv.ptr<!spirv.struct<axx>, Uniform> [0], !spirv.ptr<!spirv.struct<bxx>, Uniform> [8]), Block>, Uniform> [0]), Block>, Uniform>
+  // CHECK: !spirv.ptr<!spirv.struct<axx, (!spirv.ptr<!spirv.struct<bxx, (!spirv.ptr<!spirv.struct<axx>, StorageBuffer> [0], !spirv.ptr<!spirv.struct<bxx>, StorageBuffer> [8]), Block>, StorageBuffer> [0]), Block>, Private>
+  spirv.GlobalVariable @recursive_3 : !spirv.ptr<!spirv.struct<axx, (!spirv.ptr<!spirv.struct<bxx, (!spirv.ptr<!spirv.struct<axx>, StorageBuffer> [0], !spirv.ptr<!spirv.struct<bxx>, StorageBuffer> [8]), Block>, StorageBuffer> [0]), Block>, Private>
 
   // CHECK: spirv.GlobalVariable @block : !spirv.ptr<!spirv.struct<vert, (vector<4xf32> [BuiltIn=0], f32 [BuiltIn=1]), Block>, Output>
   spirv.GlobalVariable @block : !spirv.ptr<!spirv.struct<vert, (vector<4xf32> [BuiltIn=0], f32 [BuiltIn=1]), Block>, Output>

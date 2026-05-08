@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float16 coshf16(float16 x) {
+LIBC_INLINE constexpr float16 coshf16(float16 x) {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr fputil::ExceptValues<float16, 9> COSHF16_EXCEPTS_POS = {{

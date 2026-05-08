@@ -36,7 +36,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI system_error(const system_error&) _NOEXCEPT = default;
   ~system_error() _NOEXCEPT override;
 
-  _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
 };
 
 // __ev is expected to be an error in the generic_category domain (e.g. from

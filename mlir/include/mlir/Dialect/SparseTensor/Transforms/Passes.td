@@ -257,7 +257,7 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
     ```mlir
       Before:
         func.func @foo(%arg0: tensor<8x8xf32, #CSR>) -> memref<?xindex> {
-          %0 = sparse_tensor.pointers %arg0 {dimension = 1 : index}
+          %0 = sparse_tensor.positions %arg0 {level = 1 : index}
              : tensor<8x8xf32, #CSR> to memref<?xindex>
           return %0 : memref<?xindex>
         }
@@ -265,7 +265,7 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
       After:
         func.func @foo(%arg0: !llvm.ptr) -> memref<?xindex> {
           %c1 = arith.constant 1 : index
-          %0 = call @sparsePointers0(%arg0, %c1)
+          %0 = call @sparsePositions0(%arg0, %c1)
              : (!llvm.ptr, index) -> memref<?xindex>
           return %0 : memref<?xindex>
         }
@@ -300,18 +300,21 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
     ```mlir
       Before:
         func.func @foo(%arg0: tensor<8x8xf32, #CSR>) -> memref<?xindex> {
-          %0 = sparse_tensor.pointers %arg0 {dimension = 1 : index}
+          %0 = sparse_tensor.positions %arg0 {level = 1 : index}
              : tensor<8x8xf32, #CSR> to memref<?xindex>
           return %0 : memref<?xindex>
         }
 
       After:
-        func.func @foo(%arg0: memref<2xindex>,
-                       %arg1: memref<3xindex>,
-                       %arg2: memref<?xindex>,
-                       %arg3: memref<?xindex>,
-                       %arg4: memref<?xf32>) -> memref<?xindex> {
-          return %arg2 : memref<?xindex>
+        func.func @foo(%arg0: memref<?xindex>,
+                       %arg1: memref<?xindex>,
+                       %arg2: memref<?xf32>,
+                       %arg3: !sparse_tensor.storage_specifier<#sparse>) -> memref<?xindex> {
+          %0 = sparse_tensor.storage_specifier.get %arg3 pos_mem_sz at 1
+             : !sparse_tensor.storage_specifier<#sparse>
+          %subview = memref.subview %arg0[0] [%0] [1]
+                   : memref<?xindex> to memref<?xindex>
+          return %subview : memref<?xindex>
         }
     ```
   }];

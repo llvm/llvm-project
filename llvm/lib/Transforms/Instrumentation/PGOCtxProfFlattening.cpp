@@ -152,7 +152,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
   // Note: in such cases we leave as-is any other profile info (if present -
   // e.g. synthetic weights, etc) because it wouldn't interfere with the
   // contextual - based one (which would be in other modules)
-  auto OnExit = llvm::make_scope_exit([&]() {
+  llvm::scope_exit OnExit([&]() {
     if (IsPreThinlink)
       return;
     for (auto &F : M)

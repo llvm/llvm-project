@@ -511,3 +511,78 @@ func.func @test_l8_l4(%arg0: !fir.logical<8>) -> !fir.logical<4> {
   %0 = fir.convert %arg0 : (!fir.logical<8>) -> !fir.logical<4>
   return %0 : !fir.logical<4>
 }
+// -----
+// CHECK-LABEL: @test_logical_and_l4
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : i32
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : i32
+// CHECK: [[RES:%[0-9]*]] = llvm.and [[A]], [[B]] : i1
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : i1 to i32
+// CHECK: llvm.return [[EXT]] : i32
+func.func @test_logical_and_l4(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.logical_and %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+// -----
+// CHECK-LABEL: @test_logical_or_l4
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : i32
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : i32
+// CHECK: [[RES:%[0-9]*]] = llvm.or [[A]], [[B]] : i1
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : i1 to i32
+// CHECK: llvm.return [[EXT]] : i32
+func.func @test_logical_or_l4(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.logical_or %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+// -----
+// CHECK-LABEL: @test_eqv_l4
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : i32
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : i32
+// CHECK: [[RES:%[0-9]*]] = llvm.icmp "eq" [[A]], [[B]] : i1
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : i1 to i32
+// CHECK: llvm.return [[EXT]] : i32
+func.func @test_eqv_l4(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.eqv %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+// -----
+// CHECK-LABEL: @test_neqv_l4
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : i32
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : i32
+// CHECK: [[RES:%[0-9]*]] = llvm.icmp "ne" [[A]], [[B]] : i1
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : i1 to i32
+// CHECK: llvm.return [[EXT]] : i32
+func.func @test_neqv_l4(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.logical<4> {
+  %0 = fir.neqv %arg0, %arg1 : !fir.logical<4>
+  return %0 : !fir.logical<4>
+}
+// -----
+// Test on i1 type (from comparisons)
+// CHECK-LABEL: @test_logical_and_i1
+// CHECK: [[RES:%[0-9]*]] = llvm.and %arg0, %arg1 : i1
+// CHECK: llvm.return [[RES]] : i1
+func.func @test_logical_and_i1(%arg0: i1, %arg1: i1) -> i1 {
+  %0 = fir.logical_and %arg0, %arg1 : i1
+  return %0 : i1
+}
+// -----
+// Test on i32 type
+// CHECK-LABEL: @test_logical_and_i32
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : i32
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : i32
+// CHECK: [[RES:%[0-9]*]] = llvm.and [[A]], [[B]] : i1
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : i1 to i32
+// CHECK: llvm.return [[EXT]] : i32
+func.func @test_logical_and_i32(%arg0: i32, %arg1: i32) -> i32 {
+  %0 = fir.logical_and %arg0, %arg1 : i32
+  return %0 : i32
+}

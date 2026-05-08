@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 // So if we scale x up by 2^1022, we can use
 //   double(1.0 + 2^1022 * x) - 1.0 to test how x is rounded in denormal range.
 template <bool SKIP_ZIV_TEST = false>
-LIBC_INLINE static constexpr cpp::optional<double>
+LIBC_INLINE constexpr cpp::optional<double>
 ziv_test_denorm(int hi, double mid, double lo, double err) {
   using FPBits = typename fputil::FPBits<double>;
 

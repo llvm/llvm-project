@@ -10,8 +10,8 @@ define fastcc i8 @allocno_reload_assign(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p0.s
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uzp1 p0.s, p1.s, p0.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p0.h
 ; CHECK-NEXT:    uzp1 p8.b, p0.b, p0.b
 ; CHECK-NEXT:    mov z0.b, p8/z, #1 // =0x1

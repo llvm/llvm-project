@@ -511,9 +511,7 @@ public:
     /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;
-      raw_string_ostream OS(Name);
-      OS << *this;
-      OS.flush();
+      raw_string_ostream(Name) << *this;
       return Name;
     }
   };
@@ -652,9 +650,7 @@ public:
     /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;
-      raw_string_ostream OS(Name);
-      OS << *this;
-      OS.flush();
+      raw_string_ostream(Name) << *this;
       return Name;
     }
 

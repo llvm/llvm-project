@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
@@ -67,7 +68,7 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   if (V->isAllOnesValue())
     return Constant::getAllOnesValue(DestTy);
 
-  // Handle ConstantInt -> ConstantFP
+  // Handle ConstantInt -> Constant{Byte, FP}
   if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
@@ -75,19 +76,52 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
       return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
 
+    if (DestTy->isByteOrByteVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantByte::get(DestTy, CI->getValue());
+
     // Make sure dest type is compatible with the folded fp constant.
     // See note below regarding the PPC_FP128 restriction.
-    if (!DestTy->isFPOrFPVectorTy() || DestTy->isPPC_FP128Ty() ||
-        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
-      return nullptr;
+    if (DestTy->isFPOrFPVectorTy() && !DestTy->isPPC_FP128Ty() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantFP::get(
+          DestTy,
+          APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
 
-    return ConstantFP::get(
-        DestTy,
-        APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
+    return nullptr;
   }
 
-  // Handle ConstantFP -> ConstantInt
+  // Handle ConstantByte -> Constant{Int, FP}
+  if (ConstantByte *CB = dyn_cast<ConstantByte>(V)) {
+    // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
+    // This allows for other simplifications (although some of them
+    // can only be handled by Analysis/ConstantFolding.cpp).
+    if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
+      return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
+
+    if (DestTy->isIntOrIntVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantInt::get(DestTy, CB->getValue());
+
+    // Make sure dest type is compatible with the folded fp constant.
+    // See note below regarding the PPC_FP128 restriction.
+    if (DestTy->isFPOrFPVectorTy() && !DestTy->isPPC_FP128Ty() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantFP::get(
+          DestTy,
+          APFloat(DestTy->getScalarType()->getFltSemantics(), CB->getValue()));
+
+    return nullptr;
+  }
+
+  // Handle ConstantFP -> Constant{Int, Byte, FP}
   if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
+    // Handle half <-> bfloat
+    if (!isa<VectorType>(SrcTy) && DestTy->isFloatingPointTy()) {
+      APInt Val = FP->getValueAPF().bitcastToAPInt();
+      APFloat ResultFP(DestTy->getFltSemantics(), Val);
+      return ConstantFP::get(DestTy->getContext(), ResultFP);
+    }
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
@@ -104,11 +138,16 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
       return nullptr;
 
     // Make sure dest type is compatible with the folded integer constant.
-    if (!DestTy->isIntOrIntVectorTy() ||
-        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
-      return nullptr;
+    if (DestTy->isIntOrIntVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantInt::get(DestTy, FP->getValueAPF().bitcastToAPInt());
 
-    return ConstantInt::get(DestTy, FP->getValueAPF().bitcastToAPInt());
+    // Make sure dest type is compatible with the folded byte constant.
+    if (DestTy->isByteOrByteVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantByte::get(DestTy, FP->getValueAPF().bitcastToAPInt());
+
+    return nullptr;
   }
 
   return nullptr;
@@ -446,13 +485,13 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   Type *EltTy = V1VTy->getElementType();
 
   // Poison shuffle mask -> poison value.
-  if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
+  if (all_of(Mask, equal_to(PoisonMaskElem))) {
     return PoisonValue::get(VectorType::get(EltTy, MaskEltCount));
   }
 
   // If the mask is all zeros this is a splat, no need to go through all
   // elements.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     Type *Ty = IntegerType::get(V1->getContext(), 32);
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));

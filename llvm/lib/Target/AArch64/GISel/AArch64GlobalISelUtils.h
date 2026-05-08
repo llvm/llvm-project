@@ -51,7 +51,8 @@ bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
 /// \note This only applies on Darwin.
 ///
 /// \returns true if \p MI was replaced with a G_BZERO.
-bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder, bool MinSize);
+bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                  const LibcallLoweringInfo &Libcalls, bool MinSize);
 
 /// Analyze a ptrauth discriminator value to try to find the constant integer
 /// and address parts, cracking a ptrauth_blend intrinsic if there is one.

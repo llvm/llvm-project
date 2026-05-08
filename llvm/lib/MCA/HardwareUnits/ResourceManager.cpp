@@ -62,16 +62,19 @@ void DefaultResourceStrategy::used(uint64_t Mask) {
   RemovedFromNextInSequence = 0;
 }
 
+static uint64_t computeResourceSizeMask(uint64_t Mask, bool IsAGroup,
+                                        unsigned NumUnits) {
+  if (IsAGroup)
+    return Mask ^ (1ULL << getResourceStateIndex(Mask));
+  return (1ULL << NumUnits) - 1;
+}
+
 ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
                              uint64_t Mask)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
-      BufferSize(Desc.BufferSize), IsAGroup(llvm::popcount(ResourceMask) > 1) {
-  if (IsAGroup) {
-    ResourceSizeMask =
-        ResourceMask ^ 1ULL << getResourceStateIndex(ResourceMask);
-  } else {
-    ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
-  }
+      IsAGroup(llvm::popcount(ResourceMask) > 1),
+      ResourceSizeMask(computeResourceSizeMask(Mask, IsAGroup, Desc.NumUnits)),
+      BufferSize(Desc.BufferSize) {
   ReadyMask = ResourceSizeMask;
   AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
   Unavailable = false;
@@ -131,6 +134,24 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
         std::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
     Strategies[Index] = getStrategyFor(*Resources[Index]);
   }
+
+  // Print static resource information on debug mode
+  LLVM_DEBUG({
+    dbgs() << "\nProcessor resources:\n";
+    // Print InvalidUnit first to be consistent with scheduling model indexing
+    // schema
+    const MCProcResourceDesc &InvalidUnit = *SM.getProcResource(0);
+    dbgs() << "[ 0]  - " << format_hex(ProcResID2Mask[0], 16) << " - "
+           << InvalidUnit.Name << "\n";
+    for (unsigned I = 0, E = Resources.size(); I < E; ++I) {
+      const ResourceState &RS = *Resources[I];
+      const unsigned ProcResID = RS.getProcResourceID();
+      const MCProcResourceDesc &Desc = *SM.getProcResource(ProcResID);
+      dbgs() << '[' << format_decimal(ProcResID, 2) << "] "
+             << " - " << format_hex(RS.getResourceMask(), 16) << " - "
+             << Desc.Name << " (BufferSize=" << RS.getBufferSize() << ")\n";
+    }
+  });
 
   for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     uint64_t Mask = ProcResID2Mask[I];

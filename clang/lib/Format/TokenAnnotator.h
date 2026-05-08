@@ -247,8 +247,7 @@ private:
   bool spaceRequiredBefore(const AnnotatedLine &Line,
                            const FormatToken &Right) const;
 
-  bool mustBreakBefore(const AnnotatedLine &Line,
-                       const FormatToken &Right) const;
+  bool mustBreakBefore(AnnotatedLine &Line, const FormatToken &Right) const;
 
   bool canBreakBefore(const AnnotatedLine &Line,
                       const FormatToken &Right) const;

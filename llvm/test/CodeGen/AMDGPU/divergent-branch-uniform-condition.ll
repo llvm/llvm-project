@@ -67,7 +67,7 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-NEXT:    v_sqrt_f32_e32 v1, v0
 ; ISA-NEXT:  ; %bb.9: ; %endloop
 ; ISA-NEXT:    s_or_b64 exec, exec, s[0:1]
-; ISA-NEXT:    exp mrt0 v1, v1, v1, v1 done vm
+; ISA-NEXT:    exp mrt0, v1, v1, v1, v1 done vm
 ; ISA-NEXT:    s_endpgm
 start:
   %v0 = call float @llvm.amdgcn.interp.p1(float %1, i32 0, i32 0, i32 %0)
@@ -162,7 +162,7 @@ define amdgpu_ps void @i1_copy_assert(i1 %v4) {
 ; ISA-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; ISA-NEXT:    v_mov_b32_e32 v0, 0
 ; ISA-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s[2:3]
-; ISA-NEXT:    exp mrt0 off, off, off, off
+; ISA-NEXT:    exp mrt0, off, off, off, off
 ; ISA-NEXT:    s_endpgm
 start:
   br label %loop

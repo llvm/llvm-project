@@ -34,6 +34,7 @@ class Error;
 class Module;
 class ModuleSummaryIndex;
 class raw_pwrite_stream;
+class PassPlugin;
 
 namespace lto {
 
@@ -50,7 +51,12 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
-  std::vector<std::string> PassPlugins;
+  // LTO will register both lists of plugins, but
+  // if an LTO client has already loaded a set of plugins,
+  // they should register them via LoadedPassPlugins.
+  // LoadedPassPlugins is currently used by distributed thin-lto.
+  std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;

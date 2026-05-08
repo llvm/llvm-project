@@ -15,12 +15,9 @@
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
 // structural checks and semantic analysis.
-//   1. move structured DoConstruct and OmpEndLoopDirective into
-//      OpenMPLoopConstruct. Compilation will not proceed in case of errors
-//      after this pass.
-//   2. Associate declarative OMP allocation directives with their
+//   1. Associate declarative OMP allocation directives with their
 //      respective executable allocation directive
-//   3. TBD
+//   2. TBD
 namespace Fortran::semantics {
 
 using namespace parser::literals;

@@ -93,12 +93,12 @@ body:             |
     ; RV64I-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[LSHR2]], [[ADD1]]
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 3855
     ; RV64I-NEXT: [[AND6:%[0-9]+]]:_(s64) = G_AND [[ADD2]], [[C7]]
-    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 257
-    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND6]], [[C8]]
-    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[MUL]], [[C2]]
-    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND7]], [[C9]](s64)
-    ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
+    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND6]], [[C8]](s64)
+    ; RV64I-NEXT: [[ADD3:%[0-9]+]]:_(s64) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[ADD3]], [[C9]]
+    ; RV64I-NEXT: $x10 = COPY [[AND7]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cttz_i16
@@ -317,12 +317,12 @@ body:             |
     ; RV64I-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[LSHR2]], [[ADD1]]
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 3855
     ; RV64I-NEXT: [[AND6:%[0-9]+]]:_(s64) = G_AND [[ADD2]], [[C7]]
-    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 257
-    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND6]], [[C8]]
-    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[MUL]], [[C2]]
-    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND7]], [[C9]](s64)
-    ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
+    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND6]], [[C8]](s64)
+    ; RV64I-NEXT: [[ADD3:%[0-9]+]]:_(s64) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[ADD3]], [[C9]]
+    ; RV64I-NEXT: $x10 = COPY [[AND7]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cttz_zero_undef_i16

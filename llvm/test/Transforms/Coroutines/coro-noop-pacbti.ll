@@ -1,5 +1,5 @@
 
-; RUN: opt < %s -S -passes=coro-early | FileCheck %s
+; RUN: opt < %s -S -passes=coro-cleanup | FileCheck %s
 
 ; CHECK:      define internal fastcc void @__NoopCoro_ResumeDestroy(ptr %0) #1 {
 ; CHECK-NEXT: entry:

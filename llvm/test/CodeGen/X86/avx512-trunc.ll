@@ -1074,3 +1074,122 @@ define void @ssat_trunc_db_1024_mem(<32 x i32> %i, ptr %p) {
   ret void
 }
 
+; Test load-trunc-store pattern optimization for v4i16 -> v4i8
+define void @test_trunc_v4i16_v4i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v4i16_v4i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vmovd %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v4i16_v4i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; SKX-NEXT:    vpmovdb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <4 x i16>, ptr %src
+  %2 = trunc <4 x i16> %1 to <4 x i8>
+  store <4 x i8> %2, ptr %dst
+  ret void
+}
+
+define void @test_truncs_v4i16_v4i8(ptr %dst, ptr %src) {
+; ALL-LABEL: test_truncs_v4i16_v4i8:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovd %xmm0, (%rdi)
+; ALL-NEXT:    retq
+  %1 = load <4 x i16>, ptr %src
+  %2 = icmp sgt <4 x i16> %1, <i16 -128, i16 -128, i16 -128, i16 -128>
+  %3 = select <4 x i1> %2, <4 x i16> %1, <4 x i16> <i16 -128, i16 -128, i16 -128, i16 -128>
+  %4 = icmp slt <4 x i16> %3, <i16 127, i16 127, i16 127, i16 127>
+  %5 = select <4 x i1> %4, <4 x i16> %3, <4 x i16> <i16 127, i16 127, i16 127, i16 127>
+  %6 = trunc <4 x i16> %5 to <4 x i8>
+  store <4 x i8> %6, ptr %dst
+  ret void
+}
+
+define void @test_truncus_v4i16_v4i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_truncus_v4i16_v4i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovd %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_truncus_v4i16_v4i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; SKX-NEXT:    vpmovuswb %xmm0, %xmm0
+; SKX-NEXT:    vmovd %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <4 x i16>, ptr %src
+  %2 = icmp ult <4 x i16> %1, <i16 255, i16 255, i16 255, i16 255>
+  %3 = select <4 x i1> %2, <4 x i16> %1, <4 x i16> <i16 255, i16 255, i16 255, i16 255>
+  %4 = trunc <4 x i16> %3 to <4 x i8>
+  store <4 x i8> %4, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i32 -> v2i8
+define void @test_trunc_v2i32_v2i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i32_v2i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i32_v2i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; SKX-NEXT:    vpmovqb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i32>, ptr %src
+  %2 = trunc <2 x i32> %1 to <2 x i8>
+  store <2 x i8> %2, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i32 -> v2i16
+define void @test_trunc_v2i32_v2i16(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i32_v2i16:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; KNL-NEXT:    vmovd %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i32_v2i16:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; SKX-NEXT:    vpmovqw %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i32>, ptr %src
+  %2 = trunc <2 x i32> %1 to <2 x i16>
+  store <2 x i16> %2, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i16 -> v2i8
+define void @test_trunc_v2i16_v2i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i16_v2i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i16_v2i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; SKX-NEXT:    vpmovqb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i16>, ptr %src
+  %2 = trunc <2 x i16> %1 to <2 x i8>
+  store <2 x i8> %2, ptr %dst
+  ret void
+}

@@ -31,6 +31,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 usage = "git clang-format [OPTIONS] [<commit>] [<commit>|--staged] [--] [<file>...]"
 
@@ -57,6 +58,11 @@ The following git-config settings set the default of the corresponding option:
   clangFormat.commit
   clangFormat.extensions
   clangFormat.style
+
+When running inside a pre-commit CI environment (i.e., no commits are given
+on the command line and the PRE_COMMIT_FROM_REF and PRE_COMMIT_TO_REF
+environment variables are set), the diff range is taken from those variables
+and --diff is implied.
 """
 
 # Name of the temporary index file in which save the output of clang-format.
@@ -221,6 +227,16 @@ def main():
         help="if specified, only consider differences in these files",
     )
     opts = p.parse_args(argv)
+
+    # When no commits are given explicitly and the pre-commit CI framework's
+    # environment variables are set, use them to define the diff range.
+    if not opts.args and not dash_dash:
+        from_ref = os.environ.get('PRE_COMMIT_FROM_REF')
+        to_ref = os.environ.get('PRE_COMMIT_TO_REF')
+        if from_ref and to_ref:
+            opts.args = [from_ref, to_ref]
+            if not opts.diff and not opts.diffstat:
+                opts.diff = True
 
     opts.verbose -= opts.quiet
     del opts.quiet
@@ -707,7 +723,10 @@ def create_temporary_index(tree=None):
     If `tree` is not None, use that as the tree to read in.  Otherwise, an
     empty index is created."""
     gitdir = run("git", "rev-parse", "--git-dir")
-    path = os.path.join(gitdir, temp_index_basename)
+    # Use a unique filename to avoid stale .lock files when concurrent git
+    # operations (e.g. pre-commit hooks) race with this process.
+    fd, path = tempfile.mkstemp(prefix=temp_index_basename + "-", dir=gitdir)
+    os.close(fd)
     if tree is None:
         tree = "--empty"
     run("git", "read-tree", "--index-output=" + path, tree)

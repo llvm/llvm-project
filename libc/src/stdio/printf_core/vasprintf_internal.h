@@ -18,10 +18,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
-  WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> *wb =
-      reinterpret_cast<
-          WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> *>(target);
+LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str,
+                                     ResizingBuffer *wb) {
   size_t new_size = new_str.size() + wb->buff_cur;
   const bool isBuffOnStack = (wb->buff == wb->init_buff);
   char *new_buff = static_cast<char *>(
@@ -43,15 +41,21 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 200;
 
+template <bool use_modular = false>
 LIBC_INLINE ErrorOr<size_t> vasprintf_internal(char **ret,
                                                const char *__restrict format,
                                                internal::ArgList args) {
   char init_buff_on_stack[DEFAULT_BUFFER_SIZE];
-  printf_core::WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> wb(
-      init_buff_on_stack, DEFAULT_BUFFER_SIZE, resize_overflow_hook);
+  printf_core::ResizingBuffer wb(init_buff_on_stack, DEFAULT_BUFFER_SIZE,
+                                 resize_overflow_hook);
   printf_core::Writer writer(wb);
 
-  auto ret_val = printf_core::printf_main(&writer, format, args);
+  auto ret_val = [&] {
+    if constexpr (use_modular)
+      return printf_core::printf_main_modular(&writer, format, args);
+    else
+      return printf_core::printf_main(&writer, format, args);
+  }();
   if (!ret_val.has_value()) {
     *ret = nullptr;
     return ret_val;

@@ -11,21 +11,21 @@
 ; CHECK-DAG: OpCapability Float16Buffer
 ; CHECK-DAG: OpCapability Float16
 
-define spir_kernel void @test(<4 x float> addrspace(1)* %p, half addrspace(1)* %f) {
+define spir_kernel void @test(ptr addrspace(1) %p, ptr addrspace(1) %f) {
 entry:
-  %p.addr = alloca <4 x float> addrspace(1)*, align 8
-  %f.addr = alloca half addrspace(1)*, align 8
+  %p.addr = alloca ptr addrspace(1), align 8
+  %f.addr = alloca ptr addrspace(1), align 8
   %data = alloca <4 x float>, align 16
-  store <4 x float> addrspace(1)* %p, <4 x float> addrspace(1)** %p.addr, align 8
-  store half addrspace(1)* %f, half addrspace(1)** %f.addr, align 8
-  %0 = load <4 x float> addrspace(1)*, <4 x float> addrspace(1)** %p.addr, align 8
-  %arrayidx = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %0, i64 0
-  %1 = load <4 x float>, <4 x float> addrspace(1)* %arrayidx, align 16
-  store <4 x float> %1, <4 x float>* %data, align 16
-  %2 = load <4 x float>, <4 x float>* %data, align 16
-  %3 = load half addrspace(1)*, half addrspace(1)** %f.addr, align 8
-  call spir_func void @_Z17vstorea_half4_rtpDv4_fmPU3AS1Dh(<4 x float> %2, i64 0, half addrspace(1)* %3)
+  store ptr addrspace(1) %p, ptr %p.addr, align 8
+  store ptr addrspace(1) %f, ptr %f.addr, align 8
+  %0 = load ptr addrspace(1), ptr %p.addr, align 8
+  %arrayidx = getelementptr inbounds <4 x float>, ptr addrspace(1) %0, i64 0
+  %1 = load <4 x float>, ptr addrspace(1) %arrayidx, align 16
+  store <4 x float> %1, ptr %data, align 16
+  %2 = load <4 x float>, ptr %data, align 16
+  %3 = load ptr addrspace(1), ptr %f.addr, align 8
+  call spir_func void @_Z17vstorea_half4_rtpDv4_fmPU3AS1Dh(<4 x float> %2, i64 0, ptr addrspace(1) %3)
   ret void
 }
 
-declare spir_func void @_Z17vstorea_half4_rtpDv4_fmPU3AS1Dh(<4 x float>, i64, half addrspace(1)*)
+declare spir_func void @_Z17vstorea_half4_rtpDv4_fmPU3AS1Dh(<4 x float>, i64, ptr addrspace(1))

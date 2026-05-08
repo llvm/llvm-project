@@ -82,7 +82,7 @@ std::optional<PromotableAllocationOpInterface>
 memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
                                           Value defaultValue,
                                           OpBuilder &builder) {
-  if (defaultValue.use_empty())
+  if (defaultValue && defaultValue.use_empty())
     defaultValue.getDefiningOp()->erase();
   this->erase();
   return std::nullopt;

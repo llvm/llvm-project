@@ -325,15 +325,8 @@ define <2 x i16> @fcvtzu_v2f32_v2i16(<2 x float> %op1) vscale_range(2,0) #0 {
 define <4 x i16> @fcvtzu_v4f32_v4i16(<4 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v4f32_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu v1.4s, v0.4s
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %res = fptoui <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res
@@ -815,8 +808,7 @@ define void @fcvtzu_v32f64_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @fcvtzu_v1f64_v1i64(<1 x double> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v1f64_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzu d0, d0
 ; CHECK-NEXT:    ret
   %res = fptoui <1 x double> %op1 to <1 x i64>
   ret <1 x i64> %res
@@ -1220,15 +1212,8 @@ define <2 x i16> @fcvtzs_v2f32_v2i16(<2 x float> %op1) vscale_range(2,0) #0 {
 define <4 x i16> @fcvtzs_v4f32_v4i16(<4 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v4f32_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs v1.4s, v0.4s
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %res = fptosi <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res
@@ -1710,8 +1695,7 @@ define void @fcvtzs_v32f64_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @fcvtzs_v1f64_v1i64(<1 x double> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v1f64_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %res = fptosi <1 x double> %op1 to <1 x i64>
   ret <1 x i64> %res

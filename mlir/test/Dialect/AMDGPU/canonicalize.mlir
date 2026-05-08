@@ -206,6 +206,21 @@ func.func @scaled_mfma_less_than_4(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4
 
 // -----
 
+// CHECK-LABEL: func @scaled_mfma_exactly_4
+// CHECK: amdgpu.scaled_mfma 16x16x128 ({{.*}}[0] * {{.*}}) * ({{.*}}[1] * {{.*}}
+func.func @scaled_mfma_exactly_4(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4E2M1FN>, %scalesA: vector<4xf8E8M0FNU>, %scalesB: vector<4xf8E8M0FNU>) -> vector<4xf32> {
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<4xf32>
+  %cst_1 = arith.constant dense<5.877470e-39> : vector<4xf8E8M0FNU>
+  %scaleA = vector.extract %scalesA[0] : f8E8M0FNU from vector<4xf8E8M0FNU>
+  %sA = vector.insert %scaleA, %cst_1 [0] : f8E8M0FNU into vector<4xf8E8M0FNU>
+  %scaleB = vector.extract %scalesB[1] : f8E8M0FNU from vector<4xf8E8M0FNU>
+  %sB = vector.insert %scaleB, %cst_1 [0] : f8E8M0FNU into vector<4xf8E8M0FNU>
+  %res_0 = amdgpu.scaled_mfma 16x16x128 (%sA[0] * %opA) * (%sB[0] * %opB) + %cst_0 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
+  return %res_0 : vector<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @scaled_mfma_ugly_shapes
 // CHECK: amdgpu.scaled_mfma 16x16x128 (%{{.*}}[0] * %{{.*}}) * (%{{.*}}[3] * %arg1) + %cst : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
 // CHECK: amdgpu.scaled_mfma 16x16x128 (%{{.*}}[1] * %{{.*}}) * (%{{.*}}[3] * %arg1) + %cst : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
@@ -243,4 +258,52 @@ func.func @scaled_mfma_ugly_shapes(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4
   %res_6 = amdgpu.scaled_mfma 16x16x128 (%sA_0_6[0] * %opA) * (%sB_6_20[0] * %opB) + %cst_0 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
   %res_7 = amdgpu.scaled_mfma 16x16x128 (%sA_0_7[0] * %opA) * (%sB_6_19[0] * %opB) + %cst_0 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
   return %res_4, %res_5, %res_6, %res_7 : vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL fuse_memory_counter_wait
+func.func @fuse_memory_counter_wait() {
+  //      CHECK: amdgpu.memory_counter_wait
+  // CHECK-SAME: load(1) store(2) ds(2) exp(1) tensor(0)
+  // CHECK-NEXT: return
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1) tensor(0)
+  return
+}
+
+// CHECK-LABEL fuse_memory_counter_wait_different_counters
+func.func @fuse_memory_counter_wait_different_counters() {
+  //      CHECK: amdgpu.memory_counter_wait
+  // CHECK-SAME: load(1) store(2) ds(3) exp(4)
+  // CHECK-NEXT: return
+  amdgpu.memory_counter_wait load(1) store(2)
+  amdgpu.memory_counter_wait ds(3) exp(4)
+  return
+}
+
+func.func private @use()
+
+// CHECK-LABEL fuse_memory_counter_wait_not_adjacent
+func.func @fuse_memory_counter_wait_not_adjacent() {
+  //      CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  // CHECK-NEXT: call @use()
+  // CHECK-NEXT: amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
+  // CHECK-NEXT: return
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  func.call @use() : () -> ()
+  amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
+  return
+}
+
+// -----
+
+// Erase duplicate barriers.
+// CHECK-LABEL: func @erase_barriers
+//       CHECK-NEXT: amdgpu.lds_barrier
+//       CHECK-NEXT: return
+func.func @erase_barriers() {
+  amdgpu.lds_barrier
+  amdgpu.lds_barrier
+  return
 }

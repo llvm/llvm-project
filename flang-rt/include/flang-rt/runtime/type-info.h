@@ -55,13 +55,19 @@ public:
     Data = 1,
     Pointer = 2,
     Allocatable = 3,
-    Automatic = 4,
-    PointerDevice = 5,
-    AllocatableDevice = 6
+    Automatic = 4
+  };
+
+  enum class MemorySpace : std::uint8_t {
+    Host = 0,
+    Device = 1,
+    Managed = 2,
+    Unified = 3
   };
 
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS Genre genre() const { return genre_; }
+  RT_API_ATTRS MemorySpace memorySpace() const { return memorySpace_; }
   RT_API_ATTRS TypeCategory category() const {
     return static_cast<TypeCategory>(category_);
   }
@@ -107,6 +113,8 @@ private:
   std::uint8_t category_; // common::TypeCategory
   std::uint8_t kind_{0};
   std::uint8_t rank_{0};
+  MemorySpace memorySpace_{MemorySpace::Host}; // memory space of the component
+  [[maybe_unused]] std::uint8_t padding_[3]; // 3 bytes padding
   std::uint64_t offset_{0};
   Value characterLen_; // for TypeCategory::Character
   StaticDescriptor<0, true> derivedType_; // TYPE(DERIVEDTYPE), POINTER

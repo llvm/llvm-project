@@ -73,7 +73,6 @@ public:
   void emitInstruction(const MachineInstr *MI) override;
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
-  void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;
 };
 } // namespace llvm

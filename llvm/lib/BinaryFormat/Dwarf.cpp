@@ -550,6 +550,7 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
   case DW_LNAME_Dylan:
   case DW_LNAME_Go:
   case DW_LNAME_Haskell:
+  case DW_LNAME_HIP:
   case DW_LNAME_HLSL:
   case DW_LNAME_Java:
   case DW_LNAME_Julia:

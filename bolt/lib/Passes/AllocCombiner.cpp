@@ -64,6 +64,7 @@ static void runForAllWeCare(std::map<uint64_t, BinaryFunction> &BFs,
 void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
+    SmallVector<MCInst *, 2> ToErase;
     MCInst *Prev = nullptr;
     for (MCInst &Inst : llvm::reverse(BB)) {
       if (isIndifferentToSP(Inst, BC))
@@ -94,12 +95,14 @@ void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
         Inst.dump();
       });
 
-      BB.eraseInstruction(BB.findInstruction(Prev));
+      ToErase.push_back(Prev);
       ++NumCombined;
       DynamicCountCombined += BB.getKnownExecutionCount();
       FuncsChanged.insert(&BF);
       Prev = &Inst;
     }
+    for (MCInst *Inst : ToErase)
+      BB.eraseInstruction(BB.findInstruction(Inst));
   }
 }
 

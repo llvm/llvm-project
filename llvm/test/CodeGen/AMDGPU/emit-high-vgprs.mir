@@ -31,10 +31,10 @@ body:             |
     ; GCN: v_mqsad_u32_u8 v[0:3], v[0:1], v0, v[244:247]   ; encoding: [0x00,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MQSAD_U32_U8_e64 $vgpr0_vgpr1, $vgpr0, undef $vgpr244_vgpr245_vgpr246_vgpr247, 0, implicit $exec
 
-    ; GCN: v_mul_f32_e64 v0 /*v256*/, -v1 /*v257*/, |v2 /*v258*/| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x20]
+    ; GCN: v_mul_f32_e64 v0 /*v256*/, -v1 /*v257*/, |v2 /*v258*/| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x22]
     $vgpr256 = V_MUL_F32_e64 1, $vgpr257, 2, $vgpr258, 0, 0, implicit $exec, implicit $mode
 
-    ; GCN: v_mul_f32_e64 v0, -v1, |v2| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x20]
+    ; GCN: v_mul_f32_e64 v0, -v1, |v2| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x22]
     $vgpr0 = V_MUL_F32_e64 1, $vgpr1, 2, $vgpr2, 0, 0, implicit $exec, implicit $mode
 
     ; GCN: NumVgprs: 512

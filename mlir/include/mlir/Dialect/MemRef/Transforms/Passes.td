@@ -11,6 +11,16 @@
 
 include "mlir/Pass/PassBase.td"
 
+def ElideReinterpretCastPass : Pass<"memref-elide-reinterpret-cast"> {
+  let summary = "Replace ops depending on redundant reinterpret_cast(s) to be "
+                "convertible to EmitC.";
+  let description = [{
+    Replace data-movement ops that depend on redundant memref.reinterpret_cast
+    operations to obtain compatible shapes with equivalent ops that operate on
+    compatible shapes directly. This simplifies conversion to EmitC.
+}];
+}
+
 def ExpandOpsPass : Pass<"memref-expand"> {
   let summary = "Legalize memref operations to be convertible to LLVM.";
 }
@@ -22,7 +32,7 @@ def FoldMemRefAliasOpsPass : Pass<"fold-memref-alias-ops"> {
     from/to the original memref.
   }];
   let dependentDialects = [
-      "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
+      "memref::MemRefDialect", "vector::VectorDialect"
   ];
 }
 
@@ -197,7 +207,7 @@ def ReifyResultShapesPass : Pass<"reify-result-shapes"> {
   let description = [{
     This pass reifies the shapes of a subset of `ReifyRankedShapedTypeOpInterface`
     ops with `tensor` results.
-    
+
     The pass currently only supports result shape type reification for:
       - tensor::PadOp
       - tensor::ConcatOp

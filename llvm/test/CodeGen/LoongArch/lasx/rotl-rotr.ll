@@ -228,7 +228,7 @@ define void @rotr_v4i64_imm(ptr %dst, ptr %src) nounwind {
 ; LA32-LABEL: rotr_v4i64_imm:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvrepli.w $xr1, -62
+; LA32-NEXT:    xvrepli.d $xr1, -62
 ; LA32-NEXT:    xvrotr.d $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret

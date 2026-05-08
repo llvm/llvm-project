@@ -40,21 +40,21 @@
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#AcqRelMemSem]] %[[#RelaxedMemSem]]
 
-define dso_local spir_kernel void @testAtomicCompareExchangeExplicit_cl20(i32 addrspace(1)* noundef %object, i32 addrspace(1)* noundef %expected, i32 noundef %desired) local_unnamed_addr {
+define dso_local spir_kernel void @testAtomicCompareExchangeExplicit_cl20(ptr addrspace(1) noundef %object, ptr addrspace(1) noundef %expected, i32 noundef %desired) local_unnamed_addr {
 entry:
-  %0 = addrspacecast i32 addrspace(1)* %object to i32 addrspace(4)*
-  %1 = addrspacecast i32 addrspace(1)* %expected to i32 addrspace(4)*
-  %call = call spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(i32 addrspace(4)* noundef %0, i32 addrspace(4)* noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 0)
-  %call1 = call spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(i32 addrspace(4)* noundef %0, i32 addrspace(4)* noundef %1, i32 noundef %desired, i32 noundef 4, i32 noundef 0, i32 noundef 1)
-  %call2 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(i32 addrspace(4)* noundef %0, i32 addrspace(4)* noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 0)
-  %call3 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(i32 addrspace(4)* noundef %0, i32 addrspace(4)* noundef %1, i32 noundef %desired, i32 noundef 4, i32 noundef 0, i32 noundef 1)
+  %0 = addrspacecast ptr addrspace(1) %object to ptr addrspace(4)
+  %1 = addrspacecast ptr addrspace(1) %expected to ptr addrspace(4)
+  %call = call spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 0)
+  %call1 = call spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 4, i32 noundef 0, i32 noundef 1)
+  %call2 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 0)
+  %call3 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 4, i32 noundef 0, i32 noundef 1)
   ret void
 }
 
-declare spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(i32 addrspace(4)* noundef, i32 addrspace(4)* noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(ptr addrspace(4) noundef, ptr addrspace(4) noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
-declare spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(i32 addrspace(4)* noundef, i32 addrspace(4)* noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef, ptr addrspace(4) noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
-declare spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(i32 addrspace(4)* noundef, i32 addrspace(4)* noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(ptr addrspace(4) noundef, ptr addrspace(4) noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
-declare spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(i32 addrspace(4)* noundef, i32 addrspace(4)* noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef, ptr addrspace(4) noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr

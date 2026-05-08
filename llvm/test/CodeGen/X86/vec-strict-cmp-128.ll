@@ -6090,41 +6090,57 @@ define <2 x double> @test_v4f64_ogt2_s(<2 x double> %a, <2 x double> %b) #0 {
 define <2 x float> @test_v2f32_ogt2_s(<2 x float> %a, <2 x float> %b) #0 {
 ; SSE-32-LABEL: test_v2f32_ogt2_s:
 ; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    movq {{.*#+}} xmm1 = xmm1[0],zero
+; SSE-32-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-32-NEXT:    maxps %xmm1, %xmm0
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: test_v2f32_ogt2_s:
 ; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    movq {{.*#+}} xmm1 = xmm1[0],zero
+; SSE-64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-64-NEXT:    maxps %xmm1, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f32_ogt2_s:
 ; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; AVX-32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX-32-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_v2f32_ogt2_s:
 ; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; AVX-64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX-64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    retq
 ;
 ; AVX512-32-LABEL: test_v2f32_ogt2_s:
 ; AVX512-32:       # %bb.0:
+; AVX512-32-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; AVX512-32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-32-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX512-32-NEXT:    retl
 ;
 ; AVX512-64-LABEL: test_v2f32_ogt2_s:
 ; AVX512-64:       # %bb.0:
+; AVX512-64-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; AVX512-64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX512-64-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_v2f32_ogt2_s:
 ; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; AVX512F-32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512F-32-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX512F-32-NEXT:    retl
 ;
 ; AVX512F-64-LABEL: test_v2f32_ogt2_s:
 ; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; AVX512F-64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512F-64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX512F-64-NEXT:    retq
   %cond = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(
@@ -6137,43 +6153,57 @@ define <2 x float> @test_v2f32_ogt2_s(<2 x float> %a, <2 x float> %b) #0 {
 define <2 x float> @test_v2f32_ule2_s(<2 x float> %a, <2 x float> %b) #0 {
 ; SSE-32-LABEL: test_v2f32_ule2_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    minps %xmm0, %xmm1
-; SSE-32-NEXT:    movaps %xmm1, %xmm0
+; SSE-32-NEXT:    movq {{.*#+}} xmm2 = xmm0[0],zero
+; SSE-32-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; SSE-32-NEXT:    minps %xmm2, %xmm0
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: test_v2f32_ule2_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    minps %xmm0, %xmm1
-; SSE-64-NEXT:    movaps %xmm1, %xmm0
+; SSE-64-NEXT:    movq {{.*#+}} xmm2 = xmm0[0],zero
+; SSE-64-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; SSE-64-NEXT:    minps %xmm2, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f32_ule2_s:
 ; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-32-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
 ; AVX-32-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_v2f32_ule2_s:
 ; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-64-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
 ; AVX-64-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; AVX-64-NEXT:    retq
 ;
 ; AVX512-32-LABEL: test_v2f32_ule2_s:
 ; AVX512-32:       # %bb.0:
+; AVX512-32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-32-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
 ; AVX512-32-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; AVX512-32-NEXT:    retl
 ;
 ; AVX512-64-LABEL: test_v2f32_ule2_s:
 ; AVX512-64:       # %bb.0:
+; AVX512-64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-64-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
 ; AVX512-64-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; AVX512-64-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_v2f32_ule2_s:
 ; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512F-32-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
 ; AVX512F-32-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; AVX512F-32-NEXT:    retl
 ;
 ; AVX512F-64-LABEL: test_v2f32_ule2_s:
 ; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512F-64-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
 ; AVX512F-64-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; AVX512F-64-NEXT:    retq
   %cond = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(

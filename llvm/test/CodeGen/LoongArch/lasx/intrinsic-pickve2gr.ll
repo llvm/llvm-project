@@ -25,3 +25,16 @@ entry:
   %res = call i32 @llvm.loongarch.lasx.xvpickve2gr.wu(<8 x i32> %va, i32 1)
   ret i32 %res
 }
+
+define i1 @lasx_xvpickve2gr_wu_cmp(<8 x i32> %va) nounwind {
+; CHECK-LABEL: lasx_xvpickve2gr_wu_cmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 1
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %val = call i32 @llvm.loongarch.lasx.xvpickve2gr.wu(<8 x i32> %va, i32 1)
+  %tmp = and i32 %val, 4294967295
+  %res = icmp eq i32 %tmp, 0
+  ret i1 %res
+}

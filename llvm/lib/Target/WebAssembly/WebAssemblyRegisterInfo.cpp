@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyRegisterInfo.h"
+#include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyFrameLowering.h"
 #include "WebAssemblyInstrInfo.h"
@@ -153,4 +154,49 @@ WebAssemblyRegisterInfo::getPointerRegClass(unsigned Kind) const {
   assert(Kind == 0 && "Only one kind of pointer on WebAssembly");
   return TT.getArch() == Triple::wasm64 ? &WebAssembly::I64RegClass
                                         : &WebAssembly::I32RegClass;
+}
+
+static const TargetRegisterClass &getRegClassForBank(const RegisterBank &RB) {
+  switch (RB.getID()) {
+  case WebAssembly::I32RegBankID:
+    return WebAssembly::I32RegClass;
+  case WebAssembly::I64RegBankID:
+    return WebAssembly::I64RegClass;
+  case WebAssembly::F32RegBankID:
+    return WebAssembly::F32RegClass;
+  case WebAssembly::F64RegBankID:
+    return WebAssembly::F64RegClass;
+  case WebAssembly::EXNREFRegBankID:
+    return WebAssembly::EXNREFRegClass;
+  case WebAssembly::EXTERNREFRegBankID:
+    return WebAssembly::EXTERNREFRegClass;
+  case WebAssembly::FUNCREFRegBankID:
+    return WebAssembly::FUNCREFRegClass;
+  case WebAssembly::V128RegBankID:
+    return WebAssembly::V128RegClass;
+  default:
+    llvm_unreachable("Found unexpected RegisterBank in `getRegClassForBank`");
+  }
+}
+
+const TargetRegisterClass *
+WebAssemblyRegisterInfo::getConstrainedRegClassForOperand(
+    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
+  assert(MO.isReg());
+
+  const RegClassOrRegBank &RegClassOrBank =
+      MRI.getRegClassOrRegBank(MO.getReg());
+
+  if (RegClassOrBank.isNull())
+    return nullptr;
+
+  const TargetRegisterClass *DefRC =
+      dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
+
+  if (!DefRC) {
+    const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
+    DefRC = &getRegClassForBank(RB);
+  }
+
+  return DefRC;
 }

@@ -12,12 +12,14 @@
 #include "ClangDocTest.h"
 #include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace doc {
 
-using EmittedInfoList = std::vector<std::unique_ptr<Info>>;
+using EmittedInfoList = OwningPtrVec<Info>;
 
 static const SymbolID EmptySID = SymbolID();
 static const SymbolID NonEmptySID =
@@ -48,6 +50,21 @@ void CheckRecordInfo(RecordInfo *Expected, RecordInfo *Actual);
 void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual);
 
 void CheckIndex(Index &Expected, Index &Actual);
+
+class ClangDocContextTest : public ::testing::Test {
+protected:
+  ClangDocContextTest();
+  ~ClangDocContextTest() override;
+
+  ClangDocContext
+  getClangDocContext(std::vector<std::string> UserStylesheets = {},
+                     StringRef RepositoryUrl = "",
+                     StringRef RepositoryLinePrefix = "", StringRef Base = "");
+
+  DiagnosticOptions DiagOpts;
+  llvm::IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticsEngine Diags;
+};
 
 } // namespace doc
 } // namespace clang

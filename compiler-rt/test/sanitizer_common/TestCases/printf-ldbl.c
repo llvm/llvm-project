@@ -1,8 +1,5 @@
 // RUN: %clang %s -o %t && %run %t 2>&1
 
-// Issue #41838
-// XFAIL: sparc-target-arch && target={{.*solaris.*}}
-
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

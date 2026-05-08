@@ -600,16 +600,18 @@ declare <2 x i32> @test_movi1d(<2 x i32>, <2 x i32>)
 define <2 x i32> @movi1d() {
 ; CHECK-NOFP16-SD-LABEL: movi1d:
 ; CHECK-NOFP16-SD:       // %bb.0:
+; CHECK-NOFP16-SD-NEXT:    mov x8, #9223231299366420480 // =0x7fff800000000000
 ; CHECK-NOFP16-SD-NEXT:    movi d1, #0x00ffffffff0000
-; CHECK-NOFP16-SD-NEXT:    adrp x8, .LCPI57_0
-; CHECK-NOFP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI57_0]
+; CHECK-NOFP16-SD-NEXT:    movk x8, #32768, lsl #16
+; CHECK-NOFP16-SD-NEXT:    fmov d0, x8
 ; CHECK-NOFP16-SD-NEXT:    b test_movi1d
 ;
 ; CHECK-FP16-SD-LABEL: movi1d:
 ; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    mov x8, #9223231299366420480 // =0x7fff800000000000
 ; CHECK-FP16-SD-NEXT:    movi d1, #0x00ffffffff0000
-; CHECK-FP16-SD-NEXT:    adrp x8, .LCPI57_0
-; CHECK-FP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI57_0]
+; CHECK-FP16-SD-NEXT:    movk x8, #32768, lsl #16
+; CHECK-FP16-SD-NEXT:    fmov d0, x8
 ; CHECK-FP16-SD-NEXT:    b test_movi1d
 ;
 ; CHECK-NOFP16-GI-LABEL: movi1d:

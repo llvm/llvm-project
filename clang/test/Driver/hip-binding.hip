@@ -1,4 +1,4 @@
-// RUN: %clang -ccc-print-bindings --target=x86_64-linux-gnu \
+// RUN: %clang -Werror=openmp-target -ccc-print-bindings --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN:   --no-offload-new-driver -c 2>&1 | FileCheck -check-prefix=NRDCS %s
 // RUN: %clang -ccc-print-bindings --target=x86_64-linux-gnu --offload-new-driver \

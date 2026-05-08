@@ -64,6 +64,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "LLVMPasses.md"]
 
+## 'llvm' Target Passes
+
+[include "TargetLLVMIRTransforms.md"]
+
 ## 'math' Dialect Passes
 
 [include "MathPasses.md"]
@@ -71,6 +75,10 @@ This document describes the available MLIR passes and their contracts.
 ## 'memref' Dialect Passes
 
 [include "MemRefPasses.md"]
+
+## 'omp' Dialect Passes
+
+[include "OpenMPPasses.md"]
 
 ## 'shard' Dialect Passes
 

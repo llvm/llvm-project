@@ -14,12 +14,12 @@
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class BasicBlock;
 class PHINode;
 template <typename T> class SmallVectorImpl;
 class Type;
@@ -83,6 +83,10 @@ public:
   /// Use this method to preserve behavior when replacing SSAUpdater.
   LLVM_ABI_FOR_TEST void RewriteAndOptimizeAllUses(DominatorTree &DT);
 };
+
+LLVM_ABI_FOR_TEST bool
+EliminateNewDuplicatePHINodes(BasicBlock *BB,
+                              BasicBlock::phi_iterator FirstExistingPN);
 
 } // end namespace llvm
 

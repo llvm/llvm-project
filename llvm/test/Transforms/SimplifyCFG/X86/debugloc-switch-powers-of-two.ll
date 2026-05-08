@@ -23,7 +23,7 @@ define i32 @switch_of_powers_two_default_reachable(i32 %arg) !dbg !5 {
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4, !dbg [[DBG8]]
 ; CHECK-NEXT:    br label %[[RETURN]], !dbg [[DBG8]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 5, %[[ENTRY]] ], [ 5, %[[ENTRY_SPLIT]] ], [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ], [ 5, %[[ENTRY_SPLIT]] ], [ 5, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:

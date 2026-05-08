@@ -94,8 +94,8 @@ module @mymod {
 
     // Step 4. Launch a GPU kernel
     gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c128, %arg10 = %c1, %arg11 = %c1) dynamic_shared_memory_size %c32768_i32 {
-      %5 = gpu.block_dim  x
-      %6 = gpu.thread_id  x
+      %5 = gpu.block_dim x
+      %6 = gpu.thread_id x
       %c0 = arith.constant 0 : index
       %txcount = arith.constant 32768 : index     
       %c24576 = arith.constant 24576 : index

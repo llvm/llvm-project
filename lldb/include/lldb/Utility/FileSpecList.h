@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_FILESPECLIST_H
-#define LLDB_CORE_FILESPECLIST_H
+#ifndef LLDB_UTILITY_FILESPECLIST_H
+#define LLDB_UTILITY_FILESPECLIST_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/SupportFile.h"
@@ -132,6 +132,12 @@ public:
   ///     A new file to append to this file list.
   void Append(const FileSpec &file);
 
+  /// Appends all elements of \c other to the end of this list
+  /// (regardless of whether a \c FileSpec already exists in the list).
+  void Append(const FileSpecList &other) {
+    m_files.insert(end(), std::begin(other), std::end(other));
+  }
+
   /// Append a FileSpec object if unique.
   ///
   /// Appends \a file to the end of the file list if it doesn't already exist
@@ -254,4 +260,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_FILESPECLIST_H
+#endif // LLDB_UTILITY_FILESPECLIST_H

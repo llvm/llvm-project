@@ -108,7 +108,7 @@ void InvalidEnumDefaultInitializationCheck::registerMatchers(
     MatchFinder *Finder) {
   auto EnumWithoutZeroValue = enumType(hasDeclaration(
       enumDecl(isCompleteAndHasNoZeroValue(),
-               unless(matchers::matchesAnyListedName(IgnoredEnums)))
+               unless(matchers::matchesAnyListedRegexName(IgnoredEnums)))
           .bind("enum")));
   auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
       anyOf(EnumWithoutZeroValue,

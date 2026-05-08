@@ -169,16 +169,14 @@ define void @store_4_elements_64_bit_vector(<4 x i16> %vec, ptr %out) {
 define void @store_2_elements_64_bit_vector(<2 x i32> %vec, ptr %out) {
 ; CHECK-LABEL: store_2_elements_64_bit_vector:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:  Lloh16:
-; CHECK-NEXT:    adrp x8, lCPI8_0@PAGE
+; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    cmeq.2s v0, v0, #0
-; CHECK-NEXT:  Lloh17:
-; CHECK-NEXT:    ldr d1, [x8, lCPI8_0@PAGEOFF]
+; CHECK-NEXT:    movk x8, #2, lsl #32
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    bic.8b v0, v1, v0
 ; CHECK-NEXT:    addp.2s v0, v0, v0
 ; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh16, Lloh17
 
 
   %cmp_result = icmp ne <2 x i32> %vec, zeroinitializer

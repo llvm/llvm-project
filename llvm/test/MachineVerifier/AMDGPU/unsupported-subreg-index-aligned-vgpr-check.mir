@@ -36,6 +36,17 @@ body:             |
     ; CHECK-NEXT: Register class VReg_512 does not support subreg index sub16_sub17_sub18_sub19
     S_NOP 0, implicit-def %2:vreg_512
     GLOBAL_STORE_DWORDX4_SADDR %0, %2.sub16_sub17_sub18_sub19, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+
+    ; Test valid subregister index, but invalid effective register class.
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK-NEXT: - function:    uses_invalid_subregister_for_regclass
+    ; CHECK-NEXT: - basic block: %bb.0
+    ; CHECK-NEXT: - instruction: GLOBAL_STORE_DWORDX4_SADDR %0:vgpr_32, %2.sub0:vreg_512, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: - operand 1:   %2.sub0:vreg_512
+    ; CHECK-NEXT: VReg_512.sub0 cannot be used for AV_128_Align2 operands.
+    %3:sreg_32 = COPY %0
+    GLOBAL_STORE_DWORDX4_SADDR %0, %2.sub0, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+
     S_ENDPGM 0
 
 ...

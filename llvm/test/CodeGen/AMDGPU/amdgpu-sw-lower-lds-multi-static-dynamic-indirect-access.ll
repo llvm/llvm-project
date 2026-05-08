@@ -97,7 +97,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 3, i32 2), align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[TMP15]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = zext i32 [[TMP26]] to i64
-; CHECK-NEXT:    [[TMP28:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP28:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP33:%.*]] = ptrtoint ptr [[TMP28]] to i64
 ; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP27]], i64 [[TMP33]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP24]] to ptr addrspace(1)
@@ -125,7 +125,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label [[FREE:%.*]], label [[END:%.*]]
 ; CHECK:       Free:
-; CHECK-NEXT:    [[TMP30:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP30:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[TMP30]] to i64
 ; CHECK-NEXT:    [[TMP32:%.*]] = ptrtoint ptr addrspace(1) [[TMP29]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP32]], i64 [[TMP31]])
@@ -172,7 +172,7 @@ define amdgpu_kernel void @k1() sanitize_address {
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K1_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k1.md, i32 0, i32 4, i32 2), align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[TMP20]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64
-; CHECK-NEXT:    [[TMP27:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP27:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[TMP27]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP26]], i64 [[TMP28]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP34]] to ptr addrspace(1)
@@ -204,7 +204,7 @@ define amdgpu_kernel void @k1() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label [[FREE:%.*]], label [[END:%.*]]
 ; CHECK:       Free:
-; CHECK-NEXT:    [[TMP35:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP35:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[TMP35]] to i64
 ; CHECK-NEXT:    [[TMP37:%.*]] = ptrtoint ptr addrspace(1) [[TMP29]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP37]], i64 [[TMP36]])

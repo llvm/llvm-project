@@ -27,7 +27,7 @@ class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
                                     "operand1", "result",
-                                    "getUnaryOpResultType($_self)"
+                                    "getMatchingBoolType($_self)"
                      >])> {
   let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
 }
@@ -41,9 +41,73 @@ class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
                                     "operand", "result",
-                                    "getUnaryOpResultType($_self)"
+                                    "getMatchingBoolType($_self)"
                      >])> {
   let assemblyFormat = "$operand `:` type($operand) attr-dict";
+}
+
+// -----
+
+def SPIRV_AnyOp : SPIRV_Op<"Any", [Pure]> {
+  let summary = "Result is true if any component of Vector is true.";
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    Vector must be a vector of Boolean type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.Any %vector : vector<4xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_VectorOf<SPIRV_Bool>:$vector
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let assemblyFormat = "$vector attr-dict `:` type($vector)";
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_AllOp : SPIRV_Op<"All", [Pure]> {
+  let summary = "Result is true if all components of Vector are true.";
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    Vector must be a vector of Boolean type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.All %vector : vector<4xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_VectorOf<SPIRV_Bool>:$vector
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let assemblyFormat = "$vector attr-dict `:` type($vector)";
+
+  let hasVerifier = 0;
 }
 
 // -----

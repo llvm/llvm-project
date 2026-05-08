@@ -278,12 +278,14 @@ static const OmpDirectiveSet loopConstructSet{
     Directive::OMPD_fuse,
     Directive::OMPD_tile,
     Directive::OMPD_unroll,
+    Directive::OMPD_interchange,
 };
 
 static const OmpDirectiveSet loopTransformationSet{
     Directive::OMPD_tile,
     Directive::OMPD_unroll,
     Directive::OMPD_fuse,
+    Directive::OMPD_interchange,
 };
 
 static const OmpDirectiveSet nonPartialVarSet{

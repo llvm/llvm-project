@@ -31,7 +31,7 @@ define i8 @relaxed_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB0_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -71,7 +71,7 @@ define i8 @relaxed_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB0_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -155,7 +155,7 @@ define i8 @acquire_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -196,7 +196,7 @@ define i8 @acquire_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -283,7 +283,7 @@ define i8 @release_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -324,7 +324,7 @@ define i8 @release_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -410,7 +410,7 @@ define i8 @acq_rel_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB3_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -452,7 +452,7 @@ define i8 @acq_rel_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB3_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -540,7 +540,7 @@ define i8 @seq_cst_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -582,7 +582,7 @@ define i8 @seq_cst_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -670,7 +670,7 @@ define i16 @relaxed_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -710,7 +710,7 @@ define i16 @relaxed_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -793,7 +793,7 @@ define i16 @acquire_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -834,7 +834,7 @@ define i16 @acquire_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -920,7 +920,7 @@ define i16 @release_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB7_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -961,7 +961,7 @@ define i16 @release_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB7_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1046,7 +1046,7 @@ define i16 @acq_rel_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB8_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1088,7 +1088,7 @@ define i16 @acq_rel_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB8_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1176,7 +1176,7 @@ define i16 @seq_cst_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM30-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM30-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM30-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM30-NEXT:    ld.b32 %r13, [%rd1];
+; SM30-NEXT:    ld.volatile.b32 %r13, [%rd1];
 ; SM30-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM30-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
 ; SM30-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1218,7 +1218,7 @@ define i16 @seq_cst_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r13, [%rd1];
 ; SM70-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM70-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1

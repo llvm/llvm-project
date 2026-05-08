@@ -5,6 +5,6 @@ const int __declspec(dllexport) &Exported = 42;
 
 // The reference temporary shouldn't be dllexport, even if the reference is.
 // PRE17: @"?$RT1@Exported@@3ABHB" = internal constant i32 42
-// CXX17: @"?$RT1@Exported@@3ABHB" = internal global i32 42
+// CXX17: @"?$RT1@Exported@@3ABHB" = internal constant i32 42
 
 // CHECK: @"?Exported@@3ABHB" = dso_local dllexport constant ptr @"?$RT1@Exported@@3ABHB"

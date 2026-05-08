@@ -42,10 +42,10 @@ def testFastMathFlags():
 def testArithValue():
     def _binary_op(lhs, rhs, op: str) -> "ArithValue":
         op = op.capitalize()
-        if arith._is_float_type(lhs.type) and arith._is_float_type(rhs.type):
+        if isinstance(lhs.type, FloatType) and isinstance(rhs.type, FloatType):
             op += "F"
-        elif arith._is_integer_like_type(lhs.type) and arith._is_integer_like_type(
-            lhs.type
+        elif isinstance(lhs.type, (IntegerType, IndexType)) and isinstance(
+            lhs.type, (IntegerType, IndexType)
         ):
             op += "I"
         else:

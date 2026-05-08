@@ -145,7 +145,7 @@ TEST(ConstStringTest, StringConversions) {
   // Member functions.
   EXPECT_EQ(llvm::StringRef("foo"), foo.GetStringRef());
   EXPECT_EQ(std::string("foo"), foo.GetString());
-  EXPECT_STREQ("foo", foo.AsCString());
+  EXPECT_STREQ("foo", foo.AsCString(nullptr));
 
   // Conversion operators.
   EXPECT_EQ(llvm::StringRef("foo"), llvm::StringRef(foo));

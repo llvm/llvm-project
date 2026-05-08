@@ -134,6 +134,30 @@
 
 namespace __interception {
 
+bool DynamicLoaderAvailable() { return true; }
+
+void* OpenLibrary(const char* name) {
+  if (!name)
+    return reinterpret_cast<void*>(GetModuleHandleA(nullptr));
+  return reinterpret_cast<void*>(LoadLibraryA(name));
+}
+
+void* LookupSymbol(void* handle, const char* symbol) {
+  if (!handle)
+    return nullptr;
+  return reinterpret_cast<void*>(reinterpret_cast<__sanitizer::uptr>(
+      GetProcAddress(reinterpret_cast<HMODULE>(handle), symbol)));
+}
+
+void* LookupSymbolDefault(const char* symbol) {
+  return LookupSymbol(reinterpret_cast<void*>(GetModuleHandleA(nullptr)),
+                      symbol);
+}
+
+void* LookupSymbolNext(const char*) { return nullptr; }
+
+void* LookupSymbolNextVersioned(const char*, const char*) { return nullptr; }
+
 static const int kAddressLength = FIRST_32_SECOND_64(4, 8);
 static const int kJumpInstructionLength = 5;
 static const int kShortJumpInstructionLength = 2;

@@ -191,11 +191,10 @@ define i32 @test_nxv1i1(<vscale x 1 x i1> %x) {
 ;
 ; ZVE-LABEL: test_nxv1i1:
 ; ZVE:       # %bb.0: # %entry
-; ZVE-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; ZVE-NEXT:    vmv.v.i v8, 0
 ; ZVE-NEXT:    csrr a0, vlenb
 ; ZVE-NEXT:    srli a0, a0, 3
 ; ZVE-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVE-NEXT:    vmv.v.i v8, 0
 ; ZVE-NEXT:    vmerge.vim v8, v8, 1, v0
 ; ZVE-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; ZVE-NEXT:    vmv.s.x v9, zero
@@ -311,10 +310,10 @@ define i32 @test_nxv128i1(<vscale x 128 x i1> %x) {
 ; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v6, a0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v6, v7, a1
-; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v7, a0
 ; CHECK-NEXT:    vslidedown.vx v5, v6, a0

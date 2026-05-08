@@ -1,6 +1,4 @@
 ; RUN: llc --filetype=obj %s -o  - | dxil-dis -o - | FileCheck %s
-; Note: LLVM has soft disabled experimental-debuginfo-iterators in commit 6a45fce
-; XFAIL: *
 
 target triple = "dxil-unknown-shadermodel6.7-library"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -35,9 +33,9 @@ attributes #0 = { norecurse nounwind readnone willreturn "hlsl.export" }
 ; CHECK:      !0 = distinct !DICompileUnit
 ; CHECK-NEXT: !1 = !DIFile(filename:
 ; CHECK:      [[Fn]] = distinct !DISubprogram(name: "fma",
-; CHECK:      [[VarX]] = !DILocalVariable(tag:
-; CHECK:      [[VarY]] = !DILocalVariable(tag:
-; CHECK:      [[VarZ]] = !DILocalVariable(tag:
+; CHECK:      [[VarX]] = !DILocalVariable(tag: DW_TAG_arg_variable
+; CHECK:      [[VarY]] = !DILocalVariable(tag: DW_TAG_arg_variable
+; CHECK:      [[VarZ]] = !DILocalVariable(tag: DW_TAG_arg_variable
 ; CHECK-NEXT: [[Expr]] = !DIExpression()
 ; CHECK-NEXT: [[Line1]] = !DILocation(line:
 ; CHECK-NEXT: [[Line2]] = !DILocation(line:

@@ -58,15 +58,14 @@ bool RemarkStreamer::matchesFilter(StringRef Str) {
 }
 
 bool RemarkStreamer::needsSection() const {
-  if (EnableRemarksSection == cl::BOU_TRUE)
-    return true;
+  return EnableRemarksSection == cl::BOU_TRUE;
+}
 
+bool RemarkStreamer::wantsSection() const {
   if (EnableRemarksSection == cl::BOU_FALSE)
     return false;
-
-  assert(EnableRemarksSection == cl::BOU_UNSET);
-
   // Enable remark sections by default for bitstream remarks (so dsymutil can
   // find all remarks for a linked binary)
-  return RemarkSerializer->SerializerFormat == Format::Bitstream;
+  return needsSection() ||
+         RemarkSerializer->SerializerFormat == Format::Bitstream;
 }

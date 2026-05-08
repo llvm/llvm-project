@@ -1,0 +1,166 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+
+// Test that a throwing call in an EH cleanup region is replaced with
+// cir.try_call that unwinds to a terminate block.
+cir.func @test_throwing_dtor_in_eh_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_throwing_dtor_in_eh_cleanup()
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// Body: the call is replaced with try_call unwinding to the EH handler.
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.try_call @doSomething(%{{.*}}) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Unwind block for body throwing call.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[ET1:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[ET1]] : !cir.eh_token)
+//
+// EH cleanup block: the dtor call is replaced with try_call unwinding to terminate.
+// CHECK:       ^[[EH_CLEANUP]](%[[ET2:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET2]]
+// CHECK:         cir.try_call @dtor(%{{.*}}) ^[[DTOR_NORMAL:bb[0-9]+]], ^[[TERMINATE:bb[0-9]+]]
+// CHECK:       ^[[DTOR_NORMAL]]:
+// CHECK:         cir.end_cleanup %[[CT]]
+// CHECK:         cir.resume %[[ET2]]
+//
+// Terminate block: cir.eh.initiate + cir.eh.terminate.
+// CHECK:       ^[[TERMINATE]]:
+// CHECK:         %[[TET:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.eh.terminate %[[TET]] : !cir.eh_token
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+
+// Test that a throwing call in an "all" (Normal+EH) cleanup region is handled.
+// On the EH cleanup path, the call is replaced with try_call → terminate.
+// On the normal cleanup path, the call remains a regular cir.call.
+cir.func @test_throwing_dtor_in_all_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_throwing_dtor_in_all_cleanup()
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// Body try_call.
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.try_call @doSomething(%{{.*}}) ^[[NORMAL_BODY:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL_BODY]]:
+//
+// Normal cleanup: dtor is a regular call (not try_call).
+// CHECK:         cir.call @dtor(%{{.*}})
+// CHECK:         cir.br ^{{bb[0-9]+}}
+//
+// EH cleanup path: dtor is try_call unwinding to terminate.
+// CHECK:       ^{{bb[0-9]+}}(%[[ET2:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET2]]
+// CHECK:         cir.try_call @dtor(%{{.*}}) ^[[DTOR_NORMAL:bb[0-9]+]], ^[[TERMINATE:bb[0-9]+]]
+// CHECK:       ^[[DTOR_NORMAL]]:
+// CHECK:         cir.end_cleanup %[[CT]]
+// CHECK:         cir.resume %[[ET2]]
+//
+// Terminate block.
+// CHECK:       ^[[TERMINATE]]:
+// CHECK:         %[[TET:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.eh.terminate %[[TET]] : !cir.eh_token
+
+
+// Test throwing call in EH cleanup within a try operation.
+cir.func @test_throwing_dtor_in_eh_cleanup_in_try() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.try {
+    cir.cleanup.scope {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } cleanup eh {
+      cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } catch all (%eh_token : !cir.eh_token) {
+    %catch_token, %1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+    cir.end_catch %catch_token : !cir.catch_token
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_throwing_dtor_in_eh_cleanup_in_try()
+//
+// Body try_call unwinding to EH cleanup.
+// CHECK:         cir.try_call @doSomething(%{{.*}}) ^{{bb[0-9]+}}, ^{{bb[0-9]+}}
+//
+// EH cleanup: dtor is try_call unwinding to terminate.
+// CHECK:         cir.try_call @dtor(%{{.*}}) ^{{bb[0-9]+}}, ^[[TERMINATE:bb[0-9]+]]
+//
+// Terminate block.
+// CHECK:       ^[[TERMINATE]]:
+// CHECK:         %[[TET:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.eh.terminate %[[TET]] : !cir.eh_token
+
+
+// Test multiple throwing calls in the cleanup region.
+cir.func @test_multiple_throwing_calls_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_multiple_throwing_calls_in_cleanup()
+//
+// EH cleanup: both dtors are try_calls unwinding to the same terminate block.
+// CHECK:         cir.try_call @dtor(%{{.*}}) ^[[DTOR1_NORMAL:bb[0-9]+]], ^[[TERMINATE:bb[0-9]+]]
+// CHECK:       ^[[DTOR1_NORMAL]]:
+// CHECK:         cir.try_call @dtor(%{{.*}}) ^[[DTOR2_NORMAL:bb[0-9]+]], ^[[TERMINATE]]
+// CHECK:       ^[[DTOR2_NORMAL]]:
+// CHECK:         cir.end_cleanup
+// CHECK:         cir.resume
+//
+// Shared terminate block for both calls.
+// CHECK:       ^[[TERMINATE]]:
+// CHECK:         %[[TET:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.eh.terminate %[[TET]] : !cir.eh_token
+
+
+cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)

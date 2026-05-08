@@ -25,7 +25,6 @@ declare i32 @llvm.experimental.gc.result.i32(token) #0
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR0]] = { "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
 ;.

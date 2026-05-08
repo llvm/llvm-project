@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_CBRTF_H
-#define LIBC_SRC___SUPPORT_MATH_CBRTF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_CBRTF_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_CBRTF_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float cbrtf(float x) {
+LIBC_INLINE constexpr float cbrtf(float x) {
   // Look up table for 2^(i/3) for i = 0, 1, 2.
   constexpr double CBRT2[3] = {1.0, 0x1.428a2f98d728bp0, 0x1.965fea53d6e3dp0};
 
@@ -158,4 +158,4 @@ LIBC_INLINE static constexpr float cbrtf(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_CBRTF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_CBRTF_H

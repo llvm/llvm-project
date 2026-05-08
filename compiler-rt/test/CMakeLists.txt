@@ -16,6 +16,13 @@ pythonize_bool(COMPILER_RT_HAS_AARCH64_SME)
 
 pythonize_bool(COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
 
+if(LLVM_TREE_AVAILABLE OR NOT COMPILER_RT_STANDALONE_BUILD)
+  set(COMPILER_RT_BUILT_WITH_LLVM TRUE)
+else()
+  set(COMPILER_RT_BUILT_WITH_LLVM FALSE)
+endif()
+pythonize_bool(COMPILER_RT_BUILT_WITH_LLVM)
+
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)
@@ -66,7 +73,10 @@ endfunction()
 # Run sanitizer tests only if we're sure that clang would produce
 # working binaries.
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
-  if(COMPILER_RT_BUILD_BUILTINS)
+  # COMPILER_RT_TEST_EXTERNAL_BUILTINS allows running tests against builtins built
+  # in an independent build. This option is only indended to be used by
+  # LLVM_ENABLE_RUNTIMES-based builds.
+  if(COMPILER_RT_BUILD_BUILTINS OR COMPILER_RT_TEST_EXTERNAL_BUILTINS)
     add_subdirectory(builtins)
   endif()
   if(COMPILER_RT_BUILD_SANITIZERS)
@@ -76,8 +86,8 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(ubsan)
     compiler_rt_test_runtime(sanitizer_common)
 
-    # OpenBSD not supporting asan, cannot run the tests
-    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" AND NOT ANDROID)
+    # GNU/Hurd and OpenBSD not supporting asan, cannot run the tests
+    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "GNU" AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" AND NOT ANDROID)
       compiler_rt_test_runtime(fuzzer)
 
       # These tests don't need an additional runtime but use asan runtime.
@@ -88,7 +98,8 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
       compiler_rt_test_runtime(${sanitizer})
     endforeach()
   endif()
-  if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
+  if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE
+     AND NOT COMPILER_RT_GPU_BUILD)
     compiler_rt_test_runtime(profile)
   endif()
   if(COMPILER_RT_BUILD_CTX_PROFILE)

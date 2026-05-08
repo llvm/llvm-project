@@ -387,6 +387,12 @@ struct TypeBuilderImpl {
       return ty;
 
     auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
+    // Mark SEQUENCE derived types.
+    if (const auto *details =
+            typeSymbol.detailsIf<Fortran::semantics::DerivedTypeDetails>())
+      if (details->sequence())
+        rec.setSequence(true);
+
     // Maintain the stack of types for recursive references and to speed-up
     // the derived type constructions that can be expensive for derived type
     // with dozens of components/parents (modern Fortran).

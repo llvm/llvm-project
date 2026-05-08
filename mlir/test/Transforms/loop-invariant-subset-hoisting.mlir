@@ -598,6 +598,53 @@ func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
 
 // -----
 
+// Regression test for missing `if (nextValue) return failure()` guard in the
+// nested loop branch of `populateSubsetOpsAtIterArg`. When a single value (%3)
+// is used as the init arg in two separate nested loops, nextValue was silently
+// overwritten by the second nested loop encountered during use-def traversal,
+// causing the analysis to incorrectly succeed and hoist the extract/insert pair.
+//
+// MLIR prepends uses (LIFO), so the LAST-created user appears FIRST in the
+// use-list. Here loop2 is created first (source order), loop1 second. Thus
+// loop1 is iterated first: nextValue is set to %r1. Without the fix, the second
+// iteration (loop2) overwrites nextValue to %r2. Since %r2 IS yielded for %t,
+// the analysis wrongly succeeds and hoists the extraction. With the fix, the
+// guard `if (nextValue) return failure()` fires when loop2 is encountered after
+// loop1 has already set nextValue, correctly preventing the hoisting.
+
+// CHECK-LABEL: func @do_not_hoist_multiple_nested_loop_uses(
+func.func @do_not_hoist_multiple_nested_loop_uses(%arg: tensor<?xf32>)
+    -> tensor<?xf32> {
+  %lb = "test.foo"() : () -> (index)
+  %ub = "test.foo"() : () -> (index)
+  %step = "test.foo"() : () -> (index)
+
+  // The extraction must NOT be hoisted: it stays inside the outer for loop.
+  // CHECK: scf.for
+  // CHECK: tensor.extract_slice
+  // CHECK: tensor.insert_slice
+  %0 = scf.for %iv = %lb to %ub step %step iter_args(%t = %arg) -> tensor<?xf32> {
+    %1 = tensor.extract_slice %t[0][5][1] : tensor<?xf32> to tensor<5xf32>
+    %2 = "test.foo"(%1) : (tensor<5xf32>) -> (tensor<5xf32>)
+    %3 = tensor.insert_slice %2 into %t[0][5][1] : tensor<5xf32> into tensor<?xf32>
+    // loop2 is created first (source order) → its use of %3 is at the BACK of
+    // the use-list → iterated SECOND during populateSubsetOpsAtIterArg.
+    %r2 = scf.for %iv3 = %lb to %ub step %step iter_args(%b = %3) -> tensor<?xf32> {
+      scf.yield %b : tensor<?xf32>
+    }
+    // loop1 is created second → prepended to the FRONT of the use-list →
+    // iterated FIRST: nextValue is set to %r1. Without the fix, iterating loop2
+    // next overwrites nextValue to %r2 (which is yielded), so the analysis
+    // incorrectly succeeds. With the fix, the guard fires here and returns
+    // failure, correctly preventing hoisting.
+    %r1 = scf.for %iv2 = %lb to %ub step %step iter_args(%a = %3) -> tensor<?xf32> {
+      scf.yield %a : tensor<?xf32>
+    }
+    scf.yield %r2 : tensor<?xf32>
+  }
+  return %0 : tensor<?xf32>
+}
+
 // Ensure that cases with buffer semantics exit gracefully.
 
 // CHECK-LABEL: @hoist_buffer

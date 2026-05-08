@@ -270,6 +270,9 @@ protected:
   void InitNameIndexes();
   void InitAddressIndexes();
 
+  /// Provide thread safety for this symbol table.
+  mutable std::recursive_mutex m_mutex;
+
   ObjectFile *m_objfile;
   collection m_symbols;
   FileRangeToIndexMap m_file_addr_to_index;
@@ -277,10 +280,10 @@ protected:
   /// Maps function names to symbol indices (grouped by FunctionNameTypes)
   std::map<lldb::FunctionNameType, UniqueCStringMap<uint32_t>>
       m_name_to_symbol_indices;
-  mutable std::recursive_mutex
-      m_mutex; // Provide thread safety for this symbol table
-  bool m_file_addr_to_index_computed : 1, m_name_indexes_computed : 1,
-    m_loaded_from_cache : 1, m_saved_to_cache : 1;
+  bool m_file_addr_to_index_computed = false;
+  bool m_name_indexes_computed = false;
+  bool m_loaded_from_cache = false;
+  bool m_saved_to_cache = false;
 
 private:
   UniqueCStringMap<uint32_t> &

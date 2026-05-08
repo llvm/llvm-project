@@ -5,8 +5,10 @@ add_clang_library(clangAnalysisLifetimeSafety
   LifetimeAnnotations.cpp
   LifetimeSafety.cpp
   LiveOrigins.cpp
+  LifetimeStats.cpp
   Loans.cpp
   LoanPropagation.cpp
+  MovedLoans.cpp
   Origins.cpp
 
   LINK_LIBS

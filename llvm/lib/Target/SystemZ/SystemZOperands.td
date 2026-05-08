@@ -31,23 +31,18 @@ class ImmediateOp<ValueType vt, string asmop> : Operand<vt> {
 
 class ImmOpWithPattern<ValueType vt, string asmop, code pred, SDNodeXForm xform,
       SDNode ImmNode = imm> :
-  ImmediateOp<vt, asmop>, PatLeaf<(vt ImmNode), pred, xform>;
-
-// class ImmediatePatLeaf<ValueType vt, code pred,
-//       SDNodeXForm xform, SDNode ImmNode>
-//   : PatLeaf<(vt ImmNode), pred, xform>;
-
+  ImmediateOp<vt, asmop>, ImmLeaf<vt, pred, xform, ImmNode> {
+  let IsAPInt = true;
+  let FastIselShouldIgnore = true;
+}
 
 // Constructs both a DAG pattern and instruction operand for an immediate
 // of type VT.  PRED returns true if a node is acceptable and XFORM returns
 // the operand value associated with the node.  ASMOP is the name of the
 // associated asm operand, and also forms the basis of the asm print method.
 multiclass Immediate<ValueType vt, code pred, SDNodeXForm xform, string asmop> {
-  // def "" : ImmediateOp<vt, asmop>,
-  //          PatLeaf<(vt imm), pred, xform>;
   def "" : ImmOpWithPattern<vt, asmop, pred, xform>;
 
-//  def _timm : PatLeaf<(vt timm), pred, xform>;
   def _timm : ImmOpWithPattern<vt, asmop, pred, xform, timm>;
 }
 
@@ -321,72 +316,72 @@ def U48Imm : ImmediateAsmOperand<"U48Imm">;
 // Immediates for the lower and upper 16 bits of an i32, with the other
 // bits of the i32 being zero.
 defm imm32ll16 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(32) && SystemZ::isImmLL(N->getZExtValue());
+  return Imm.isIntN(32) && SystemZ::isImmLL(Imm.getZExtValue());
 }], LL16, "U16Imm">;
 
 defm imm32lh16 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(32) && SystemZ::isImmLH(N->getZExtValue());
+  return Imm.isIntN(32) && SystemZ::isImmLH(Imm.getZExtValue());
 }], LH16, "U16Imm">;
 
 // Immediates for the lower and upper 16 bits of an i32, with the other
 // bits of the i32 being one.
 defm imm32ll16c : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(32) &&
-         SystemZ::isImmLL(uint32_t(~N->getZExtValue()));
+  return Imm.isIntN(32) &&
+         SystemZ::isImmLL(uint32_t(~Imm.getZExtValue()));
 }], LL16, "U16Imm">;
 
 defm imm32lh16c : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(32) &&
-         SystemZ::isImmLH(uint32_t(~N->getZExtValue()));
+  return Imm.isIntN(32) &&
+         SystemZ::isImmLH(uint32_t(~Imm.getZExtValue()));
 }], LH16, "U16Imm">;
 
 // Short immediates
 defm imm32zx1 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(1);
+  return Imm.isIntN(1);
 }], NOOP_SDNodeXForm, "U1Imm">;
 
 defm imm32zx2 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(2);
+  return Imm.isIntN(2);
 }], NOOP_SDNodeXForm, "U2Imm">;
 
 defm imm32zx3 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(3);
+  return Imm.isIntN(3);
 }], NOOP_SDNodeXForm, "U3Imm">;
 
 defm imm32zx4 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(4);
+  return Imm.isIntN(4);
 }], NOOP_SDNodeXForm, "U4Imm">;
 
 // Note: this enforces an even value during code generation only.
 // When used from the assembler, any 4-bit value is allowed.
 defm imm32zx4even : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(4);
+  return Imm.isIntN(4);
 }], UIMM8EVEN, "U4Imm">;
 
 defm imm32sx8 : Immediate<i32, [{
-  return N->getAPIntValue().isSignedIntN(8);
+  return Imm.isSignedIntN(8);
 }], SIMM8, "S8Imm">;
 
 defm imm32zx8 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(8);
+  return Imm.isIntN(8);
 }], UIMM8, "U8Imm">;
 
 defm imm32zx8trunc : Immediate<i32, [{}], UIMM8, "U8Imm">;
 
 defm imm32zx12 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(12);
+  return Imm.isIntN(12);
 }], UIMM12, "U12Imm">;
 
 defm imm32sx16 : Immediate<i32, [{
-  return N->getAPIntValue().isSignedIntN(16);
+  return Imm.isSignedIntN(16);
 }], SIMM16, "S16Imm">;
 
 defm imm32sx16n : Immediate<i32, [{
-  return (-N->getAPIntValue()).isSignedIntN(16);
+  return (-Imm).isSignedIntN(16);
 }], NEGSIMM16, "S16Imm">;
 
 defm imm32zx16 : Immediate<i32, [{
-  return N->getAPIntValue().isIntN(16);
+  return Imm.isIntN(16);
 }], UIMM16, "U16Imm">;
 
 defm imm32sx16trunc : Immediate<i32, [{}], SIMM16, "S16Imm">;
@@ -399,7 +394,7 @@ defm simm32 : Immediate<i32, [{}], SIMM32, "S32Imm">;
 defm uimm32 : Immediate<i32, [{}], UIMM32, "U32Imm">;
 
 defm simm32n : Immediate<i32, [{
-  auto SImm = N->getAPIntValue().trySExtValue();
+  auto SImm = Imm.trySExtValue();
   return SImm.has_value() && isInt<32>(-*SImm);
 }], NEGSIMM32, "S32Imm">;
 
@@ -412,115 +407,115 @@ def imm32 : ImmLeaf<i32, [{}]>;
 // Immediates for 16-bit chunks of an i64, with the other bits of the
 // i32 being zero.
 defm imm64ll16 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) && SystemZ::isImmLL(N->getZExtValue());
+  return Imm.isIntN(64) && SystemZ::isImmLL(Imm.getZExtValue());
 }], LL16, "U16Imm">;
 
 defm imm64lh16 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) && SystemZ::isImmLH(N->getZExtValue());
+  return Imm.isIntN(64) && SystemZ::isImmLH(Imm.getZExtValue());
 }], LH16, "U16Imm">;
 
 defm imm64hl16 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) && SystemZ::isImmHL(N->getZExtValue());
+  return Imm.isIntN(64) && SystemZ::isImmHL(Imm.getZExtValue());
 }], HL16, "U16Imm">;
 
 defm imm64hh16 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) && SystemZ::isImmHH(N->getZExtValue());
+  return Imm.isIntN(64) && SystemZ::isImmHH(Imm.getZExtValue());
 }], HH16, "U16Imm">;
 
 // Immediates for 16-bit chunks of an i64, with the other bits of the
 // i32 being one.
 defm imm64ll16c : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmLL(uint64_t(~N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmLL(uint64_t(~Imm.getZExtValue()));
 }], LL16, "U16Imm">;
 
 defm imm64lh16c : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmLH(uint64_t(~N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmLH(uint64_t(~Imm.getZExtValue()));
 }], LH16, "U16Imm">;
 
 defm imm64hl16c : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmHL(uint64_t(~N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmHL(uint64_t(~Imm.getZExtValue()));
 }], HL16, "U16Imm">;
 
 defm imm64hh16c : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmHH(uint64_t(~N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmHH(uint64_t(~Imm.getZExtValue()));
 }], HH16, "U16Imm">;
 
 // Immediates for the lower and upper 32 bits of an i64, with the other
 // bits of the i32 being zero.
 defm imm64lf32 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) && SystemZ::isImmLF(N->getZExtValue());
+  return Imm.isIntN(64) && SystemZ::isImmLF(Imm.getZExtValue());
 }], LF32, "U32Imm">;
 
 defm imm64hf32 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) && SystemZ::isImmHF(N->getZExtValue());
+  return Imm.isIntN(64) && SystemZ::isImmHF(Imm.getZExtValue());
 }], HF32, "U32Imm">;
 
 // Immediates for the lower and upper 32 bits of an i64, with the other
 // bits of the i32 being one.
 defm imm64lf32c : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmLF(uint64_t(~N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmLF(uint64_t(~Imm.getZExtValue()));
 }], LF32, "U32Imm">;
 
 defm imm64hf32c : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmHF(uint64_t(~N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmHF(uint64_t(~Imm.getZExtValue()));
 }], HF32, "U32Imm">;
 
 // Negated immediates that fit LF32 or LH16.
 defm imm64lh16n : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmLH(uint64_t(-N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmLH(uint64_t(-Imm.getZExtValue()));
 }], NEGLH16, "U16Imm">;
 
 defm imm64lf32n : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64) &&
-         SystemZ::isImmLF(uint64_t(-N->getZExtValue()));
+  return Imm.isIntN(64) &&
+         SystemZ::isImmLF(uint64_t(-Imm.getZExtValue()));
 }], NEGLF32, "U32Imm">;
 
 // Short immediates.
 defm imm64sx8 : Immediate<i64, [{
-  return N->getAPIntValue().isSignedIntN(8);
+  return Imm.isSignedIntN(8);
 }], SIMM8, "S8Imm">;
 
 defm imm64zx8 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(8);;
+  return Imm.isIntN(8);;
 }], UIMM8, "U8Imm">;
 
 defm imm64sx16 : Immediate<i64, [{
-  return N->getAPIntValue().isSignedIntN(16);
+  return Imm.isSignedIntN(16);
 }], SIMM16, "S16Imm">;
 
 defm imm64sx16n : Immediate<i64, [{
-  return (-N->getAPIntValue()).isSignedIntN(16);
+  return (-Imm).isSignedIntN(16);
 }], NEGSIMM16, "S16Imm">;
 
 defm imm64zx16 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(16);
+  return Imm.isIntN(16);
 }], UIMM16, "U16Imm">;
 
 defm imm64sx32 : Immediate<i64, [{
-  return N->getAPIntValue().isSignedIntN(32);
+  return Imm.isSignedIntN(32);
 }], SIMM32, "S32Imm">;
 
 defm imm64sx32n : Immediate<i64, [{
-  return (-N->getAPIntValue()).isSignedIntN(32);
+  return (-Imm).isSignedIntN(32);
 }], NEGSIMM32, "S32Imm">;
 
 defm imm64zx32 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(32);
+  return Imm.isIntN(32);
 }], UIMM32, "U32Imm">;
 
 defm imm64zx32n : Immediate<i64, [{
-  return (-N->getAPIntValue()).isIntN(32);
+  return (-Imm).isIntN(32);
 }], NEGUIMM32, "U32Imm">;
 
 defm imm64zx48 : Immediate<i64, [{
-  return N->getAPIntValue().isIntN(64);
+  return Imm.isIntN(64);
 }], UIMM48, "U48Imm">;
 
 class Imm64 : ImmLeaf<i64, [{}]>, Operand<i64> {
@@ -541,10 +536,10 @@ def len8imm64 : Imm64 {
 //===----------------------------------------------------------------------===//
 
 // Floating-point zero.
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.0); }]>;
 
 // Floating point negative zero.
-def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
+def fpimmneg0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-0.0); }]>;
 
 //===----------------------------------------------------------------------===//
 // Symbolic address operands
@@ -608,20 +603,20 @@ def pcrel32 : PCRelAddress<i64, "pcrel32", PCRel32> {
 // Addressing modes
 //===----------------------------------------------------------------------===//
 
-class DispOp<ValueType vt, code pred> : Operand<vt>, PatLeaf<(vt imm), pred>;
+class DispOp<ValueType vt, code pred> : Operand<vt>, IntImmLeaf<vt, pred>;
 
 // 12-bit displacement operands.
 let EncoderMethod = "getImmOpValue<SystemZ::FK_390_U12Imm>",
     DecoderMethod = "decodeU12ImmOperand" in {
-  def disp12imm32 : DispOp<i32, [{ return N->getAPIntValue().isIntN(12); }]>;
-  def disp12imm64 : DispOp<i64, [{ return N->getAPIntValue().isIntN(12); }]>;
+  def disp12imm32 : DispOp<i32, [{ return Imm.isIntN(12); }]>;
+  def disp12imm64 : DispOp<i64, [{ return Imm.isIntN(12); }]>;
 }
 
 // 20-bit displacement operands.
 let EncoderMethod = "getImmOpValue<SystemZ::FK_390_S20Imm>",
     DecoderMethod = "decodeS20ImmOperand" in {
-  def disp20imm32 : DispOp<i32, [{ return N->getAPIntValue().isSignedIntN(20); }]>;
-  def disp20imm64 : DispOp<i64, [{ return N->getAPIntValue().isSignedIntN(20); }]>;
+  def disp20imm32 : DispOp<i32, [{ return Imm.isSignedIntN(20); }]>;
+  def disp20imm64 : DispOp<i64, [{ return Imm.isSignedIntN(20); }]>;
 }
 
 def BDAddr32Disp12      : AddressAsmOperand<"BDAddr",   "32", "12">;
@@ -691,8 +686,11 @@ def bdvaddr12only     : BDVMode<            "64", "12">;
 //===----------------------------------------------------------------------===//
 
 // A 4-bit condition-code mask.
-def cond4 : PatLeaf<(i32 timm), [{ return (N->getZExtValue() < 16); }]>,
+def cond4 : ImmLeaf<i32, [{ return (Imm.getZExtValue() < 16); }],
+                    NOOP_SDNodeXForm, timm>,
             Operand<i32> {
   let PrintMethod = "printCond4Operand";
   let OperandType = "OPERAND_IMMEDIATE";
+  let IsAPInt = true;
+  let FastIselShouldIgnore = true;
 }

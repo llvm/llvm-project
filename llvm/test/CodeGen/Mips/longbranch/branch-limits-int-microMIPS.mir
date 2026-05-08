@@ -141,7 +141,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BEQ_MM
@@ -166,7 +166,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -179,7 +179,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -234,7 +234,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BGEZ_MM
@@ -261,7 +261,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -274,7 +274,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -329,7 +329,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BGTZ_MM
@@ -356,7 +356,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -369,7 +369,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -424,7 +424,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BLEZ_MM
@@ -451,7 +451,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -464,7 +464,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -519,7 +519,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BLTZ_MM
@@ -546,7 +546,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -559,7 +559,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -612,7 +612,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BNE_MM
@@ -637,7 +637,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -650,7 +650,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -705,7 +705,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BEQZ16_MM
@@ -732,7 +732,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -745,7 +745,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -800,7 +800,7 @@ body:             |
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   INLINEASM &".space 131068", 1
+  ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
   ; MM:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BNEZ16_MM
@@ -827,7 +827,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -840,7 +840,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra

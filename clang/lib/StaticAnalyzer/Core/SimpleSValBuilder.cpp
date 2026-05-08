@@ -952,12 +952,8 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     const MemSpaceRegion *RightMS = RightBase->getMemorySpace(state);
     const MemSpaceRegion *UnknownMS = MemMgr.getUnknownRegion();
 
-    // If the two regions are from different known memory spaces they cannot be
-    // equal. Also, assume that no symbolic region (whose memory space is
-    // unknown) is on the stack.
-    if (LeftMS != RightMS &&
-        ((LeftMS != UnknownMS && RightMS != UnknownMS) ||
-         (isa<StackSpaceRegion>(LeftMS) || isa<StackSpaceRegion>(RightMS)))) {
+    // Two regions from different known memory spaces cannot be equal.
+    if (LeftMS != RightMS && LeftMS != UnknownMS && RightMS != UnknownMS) {
       switch (op) {
       default:
         return UnknownVal();

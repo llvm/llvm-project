@@ -81,7 +81,7 @@ SBProcess::~SBProcess() = default;
 const char *SBProcess::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 const char *SBProcess::GetPluginName() {
@@ -824,7 +824,7 @@ SBBroadcaster SBProcess::GetBroadcaster() const {
 const char *SBProcess::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 lldb::SBAddressRangeList SBProcess::FindRangesInMemory(
@@ -1014,7 +1014,7 @@ bool SBProcess::GetDescription(SBStream &description) {
     Module *exe_module = process_sp->GetTarget().GetExecutableModulePointer();
     const char *exe_name = nullptr;
     if (exe_module)
-      exe_name = exe_module->GetFileSpec().GetFilename().AsCString();
+      exe_name = exe_module->GetFileSpec().GetFilename().AsCString(nullptr);
 
     strm.Printf("SBProcess: pid = %" PRIu64 ", state = %s, threads = %d%s%s",
                 process_sp->GetID(), lldb_private::StateAsCString(GetState()),
@@ -1041,8 +1041,11 @@ SBStructuredData SBProcess::GetExtendedCrashInformation() {
   auto expected_data =
       platform_sp->FetchExtendedCrashInformation(*process_sp.get());
 
-  if (!expected_data)
+  if (!expected_data) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), expected_data.takeError(),
+                   "FetchExtendedCrashInformation failed: {0}");
     return data;
+  }
 
   StructuredData::ObjectSP fetched_data = *expected_data;
   data.m_impl_up->SetObjectSP(fetched_data);
@@ -1196,7 +1199,7 @@ const char *SBProcess::GetExtendedBacktraceTypeAtIndex(uint32_t idx) {
     const std::vector<ConstString> &names =
         runtime->GetExtendedBacktraceTypes();
     if (idx < names.size()) {
-      return names[idx].AsCString();
+      return names[idx].AsCString(nullptr);
     }
   }
   return nullptr;

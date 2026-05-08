@@ -38,6 +38,7 @@ using namespace llvm::omp::target::ompt;
 #endif
 
 using namespace llvm::omp::target::plugin;
+using namespace llvm::omp::target::debug;
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -48,7 +49,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   void *Event = getEvent();
   bool NeedNewEvent = Event == nullptr;
   if (NeedNewEvent && Device.createEvent(&Event) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to create event\n");
+    REPORT() << "Failed to create event";
     return OFFLOAD_FAIL;
   }
 
@@ -56,7 +57,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   // know if the target support event. But if a target doesn't,
   // recordEvent should always return success.
   if (Device.recordEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to set dependence on event " DPxMOD "\n", DPxPTR(Event));
+    REPORT() << "Failed to set dependence on event " << Event;
     return OFFLOAD_FAIL;
   }
 
@@ -88,12 +89,23 @@ llvm::Error DeviceTy::init() {
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
-    // Enables saving the device memory kernel output post execution if set.
-    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT", false);
+    BoolEnvar OMPX_RecordOutput("LIBOMPTARGET_RECORD_OUTPUT", true);
+    Int64Envar OMPX_RecordMemSize("LIBOMPTARGET_RECORD_MEMSIZE",
+                                  8 * 1024 * 1024 * 1024ULL);
+    Int32Envar OMPX_RecordDevice("LIBOMPTARGET_RECORD_DEVICE", 0);
+    StringEnvar OMPX_RecordOutputDir("LIBOMPTARGET_RECORD_DIR", "");
+    BoolEnvar OMPX_EmitRecordReport("LIBOMPTARGET_RECORD_REPORT", false);
+    if (OMPX_RecordDevice != RTLDeviceID)
+      return llvm::Error::success();
 
-    uint64_t ReqPtrArgOffset;
-    RTL->initialize_record_replay(RTLDeviceID, 0, nullptr, true,
-                                  OMPX_ReplaySaveOutput, ReqPtrArgOffset);
+    Ret = RTL->initialize_record_replay(
+        RTLDeviceID, OMPX_RecordMemSize, nullptr,
+        /*IsRecord=*/true, /*IsNative=*/true, OMPX_RecordOutput,
+        OMPX_EmitRecordReport, OMPX_RecordOutputDir.get().c_str());
+    if (Ret != OFFLOAD_SUCCESS)
+      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                       "failed to initialize RR in device %d\n",
+                                       DeviceID);
   }
 
   return llvm::Error::success();
@@ -210,7 +222,7 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   DeviceEnvironment.NumDevices = RTL->getNumDevices();
   // TODO: The device ID used here is not the real device ID used by OpenMP.
   DeviceEnvironment.DeviceNum = RTLDeviceID;
-  DeviceEnvironment.DynamicMemSize = GenericDevice.getDynamicMemorySize();
+  DeviceEnvironment.DynamicMemSize = 0;
   DeviceEnvironment.ClockFrequency = GenericDevice.getClockFrequency();
   DeviceEnvironment.IndirectCallTable =
       reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
@@ -261,7 +273,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
-          omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
@@ -281,7 +293,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
+          DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
@@ -315,21 +327,21 @@ int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
-  DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
-     DPxPTR(HstPtr), Size);
+  ODBG(ODT_Mapping) << "Notifying about new mapping: HstPtr=" << HstPtr
+                    << ", Size=" << Size;
 
   if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
-    REPORT("Notifying about data mapping failed.\n");
+    REPORT() << "Notifying about data mapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
+  ODBG(ODT_Mapping) << "Notifying about an unmapping: HstPtr=" << HstPtr;
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
-    REPORT("Notifying about data unmapping failed.\n");
+    REPORT() << "Notifying about data unmapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
@@ -338,9 +350,10 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
+                               KernelExtraArgsTy *KernelExtraArgs,
                                AsyncInfoTy &AsyncInfo) {
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-                            &KernelArgs, AsyncInfo);
+                            &KernelArgs, KernelExtraArgs, AsyncInfo);
 }
 
 // Run region on device

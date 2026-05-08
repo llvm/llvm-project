@@ -57,7 +57,7 @@ entry:
   %arrayidx9.2 = getelementptr inbounds i32, ptr %p2, i64 2
   br label %for.cond5
 
-for.cond5:                              ; preds = %entry, %for.cond5
+for.cond5:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.cond5 ]
   %i3 = load i32, ptr %p2, align 4
   %sub = sub nsw i32 0, %i3
@@ -71,6 +71,6 @@ for.cond5:                              ; preds = %entry, %for.cond5
   %exitcond = icmp eq i64 %indvars.iv.next, 63
   br i1 %exitcond, label %for.end17, label %for.cond5
 
-for.end17:                                        ; preds = %for.cond5
+for.end17:
   ret void
 }

@@ -271,6 +271,79 @@ func.func @alloca() -> memref<4x8xf32> {
 
 // -----
 
+func.func @alloc_dynamic(%n: index) -> memref<?x4xf32> {
+  %0 = memref.alloc(%n) : memref<?x4xf32>
+  return %0 : memref<?x4xf32>
+}
+
+// CHECK-LABEL: func @alloc_dynamic
+// CHECK-SAME: (%[[N:.*]]: index)
+// CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) : memref<?xf32, strided<[1]>>
+// CHECK: memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [%[[N]], 4], strides: [4, 1]
+
+// -----
+
+func.func @alloca_dynamic(%n: index) -> memref<?x4xf32> {
+  %0 = memref.alloca(%n) : memref<?x4xf32>
+  return %0 : memref<?x4xf32>
+}
+
+// CHECK-LABEL: func @alloca_dynamic
+// CHECK-SAME: (%[[N:.*]]: index)
+// CHECK: %[[ALLOCA:.*]] = memref.alloca(%{{.*}}) : memref<?xf32, strided<[1]>>
+// CHECK: memref.reinterpret_cast %[[ALLOCA]] to offset: [0], sizes: [%[[N]], 4], strides: [4, 1]
+
+// -----
+
+// Explicit row-major strides: same as the default layout, should flatten.
+func.func @flatten_alloc_strided_row_major() -> memref<4x8xf32, strided<[8, 1]>> {
+  %0 = memref.alloc() : memref<4x8xf32, strided<[8, 1]>>
+  return %0 : memref<4x8xf32, strided<[8, 1]>>
+}
+
+// CHECK-LABEL: func @flatten_alloc_strided_row_major
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
+// CHECK: memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32, strided<[1]>> to memref<4x8xf32, strided<[8, 1]>>
+
+// -----
+
+// Non-zero static offset: the flat allocation covers [0, offset+extent) = [0, 82)
+// and the reinterpret_cast restores the original offset in the result type.
+func.func @flatten_alloc_strided_offset() -> memref<4x8xf32, strided<[8, 1], offset: 50>> {
+  %0 = memref.alloc() : memref<4x8xf32, strided<[8, 1], offset: 50>>
+  return %0 : memref<4x8xf32, strided<[8, 1], offset: 50>>
+}
+
+// CHECK-LABEL: func @flatten_alloc_strided_offset
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<82xf32, strided<[1]>>
+// CHECK: memref.reinterpret_cast %[[ALLOC]] to offset: [50], sizes: [4, 8], strides: [8, 1] : memref<82xf32, strided<[1]>> to memref<4x8xf32, strided<[8, 1], offset: 50>>
+
+// -----
+
+// Padded strides: flatten to the maximum extent (max(18*4, 2*8) = 72).
+func.func @flatten_alloc_strided_padded() -> memref<4x8xf32, strided<[18, 2]>> {
+  %0 = memref.alloc() : memref<4x8xf32, strided<[18, 2]>>
+  return %0 : memref<4x8xf32, strided<[18, 2]>>
+}
+
+// CHECK-LABEL: func @flatten_alloc_strided_padded
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<72xf32, strided<[1]>>
+// CHECK: memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [18, 2] : memref<72xf32, strided<[1]>> to memref<4x8xf32, strided<[18, 2]>>
+
+// -----
+
+// Multi-dynamic alloc: strides are dynamic so the pattern bails out.
+func.func @alloc_multi_dynamic(%m: index, %n: index) -> memref<?x?xf32> {
+  %0 = memref.alloc(%m, %n) : memref<?x?xf32>
+  return %0 : memref<?x?xf32>
+}
+
+// CHECK-LABEL: func @alloc_multi_dynamic
+// CHECK: memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32>
+// CHECK-NOT: memref.reinterpret_cast
+
+// -----
+
 func.func @chained_alloc_load() -> vector<8xf32> {
   %c3 = arith.constant 3 : index
   %c6 = arith.constant 6 : index

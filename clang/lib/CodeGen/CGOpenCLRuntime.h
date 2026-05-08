@@ -36,8 +36,7 @@ class CodeGenModule;
 class CGOpenCLRuntime {
 protected:
   CodeGenModule &CGM;
-  llvm::Type *PipeROTy;
-  llvm::Type *PipeWOTy;
+  llvm::Type *PipeTy;
   llvm::Type *SamplerTy;
 
   /// Structure for enqueued block information.
@@ -50,34 +49,31 @@ protected:
   /// Maps block expression to block information.
   llvm::DenseMap<const Expr *, EnqueuedBlockInfo> EnqueuedBlockMap;
 
-  virtual llvm::Type *getPipeType(const PipeType *T, StringRef Name,
-                                  llvm::Type *&PipeTy);
   llvm::PointerType *getPointerType(const Type *T);
 
 public:
-  CGOpenCLRuntime(CodeGenModule &CGM) : CGM(CGM),
-    PipeROTy(nullptr), PipeWOTy(nullptr), SamplerTy(nullptr) {}
-  virtual ~CGOpenCLRuntime();
+  CGOpenCLRuntime(CodeGenModule &CGM)
+      : CGM(CGM), PipeTy(nullptr), SamplerTy(nullptr) {}
+  ~CGOpenCLRuntime();
 
   /// Emit the IR required for a work-group-local variable declaration, and add
   /// an entry to CGF's LocalDeclMap for D.  The base class does this using
   /// CodeGenFunction::EmitStaticVarDecl to emit an internal global for D.
-  virtual void EmitWorkGroupLocalVarDecl(CodeGenFunction &CGF,
-                                         const VarDecl &D);
+  void EmitWorkGroupLocalVarDecl(CodeGenFunction &CGF, const VarDecl &D);
 
-  virtual llvm::Type *convertOpenCLSpecificType(const Type *T);
+  llvm::Type *convertOpenCLSpecificType(const Type *T);
 
-  virtual llvm::Type *getPipeType(const PipeType *T);
+  llvm::Type *getPipeType(const PipeType *T);
 
   llvm::Type *getSamplerType(const Type *T);
 
   // Returns a value which indicates the size in bytes of the pipe
   // element.
-  virtual llvm::Value *getPipeElemSize(const Expr *PipeArg);
+  llvm::Value *getPipeElemSize(const Expr *PipeArg);
 
   // Returns a value which indicates the alignment in bytes of the pipe
   // element.
-  virtual llvm::Value *getPipeElemAlign(const Expr *PipeArg);
+  llvm::Value *getPipeElemAlign(const Expr *PipeArg);
 
   /// \return __generic void* type.
   llvm::PointerType *getGenericVoidPointerType();

@@ -236,6 +236,19 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              bool useInBoundsInsteadOfMasking = false,
                              ArrayRef<bool> inputScalableVecDims = {});
 
+/// Create a TransferWriteOp of `vecToStore` into `dest`.
+///
+/// If the shape of the vector to write differs from the destination shape,
+/// masking is used to avoid out-of-bounds accesses. Set
+/// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
+/// instead of explicit masks.
+/// `writeIndices` specifies the offsets to use. If empty, all indices are set
+/// to 0.
+Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                    Value vecToStore, Value dest,
+                                    SmallVector<Value> writeIndices = {},
+                                    bool useInBoundsInsteadOfMasking = false);
+
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:
 ///   1. The numbers of elements in both array are equal.

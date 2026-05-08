@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror -Wno-unused-variable
 ! Check that we get portability warning for the extension:
 !  - matching but non-'E' exponent letter together with kind-param
 

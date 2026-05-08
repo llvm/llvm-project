@@ -77,7 +77,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bad_weak_ptr(const bad_weak_ptr&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_weak_ptr& operator=(const bad_weak_ptr&) _NOEXCEPT = default;
   ~bad_weak_ptr() _NOEXCEPT override;
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_weak_ptr() {
@@ -752,7 +752,7 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
     // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
     size_t __bytes           = __elements == 0 ? sizeof(__unbounded_array_control_block)
                                                : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
-    constexpr size_t __align = alignof(_Tp);
+    constexpr size_t __align = alignof(__unbounded_array_control_block);
     return (__bytes + __align - 1) & ~(__align - 1);
   }
 
@@ -1423,7 +1423,7 @@ struct hash<shared_ptr<_Tp> > {
   _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const shared_ptr<_Tp>& __ptr) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const shared_ptr<_Tp>& __ptr) const _NOEXCEPT {
     return hash<typename shared_ptr<_Tp>::element_type*>()(__ptr.get());
   }
 };

@@ -155,6 +155,56 @@ func.func @loop_with_final_value(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !f
 
 // -----
 
+// CHECK-LABEL:   func.func @loop_with_final_value_yielding_iv() {
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C10:.*]] = arith.constant 10 : index
+// CHECK:           %[[TRIP:.*]] = arith.divsi
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[FOR:.*]] = scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[ONE]] iter_args(%{{.*}} = %[[C1]]) -> (index) {
+// CHECK:             %[[NEXT:.*]] = arith.addi %{{.*}}, %[[C1]]
+// CHECK:             scf.yield %[[NEXT]] : index
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+func.func @loop_with_final_value_yielding_iv() {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0:1 = fir.do_loop %i = %c1 to %c10 step %c1 -> index {
+    fir.result %i : index
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @loop_with_final_value_and_result() {
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C0I32:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C10:.*]] = arith.constant 10 : index
+// CHECK:           %[[TRIP:.*]] = arith.divsi
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[LOOP:.*]]:2 = scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[ONE]] iter_args(%[[IVIN:.*]] = %[[C1]], %[[ACCIN:.*]] = %[[C0I32]]) -> (index, i32) {
+// CHECK:             %[[IVNEXT:.*]] = arith.addi %{{.*}}, %[[C1]] : index
+// CHECK:             %[[ACCOUT:.*]] = arith.addi %[[ACCIN]], %[[ACCIN]] : i32
+// CHECK:             scf.yield %[[IVNEXT]], %[[ACCOUT]] : index, i32
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+func.func @loop_with_final_value_and_result() {
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c10 = arith.constant 10 : index
+  %0:2 = fir.do_loop %i = %c1 to %c10 step %c1 iter_args(%acc = %c0_i32) -> (index, i32) {
+    %acc2 = arith.addi %acc, %acc : i32
+    fir.result %i, %acc2 : index, i32
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @loop_with_unordered_attr(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index

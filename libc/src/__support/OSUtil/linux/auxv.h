@@ -10,11 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AUXV_H
 
 #include "hdr/fcntl_macros.h" // For open flags
+#include "hdr/sys_auxv_macros.h" // For AT_ macros
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/callonce.h"
 
-#include <linux/auxvec.h> // For AT_ macros
 #include <linux/mman.h>   // For mmap flags
 #include <linux/param.h>  // For EXEC_PAGESIZE
 #include <linux/prctl.h>  // For prctl

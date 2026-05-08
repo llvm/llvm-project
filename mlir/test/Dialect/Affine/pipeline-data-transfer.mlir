@@ -378,3 +378,21 @@ func.func @escaping_and_indexed_use_mix() {
 // CHECK-NEXT:   "compute"(%{{.*}}) : (memref<32xf32, 1>) -> ()
 // CHECK-NEXT:   [[VAL:%[0-9a-zA-Z_]+]] = affine.load %{{.*}}[%{{.*}}] : memref<32xf32, 1>
 // CHECK-NEXT:   "foo"([[VAL]]) : (f32) -> ()
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/60021.
+// An op that uses the same memref as both source and tag in dma_start should
+// not crash; the pass should gracefully skip replacement.
+// CHECK-LABEL: func @same_memref_source_and_tag
+func.func @same_memref_source_and_tag(%arg0: index, %arg1: index) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<1xf32>
+  %alloc_0 = memref.alloc() : memref<100x100xf32, 2>
+  affine.for %arg2 = 0 to 1 {
+    affine.dma_start %alloc[%arg0], %alloc_0[%arg0, %arg0], %alloc[%c0], %c0 : memref<1xf32>, memref<100x100xf32, 2>, memref<1xf32>
+    affine.dma_wait %alloc[%c0], %c0 : memref<1xf32>
+  }
+  return
+}
+// CHECK: affine.for

@@ -37,7 +37,6 @@ module {
 // CHECK:         %[[VAL_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         br label %[[VAL_3:.*]]
 // CHECK:       entry:                                            ; preds = %[[VAL_4:.*]]
-// CHECK:         %[[VAL_5:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         br label %[[VAL_6:.*]]
 // CHECK:       omp_parallel:                                     ; preds = %[[VAL_3]]
 // CHECK:         %[[VAL_7:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_0]], i32 0, i32 0
@@ -96,8 +95,10 @@ module {
 // CHECK:       reduce.finalize:                                  ; preds = %[[VAL_34]], %[[VAL_28]]
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_33]]
+// CHECK:         br label %[[FINI:.*]]
+// CHECK:       [[FINI]]:
 // CHECK:         br label %[[VAL_39:.*]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_38]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[FINI]]
 // CHECK:         ret void
 // CHECK:         %[[VAL_40:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_41:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_42:.*]] = load ptr, ptr %[[VAL_40]], align 8

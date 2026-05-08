@@ -236,8 +236,7 @@ define double @sincos_f64(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    mv s0, a1
 ; RV32IZFINXZDINX-NEXT:    mv s1, a0
 ; RV32IZFINXZDINX-NEXT:    call sin
-; RV32IZFINXZDINX-NEXT:    mv s2, a0
-; RV32IZFINXZDINX-NEXT:    mv s3, a1
+; RV32IZFINXZDINX-NEXT:    fmv.d s2, a0
 ; RV32IZFINXZDINX-NEXT:    mv a0, s1
 ; RV32IZFINXZDINX-NEXT:    mv a1, s0
 ; RV32IZFINXZDINX-NEXT:    call cos

@@ -33,7 +33,7 @@ private:
   llvm::DenseMap<SymbolRefAttr, llvm::DenseSet<SymbolRefAttr>> storeSymbolsMap;
 };
 
-// Traverses upwards searchign for the operation mapped by the symbol.
+// Traverses upwards searching for the operation mapped by the symbol.
 static Operation *getFromSymbol(Operation *baseOp, SymbolRefAttr symbol) {
   for (auto *op = baseOp; op; op = op->getParentOp()) {
     auto *lookup = SymbolTable::lookupNearestSymbolFrom(op, symbol);
@@ -57,6 +57,9 @@ LogicalResult MLProgramPipelineGlobals::buildGlobalMap(ModuleOp module) {
 
       auto symbol = mlir::dyn_cast<SymbolRefAttr>(callable);
       auto *func = getFromSymbol(op, symbol);
+      // If the callee cannot be resolved, we cannot safely analyze the IR.
+      if (!func)
+        return WalkResult::interrupt();
       callableMap[symbol] = func;
     }
     return WalkResult::advance();
@@ -95,8 +98,13 @@ LogicalResult MLProgramPipelineGlobals::buildGlobalMap(ModuleOp module) {
     llvm::DenseSet<SymbolRefAttr> storeSymbols;
 
     for (size_t i = 0; i < work.size(); ++i) {
-      callableMap[work[i]]->walk([&](CallOpInterface call) {
-        auto symbol = dyn_cast<SymbolRefAttr>(call.getCallableForCallee());
+      // Defensive: symbols in `work` should always be in `callableMap` since
+      // buildGlobalMap interrupted on any unresolvable callee, but use find to
+      // avoid inserting null entries via operator[].
+      auto it = callableMap.find(work[i]);
+      assert(it != callableMap.end() && "Expected callable in callableMap");
+      it->second->walk([&](CallOpInterface call) {
+        auto symbol = cast<SymbolRefAttr>(call.getCallableForCallee());
         if (visited.insert(symbol).second)
           work.push_back(symbol);
       });

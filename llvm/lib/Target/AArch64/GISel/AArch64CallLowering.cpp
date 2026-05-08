@@ -19,6 +19,7 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
+#include "AArch64TargetMachine.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -166,7 +167,8 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     markRegUsed(PhysReg);
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
@@ -257,7 +259,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
                            ISD::ArgFlagsTy Flags) override {
     MachineFunction &MF = MIRBuilder.getMF();
     LLT p0 = LLT::pointer(0, 64);
-    LLT s64 = LLT::scalar(64);
+    LLT s64 = LLT::integer(64);
 
     if (IsTailCall) {
       assert(!Flags.isByVal() && "byval unhandled with tail calls");
@@ -292,7 +294,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA, ISD::ArgFlagsTy Flags) override {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -444,7 +446,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       auto &Flags = CurArgInfo.Flags[0];
       if (MRI.getType(CurVReg).getSizeInBits() == TypeSize::getFixed(1) &&
           !Flags.isSExt() && !Flags.isZExt()) {
-        CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
+        CurVReg = MIRBuilder.buildZExt(LLT::integer(8), CurVReg).getReg(0);
       } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
                  1) {
         // Some types will need extending as specified by the CC.
@@ -488,7 +490,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             // If the split EVT was a <1 x T> vector, and NewVT is T, then we
             // don't have to do anything since we don't distinguish between the
             // two.
-            if (NewLLT != MRI.getType(CurVReg)) {
+            if (NewLLT.getScalarSizeInBits() !=
+                MRI.getType(CurVReg).getScalarSizeInBits()) {
               // A scalar extend.
               CurVReg = MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg})
                             .getReg(0);
@@ -577,6 +580,22 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
 
 bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
+  const auto &TM = static_cast<const AArch64TargetMachine &>(MF.getTarget());
+
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  auto OptLevel = MF.getTarget().getOptLevel();
+  auto EnableGlobalISelAtO = TM.getEnableGlobalISelAtO();
+
+  // GlobalISel is currently only enabled when the opt level is less than or
+  // equal to EnableGlobalISelAt or it was explicitly enabled via the CLI. If we
+  // encounter this check, we know GlobalISel was enabled. If not by these two,
+  // it must have been used as part of the SDAG pipeline to use GlobalISel for
+  // optnone.
+  if (static_cast<unsigned>(OptLevel) > EnableGlobalISelAtO && !GlobalISelFlag)
+    return !F.hasOptNone();
+
   if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
                           llvm::any_of(F.args(), [](const Argument &A) {
                             return A.getType()->isScalableTy();
@@ -611,7 +630,7 @@ void AArch64CallLowering::saveVarArgRegisters(
   bool IsWin64CC = Subtarget.isCallingConvWin64(CCInfo.getCallingConv(),
                                                 MF.getFunction().isVarArg());
   const LLT p0 = LLT::pointer(0, 64);
-  const LLT s64 = LLT::scalar(64);
+  const LLT s64 = LLT::integer(64);
 
   unsigned FirstVariadicGPR = CCInfo.getFirstUnallocated(GPRArgRegs);
   unsigned NumVariadicGPRArgRegs = GPRArgRegs.size() - FirstVariadicGPR + 1;
@@ -735,7 +754,7 @@ bool AArch64CallLowering::lowerFormalArguments(
       if (!Flags.isZExt() && !Flags.isSExt()) {
         // Lower i1 argument as i8, and insert AssertZExt + Trunc later.
         Register OrigReg = OrigArg.Regs[0];
-        Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
+        Register WideReg = MRI.createGenericVirtualRegister(LLT::integer(8));
         OrigArg.Regs[0] = WideReg;
         BoolArgs.push_back({OrigReg, WideReg});
       }
@@ -1341,7 +1360,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       // We cannot use a ZExt ArgInfo flag here, because it will
       // zero-extend the argument to i32 instead of just i8.
       OutArg.Regs[0] =
-          MIRBuilder.buildZExt(LLT::scalar(8), OutArg.Regs[0]).getReg(0);
+          MIRBuilder.buildZExt(LLT::integer(8), OutArg.Regs[0]).getReg(0);
       LLVMContext &Ctx = MF.getFunction().getContext();
       OutArg.Ty = Type::getInt8Ty(Ctx);
     }

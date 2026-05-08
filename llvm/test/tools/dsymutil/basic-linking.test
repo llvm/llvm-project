@@ -1,15 +1,18 @@
-RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
-RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
-RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
-RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 %p/Inputs/basic-lto.macho.x86_64 %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefixes=CHECK,CHECK-LTO,CHECK-ARCHIVE
-RUN: dsymutil -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/basic-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK
-RUN: dsymutil -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/two-level-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-TWO
-RUN: dsymutil -no-output -verbose -oso-prepend-path=%p -build-variant-suffix=_debug -D WrongPath -D %p/Inputs %p/Inputs/variant-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-VARIANT
+RUN: dsymutil --linker classic -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
+RUN: dsymutil --linker classic -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
+RUN: dsymutil --linker classic -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
+RUN: dsymutil --linker classic -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 %p/Inputs/basic-lto.macho.x86_64 %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefixes=CHECK,CHECK-LTO,CHECK-ARCHIVE
+RUN: dsymutil --linker classic -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/basic-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK
+RUN: dsymutil --linker classic -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/two-level-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-TWO
+RUN: dsymutil --linker classic -no-output -verbose -oso-prepend-path=%p -build-variant-suffix=_debug -D WrongPath -D %p/Inputs %p/Inputs/variant-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-VARIANT
 
 RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
 RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
 RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
 RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 %p/Inputs/basic-lto.macho.x86_64 %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefixes=CHECK,CHECK-LTO,CHECK-ARCHIVE
+RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/basic-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK
+RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p -D %p/Inputs %p/Inputs/two-level-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-TWO
+RUN: dsymutil --linker parallel -no-output -verbose -oso-prepend-path=%p -build-variant-suffix=_debug -D WrongPath -D %p/Inputs %p/Inputs/variant-relink.macho.arm64.dylib | FileCheck %s --check-prefix=CHECK-RELINK-VARIANT
 
 This test check the basic Dwarf linking process through the debug dumps.
 

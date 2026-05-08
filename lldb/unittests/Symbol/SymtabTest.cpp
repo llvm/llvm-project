@@ -698,7 +698,7 @@ LinkEditData:
 
   // Now make sure that name lookup works for all symbols. This indicates that
   // the Symtab::NameToIndexMap was decoded correctly and works as expected.
-  Symbol *symbol = nullptr;
+  const Symbol *symbol = nullptr;
   symbol = symtab.FindFirstSymbolWithNameAndType(ConstString("main"),
                                                  eSymbolTypeCode,
                                                  Symtab::eDebugAny,

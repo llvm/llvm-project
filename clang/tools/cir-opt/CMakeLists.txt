@@ -23,6 +23,7 @@ clang_target_link_libraries(cir-opt
   PRIVATE
   clangCIR
   clangCIRLoweringDirectToLLVM
+  CIROpenMPSupport
   MLIRCIR
   MLIRCIRTransforms
 )
@@ -35,6 +36,7 @@ target_link_libraries(cir-opt
   MLIRDialect
   MLIRIR
   MLIRMemRefDialect
+  MLIROpenMPTransforms
   MLIROptLib
   MLIRParser
   MLIRPass

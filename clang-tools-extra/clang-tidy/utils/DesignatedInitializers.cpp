@@ -20,7 +20,7 @@
 namespace clang::tidy::utils {
 
 /// Returns true if Name is reserved, like _Foo or __Vector_base.
-static inline bool isReservedName(llvm::StringRef Name) {
+static inline bool isReservedName(StringRef Name) {
   // This doesn't catch all cases, but the most common.
   return Name.size() >= 2 && Name[0] == '_' &&
          (isUppercase(Name[1]) || Name[1] == '_');
@@ -47,7 +47,7 @@ public:
         Valid = true;
         FieldsIt = RD->field_begin();
         FieldsEnd = RD->field_end();
-        if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(RD)) {
+        if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD)) {
           BasesIt = CRD->bases_begin();
           BasesEnd = CRD->bases_end();
           Valid = CRD->isAggregate();
@@ -80,7 +80,7 @@ public:
     if (BasesIt != BasesEnd)
       return false; // Bases can't be designated. Should we make one up?
     if (FieldsIt != FieldsEnd) {
-      llvm::StringRef FieldName;
+      StringRef FieldName;
       if (const IdentifierInfo *II = FieldsIt->getIdentifier())
         FieldName = II->getName();
 
@@ -142,16 +142,16 @@ static void collectDesignators(
   if (!Fields)
     return;
   for (const Expr *Init : Sem->inits()) {
-    auto Next = llvm::make_scope_exit([&, Size(Prefix.size())] {
+    const llvm::scope_exit Next([&, Size(Prefix.size())] {
       Fields.next();       // Always advance to the next subobject name.
       Prefix.resize(Size); // Erase any designator we appended.
     });
     // Skip for a broken initializer or if it is a "hole" in a subobject that
     // was not explicitly initialized.
-    if (!Init || llvm::isa<ImplicitValueInitExpr>(Init))
+    if (!Init || isa<ImplicitValueInitExpr>(Init))
       continue;
 
-    const auto *BraceElidedSubobject = llvm::dyn_cast<InitListExpr>(Init);
+    const auto *BraceElidedSubobject = dyn_cast<InitListExpr>(Init);
     if (BraceElidedSubobject &&
         NestedBraces.contains(BraceElidedSubobject->getLBraceLoc()))
       BraceElidedSubobject = nullptr; // there were braces!
@@ -180,7 +180,7 @@ getUnwrittenDesignators(const InitListExpr *Syn) {
   // Instead, record where braces of sub-init-lists occur in the syntactic form.
   llvm::DenseSet<SourceLocation> NestedBraces;
   for (const Expr *Init : Syn->inits())
-    if (auto *Nested = llvm::dyn_cast<InitListExpr>(Init))
+    if (auto *Nested = dyn_cast<InitListExpr>(Init))
       NestedBraces.insert(Nested->getLBraceLoc());
 
   // Traverse the semantic form to find the designators.

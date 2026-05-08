@@ -1,4 +1,4 @@
-//===-- RecordTest.cpp ----------------------------------------------------===//
+//===-- TypesTest.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Types.h"
+#include "TypesInternal.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
@@ -96,6 +97,21 @@ TEST(RecordedIncludesTest, MatchVerbatimMixedAbsoluteRelative) {
   Inc.addSearchDirectory("/working/rel1/rel2");
   Inc.add(Include{"rel2/bar.h", Bar, SourceLocation(), 1});
   EXPECT_THAT(Inc.match(Header("<bar.h>")), IsEmpty());
+}
+
+TEST(NormalizePathTest, RemovesDotSegments) {
+  EXPECT_EQ(normalizePath("foo/./bar/../baz").str(), "foo/baz");
+  EXPECT_EQ(normalizePath("/foo/./bar").str(), "/foo/bar");
+  EXPECT_EQ(normalizePath("/foo/../bar").str(), "/bar");
+  EXPECT_EQ(normalizePath("foo/bar/").str(), "foo/bar");
+}
+
+TEST(NormalizePathTest, CanonicalizesSeparators) {
+  EXPECT_EQ(normalizePath("foo\\bar").str(), "foo/bar");
+}
+
+TEST(NormalizePathTest, PreservesRootPath) {
+  EXPECT_EQ(normalizePath("/").str(), "/");
 }
 
 } // namespace

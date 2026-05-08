@@ -277,6 +277,106 @@ define <vscale x 2 x i64> @test_fcvtzu_i64_f32(<vscale x 2 x i64> %a, <vscale x 
   ret <vscale x 2 x i64> %out
 }
 
+define <vscale x 16 x i8> @test_revd_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: define <vscale x 16 x i8> @test_revd_i8(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[RES]]
+;
+  %res = tail call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 8 x i16> @test_revd_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: define <vscale x 8 x i16> @test_revd_i16(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.revd.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> [[A]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[RES]]
+;
+  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.revd.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %a)
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @test_revd_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: define <vscale x 4 x i32> @test_revd_i32(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.revd.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
+;
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.revd.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @test_revd_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: define <vscale x 2 x i64> @test_revd_i64(
+; CHECK-SAME: <vscale x 2 x i64> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.revd.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[A]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
+;
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.revd.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %a)
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 8 x i16> @test_revb_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: define <vscale x 8 x i16> @test_revb_i16(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.revb.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> [[A]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[RES]]
+;
+  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.revb.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %a)
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @test_revb_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: define <vscale x 4 x i32> @test_revb_i32(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
+;
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @test_revb_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: define <vscale x 2 x i64> @test_revb_i64(
+; CHECK-SAME: <vscale x 2 x i64> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.revb.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[A]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
+;
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.revb.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %a)
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 4 x i32> @test_revh_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: define <vscale x 4 x i32> @test_revh_i32(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
+;
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @test_revh_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: define <vscale x 2 x i64> @test_revh_i64(
+; CHECK-SAME: <vscale x 2 x i64> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.revh.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[A]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
+;
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.revh.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %a)
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @test_revw_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: define <vscale x 2 x i64> @test_revw_i64(
+; CHECK-SAME: <vscale x 2 x i64> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[A]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
+;
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %a)
+  ret <vscale x 2 x i64> %res
+}
+
 define <vscale x 8 x half> @test_scvtf(<vscale x 8 x half> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: define <vscale x 8 x half> @test_scvtf(
 ; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) {

@@ -174,7 +174,9 @@ public:
     // Remove all declarations that are either external or are replaced with
     // external declarations with higher visibilities.
     DeclListNode::Decls *Tail = erase_if([Decls](NamedDecl *ND) {
-      if (ND->isFromASTFile())
+      // If the declaration is promoted intentionally, keep it.
+      if (ND->isFromASTFile() && ND->getModuleOwnershipKind() !=
+                                     Decl::ModuleOwnershipKind::VisiblePromoted)
         return true;
       // FIXME: Can we get rid of this loop completely?
       return llvm::any_of(Decls, [ND](NamedDecl *D) {

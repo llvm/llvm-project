@@ -19,8 +19,11 @@ static_library("llvm") {
     "PreferIsaOrDynCastInConditionalsCheck.cpp",
     "PreferRegisterOverUnsignedCheck.cpp",
     "PreferStaticOverAnonymousNamespaceCheck.cpp",
+    "RedundantCastingCheck.cpp",
     "TwineLocalCheck.cpp",
+    "TypeSwitchCaseTypesCheck.cpp",
     "UseNewMLIROpBuilderCheck.cpp",
     "UseRangesCheck.cpp",
+    "UseVectorUtilsCheck.cpp",
   ]
 }

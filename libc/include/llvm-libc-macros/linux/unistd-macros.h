@@ -17,6 +17,8 @@
 
 #define _SC_PAGESIZE 1
 #define _SC_PAGE_SIZE _SC_PAGESIZE
+#define _SC_NPROCESSORS_CONF 83
+#define _SC_NPROCESSORS_ONLN 84
 
 #define _PC_FILESIZEBITS 0
 #define _PC_LINK_MAX 1

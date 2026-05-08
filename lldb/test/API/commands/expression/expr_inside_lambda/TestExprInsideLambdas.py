@@ -6,9 +6,11 @@
 
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no expression evaluation
 class ExprInsideLambdaTestCase(TestBase):
     def expectExprError(self, expr: str, expected: str):
         frame = self.thread.GetFrameAtIndex(0)
@@ -127,8 +129,8 @@ class ExprInsideLambdaTestCase(TestBase):
 
         # Inside non_capturing_method
         lldbutil.continue_to_breakpoint(process, bkpt)
-        self.expect_expr("local", result_type="int", result_value="5")
-        self.expect_expr("local2", result_type="int", result_value="10")
+        self.expect_expr("local", result_type="const int", result_value="5")
+        self.expect_expr("local2", result_type="const int", result_value="10")
         self.expect_expr("local2 * local", result_type="int", result_value="50")
 
         self.expectExprError(

@@ -2,13 +2,13 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 ; Test there's no verifier error if a function directly uses LDS and
@@ -18,7 +18,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 
@@ -169,8 +169,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-GISEL:       ; %bb.0: ; %entry
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX8-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX8-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GFX8-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX8-GISEL-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GFX8-GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
 ; GFX8-GISEL-NEXT:    s_cbranch_execz .LBB2_2
@@ -236,8 +237,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX9-GISEL-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
 ; GFX9-GISEL-NEXT:    s_cbranch_execz .LBB2_2
@@ -294,8 +296,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GISEL-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB2_3

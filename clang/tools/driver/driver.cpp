@@ -38,6 +38,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -54,6 +55,9 @@
 #include <optional>
 #include <set>
 #include <system_error>
+#if LLVM_ON_UNIX
+#include <signal.h>
+#endif
 
 using namespace clang;
 using namespace clang::driver;
@@ -264,8 +268,14 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   // Handle -cc1 integrated tools.
-  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
+  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1")) {
+    // Note that this only enables the sandbox for direct -cc1 invocations and
+    // out-of-process -cc1 invocations launched by the driver. For in-process
+    // -cc1 invocations launched by the driver, the sandbox is enabled in
+    // CC1Command::Execute() for better crash recovery.
+    auto EnableSandbox = llvm::sys::sandbox::scopedEnable();
     return ExecuteCC1Tool(Args, ToolContext, VFS);
+  }
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
@@ -371,7 +381,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process) {
     TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
-    llvm::CrashRecoveryContext::Enable();
+    llvm::CrashRecoveryContext::Enable(
+        /*NeedsPOSIXUtilitySignalHandling=*/true);
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
@@ -400,6 +411,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   Driver::CommandStatus CommandStatus = Driver::CommandStatus::Ok;
   // Pretend the first command failed if ReproStatus is Always.
   const Command *FailingCommand = nullptr;
+  int CommandRes = 0;
   if (!C->getJobs().empty())
     FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
@@ -407,7 +419,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
     for (const auto &P : FailingCommands) {
-      int CommandRes = P.first;
+      CommandRes = P.first;
       FailingCommand = P.second;
       if (!Res)
         Res = CommandRes;
@@ -443,8 +455,6 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                                   *C, *FailingCommand))
     Res = 1;
 
-  Diags.getClient()->finish();
-
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
@@ -462,6 +472,29 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // propagated.
   if (Res < 0)
     Res = 1;
+#endif
+
+#if LLVM_ON_UNIX
+  // On Unix, signals are represented by return codes of 128 plus the signal
+  // number. If the return code indicates it was from a signal handler, raise
+  // the signal so that the exit code includes the signal number, as required
+  // by POSIX. Return code 255 is excluded because some tools, such as
+  // llvm-ifs, exit with code 255 (-1) on failure.
+  if (CommandRes > 128 && CommandRes != 255) {
+    llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
+    raise(CommandRes - 128);
+  }
+  // When cc1 runs out-of-process (CLANG_SPAWN_CC1), ExecuteAndWait returns -2
+  // if the child was killed by a signal. The signal number is not preserved,
+  // so resignal with SIGABRT to ensure the driver exits via signal.
+  if (CommandRes == -2) {
+    llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
+    raise(SIGABRT);
+  }
 #endif
 
   // If we have multiple failing commands, we return the result of the first

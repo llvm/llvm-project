@@ -10,7 +10,7 @@ Many coding guidelines advise replacing the magic values with symbolic
 constants to improve readability. Here are a few references:
 
    * `Rule ES.45: Avoid "magic constants"; use symbolic constants in C++ Core Guidelines <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#res-magic>`_
-   * `Rule 5.1.1 Use symbolic names instead of literal values in code in High Integrity C++ <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard-expressions>`_
+   * `Rule 5.1.1 Use symbolic names instead of literal values in code in High Integrity C++ <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-rules>`_
    * Item 17 in "C++ Coding Standards: 101 Rules, Guidelines and Best
      Practices" by Herb Sutter and Andrei Alexandrescu
    * Chapter 17 in "Clean Code - A handbook of agile software craftsmanship."

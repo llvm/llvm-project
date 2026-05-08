@@ -113,20 +113,16 @@ TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
 }
 
 unsigned TargetCodeGenInfo::getDeviceKernelCallingConv() const {
-  if (getABIInfo().getContext().getLangOpts().OpenCL) {
-    // Device kernels are called via an explicit runtime API with arguments,
-    // such as set with clSetKernelArg() for OpenCL, not as normal
-    // sub-functions. Return SPIR_KERNEL by default as the kernel calling
-    // convention to ensure the fingerprint is fixed such way that each kernel
-    // argument gets one matching argument in the produced kernel function
-    // argument list to enable feasible implementation of clSetKernelArg() with
-    // aggregates etc. In case we would use the default C calling conv here,
-    // clSetKernelArg() might break depending on the target-specific
-    // conventions; different targets might split structs passed as values
-    // to multiple function arguments etc.
-    return llvm::CallingConv::SPIR_KERNEL;
-  }
-  llvm_unreachable("Unknown kernel calling convention");
+  // Device kernels are called via an explicit runtime API with arguments,
+  // such as set with clSetKernelArg() for OpenCL, not as normal
+  // sub-functions.  This uses a modified version of the C calling convention
+  // which simplifies the treatment of non-scalar types.  (The rule adjustment
+  // hapens in CodeGenTypes::arrangeLLVMFunctionInfo.)
+  //
+  // Outside of OpenCL, kernels currently do not exist for CPU targets.
+  assert(getABIInfo().getContext().getLangOpts().OpenCL &&
+         "Kernel calling convention only defined for OpenCL");
+  return llvm::CallingConv::C;
 }
 
 void TargetCodeGenInfo::setOCLKernelStubCallingConvention(
@@ -148,25 +144,11 @@ LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return D ? D->getType().getAddressSpace() : LangAS::Default;
 }
 
-llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
-    CodeGen::CodeGenFunction &CGF, llvm::Value *Src, LangAS SrcAddr,
-    llvm::Type *DestTy, bool isNonNull) const {
-  // Since target may map different address spaces in AST to the same address
-  // space, an address space conversion may end up as a bitcast.
-  if (auto *C = dyn_cast<llvm::Constant>(Src))
-    return performAddrSpaceCast(CGF.CGM, C, SrcAddr, DestTy);
-  // Try to preserve the source's name to make IR more readable.
-  return CGF.Builder.CreateAddrSpaceCast(
-      Src, DestTy, Src->hasName() ? Src->getName() + ".ascast" : "");
-}
-
-llvm::Constant *
-TargetCodeGenInfo::performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *Src,
-                                        LangAS SrcAddr,
-                                        llvm::Type *DestTy) const {
-  // Since target may map different address spaces in AST to the same address
-  // space, an address space conversion may end up as a bitcast.
-  return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+StringRef
+TargetCodeGenInfo::getLLVMSyncScopeStr(const LangOptions &LangOpts,
+                                       SyncScope Scope,
+                                       llvm::AtomicOrdering Ordering) const {
+  return ""; /* default sync scope */
 }
 
 llvm::SyncScope::ID
@@ -174,7 +156,8 @@ TargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
                                       SyncScope Scope,
                                       llvm::AtomicOrdering Ordering,
                                       llvm::LLVMContext &Ctx) const {
-  return Ctx.getOrInsertSyncScopeID(""); /* default sync scope */
+  return Ctx.getOrInsertSyncScopeID(
+      getLLVMSyncScopeStr(LangOpts, Scope, Ordering));
 }
 
 void TargetCodeGenInfo::addStackProbeTargetAttributes(

@@ -552,13 +552,13 @@ namespace llvm {
         auto *AI = new AllocaInst(func_test3->getType(), 0, "func3ptr",
                                   label_entry_11);
         new StoreInst(func_test3, AI, label_entry_11);
-        BranchInst::Create(label_bb, label_entry_11);
+        UncondBrInst::Create(label_bb, label_entry_11);
 
         // Block bb (label_bb)
-        BranchInst::Create(label_bb, label_bb1, int1_f, label_bb);
+        CondBrInst::Create(int1_f, label_bb, label_bb1, label_bb);
 
         // Block bb1 (label_bb1)
-        BranchInst::Create(label_bb1, label_return, int1_f, label_bb1);
+        CondBrInst::Create(int1_f, label_bb1, label_return, label_bb1);
 
         // Block return (label_return)
         ReturnInst::Create(Context, label_return);
@@ -620,18 +620,18 @@ namespace llvm {
       LLVMContext Context;
 
       const char *IR = "define void @foo() {\n"
-                       "  call void @broker(void (i8*)* @callback0, i8* null)\n"
-                       "  call void @broker(void (i8*)* @callback1, i8* null)\n"
+                       "  call void @broker(ptr @callback0, ptr null)\n"
+                       "  call void @broker(ptr @callback1, ptr null)\n"
                        "  ret void\n"
                        "}\n"
                        "\n"
-                       "declare !callback !0 void @broker(void (i8*)*, i8*)\n"
+                       "declare !callback !0 void @broker(ptr, ptr)\n"
                        "\n"
-                       "define internal void @callback0(i8* %arg) {\n"
+                       "define internal void @callback0(ptr %arg) {\n"
                        "  ret void\n"
                        "}\n"
                        "\n"
-                       "define internal void @callback1(i8* %arg) {\n"
+                       "define internal void @callback1(ptr %arg) {\n"
                        "  ret void\n"
                        "}\n"
                        "\n"

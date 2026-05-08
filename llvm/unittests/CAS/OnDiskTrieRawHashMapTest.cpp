@@ -203,6 +203,7 @@ TEST(OnDiskTrieRawHashMapTest, OutOfSpace) {
                         Temp.path("NoSpace2").str(), "index",
                         /*NumHashBits=*/8, /*DataSize=*/8, /*MaxFileSize=*/118,
                         /*NewInitialFileSize=*/std::nullopt,
+                        /*Logger=*/nullptr,
                         /*NewTableNumRootBits=*/1, /*NewTableNumSubtrieBits=*/1)
                         .moveInto(Trie),
                     Succeeded());

@@ -25,7 +25,7 @@ static_library("NativePDB") {
     "CodeViewRegisterMapping.cpp",
     "CompileUnitIndex.cpp",
     "DWARFLocationExpression.cpp",
-    "PdbAstBuilder.cpp",
+    "PdbAstBuilderClang.cpp",
     "PdbFPOProgramToDWARFExpression.cpp",
     "PdbIndex.cpp",
     "PdbSymUid.cpp",

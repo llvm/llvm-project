@@ -1,5 +1,5 @@
 // Tests that the behavior will be good if there are multiple operator delete in the promise_type.
-// RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++20 -Wno-coroutines-unsupported-target %s -fsyntax-only -verify
 // expected-no-diagnostics
 
 #include "Inputs/std-coroutine.h"

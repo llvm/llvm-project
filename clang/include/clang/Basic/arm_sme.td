@@ -991,9 +991,10 @@ let SMETargetGuard = "sme-f8f32" in {
                                        [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
   def SVMLA_FP8_LANE_ZA16_VG4x4 : Inst<"svmla_lane_za32[_mf8]_vg4x4", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fmlall_lane_za32_vg4x4",
                                        [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  // FMLALL
+  def SVMLA_FP8_ZA32_VG4x1 : Inst<"svmla_za32[_mf8]_vg4x1", "vmdd>", "m", MergeNone, "aarch64_sme_fp8_fmlall_za32_vg4x1",
+                                  [IsStreaming, IsInOutZA, IsOverloadNone], []>;
   // FMLALL (single)
-  def SVMLA_FP8_SINGLE_ZA32_VG4x1 : Inst<"svmla[_single]_za32[_mf8]_vg4x1", "vmdd>", "m", MergeNone, "aarch64_sme_fp8_fmlall_single_za32_vg4x1",
-                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
   def SVMLA_FP8_SINGLE_ZA32_VG4x2 : Inst<"svmla[_single]_za32[_mf8]_vg4x2", "vm2d>", "m", MergeNone, "aarch64_sme_fp8_fmlall_single_za32_vg4x2",
                                          [IsStreaming, IsInOutZA, IsOverloadNone], []>;
   def SVMLA_FP8_SINGLE_ZA32_VG4x4 : Inst<"svmla[_single]_za32[_mf8]_vg4x4", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fmlall_single_za32_vg4x4",
@@ -1015,9 +1016,10 @@ let SMETargetGuard = "sme-f8f16" in {
                                        [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
   def SVMLA_FP8_LANE_ZA16_VG2x4 : Inst<"svmla_lane_za16[_mf8]_vg2x4", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fmlal_lane_za16_vg2x4",
                                        [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  // FMLAL
+  def SVMLA_FP8_ZA16_VG2x1 : Inst<"svmla_za16[_mf8]_vg2x1", "vmdd>", "m", MergeNone, "aarch64_sme_fp8_fmlal_za16_vg2x1",
+                                  [IsStreaming, IsInOutZA, IsOverloadNone], []>;
   // FMLAL (single)
-  def SVMLA_FP8_SINGLE_ZA16_VG2x1 : Inst<"svmla[_single]_za16[_mf8]_vg2x1", "vmdd>", "m", MergeNone, "aarch64_sme_fp8_fmlal_single_za16_vg2x1",
-                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
   def SVMLA_FP8_SINGLE_ZA16_VG2x2 : Inst<"svmla[_single]_za16[_mf8]_vg2x2", "vm2d>", "m", MergeNone, "aarch64_sme_fp8_fmlal_single_za16_vg2x2",
                                          [IsStreaming, IsInOutZA, IsOverloadNone], []>;
   def SVMLA_FP8_SINGLE_ZA16_VG2x4 : Inst<"svmla[_single]_za16[_mf8]_vg2x4", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fmlal_single_za16_vg2x4",

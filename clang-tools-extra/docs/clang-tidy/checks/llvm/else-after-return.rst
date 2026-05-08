@@ -1,6 +1,4 @@
 .. title:: clang-tidy - llvm-else-after-return
-.. meta::
-   :http-equiv=refresh: 5;URL=../readability/else-after-return.html
 
 llvm-else-after-return
 ======================

@@ -163,7 +163,7 @@ def SPIRV_GraphEntryPointARMOp : SPIRV_GraphARMOp<"GraphEntryPoint", [InModuleSc
   }];
 
   let description = [{
-    Graph Entry Point must be the Result <id> of an OpGraphARM instruction.
+    Graph Entry Point must be the Result `<id>` of an OpGraphARM instruction.
 
     Name is a name string for the graphentry point. A module cannot have two
     OpGraphEntryPointARM instructions with the same Name string.

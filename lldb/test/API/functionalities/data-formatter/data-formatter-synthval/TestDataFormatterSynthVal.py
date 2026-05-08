@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class DataFormatterSynthValueTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

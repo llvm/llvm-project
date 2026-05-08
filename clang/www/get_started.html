@@ -121,9 +121,12 @@ Visual Studio:</p>
 <ol>
   <li>Get the required tools:
   <ul>
-    <li><b>Git</b>.  Source code control program.  Get it from:
-        <a href="https://git-scm.com/download">
-        https://git-scm.com/download</a></li>
+    <li><b>Git</b>.  Source code control program with its packaged bash tools.
+        Get it from: <a href="https://git-scm.com/download">
+        https://git-scm.com/download</a> or install the component
+        <b>Git For Windows</b> bundled with Visual Studio.  In addition to
+        source code control, the GNU core utilities in the package are used
+        by the tests.</li>
     <li><b>CMake</b>.  This is used for generating Visual Studio solution and
         project files.  Get it from:
         <a href="https://cmake.org/download/">
@@ -132,15 +135,6 @@ Visual Studio:</p>
     <li><b>Python</b>.  It is used to run the clang test suite. Get it from:
         <a href="https://www.python.org/download/">
         https://www.python.org/download/</a></li>
-    <li><b>GnuWin32 tools</b>
-        The Clang and LLVM test suite use various GNU core utilities, such as
-        <tt>grep</tt>, <tt>sed</tt>, and <tt>find</tt>. The gnuwin32 packages
-        are the oldest and most well-tested way to get these tools. However, the
-        MSys utilities provided by git for Windows have been known to work.
-        Cygwin has worked in the past, but is not well tested.
-        If you don't already have the core utilies from some other source, get
-        gnuwin32 from <a href="http://getgnuwin32.sourceforge.net/">
-        http://getgnuwin32.sourceforge.net/</a>.</li>
   </ul>
   </li>
 

@@ -15,9 +15,9 @@
 
 namespace clang::tidy::modernize {
 
-using NamespaceName = llvm::SmallString<40>;
+using NamespaceName = SmallString<40>;
 
-class NS : public llvm::SmallVector<const NamespaceDecl *, 6> {
+class NS : public SmallVector<const NamespaceDecl *, 6> {
 public:
   std::optional<SourceRange>
   getCleanedNamespaceFrontRange(const SourceManager &SM,
@@ -43,7 +43,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  using NamespaceContextVec = llvm::SmallVector<NS, 6>;
+  using NamespaceContextVec = SmallVector<NS, 6>;
 
   void reportDiagnostic(const SourceManager &SM, const LangOptions &LangOpts);
   NamespaceContextVec Namespaces;

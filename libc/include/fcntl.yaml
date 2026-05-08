@@ -1,6 +1,15 @@
 header: fcntl.h
-header_template: fcntl.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: AT_FDCWD
+    macro_header: fcntl-macros.h
+  - macro_name: AT_REMOVEDIR
+    macro_header: fcntl-macros.h
+  - macro_name: AT_SYMLINK_NOFOLLOW
+    macro_header: fcntl-macros.h
+  - macro_name: AT_EACCESS
+    macro_header: fcntl-macros.h
 types:
   - type_name: off_t
   - type_name: mode_t

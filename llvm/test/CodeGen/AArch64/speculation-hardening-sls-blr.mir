@@ -12,14 +12,14 @@
 # Check that the BLR SLS hardening transforms a BLR into a BL with operands as
 # expected.
 --- |
-  @a = dso_local local_unnamed_addr global i32 (...)* null, align 8
+  @a = dso_local local_unnamed_addr global ptr null, align 8
   @b = dso_local local_unnamed_addr global i32 0, align 4
 
   define dso_local void @fn1() local_unnamed_addr "target-features"="+harden-sls-blr" {
   entry:
-    %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @a to i32 ()**), align 8
+    %0 = load ptr, ptr @a, align 8
     %call = tail call i32 %0() nounwind
-    store i32 %call, i32* @b, align 4
+    store i32 %call, ptr @b, align 4
     ret void
   }
 ...
@@ -35,7 +35,7 @@ body:             |
     frame-setup CFI_INSTRUCTION def_cfa_offset 16
     frame-setup CFI_INSTRUCTION offset $w30, -16
     renamable $x8 = ADRP target-flags(aarch64-page) @a
-    renamable $x8 = LDRXui killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @a :: (dereferenceable load (s64) from `i32 ()** bitcast (i32 (...)** @a to i32 ()**)`)
+    renamable $x8 = LDRXui killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @a :: (dereferenceable load (s64) from `ptr bitcast (ptr @a to ptr)`)
     BLRNoIP killed renamable $x8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
   ; CHECK:  BL <mcsymbol __llvm_slsblr_thunk_x8>, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0, implicit killed $x8
     renamable $x8 = ADRP target-flags(aarch64-page) @b

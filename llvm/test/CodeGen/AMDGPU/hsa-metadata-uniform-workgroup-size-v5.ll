@@ -14,7 +14,7 @@ bb:
 ; CHECK:  - .args:
 ; CHECK-LABEL:     .name:           kernel_non_uniform_workgroup
 ; CHECK-NOT:     .uniform_work_group_size:
-define amdgpu_kernel void @kernel_non_uniform_workgroup() #1 {
+define amdgpu_kernel void @kernel_non_uniform_workgroup() {
 bb:
   ret void
 }
@@ -26,8 +26,7 @@ define amdgpu_kernel void @kernel_no_attr() {
 bb:
   ret void
 }
-attributes #0 = { "uniform-work-group-size"="true" }
-attributes #1 = { "uniform-work-group-size"="false" }
+attributes #0 = { "uniform-work-group-size" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

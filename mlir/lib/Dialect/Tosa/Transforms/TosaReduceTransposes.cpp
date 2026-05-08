@@ -408,7 +408,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   size_t ones = llvm::count(shape, 1);
   // N == 1 and N != 1
   if (ones != shape.size() - 1 &&
-      !(ones == shape.size() && reshapeInputShape[0] == 1))
+      (ones != shape.size() || reshapeInputShape[0] != 1))
     return std::nullopt;
 
   // Do not insert a TransposeOp, instead we fold the reshape and its attribute.

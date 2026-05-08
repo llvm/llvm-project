@@ -57,7 +57,7 @@ int receive_both(Both o) {
 }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?receive_both@@Y{{.*}}"
-// CHECK-SAME: (ptr dead_on_return noundef %o)
+// CHECK-SAME: (ptr noundef dead_on_return %o)
 
 int pass_both() {
   gvi32 = receive_both(Both());
@@ -67,7 +67,7 @@ int pass_both() {
 // CHECK-LABEL: define dso_local noundef i32 @"?pass_both@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.Both, align 8
 // CHECK: call x86_thiscallcc noundef ptr @"??0Both@@QAE@XZ"(ptr {{[^,]*}} [[TMP]])
-// CHECK: call noundef i32 @"?receive_both@@Y{{.*}}"(ptr dead_on_return noundef [[TMP]])
+// CHECK: call noundef i32 @"?receive_both@@Y{{.*}}"(ptr noundef dead_on_return [[TMP]])
 
 int receive_inalloca_both(NonTrivial nt, Both o) {
   return nt.x + o.x + o.y;
@@ -101,11 +101,11 @@ struct [[trivial_abi]] alignas(8) MyPtr {
 int receiveMyPtr(MyPtr o) { return *o.ptr; }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?receiveMyPtr@@Y{{.*}}"
-// CHECK-SAME: (ptr dead_on_return noundef %o)
+// CHECK-SAME: (ptr noundef dead_on_return %o)
 
 int passMyPtr() { return receiveMyPtr(MyPtr()); }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?passMyPtr@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.MyPtr, align 8
 // CHECK: call x86_thiscallcc noundef ptr @"??0MyPtr@@QAE@XZ"(ptr {{[^,]*}} [[TMP]])
-// CHECK: call noundef i32 @"?receiveMyPtr@@Y{{.*}}"(ptr dead_on_return noundef [[TMP]])
+// CHECK: call noundef i32 @"?receiveMyPtr@@Y{{.*}}"(ptr noundef dead_on_return [[TMP]])

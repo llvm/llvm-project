@@ -44,7 +44,9 @@ def TestMoveValueDefns :
          DeclareOpInterfaceMethods<TransformOpInterface>,
          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Moves all dependencies of on operation before another operation.
+    Moves all dependencies of a list of values before another operation.
+    Only pure operations are moved. If there is a side effecting op in the
+    dependency chain no operations are moved.
   }];
 
   let arguments =

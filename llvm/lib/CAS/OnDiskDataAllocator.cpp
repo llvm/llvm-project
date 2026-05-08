@@ -12,6 +12,7 @@
 
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "DatabaseFile.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/Config/llvm-config.h"
 
 using namespace llvm;
@@ -121,6 +122,7 @@ DataAllocatorHandle::create(MappedFileRegionArena &Alloc, StringRef Name,
 Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
     const Twine &PathTwine, const Twine &TableNameTwine, uint64_t MaxFileSize,
     std::optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    std::shared_ptr<ondisk::OnDiskCASLogger> Logger,
     function_ref<void(void *)> UserHeaderInit) {
   assert(!UserHeaderSize || UserHeaderInit);
   SmallString<128> PathStorage;
@@ -145,7 +147,7 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
 
   // Get or create the file.
   Expected<DatabaseFile> File =
-      DatabaseFile::create(Path, MaxFileSize, NewDBConstructor);
+      DatabaseFile::create(Path, MaxFileSize, Logger, NewDBConstructor);
   if (!File)
     return File.takeError();
 
@@ -204,6 +206,7 @@ struct OnDiskDataAllocator::ImplType {};
 Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
     const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
     std::optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    std::shared_ptr<ondisk::OnDiskCASLogger> Logger,
     function_ref<void(void *)> UserHeaderInit) {
   return createStringError(make_error_code(std::errc::not_supported),
                            "OnDiskDataAllocator is not supported");

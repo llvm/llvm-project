@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   std::vector<std::pair<llvm::UTF32, SmallVector<llvm::UTF32>>> Entries;
   SmallVector<StringRef> Values;
   for (const StringRef Line : Lines) {
-    if (Line.starts_with("#"))
+    if (Line.starts_with('#'))
       continue;
 
     Values.clear();
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
       return 2;
     }
 
-    const llvm::StringRef From = Values[0].trim();
+    const StringRef From = Values[0].trim();
     llvm::UTF32 CodePoint = 0;
     From.getAsInteger(16, CodePoint);
 

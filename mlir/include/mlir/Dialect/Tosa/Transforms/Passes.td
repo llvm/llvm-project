@@ -42,6 +42,16 @@ def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
     "tensor::TensorDialect",
     "tosa::TosaDialect",
   ];
+
+  let options = [
+    Option<"foldShapeExpressions", "fold-shape-expressions", "bool",
+           /*default=*/"false",
+           "Fold TOSA shape operations when they have known input values">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool",
+           /*default=*/"false",
+           "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+           "be inserted at the I/O boundaries.">
+  ];
 }
 
 def TosaMakeBroadcastablePass
@@ -195,6 +205,50 @@ def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let dependentDialects = [
     "func::FuncDialect",
     "tosa::TosaDialect",
+  ];
+}
+
+def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
+  let summary = "Narrow F64 TOSA operations to F32";
+  let description = [{
+    This pass narrows TOSA operations with 64-bit floating-point tensor types to
+    32-bit floating-point tensor types. While TOSA itself has no double
+    precision support, upstream conversions or frontends may still materialize
+    F64 tensors temporarily, so this pass removes them before handing off to a
+    TOSA backend.
+  }];
+
+  let options = [
+    Option<"aggressiveRewrite", "aggressive-rewrite", "bool", "false",
+      "If enabled, all TOSA operations are rewritten, regardless or whether the narrowing"
+      "is safe. This option may lead to data loss if not used carefully.">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
+      "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+      "be inserted at the I/O boundaries.">
+  ];
+
+  let dependentDialects = [
+    "func::FuncDialect",
+    "tosa::TosaDialect",
+  ];
+}
+
+def TosaInputShape : Pass<"tosa-experimental-input-shape", "func::FuncOp"> {
+  let summary = "Override dynamic function arguments to specified static shapes.";
+  let description = [{
+    Pass that overrides the dynamic input shapes of function arguments to
+    specified static shapes. If a specified static shape conflicts with the
+    static dimensions in an original input shape, an error is reported.
+  }];
+
+  let constructor = "tosa::createTosaInputShapePass()";
+  let dependentDialects = [
+    "tensor::TensorDialect"
+  ];
+  let options = [
+    ListOption<"args", "args", "std::string",
+          "Comma-separated list of shape descriptions. Each description contains the "
+          "argument name, a colon, and a shape with dimensions separated by x ">
   ];
 }
 

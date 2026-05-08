@@ -525,7 +525,12 @@ struct IRInstructionMapper {
     InstructionClassification() = default;
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
-    InstrType visitBranchInst(BranchInst &BI) {
+    InstrType visitUncondBrInst(UncondBrInst &BI) {
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
+    InstrType visitCondBrInst(CondBrInst &BI) {
       if (EnableBranches)
         return Legal;
       return Illegal;

@@ -67,7 +67,7 @@ define amdgpu_kernel void @workitem_id_z_singlethreaded() #2 {
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_singlethreaded_md':
 ; CHECK-NOT: DIVERGENT
-define amdgpu_kernel void @workitem_id_x_singlethreaded_md() !reqd_work_group_size !0 {
+define amdgpu_kernel void @workitem_id_x_singlethreaded_md() "amdgpu-no-wwm" !reqd_work_group_size !0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   store volatile i32 %id.x, ptr addrspace(1) undef
   ret void
@@ -141,7 +141,7 @@ define amdgpu_kernel void @workitem_id_y_uniform_in_subgroup(ptr %o) #3 !reqd_wo
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,1" }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" }
 attributes #3 = { "target-cpu"="gfx900" "amdgpu-flat-work-group-size"="256,256" }
 
 !0 = !{i32 1, i32 1, i32 1}

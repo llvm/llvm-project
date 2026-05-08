@@ -35,7 +35,7 @@ public:
   static IRObjectWithUseList<BlockOperand> *getUseList(Block *value);
 
   /// Return which operand this is in the BlockOperand list of the Operation.
-  unsigned getOperandNumber();
+  unsigned getOperandNumber() const;
 };
 
 //===----------------------------------------------------------------------===//

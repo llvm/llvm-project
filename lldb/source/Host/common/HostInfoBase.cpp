@@ -53,6 +53,13 @@ struct HostInfoBaseFields {
 
   llvm::once_flag m_lldb_so_dir_once;
   FileSpec m_lldb_so_dir;
+#ifndef NDEBUG
+  /// Used to assert that the shared library helper isn't set after the shlib
+  /// dir has already been computed.
+  bool m_lldb_so_dir_computed = false;
+#endif
+  HostInfoBase::SharedLibraryDirectoryHelper *g_shlib_dir_helper = nullptr;
+
   llvm::once_flag m_lldb_support_exe_dir_once;
   FileSpec m_lldb_support_exe_dir;
   llvm::once_flag m_lldb_headers_dir_once;
@@ -75,17 +82,14 @@ struct HostInfoBaseFields {
 } // namespace
 
 static HostInfoBaseFields *g_fields = nullptr;
-static HostInfoBase::SharedLibraryDirectoryHelper *g_shlib_dir_helper = nullptr;
 
-void HostInfoBase::Initialize(SharedLibraryDirectoryHelper *helper) {
-  g_shlib_dir_helper = helper;
+void HostInfoBase::Initialize() {
   g_fields = new HostInfoBaseFields();
   LogChannelSystem::Initialize();
 }
 
 void HostInfoBase::Terminate() {
   LogChannelSystem::Terminate();
-  g_shlib_dir_helper = nullptr;
   delete g_fields;
   g_fields = nullptr;
 }
@@ -125,8 +129,12 @@ HostInfoBase::ParseArchitectureKind(llvm::StringRef kind) {
 
 FileSpec HostInfoBase::GetShlibDir() {
   llvm::call_once(g_fields->m_lldb_so_dir_once, []() {
-    if (!HostInfo::ComputeSharedLibraryDirectory(g_fields->m_lldb_so_dir))
+    if (!HostInfo::ComputeSharedLibraryDirectory(g_fields->m_lldb_so_dir,
+                                                 g_fields->g_shlib_dir_helper))
       g_fields->m_lldb_so_dir = FileSpec();
+#ifndef NDEBUG
+    g_fields->m_lldb_so_dir_computed = true;
+#endif
     Log *log = GetLog(LLDBLog::Host);
     LLDB_LOG(log, "shlib dir -> `{0}`", g_fields->m_lldb_so_dir);
   });
@@ -269,7 +277,18 @@ bool HostInfoBase::ComputePathRelativeToLibrary(FileSpec &file_spec,
   return (bool)file_spec.GetDirectory();
 }
 
-bool HostInfoBase::ComputeSharedLibraryDirectory(FileSpec &file_spec) {
+void HostInfoBase::SetSharedLibraryDirectoryHelper(
+    SharedLibraryDirectoryHelper *helper) {
+  assert(g_fields &&
+         "SetSharedLibraryDirectoryHelper called before Initialize");
+  assert(!g_fields->m_lldb_so_dir_computed &&
+         "SetSharedLibraryDirectoryHelper called after "
+         "ComputeSharedLibraryDirectory");
+  g_fields->g_shlib_dir_helper = helper;
+}
+
+bool HostInfoBase::ComputeSharedLibraryDirectory(
+    FileSpec &file_spec, SharedLibraryDirectoryHelper *helper) {
   // To get paths related to LLDB we get the path to the executable that
   // contains this function. On MacOSX this will be "LLDB.framework/.../LLDB".
   // On other posix systems, we will get .../lib(64|32)?/liblldb.so.
@@ -277,8 +296,8 @@ bool HostInfoBase::ComputeSharedLibraryDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec(Host::GetModuleFileSpecForHostAddress(
       reinterpret_cast<void *>(HostInfoBase::ComputeSharedLibraryDirectory)));
 
-  if (g_shlib_dir_helper)
-    g_shlib_dir_helper(lldb_file_spec);
+  if (helper)
+    helper(lldb_file_spec);
 
   // Remove the filename so that this FileSpec only represents the directory.
   file_spec.SetDirectory(lldb_file_spec.GetDirectory());

@@ -15,7 +15,7 @@
 # CHECK-NEXT:    SU(0): Data Latency=1 Reg=$vgpr0
 # CHECK:       Successors:
 # CHECK-NEXT:    SU(4): Out  Latency=1
-# CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr0
 # CHECK-NEXT:    SU(3): Out  Latency=1
 # CHECK-NEXT:    SU(3): Data Latency=1 Reg=$vcc
 # CHECK:     SU(3):   $vgpr1 = V_ADDC_U32_e32 0, $vgpr1, implicit-def dead $vcc, implicit $vcc, implicit $exec
@@ -26,13 +26,13 @@
 # CHECK-NEXT:    SU(1): Data Latency=1 Reg=$vgpr1
 # CHECK:       Successors:
 # CHECK-NEXT:    SU(4): Out  Latency=1
-# CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr1
 # CHECK:     SU(4):   $vgpr0_vgpr1 = FLAT_LOAD_DWORDX2 renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK:       Predecessors:
 # CHECK-NEXT:    SU(3): Out  Latency=1
-# CHECK-NEXT:    SU(3): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(3): Data Latency=1 Reg=$vgpr1
 # CHECK-NEXT:    SU(2): Out  Latency=1
-# CHECK-NEXT:    SU(2): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(2): Data Latency=1 Reg=$vgpr0
 # CHECK:       Successors:
 # CHECK-NEXT:    ExitSU: Ord  Latency=3 Artificial
 

@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-MUBUF %s
-; RxN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=-promote-alloca,+sram-ecc < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-promote-alloca < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX803,NO-D16-HI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -mattr=+enable-flat-scratch < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-MUBUF %s
+; RxN: llc -mtriple=amdgcn -mcpu=gfx906 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+sram-ecc < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX803,NO-D16-HI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16:
 ; GCN: s_waitcnt
@@ -494,7 +494,7 @@ entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  store volatile i16 %hi, ptr addrspace(5) null
+  store volatile i16 %hi, ptr addrspace(5) zeroinitializer
   ret void
 }
 
@@ -516,7 +516,7 @@ entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  store volatile i8 %trunc, ptr addrspace(5) null
+  store volatile i8 %trunc, ptr addrspace(5) zeroinitializer
   ret void
 }
 

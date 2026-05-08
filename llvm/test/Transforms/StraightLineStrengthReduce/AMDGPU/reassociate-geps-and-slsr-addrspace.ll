@@ -46,9 +46,9 @@ define amdgpu_kernel void @slsr_after_reassociate_global_geps_over_mubuf_max_off
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[ARR]], i64 [[TMP]]
 ; CHECK-NEXT:    [[V11:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4
 ; CHECK-NEXT:    store i32 [[V11]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[J2:%.*]] = add i32 [[J1]], [[I]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[J2]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[ARR]], i64 [[TMP5]]
+; CHECK-NEXT:    [[OFFSET:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[OFFSET]], 2
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P1]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[V22:%.*]] = load i32, ptr addrspace(1) [[P2]], align 4
 ; CHECK-NEXT:    store i32 [[V22]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -109,8 +109,8 @@ define amdgpu_kernel void @slsr_after_reassociate_lds_geps_over_ds_max_offset(pt
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[ARR]], i32 [[J1]]
 ; CHECK-NEXT:    [[V11:%.*]] = load i32, ptr addrspace(3) [[P1]], align 4
 ; CHECK-NEXT:    store i32 [[V11]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[J2:%.*]] = add i32 [[J1]], [[I]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[ARR]], i32 [[J2]]
+; CHECK-NEXT:    [[J2:%.*]] = shl i32 [[I]], 2
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[P1]], i32 [[J2]]
 ; CHECK-NEXT:    [[V22:%.*]] = load i32, ptr addrspace(3) [[P2]], align 4
 ; CHECK-NEXT:    store i32 [[V22]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void

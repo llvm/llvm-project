@@ -26,7 +26,7 @@ void atom(void) {
   if (__builtin_cpu_is("atom"))
     a("atom");
 
-  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 1)
+  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 4)
   // CHECK: = icmp eq i32 [[LOAD]], 1
 }
 
@@ -34,7 +34,7 @@ void amdfam10h(void) {
   if (__builtin_cpu_is("amdfam10h"))
     a("amdfam10h");
 
-  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 1)
+  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 4)
   // CHECK: = icmp eq i32 [[LOAD]], 4
 }
 
@@ -42,7 +42,7 @@ void barcelona(void) {
   if (__builtin_cpu_is("barcelona"))
     a("barcelona");
 
-  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 2)
+  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
   // CHECK: = icmp eq i32 [[LOAD]], 4
 }
 
@@ -50,6 +50,6 @@ void nehalem(void) {
   if (__builtin_cpu_is("nehalem"))
     a("nehalem");
 
-  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 2)
+  // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
   // CHECK: = icmp eq i32 [[LOAD]], 1
 }

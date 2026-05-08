@@ -12,10 +12,6 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 
-#include "llvm/Support/Threading.h"
-
-#include <mutex>
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -42,16 +38,14 @@ void ScriptInterpreterNone::ExecuteInterpreterLoop() {
 }
 
 void ScriptInterpreterNone::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguageNone, CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                lldb::eScriptLanguageNone, CreateInstance);
 }
 
-void ScriptInterpreterNone::Terminate() {}
+void ScriptInterpreterNone::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 lldb::ScriptInterpreterSP
 ScriptInterpreterNone::CreateInstance(Debugger &debugger) {

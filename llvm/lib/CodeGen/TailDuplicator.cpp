@@ -369,11 +369,16 @@ void TailDuplicator::processPHI(
   // available value liveout of the block.
   Register NewDef = MRI->createVirtualRegister(RC);
   Copies.push_back(std::make_pair(NewDef, RegSubRegPair(SrcReg, SrcSubReg)));
+  if (!Remove) {
+    // Informing MachineSSAUpdater that DefReg -> NewDef in PredBB is not
+    // correct, because it could be used to update on other PHI. But the DefReg
+    // in the COPY will be properly updated by MachineSSAUpdater.
+    MI->getOperand(SrcOpIdx).setReg(NewDef);
+    MI->getOperand(SrcOpIdx).setSubReg(0);
+    return;
+  }
   if (isDefLiveOut(DefReg, TailBB, MRI) || RegsUsedByPhi.count(DefReg))
     addSSAUpdateEntry(DefReg, NewDef, PredBB);
-
-  if (!Remove)
-    return;
 
   MI->removePHIIncomingValueFor(*PredBB);
 
@@ -461,7 +466,7 @@ void TailDuplicator::duplicateInstruction(
       Register NewReg = MRI->createVirtualRegister(OrigRC);
       BuildMI(*PredBB, NewMI, NewMI.getDebugLoc(), TII->get(TargetOpcode::COPY),
               NewReg)
-          .addReg(VI->second.Reg, 0, VI->second.SubReg);
+          .addReg(VI->second.Reg, {}, VI->second.SubReg);
       LocalVRMap.erase(VI);
       LocalVRMap.try_emplace(Reg, NewReg, 0);
       MO.setReg(NewReg);
@@ -1072,7 +1077,7 @@ void TailDuplicator::appendCopies(MachineBasicBlock *MBB,
   const MCInstrDesc &CopyD = TII->get(TargetOpcode::COPY);
   for (auto &CI : CopyInfos) {
     auto C = BuildMI(*MBB, Loc, DebugLoc(), CopyD, CI.first)
-                .addReg(CI.second.Reg, 0, CI.second.SubReg);
+                 .addReg(CI.second.Reg, {}, CI.second.SubReg);
     Copies.push_back(C);
   }
 }

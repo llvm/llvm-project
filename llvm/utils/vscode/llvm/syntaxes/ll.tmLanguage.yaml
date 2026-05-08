@@ -230,6 +230,7 @@ patterns:
             \\bnoimplicitfloat\\b|\
             \\bnoinline\\b|\
             \\bnomerge\\b|\
+            \\bnooutline\\b|\
             \\bnonlazybind\\b|\
             \\bnonnull\\b|\
             \\bnoprofile\\b|\

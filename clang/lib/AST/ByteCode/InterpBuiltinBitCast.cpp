@@ -8,6 +8,7 @@
 #include "InterpBuiltinBitCast.h"
 #include "BitcastBuffer.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "Floating.h"
 #include "Integral.h"
@@ -34,10 +35,12 @@ using namespace clang::interp;
 //  - Optimize the common case of only pushing and pulling full
 //    bytes to/from the buffer.
 
+enum class Result { Success, Skip, Failure };
+
 /// Used to iterate over pointer fields.
 using DataFunc =
-    llvm::function_ref<bool(const Pointer &P, PrimType Ty, Bits BitOffset,
-                            Bits FullBitWidth, bool PackedBools)>;
+    llvm::function_ref<Result(const Pointer &P, PrimType Ty, Bits BitOffset,
+                              Bits FullBitWidth, bool PackedBools)>;
 
 #define BITCAST_TYPE_SWITCH(Expr, B)                                           \
   do {                                                                         \
@@ -77,8 +80,8 @@ using DataFunc =
 
 /// We use this to recursively iterate over all fields and elements of a pointer
 /// and extract relevant data for a bitcast.
-static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
-                          Bits BitsToRead, DataFunc F) {
+static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
+                            Bits BitsToRead, DataFunc F, bool Initialize) {
   const Descriptor *FieldDesc = P.getFieldDesc();
   assert(FieldDesc);
 
@@ -101,12 +104,14 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     unsigned NumElems = FieldDesc->getNumElems();
     bool Ok = true;
     for (unsigned I = P.getIndex(); I != NumElems; ++I) {
-      Ok = Ok && F(P.atIndex(I), ElemT, Offset, ElemSize, PackedBools);
+      Result Res = F(P.atIndex(I), ElemT, Offset, ElemSize, PackedBools);
+
+      Ok = Ok && (Res == Result::Success);
       Offset += PackedBools ? Bits(1) : ElemSize;
       if (Offset >= BitsToRead)
         break;
     }
-    return Ok;
+    return Ok ? Result::Success : Result::Skip;
   }
 
   // Composite arrays.
@@ -114,12 +119,13 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     QualType ElemType = FieldDesc->getElemQualType();
     Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
     for (unsigned I = P.getIndex(); I != FieldDesc->getNumElems(); ++I) {
-      enumerateData(P.atIndex(I).narrow(), Ctx, Offset, BitsToRead, F);
+      enumerateData(P.atIndex(I).narrow(), Ctx, Offset, BitsToRead, F,
+                    Initialize);
       Offset += ElemSize;
       if (Offset >= BitsToRead)
         break;
     }
-    return true;
+    return Result::Success;
   }
 
   // Records.
@@ -132,32 +138,49 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     for (const Record::Field &Fi : R->fields()) {
       if (Fi.isUnnamedBitField())
         continue;
+
       Pointer Elem = P.atField(Fi.Offset);
       Bits BitOffset =
           Offset + Bits(Layout.getFieldOffset(Fi.Decl->getFieldIndex()));
-      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, BitsToRead, F);
+      Result Res =
+          enumerateData(Elem, Ctx, BitOffset, BitsToRead, F, Initialize);
+      if (Initialize) {
+        if (Res == Result::Success)
+          Elem.initialize();
+        else if (Res == Result::Skip)
+          Elem.startLifetime();
+      }
+      Ok = Ok && Res != Result::Failure;
     }
     for (const Record::Base &B : R->bases()) {
       Pointer Elem = P.atField(B.Offset);
+      if (!Initialize && !Elem.isInitialized())
+        return Result::Failure;
+
       CharUnits ByteOffset =
           Layout.getBaseClassOffset(cast<CXXRecordDecl>(B.Decl));
       Bits BitOffset = Offset + Bits(Ctx.getASTContext().toBits(ByteOffset));
-      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, BitsToRead, F);
-      // FIXME: We should only (need to) do this when bitcasting OUT of the
-      // buffer, not when copying data into it.
-      if (Ok)
-        Elem.initialize();
+      Result Res =
+          enumerateData(Elem, Ctx, BitOffset, BitsToRead, F, Initialize);
+      if (Initialize) {
+        if (Res == Result::Success)
+          Elem.initialize();
+        else if (Res == Result::Skip)
+          Elem.startLifetime();
+      }
+      Ok = Ok && Res != Result::Failure;
     }
-
-    return Ok;
+    return Ok ? Result::Success : Result::Failure;
   }
 
   llvm_unreachable("Unhandled data type");
 }
 
 static bool enumeratePointerFields(const Pointer &P, const Context &Ctx,
-                                   Bits BitsToRead, DataFunc F) {
-  return enumerateData(P, Ctx, Bits::zero(), BitsToRead, F);
+                                   Bits BitsToRead, DataFunc F,
+                                   bool Initialize) {
+  return enumerateData(P, Ctx, Bits::zero(), BitsToRead, F, Initialize) !=
+         Result::Failure;
 }
 
 //  This function is constexpr if and only if To, From, and the types of
@@ -268,7 +291,7 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
   return enumeratePointerFields(
       FromPtr, Ctx, Buffer.size(),
       [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
-          bool PackedBools) -> bool {
+          bool PackedBools) -> Result {
         Bits BitWidth = FullBitWidth;
 
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
@@ -278,18 +301,18 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
           BitWidth = Bits(1);
 
         if (BitWidth.isZero())
-          return true;
+          return Result::Skip;
 
         // Bits will be left uninitialized and diagnosed when reading.
         if (!P.isInitialized())
-          return true;
+          return Result::Skip;
 
         if (T == PT_Ptr) {
           assert(P.getType()->isNullPtrType());
           // Clang treats nullptr_t has having NO bits in its value
           // representation. So, we accept it here and leave its bits
           // uninitialized.
-          return true;
+          return Result::Skip;
         }
 
         assert(P.isInitialized());
@@ -311,7 +334,12 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
 
           Buffer.markInitialized(BitOffset, NumBits);
         } else {
-          BITCAST_TYPE_SWITCH(T, { P.deref<T>().bitcastToMemory(Buff.get()); });
+          BITCAST_TYPE_SWITCH(T, {
+            auto Val = P.deref<T>();
+            if (!Val.isNumber())
+              return Result::Failure;
+            Val.bitcastToMemory(Buff.get());
+          });
 
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), FullBitWidth.roundToBytes());
@@ -319,8 +347,9 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
         }
 
         Buffer.pushData(Buff.get(), BitOffset, BitWidth, TargetEndianness);
-        return true;
-      });
+        return Result::Success;
+      },
+      false);
 }
 
 bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -390,7 +419,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   bool Success = enumeratePointerFields(
       ToPtr, S.getContext(), Buffer.size(),
       [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
-          bool PackedBools) -> bool {
+          bool PackedBools) -> Result {
         QualType PtrType = P.getType();
         if (T == PT_Float) {
           const auto &Semantics = ASTCtx.getFloatTypeSemantics(PtrType);
@@ -407,7 +436,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
           Floating::bitcastFromMemory(M.get(), Semantics, &R);
           P.deref<Floating>() = R;
           P.initialize();
-          return true;
+          return Result::Success;
         }
 
         Bits BitWidth;
@@ -431,9 +460,9 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
                 << PtrType << S.getLangOpts().CharIsSigned
                 << E->getSourceRange();
 
-            return false;
+            return Result::Failure;
           }
-          return true;
+          return Result::Skip;
         }
 
         auto Memory = Buffer.copyBits(BitOffset, BitWidth, FullBitWidth,
@@ -463,15 +492,16 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
           });
         }
         P.initialize();
-        return true;
-      });
+        return Result::Success;
+      },
+      true);
 
   return Success;
 }
 
 using PrimTypeVariant =
     std::variant<Pointer, FunctionPointer, MemberPointer, FixedPoint,
-                 Integral<8, false>, Integral<8, true>, Integral<16, false>,
+                 Char<false>, Char<true>, Integral<16, false>,
                  Integral<16, true>, Integral<32, false>, Integral<32, true>,
                  Integral<64, false>, Integral<64, true>, IntegralAP<true>,
                  IntegralAP<false>, Boolean, Floating>;
@@ -489,25 +519,29 @@ bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
   assert(DestPtr.isBlockPointer());
 
   llvm::SmallVector<PrimTypeVariant> Values;
-  enumeratePointerFields(SrcPtr, S.getContext(), Size,
-                         [&](const Pointer &P, PrimType T, Bits BitOffset,
-                             Bits FullBitWidth, bool PackedBools) -> bool {
-                           TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
-                           return true;
-                         });
+  enumeratePointerFields(
+      SrcPtr, S.getContext(), Size,
+      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+          bool PackedBools) -> Result {
+        TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
+        return Result::Success;
+      },
+      false);
 
   unsigned ValueIndex = 0;
-  enumeratePointerFields(DestPtr, S.getContext(), Size,
-                         [&](const Pointer &P, PrimType T, Bits BitOffset,
-                             Bits FullBitWidth, bool PackedBools) -> bool {
-                           TYPE_SWITCH(T, {
-                             P.deref<T>() = std::get<T>(Values[ValueIndex]);
-                             P.initialize();
-                           });
+  enumeratePointerFields(
+      DestPtr, S.getContext(), Size,
+      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+          bool PackedBools) -> Result {
+        TYPE_SWITCH(T, {
+          P.deref<T>() = std::get<T>(Values[ValueIndex]);
+          P.initialize();
+        });
 
-                           ++ValueIndex;
-                           return true;
-                         });
+        ++ValueIndex;
+        return Result::Success;
+      },
+      true);
 
   // We should've read all the values into DestPtr.
   assert(ValueIndex == Values.size());

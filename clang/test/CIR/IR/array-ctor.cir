@@ -2,6 +2,7 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
 !rec_S = !cir.record<struct "S" padded {!u8i}>
 
 module {
@@ -11,7 +12,6 @@ module {
     cir.array.ctor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
     ^bb0(%arg0: !cir.ptr<!rec_S>):
       cir.call @_ZN1SC1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-      cir.yield
     }
     cir.return
   }
@@ -22,7 +22,22 @@ module {
   // CHECK:   cir.array.ctor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
   // CHECK:   ^bb0(%arg0: !cir.ptr<!rec_S>):
   // CHECK:     cir.call @_ZN1SC1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-  // CHECK:     cir.yield
+  // CHECK:   }
+  // CHECK:   cir.return
+  // CHECK: }
+
+  cir.func dso_local @dynamic_array_ctor(%p: !cir.ptr<!rec_S>, %n: !u64i) {
+    cir.array.ctor %p, %n : !cir.ptr<!rec_S>, !u64i {
+    ^bb0(%e: !cir.ptr<!rec_S>):
+      cir.call @_ZN1SC1Ev(%e) : (!cir.ptr<!rec_S>) -> ()
+    }
+    cir.return
+  }
+
+  // CHECK: cir.func dso_local @dynamic_array_ctor
+  // CHECK:   cir.array.ctor %{{.*}}, %{{.*}} : !cir.ptr<!rec_S>, !u64i {
+  // CHECK:   ^bb0(%{{.*}}: !cir.ptr<!rec_S>):
+  // CHECK:     cir.call @_ZN1SC1Ev(%{{.*}}) : (!cir.ptr<!rec_S>) -> ()
   // CHECK:   }
   // CHECK:   cir.return
   // CHECK: }

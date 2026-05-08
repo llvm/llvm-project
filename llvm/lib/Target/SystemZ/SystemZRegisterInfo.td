@@ -305,13 +305,13 @@ defm VR64 : SystemZRegClass<"VR64", [f64, v8i8, v4i16, v2i32, v2f32], 64,
 // The subset of vector registers that can be used for floating-point
 // operations too.
 defm VF128 : SystemZRegClass<"VF128",
-                             [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 128,
-                             (sequence "V%u", 0, 15)>;
+                             [v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64],
+                             128, (sequence "V%u", 0, 15)>;
 
 // All vector registers.
 defm VR128 : SystemZRegClass<"VR128",
                              [v16i8, v8i16, v4i32, v2i64, i128,
-                              v4f32, v2f64, f128],
+                              v8f16, v4f32, v2f64, f128],
                              128, (add (sequence "V%u", 0, 7),
                                        (sequence "V%u", 16, 31),
                                        (sequence "V%u", 8, 15))>;

@@ -12,6 +12,7 @@
 
 #include "clang-c/BuildSystem.h"
 #include "CXString.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Chrono.h"
@@ -149,4 +150,11 @@ clang_ModuleMapDescriptor_writeToBuffer(CXModuleMapDescriptor MMD, unsigned,
 
 void clang_ModuleMapDescriptor_dispose(CXModuleMapDescriptor MMD) {
   delete MMD;
+}
+
+void clang_ModuleCache_prune(const char *Path, time_t PruneInterval,
+                             time_t PruneAfter) {
+  if (Path)
+    clang::maybePruneImpl(Path, PruneInterval, PruneAfter,
+                          /*PruneTopLevel=*/true);
 }

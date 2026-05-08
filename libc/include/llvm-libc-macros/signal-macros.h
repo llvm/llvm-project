@@ -11,7 +11,7 @@
 
 #if defined(__linux__)
 #include "linux/signal-macros.h"
-#elif defined(__NVPTX__) || defined(__AMDGPU__)
+#elif defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)
 #include "gpu/signal-macros.h"
 #endif
 

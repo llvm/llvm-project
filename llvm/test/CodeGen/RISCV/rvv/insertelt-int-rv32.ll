@@ -838,3 +838,15 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_idx_cn1(<vscale x 2 x i64> %v, i32 
   %r = insertelement <vscale x 2 x i64> %v, i64 -1, i32 %idx
   ret <vscale x 2 x i64> %r
 }
+
+define <vscale x 2 x i64> @insertelt_nxv2i64_sext(<vscale x 2 x i64> %v, i32 signext %elt, i32 %idx) {
+; CHECK-LABEL: insertelt_nxv2i64_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vslideup.vi v8, v10, 3
+; CHECK-NEXT:    ret
+  %sext = sext i32 %elt to i64
+  %r = insertelement <vscale x 2 x i64> %v, i64 %sext, i32 3
+  ret <vscale x 2 x i64> %r
+}

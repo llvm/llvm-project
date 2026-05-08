@@ -60,16 +60,16 @@ void check_always_lock_free(std::atomic_ref<T> const& a) {
   } while (0)
 
 void test() {
-  char c = 'x';
+  alignas(std::atomic_ref<char>::required_alignment) char c = 'x';
   check_always_lock_free(std::atomic_ref<char>(c));
 
-  int i = 0;
+  alignas(std::atomic_ref<int>::required_alignment) int i = 0;
   check_always_lock_free(std::atomic_ref<int>(i));
 
-  float f = 0.f;
+  alignas(std::atomic_ref<float>::required_alignment) float f = 0.f;
   check_always_lock_free(std::atomic_ref<float>(f));
 
-  int* p = &i;
+  alignas(std::atomic_ref<int*>::required_alignment) int* p = &i;
   check_always_lock_free(std::atomic_ref<int*>(p));
 
   CHECK_ALWAYS_LOCK_FREE(struct Empty{});

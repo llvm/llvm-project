@@ -439,9 +439,9 @@ define i64 @sel_1_2(i64 %x, i64 %y) {
 ;
 ; X64-LABEL: sel_1_2:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    cmpq $42, %rdi
-; X64-NEXT:    sbbq $0, %rsi
-; X64-NEXT:    leaq 2(%rsi), %rax
+; X64-NEXT:    sbbq $-2, %rax
 ; X64-NEXT:    retq
   %cmp = icmp ult i64 %x, 42
   %sel = select i1 %cmp, i64 1, i64 2

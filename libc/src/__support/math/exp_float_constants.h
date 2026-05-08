@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
 
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -20,7 +21,7 @@ namespace math {
 // Table is generated with Sollya as follow:
 // > display = hexadecimal;
 // > for i from -104 to 89 do { D(exp(i)); };
-static constexpr double EXP_M1[195] = {
+LIBC_INLINE_VAR constexpr double EXP_M1[195] = {
     0x1.f1e6b68529e33p-151, 0x1.525be4e4e601dp-149, 0x1.cbe0a45f75eb1p-148,
     0x1.3884e838aea68p-146, 0x1.a8c1f14e2af5dp-145, 0x1.20a717e64a9bdp-143,
     0x1.8851d84118908p-142, 0x1.0a9bdfb02d240p-140, 0x1.6a5bea046b42ep-139,
@@ -92,7 +93,7 @@ static constexpr double EXP_M1[195] = {
 // Table is generated with Sollya as follow:
 // > display = hexadecimal;
 // > for i from 0 to 127 do { D(exp(i / 128)); };
-static constexpr double EXP_M2[128] = {
+LIBC_INLINE_VAR constexpr double EXP_M2[128] = {
     0x1.0000000000000p0, 0x1.0202015600446p0, 0x1.04080ab55de39p0,
     0x1.06122436410ddp0, 0x1.08205601127edp0, 0x1.0a32a84e9c1f6p0,
     0x1.0c49236829e8cp0, 0x1.0e63cfa7ab09dp0, 0x1.1082b577d34edp0,

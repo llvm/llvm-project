@@ -33,7 +33,7 @@ namespace internal {
 // Returns the idx to the first character in src that is not a whitespace
 // character (as determined by isspace())
 template <typename CharType>
-LIBC_INLINE size_t
+LIBC_INLINE constexpr size_t
 first_non_whitespace(const CharType *__restrict src,
                      size_t src_len = cpp::numeric_limits<size_t>::max()) {
   size_t src_cur = 0;
@@ -94,7 +94,7 @@ LIBC_INLINE static int infer_base(const CharType *__restrict src,
 // Takes a pointer to a string and the base to convert to. This function is used
 // as the backend for all of the string to int functions.
 template <typename T, typename CharType>
-LIBC_INLINE StrToNumResult<T>
+LIBC_INLINE constexpr StrToNumResult<T>
 strtointeger(const CharType *__restrict src, int base,
              const size_t src_len = cpp::numeric_limits<size_t>::max()) {
   using ResultType = make_integral_or_big_int_unsigned_t<T>;

@@ -48,6 +48,19 @@ enum ShiftExtendType {
   SXTX,
 };
 
+/// isSignExtendShiftType - Returns true if \p Type is sign extending.
+static inline bool isSignExtendShiftType(AArch64_AM::ShiftExtendType Type) {
+  switch (Type) {
+  case AArch64_AM::SXTB:
+  case AArch64_AM::SXTH:
+  case AArch64_AM::SXTW:
+  case AArch64_AM::SXTX:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// getShiftName - Get the string encoding for the shift type.
 static inline const char *getShiftExtendName(AArch64_AM::ShiftExtendType ST) {
   switch (ST) {
@@ -769,7 +782,7 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   if (Imm & 0x04) EncVal |= 0x0004000000000000ULL;
   if (Imm & 0x02) EncVal |= 0x0002000000000000ULL;
   if (Imm & 0x01) EncVal |= 0x0001000000000000ULL;
-  return (EncVal << 32) | EncVal;
+  return EncVal;
 }
 
 /// Returns true if Imm is the concatenation of a repeating pattern of type T.
@@ -899,6 +912,34 @@ static inline bool isSVECpyDupImm(int SizeInBits, int64_t Val, int32_t &Imm,
     break;
   }
   return false;
+}
+
+static inline bool isSVELogicalImm(unsigned SizeInBits, uint64_t ImmVal,
+                                   uint64_t &Encoding) {
+  // Shift mask depending on type size.
+  switch (SizeInBits) {
+  case 8:
+    ImmVal &= 0xFF;
+    ImmVal |= ImmVal << 8;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 16:
+    ImmVal &= 0xFFFF;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 32:
+    ImmVal &= 0xFFFFFFFF;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 64:
+    break;
+  default:
+    llvm_unreachable("Unexpected size");
+  }
+
+  return processLogicalImmediate(ImmVal, 64, Encoding);
 }
 
 } // end namespace AArch64_AM

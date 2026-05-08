@@ -1,0 +1,71 @@
+# RUN: split-file %s %t
+
+;--- bad-expression.mir
+# RUN: not llc %t/bad-expression.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/bad-expression.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected <CounterName>_<CounterNum>
+# CHECK-NEXT:    S_WAITCNT_DEPCTR .BadExpression
+# CHECK-NEXT:                      ^
+name: BadExpression
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .BadExpression
+...
+
+;--- counter-too-large.mir
+# RUN: not llc %t/counter-too-large.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/counter-too-large.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} counter value too large
+# CHECK-NEXT:    S_WAITCNT_DEPCTR .VaVdst_99999
+# CHECK-NEXT:                             ^
+name: CounterTooLarge
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .VaVdst_99999
+...
+
+;--- expected-prefix.mir
+# RUN: not llc %t/expected-prefix.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/expected-prefix.mir
+---
+# CHECK: error: {{.*}}
+name: MissingDotPrefix
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR MissingDotPrefix
+...
+
+;--- invalid-counter-name.mir
+# RUN: not llc %t/invalid-counter-name.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/invalid-counter-name.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} invalid counter name
+# CHECK-NEXT:    S_WAITCNT_DEPCTR .InvalidCounterName_1
+# CHECK-NEXT:                      ^
+name: InvalidCounterName
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .InvalidCounterName_1
+...
+
+;--- non-integer-counter.mir
+# RUN: not llc %t/non-integer-counter.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/non-integer-counter.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT_DEPCTR .VaVdst_BadCnt
+# CHECK-NEXT:                             ^
+name: NonIntegerCounter
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .VaVdst_BadCnt
+...
+
+;--- non-negative-integer-counter.mir
+# RUN: not llc %t/non-negative-integer-counter.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/non-negative-integer-counter.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT_DEPCTR .VaVdst_-1
+# CHECK-NEXT:                             ^
+name: NegativeCounter
+body: |
+  bb.0:
+    S_WAITCNT_DEPCTR .VaVdst_-1
+...

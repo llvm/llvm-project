@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  FILE *input = fopen(InputFilename.c_str(), "r");
+  FILE *input = fopen(InputFilename.c_str(), "rb");
   if (!input) {
     fprintf(stderr, "Unable to open %s, exiting\n", InputFilename.c_str());
     exit(1);

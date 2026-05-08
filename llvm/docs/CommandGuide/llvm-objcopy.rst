@@ -251,6 +251,9 @@ multiple file formats.
  For COFF and Mach-O objects, remove all symbols, debug sections, and
  relocations from the output.
 
+ For WebAssembly objects, remove all custom sections except for those named
+ metadata.code.*.
+
 .. option:: --strip-debug, -g
 
  Remove all debug sections from the output.

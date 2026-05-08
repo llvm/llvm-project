@@ -126,7 +126,7 @@ body: |
     S_ENDPGM 0
 ...
 # GCN-LABEL: name: hazard-lookahead-wave-barrier
-# GCN: S_WAITCNT 0
+# GCN: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_ADD_F16_dpp
 ---

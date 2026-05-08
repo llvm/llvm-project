@@ -1,0 +1,124 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z17 -run-pass=greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test folding where the original load is in another MBB.
+
+--- |
+  define void @fun0() { ret void }
+...
+
+# CHECK-LABEL: name: fun0
+# CHECK-LABEL:   bb.0:
+# CHECK-NEXT:      successors: %bb.1(0x80000000)
+# CHECK-NEXT:      liveins: $f0s, $f2s, $f4s, $f6s, $r2l
+# CHECK-NEXT: {{  $}}
+# CHECK-NEXT:      %1:gr32bit = COPY $r2l
+# CHECK-NEXT:      %0:fp32bit = COPY $f6s
+# CHECK-NEXT:      %5:fp32bit = COPY $f4s
+# CHECK-NEXT:      %6:fp32bit = COPY $f2s
+# CHECK-NEXT:      %7:fp32bit = COPY $f0s
+# CHECK-NEXT:      %2:vr32bit = VL32 %fixed-stack.0, 4, $noreg :: (load (s32) from %fixed-stack.0)
+# CHECK-NEXT:      %3:fp32bit = VL32 %fixed-stack.1, 4, $noreg :: (load (s32) from %fixed-stack.1)
+# CHECK-NEXT:      %8:vr32bit = VL32 %fixed-stack.3, 4, $noreg :: (load (s32) from %fixed-stack.3)
+# CHECK-NEXT:      %9:fp32bit = LZER
+# CHECK-NEXT:      %10:addr64bit = LGHI 0
+# CHECK-NEXT: {{  $}}
+# CHECK:         bb.2:
+# CHECK-NEXT:      successors: %bb.4(0x80000000)
+# CHECK-NEXT: {{  $}}
+# CHECK-NEXT:      %12:fp32bit = nofpexcept SEB %9, %fixed-stack.2, 4, $noreg, implicit-def dead $cc, implicit $fpc :: (load (s32) from %fixed-stack.2)
+# CHECK-NEXT:      %13:vr32bit = nofpexcept WFMSB %5, %12, implicit $fpc
+# CHECK-NEXT:      %14:fp32bit = nofpexcept WFMSB %13, %9, implicit $fpc
+# CHECK-NEXT:      J %bb.4
+---
+name:            fun0
+alignment:       2
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+liveins:
+  - { reg: '$f0s', virtual-reg: '%3' }
+  - { reg: '$f2s', virtual-reg: '%4' }
+  - { reg: '$f4s', virtual-reg: '%5' }
+  - { reg: '$f6s', virtual-reg: '%6' }
+  - { reg: '$r2l', virtual-reg: '%7' }
+frameInfo:
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+fixedStack:
+  - { id: 0, offset: 24, size: 4, alignment: 8, isImmutable: true }
+  - { id: 1, offset: 16, size: 4, alignment: 8, isImmutable: true }
+  - { id: 2, offset: 8, size: 4, alignment: 8, isImmutable: true }
+  - { id: 3, size: 4, alignment: 8, isImmutable: true }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $f0s, $f2s, $f4s, $f6s, $r2l
+  
+    %4:gr32bit = COPY $r2l
+    %3:fp32bit = COPY $f6s
+    %2:fp32bit = COPY $f4s
+    %1:fp32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %5:vr32bit = VL32 %fixed-stack.3, 4, $noreg :: (load (s32) from %fixed-stack.3)
+    %6:fp32bit = VL32 %fixed-stack.2, 4, $noreg :: (load (s32) from %fixed-stack.2)
+    %7:vr32bit = VL32 %fixed-stack.1, 4, $noreg :: (load (s32) from %fixed-stack.1)
+    %8:vr32bit = VL32 %fixed-stack.0, 4, $noreg :: (load (s32) from %fixed-stack.0)
+    %9:fp32bit = LZER
+    %10:addr64bit = LGHI 0
+  
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  
+    dead %11:fp32bit = nofpexcept LTEBR %6, implicit-def $cc, implicit $fpc
+    BRC 15, 13, %bb.3, implicit killed $cc
+  
+  bb.2:
+    successors: %bb.4(0x80000000)
+  
+    %12:vr32bit = nofpexcept WFSSB %9, %7, implicit $fpc
+    %13:vr32bit = nofpexcept WFMSB %2, %12, implicit $fpc
+    %14:fp32bit = nofpexcept WFMSB %13, %9, implicit $fpc
+    J %bb.4
+  
+  bb.3:
+    successors: %bb.4(0x80000000)
+  
+    %14:fp32bit = COPY %8
+  
+  bb.4:
+    successors: %bb.5(0x80000000)
+  
+    %15:vr32bit = nofpexcept WFSSB %9, %1, implicit $fpc
+    %16:vr32bit = nofpexcept WFMSB %5, %15, implicit $fpc
+  
+  bb.5:
+    successors: %bb.6(0x40000000), %bb.7(0x40000000)
+  
+    TMLMux %4, 1, implicit-def $cc
+    BRC 15, 8, %bb.7, implicit killed $cc
+  
+  bb.6:
+    successors: %bb.8(0x80000000)
+  
+    %17:vr32bit = nofpexcept WFMSB %16, %3, implicit $fpc
+    %14:fp32bit = nofpexcept WFASB %0, %17, implicit $fpc
+    J %bb.8
+  
+  bb.7:
+    successors: %bb.8(0x80000000)
+  
+  bb.8:
+    successors: %bb.1(0x80000000)
+  
+    %18:gr32bit = nofpexcept CFEBR 5, %14, implicit-def dead $cc, implicit $fpc
+    $r2d = LGHI 0
+    $r3l = COPY %18
+    $r4l = LHIMux 0
+    CallBASR %10, $r2d, killed $r3l, killed $r4l, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
+    J %bb.1
+...

@@ -6,13 +6,13 @@
 ; CHECK: ds_read_b32
 ; CHECK: ds_write_b32
 define amdgpu_vs void @test1(i32 %v) #0 {
-  %p1 = getelementptr i32, ptr addrspace(3) null, i32 1
+  %p1 = getelementptr i32, ptr addrspace(3) zeroinitializer, i32 1
 
-  store i32 %v, ptr addrspace(3) null
+  store i32 %v, ptr addrspace(3) zeroinitializer
 
   call void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32 %v, ptr addrspace(8) poison, i32 0, i32 0, i32 68, i32 1)
 
-  %w = load i32, ptr addrspace(3) null
+  %w = load i32, ptr addrspace(3) zeroinitializer
   store i32 %w, ptr addrspace(3) %p1
   ret void
 }

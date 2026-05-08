@@ -31,11 +31,11 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK-SAME:      ptr {{[^%]*}}%[[ARG0:.*]]){{.*}}{
 // [...]
 // load  a(2):
-// CHECK:  %[[VAL20:.*]] = getelementptr i8, ptr %{{.*}}, i64 %{{.*}}
+// CHECK:  %[[VAL20:.*]] = getelementptr nusw nuw i8, ptr %{{.*}}, i64 %{{.*}}
 // CHECK:  %[[A2:.*]] = load i32, ptr %[[VAL20]], align 4, !tbaa ![[A_ACCESS_TAG:.*]]
 // [...]
 // store a(2) to a(1):
-// CHECK:  %[[A1:.*]] = getelementptr i8, ptr %{{.*}}, i64 %{{.*}}
+// CHECK:  %[[A1:.*]] = getelementptr nusw nuw i8, ptr %{{.*}}, i64 %{{.*}}
 // CHECK:  store i32 %[[A2]], ptr %[[A1]], align 4, !tbaa ![[A_ACCESS_TAG]]
 // CHECK:  ret void
 // CHECK: }

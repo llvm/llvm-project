@@ -441,6 +441,29 @@
 #define LLVM_CTOR_NODISCARD
 #endif
 
+// Macro to suppress the MSVC warning C4848:
+// "support for attribute [[msvc::no_unique_address]] in C++17 and earlier
+// is a vendor extension".
+// This warning is removed in versions >= 19.43.
+#if !defined(_MSC_VER) || _MSC_VER >= 1943 || defined(__clang__)
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else // MSVC < 19.43
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
+  _Pragma("warning(push)") _Pragma("warning(disable : 4848)")
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP _Pragma("warning(pop)")
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#elif LLVM_HAS_CPP_ATTRIBUTE(msvc::no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS                                                 \
+  LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                                   \
+  [[msvc::no_unique_address]] LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else
+#define LLVM_NO_UNIQUE_ADDRESS
+#endif
+
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
 /// pedantic diagnostics.
 #ifdef __GNUC__

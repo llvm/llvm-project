@@ -33,7 +33,8 @@ TEST_F(VPDominatorTreeTest, DominanceNoRegionsTest) {
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
   VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("VPBB3");
   VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("VPBB4");
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB1, VPBB4);
+  VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                            "R1", VPBB1, VPBB4);
   VPBB2->setParent(R1);
   VPBB3->setParent(R1);
 
@@ -99,7 +100,8 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB4 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB4);
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB4);
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
     VPBlockUtils::connectBlocks(VPBB0, R1);
@@ -112,7 +114,8 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
@@ -171,12 +174,14 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB3);
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB3);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
-    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB#");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB3);
+    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB3");
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB3);
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB2, R2BB1);
@@ -207,6 +212,81 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     checkDomChildren(VPDT, R2BB3, {});
     checkDomChildren(VPDT, R1BB3, {VPBB2});
     checkDomChildren(VPDT, VPBB2, {Plan.getScalarHeader()});
+  }
+
+  {
+    // 2 nested replicate regions.
+    //  VPBB1
+    //    |
+    //  R1 {
+    //         R1BB1
+    //       /        \
+    //   R2 {          |
+    //     \           |
+    //     R2BB1       |
+    //       |   \    R1BB2
+    //     R2BB2-/     |
+    //        \        |
+    //         R2BB3   |
+    //   }            /
+    //      \        /
+    //        R1BB3
+    //  }
+    //   |
+    //  VPBB2
+    //
+    VPlan &Plan = getPlan();
+    VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
+    VPInstruction *R1BB1I = new VPInstruction(VPInstruction::VScale, {});
+    R1BB1->appendRecipe(R1BB1I);
+    VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
+    VPInstruction *R1BB2I = new VPInstruction(VPInstruction::VScale, {});
+    R1BB2->appendRecipe(R1BB2I);
+    VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
+    VPInstruction *R1BB3I = new VPInstruction(VPInstruction::VScale, {});
+    R1BB3->appendRecipe(R1BB3I);
+    VPRegionBlock *R1 = Plan.createReplicateRegion(R1BB1, R1BB3, "R1");
+
+    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
+    VPInstruction *R2BB1I = new VPInstruction(VPInstruction::VScale, {});
+    R2BB1->appendRecipe(R2BB1I);
+    VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
+    VPInstruction *R2BB2I = new VPInstruction(VPInstruction::VScale, {});
+    R2BB2->appendRecipe(R2BB2I);
+    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB3");
+    VPInstruction *R2BB3I = new VPInstruction(VPInstruction::VScale, {});
+    R2BB3->appendRecipe(R2BB3I);
+    VPRegionBlock *R2 = Plan.createReplicateRegion(R2BB1, R2BB3, "R2");
+    R2BB2->setParent(R2);
+    VPBlockUtils::connectBlocks(R2BB1, R2BB2);
+    VPBlockUtils::connectBlocks(R2BB2, R2BB1);
+    VPBlockUtils::connectBlocks(R2BB2, R2BB3);
+
+    R2->setParent(R1);
+    VPBlockUtils::connectBlocks(R1BB1, R2);
+    R1BB2->setParent(R1);
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+    VPBlockUtils::connectBlocks(R1BB2, R1BB3);
+    VPBlockUtils::connectBlocks(R2, R1BB3);
+
+    VPBasicBlock *VPBB1 = Plan.getEntry();
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPBlockUtils::connectBlocks(R1, VPBB2);
+
+    VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
+    VPDominatorTree VPDT(Plan);
+
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R2BB1I));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R2BB2I));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R2BB3I));
+    EXPECT_TRUE(VPDT.properlyDominates(R1BB1I, R1BB3I));
+    EXPECT_FALSE(VPDT.properlyDominates(R1BB2I, R1BB3I));
+    EXPECT_TRUE(VPDT.properlyDominates(R2BB1I, R2BB2I));
+    EXPECT_TRUE(VPDT.properlyDominates(R2BB1I, R2BB3I));
+    EXPECT_FALSE(VPDT.properlyDominates(R2BB1I, R1BB3I));
+    EXPECT_FALSE(VPDT.properlyDominates(R2BB3I, R2BB2I));
+    EXPECT_FALSE(VPDT.properlyDominates(R2BB1I, R2BB1I));
   }
 }
 

@@ -10,6 +10,7 @@
 
 // iterator() = default;
 
+#include <cassert>
 #include <ranges>
 
 #include "../types.h"

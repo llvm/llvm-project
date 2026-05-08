@@ -67,7 +67,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK-NEXT: %[[FINAL_RESULT:[A-Za-z0-9_.]*]] = add i32 %[[FINAL_LHS]], %[[FINAL_RHS]]
 // CHECK-NEXT: store i32 %[[FINAL_RESULT]]
 
-// CHECK: call void @__kmpc_barrier
 // CHECK: call void @__kmpc_target_deinit
 
 // CHECK: define internal void @[[OUTLINED]]

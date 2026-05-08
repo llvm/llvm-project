@@ -46,7 +46,8 @@ struct TestPointerLikeTypeInterfacePass
 
   Pass::Option<std::string> testMode{
       *this, "test-mode",
-      llvm::cl::desc("Test mode: walk, alloc, copy, or free"),
+      llvm::cl::desc(
+          "Test mode: walk, alloc, copy, free, load, store, or cast"),
       llvm::cl::init("walk")};
 
   StringRef getArgument() const override {
@@ -75,6 +76,12 @@ private:
   void testGenCopy(Operation *srcOp, Operation *destOp, Value srcResult,
                    Value destResult, PointerLikeType pointerType,
                    OpBuilder &builder);
+  void testGenLoad(Operation *op, Value result, PointerLikeType pointerType,
+                   OpBuilder &builder);
+  void testGenStore(Operation *op, Value result, PointerLikeType pointerType,
+                    OpBuilder &builder, Value providedValue = {});
+  void testGenCast(Operation *op, Value value, Type resultType,
+                   OpBuilder &builder);
 
   struct PointerCandidate {
     Operation *op;
@@ -92,9 +99,24 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
   auto func = getOperation();
   OpBuilder builder(&getContext());
 
-  if (testMode == "alloc" || testMode == "free") {
+  if (testMode == "cast") {
+    func.walk([&](Operation *op) {
+      if (!op->hasAttr("test.cast"))
+        return;
+      auto destAttr = dyn_cast_or_null<TypeAttr>(op->getAttr("cast_dest"));
+      if (!destAttr || op->getNumResults() == 0)
+        return;
+      testGenCast(op, op->getResult(0), destAttr.getValue(), builder);
+    });
+    return;
+  }
+
+  if (testMode == "alloc" || testMode == "free" || testMode == "load" ||
+      testMode == "store") {
     // Collect all candidates first
     SmallVector<PointerCandidate> candidates;
+    // For store mode, also look for a test value to use
+    Value testValue;
     func.walk([&](Operation *op) {
       if (op->hasAttr("test.ptr")) {
         for (auto result : op->getResults()) {
@@ -104,6 +126,11 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
             break; // Only take the first PointerLikeType result
           }
         }
+      }
+      // Collect value marked with test.value for store tests
+      if (testMode == "store" && op->hasAttr("test.value")) {
+        if (op->getNumResults() > 0)
+          testValue = op->getResult(0);
       }
     });
 
@@ -115,6 +142,12 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
       else if (testMode == "free")
         testGenFree(candidate.op, candidate.result, candidate.pointerType,
                     builder);
+      else if (testMode == "load")
+        testGenLoad(candidate.op, candidate.result, candidate.pointerType,
+                    builder);
+      else if (testMode == "store")
+        testGenStore(candidate.op, candidate.result, candidate.pointerType,
+                     builder, testValue);
     }
   } else if (testMode == "copy") {
     // Collect all source and destination candidates
@@ -288,6 +321,150 @@ void TestPointerLikeTypeInterfacePass::testGenCopy(
     srcOp->print(llvm::errs());
     llvm::errs() << " to destination: ";
     destOp->print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+}
+
+void TestPointerLikeTypeInterfacePass::testGenLoad(Operation *op, Value result,
+                                                   PointerLikeType pointerType,
+                                                   OpBuilder &builder) {
+  Location loc = op->getLoc();
+
+  // Create a new builder with the listener and set insertion point
+  OperationTracker tracker;
+  OpBuilder newBuilder(op->getContext());
+  newBuilder.setListener(&tracker);
+  newBuilder.setInsertionPointAfter(op);
+
+  // Call the genLoad API
+  auto typedResult = cast<TypedValue<PointerLikeType>>(result);
+  Value loadRes = pointerType.genLoad(newBuilder, loc, typedResult, Type());
+
+  if (loadRes) {
+    llvm::errs() << "Successfully generated load for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+    llvm::errs() << "\tLoaded value type: ";
+    loadRes.getType().print(llvm::errs());
+    llvm::errs() << "\n";
+
+    // Print all operations that were inserted
+    for (Operation *insertedOp : tracker.insertedOps) {
+      llvm::errs() << "\tGenerated: ";
+      insertedOp->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  } else {
+    llvm::errs() << "Failed to generate load for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+}
+
+void TestPointerLikeTypeInterfacePass::testGenStore(Operation *op, Value result,
+                                                    PointerLikeType pointerType,
+                                                    OpBuilder &builder,
+                                                    Value providedValue) {
+  Location loc = op->getLoc();
+
+  // Create a new builder with the listener and set insertion point
+  OperationTracker tracker;
+  OpBuilder newBuilder(op->getContext());
+  newBuilder.setListener(&tracker);
+  newBuilder.setInsertionPointAfter(op);
+
+  // Use provided value if available, otherwise create a constant
+  Value valueToStore = providedValue;
+  if (!valueToStore) {
+    // Create a test value to store - use a constant matching the element type
+    Type elementType = pointerType.getElementType();
+    if (!elementType) {
+      llvm::errs() << "Failed to generate store for operation: ";
+      op->print(llvm::errs());
+      llvm::errs() << "\n";
+      return;
+    }
+
+    if (elementType.isIntOrIndex()) {
+      auto attr = newBuilder.getIntegerAttr(elementType, 42);
+      valueToStore =
+          arith::ConstantOp::create(newBuilder, loc, elementType, attr);
+    } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
+      auto attr = newBuilder.getFloatAttr(floatType, 42.0);
+      valueToStore =
+          arith::ConstantOp::create(newBuilder, loc, floatType, attr);
+    } else {
+      llvm::errs() << "Failed to generate store for operation: ";
+      op->print(llvm::errs());
+      llvm::errs() << "\n";
+      return;
+    }
+  }
+
+  // Call the genStore API
+  auto typedResult = cast<TypedValue<PointerLikeType>>(result);
+  bool success =
+      pointerType.genStore(newBuilder, loc, valueToStore, typedResult);
+
+  if (success) {
+    llvm::errs() << "Successfully generated store for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+
+    // Print all operations that were inserted
+    for (Operation *insertedOp : tracker.insertedOps) {
+      llvm::errs() << "\tGenerated: ";
+      insertedOp->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  } else {
+    llvm::errs() << "Failed to generate store for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+}
+
+void TestPointerLikeTypeInterfacePass::testGenCast(Operation *op, Value value,
+                                                   Type resultType,
+                                                   OpBuilder &builder) {
+  Location loc = op->getLoc();
+
+  OperationTracker tracker;
+  OpBuilder newBuilder(op->getContext());
+  newBuilder.setListener(&tracker);
+  newBuilder.setInsertionPointAfter(op);
+
+  PointerLikeType dispatchTy;
+  if (isa<PointerLikeType>(value.getType()))
+    dispatchTy = cast<PointerLikeType>(value.getType());
+  else if (isa<PointerLikeType>(resultType))
+    dispatchTy = cast<PointerLikeType>(resultType);
+  else {
+    llvm::errs() << "Failed genCast: neither value nor result type is "
+                    "PointerLikeType for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+    return;
+  }
+
+  Value castRes = dispatchTy.genCast(newBuilder, loc, value, resultType);
+
+  if (castRes) {
+    llvm::errs() << "Successfully generated cast for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+    llvm::errs() << "\tCast result type: ";
+    castRes.getType().print(llvm::errs());
+    llvm::errs() << "\n";
+
+    for (Operation *insertedOp : tracker.insertedOps) {
+      llvm::errs() << "\tGenerated: ";
+      insertedOp->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  } else {
+    llvm::errs() << "Failed to generate cast for operation: ";
+    op->print(llvm::errs());
     llvm::errs() << "\n";
   }
 }

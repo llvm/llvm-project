@@ -26,13 +26,29 @@ struct MultiClass;
 struct SubClassReference;
 struct SubMultiClassReference;
 
+/// Specifies how a 'let' assignment interacts with the existing field value.
+/// - Replace: overwrite the field (default behavior).
+/// - Append: concatenate the new value after the existing value.
+/// - Prepend: concatenate the new value before the existing value.
+enum class LetMode { Replace, Append, Prepend };
+
+/// Parsed let mode keyword and field name (e.g. `let append x` yields
+/// Mode=Append, Name="x"; plain `let x` yields Mode=Replace, Name="x").
+struct LetModeAndName {
+  LetMode Mode;
+  SMLoc Loc;        // Source location of the field name.
+  std::string Name; // The field name being assigned.
+};
+
 struct LetRecord {
   const StringInit *Name;
   std::vector<unsigned> Bits;
   const Init *Value;
   SMLoc Loc;
-  LetRecord(const StringInit *N, ArrayRef<unsigned> B, const Init *V, SMLoc L)
-      : Name(N), Bits(B), Value(V), Loc(L) {}
+  LetMode Mode;
+  LetRecord(const StringInit *N, ArrayRef<unsigned> B, const Init *V, SMLoc L,
+            LetMode M = LetMode::Replace)
+      : Name(N), Bits(B), Value(V), Loc(L), Mode(M) {}
 };
 
 /// RecordsEntry - Holds exactly one of a Record, ForeachLoop, or
@@ -223,10 +239,11 @@ private: // Semantic analysis methods.
   bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV);
   /// Set the value of a RecordVal within the given record. If `OverrideDefLoc`
   /// is set, the provided location overrides any existing location of the
-  /// RecordVal.
+  /// RecordVal. An optional `Mode` specifies append/prepend concatenation.
   bool SetValue(Record *TheRec, SMLoc Loc, const Init *ValName,
                 ArrayRef<unsigned> BitList, const Init *V,
-                bool AllowSelfAssignment = false, bool OverrideDefLoc = true);
+                bool AllowSelfAssignment = false, bool OverrideDefLoc = true,
+                LetMode Mode = LetMode::Replace);
   bool AddSubClass(Record *Rec, SubClassReference &SubClass);
   bool AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass);
   bool AddSubMultiClass(MultiClass *CurMC,
@@ -270,6 +287,7 @@ private: // Parser methods.
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
   bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec = nullptr);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
+  LetModeAndName ParseLetModeAndName();
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
   bool ParseObjectBody(Record *CurRec);

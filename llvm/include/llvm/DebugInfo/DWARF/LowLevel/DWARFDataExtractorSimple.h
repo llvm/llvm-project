@@ -22,21 +22,67 @@ namespace llvm {
 
 template <typename Relocator>
 class DWARFDataExtractorBase : public DataExtractor {
+  unsigned AddressSize;
 
 public:
   DWARFDataExtractorBase(StringRef Data, bool IsLittleEndian,
-                         uint8_t AddressSize)
-      : DataExtractor(Data, IsLittleEndian, AddressSize) {}
+                         unsigned AddressSize)
+      : DataExtractor(Data, IsLittleEndian), AddressSize(AddressSize) {}
+
   DWARFDataExtractorBase(ArrayRef<uint8_t> Data, bool IsLittleEndian,
-                         uint8_t AddressSize)
+                         unsigned AddressSize)
       : DataExtractor(
             StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
-            IsLittleEndian, AddressSize) {}
+            IsLittleEndian),
+        AddressSize(AddressSize) {}
 
   /// Truncating constructor
   DWARFDataExtractorBase(const DWARFDataExtractorBase &Other, size_t Length)
       : DataExtractor(Other.getData().substr(0, Length), Other.isLittleEndian(),
                       Other.getAddressSize()) {}
+
+  /// Get the address size for this extractor.
+  unsigned getAddressSize() const { return AddressSize; }
+
+  /// Set the address size for this extractor.
+  void setAddressSize(unsigned Size) { AddressSize = Size; }
+
+  //------------------------------------------------------------------
+  /// Extract an address from \a *OffsetPtr.
+  ///
+  /// Extract a single address from the data and update the offset
+  /// pointed to by \a OffsetPtr. The size of the extracted address
+  /// is \a getAddressSize(), so the address size has to be
+  /// set correctly prior to extracting any address values.
+  ///
+  /// @param[in,out] OffsetPtr
+  ///     A pointer to an offset within the data that will be advanced
+  ///     by the appropriate number of bytes if the value is extracted
+  ///     correctly. If the offset is out of bounds or there are not
+  ///     enough bytes to extract this value, the offset will be left
+  ///     unmodified.
+  ///
+  /// @return
+  ///     The extracted address value as a 64 integer.
+  uint64_t getAddress(uint64_t *OffsetPtr) const {
+    return getUnsigned(OffsetPtr, AddressSize);
+  }
+
+  /// Extract an address-sized unsigned integer from the location given by the
+  /// cursor. In case of an extraction error, or if the cursor is already in
+  /// an error state, zero is returned.
+  uint64_t getAddress(Cursor &C) const { return getUnsigned(C, AddressSize); }
+
+  /// Test the availability of enough bytes of data for an address from
+  /// \a Offset. The size of an address is \a getAddressSize().
+  ///
+  /// @return
+  ///     \b true if \a Offset is a valid offset and there are enough
+  ///     bytes for an address available at that offset, \b false
+  ///     otherwise.
+  bool isValidOffsetForAddress(uint64_t Offset) const {
+    return isValidOffsetForDataOfSize(Offset, AddressSize);
+  }
 
   /// Extracts a value and returns it as adjusted by the Relocator
   uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,

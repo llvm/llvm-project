@@ -10,6 +10,7 @@ static_library("TargetParser") {
     "AArch64TargetParser.cpp",
     "ARMTargetParser.cpp",
     "ARMTargetParserCommon.cpp",
+    "AVRTargetParser.cpp",
     "CSKYTargetParser.cpp",
     "Host.cpp",
     "LoongArchTargetParser.cpp",

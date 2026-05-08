@@ -298,7 +298,9 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
 #loc2 = loc("loop-metadata.mlir":52:4)
 
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
-#di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs", file = #di_file, subprogramFlags = Definition>
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
+#di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs", file = #di_file, subprogramFlags = Definition, type = #void_type>
 
 #start_loc_fused = loc(fused<#di_subprogram>[#loc1])
 #end_loc_fused= loc(fused<#di_subprogram>[#loc2])

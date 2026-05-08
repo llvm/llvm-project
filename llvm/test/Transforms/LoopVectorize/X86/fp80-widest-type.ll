@@ -26,7 +26,7 @@ define x86_fp80 @test() {
 foo.exit:
   br label %for.body3.i.3
 
-for.body3.i.3:                                    ; preds = %for.body3.i.3, %foo.exit
+for.body3.i.3:
   %n.addr.112.i.3 = phi i64 [ %dec.i.3, %for.body3.i.3 ], [ 24, %foo.exit ]
   %x.addr.111.i.3 = phi x86_fp80 [ %mul.i.3, %for.body3.i.3 ], [ zeroinitializer, %foo.exit ]
   %mul.i.3 = fmul x86_fp80 %x.addr.111.i.3, 0xK40008000000000000000
@@ -34,7 +34,7 @@ for.body3.i.3:                                    ; preds = %for.body3.i.3, %foo
   %cmp2.i.3 = icmp sgt i64 %n.addr.112.i.3, 1
   br i1 %cmp2.i.3, label %for.body3.i.3, label %foo.exit.3
 
-foo.exit.3:                                       ; preds = %for.body3.i.3
+foo.exit.3:
   %mul.lcssa = phi x86_fp80 [ %mul.i.3, %for.body3.i.3 ]
   ret x86_fp80 %mul.lcssa
 }

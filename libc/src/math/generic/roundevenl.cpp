@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/roundevenl.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/roundevenl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long double, roundevenl, (long double x)) {
-  return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
+  return math::roundevenl(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

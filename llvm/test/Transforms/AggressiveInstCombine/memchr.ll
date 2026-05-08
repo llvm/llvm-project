@@ -3,13 +3,13 @@
 
 @str = constant [5 x i8] c"01\002\00", align 1
 @str_long = constant [8 x i8] c"0123456\00", align 1
+@str_hi = constant [3 x i8] c"\80\81\00"
 
 declare ptr @memchr(ptr, i32, i64)
 
 define i1 @test_memchr_null(i32 %x) !prof !0 {
 ; CHECK-LABEL: define i1 @test_memchr_null(
-; CHECK-SAME: i32 [[X:%.*]]) 
-; CHECK: !prof [[PROF_0:![0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
 ; CHECK-NEXT:    switch i8 [[TMP0]], label %[[ENTRY_SPLIT:.*]] [
@@ -17,7 +17,7 @@ define i1 @test_memchr_null(i32 %x) !prof !0 {
 ; CHECK-NEXT:      i8 49, label %[[MEMCHR_CASE1:.*]]
 ; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
 ; CHECK-NEXT:      i8 50, label %[[MEMCHR_CASE3:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[MEMCHR_CASE]]:
 ; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS:.*]]
 ; CHECK:       [[MEMCHR_CASE1]]:
@@ -43,8 +43,7 @@ entry:
 
 define ptr @test_memchr(i32 %x) !prof !0 {
 ; CHECK-LABEL: define ptr @test_memchr(
-; CHECK-SAME: i32 [[X:%.*]]) 
-; CHECK: !prof [[PROF_0]] {
+; CHECK-SAME: i32 [[X:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
 ; CHECK-NEXT:    switch i8 [[TMP0]], label %[[ENTRY_SPLIT:.*]] [
@@ -52,7 +51,7 @@ define ptr @test_memchr(i32 %x) !prof !0 {
 ; CHECK-NEXT:      i8 49, label %[[MEMCHR_CASE1:.*]]
 ; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
 ; CHECK-NEXT:      i8 50, label %[[MEMCHR_CASE3:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ], !prof [[PROF1]]
 ; CHECK:       [[MEMCHR_CASE]]:
 ; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS:.*]]
 ; CHECK:       [[MEMCHR_CASE1]]:
@@ -76,15 +75,14 @@ entry:
 
 define ptr @test_memchr_smaller_n(i32 %x) !prof !0 {
 ; CHECK-LABEL: define ptr @test_memchr_smaller_n(
-; CHECK-SAME: i32 [[X:%.*]]) 
-; CHECK: !prof [[PROF_0]] {
+; CHECK-SAME: i32 [[X:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
 ; CHECK-NEXT:    switch i8 [[TMP0]], label %[[ENTRY_SPLIT:.*]] [
 ; CHECK-NEXT:      i8 48, label %[[MEMCHR_CASE:.*]]
 ; CHECK-NEXT:      i8 49, label %[[MEMCHR_CASE1:.*]]
 ; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
-; CHECK-NEXT:    ], !prof [[PROF_1:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF1]]
 ; CHECK:       [[MEMCHR_CASE]]:
 ; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS:.*]]
 ; CHECK:       [[MEMCHR_CASE1]]:
@@ -108,8 +106,7 @@ entry:
 
 define ptr @test_memchr_larger_n(i32 %x) !prof !0 {
 ; CHECK-LABEL: define ptr @test_memchr_larger_n(
-; CHECK-SAME: i32 [[X:%.*]])
-; CHECK: !prof [[PROF_0]] {
+; CHECK-SAME: i32 [[X:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str, i32 [[X]], i64 6)
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
@@ -121,8 +118,7 @@ entry:
 
 define ptr @test_memchr_non_constant(i32 %x, ptr %str) !prof !0 {
 ; CHECK-LABEL: define ptr @test_memchr_non_constant(
-; CHECK-SAME: i32 [[X:%.*]], ptr [[STR:%.*]]) 
-; CHECK: !prof [[PROF_0]] {
+; CHECK-SAME: i32 [[X:%.*]], ptr [[STR:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr [[STR]], i32 [[X]], i64 5)
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
@@ -133,8 +129,8 @@ entry:
 }
 
 define ptr @test_memchr_constant_ch() !prof !0 {
-; CHECK-LABEL: define ptr @test_memchr_constant_ch() 
-; CHECK: !prof [[PROF_0]] {
+; CHECK-LABEL: define ptr @test_memchr_constant_ch(
+; CHECK-SAME: ) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str, i32 49, i64 5)
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
@@ -146,8 +142,7 @@ entry:
 
 define ptr @test_memchr_dynamic_n(i32 %x, i32 %y) !prof !0 {
 ; CHECK-LABEL: define ptr @test_memchr_dynamic_n(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) 
-; CHECK: !prof [[PROF_0]] {
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str, i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
@@ -159,8 +154,7 @@ entry:
 
 define ptr @test_memchr_long(i32 %x) !prof !0 {
 ; CHECK-LABEL: define ptr @test_memchr_long(
-; CHECK-SAME: i32 [[X:%.*]])
-; CHECK: !prof [[PROF_0]] {
+; CHECK-SAME: i32 [[X:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str_long, i32 [[X]], i64 8)
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
@@ -173,8 +167,7 @@ entry:
 ; We want to check that the compiler still calls memchr if the length is non-constant:
 define ptr @test_memchr_non_constant_length2(i32 %x, i64 %len) !prof !0 {
 ; CHECK-LABEL: define ptr @test_memchr_non_constant_length2(
-; CHECK-SAME: i32 [[X:%.*]], i64 [[LEN:%.*]]) 
-; CHECK: !prof [[PROF_0]] {
+; CHECK-SAME: i32 [[X:%.*]], i64 [[LEN:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str, i32 [[X]], i64 [[LEN]])
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
@@ -184,6 +177,36 @@ entry:
   ret ptr %memchr
 }
 
+define ptr @test_memchr_high_bytes(i32 %c) {
+; CHECK-LABEL: define ptr @test_memchr_high_bytes(
+; CHECK-SAME: i32 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C]] to i8
+; CHECK-NEXT:    switch i8 [[TMP1]], [[DOTSPLIT:label %.*]] [
+; CHECK-NEXT:      i8 -128, label %[[MEMCHR_CASE:.*]]
+; CHECK-NEXT:      i8 -127, label %[[MEMCHR_CASE1:.*]]
+; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[MEMCHR_CASE]]:
+; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS:.*]]
+; CHECK:       [[MEMCHR_CASE1]]:
+; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
+; CHECK:       [[MEMCHR_CASE2]]:
+; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
+; CHECK:       [[MEMCHR_SUCCESS]]:
+; CHECK-NEXT:    [[MEMCHR_IDX:%.*]] = phi i64 [ 0, %[[MEMCHR_CASE]] ], [ 1, %[[MEMCHR_CASE1]] ], [ 2, %[[MEMCHR_CASE2]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr @str_hi, i64 [[MEMCHR_IDX]]
+; CHECK-NEXT:    br [[DOTSPLIT]]
+; CHECK:       [[_SPLIT:.*:]]
+; CHECK-NEXT:    [[MEMCHR3:%.*]] = phi ptr [ null, [[TMP0:%.*]] ], [ [[TMP2]], %[[MEMCHR_SUCCESS]] ]
+; CHECK-NEXT:    ret ptr [[MEMCHR3]]
+;
+  %memchr = call ptr @memchr(ptr @str_hi, i32 %c, i64 3)
+  ret ptr %memchr
+}
+
+
 !0 = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF_1]] = !{!"unknown", !"aggressive-instcombine"}
+;.
+; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF1]] = !{!"unknown", !"aggressive-instcombine"}
+;.

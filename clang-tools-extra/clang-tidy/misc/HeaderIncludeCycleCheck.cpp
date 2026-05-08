@@ -35,16 +35,15 @@ public:
                             const std::vector<StringRef> &IgnoredFilesList)
       : Check(Check), SM(SM) {
     IgnoredFilesRegexes.reserve(IgnoredFilesList.size());
-    for (const StringRef &It : IgnoredFilesList) {
+    for (const StringRef &It : IgnoredFilesList)
       if (!It.empty())
         IgnoredFilesRegexes.emplace_back(It);
-    }
   }
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override {
-    if (FileType != clang::SrcMgr::C_User)
+    if (FileType != SrcMgr::C_User)
       return;
 
     if (Reason != EnterFile && Reason != ExitFile)
@@ -78,7 +77,7 @@ public:
                           OptionalFileEntryRef File, StringRef, StringRef,
                           const Module *, bool,
                           SrcMgr::CharacteristicKind FileType) override {
-    if (FileType != clang::SrcMgr::C_User)
+    if (FileType != SrcMgr::C_User)
       return;
 
     NextToEnter = Range.getBegin();

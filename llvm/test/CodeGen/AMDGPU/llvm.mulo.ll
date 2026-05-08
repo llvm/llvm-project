@@ -36,8 +36,8 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX9-NEXT:    v_mad_u64_u32 v[5:6], s[4:5], v0, v3, 0
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v2, 0
 ; GFX9-NEXT:    v_mad_u64_u32 v[7:8], s[4:5], v4, v2, 0
-; GFX9-NEXT:    v_add_co_u32_e32 v9, vcc, v1, v5
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v4, v3, 0
+; GFX9-NEXT:    v_add_co_u32_e32 v9, vcc, v1, v5
 ; GFX9-NEXT:    v_addc_co_u32_e32 v6, vcc, 0, v6, vcc
 ; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, v9, v7
 ; GFX9-NEXT:    v_addc_co_u32_e32 v4, vcc, v6, v8, vcc
@@ -177,8 +177,8 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX9-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v5, v3, 0
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v5, v2, 0
 ; GFX9-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v4, v2, 0
-; GFX9-NEXT:    v_add_co_u32_e32 v12, vcc, v1, v6
 ; GFX9-NEXT:    v_mad_i64_i32 v[10:11], s[4:5], v4, v3, 0
+; GFX9-NEXT:    v_add_co_u32_e32 v12, vcc, v1, v6
 ; GFX9-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v7, vcc
 ; GFX9-NEXT:    v_add_co_u32_e32 v12, vcc, v12, v8
 ; GFX9-NEXT:    v_addc_co_u32_e32 v7, vcc, v7, v9, vcc

@@ -283,6 +283,9 @@ svint32_t badcast(int4 x) { return x; } // expected-error {{returning 'int4' (ve
 // memory representation.
 fixed_bool_t to_fixed_bool_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
 
+// Do not allow implicit conversion between fixed-length uint8_t vectors and svbool_t.
+svbool_t to_svbool_t_from_fixed_uint8_t(fixed_uint8_t x) { return x; } // expected-error-re {{returning 'fixed_uint8_t' (vector of {{[0-9]+}} 'unsigned char' values) from a function with incompatible result type 'svbool_t' (aka '__SVBool_t')}}
+
 // --------------------------------------------------------------------------//
 // Test the scalable and fixed-length types can be used interchangeably
 

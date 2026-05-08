@@ -67,7 +67,7 @@ public:
     // for the known v1/v2 this is all that needs to be done
     virtual bool IsKVO() {
       if (m_is_kvo == eLazyBoolCalculate) {
-        const char *class_name = GetClassName().AsCString();
+        const char *class_name = GetClassName().AsCString(nullptr);
         if (class_name && *class_name)
           m_is_kvo =
               (LazyBool)(strstr(class_name, "NSKVONotifying_") == class_name);
@@ -79,7 +79,7 @@ public:
     // for the known v1/v2 this is all that needs to be done
     virtual bool IsCFType() {
       if (m_is_cf == eLazyBoolCalculate) {
-        const char *class_name = GetClassName().AsCString();
+        const char *class_name = GetClassName().AsCString(nullptr);
         if (class_name && *class_name)
           m_is_cf = (LazyBool)(strcmp(class_name, "__NSCFType") == 0 ||
                                strcmp(class_name, "NSCFType") == 0);

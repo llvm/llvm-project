@@ -69,7 +69,7 @@ exit:
   ret void
 }
 
-define dso_local void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
+define void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
 ; CHECK-LABEL: LV: Checking a loop in 'dotp_high_register_pressure' from <stdin>
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
@@ -80,7 +80,7 @@ entry:
   %cmp100 = icmp sgt i32 %n, 0
   br i1 %cmp100, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %arrayidx13 = getelementptr inbounds nuw i8, ptr %sum, i64 4
   %gep.b.12 = getelementptr inbounds nuw i8, ptr %sum, i64 8
   %arrayidx31 = getelementptr inbounds nuw i8, ptr %sum, i64 12
@@ -99,7 +99,7 @@ for.body.lr.ph:                                   ; preds = %entry
   %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
 
-for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+for.cond.for.cond.cleanup_crit_edge:
   %add.lcssa = phi i32 [ %add.1, %for.body ]
   %add.2.lcssa = phi i32 [ %add.2, %for.body ]
   %add.3.lcssa = phi i32 [ %add.3, %for.body ]
@@ -118,10 +118,10 @@ for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
   store i32 %add.8.lcssa, ptr %arrayidx67, align 4
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %0 = phi i32 [ %arrayidx67.promoted, %for.body.lr.ph ], [ %add.8, %for.body ]
   %1 = phi i32 [ %arrayidx58.promoted, %for.body.lr.ph ], [ %add.7, %for.body ]
@@ -197,7 +197,7 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 entry:
   br label %for.body
 
-for.body:                                    ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum3 = phi i32 [ 0, %entry ], [ %add.a3, %for.body ]
   %accum2 = phi i32 [ 0, %entry ], [ %add.a2, %for.body ]
@@ -242,7 +242,7 @@ for.body:                                    ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %num_in
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                        ; preds = %for.body
+exit:
   %result0 = add nsw i32 %add.a0, %add.a1
   %result1 = add nsw i32 %add.a2, %add.a3
   %result = add nsw i32 %result0, %result1

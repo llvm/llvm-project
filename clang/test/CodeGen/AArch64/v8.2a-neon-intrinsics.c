@@ -227,9 +227,9 @@ float16x8_t test_vcvtq_f16_u16 (uint16x8_t a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.fcvtzs.v4i16.v4f16(<4 x half> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <4 x i16> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <4 x i16> @llvm.fptosi.sat.v4i16.v4f16(<4 x half> [[TMP2]])
+// CHECK-NEXT:    ret <4 x i16> [[VCVTZ_I]]
 //
 int16x4_t test_vcvt_s16_f16 (float16x4_t a) {
   return vcvt_s16_f16(a);
@@ -240,9 +240,9 @@ int16x4_t test_vcvt_s16_f16 (float16x4_t a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.fcvtzs.v8i16.v8f16(<8 x half> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <8 x i16> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <8 x i16> @llvm.fptosi.sat.v8i16.v8f16(<8 x half> [[TMP2]])
+// CHECK-NEXT:    ret <8 x i16> [[VCVTZ_I]]
 //
 int16x8_t test_vcvtq_s16_f16 (float16x8_t a) {
   return vcvtq_s16_f16(a);
@@ -253,9 +253,9 @@ int16x8_t test_vcvtq_s16_f16 (float16x8_t a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.fcvtzu.v4i16.v4f16(<4 x half> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <4 x i16> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f16(<4 x half> [[TMP2]])
+// CHECK-NEXT:    ret <4 x i16> [[VCVTZ_I]]
 //
 uint16x4_t test_vcvt_u16_f16 (float16x4_t a) {
   return vcvt_u16_f16(a);
@@ -266,9 +266,9 @@ uint16x4_t test_vcvt_u16_f16 (float16x4_t a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VCVTZ_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CHECK-NEXT:    [[VCVTZ1_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.fcvtzu.v8i16.v8f16(<8 x half> [[VCVTZ_I]])
-// CHECK-NEXT:    ret <8 x i16> [[VCVTZ1_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
+// CHECK-NEXT:    [[VCVTZ_I:%.*]] = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> [[TMP2]])
+// CHECK-NEXT:    ret <8 x i16> [[VCVTZ_I]]
 //
 uint16x8_t test_vcvtq_u16_f16 (float16x8_t a) {
   return vcvtq_u16_f16(a);
@@ -1973,10 +1973,10 @@ float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext half [[B]] to float
 // CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[CONV]]
-// CHECK-NEXT:    [[TMP0:%.*]] = fptrunc float [[FNEG]] to half
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc float [[FNEG]] to half
 // CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x half> [[C]], i32 3
-// CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fma.f16(half [[TMP0]], half [[EXTRACT]], half [[A]])
-// CHECK-NEXT:    ret half [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.fma.f16(half [[CONV1]], half [[EXTRACT]], half [[A]])
+// CHECK-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
   return vfmsh_lane_f16(a, b, c, 3);
@@ -1987,10 +1987,10 @@ float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext half [[B]] to float
 // CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[CONV]]
-// CHECK-NEXT:    [[TMP0:%.*]] = fptrunc float [[FNEG]] to half
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc float [[FNEG]] to half
 // CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <8 x half> [[C]], i32 7
-// CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fma.f16(half [[TMP0]], half [[EXTRACT]], half [[A]])
-// CHECK-NEXT:    ret half [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.fma.f16(half [[CONV1]], half [[EXTRACT]], half [[A]])
+// CHECK-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
   return vfmsh_laneq_f16(a, b, c, 7);
@@ -2094,8 +2094,8 @@ float16x8_t test_vmulq_n_f16(float16x8_t a, float16_t b) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[VGET_LANE]] to half
 // CHECK-NEXT:    [[CONV3:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[CONV3]]
-// CHECK-NEXT:    [[TMP2:%.*]] = fptrunc float [[MUL]] to half
-// CHECK-NEXT:    ret half [[TMP2]]
+// CHECK-NEXT:    [[CONV4:%.*]] = fptrunc float [[MUL]] to half
+// CHECK-NEXT:    ret half [[CONV4]]
 //
 float16_t test_vmulh_lane_f16(float16_t a, float16x4_t b) {
   return vmulh_lane_f16(a, b, 3);
@@ -2110,8 +2110,8 @@ float16_t test_vmulh_lane_f16(float16_t a, float16x4_t b) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[VGETQ_LANE]] to half
 // CHECK-NEXT:    [[CONV3:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[CONV3]]
-// CHECK-NEXT:    [[TMP2:%.*]] = fptrunc float [[MUL]] to half
-// CHECK-NEXT:    ret half [[TMP2]]
+// CHECK-NEXT:    [[CONV4:%.*]] = fptrunc float [[MUL]] to half
+// CHECK-NEXT:    ret half [[CONV4]]
 //
 float16_t test_vmulh_laneq_f16(float16_t a, float16x8_t b) {
   return vmulh_laneq_f16(a, b, 7);

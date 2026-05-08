@@ -690,8 +690,8 @@ define <vscale x 4 x float> @select_f32_invert_fsub(<vscale x 4 x float> %a, <vs
 ; CHECK-LABEL: select_f32_invert_fsub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    fsub z0.s, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %p = icmp eq <vscale x 4 x i32> %c, zeroinitializer
   %fsub = fsub <vscale x 4 x float> %a, %b

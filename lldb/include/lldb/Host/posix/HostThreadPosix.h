@@ -25,7 +25,7 @@ public:
   Status Join(lldb::thread_result_t *result) override;
   Status Cancel() override;
 
-  Status Detach();
+  void Reset() override;
 };
 
 } // namespace lldb_private

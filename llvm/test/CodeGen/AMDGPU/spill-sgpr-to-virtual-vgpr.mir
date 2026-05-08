@@ -241,13 +241,14 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR %0, 0
+  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 15, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -255,7 +256,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR %0, 0
+  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 20, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -264,7 +265,6 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 10
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
   ; GCN-NEXT:   S_CMP_EQ_U32 $sgpr11, 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc

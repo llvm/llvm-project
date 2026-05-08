@@ -37,10 +37,10 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
   //      being so inprecise. When the invalidation is improved, the handling
   //      of nested loops will also need to be improved.
   ASTContext &ASTCtx = LCtx->getAnalysisDeclContext()->getASTContext();
-  const StackFrameContext *STC = LCtx->getStackFrame();
+  const StackFrame *SF = LCtx->getStackFrame();
   MemRegionManager &MRMgr = PrevState->getStateManager().getRegionManager();
-  const MemRegion *Regions[] = {MRMgr.getStackLocalsRegion(STC),
-                                MRMgr.getStackArgumentsRegion(STC),
+  const MemRegion *Regions[] = {MRMgr.getStackLocalsRegion(SF),
+                                MRMgr.getStackArgumentsRegion(SF),
                                 MRMgr.getGlobalsRegion()};
   RegionAndSymbolInvalidationTraits ITraits;
   for (auto *Region : Regions) {
@@ -66,10 +66,10 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
   // is located in a method, constructor or destructor, the value of 'this'
   // pointer should remain unchanged.  Ignore static methods, since they do not
   // have 'this' pointers.
-  const CXXMethodDecl *CXXMD = dyn_cast<CXXMethodDecl>(STC->getDecl());
+  const CXXMethodDecl *CXXMD = dyn_cast<CXXMethodDecl>(SF->getDecl());
   if (CXXMD && CXXMD->isImplicitObjectMemberFunction()) {
     const CXXThisRegion *ThisR =
-        MRMgr.getCXXThisRegion(CXXMD->getThisType(), STC);
+        MRMgr.getCXXThisRegion(CXXMD->getThisType(), SF);
     ITraits.setTrait(ThisR,
                      RegionAndSymbolInvalidationTraits::TK_PreserveContents);
   }

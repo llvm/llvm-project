@@ -200,7 +200,7 @@ void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
 }
 
 bool ARMSubtarget::isXRaySupported() const {
-  // We don't currently suppport Thumb, but Windows requires Thumb.
+  // We don't currently support Thumb, but Windows requires Thumb.
   return hasV6Ops() && hasARMOps() && !isTargetWindows();
 }
 
@@ -543,7 +543,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // This stack unwinding cannot be expressed with SEH unwind opcodes when done
   // with a single push, making it necessary to split the push into r4-r10, and
   // another containing r11+lr.
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
       F.needsUnwindTableEntry() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;

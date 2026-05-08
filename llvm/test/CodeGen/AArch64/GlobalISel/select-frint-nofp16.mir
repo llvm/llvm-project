@@ -22,11 +22,11 @@ body:             |
     ; CHECK-NEXT: [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[FRINTXSr]], implicit $fpcr
     ; CHECK-NEXT: $h0 = COPY [[FCVTHSr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
-    %0:fpr(s16) = COPY $h0
-    %2:fpr(s32) = G_FPEXT %0(s16)
-    %3:fpr(s32) = G_FRINT %2
-    %1:fpr(s16) = G_FPTRUNC %3(s32)
-    $h0 = COPY %1(s16)
+    %0:fpr(f16) = COPY $h0
+    %2:fpr(f32) = G_FPEXT %0(f16)
+    %3:fpr(f32) = G_FRINT %2
+    %1:fpr(f16) = G_FPTRUNC %3(f32)
+    $h0 = COPY %1(f16)
     RET_ReallyLR implicit $h0
 
 ...
@@ -81,22 +81,22 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi16lane2]].dsub
     ; CHECK-NEXT: $d0 = COPY [[COPY2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<4 x s16>) = COPY $d0
-    %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
-    %16:fpr(s32) = G_FPEXT %2(s16)
-    %17:fpr(s32) = G_FRINT %16
-    %6:fpr(s16) = G_FPTRUNC %17(s32)
-    %14:fpr(s32) = G_FPEXT %3(s16)
-    %15:fpr(s32) = G_FRINT %14
-    %7:fpr(s16) = G_FPTRUNC %15(s32)
-    %12:fpr(s32) = G_FPEXT %4(s16)
-    %13:fpr(s32) = G_FRINT %12
-    %8:fpr(s16) = G_FPTRUNC %13(s32)
-    %10:fpr(s32) = G_FPEXT %5(s16)
-    %11:fpr(s32) = G_FRINT %10
-    %9:fpr(s16) = G_FPTRUNC %11(s32)
-    %1:fpr(<4 x s16>) = G_BUILD_VECTOR %6(s16), %7(s16), %8(s16), %9(s16)
-    $d0 = COPY %1(<4 x s16>)
+    %0:fpr(<4 x f16>) = COPY $d0
+    %2:fpr(f16), %3:fpr(f16), %4:fpr(f16), %5:fpr(f16) = G_UNMERGE_VALUES %0(<4 x f16>)
+    %16:fpr(f32) = G_FPEXT %2(f16)
+    %17:fpr(f32) = G_FRINT %16
+    %6:fpr(f16) = G_FPTRUNC %17(f32)
+    %14:fpr(f32) = G_FPEXT %3(f16)
+    %15:fpr(f32) = G_FRINT %14
+    %7:fpr(f16) = G_FPTRUNC %15(f32)
+    %12:fpr(f32) = G_FPEXT %4(f16)
+    %13:fpr(f32) = G_FRINT %12
+    %8:fpr(f16) = G_FPTRUNC %13(f32)
+    %10:fpr(f32) = G_FPEXT %5(f16)
+    %11:fpr(f32) = G_FRINT %10
+    %9:fpr(f16) = G_FPTRUNC %11(f32)
+    %1:fpr(<4 x f16>) = G_BUILD_VECTOR %6(f16), %7(f16), %8(f16), %9(f16)
+    $d0 = COPY %1(<4 x f16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -172,32 +172,32 @@ body:             |
     ; CHECK-NEXT: [[INSvi16lane6:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane5]], 7, [[INSERT_SUBREG7]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi16lane6]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<8 x s16>) = COPY $q0
-    %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16), %6:fpr(s16), %7:fpr(s16), %8:fpr(s16), %9:fpr(s16) = G_UNMERGE_VALUES %0(<8 x s16>)
-    %32:fpr(s32) = G_FPEXT %2(s16)
-    %33:fpr(s32) = G_FRINT %32
-    %10:fpr(s16) = G_FPTRUNC %33(s32)
-    %30:fpr(s32) = G_FPEXT %3(s16)
-    %31:fpr(s32) = G_FRINT %30
-    %11:fpr(s16) = G_FPTRUNC %31(s32)
-    %28:fpr(s32) = G_FPEXT %4(s16)
-    %29:fpr(s32) = G_FRINT %28
-    %12:fpr(s16) = G_FPTRUNC %29(s32)
-    %26:fpr(s32) = G_FPEXT %5(s16)
-    %27:fpr(s32) = G_FRINT %26
-    %13:fpr(s16) = G_FPTRUNC %27(s32)
-    %24:fpr(s32) = G_FPEXT %6(s16)
-    %25:fpr(s32) = G_FRINT %24
-    %14:fpr(s16) = G_FPTRUNC %25(s32)
-    %22:fpr(s32) = G_FPEXT %7(s16)
-    %23:fpr(s32) = G_FRINT %22
-    %15:fpr(s16) = G_FPTRUNC %23(s32)
-    %20:fpr(s32) = G_FPEXT %8(s16)
-    %21:fpr(s32) = G_FRINT %20
-    %16:fpr(s16) = G_FPTRUNC %21(s32)
-    %18:fpr(s32) = G_FPEXT %9(s16)
-    %19:fpr(s32) = G_FRINT %18
-    %17:fpr(s16) = G_FPTRUNC %19(s32)
-    %1:fpr(<8 x s16>) = G_BUILD_VECTOR %10(s16), %11(s16), %12(s16), %13(s16), %14(s16), %15(s16), %16(s16), %17(s16)
-    $q0 = COPY %1(<8 x s16>)
+    %0:fpr(<8 x f16>) = COPY $q0
+    %2:fpr(f16), %3:fpr(f16), %4:fpr(f16), %5:fpr(f16), %6:fpr(f16), %7:fpr(f16), %8:fpr(f16), %9:fpr(f16) = G_UNMERGE_VALUES %0(<8 x s16>)
+    %32:fpr(f32) = G_FPEXT %2(f16)
+    %33:fpr(f32) = G_FRINT %32
+    %10:fpr(f16) = G_FPTRUNC %33(f32)
+    %30:fpr(f32) = G_FPEXT %3(f16)
+    %31:fpr(f32) = G_FRINT %30
+    %11:fpr(f16) = G_FPTRUNC %31(f32)
+    %28:fpr(f32) = G_FPEXT %4(f16)
+    %29:fpr(f32) = G_FRINT %28
+    %12:fpr(f16) = G_FPTRUNC %29(f32)
+    %26:fpr(f32) = G_FPEXT %5(f16)
+    %27:fpr(f32) = G_FRINT %26
+    %13:fpr(f16) = G_FPTRUNC %27(f32)
+    %24:fpr(f32) = G_FPEXT %6(f16)
+    %25:fpr(f32) = G_FRINT %24
+    %14:fpr(f16) = G_FPTRUNC %25(f32)
+    %22:fpr(f32) = G_FPEXT %7(f16)
+    %23:fpr(f32) = G_FRINT %22
+    %15:fpr(f16) = G_FPTRUNC %23(f32)
+    %20:fpr(f32) = G_FPEXT %8(f16)
+    %21:fpr(f32) = G_FRINT %20
+    %16:fpr(f16) = G_FPTRUNC %21(f32)
+    %18:fpr(f32) = G_FPEXT %9(f16)
+    %19:fpr(f32) = G_FRINT %18
+    %17:fpr(f16) = G_FPTRUNC %19(f32)
+    %1:fpr(<8 x f16>) = G_BUILD_VECTOR %10(f16), %11(f16), %12(f16), %13(f16), %14(f16), %15(f16), %16(f16), %17(f16)
+    $q0 = COPY %1(<8 x f16>)
     RET_ReallyLR implicit $q0

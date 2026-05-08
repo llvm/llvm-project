@@ -52,9 +52,9 @@ protected:
   virtual bool emitBool(bool V, const Expr *E) = 0;
 
   /// Emits jumps.
-  bool jumpTrue(const LabelTy &Label);
-  bool jumpFalse(const LabelTy &Label);
-  bool jump(const LabelTy &Label);
+  bool jumpTrue(const LabelTy &Label, SourceInfo SI);
+  bool jumpFalse(const LabelTy &Label, SourceInfo SI);
+  bool jump(const LabelTy &Label, SourceInfo SI);
   bool fallthrough(const LabelTy &Label);
   /// Speculative execution.
   bool speculate(const CallExpr *E, const LabelTy &EndLabel);
@@ -67,7 +67,7 @@ protected:
   Local createLocal(Descriptor *D);
 
   /// Parameter indices.
-  llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
+  llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   /// Offset of the This parameter in a lambda record.

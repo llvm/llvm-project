@@ -74,6 +74,7 @@ add_llvm_component_library(LLVMTransformUtils
   RelLookupTableConverter.cpp
   ScalarEvolutionExpander.cpp
   SCCPSolver.cpp
+  StripConvergenceIntrinsics.cpp
   StripGCRelocates.cpp
   SSAUpdater.cpp
   SSAUpdaterBulk.cpp
@@ -104,6 +105,7 @@ add_llvm_component_library(LLVMTransformUtils
   LINK_COMPONENTS
   Analysis
   Core
+  ProfileData
   Support
   TargetParser
   )

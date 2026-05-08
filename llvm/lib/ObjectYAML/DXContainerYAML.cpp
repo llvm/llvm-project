@@ -366,7 +366,7 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   IO.setContext(&Version);
 
   // Restore the YAML context on function exit.
-  auto RestoreContext = make_scope_exit([&]() { IO.setContext(OldContext); });
+  llvm::scope_exit RestoreContext([&]() { IO.setContext(OldContext); });
 
   // Shader stage is only included in binaries for v1 and later, but we always
   // include it since it simplifies parsing and file construction.
@@ -374,6 +374,10 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   PSV.mapInfoForVersion(IO);
 
   IO.mapRequired("ResourceStride", PSV.ResourceStride);
+  if (PSV.Version > 0) {
+    IO.mapOptional("RuntimeInfoSize", PSV.RuntimeInfoSize);
+    IO.mapOptional("StringTable", PSV.StringTable);
+  }
   IO.mapRequired("Resources", PSV.Resources);
   if (PSV.Version == 0)
     return;
@@ -584,6 +588,12 @@ void MappingTraits<DXContainerYAML::SignatureElement>::mapping(
   IO.mapRequired("Interpolation", El.Mode);
   IO.mapRequired("DynamicMask", El.DynamicMask);
   IO.mapRequired("Stream", El.Stream);
+}
+
+void MappingTraits<DXContainerYAML::StringTableEntry>::mapping(
+    IO &IO, DXContainerYAML::StringTableEntry &E) {
+  IO.mapRequired("String", E.String);
+  IO.mapRequired("Offset", E.Offset);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::SemanticKind>::enumeration(

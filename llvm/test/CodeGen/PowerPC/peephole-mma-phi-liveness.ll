@@ -19,6 +19,8 @@ define void @baz(i64 %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    xvmuldp 0, 0, 1
 ; CHECK-NEXT:    xvmaddadp 2, 1, 1
 ; CHECK-NEXT:    xvmaddadp 0, 1, 1
+; CHECK-NEXT:    xvadddp 2, 2, 1
+; CHECK-NEXT:    xvadddp 0, 0, 1
 ; CHECK-NEXT:    stxv 2, 0(3)
 ; CHECK-NEXT:    stxv 0, 0(3)
 ; CHECK-NEXT:    # implicit-def: $acc0
@@ -55,8 +57,10 @@ define void @baz(i64 %arg) local_unnamed_addr #0 {
 ; CHECK-WACC-NEXT:    xvmuldp 2, 2, 0
 ; CHECK-WACC-NEXT:    xvmaddadp 1, 0, 0
 ; CHECK-WACC-NEXT:    xvmaddadp 2, 0, 0
+; CHECK-WACC-NEXT:    xvadddp 1, 1, 0
+; CHECK-WACC-NEXT:    xvadddp 0, 2, 0
 ; CHECK-WACC-NEXT:    stxv 1, 0(3)
-; CHECK-WACC-NEXT:    stxv 2, 0(3)
+; CHECK-WACC-NEXT:    stxv 0, 0(3)
 ; CHECK-WACC-NEXT:    # implicit-def: $wacc0
 ; CHECK-WACC-NEXT:    bc 12, 20, L..BB0_2
 ; CHECK-WACC-NEXT:  # %bb.1: # %bb10

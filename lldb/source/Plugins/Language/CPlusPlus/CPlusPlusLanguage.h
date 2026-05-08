@@ -14,7 +14,6 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include "Plugins/Language/ClangCommon/ClangHighlighter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
@@ -22,8 +21,6 @@
 namespace lldb_private {
 
 class CPlusPlusLanguage : public Language {
-  ClangHighlighter m_highlighter;
-
 public:
   class CxxMethodName : public Language::MethodName {
   public:
@@ -80,8 +77,6 @@ public:
   llvm::StringRef GetNilReferenceSummaryString() override { return "nullptr"; }
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
-
-  const Highlighter *GetHighlighter() const override { return &m_highlighter; }
 
   // Static Functions
   static void Initialize();

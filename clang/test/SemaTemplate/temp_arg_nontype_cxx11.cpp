@@ -43,7 +43,7 @@ void TempFunc() {}
 
 void Useage() {
   //expected-error@+2 {{no matching function}}
-  //expected-note@-4 {{candidate template ignored: substitution failure [with a = 1, b = 4294967295, c = 1]: non-type template argument evaluates to -1, which cannot be narrowed to type 'unsigned int'}}
+  //expected-note@-4 {{candidate template ignored: invalid explicitly-specified argument for template parameter 'b'}}
   TempFunc<1, -1, 1>();
 }
 }
@@ -114,3 +114,12 @@ void lookup() {
   Kolumn<&container::a>().ls();   // expected-error {{<&container::a}}
   Kolumn<nullptr>().ls();         // expected-error {{<nullptr}}
 }
+
+namespace GH167709 {
+  template <unsigned I> struct A {
+    static_assert(false, "shouldn't instantiate this");
+  };
+  template <int> void f() {}
+  template <int I> typename A<I>::type f() = delete;
+  template void f<-1>();
+} // namespace GH167709

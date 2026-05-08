@@ -276,7 +276,7 @@ private:
     } else if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
       do {
         Ty = ArrayTy->getElementType();
-      } while ((ArrayTy = dyn_cast<ArrayType>(Ty)));
+      } while ((ArrayTy = dyn_cast<ArrayType>(Ty)) != nullptr);
     }
     return Ty->isFPOrFPVectorTy();
   };

@@ -105,7 +105,7 @@ define void @main() #0 {
 ; CHECK:            UsedByAtomic64:  false
   ; RWBuffer<float4> Buf = BufferArray[100];
   %uav3 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-              @llvm.dx.resource.handlefrombinding(i32 5, i32 10, i32 -1, i32 100, ptr null)
+              @llvm.dx.resource.handlefrombinding(i32 5, i32 10, i32 0, i32 100, ptr null)
   ret void
 }
 

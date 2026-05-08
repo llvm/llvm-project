@@ -116,6 +116,37 @@ def EmitC_FileOp
   let skipDefaultBuilders = 1;
 }
 
+def EmitC_AddressOfOp : EmitC_Op<"address_of", [
+    CExpressionInterface,
+    TypesMatchWith<"input and result reference the same type", "reference", "result",
+                   "emitc::PointerType::get(::llvm::cast<emitc::LValueType>($_self).getValueType())">
+]> {
+  let summary = "Address operation";
+  let description = [{
+    This operation models the C & (address of) operator for a single operand,
+    which must be an emitc.lvalue, and returns an emitc pointer to its location.
+
+    Example:
+
+    ```mlir
+    // Custom form of applying the & operator.
+    %0 = emitc.address_of %arg0 : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    ```
+  }];
+  let arguments = (ins EmitC_LValueType:$reference);
+  let results = (outs EmitC_PointerType:$result);
+  let assemblyFormat = [{
+    $reference `:` qualified(type($reference)) attr-dict
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+  }];
+}
+
 def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
   let summary = "Addition operation";
   let description = [{
@@ -140,7 +171,7 @@ def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
 }
 
 def EmitC_ApplyOp : EmitC_Op<"apply", [CExpressionInterface]> {
-  let summary = "Apply operation";
+  let summary = "Deprecated (use address_of/dereference)";
   let description = [{
     With the `emitc.apply` operation the operators & (address of) and * (contents of)
     can be applied to a single operand.
@@ -439,6 +470,41 @@ def EmitC_ConstantOp
   }];
 }
 
+def EmitC_DereferenceOp : EmitC_Op<"dereference", [
+    CExpressionInterface,
+    TypesMatchWith<"input and result reference the same type", "pointer", "result",
+                   "emitc::LValueType::get(::llvm::cast<emitc::PointerType>($_self).getPointee())">
+]> {
+  let summary = "Dereference operation";
+  let description = [{
+    This operation models the C * (dereference) operator, which must be of
+    !emitc.ptr<> type, returning an !emitc.lvalue<> the value pointed to by the
+    pointer.
+
+    Example:
+
+    ```mlir
+    // Custom form of the dereference operator.
+    %0 = emitc.dereference %arg0 : (!emitc.ptr<i32>) -> !emitc.lvalue<i32>
+    ```
+  }];
+  let arguments = (ins EmitC_PointerType:$pointer);
+  let results = (outs EmitC_LValueType:$result);
+  let assemblyFormat = [{
+    $pointer `:` qualified(type($pointer)) attr-dict
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+    bool alwaysInline() {
+      return true; // C doesn't support references.
+    }
+  }];
+}
+
 def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
   let summary = "Division operation";
   let description = [{
@@ -505,11 +571,12 @@ def EmitC_ExpressionOp
 
   let arguments = (ins Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$defs,
       UnitAttr:$do_not_inline);
-  let results = (outs EmitCType:$result);
+  let results = (outs AnyTypeOf<[EmitCType, EmitC_LValueType]>:$result);
   let regions = (region SizedRegion<1>:$region);
 
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
+  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
@@ -871,7 +938,7 @@ def EmitC_IncludeOp
   let hasCustomAssemblyFormat = 1;
 }
 
-def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
+def EmitC_LiteralOp : EmitC_Op<"literal", [Pure, CExpressionInterface]> {
   let summary = "Literal operation";
   let description = [{
     The `emitc.literal` operation produces an SSA value equal to some constant
@@ -894,6 +961,15 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
 
   let hasVerifier = 1;
   let assemblyFormat = "$value attr-dict `:` type($result)";
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+    bool alwaysInline() {
+      return true; // Always inlined by design.
+    }
+  }];
 }
 
 def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", []> {
@@ -1060,7 +1136,7 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_MemberOp : EmitC_Op<"member"> {
+def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
   let summary = "Member operation";
   let description = [{
     With the `emitc.member` operation the member access operator `.` can be
@@ -1081,9 +1157,18 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
     EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
   );
   let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+    bool alwaysInline() {
+      return true; // C doesn't support references.
+    }
+  }];
 }
 
-def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
+def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr", [CExpressionInterface]> {
   let summary = "Member of pointer operation";
   let description = [{
     With the `emitc.member_of_ptr` operation the member access operator `->`
@@ -1106,6 +1191,15 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
     EmitC_LValueOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
   );
   let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+    bool alwaysInline() {
+      return true; // C doesn't support references.
+    }
+  }];
 }
 
 def EmitC_ConditionalOp : EmitC_Op<"conditional",
@@ -1275,8 +1369,10 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
   let hasVerifier = 1;
 }
 
-def EmitC_GetGlobalOp : EmitC_Op<"get_global",
-    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+def EmitC_GetGlobalOp
+    : EmitC_Op<"get_global", [Pure,
+                              DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+                              CExpressionInterface]> {
   let summary = "Obtain access to a global variable";
   let description = [{
      The `emitc.get_global` operation retrieves the lvalue of a
@@ -1294,6 +1390,15 @@ def EmitC_GetGlobalOp : EmitC_Op<"get_global",
   let arguments = (ins FlatSymbolRefAttr:$name);
   let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
   let assemblyFormat = "$name `:` type($result) attr-dict";
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+    bool alwaysInline() {
+      return true; // C doesn't support references.
+    }
+  }];
 }
 
 def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
@@ -1404,7 +1509,8 @@ def EmitC_YieldOp : EmitC_Op<"yield",
     value is yielded.
   }];
 
-  let arguments = (ins Optional<EmitCType>:$result);
+  let arguments =
+      (ins Optional<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$result);
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let hasVerifier = 1;
@@ -1414,7 +1520,8 @@ def EmitC_YieldOp : EmitC_Op<"yield",
 def EmitC_IfOp : EmitC_Op<"if",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
-    "getEntrySuccessorRegions"]>, OpAsmOpInterface, SingleBlock,
+    "getEntrySuccessorRegions", "getSuccessorInputs"]>,
+    OpAsmOpInterface, SingleBlock,
     SingleBlockImplicitTerminator<"emitc::YieldOp">,
     RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "If-then-else operation";
@@ -1475,7 +1582,7 @@ def EmitC_IfOp : EmitC_Op<"if",
   let hasCustomAssemblyFormat = 1;
 }
 
-def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
+def EmitC_SubscriptOp : EmitC_Op<"subscript", [CExpressionInterface]> {
   let summary = "Subscript operation";
   let description = [{
     With the `emitc.subscript` operation the subscript operator `[]` can be applied
@@ -1523,6 +1630,15 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
 
   let hasVerifier = 1;
   let assemblyFormat = "$value `[` $indices `]` attr-dict `:` functional-type(operands, results)";
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+    bool alwaysInline() {
+      return true; // C doesn't support references.
+    }
+  }];
 }
 
 def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
@@ -1703,8 +1819,9 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
 }
 
 def EmitC_GetFieldOp
-    : EmitC_Op<"get_field", [Pure, DeclareOpInterfaceMethods<
-                                       SymbolUserOpInterface>]> {
+    : EmitC_Op<"get_field", [Pure,
+                             DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+                             CExpressionInterface]> {
   let summary = "Obtain access to a field within a class instance";
   let description = [{
      The `emitc.get_field` operation retrieves the lvalue of a
@@ -1721,6 +1838,15 @@ def EmitC_GetFieldOp
   let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+    bool alwaysInline() {
+      return true; // C doesn't support references.
+    }
+  }];
 }
 
 def EmitC_DoOp : EmitC_Op<"do",

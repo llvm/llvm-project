@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-msc50-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../misc/predictable-rand.html
 
 cert-msc50-cpp
 ==============

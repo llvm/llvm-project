@@ -1272,3 +1272,30 @@ entry:
   %abs2 = call half @llvm.fabs.f16(half %sel)
   ret half %abs2
 }
+
+; fabs cannot be removed after fmul because fmul may produce NaN with unknown sign.
+define float @fabs_fmul_nan(float %x) {
+; CHECK-LABEL: @fabs_fmul_nan(
+; CHECK-NEXT:    [[ABS:%.*]] = call nnan float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[ABS2:%.*]] = call float @llvm.fabs.f32(float [[MUL]])
+; CHECK-NEXT:    ret float [[ABS2]]
+;
+  %abs = call nnan float @llvm.fabs.f32(float %x)
+  %mul = fmul float %abs, 0x7FF0000000000000
+  %abs2 = call float @llvm.fabs.f32(float %mul)
+  ret float %abs2
+}
+
+define <2 x float> @fabs_fmul_nan_vector(<2 x float> %x) {
+; CHECK-LABEL: @fabs_fmul_nan_vector(
+; CHECK-NEXT:    [[ABS:%.*]] = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[ABS]], splat (float 0x7FF0000000000000)
+; CHECK-NEXT:    [[ABS2:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[MUL]])
+; CHECK-NEXT:    ret <2 x float> [[ABS2]]
+;
+  %abs = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
+  %mul = fmul <2 x float> %abs, splat (float 0x7FF0000000000000)
+  %abs2 = call <2 x float> @llvm.fabs.v2f32(<2 x float> %mul)
+  ret <2 x float> %abs2
+}

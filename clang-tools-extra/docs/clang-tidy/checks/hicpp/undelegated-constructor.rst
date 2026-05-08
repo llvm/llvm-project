@@ -1,12 +1,10 @@
 .. title:: clang-tidy - hicpp-undelegated-constructor
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/undelegated-constructor.html
 
 hicpp-undelegated-constructor
 =============================
 
 This check is an alias for :doc:`bugprone-undelegated-constructor <../bugprone/undelegated-constructor>`.
-Partially implements `rule 12.4.5 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/special-member-functions>`_
+Partially implements `rule 12.4.5 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-rules>`_
 to find misplaced constructor calls inside a constructor.
 
 .. code-block:: c++

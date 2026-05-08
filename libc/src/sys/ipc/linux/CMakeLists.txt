@@ -1,0 +1,23 @@
+add_header_library(
+  kernel_statx
+  HDRS
+    kernel_statx.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_syscall
+    libc.src.__support.error_or
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  ftok
+  SRCS
+    ftok.cpp
+  HDRS
+    ../ftok.h
+  DEPENDS
+    .kernel_statx
+    libc.hdr.types.key_t
+    libc.src.__support.common
+    libc.src.errno.errno
+)

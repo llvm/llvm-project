@@ -110,6 +110,19 @@ define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
   ret <4 x double> %r
 }
 
+; -(X / Y) --> (-X) / Y
+
+define float @fdiv_fneg_fpmath(float %x, float %y) {
+; CHECK-LABEL: @fdiv_fneg_fpmath(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[NEG]], [[Y:%.*]], !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %z = fdiv arcp float %x, %y, !fpmath !{float 2.5}
+  %w = fneg float %z
+  ret float %w
+}
+
 ; -(X / C) --> X / (-C)
 
 define float @fdiv_op1_constant_fsub(float %x) {
@@ -151,6 +164,50 @@ define float @fdiv_op1_constant_fneg_fmf(float %x) {
 ;
   %d = fdiv float %x, -42.0
   %r = fneg nnan float %d
+  ret float %r
+}
+
+; Don't propagate ninf if it is unavailable on fdiv
+
+define float @fdiv_op1_constant_fneg_ninf(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, 0x7FF0000000000000
+  %r = fneg ninf float %d
+  ret float %r
+}
+
+define float @fdiv_ninf_op1_constant_fneg_ninf(float %x) {
+; CHECK-LABEL: @fdiv_ninf_op1_constant_fneg_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fdiv ninf float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv ninf float %x, -42.0
+  %r = fneg ninf float %d
+  ret float %r
+}
+
+; Don't propagate nsz if it is unavailable on fdiv
+
+define float @fdiv_op1_constant_fneg_nsz(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_nsz(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, 0.0
+  %r = fneg nsz float %d
+  ret float %r
+}
+
+define float @fdiv_nsz_op1_constant_fneg_nsz(float %x) {
+; CHECK-LABEL: @fdiv_nsz_op1_constant_fneg_nsz(
+; CHECK-NEXT:    [[R:%.*]] = fdiv nsz float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv nsz float %x, 0.0
+  %r = fneg nsz float %d
   ret float %r
 }
 
@@ -202,6 +259,16 @@ define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
   %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double poison>
   %r = fneg <4 x double> %d
   ret <4 x double> %r
+}
+
+define float @fdiv_op1_constant_fneg_fpmath(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_fpmath(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 4.200000e+01, !fpmath [[META0]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, -42.0, !fpmath !{float 2.5}
+  %r = fneg float %d
+  ret float %r
 }
 
 ; -(C / X) --> (-C) / X
@@ -305,6 +372,16 @@ define float @fdiv_op0_constant_fneg_nnan(float %x) {
 ;
   %d = fdiv float 42.0, %x
   %r = fneg nnan float %d
+  ret float %r
+}
+
+define float @fdiv_op0_constant_fneg_fpmath(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fneg_fpmath(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float -1.000000e+00, [[X:%.*]], !fpmath [[META0]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float 1.0, %x, !fpmath !{float 2.5}
+  %r = fneg float %d
   ret float %r
 }
 
@@ -981,7 +1058,7 @@ define float @fneg_ldexp_contract(float %x, i32 %n) {
 define float @fneg_ldexp_metadata(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_metadata(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]]), !arst [[META0:![0-9]+]]
+; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]]), !arst [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n), !arst !0
@@ -1100,11 +1177,11 @@ define float @test_fneg_select_constant_var_multiuse(i1 %cond, float %x) {
 
 define float @test_fneg_select_maxnum(float %x) {
 ; CHECK-LABEL: @test_fneg_select_maxnum(
-; CHECK-NEXT:    [[SEL1:%.*]] = call nsz float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SEL1]]
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
-  %cmp1 = fcmp ogt float %x, 1.0
+  %cmp1 = fcmp nnan ogt float %x, 1.0
   %sel1 = select nnan nsz i1 %cmp1, float %x, float 1.0
   %neg = fneg float %sel1
   ret float %neg

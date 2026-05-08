@@ -164,7 +164,7 @@ llvm::Error PipePosix::OpenAsWriter(llvm::StringRef name,
                                     const Timeout<std::micro> &timeout) {
   std::lock_guard<std::mutex> guard(m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
-    return llvm::createStringError("Pipe is already opened");
+    return llvm::createStringError("pipe is already opened");
 
   int flags = O_WRONLY | O_NONBLOCK | O_CLOEXEC;
 

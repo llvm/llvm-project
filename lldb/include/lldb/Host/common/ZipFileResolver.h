@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_ZIPFILERESOLVER_H
-#define LLDB_HOST_ZIPFILERESOLVER_H
+#ifndef LLDB_HOST_COMMON_ZIPFILERESOLVER_H
+#define LLDB_HOST_COMMON_ZIPFILERESOLVER_H
 
 #include "lldb/lldb-private.h"
 
@@ -37,4 +37,4 @@ public:
 
 } // end of namespace lldb_private
 
-#endif // LLDB_HOST_ZIPFILERESOLVER_H
+#endif // LLDB_HOST_COMMON_ZIPFILERESOLVER_H

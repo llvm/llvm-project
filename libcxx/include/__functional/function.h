@@ -540,7 +540,7 @@ public:
 #    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
-      : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
+      : __f_(reinterpret_cast<__block_type>(__f ? __function::_Block_copy(__f) : nullptr))
 #    endif
   {
   }
@@ -563,7 +563,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
 #    if !__has_feature(objc_arc)
     if (__f_)
-      _Block_release(__f_);
+      __function::_Block_release(__f_);
 #    endif
     __f_ = 0;
   }
@@ -684,7 +684,7 @@ public:
 template <class _Rp, class... _Ap>
 function(_Rp (*)(_Ap...)) -> function<_Rp(_Ap...)>;
 
-template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
+template <class _Fp, class _Stripped = __strip_signature_t<decltype(&_Fp::operator())>>
 function(_Fp) -> function<_Stripped>;
 #  endif // _LIBCPP_STD_VER >= 17
 

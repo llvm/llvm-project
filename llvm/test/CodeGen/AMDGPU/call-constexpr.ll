@@ -305,6 +305,7 @@ define amdgpu_kernel void @test_invoke() #0 personality ptr @__gxx_personality_v
 ; SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 2.0
+; SDAG-NEXT:    ; implicit-def: $sgpr15
 ; SDAG-NEXT:    s_mov_b32 s14, s16
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
@@ -330,6 +331,7 @@ define amdgpu_kernel void @test_invoke() #0 personality ptr @__gxx_personality_v
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 2.0
+; GISEL-NEXT:    ; implicit-def: $sgpr15
 ; GISEL-NEXT:    s_mov_b32 s14, s16
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0

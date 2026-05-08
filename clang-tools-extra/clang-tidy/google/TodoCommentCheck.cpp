@@ -14,9 +14,11 @@
 namespace clang::tidy {
 
 namespace google::readability {
+namespace {
 
 enum class StyleKind { Parentheses, Hyphen };
 
+} // namespace
 } // namespace google::readability
 
 template <> struct OptionEnumMapping<google::readability::StyleKind> {
@@ -39,8 +41,7 @@ public:
   TodoCommentHandler(TodoCommentCheck &Check, std::optional<std::string> User)
       : Check(Check), User(User ? *User : "unknown"),
         TodoMatch(R"(^// *TODO *((\((.*)\))?:?( )?|: *(.*) *- *)?(.*)$)") {
-    const llvm::StringRef TodoStyleString =
-        Check.Options.get("Style", "Hyphen");
+    const StringRef TodoStyleString = Check.Options.get("Style", "Hyphen");
     for (const auto &[Value, Name] :
          OptionEnumMapping<StyleKind>::getEnumMapping()) {
       if (Name == TodoStyleString) {

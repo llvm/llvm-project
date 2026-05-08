@@ -339,10 +339,11 @@ define <8 x i8> @test_shuf8(<8 x i8> %a, <8 x i8> %b)
 ; CHECKLE-LABEL: test_shuf8:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECKLE-NEXT:    mov x8, #8830452760576 // =0x80800000000
 ; CHECKLE-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECKLE-NEXT:    adrp x8, .LCPI12_0
 ; CHECKLE-NEXT:    mov v0.d[1], v1.d[0]
-; CHECKLE-NEXT:    ldr d1, [x8, :lo12:.LCPI12_0]
+; CHECKLE-NEXT:    movk x8, #2056, lsl #48
+; CHECKLE-NEXT:    fmov d1, x8
 ; CHECKLE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECKLE-NEXT:    ret
 ;

@@ -1106,17 +1106,44 @@ __m256i test_mm256_permute2x128_si256(__m256i a, __m256i b) {
   return _mm256_permute2x128_si256(a, b, 0x38);
 }
 
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0xA7), 7LL, 8LL, 0LL, 0LL));
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0x5F), 0LL, 0LL, 3LL, 4LL));
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0x37), 7LL, 8LL, 7LL, 8LL));
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0x12), 5LL, 6LL, 3LL, 4LL));
+
 __m256i test_mm256_permute4x64_epi64(__m256i a) {
   // CHECK-LABEL: test_mm256_permute4x64_epi64
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> poison, <4 x i32> <i32 3, i32 0, i32 2, i32 0>
   return _mm256_permute4x64_epi64(a, 35);
 }
+// Control value 0x00: [0,0,0,0] -> broadcast element 0
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(((__m256i)(__v4di){40LL, 30LL, 20LL, 10LL}), 0x00), 40LL, 40LL, 40LL, 40LL));
+// Control value 0x1B: [0,1,2,3] -> reverse order [3,2,1,0] = [D,C,B,A]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(((__m256i)(__v4di){40LL, 30LL, 20LL, 10LL}), 0x1B), 10LL, 20LL, 30LL, 40LL));
+// Control value 0x39: [1,2,3,0] -> rotate left [B,C,D,A]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(((__m256i)(__v4di){40LL, 30LL, 20LL, 10LL}), 0x39), 30LL, 20LL, 10LL, 40LL));
+// Control value 0x12: [2,0,1,0] -> [C,A,B,A]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(((__m256i)(__v4di){40LL, 30LL, 20LL, 10LL}), 0x12), 20LL, 40LL, 30LL, 40LL));
+// Control value 0xE4: [3,2,1,0] -> identity [A,B,C,D]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(((__m256i)(__v4di){40LL, 30LL, 20LL, 10LL}), 0xE4), 40LL, 30LL, 20LL, 10LL));
+// Test with negative values
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(((__m256i)(__v4di){-40LL, -30LL, -20LL, -10LL}), 0x1B), -10LL, -20LL, -30LL, -40LL));
 
 __m256d test_mm256_permute4x64_pd(__m256d a) {
   // CHECK-LABEL: test_mm256_permute4x64_pd
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> poison, <4 x i32> <i32 1, i32 2, i32 1, i32 0>
   return _mm256_permute4x64_pd(a, 25);
 }
+// Control value 0x00: [0,0,0,0] -> broadcast element 0
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(((__m256d){4.0, 3.0, 2.0, 1.0}), 0x00), 4.0, 4.0, 4.0, 4.0));
+// Control value 0x1B: [0,1,2,3] -> reverse order [3,2,1,0] = [D,C,B,A]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(((__m256d){4.0, 3.0, 2.0, 1.0}), 0x1B), 1.0, 2.0, 3.0, 4.0));
+// Control value 0x39: [1,2,3,0] -> rotate left [B,C,D,A]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(((__m256d){4.0, 3.0, 2.0, 1.0}), 0x39), 3.0, 2.0, 1.0, 4.0));
+// Control value 0x12: [2,0,1,0] -> [C,A,B,A]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(((__m256d){4.0, 3.0, 2.0, 1.0}), 0x12), 2.0, 4.0, 3.0, 4.0));
+// Control value 0xE4: [3,2,1,0] -> identity [A,B,C,D]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(((__m256d){4.0, 3.0, 2.0, 1.0}), 0xE4), 4.0, 3.0, 2.0, 1.0));
 
 __m256i test_mm256_permutevar8x32_epi32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_permutevar8x32_epi32

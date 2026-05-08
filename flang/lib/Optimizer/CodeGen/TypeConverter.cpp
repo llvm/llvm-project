@@ -163,8 +163,8 @@ LLVMTypeConverter::convertRecordType(fir::RecordType derived,
     return mlir::success();
   }
   callStack.push_back(derived);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([&callStack]() { callStack.pop_back(); });
+  llvm::scope_exit popConversionCallStack(
+      [&callStack]() { callStack.pop_back(); });
 
   llvm::SmallVector<mlir::Type> members;
   for (auto mem : derived.getTypeList()) {

@@ -36,6 +36,7 @@ func.func @_QPfoo() {
 
 // CHECK: %[[S_DECL:.*]]:2 = hlfir.declare %6 {uniq_name = "_QFfooEs"}
 // CHECK: %[[S_MAP:.*]] = omp.map.info var_ptr(%[[S_DECL]]#1
+// CHECK-SAME: map_clauses(implicit, tofrom) capture(ByRef)
 
 // CHECK: omp.target host_eval({{.*}}) map_entries({{.*}}, %[[S_MAP]] -> %[[S_TARGET_ARG:.*]] : {{.*}}) {
 // CHECK:   %[[S_DEV_DECL:.*]]:2 = hlfir.declare %[[S_TARGET_ARG]]

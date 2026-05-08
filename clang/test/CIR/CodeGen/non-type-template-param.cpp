@@ -13,7 +13,7 @@ void template_foo() {
 // CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<5> : !s32i
-// CIR: %[[ADD:.*]] = cir.binop(add, %[[CONST_1]], %[[CONST_2]]) nsw : !s32i
+// CIR: %[[ADD:.*]] = cir.add nsw %[[CONST_1]], %[[CONST_2]] : !s32i
 // CIR: cir.store{{.*}} %[[ADD]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: %[[INIT:.*]] = alloca i32, i64 1, align 4

@@ -84,9 +84,10 @@ static constexpr std::tuple<
     mkIOKey(SetAccess), mkIOKey(SetAction), mkIOKey(SetAdvance),
     mkIOKey(SetAsynchronous), mkIOKey(SetBlank), mkIOKey(SetCarriagecontrol),
     mkIOKey(SetConvert), mkIOKey(SetDecimal), mkIOKey(SetDelim),
-    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm), mkIOKey(SetPad),
-    mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl),
-    mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
+    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm),
+    mkIOKey(SetLeadingZero), mkIOKey(SetPad), mkIOKey(SetPos),
+    mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl), mkIOKey(SetRound),
+    mkIOKey(SetSign), mkIOKey(SetStatus)>
     newIOTable;
 } // namespace Fortran::lower
 
@@ -951,7 +952,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
   const auto &loopSym =
-      *Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.name).symbol;
+      *Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.Name()).symbol;
   mlir::Value loopVar = fir::getBase(converter.genExprAddr(
       Fortran::evaluate::AsGenericExpr(loopSym).value(), stmtCtx));
   auto genControlValue = [&](const Fortran::parser::ScalarIntExpr &expr) {
@@ -959,11 +960,11 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
         converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
     return builder.createConvert(loc, builder.getIndexType(), v);
   };
-  mlir::Value lowerValue = genControlValue(control.lower);
-  mlir::Value upperValue = genControlValue(control.upper);
+  mlir::Value lowerValue = genControlValue(control.Lower());
+  mlir::Value upperValue = genControlValue(control.Upper());
   mlir::Value stepValue =
-      control.step.has_value()
-          ? genControlValue(*control.step)
+      control.Step().has_value()
+          ? genControlValue(*control.Step())
           : mlir::arith::ConstantIndexOp::create(builder, loc, 1);
   auto genItemList = [&](const D &ioImpliedDo) {
     if constexpr (std::is_same_v<D, Fortran::parser::InputImpliedDo>)
@@ -1246,6 +1247,10 @@ mlir::Value genIOOption<Fortran::parser::ConnectSpec::CharExpr>(
   case Fortran::parser::ConnectSpec::CharExpr::Kind::Form:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetForm)>(loc, builder);
     break;
+  case Fortran::parser::ConnectSpec::CharExpr::Kind::Leading_Zero:
+    ioFunc =
+        fir::runtime::getIORuntimeFunc<mkIOKey(SetLeadingZero)>(loc, builder);
+    break;
   case Fortran::parser::ConnectSpec::CharExpr::Kind::Pad:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetPad)>(loc, builder);
     break;
@@ -1311,6 +1316,10 @@ mlir::Value genIOOption<Fortran::parser::IoControlSpec::CharExpr>(
     break;
   case Fortran::parser::IoControlSpec::CharExpr::Kind::Delim:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetDelim)>(loc, builder);
+    break;
+  case Fortran::parser::IoControlSpec::CharExpr::Kind::Leading_Zero:
+    ioFunc =
+        fir::runtime::getIORuntimeFunc<mkIOKey(SetLeadingZero)>(loc, builder);
     break;
   case Fortran::parser::IoControlSpec::CharExpr::Kind::Pad:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetPad)>(loc, builder);
@@ -1426,6 +1435,9 @@ static void threadSpecs(Fortran::lower::AbstractConverter &converter,
               // been processed and also to set it to zero if the transfer is
               // already finished.
               return ok;
+            },
+            [](const Fortran::parser::ErrorRecovery &) -> mlir::Value {
+              llvm::report_fatal_error("ErrorRecovery in parse tree");
             },
             [&](const auto &x) {
               return genIOOption(converter, loc, cookie, x);

@@ -4,7 +4,7 @@
 // own copy the vftable when emitting the available externally constructor.
 
 // CHECK: @"??_7?$Foo@H@@6B@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [
-// CHECK-SAME:   ptr @"??_G?$Foo@H@@UEAAPEAXI@Z"
+// CHECK-SAME:   ptr @"??_E?$Foo@H@@UEAAPEAXI@Z"
 // CHECK-SAME: ] }, comdat
 
 // CHECK-LABEL: define dso_local noundef ptr @"?f@@YAPEAU?$Foo@H@@XZ"()

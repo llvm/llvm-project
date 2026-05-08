@@ -230,10 +230,11 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #  if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
-_LIBCPP_EXPORTED_FROM_ABI size_t __strftime(char*, size_t, const char*, const struct tm*, __locale_t);
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char*, size_t, const char*, const struct tm*, __locale_t);
 #  else
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __ret, size_t __n, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __ret, size_t __n, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return ::_strftime_l(__ret, __n, __format, __tm, __loc);
 }
 #  endif

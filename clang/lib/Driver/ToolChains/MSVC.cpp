@@ -325,7 +325,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     A.renderAsInput(Args, CmdArgs);
   }
 
-  addHIPRuntimeLibArgs(TC, C, Args, CmdArgs);
+  TC.addOffloadRTLibs(C.getActiveOffloadKinds(), Args, CmdArgs);
 
   TC.addProfileRTLibs(Args, CmdArgs);
 
@@ -516,11 +516,18 @@ void MSVCToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
   SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
-void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,
-                                         ArgStringList &CmdArgs) const {
-  CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
-                                     RocmInstallation->getLibPath()),
-                  "amdhip64.lib"});
+void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                    true) ||
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+    return;
+
+  if (ActiveKinds & Action::OFK_HIP) {
+    CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
+                                       RocmInstallation->getLibPath()),
+                    "amdhip64.lib"});
+  }
 }
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
@@ -812,9 +819,8 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
   return MSVT;
 }
 
-std::string
-MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
-                                           types::ID InputType) const {
+std::string MSVCToolChain::ComputeEffectiveClangTriple(
+    const ArgList &Args, llvm::StringRef BoundArch, types::ID InputType) const {
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
@@ -823,7 +829,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
 
   // For the rest of the triple, however, a computed architecture name may
   // be needed.
-  llvm::Triple Triple(ToolChain::ComputeEffectiveClangTriple(Args, InputType));
+  llvm::Triple Triple(
+      ToolChain::ComputeEffectiveClangTriple(Args, BoundArch, InputType));
   if (Triple.getEnvironment() == llvm::Triple::MSVC) {
     StringRef ObjFmt = Triple.getEnvironmentName().split('-').second;
     if (ObjFmt.empty())

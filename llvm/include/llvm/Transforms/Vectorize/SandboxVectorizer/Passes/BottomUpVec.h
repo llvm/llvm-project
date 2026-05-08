@@ -88,6 +88,9 @@ class BottomUpVec final : public RegionPass {
   /// `Actions` vector.
   Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
                        unsigned Depth, LegalityAnalysis &Legality);
+  /// If the values in \p Bndl have external users, then emit unpacks and
+  /// connect them to the users. \p Vec is the vectorized form of \p Bndl.
+  void emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl, Value *Vec);
   /// Generate vector instructions based on `Actions` and return the last vector
   /// created.
   Value *emitVectors();

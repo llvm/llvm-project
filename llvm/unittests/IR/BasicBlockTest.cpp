@@ -32,9 +32,9 @@ TEST(BasicBlockTest, PhiRange) {
 
   // Create some predecessors of it.
   std::unique_ptr<BasicBlock> BB1(BasicBlock::Create(Context));
-  BranchInst::Create(BB.get(), BB1.get());
+  UncondBrInst::Create(BB.get(), BB1.get());
   std::unique_ptr<BasicBlock> BB2(BasicBlock::Create(Context));
-  BranchInst::Create(BB.get(), BB2.get());
+  UncondBrInst::Create(BB.get(), BB2.get());
 
   // Make sure this doesn't crash if there are no phis.
   int PhiCount = 0;
@@ -45,7 +45,7 @@ TEST(BasicBlockTest, PhiRange) {
   ASSERT_EQ(PhiCount, 0) << "empty block should have no phis";
 
   // Make it a cycle.
-  auto *BI = BranchInst::Create(BB.get(), BB.get());
+  auto *BI = UncondBrInst::Create(BB.get(), BB.get());
 
   // Now insert some PHI nodes.
   auto *Int32Ty = Type::getInt32Ty(Context);
@@ -99,44 +99,6 @@ TEST(BasicBlockTest, PhiRange) {
             std::distance(Range2.begin(), Range2.end()));                      \
   for (auto Pair : zip(Range1, Range2))                                        \
     EXPECT_EQ(&std::get<0>(Pair), std::get<1>(Pair));
-
-TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
-  LLVMContext Ctx;
-
-  Module *M = new Module("MyModule", Ctx);
-  Type *ArgTy1[] = {PointerType::getUnqual(Ctx)};
-  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), ArgTy1, false);
-  Argument *V = new Argument(Type::getInt32Ty(Ctx));
-  Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
-
-  Function *DbgDeclare =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_declare);
-  Function *DbgValue =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_value);
-  Value *DIV = MetadataAsValue::get(Ctx, (Metadata *)nullptr);
-  SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
-
-  BasicBlock *BB1 = BasicBlock::Create(Ctx, "", F);
-  const BasicBlock *BBConst = BB1;
-  IRBuilder<> Builder1(BB1);
-
-  AllocaInst *Var = Builder1.CreateAlloca(Builder1.getInt8Ty());
-  Builder1.CreateCall(DbgValue, Args);
-  Instruction *AddInst = cast<Instruction>(Builder1.CreateAdd(V, V));
-  Instruction *MulInst = cast<Instruction>(Builder1.CreateMul(AddInst, V));
-  Builder1.CreateCall(DbgDeclare, Args);
-  Instruction *SubInst = cast<Instruction>(Builder1.CreateSub(MulInst, V));
-
-  SmallVector<Instruction *, 4> Exp = {Var, AddInst, MulInst, SubInst};
-  CHECK_ITERATORS(BB1->instructionsWithoutDebug(), Exp);
-  CHECK_ITERATORS(BBConst->instructionsWithoutDebug(), Exp);
-
-  EXPECT_EQ(static_cast<size_t>(BB1->sizeWithoutDebug()), Exp.size());
-  EXPECT_EQ(static_cast<size_t>(BBConst->sizeWithoutDebug()), Exp.size());
-
-  delete M;
-  delete V;
-}
 
 TEST(BasicBlockTest, ComesBefore) {
   const char *ModuleString = R"(define i32 @f(i32 %x) {

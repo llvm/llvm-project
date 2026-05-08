@@ -129,7 +129,7 @@ int main(int argc, const char *argv[]) {
   unsigned InstructionNumber = 1;
   for (Function &F : *ModuleToAnalyze)
     for (BasicBlock &BB : F)
-      for (Instruction &I : BB.instructionsWithoutDebug())
+      for (Instruction &I : BB)
         LLVMInstNum[&I]= InstructionNumber++;
 
   // The similarity identifier we will use to find the similar sections.

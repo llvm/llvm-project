@@ -291,7 +291,7 @@ return:
 }
 !0 = !{ float 2.5 }
 
-define float @test_logf_pos_denormalpreserve(float %f) "denormal-fp-math"="preserve-sign,preserve-sign"  {
+define float @test_logf_pos_denormalpreserve(float %f) denormal_fpenv(preservesign)  {
 ; CHECK-LABEL: define float @test_logf_pos_denormalpreserve(
 ; CHECK-SAME: float [[F:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -315,7 +315,7 @@ return:
   ret float 0.0
 }
 
-define float @test_logf_pos_denormaldynamic(float %f) "denormal-fp-math"="dynamic,dynamic"  {
+define float @test_logf_pos_denormaldynamic(float %f) denormal_fpenv(dynamic)  {
 ; CHECK-LABEL: define float @test_logf_pos_denormaldynamic(
 ; CHECK-SAME: float [[F:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

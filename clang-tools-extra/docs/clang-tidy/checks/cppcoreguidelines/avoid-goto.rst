@@ -9,7 +9,7 @@ with looping constructs. Only forward jumps in nested loops are accepted.
 This check implements `ES.76
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es76-avoid-goto>`_
 from the C++ Core Guidelines and
-`6.3.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/statements>`_
+`6.3.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-rules>`_
 from High Integrity C++ Coding Standard.
 
 For more information on why to avoid programming

@@ -15,6 +15,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class TestArgumentPassingRestrictions(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "7.0"])
     def test_argument_passing_restrictions(self):

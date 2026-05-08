@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/rintl.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/rintl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long double, rintl, (long double x)) {
-  return fputil::round_using_current_rounding_mode(x);
+  return math::rintl(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

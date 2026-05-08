@@ -1,0 +1,20 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+module {
+  cir.global "private" constant cir_private @__const.test.b = #cir.const_array<"qwe" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 100>
+  // CHECK: cir.global "private" constant cir_private @__const.test.b = #cir.const_array<"qwe" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 100>
+
+  cir.global "private" constant cir_private dso_local @".str" = #cir.const_array<"qwe" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4> {alignment = 1 : i64}
+  // CHECK: cir.global "private" constant cir_private dso_local @".str" = #cir.const_array<"qwe" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4> {alignment = 1 : i64}
+
+  cir.func @test_string_trailing_zeros() {
+    %2 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 4>>
+    %3 = cir.get_global @__const.test.b : !cir.ptr<!cir.array<!s8i x 100>>
+    cir.return
+  }
+  // CHECK: cir.func @test_string_trailing_zeros()
+  // CHECK:   %{{.*}} = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 4>>
+  // CHECK:   %{{.*}} = cir.get_global @__const.test.b : !cir.ptr<!cir.array<!s8i x 100>>
+  // CHECK:   cir.return
+}

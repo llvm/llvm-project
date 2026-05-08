@@ -283,7 +283,7 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    adds r0, r2, #1
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    bic r0, r0, #1
+; CHECK-NEXT:    and r0, r0, #510
 ; CHECK-NEXT:    subs r0, #2
 ; CHECK-NEXT:    add.w r0, r3, r0, lsr #1
 ; CHECK-NEXT:    dls lr, r0

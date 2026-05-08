@@ -48,9 +48,12 @@ public:
 /// Print LLVM IR using the MIR serialization format to the given output stream.
 LLVM_ABI void printMIR(raw_ostream &OS, const Module &M);
 
-/// Print a machine function using the MIR serialization format to the given
-/// output stream.
+/// Print MIR using Legacy Pass Manager (uses MachineModuleInfo).
 LLVM_ABI void printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
+                       const MachineFunction &MF);
+
+/// Print MIR using New Pass Manager (uses FunctionAnalysisManager).
+LLVM_ABI void printMIR(raw_ostream &OS, FunctionAnalysisManager &FAM,
                        const MachineFunction &MF);
 
 /// Determine a possible list of successors of a basic block based on the

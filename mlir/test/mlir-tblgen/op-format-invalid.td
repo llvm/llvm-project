@@ -355,6 +355,12 @@ def OIListStartingToken : TestFormat_Op<[{
 // Optional Groups
 //===----------------------------------------------------------------------===//
 
+// CHECK: error: optional attribute 'attr' cannot be used outside of an optional group
+// CHECK: note: to conditionally print the attribute, use '($attr^)?'
+def OptionalAttrOutsideGroup : TestFormat_Op<[{
+  $attr attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
+
 // CHECK: error: optional groups can only be used as top-level elements
 def OptionalInvalidA : TestFormat_Op<[{
   type(($attr^)?) attr-dict

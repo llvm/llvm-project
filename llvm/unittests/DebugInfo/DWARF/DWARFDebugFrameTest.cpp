@@ -1407,7 +1407,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_expression) {
   dwarf::RegisterLocations VerifyLocs;
 
   std::vector<uint8_t> ExprBytes = {dwarf::DW_OP_reg12};
-  DataExtractor ExprData(ExprBytes, true, AddrSize);
+  DataExtractor ExprData(ExprBytes, true);
   DWARFExpression Expr(ExprData, AddrSize);
   VerifyLocs.setRegisterLocation(
       Reg, dwarf::UnwindLocation::createAtDWARFExpression(Expr));
@@ -1459,7 +1459,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_val_expression) {
   dwarf::RegisterLocations VerifyLocs;
 
   std::vector<uint8_t> ExprBytes = {dwarf::DW_OP_reg12};
-  DataExtractor ExprData(ExprBytes, true, AddrSize);
+  DataExtractor ExprData(ExprBytes, true);
   DWARFExpression Expr(ExprData, AddrSize);
   VerifyLocs.setRegisterLocation(
       Reg, dwarf::UnwindLocation::createIsDWARFExpression(Expr));

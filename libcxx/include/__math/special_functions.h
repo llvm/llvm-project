@@ -49,7 +49,7 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
   }
 
   if (!__math::isfinite(__H_n)) {
-    // Overflow occured. Two possible cases:
+    // Overflow occurred. Two possible cases:
     //    n is odd:  return infinity of the same sign as x.
     //    n is even: return +Inf
     _Real __inf = std::numeric_limits<_Real>::infinity();

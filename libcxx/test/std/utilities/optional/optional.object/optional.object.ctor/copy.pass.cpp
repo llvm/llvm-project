@@ -69,8 +69,8 @@ void test_ref(InitArgs&&... args) {
     assert(&(*lhs) == &(*rhs));
 }
 
+#if TEST_STD_VER >= 26
 void test_reference_extension() {
-#if defined(_LIBCPP_VERSION) && 0 // FIXME these extensions are currently disabled.
   using T = TestTypes::TestType;
   T::reset();
   {
@@ -99,12 +99,15 @@ void test_reference_extension() {
   }
   assert(T::alive == 0);
   assert(T::destroyed == 1);
+
+#  if 0 // optional<T&&> is not permitted.
   {
     static_assert(!std::is_copy_constructible<std::optional<T&&>>::value, "");
     static_assert(!std::is_copy_constructible<std::optional<T const&&>>::value, "");
   }
-#endif
+#  endif
 }
+#endif
 
 int main(int, char**) {
   test<int>();
@@ -153,9 +156,11 @@ int main(int, char**) {
   {
     test_throwing_ctor();
   }
+#if TEST_STD_VER >= 26
   {
     test_reference_extension();
   }
+#endif
   {
     constexpr std::optional<int> o1{4};
     constexpr std::optional<int> o2 = o1;

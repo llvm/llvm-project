@@ -566,3 +566,61 @@ foreach i = 0 - 3 in {
   def : SysReg<"qc.mwpendaddr" # i,   !add(0x7D4, i)>;
 }
 } // FeatureVendorXqciint, isRV32Only
+
+// XAIFET
+let FeaturesRequired = [{ {RISCV::FeatureVendorXAIFET} }] in {
+  def : SysReg<"aif.cache_invalidate", 0x7d0>;
+  def : SysReg<"aif.dcache_debug", 0xfc0>;
+  def : SysReg<"aif.evict_sw", 0x7f9>;
+  def : SysReg<"aif.evict_va", 0x89f>;
+  def : SysReg<"aif.excl_mode", 0x7d3>;
+  def : SysReg<"aif.fcc", 0x821>;
+  def : SysReg<"aif.fccnb", 0xcc0>;
+  def : SysReg<"aif.flb", 0x820>;
+  def : SysReg<"aif.flush_sw", 0x7fb>;
+  def : SysReg<"aif.flush_va", 0x8bf>;
+  def : SysReg<"aif.gsc_progress", 0x840>;
+  def : SysReg<"aif.hartid", 0xcd0>;
+  def : SysReg<"aif.lock_sw", 0x7fd>;
+  def : SysReg<"aif.lock_va", 0x8df>;
+  def : SysReg<"aif.matp", 0x7c0>;
+  def : SysReg<"aif.mbusaddr", 0x7d5>;
+  def : SysReg<"aif.mcache_control", 0x7e0>;
+  def : SysReg<"aif.menable_shadows", 0x7d2>;
+  def : SysReg<"aif.minstmask", 0x7cd>;
+  def : SysReg<"aif.minstmatch", 0x7ce>;
+  def : SysReg<"aif.portctrl0", 0x9cc>;
+  def : SysReg<"aif.portctrl1", 0x9cd>;
+  def : SysReg<"aif.portctrl2", 0x9ce>;
+  def : SysReg<"aif.portctrl3", 0x9cf>;
+  def : SysReg<"aif.porthead0", 0xcc8>;
+  def : SysReg<"aif.porthead1", 0xcc9>;
+  def : SysReg<"aif.porthead2", 0xcca>;
+  def : SysReg<"aif.porthead3", 0xccb>;
+  def : SysReg<"aif.portheadnb0", 0xccc>;
+  def : SysReg<"aif.portheadnb1", 0xccd>;
+  def : SysReg<"aif.portheadnb2", 0xcce>;
+  def : SysReg<"aif.portheadnb3", 0xccf>;
+  def : SysReg<"aif.prefetch_va", 0x81f>;
+  def : SysReg<"aif.stall", 0x822>;
+  def : SysReg<"aif.tensor_conv_ctrl", 0x803>;
+  def : SysReg<"aif.tensor_conv_size", 0x802>;
+  def : SysReg<"aif.tensor_coop", 0x804>;
+  def : SysReg<"aif.tensor_error", 0x808>;
+  def : SysReg<"aif.tensor_fma", 0x801>;
+  def : SysReg<"aif.tensor_load", 0x83f>;
+  def : SysReg<"aif.tensor_load_l2", 0x85f>;
+  def : SysReg<"aif.tensor_mask", 0x805>;
+  def : SysReg<"aif.tensor_quant", 0x806>;
+  def : SysReg<"aif.tensor_reduce", 0x800>;
+  def : SysReg<"aif.tensor_store", 0x87f>;
+  def : SysReg<"aif.tensor_wait", 0x830>;
+  def : SysReg<"aif.tex_send", 0x807>;
+  def : SysReg<"aif.ucache_control", 0x810>;
+  def : SysReg<"aif.unlock_sw", 0x7ff>;
+  def : SysReg<"aif.unlock_va", 0x8ff>;
+  def : SysReg<"aif.validation0", 0x8d0>;
+  def : SysReg<"aif.validation1", 0x8d1>;
+  def : SysReg<"aif.validation2", 0x8d2>;
+  def : SysReg<"aif.validation3", 0x8d3>;
+} // FeatureVendorXAIFET

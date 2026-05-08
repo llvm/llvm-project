@@ -1,10 +1,10 @@
-if(LIBC_TARGET_OS_IS_GPU)
-  add_subdirectory(gpu)
+# The CPU build depends on Google benchmark.
+if(NOT LIBC_INCLUDE_BENCHMARKS)
   return()
 endif()
 
-# The CPU build depends on Google benchmark.
-if(NOT LIBC_INCLUDE_BENCHMARKS)
+if(LIBC_TARGET_OS_IS_GPU)
+  add_subdirectory(gpu)
   return()
 endif()
 

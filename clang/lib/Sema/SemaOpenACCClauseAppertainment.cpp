@@ -72,7 +72,7 @@ struct LLVMDirectiveClauseRelationships {
 #include "llvm/Frontend/OpenACC/ACC.inc"
 
 namespace {
-LLVMDirectiveClauseRelationships Relations[] =
+const LLVMDirectiveClauseRelationships Relations[] =
 #define GEN_CLANG_DIRECTIVE_CLAUSE_MAP
 #include "llvm/Frontend/OpenACC/ACC.inc"
     ;

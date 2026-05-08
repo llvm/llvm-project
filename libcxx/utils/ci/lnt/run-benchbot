@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+set -e
+set -o pipefail
+
+PROGNAME="$(basename "${0}")"
+
+function usage() {
+cat <<EOF
+Usage:
+${PROGNAME} [options] <BUILDER> [-- commit ...]
+
+[-h|--help]         Display this help and exit.
+
+--llvm-root <DIR>   Path to the root of the LLVM monorepo. By default, we try
+                    to figure it out based on the current working directory.
+
+--build-dir <DIR>   The directory to use for storing benchmark results. By default,
+                    this is '<llvm-root>/build/<builder>'. Note that intermediate
+                    build results are never kept around.
+
+[--lnt-url <URL>]   The optional URL of the LNT instance to submit results to. By
+                    default, results are not submitted to any LNT instance.
+
+[--filter <FILTER>] Optional filter to pass to lit to run only a subset of benchmarks.
+
+Environment variables
+SPEC_DIR            Optional path to a SPEC installation. If set and the directory
+                    exists, SPEC benchmarks are included in the run.
+
+If commits are provided after --, only those commits are benchmarked and the
+runner exits. Otherwise, the runner polls the given LNT url (which must be
+present) to discover un-benchmarked commits and runs indefinitely.
+EOF
+}
+
+if [[ $# == 0 ]]; then
+   usage
+   exit 0
+fi
+
+while [[ $# -gt 0 ]]; do
+    case ${1} in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --llvm-root)
+            MONOREPO_ROOT="${2}"
+            shift; shift
+            ;;
+        --build-dir)
+            BUILD_DIR="${2}"
+            shift; shift
+            ;;
+        --lnt-url)
+            LNT_URL="${2}"
+            shift; shift
+            ;;
+        --filter)
+            FILTER="${2}"
+            shift; shift
+            ;;
+        --)
+            shift
+            COMMITS=("$@")
+            break
+            ;;
+        *)
+            BUILDER="${1}"
+            shift
+            ;;
+    esac
+done
+
+MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
+BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
+
+case "${BUILDER}" in
+apple-m5-clang21)
+    export SDKROOT=$(xcrun --show-sdk-path)
+    COMPILER=$(brew --prefix)/opt/llvm/bin/clang++
+    BENCHMARK_SUITE_VERSION=0eefb2682bf8c04954c46e91916b5164d8424702
+;;
+apple-m5-xcode26)
+    COMPILER=clang++
+    BENCHMARK_SUITE_VERSION=0eefb2682bf8c04954c46e91916b5164d8424702
+;;
+*)
+    echo "${BUILDER} is not a known configuration"
+    exit 1
+;;
+esac
+
+echo "***********************************************"
+echo "Diagnose tools in use"
+cmake --version
+ninja --version
+${COMPILER} --version
+echo "Benchmark suite version: ${BENCHMARK_SUITE_VERSION}"
+echo "***********************************************"
+
+LNT_TEST_SUITE=libcxx2
+
+mkdir -p "${BUILD_DIR}"
+
+# Given path/to/abcdef.json, figures out the next available path,
+# considering path/to/abcdef.{1,2,3,etc}.json.
+next_available_path() {
+    local path="${1}"
+    local base="${path%.json}"
+    local i=1
+    while [ -f "${path}" ]; do
+        path="${base}.${i}.json"
+        i=$((i + 1))
+    done
+    echo "${path}"
+}
+
+run_benchmarks() {
+    local spec_arg=""
+    if [ -d "${SPEC_DIR}" ]; then
+        spec_arg="--spec-dir ${SPEC_DIR}"
+    fi
+
+    local filter_arg=""
+    if [ -n "${FILTER}" ]; then
+        filter_arg="--filter ${FILTER}"
+    fi
+
+    local output=$(next_available_path "${BUILD_DIR}/${1}.json")
+    ${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks                                                         \
+        --test-suite-commit ${BENCHMARK_SUITE_VERSION}                                                          \
+        --git-repo ${MONOREPO_ROOT}                                                                             \
+        --machine ${BUILDER}                                                                                    \
+        --compiler ${COMPILER}                                                                                  \
+        --benchmark-commit ${1}                                                                                 \
+        ${spec_arg}                                                                                             \
+        ${filter_arg}                                                                                           \
+        --output ${output}
+
+    if [ -n "${LNT_URL}" ]; then
+        ${MONOREPO_ROOT}/libcxx/utils/ci/lnt/submit-benchmarks                                                  \
+            --lnt-url ${LNT_URL}                                                                                \
+            --test-suite ${LNT_TEST_SUITE}                                                                      \
+            ${output}
+    fi
+}
+
+if [ ${#COMMITS[@]} -gt 0 ]; then
+    for commit in "${COMMITS[@]}"; do
+        run_benchmarks ${commit}
+    done
+else
+    if [ -z "${LNT_URL}" ]; then
+        echo "error: --lnt-url is required when polling for commits (it is used to discover un-benchmarked commits)"
+        exit 1
+    fi
+    while true; do
+        ${MONOREPO_ROOT}/libcxx/utils/ci/lnt/commit-watch --git-repo ${MONOREPO_ROOT}                           \
+            --lnt-url ${LNT_URL} --test-suite ${LNT_TEST_SUITE} --machine ${BUILDER} |                          \
+            while read commit; do                                                                               \
+                run_benchmarks ${commit}
+            done
+        sleep 60 # To avoid busy looping in case something goes really wrong
+    done
+fi

@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/ceilbf16.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/ceilbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(bfloat16, ceilbf16, (bfloat16 x)) { return fputil::ceil(x); }
+LLVM_LIBC_FUNCTION(bfloat16, ceilbf16, (bfloat16 x)) {
+  return math::ceilbf16(x);
+}
 
 } // namespace LIBC_NAMESPACE_DECL

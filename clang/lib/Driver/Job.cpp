@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -425,6 +426,10 @@ int CC1Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
   // applicable here.
   if (ExecutionFailed)
     *ExecutionFailed = false;
+
+  // Enabling the sandbox here allows us to restore its previous state even when
+  // this cc1 invocation crashes.
+  auto EnableSandbox = llvm::sys::sandbox::scopedEnable();
 
   llvm::CrashRecoveryContext CRC;
   CRC.DumpStackAndCleanupOnFailure = true;

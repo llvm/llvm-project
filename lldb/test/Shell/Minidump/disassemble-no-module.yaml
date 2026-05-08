@@ -7,7 +7,7 @@
 # CHECK: frame #0: 0x0000000000400430
 # CHECK-LABEL: (lldb) disassemble
 # CHECK-NEXT: error: error reading data from section .module_image
-# CHECK-NEXT: error: Failed to disassemble memory at 0x00400430.
+# CHECK-NEXT: error: Failed to disassemble memory at 0x00400430
 
 --- !minidump
 Streams:         

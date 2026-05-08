@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"

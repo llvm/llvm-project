@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -180,9 +181,8 @@ Value mlir::tosa::getTosaConstShape(PatternRewriter &rewriter, Location loc,
 }
 
 SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
-  return to_vector(llvm::map_range(shape, [](int64_t dim) {
-    return ShapedType::isDynamic(dim) ? -1 : dim;
-  }));
+  return map_to_vector(
+      shape, [](int64_t dim) { return ShapedType::isDynamic(dim) ? -1 : dim; });
 }
 
 bool mlir::tosa::getConstShapeValues(Operation *op,

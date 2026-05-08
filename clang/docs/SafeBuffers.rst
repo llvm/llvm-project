@@ -135,7 +135,7 @@ the only formal "hint" in the program that the pointer does indeed point
 to a buffer of multiple objects::
 
     int get_last_element(int *pointer, size_t size) {
-      return ptr[sz - 1]; // warning: unsafe buffer access
+      return ptr[size - 1]; // warning: unsafe buffer access
     }
 
     int *get_last_element_ptr(int *pointer, size_t size) {
@@ -177,9 +177,9 @@ section can be made **slightly** safer this way::
     }
 
 Here ``std::span`` eliminates the potential concern that the operation
-``size - 1`` may overflow when ``sz`` is equal to ``0``, leading to a buffer
+``size - 1`` may overflow when ``size`` is equal to ``0``, leading to a buffer
 "underrun". However, such program does not provide a guarantee that
-the variable ``sz`` correctly represents the **actual** size fo the buffer
+the variable ``size`` correctly represents the **actual** size fo the buffer
 pointed to by ``ptr``. The ``std::span`` constructed this way may be ill-formed.
 It may fail to protect you from overrunning the original buffer.
 
@@ -320,7 +320,7 @@ here is how you can suppress it::
 
     int get_last_element(int *pointer, size_t size) {
       #pragma clang unsafe_buffer_usage begin
-      return ptr[sz - 1]; // warning suppressed
+      return ptr[size - 1]; // warning suppressed
       #pragma clang unsafe_buffer_usage end
     }
 
@@ -484,7 +484,7 @@ and undesirable than the previous solution::
       // This access is still completely unchecked. What's the point of having
       // perfect bounds information if you aren't performing runtime checks?
       #pragma clang unsafe_buffer_usage begin
-      return ptr[sz - 1];
+      return ptr[size - 1];
       #pragma clang unsafe_buffer_usage end
     }
 

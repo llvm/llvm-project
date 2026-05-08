@@ -1,0 +1,25 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+
+module {
+
+cir.func private @flattened_resume() {
+  %exception_addr = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["exception", init] {alignment = 8 : i64}
+  %type_id_addr = cir.alloca !u32i, !cir.ptr<!u32i>, ["type_id", init] {alignment = 4 : i64}
+  %exception = cir.load %exception_addr : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  %type_id = cir.load %type_id_addr : !cir.ptr<!u32i>, !u32i
+  cir.resume.flat %exception, %type_id
+}
+
+// CHECK: cir.func private @flattened_resume() {
+// CHECK:   %[[EXCEPTION_ADDR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["exception", init]
+// CHECK:   %[[TYPE_ID_ADDR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["type_id", init]
+// CHECK:   %[[EXCEPTION:.*]] = cir.load %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK:   %[[TYPE_ID:.*]] = cir.load %[[TYPE_ID_ADDR]] : !cir.ptr<!u32i>, !u32i
+// CHECK:   cir.resume.flat %[[EXCEPTION]], %[[TYPE_ID]]
+// CHECK: }
+
+}
+

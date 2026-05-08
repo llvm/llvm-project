@@ -53,9 +53,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::rotate_copy(vector<int>)", std_rotate_copy);
     bm.operator()<std::deque<int>>("std::rotate_copy(deque<int>)", std_rotate_copy);
     bm.operator()<std::list<int>>("std::rotate_copy(list<int>)", std_rotate_copy);
-    bm.operator()<std::vector<int>>("rng::rotate_copy(vector<int>)", std::ranges::rotate_copy);
-    bm.operator()<std::deque<int>>("rng::rotate_copy(deque<int>)", std::ranges::rotate_copy);
-    bm.operator()<std::list<int>>("rng::rotate_copy(list<int>)", std::ranges::rotate_copy);
   }
 
   benchmark::Initialize(&argc, argv);

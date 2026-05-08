@@ -111,7 +111,6 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
                           process->GetAddressByteSize());
 
   lldb::offset_t cursor = 0;
-
   m_flags = extractor.GetU32_unchecked(&cursor);
   m_version = extractor.GetU32_unchecked(&cursor);
   m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
@@ -119,18 +118,16 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
     m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
   m_method_list_ptr = extractor.GetAddress_unchecked(&cursor);
   m_properties_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_firstSubclass = extractor.GetAddress_unchecked(&cursor);
-  m_nextSiblingClass = extractor.GetAddress_unchecked(&cursor);
 
   if (m_ro_ptr & 1) {
     DataBufferHeap buffer(ptr_size, '\0');
     process->ReadMemory(m_ro_ptr ^ 1, buffer.GetBytes(), ptr_size, error);
     if (error.Fail())
       return false;
-    cursor = 0;
     DataExtractor extractor(buffer.GetBytes(), ptr_size,
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
+    lldb::offset_t cursor = 0;
     m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
     if (ABISP abi_sp = process->GetABI())
       m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
@@ -268,6 +265,28 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
   return true;
 }
 
+void ClassDescriptorV2::method_t::ReadNames(
+    llvm::MutableArrayRef<method_t> methods, Process &process) {
+  std::vector<lldb::addr_t> str_addresses;
+  str_addresses.reserve(2 * methods.size());
+  for (auto &method : methods)
+    str_addresses.push_back(method.m_name_ptr);
+  for (auto &method : methods)
+    str_addresses.push_back(method.m_types_ptr);
+
+  llvm::SmallVector<std::optional<std::string>> read_result =
+      process.ReadCStringsFromMemory(str_addresses);
+  auto names = llvm::MutableArrayRef(read_result).take_front(methods.size());
+  auto types = llvm::MutableArrayRef(read_result).take_back(methods.size());
+
+  for (auto [name_str, type_str, method] : llvm::zip(names, types, methods)) {
+    if (name_str)
+      method.m_name = std::move(*name_str);
+    if (type_str)
+      method.m_types = std::move(*type_str);
+  }
+}
+
 llvm::SmallVector<ClassDescriptorV2::method_t, 0>
 ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
                                lldb::addr_t relative_string_base_addr,
@@ -304,6 +323,7 @@ ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
                         is_small, has_direct_sel, has_relative_types);
   }
 
+  method_t::ReadNames(methods, *process);
   return methods;
 }
 
@@ -341,13 +361,7 @@ bool ClassDescriptorV2::method_t::Read(DataExtractor &extractor,
     m_imp_ptr = extractor.GetAddress_unchecked(&cursor);
   }
 
-  Status error;
-  process->ReadCStringFromMemory(m_name_ptr, m_name, error);
-  if (error.Fail())
-    return false;
-
-  process->ReadCStringFromMemory(m_types_ptr, m_types, error);
-  return error.Success();
+  return true;
 }
 
 bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
@@ -733,7 +747,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
     return;
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   Log *log = GetLog(LLDBLog::Types);
-  LLDB_LOGV(log, "class_name = {0}", descriptor.GetClassName());
+  LLDB_LOG_VERBOSE(log, "class_name = {0}", descriptor.GetClassName());
   m_filled = true;
   ObjCLanguageRuntime::EncodingToTypeSP encoding_to_type_sp(
       runtime.GetEncodingToType());
@@ -748,16 +762,18 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
                                                        uint64_t size) -> bool {
     const bool for_expression = false;
     const bool stop_loop = false;
-    LLDB_LOGV(log, "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = {3}",
-              name, type, offset_ptr, size);
+    LLDB_LOG_VERBOSE(
+        log, "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = {3}", name,
+        type, offset_ptr, size);
     CompilerType ivar_type =
         encoding_to_type_sp->RealizeType(type, for_expression);
     if (ivar_type) {
-      LLDB_LOGV(log,
-                "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
-                "{3}, type_size = {4}",
-                name, type, offset_ptr, size,
-                expectedToOptional(ivar_type.GetByteSize(nullptr)).value_or(0));
+      LLDB_LOG_VERBOSE(
+          log,
+          "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
+          "{3}, type_size = {4}",
+          name, type, offset_ptr, size,
+          expectedToOptional(ivar_type.GetByteSize(nullptr)).value_or(0));
       Scalar offset_scalar;
       Status error;
       const int offset_ptr_size = 4;
@@ -765,13 +781,13 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
       size_t read = process->ReadScalarIntegerFromMemory(
           offset_ptr, offset_ptr_size, is_signed, offset_scalar, error);
       if (error.Success() && 4 == read) {
-        LLDB_LOGV(log, "offset_ptr = {0:x} --> {1}", offset_ptr,
-                  offset_scalar.SInt());
+        LLDB_LOG_VERBOSE(log, "offset_ptr = {0:x} --> {1}", offset_ptr,
+                         offset_scalar.SInt());
         m_ivars.push_back(
             {ConstString(name), ivar_type, size, offset_scalar.SInt()});
       } else
-        LLDB_LOGV(log, "offset_ptr = {0:x} --> read fail, read = %{1}",
-                  offset_ptr, read);
+        LLDB_LOG_VERBOSE(log, "offset_ptr = {0:x} --> read fail, read = %{1}",
+                         offset_ptr, read);
     }
     return stop_loop;
   });

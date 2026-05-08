@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -std=c++20 %t/task.cppm -I%t -emit-reduced-module-interface -o %t/task.pcm
-// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/user.cpp -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 %t/task.cppm -I%t -emit-reduced-module-interface -o %t/task.pcm -Wno-coroutines-unsupported-target
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/user.cpp -verify -fsyntax-only -Wno-coroutines-unsupported-target
 
 //--- coroutine.h
 

@@ -30,7 +30,9 @@ ARCHINFO(armv7k, armv7k, MachO::CPU_TYPE_ARM, MachO::CPU_SUBTYPE_ARM_V7K, 32)
 ARCHINFO(armv6m, armv6m, MachO::CPU_TYPE_ARM, MachO::CPU_SUBTYPE_ARM_V6M, 32)
 ARCHINFO(armv7m, armv7m, MachO::CPU_TYPE_ARM, MachO::CPU_SUBTYPE_ARM_V7M, 32)
 ARCHINFO(armv7em, armv7em, MachO::CPU_TYPE_ARM, MachO::CPU_SUBTYPE_ARM_V7EM, 32)
-
+ARCHINFO(armv8m_main, armv8m.main, MachO::CPU_TYPE_ARM, MachO::CPU_SUBTYPE_ARM_V8M_BASE, 32)
+ARCHINFO(armv8m_base, armv8m.base, MachO::CPU_TYPE_ARM, MachO::CPU_SUBTYPE_ARM_V8M_BASE, 32)
+ARCHINFO(armv8_1m_main, armv8.1m.main, MachO::CPU_TYPE_ARM, MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN, 32)
 
 ///
 /// ARM64 architectures sorted by cpu sub type id.

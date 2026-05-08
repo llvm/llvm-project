@@ -23,6 +23,36 @@ define dso_local void @test_a() nounwind {
   ret void
 }
 
+define dso_local void @test_a_p(ptr %p) nounwind {
+; X86-LABEL: test_a_p:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    #APP
+; X86-NEXT:    #TEST (%eax)
+; X86-NEXT:    #NO_APP
+; X86-NEXT:    #APP
+; X86-EMPTY:
+; X86-NEXT:    #TEST [eax]
+; X86-EMPTY:
+; X86-NEXT:    #NO_APP
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_a_p:
+; X64:       # %bb.0:
+; X64-NEXT:    #APP
+; X64-NEXT:    #TEST (%rdi)
+; X64-NEXT:    #NO_APP
+; X64-NEXT:    #APP
+; X64-EMPTY:
+; X64-NEXT:    #TEST [rdi]
+; X64-EMPTY:
+; X64-NEXT:    #NO_APP
+; X64-NEXT:    retq
+  tail call void asm sideeffect "#TEST ${0:a}", "p,~{dirflag},~{fpsr},~{flags}"(ptr %p)
+  tail call void asm sideeffect inteldialect "#TEST ${0:a}", "p,~{dirflag},~{fpsr},~{flags}"(ptr %p)
+  ret void
+}
+
 define dso_local void @test_c() nounwind {
 ; CHECK-LABEL: test_c:
 ; CHECK:       # %bb.0:

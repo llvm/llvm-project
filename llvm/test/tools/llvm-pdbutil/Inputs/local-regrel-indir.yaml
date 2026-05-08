@@ -1,0 +1,31 @@
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             2
+  BuildNumber:     36402
+  PdbDllVersion:   35725
+  PdbDllRbld:      0
+  Flags:           1
+  MachineType:     Amd64
+  Modules:
+    - Module:          '/tmp/nrvo.obj'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [  ]
+              VarName:         foo
+          - Kind:            S_DEFRANGE_REGISTER_REL_INDIR
+            DefRangeRegisterRelIndirSym:
+              Register:        335
+              Flags:           0
+              BasePointerOffset: 48
+              OffsetInUdt:     0
+              Range:
+                OffsetStart:     81
+                ISectStart:      1
+                Range:           23
+              Gaps:            []
+...

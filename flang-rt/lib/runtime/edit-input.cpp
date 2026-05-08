@@ -970,6 +970,11 @@ RT_API_ATTRS bool EditLogicalInput(
     // not list-directed.
     char32_t comma{edit.modes.GetSeparatorChar()};
     while (next && *next != comma) {
+      if (*next == '!') {
+        if (!io.AdvanceRecord()) { // skip namelist comment
+          return false;
+        }
+      }
       next = io.NextInField(remaining, edit);
     }
   }
@@ -1050,6 +1055,12 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
   case DataEdit::ListDirected:
     return EditListDirectedCharacterInput(io, x, lengthChars, edit);
   case 'A':
+    if (edit.variation == 'T') {
+      io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+          "'AT' edit descriptor may not be used for input");
+      return false;
+    }
+    break;
   case 'G':
     break;
   case 'B':

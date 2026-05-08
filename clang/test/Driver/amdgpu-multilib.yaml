@@ -1,0 +1,80 @@
+# UNSUPPORTED: system-windows
+
+# Basic selection where -fmultilib-flag=debug selects the debug variant.
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -fmultilib-flag=debug -nogpulib \
+# RUN:   | FileCheck --check-prefix=CHECK-DEBUG %s
+# CHECK-DEBUG:      "-cc1" "-triple" "amdgcn-amd-amdhsa"
+# CHECK-DEBUG:      "-L{{[^"]*}}/debug"
+
+# Default behavior where no variant path is prepended.
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -nogpulib \
+# RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
+# CHECK-DEFAULT-NOT: "-L{{[^"]*}}/debug"
+# CHECK-DEFAULT-NOT: "-L{{[^"]*}}/release"
+# CHECK-DEFAULT-NOT: "-L{{[^"]*}}/noexcept"
+
+# Multiple matches stacking on top of each-other.
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -fmultilib-flag=debug -fno-exceptions -nogpulib \
+# RUN:   | FileCheck --check-prefix=CHECK-LAYERED %s
+# CHECK-LAYERED:      "-L{{[^"]*}}/noexcept"
+# CHECK-LAYERED-SAME: "-L{{[^"]*}}/debug"
+
+# Lists selected variant directories.
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -fmultilib-flag=debug \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-DIR %s
+# CHECK-PRINT-DIR: debug
+
+# Lists all non-default variants with flags.
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-lib 2>&1 \
+# RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-LIB %s
+# CHECK-PRINT-LIB: debug;@fmultilib-flag=debug
+# CHECK-PRINT-LIB: release;@fmultilib-flag=release
+# CHECK-PRINT-LIB: noexcept;@fno-exceptions
+
+# Error emitted when custom flag value is invalid.
+# RUN: not %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -fmultilib-flag=nonexistent -nogpulib \
+# RUN:   | FileCheck --check-prefix=CHECK-NOMATCH %s
+# CHECK-NOMATCH: error: unsupported option '-fmultilib-flag=nonexistent'
+
+# Check exclusivity so that only one of debug/release selected.
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -fmultilib-flag=release \
+# RUN:   | FileCheck --check-prefix=CHECK-EXCLUSIVE %s
+# CHECK-EXCLUSIVE:     release
+# CHECK-EXCLUSIVE-NOT: debug
+
+---
+MultilibVersion: 1.0
+
+Groups:
+- Name: build-type
+  Type: Exclusive
+
+Variants:
+- Dir: .
+  Flags: []
+- Dir: debug
+  Flags: [-fmultilib-flag=debug]
+  Group: build-type
+- Dir: release
+  Flags: [-fmultilib-flag=release]
+  Group: build-type
+- Dir: noexcept
+  Flags: [-fno-exceptions]
+
+Mappings: []
+
+Flags:
+- Name: build-type
+  Values:
+  - Name: none
+  - Name: debug
+  - Name: release
+  Default: none
+...

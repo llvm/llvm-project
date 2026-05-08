@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCASMINFO_H
 
 #include "MCTargetDesc/X86MCExpr.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
@@ -26,11 +27,15 @@ class X86MCAsmInfoDarwin : public MCAsmInfoDarwin {
   virtual void anchor();
 
 public:
-  explicit X86MCAsmInfoDarwin(const Triple &Triple);
+  StringSet<> ReservedIdentifiers;
+  explicit X86MCAsmInfoDarwin(const Triple &Triple,
+                              const MCTargetOptions &Options);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 struct X86_64MCAsmInfoDarwin : public X86MCAsmInfoDarwin {
-  explicit X86_64MCAsmInfoDarwin(const Triple &Triple);
+  explicit X86_64MCAsmInfoDarwin(const Triple &Triple,
+                                 const MCTargetOptions &Options);
   const MCExpr *
   getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
                               MCStreamer &Streamer) const override;
@@ -40,28 +45,38 @@ class X86ELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit X86ELFMCAsmInfo(const Triple &Triple);
+  StringSet<> ReservedIdentifiers;
+  explicit X86ELFMCAsmInfo(const Triple &Triple,
+                           const MCTargetOptions &Options);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 class X86MCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
   void anchor() override;
 
 public:
-  explicit X86MCAsmInfoMicrosoft(const Triple &Triple);
+  StringSet<> ReservedIdentifiers;
+  explicit X86MCAsmInfoMicrosoft(const Triple &Triple,
+                                 const MCTargetOptions &Options);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 class X86MCAsmInfoMicrosoftMASM : public X86MCAsmInfoMicrosoft {
   void anchor() override;
 
 public:
-  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple);
+  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple,
+                                     const MCTargetOptions &Options);
 };
 
 class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
   void anchor() override;
 
 public:
-  explicit X86MCAsmInfoGNUCOFF(const Triple &Triple);
+  StringSet<> ReservedIdentifiers;
+  explicit X86MCAsmInfoGNUCOFF(const Triple &Triple,
+                               const MCTargetOptions &Options);
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 namespace X86 {

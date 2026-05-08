@@ -469,9 +469,9 @@ unreachable:                                      ; preds = %rethrow
 ; }
 ;
 ; ~Temp() generates cleanupret, which is lowered to a 'throw_ref' later. That
-; throw_ref's argument should correctly target the top-level cleanuppad
-; (catch_all_ref). This is a regression test for the bug where we did not
-; compute throw_ref's argument correctly.
+; throw_ref's argument should correctly rethrow the exception caught by the
+; top-level cleanuppad (catch_all_ref). This is a regression test for the bug
+; where we did not compute throw_ref's argument correctly.
 
 ; CHECK-LABEL: inlined_cleanupret:
 ; CHECK: block     exnref
@@ -484,6 +484,7 @@ unreachable:                                      ; preds = %rethrow
 ; try_table (catch_all_ref 0)'s caught exception is stored in local 2
 ; CHECK:     local.set  2
 ; CHECK:     block
+; catch_all 0 dispatches to %terminate.i (the 'call _ZSt9terminatev' instruction).
 ; CHECK:       try_table    (catch_all 0)
 ; CHECK:         block
 ; CHECK:           block     i32
@@ -495,7 +496,8 @@ unreachable:                                      ; preds = %rethrow
 ; CHECK:           block     i32
 ; CHECK:             try_table    (catch_all_ref 5)
 ; CHECK:               try_table    (catch __cpp_exception 1)
-; Note that the throw_ref below targets the top-level catch_all_ref (local 2)
+; Note that the throw_ref below rethrows the exception caught by the top-level
+; catch_all_ref (local 2)
 ; CHECK:                 local.get  2
 ; CHECK:                 throw_ref
 ; CHECK:               end_try_table

@@ -3,7 +3,7 @@
 # UNSUPPORTED: system-windows
 
 # RUN: split-file %s %t
-# RUN: %clangxx_host %t/main.cpp %t/t1_def.cpp -gdwarf -o %t.out
+# RUN: %clangxx_host %t/main.cpp %t/t1_def.cpp -gdwarf -gno-simple-template-names -o %t.out
 # RUN: %lldb -b %t.out -s %t/lldb.cmd | FileCheck %s
 
 # CHECK: (lldb) p v1

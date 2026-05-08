@@ -1,0 +1,12 @@
+executable("clang-ssaf-format") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//clang/lib/ScalableStaticAnalysisFramework/Analyses",
+    "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//clang/lib/ScalableStaticAnalysisFramework/Tool",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "SSAFFormat.cpp" ]
+}

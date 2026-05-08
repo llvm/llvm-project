@@ -33,6 +33,7 @@ extern cl::opt<bool> InstrumentationFileAppendPID;
 extern cl::opt<bool> ConservativeInstrumentation;
 extern cl::opt<std::string> InstrumentationFilename;
 extern cl::opt<std::string> InstrumentationBinpath;
+extern cl::opt<uint32_t> InstrumentationMaxSize;
 extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> InstrumentationNoCountersClear;
 extern cl::opt<bool> InstrumentationWaitForks;
@@ -65,13 +66,11 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
     exit(1);
   }
 
-  if ((opts::InstrumentationWaitForks || opts::InstrumentationSleepTime) &&
-      opts::InstrumentationFileAppendPID) {
-    errs()
-        << "BOLT-ERROR: instrumentation-file-append-pid is not compatible with "
-           "instrumentation-sleep-time and instrumentation-wait-forks. If you "
-           "want a separate profile for each fork, it can only be dumped in "
-           "the end of process when instrumentation-file-append-pid is used.\n";
+  if (opts::InstrumentationWaitForks && opts::InstrumentationFileAppendPID) {
+    errs() << "BOLT-ERROR: instrumentation-file-append-pid is not compatible "
+              "with instrumentation-wait-forks. If you want a separate profile "
+              "for each fork, it can only be dumped in the end of process when "
+              "instrumentation-file-append-pid is used.\n";
     exit(1);
   }
 }
@@ -167,6 +166,7 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
     emitFill(sizeof(uint64_t), Label);
 
   emitPadding(BC.RegularPageSize);
+  emitIntValue("__bolt_instr_max_size", opts::InstrumentationMaxSize);
   emitIntValue("__bolt_instr_sleep_time", opts::InstrumentationSleepTime);
   emitIntValue("__bolt_instr_no_counters_clear",
                !!opts::InstrumentationNoCountersClear, 1);

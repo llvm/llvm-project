@@ -276,6 +276,7 @@ module LLVM_IR {
   // These are intended for (repeated) textual inclusion.
   textual header "llvm/IR/ConstrainedOps.def"
   textual header "llvm/IR/DebugInfoFlags.def"
+  textual header "llvm/IR/FunctionProperties.def"
   textual header "llvm/IR/Instruction.def"
   textual header "llvm/IR/Metadata.def"
   textual header "llvm/IR/FixedMetadataKinds.def"
@@ -415,6 +416,7 @@ module LLVM_Utils {
     module * { export * }
 
     // These are intended for textual inclusion.
+    textual header "llvm/TargetParser/AMDGPUTargetParser.def"
     textual header "llvm/TargetParser/ARMTargetParser.def"
     textual header "llvm/TargetParser/CSKYTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"

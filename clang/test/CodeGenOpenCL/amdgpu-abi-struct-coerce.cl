@@ -431,8 +431,8 @@ struct_char_arr32 func_ret_struct_char_arr32()
   return s;
 }
 
-// CHECK: define{{.*}} i32 @func_transparent_union_ret() local_unnamed_addr #[[ATTR1:[0-9]+]] {
-// CHECK: ret i32 0
+// CHECK: define{{.*}} %union.transparent_u @func_transparent_union_ret() local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK: ret %union.transparent_u zeroinitializer
 transparent_u func_transparent_union_ret()
 {
   transparent_u u = { 0 };

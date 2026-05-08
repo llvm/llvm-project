@@ -194,7 +194,7 @@ private:
 } // anonymous namespace
 
 void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
-  Streamer.initSections(false, *BC.STI);
+  Streamer.initSections(*BC.STI);
   Streamer.setUseAssemblerInfoForParsing(false);
 
   if (opts::UpdateDebugSections && BC.isELF()) {
@@ -232,7 +232,7 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
 }
 
 void BinaryEmitter::emitFunctions() {
-  auto emit = [&](const std::vector<BinaryFunction *> &Functions) {
+  auto emit = [&](const BinaryFunctionListType &Functions) {
     const bool HasProfile = BC.NumProfiledFuncs > 0;
     const bool OriginalAllowAutoPadding = Streamer.getAllowAutoPadding();
     for (BinaryFunction *Function : Functions) {
@@ -282,11 +282,7 @@ void BinaryEmitter::emitFunctions() {
   }
 
   // Emit functions in sorted order.
-  std::vector<BinaryFunction *> SortedFunctions = BC.getSortedFunctions();
-  emit(SortedFunctions);
-
-  // Emit functions added by BOLT.
-  emit(BC.getInjectedBinaryFunctions());
+  emit(BC.getOutputBinaryFunctions());
 
   // Mark the end of hot text.
   if (opts::HotText) {
@@ -359,7 +355,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   }
 
   MCContext &Context = Streamer.getContext();
-  const MCAsmInfo *MAI = Context.getAsmInfo();
+  const MCAsmInfo &MAI = Context.getAsmInfo();
 
   MCSymbol *const StartSymbol = Function.getSymbol(FF.getFragmentNum());
 
@@ -391,7 +387,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     for (const MCCFIInstruction &CFIInstr : Function.cie()) {
       // Only write CIE CFI insns that LLVM will not already emit
       const std::vector<MCCFIInstruction> &FrameInstrs =
-          MAI->getInitialFrameState();
+          MAI.getInitialFrameState();
       if (!llvm::is_contained(FrameInstrs, CFIInstr))
         emitCFIInstruction(CFIInstr);
     }
@@ -417,7 +413,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   if (size_t Padding = opts::padFunctionAfter(Function)) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: padding function " << Function << " with "
                       << Padding << " bytes\n");
-    Streamer.emitFill(Padding, MAI->getTextAlignFillValue());
+    Streamer.emitFill(Padding, MAI.getTextAlignFillValue());
   }
 
   if (opts::MarkFuncs)
@@ -430,7 +426,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   MCSymbol *EndSymbol = Function.getFunctionEndLabel(FF.getFragmentNum());
   Streamer.emitLabel(EndSymbol);
 
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (MAI.hasDotTypeDotSizeDirective()) {
     const MCExpr *SizeExpr = MCBinaryExpr::createSub(
         MCSymbolRefExpr::create(EndSymbol, Context),
         MCSymbolRefExpr::create(StartSymbol, Context), Context);

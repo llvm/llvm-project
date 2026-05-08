@@ -8,7 +8,7 @@
 typedef unsigned long size_type;
 
 size_type size(unsigned long *_start, unsigned long *_finish) {
-  // CIR-LABEL: cir.func dso_local @_Z4sizePmS_
+  // CIR-LABEL: cir.func {{.*}} @_Z4sizePmS_
   // CIR: %[[D:.*]] = cir.ptr_diff {{.*}} : !cir.ptr<!u64i> -> !s64i
   // CIR: %[[U:.*]] = cir.cast integral %[[D]] : !s64i -> !u64i
   // CIR: cir.return {{.*}} : !u64i

@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/Support/Allocator.h"
 #include <atomic>
+#include <limits>
 
 namespace llvm {
 namespace dwarf_linker {
@@ -61,8 +62,19 @@ public:
   // Keeps declaration die.
   std::atomic<DIE *> DeclarationDie = {nullptr};
 
-  // True if parent type die is declaration.
-  std::atomic<bool> ParentIsDeclaration = {true};
+  // True if the declaration winner's parent is itself a declaration.
+  bool DeclarationParentIsDeclaration = true;
+
+  // Priority of the CU that set Die (lower wins, for deterministic output).
+  // Atomic so it can be read outside the lock for a fast pre-check; the
+  // definitive comparison still happens under the spinlock.
+  std::atomic<uint64_t> DiePriority = {std::numeric_limits<uint64_t>::max()};
+
+  // Priority of the CU that set DeclarationDie (lower wins).
+  uint64_t DeclarationDiePriority = std::numeric_limits<uint64_t>::max();
+
+  // Spinlock for deterministic type DIE allocation.
+  std::atomic_flag Lock = {};
 
   /// Children for current type.
   ArrayList<TypeEntry *, 5> Children;

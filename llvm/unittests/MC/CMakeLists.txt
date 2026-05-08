@@ -6,6 +6,7 @@ endforeach()
 
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  DebugInfoDWARF
   MC
   MCDisassembler
   Object
@@ -15,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(MCTests
   Disassembler.cpp
+  DwarfDebugFrameCIE.cpp
   DwarfLineTables.cpp
   DwarfLineTableHeaders.cpp
   MCInstPrinter.cpp

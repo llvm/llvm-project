@@ -2,7 +2,7 @@
 
 RUN: %clang %cflags -fpic -shared -xc /dev/null -o %t.so
 // Link against a DSO to ensure PLT entries.
-RUN: %clang %cflags %p/../Inputs/plt-tailcall.c %t.so \
+RUN: %clang %cflags -Wl,-z,undefs %p/../Inputs/plt-tailcall.c %t.so \
 RUN:    -o %t -Wl,-q
 RUN: llvm-bolt %t -o %t.bolt --plt=all --print-plt  --print-only=foo | FileCheck %s
 

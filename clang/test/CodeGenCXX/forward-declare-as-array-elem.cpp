@@ -11,10 +11,10 @@ struct S {
 // The address calculation should be based on the size of the struct S
 // declaration, not a dummy type like i8.
 
-// CHECK-LABEL: define dso_local noundef i32 @_Z1fv
-// CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+// CHECK-LABEL: define dso_local noundef i32 @_Z1fv(
+// CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds ([10 x %struct.S], ptr @a, i64 0, i64 3), align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int f() { return a[3].x; }

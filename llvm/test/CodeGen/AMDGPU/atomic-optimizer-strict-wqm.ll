@@ -41,7 +41,7 @@ define amdgpu_ps void @main(i32 %arg) {
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    exp mrt0 off, off, off, off
+; GFX10-NEXT:    exp mrt0, off, off, off, off
 ; GFX10-NEXT:    s_endpgm
 bb:
   br label %bb4

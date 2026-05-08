@@ -75,7 +75,7 @@ struct S {
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !tbaa [[INT_TBAA3]]
 // CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8, !tbaa [[CHARPTR_TBAA7]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP14]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP15]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP15]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[CHARPTR_TBAA17:![0-9]+]]
 // CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr [[ARRAYIDX9]], align 1, !tbaa [[CHAR_TBAA19:![0-9]+]]
@@ -212,7 +212,7 @@ struct S {
 // CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8, !tbaa [[CHARPTR_TBAA37:![0-9]+]], !alias.scope [[META30]], !nonnull [[META35]], !align [[META38:![0-9]+]]
 // CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8, !tbaa [[CHARPTR_TBAA7]], !noalias [[META30]]
 // CHECK-NEXT:    [[IDXPROM_I:%.*]] = zext nneg i32 [[TMP8]] to i64
-// CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP11]], i64 [[IDXPROM_I]]
+// CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP11]], i64 [[IDXPROM_I]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[ARRAYIDX_I]], align 8, !tbaa [[CHARPTR_TBAA17]], !noalias [[META30]]
 // CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP12]], i64 [[IDXPROM_I]]
 // CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[ARRAYIDX5_I]], align 1, !tbaa [[CHAR_TBAA19]], !noalias [[META30]]

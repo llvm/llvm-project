@@ -19,6 +19,8 @@
 // FIXME: Is it easiest to fix this layering violation by moving the .inc
 // #includes from AArch64MCTargetDesc.h to here?
 #include "MCTargetDesc/AArch64MCTargetDesc.h" // For AArch64::X0 and friends.
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -247,6 +249,38 @@ static inline bool atomicBarrierDroppedOnZero(unsigned Opcode) {
   return false;
 }
 
+inline unsigned CheckFixedPointOperandConstant(APFloat &FVal, unsigned RegWidth,
+                                               bool isReciprocal) {
+  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
+  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
+  // x-register.
+  //
+  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
+  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
+  // integers.
+  bool IsExact;
+
+  if (isReciprocal)
+    if (!FVal.getExactInverse(&FVal))
+      return 0;
+
+  // fbits is between 1 and 64 in the worst-case, which means the fmul
+  // could have 2^64 as an actual operand. Need 65 bits of precision.
+  APSInt IntVal(65, true);
+  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+  // N.b. isPowerOf2 also checks for > 0.
+  if (!IsExact || !IntVal.isPowerOf2())
+    return 0;
+  unsigned FBits = IntVal.logBase2();
+
+  // Checks above should have guaranteed that we haven't lost information in
+  // finding FBits, but it must still be in range.
+  if (FBits == 0 || FBits > RegWidth)
+    return 0;
+  return FBits;
+}
+
 namespace AArch64CC {
 
 // The CondCodes constants map directly to the 4-bit encoding of the condition
@@ -401,6 +435,9 @@ struct SysAlias {
   FeatureBitset getRequiredFeatures() const { return FeaturesRequired; }
 };
 
+#define GET_SysAliasRegUse_DECL
+#include "AArch64GenSystemOperands.inc"
+
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
   constexpr SysAliasReg(const char *N, uint16_t E, bool R)
@@ -410,13 +447,27 @@ struct SysAliasReg : SysAlias {
 };
 
 struct SysAliasOptionalReg : SysAlias {
-  bool NeedsReg;
-  bool OptionalReg;
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O)
-      : SysAlias(N, E), NeedsReg(R), OptionalReg(O) {}
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O,
+  SysAliasRegUse RegUse;
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R)
+      : SysAlias(N, E), RegUse(R) {}
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R,
                                 FeatureBitset F)
-      : SysAlias(N, E, F), NeedsReg(R), OptionalReg(O) {}
+      : SysAlias(N, E, F), RegUse(R) {}
+};
+
+struct TLBIPSysAlias : SysAliasOptionalReg {
+  bool AllowWithTLBID;
+
+  constexpr TLBIPSysAlias(const char *N, uint16_t E, SysAliasRegUse R,
+                          FeatureBitset F, bool AllowWithTLBID)
+      : SysAliasOptionalReg(N, E, R, F), AllowWithTLBID(AllowWithTLBID) {}
+
+  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+    return SysAliasOptionalReg::haveFeatures(ActiveFeatures) &&
+           (ActiveFeatures[llvm::AArch64::FeatureAll] ||
+            ActiveFeatures[llvm::AArch64::FeatureD128] ||
+            (AllowWithTLBID && ActiveFeatures[llvm::AArch64::FeatureTLBID]));
+  }
 };
 
 struct SysAliasImm : SysAlias {
@@ -822,20 +873,12 @@ struct TLBI : SysAliasOptionalReg {
 }
 
 namespace AArch64TLBIP {
-struct TLBIP : SysAliasOptionalReg {
-  using SysAliasOptionalReg::SysAliasOptionalReg;
+struct TLBIP : TLBIPSysAlias {
+  using TLBIPSysAlias::TLBIPSysAlias;
 };
 #define GET_TLBIPTable_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64TLBIP
-
-namespace AArch64MLBI {
-struct MLBI : SysAliasReg {
-  using SysAliasReg::SysAliasReg;
-};
-#define GET_MLBITable_DECL
-#include "AArch64GenSystemOperands.inc"
-} // namespace AArch64MLBI
 
 namespace AArch64GIC {
 struct GIC : SysAliasReg {

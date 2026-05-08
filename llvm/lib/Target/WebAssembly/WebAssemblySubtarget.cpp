@@ -13,8 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblySubtarget.h"
+#include "GISel/WebAssemblyCallLowering.h"
+#include "GISel/WebAssemblyLegalizerInfo.h"
+#include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyInstrInfo.h"
+#include "WebAssemblyTargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 
@@ -66,7 +71,15 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
                                            const TargetMachine &TM)
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this) {}
+      TLInfo(TM, *this) {
+  CallLoweringInfo.reset(new WebAssemblyCallLowering(*getTargetLowering()));
+  Legalizer.reset(new WebAssemblyLegalizerInfo(*this));
+  auto *RBI = new WebAssemblyRegisterBankInfo(*getRegisterInfo());
+  RegBankInfo.reset(RBI);
+
+  InstSelector.reset(createWebAssemblyInstructionSelector(
+      *static_cast<const WebAssemblyTargetMachine *>(&TM), *this, *RBI));
+}
 
 bool WebAssemblySubtarget::enableAtomicExpand() const {
   // If atomics are disabled, atomic ops are lowered instead of expanded
@@ -81,3 +94,19 @@ bool WebAssemblySubtarget::enableMachineScheduler() const {
 }
 
 bool WebAssemblySubtarget::useAA() const { return true; }
+
+const CallLowering *WebAssemblySubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+InstructionSelector *WebAssemblySubtarget::getInstructionSelector() const {
+  return InstSelector.get();
+}
+
+const LegalizerInfo *WebAssemblySubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+const RegisterBankInfo *WebAssemblySubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}

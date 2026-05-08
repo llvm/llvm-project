@@ -107,9 +107,7 @@ FunctionPass *llvm::createGCLoweringPass() { return new LowerIntrinsics(); }
 char LowerIntrinsics::ID = 0;
 char &llvm::GCLoweringID = LowerIntrinsics::ID;
 
-LowerIntrinsics::LowerIntrinsics() : FunctionPass(ID) {
-  initializeLowerIntrinsicsPass(*PassRegistry::getPassRegistry());
-}
+LowerIntrinsics::LowerIntrinsics() : FunctionPass(ID) {}
 
 StringRef LowerIntrinsics::getPassName() const {
   return "Lower Garbage Collection Instructions";

@@ -161,10 +161,9 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
 
 bool MacroRepeatedPPCallbacks::hasSideEffects(
     const Token *ResultArgToks) const {
-  for (; ResultArgToks->isNot(tok::eof); ++ResultArgToks) {
+  for (; ResultArgToks->isNot(tok::eof); ++ResultArgToks)
     if (ResultArgToks->isOneOf(tok::plusplus, tok::minusminus))
       return true;
-  }
   return false;
 }
 

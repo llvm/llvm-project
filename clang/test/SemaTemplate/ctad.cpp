@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx17 %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx17 %s -Wno-c++20-extensions
 // RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20 %s
 
 namespace pr41427 {
@@ -116,3 +116,11 @@ template <class T, class> struct S {
 S<int, int>::I i; // expected-error{{no viable constructor or deduction guide for deduction of template arguments of 'S<int, int>::I'}} \
                   // expected-note{{while building implicit deduction guide first needed here}}
 }
+
+namespace GH167513 {
+  template <class T, T> struct A {
+    A(T) {}
+  };
+  template <class T> using AA = A<T, T{}>;
+  AA b{0};
+} // namespace GH167513

@@ -1,4 +1,5 @@
-#RUN: llc -verify-machineinstrs -mtriple=i386-apple-darwin -o - -run-pass=x86-pseudo %s | FileCheck %s
+#RUN: llc -verify-machineinstrs -mtriple=i386-apple-darwin -o - -run-pass=x86-expand-pseudo %s | FileCheck %s
+#RUN: llc -verify-machineinstrs -mtriple=i386-apple-darwin -o - -passes=x86-expand-pseudo %s | FileCheck %s
 ---
 name:            tail_call_fail
 tracksRegLiveness: true

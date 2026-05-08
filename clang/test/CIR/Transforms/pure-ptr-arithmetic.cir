@@ -1,0 +1,65 @@
+// RUN: cir-opt %s -canonicalize -o - | FileCheck %s
+
+// Verify that pointer-arithmetic ops marked Pure are eliminated when their
+// results are unused (trivially dead).
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+!rec_S = !cir.record<struct "S" {!s32i, !s32i}>
+!rec_Base = !cir.record<struct "Base" {!u8i}>
+!rec_Derived = !cir.record<struct "Derived" {!rec_Base, !s32i}>
+
+module {
+
+// CHECK-LABEL: @dead_get_member
+// CHECK-NOT:     cir.get_member
+cir.func @dead_get_member(%arg0: !cir.ptr<!rec_S>) {
+  %0 = cir.get_member %arg0[1] {name = "y"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  cir.return
+}
+
+// CHECK-LABEL: @dead_base_class_addr
+// CHECK-NOT:     cir.base_class_addr
+cir.func @dead_base_class_addr(%arg0: !cir.ptr<!rec_Derived>) {
+  %0 = cir.base_class_addr %arg0 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+  cir.return
+}
+
+// CHECK-LABEL: @dead_derived_class_addr
+// CHECK-NOT:     cir.derived_class_addr
+cir.func @dead_derived_class_addr(%arg0: !cir.ptr<!rec_Base>) {
+  %0 = cir.derived_class_addr %arg0 : !cir.ptr<!rec_Base> nonnull [0] -> !cir.ptr<!rec_Derived>
+  cir.return
+}
+
+// CHECK-LABEL: @dead_vtable_get_vptr
+// CHECK-NOT:     cir.vtable.get_vptr
+cir.func @dead_vtable_get_vptr(%arg0: !cir.ptr<!rec_Derived>) {
+  %0 = cir.vtable.get_vptr %arg0 : !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.vptr>
+  cir.return
+}
+
+// CHECK-LABEL: @dead_vtable_get_virtual_fn_addr
+// CHECK-NOT:     cir.vtable.get_virtual_fn_addr
+cir.func @dead_vtable_get_virtual_fn_addr(%arg0: !cir.vptr) {
+  %0 = cir.vtable.get_virtual_fn_addr %arg0[0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
+  cir.return
+}
+
+// CHECK-LABEL: @dead_vtable_get_type_info
+// CHECK-NOT:     cir.vtable.get_type_info
+cir.func @dead_vtable_get_type_info(%arg0: !cir.vptr) {
+  %0 = cir.vtable.get_type_info %arg0 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_S>>
+  cir.return
+}
+
+// CHECK-LABEL: @dead_get_runtime_member
+// CHECK-NOT:     cir.get_runtime_member
+cir.func @dead_get_runtime_member(%arg0: !cir.ptr<!rec_S>, %arg1: !cir.data_member<!s32i in !rec_S>) {
+  %0 = cir.get_runtime_member %arg0[%arg1 : !cir.data_member<!s32i in !rec_S>] : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  cir.return
+}
+
+}

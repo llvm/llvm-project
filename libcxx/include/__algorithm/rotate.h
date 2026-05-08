@@ -12,16 +12,13 @@
 #include <__algorithm/copy.h>
 #include <__algorithm/copy_backward.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/min.h>
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
 #include <__algorithm/swap_ranges.h>
 #include <__config>
-#include <__cstddef/size_t.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/construct_at.h>
-#include <__memory/pointer_traits.h>
-#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -89,46 +86,32 @@ __rotate_forward(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIt
   return __r;
 }
 
-template <typename _Integral>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _Integral __algo_gcd(_Integral __x, _Integral __y) {
-  do {
-    _Integral __t = __x % __y;
-    __x           = __y;
-    __y           = __t;
-  } while (__y);
-  return __x;
-}
+template <class _AlgPolicy, class _Iter, class _Sent>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _Iter
+__rotate_random_access(_Iter __first, _Iter __middle, _Sent __sent) {
+  auto __left  = _IterOps<_AlgPolicy>::distance(__first, __middle);
+  auto __right = _IterOps<_AlgPolicy>::distance(__middle, __sent);
+  auto __last  = __first + __right;
 
-template <class _AlgPolicy, typename _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _RandomAccessIterator
-__rotate_gcd(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last) {
-  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
-  typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
-  using _Ops = _IterOps<_AlgPolicy>;
+  auto __min_len = std::min(__left, __right);
 
-  const difference_type __m1 = __middle - __first;
-  const difference_type __m2 = _Ops::distance(__middle, __last);
-  if (__m1 == __m2) {
-    std::__swap_ranges<_AlgPolicy>(__first, __middle, __middle, __last);
-    return __middle;
+  while (__min_len > 0) {
+    if (__left <= __right) {
+      do {
+        std::__swap_ranges<_AlgPolicy>(__first, __first + __left, __first + __left);
+        __first += __left;
+        __right -= __left;
+      } while (__left <= __right);
+      __min_len = __right;
+    } else {
+      do {
+        std::__swap_ranges<_AlgPolicy>(__first + (__left - __right), __first + __left, __first + __left);
+        __left -= __right;
+      } while (__left > __right);
+      __min_len = __left;
+    }
   }
-  const difference_type __g = std::__algo_gcd(__m1, __m2);
-  for (_RandomAccessIterator __p = __first + __g; __p != __first;) {
-    value_type __t(_Ops::__iter_move(--__p));
-    _RandomAccessIterator __p1 = __p;
-    _RandomAccessIterator __p2 = __p1 + __m1;
-    do {
-      *__p1                     = _Ops::__iter_move(__p2);
-      __p1                      = __p2;
-      const difference_type __d = _Ops::distance(__p2, __last);
-      if (__m1 < __d)
-        __p2 += __m1;
-      else
-        __p2 = __first + (__m1 - __d);
-    } while (__p2 != __p);
-    *__p1 = std::move(__t);
-  }
-  return __first + __m2;
+  return __last;
 }
 
 template <class _AlgPolicy, class _ForwardIterator>
@@ -170,7 +153,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator
       return std::__rotate_left<_AlgPolicy>(__first, __last);
     if (_IterOps<_AlgPolicy>::next(__middle) == __last)
       return std::__rotate_right<_AlgPolicy>(__first, __last);
-    return std::__rotate_gcd<_AlgPolicy>(__first, __middle, __last);
+    return std::__rotate_random_access<_AlgPolicy>(__first, __middle, __last);
   }
   return std::__rotate_forward<_AlgPolicy>(__first, __middle, __last);
 }

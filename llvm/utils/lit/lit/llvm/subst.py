@@ -44,6 +44,7 @@ class ToolSubst(object):
         verbatim=False,
         unresolved="warn",
         extra_args=None,
+        launcher=None,
     ):
         """Construct a ToolSubst.
 
@@ -79,6 +80,7 @@ class ToolSubst(object):
         """
         self.unresolved = unresolved
         self.extra_args = extra_args
+        self.launcher = launcher
         self.key = key
         self.command = command if command is not None else FindTool(key)
         self.was_resolved = False
@@ -120,6 +122,8 @@ class ToolSubst(object):
         if command_str:
             if self.extra_args:
                 command_str = " ".join([command_str] + self.extra_args)
+            if self.launcher:
+                command_str = self.launcher + " " + command_str
         else:
             if self.unresolved == "warn":
                 # Warn, but still provide a substitution.

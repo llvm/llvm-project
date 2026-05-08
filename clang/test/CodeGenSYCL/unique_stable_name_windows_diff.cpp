@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -aux-triple x86_64-pc-windows-msvc -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s '-D$ADDRSPACE=addrspace(1) '
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsycl-is-host -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s '-D$ADDRSPACE='
 
+template<typename KN, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
 
 template<typename KN, typename Func>
 [[clang::sycl_kernel_entry_point(KN)]] void kernel(Func F){

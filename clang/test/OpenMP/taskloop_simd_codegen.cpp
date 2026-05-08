@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 // CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr [[TASKV]], i32 0, i32 0
 // OMP45: [[IF:%.+]] = icmp ne i32 %{{.+}}, 0
 // OMP50: [[IF_VAL:%.+]] = load i8, ptr %
-// OMP50: [[IF:%.+]] = trunc i8 [[IF_VAL]] to i1
+// OMP50: [[IF:%.+]] = icmp ne i8 [[IF_VAL]], 0
 // CHECK: [[IF_INT:%.+]] = sext i1 [[IF]] to i32
 // CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
 // CHECK: store i64 0, ptr [[DOWN]],

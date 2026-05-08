@@ -1,13 +1,7 @@
-// RUN: %clang_cc1 -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
-
-// REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s
-
-// REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s
-
-// REQUIRES: riscv-registered-target
-// RUN: %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s
+// RUN: %clang_cc1                                  -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
+// RUN: %if aarch64-registered-target %{ %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s %}
+// RUN: %if aarch64-registered-target %{ %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s %}
+// RUN: %if riscv-registered-target   %{ %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s %}
 
 /// Note that this does not make sense to check for x86 SIMD types, because
 /// __m128i, __m256i, and __m512i do not specify the element type. There are no

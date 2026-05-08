@@ -49,7 +49,7 @@ define void @test2(ptr %P) {
 
 define void @store_at_gep_off_null_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr null, i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    store i32 poison, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -60,7 +60,7 @@ define void @store_at_gep_off_null_inbounds(i64 %offset) {
 
 define void @store_at_gep_off_null_not_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_not_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr null, i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [4 x i8], ptr null, i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    store i32 poison, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -71,7 +71,7 @@ define void @store_at_gep_off_null_not_inbounds(i64 %offset) {
 
 define void @store_at_gep_off_no_null_opt(i64 %offset) #0 {
 ; CHECK-LABEL: @store_at_gep_off_no_null_opt(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr null, i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    store i32 24, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -170,7 +170,7 @@ define void @test6(i32 %n, ptr %a, ptr %gi) nounwind uwtable ssp {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[STOREMERGE]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GI]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP0]], 1

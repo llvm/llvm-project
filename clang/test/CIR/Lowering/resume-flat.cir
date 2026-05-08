@@ -1,0 +1,30 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+
+module {
+
+cir.func private @flattened_resume() {
+  %exception_addr = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["exception", init] {alignment = 8 : i64}
+  %type_id_addr = cir.alloca !u32i, !cir.ptr<!u32i>, ["type_id", init] {alignment = 4 : i64}
+  %exception = cir.load %exception_addr : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  %type_id = cir.load %type_id_addr : !cir.ptr<!u32i>, !u32i
+  cir.resume.flat %exception, %type_id
+}
+
+
+// CHECK: llvm.func @flattened_resume() attributes {sym_visibility = "private"} {
+// CHECK:   %[[CONST_1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:   %[[EXCEPTION_ADDR:.*]] = llvm.alloca %[[CONST_1]] x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// CHECK:   %[[CONST_1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:   %[[TYPE_ID_ADDR:.*]] = llvm.alloca %[[CONST_1]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// CHECK:   %[[EXCEPTION:.*]] = llvm.load %[[EXCEPTION_ADDR]] {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
+// CHECK:   %[[TYPE_ID:.*]] = llvm.load %[[TYPE_ID_ADDR]] {alignment = 4 : i64} : !llvm.ptr -> i32
+// CHECK:   %[[POISON:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[TMP_EXCEPTION_INFO:.*]] = llvm.insertvalue %[[EXCEPTION]], %[[POISON]][0] : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_INFO:.*]] = llvm.insertvalue %[[TYPE_ID]], %[[TMP_EXCEPTION_INFO]][1] : !llvm.struct<(ptr, i32)>
+// CHECK:   llvm.resume %[[EXCEPTION_INFO]] : !llvm.struct<(ptr, i32)>
+// CHECK: }
+
+}

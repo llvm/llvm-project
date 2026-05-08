@@ -21,6 +21,8 @@ extern int sprintf(char *str, const char *format, ...);
 #else
 void *memcpy(void *dst, const void *src, size_t c);
 #endif
+void bcopy(const void *src, void *dst, size_t n);
+void bzero(void *dst, size_t n);
 
 #ifdef __cplusplus
 }
@@ -102,6 +104,16 @@ void call_memset(void) {
   char buf[10];
   __builtin_memset(buf, 0xff, 10);
   __builtin_memset(buf, 0xff, 11); // expected-warning {{'memset' will always overflow; destination buffer has size 10, but size argument is 11}}
+}
+
+void call_bcopy_bzero(void) {
+  char src[20], dst[10];
+  bcopy(src, dst, 20); // expected-warning {{'bcopy' will always overflow; destination buffer has size 10, but size argument is 20}}
+  bzero(dst, 11); // expected-warning {{'bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
+  __builtin_bcopy(src, dst, 10);
+  __builtin_bcopy(src, dst, 20); // expected-warning {{'bcopy' will always overflow; destination buffer has size 10, but size argument is 20}}
+  __builtin_bzero(dst, 10);
+  __builtin_bzero(dst, 11); // expected-warning {{'bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
 }
 
 void call_snprintf(double d, int n) {

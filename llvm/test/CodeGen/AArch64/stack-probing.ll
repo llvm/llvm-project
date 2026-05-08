@@ -78,7 +78,7 @@ define void @static_1040(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1040
 ; CHECK-NEXT:    .cfi_def_cfa_offset 1056
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    add sp, sp, #1040
@@ -102,7 +102,7 @@ define void @static_4096(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    add sp, sp, #1, lsl #12 // =4096
@@ -126,7 +126,7 @@ define void @static_4112(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
-; CHECK-NEXT:    str xzr, [sp], #-16
+; CHECK-NEXT:    ldr xzr, [sp], #-16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4128
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
@@ -153,7 +153,7 @@ define void @static_5120(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    .cfi_def_cfa_offset 5136
 ; CHECK-NEXT:    mov x8, sp
@@ -181,10 +181,10 @@ define void @static_5136(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1040
 ; CHECK-NEXT:    .cfi_def_cfa_offset 5152
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    add sp, sp, #1, lsl #12 // =4096
@@ -210,10 +210,10 @@ define void @static_9216(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8208
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    .cfi_def_cfa_offset 9232
 ; CHECK-NEXT:    mov x8, sp
@@ -241,19 +241,19 @@ define void @static_20464(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8208
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12304
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16400
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #4080
 ; CHECK-NEXT:    .cfi_def_cfa_offset 20480
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    add sp, sp, #4, lsl #12 // =16384
@@ -282,7 +282,7 @@ define void @static_20480(ptr %out) #0 {
 ; CHECK-NEXT:  .LBB10_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    cmp sp, x9
 ; CHECK-NEXT:    b.ne .LBB10_1
 ; CHECK-NEXT:  // %bb.2: // %entry
@@ -314,7 +314,7 @@ define void @static_21504(ptr %out) #0 {
 ; CHECK-NEXT:  .LBB11_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    cmp sp, x9
 ; CHECK-NEXT:    b.ne .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %entry
@@ -350,14 +350,14 @@ define void @static_21520(ptr %out) #0 {
 ; CHECK-NEXT:  .LBB12_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    cmp sp, x9
 ; CHECK-NEXT:    b.ne .LBB12_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    .cfi_def_cfa_register wsp
 ; CHECK-NEXT:    sub sp, sp, #1040
 ; CHECK-NEXT:    .cfi_def_cfa_offset 21536
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    add sp, sp, #5, lsl #12 // =20480
@@ -396,7 +396,7 @@ define void @static_16_align_8192(ptr %out) #0 {
 ; CHECK-NEXT:    b.le .LBB13_3
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    // in Loop: Header=BB13_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB13_1
 ; CHECK-NEXT:  .LBB13_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
@@ -429,7 +429,7 @@ define void @static_16_align_2048(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub x9, sp, #2032
 ; CHECK-NEXT:    and sp, x9, #0xfffffffffffff800
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    mov sp, x29
@@ -458,7 +458,7 @@ define void @static_2032_align_2048(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub x9, sp, #2032
 ; CHECK-NEXT:    and sp, x9, #0xfffffffffffff800
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    mov sp, x29
@@ -485,7 +485,7 @@ define void @static_9232(ptr %out) uwtable(async) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8208
 ; CHECK-NEXT:    sub sp, sp, #800
 ; CHECK-NEXT:    .cfi_def_cfa_offset 9008
-; CHECK-NEXT:    str xzr, [sp], #-240
+; CHECK-NEXT:    ldr xzr, [sp], #-240
 ; CHECK-NEXT:    .cfi_def_cfa_offset 9248
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]

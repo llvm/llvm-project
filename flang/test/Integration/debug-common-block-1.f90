@@ -74,8 +74,8 @@ END
 ! CHECK-DAG: ![[EXPVA3:[0-9]+]] = !DIGlobalVariableExpression(var: ![[VA3]], expr: !DIExpression(DW_OP_plus_uconst, 8))
 
 
-! CHECK-DAG: ![[REAL]] = !DIBasicType(name: "real", size: 32, encoding: DW_ATE_float)
-! CHECK-DAG: ![[INT]] = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
+! CHECK-DAG: ![[REAL]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
+! CHECK-DAG: ![[INT]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 
 ! CHECK-DAG: ![[F1:[0-9]+]] = {{.*}}!DISubprogram(name: "f1"{{.*}})
 ! CHECK-DAG: ![[CBF1]] = !DICommonBlock(scope: ![[F1]], declaration: null, name: "__BLNK__"{{.*}})

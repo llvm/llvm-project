@@ -1536,3 +1536,13 @@ template <class T, class = void> constexpr auto var = T{};
 template <typename T> constexpr auto var<T> = T{};
 } // namespace GH144775
 #endif
+
+namespace GH64087
+{
+/// @brief Primary template
+/// @tparam T type
+template <typename T>
+void foo(){}
+
+template void foo<bool>();
+} // namespace GH64087

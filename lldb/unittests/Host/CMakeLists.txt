@@ -12,6 +12,7 @@ set (FILES
   ProcessLaunchInfoTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
+  StripConPTYSequencesTest.cpp
   ThreadLauncherTest.cpp
   XMLTest.cpp
 )

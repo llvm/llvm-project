@@ -51,7 +51,7 @@ module {
   // CHECK-NEXT: }
 
   cir.func @non_simplifiable_ternary(%arg0 : !cir.bool) -> !s32i {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
     %1 = cir.ternary (%arg0, true {
       %2 = cir.const #cir.int<42> : !s32i
       cir.yield %2 : !s32i

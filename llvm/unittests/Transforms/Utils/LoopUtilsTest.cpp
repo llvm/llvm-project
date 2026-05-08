@@ -89,9 +89,8 @@ TEST(LoopUtils, DeleteDeadLoopNest) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI++);
         assert(Entry->getName() == "entry" && "Expecting BasicBlock entry");
-        const BranchInst *BI = dyn_cast<BranchInst>(Entry->getTerminator());
+        const UncondBrInst *BI = dyn_cast<UncondBrInst>(Entry->getTerminator());
         assert(BI && "Expecting valid branch instruction");
-        EXPECT_EQ(BI->getNumSuccessors(), (unsigned)1);
         EXPECT_EQ(BI->getSuccessor(0)->getName(), "for.end");
       });
 }
@@ -239,7 +238,7 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
           SmallVector<uint32_t, 2> Weights;
           EXPECT_EQ(extractBranchWeights(LatchBranch, Weights), true);
           EXPECT_EQ(Weights[0], 0u);
-          EXPECT_EQ(Weights[1], 0u);
+          EXPECT_EQ(Weights[1], 1u);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
                     0);

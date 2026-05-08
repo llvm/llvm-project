@@ -149,7 +149,7 @@ bool SearchFilter::CompUnitPasses(FileSpec &fileSpec) { return true; }
 bool SearchFilter::CompUnitPasses(CompileUnit &compUnit) { return true; }
 
 bool SearchFilter::FunctionPasses(Function &function) {
-  // This is a slightly cheesy job, but since we don't have finer grained 
+  // This is a slightly cheesy job, but since we don't have finer grained
   // filters yet, just checking that the start address passes is probably
   // good enough for the base class behavior.
   Address addr = function.GetAddress();
@@ -262,7 +262,9 @@ SearchFilter::DoModuleIteration(const SymbolContext &context,
     return Searcher::eCallbackReturnContinue;
   }
 
-  for (ModuleSP module_sp : m_target_sp->GetImages().Modules()) {
+  ModuleList module_list = m_target_sp->GetImages();
+  // Since we're iterating over a copy, no need to do any locking.
+  for (ModuleSP module_sp : module_list.ModulesNoLocking()) {
     // If this is the last level supplied, then call the callback directly,
     // otherwise descend.
     if (!ModulePasses(module_sp))
@@ -422,14 +424,9 @@ void SearchFilterByModule::Search(Searcher &searcher) {
     searcher.SearchCallback(*this, empty_sc, nullptr);
   }
 
-  // If the module file spec is a full path, then we can just find the one
-  // filespec that passes.  Otherwise, we need to go through all modules and
-  // find the ones that match the file name.
-
-  const ModuleList &target_modules = m_target_sp->GetImages();
-  std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
-
-  for (ModuleSP module_sp : m_target_sp->GetImages().Modules()) {
+  ModuleList module_list = m_target_sp->GetImages();
+  // Since we're iterating over a copy, no need to do any locking.
+  for (ModuleSP module_sp : module_list.ModulesNoLocking()) {
     if (FileSpec::Match(m_module_spec, module_sp->GetFileSpec())) {
       SymbolContext matchingContext(m_target_sp, module_sp);
       Searcher::CallbackReturn shouldContinue;
@@ -545,7 +542,9 @@ void SearchFilterByModuleList::Search(Searcher &searcher) {
   // If the module file spec is a full path, then we can just find the one
   // filespec that passes.  Otherwise, we need to go through all modules and
   // find the ones that match the file name.
-  for (ModuleSP module_sp : m_target_sp->GetImages().Modules()) {
+  ModuleList module_list = m_target_sp->GetImages();
+  // Since we're iterating over a copy, no need to do any locking.
+  for (ModuleSP module_sp : module_list.ModulesNoLocking()) {
     if (m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) ==
         UINT32_MAX)
       continue;
@@ -707,7 +706,7 @@ bool SearchFilterByModuleListAndCU::AddressPasses(Address &address) {
     cu_spec = sym_ctx.comp_unit->GetPrimaryFile();
   if (m_cu_spec_list.FindFileIndex(0, cu_spec, false) == UINT32_MAX)
     return false; // Fails the file check
-  return SearchFilterByModuleList::ModulePasses(sym_ctx.module_sp); 
+  return SearchFilterByModuleList::ModulePasses(sym_ctx.module_sp);
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {
@@ -744,7 +743,9 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
   ModuleList matching_modules;
 
   bool no_modules_in_filter = m_module_spec_list.GetSize() == 0;
-  for (ModuleSP module_sp : m_target_sp->GetImages().Modules()) {
+  ModuleList module_list = m_target_sp->GetImages();
+  // Since we're iterating over a copy, no need to do any locking.
+  for (ModuleSP module_sp : module_list.ModulesNoLocking()) {
     if (!no_modules_in_filter &&
         m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) ==
             UINT32_MAX)

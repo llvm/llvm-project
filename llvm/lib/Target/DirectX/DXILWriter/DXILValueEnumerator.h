@@ -43,6 +43,8 @@ class ValueSymbolTable;
 
 namespace dxil {
 
+class DXILDebugInfoMap;
+
 class ValueEnumerator {
 public:
   using TypeList = std::vector<Type *>;
@@ -138,8 +140,11 @@ private:
   unsigned FirstFuncConstantID;
   unsigned FirstInstID;
 
+  const DXILDebugInfoMap &DebugInfo;
+
 public:
-  ValueEnumerator(const Module &M, Type *PrefixType);
+  ValueEnumerator(const Module &M, Type *PrefixType,
+                  const DXILDebugInfoMap &DebugInfo);
   ValueEnumerator(const ValueEnumerator &) = delete;
   ValueEnumerator &operator=(const ValueEnumerator &) = delete;
 
@@ -157,7 +162,7 @@ public:
   }
 
   unsigned getMetadataOrNullID(const Metadata *MD) const {
-    return MetadataMap.lookup(MD).ID;
+    return MetadataMap.lookup(getDXILMetadata(MD)).ID;
   }
 
   unsigned numMDs() const { return MDs.size(); }
@@ -230,6 +235,8 @@ public:
   /// specified basic block.  This is relatively expensive information, so it
   /// should only be used by rare constructs such as address-of-label.
   unsigned getGlobalBasicBlockID(const BasicBlock *BB) const;
+
+  const Metadata *getDXILMetadata(const Metadata *M) const;
 
   /// incorporateFunction/purgeFunction - If you'd like to deal with a function,
   /// use these two methods to get its data into the ValueEnumerator!

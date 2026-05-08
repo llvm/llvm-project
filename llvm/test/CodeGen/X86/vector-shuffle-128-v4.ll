@@ -695,35 +695,17 @@ define <4 x float> @shuffle_v4f32_zz4z(<4 x float> %a) {
 }
 
 define <4 x float> @shuffle_v4f32_zuu4(<4 x float> %a) {
-; SSE2-LABEL: shuffle_v4f32_zuu4:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE3-LABEL: shuffle_v4f32_zuu4:
-; SSE3:       # %bb.0:
-; SSE3-NEXT:    xorps %xmm1, %xmm1
-; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
-; SSE3-NEXT:    movaps %xmm1, %xmm0
-; SSE3-NEXT:    retq
-;
-; SSSE3-LABEL: shuffle_v4f32_zuu4:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    xorps %xmm1, %xmm1
-; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
-; SSSE3-NEXT:    movaps %xmm1, %xmm0
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: shuffle_v4f32_zuu4:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = zero,zero,zero,xmm0[0]
-; SSE41-NEXT:    retq
+; SSE-LABEL: shuffle_v4f32_zuu4:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_zuu4:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,zero,zero,xmm0[0]
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,0],xmm0[0,0]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <4 x i32> <i32 0, i32 poison, i32 poison, i32 4>
   ret <4 x float> %shuffle

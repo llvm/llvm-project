@@ -161,8 +161,9 @@ std::optional<ProgramTree> ProgramTree::Build(
   const parser::LanguageBindingSpec *bindingSpec{};
   if (const auto &suffix{
           std::get<std::optional<parser::Suffix>>(stmt.statement.t)}) {
-    if (suffix->binding) {
-      bindingSpec = &*suffix->binding;
+    if (const auto &binding{
+            std::get<std::optional<parser::LanguageBindingSpec>>(suffix->t)}) {
+      bindingSpec = &*binding;
     }
   }
   return BuildSubprogramTree(name, context, x)

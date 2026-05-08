@@ -81,7 +81,7 @@ int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis);
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of int64_t
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 SmallVector<int64_t> delinearize(int64_t linearIndex,
                                  ArrayRef<int64_t> strides);
 
@@ -181,7 +181,7 @@ AffineExpr linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of AffineExpr
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 ///
 /// It is the caller's responsibility to pass proper AffineExpr kind that result
 /// in valid AffineExpr (i.e. cannot multiply 2 AffineDimExpr or divide by an

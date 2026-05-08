@@ -1,0 +1,38 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "invalid-entity-id-value.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "data": [
+    {
+      "summary_name": "Analysis1",
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "ref": {
+              "@": "not-a-number"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

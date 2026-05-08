@@ -12,6 +12,7 @@ static_library("COFF") {
     ":Options",
     "//lld/Common",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/DTLTO",
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/DebugInfo/MSF",
     "//llvm/lib/DebugInfo/PDB",

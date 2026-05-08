@@ -263,5 +263,5 @@ define i1 @neg_icmp_eq_implies_trunc(i8 %x, i1 %c) {
 !1 = !{!"branch_weights", i32 2, i32 3}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}
+; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
 ;.

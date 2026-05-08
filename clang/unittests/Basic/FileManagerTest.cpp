@@ -493,6 +493,10 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  // Normalize to native path style to match tryGetRealPathName()
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(ExpectedResult);
   EXPECT_EQ(file.getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 
@@ -519,6 +523,10 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  // Normalize to native path style to match tryGetRealPathName()
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(ExpectedResult);
   EXPECT_EQ(file->getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 

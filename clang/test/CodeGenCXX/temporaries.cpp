@@ -48,8 +48,7 @@ namespace BraceInit {
   typedef const int &CIR;
   CIR x = CIR{3};
   // CHECK-CXX11: @_ZGRN9BraceInit1xE_ = internal constant i32 3
-  // FIXME: This should still be emitted as 'constant' in C++17.
-  // CHECK-CXX17: @_ZGRN9BraceInit1xE_ = internal global i32 3
+  // CHECK-CXX17: @_ZGRN9BraceInit1xE_ = internal constant i32 3
   // CHECK: @_ZN9BraceInit1xE ={{.*}} constant ptr @_ZGRN9BraceInit1xE_
 }
 
@@ -59,7 +58,7 @@ namespace RefTempSubobject {
     int ints[3] = {1, 2, 3};
   };
 
-  // CHECK: @_ZGRN16RefTempSubobject2srE_ = internal global { ptr, [3 x i32] } { {{.*}} getelementptr {{.*}} @_ZGRN16RefTempSubobject2srE_, {{.*}}, [3 x i32] [i32 1, i32 2, i32 3] }
+  // CHECK: @_ZGRN16RefTempSubobject2srE_ = internal constant { ptr, [3 x i32] } { {{.*}} getelementptr {{.*}} @_ZGRN16RefTempSubobject2srE_, {{.*}}, [3 x i32] [i32 1, i32 2, i32 3] }
   // CHECK: @_ZN16RefTempSubobject2srE = constant {{.*}} @_ZGRN16RefTempSubobject2srE_
   constexpr const SelfReferential &sr = SelfReferential();
 }
@@ -714,11 +713,11 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[TEMPE:_ZGRN17MultipleExtension2e1E.*]],
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[TEMPE]], i64 8))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPE]], i64 8))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e1E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[TEMPE]], i32 0, i32 2)
+  // CHECK: store {{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPD]], i64 4), {{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPE]], i64 16)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[TEMPE]]
   // CHECK: store {{.*}} @[[TEMPE]], ptr @_ZN17MultipleExtension2e1E, align 8
 
@@ -728,11 +727,11 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[E:_ZN17MultipleExtension2e2E]]
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[E]], i64 8))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds nuw (i8, ptr @[[E]], i64 8))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e2E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[E]], i32 0, i32 2)
+  // CHECK: store {{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPD]], i64 4), {{.*}} getelementptr inbounds nuw (i8, ptr @[[E]], i64 16)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[E]]
 
 

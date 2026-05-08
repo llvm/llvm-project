@@ -110,3 +110,32 @@ define <2 x float> @t3(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
   %v1 = fadd contract <2 x float> %v0, %c
   ret <2 x float> %v1
 }
+
+;; Dot product represented as `fmul+reduce.fadd`. With "contract" FMF, we
+;; should scalarize the fmul.f32x2 to allow for FMA fusion.
+define float @dot_reduce_contract(<8 x float> %a, <8 x float> %b) {
+; CHECK-LABEL: dot_reduce_contract(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [dot_reduce_contract_param_0+16];
+; CHECK-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [dot_reduce_contract_param_0];
+; CHECK-NEXT:    ld.param.v4.b32 {%r9, %r10, %r11, %r12}, [dot_reduce_contract_param_1+16];
+; CHECK-NEXT:    ld.param.v4.b32 {%r13, %r14, %r15, %r16}, [dot_reduce_contract_param_1];
+; CHECK-NEXT:    fma.rn.f32 %r17, %r5, %r13, 0f00000000;
+; CHECK-NEXT:    fma.rn.f32 %r18, %r6, %r14, %r17;
+; CHECK-NEXT:    fma.rn.f32 %r19, %r7, %r15, %r18;
+; CHECK-NEXT:    fma.rn.f32 %r20, %r8, %r16, %r19;
+; CHECK-NEXT:    fma.rn.f32 %r21, %r1, %r9, %r20;
+; CHECK-NEXT:    fma.rn.f32 %r22, %r2, %r10, %r21;
+; CHECK-NEXT:    fma.rn.f32 %r23, %r3, %r11, %r22;
+; CHECK-NEXT:    fma.rn.f32 %r24, %r4, %r12, %r23;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r24;
+; CHECK-NEXT:    ret;
+  %mul = fmul contract <8 x float> %a, %b
+  %red = call contract float @llvm.vector.reduce.fadd.v8f32(float 0.0, <8 x float> %mul)
+  ret float %red
+}
+
+declare float @llvm.vector.reduce.fadd.v8f32(float, <8 x float>)

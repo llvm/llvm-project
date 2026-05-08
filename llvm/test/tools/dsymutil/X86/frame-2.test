@@ -2,7 +2,7 @@
 # RUN: mkdir -p %t
 # RUN: llc -filetype=obj %p/../Inputs/frame-dw2.ll -o %t/frame-dw2.o
 # RUN: llc -filetype=obj %p/../Inputs/frame-dw4.ll -o %t/frame-dw4.o
-# RUN: dsymutil -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-frame - | FileCheck %s
+# RUN: dsymutil --linker classic -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-frame - | FileCheck %s
 
 # Check the handling of multiple different CIEs. To have CIEs that
 # appear to be different, use a dwarf2 version of the file along with
@@ -39,3 +39,5 @@ objects:
 # CHECK:  FDE cie=00000000 pc=00004000...00004
 # CHECK-NOT: FDE
 # CHECK: .eh_frame contents:
+
+## FIXME: Support --linker parallel

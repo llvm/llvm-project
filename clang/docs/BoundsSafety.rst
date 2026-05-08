@@ -352,7 +352,7 @@ Annotations for sentinel-delimited arrays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A C string is an array of characters. The null terminator — the first null
-character ('\0') element in the array — marks the end of the string.
+character (``'\0'``) element in the array — marks the end of the string.
 ``-fbounds-safety`` provides ``__null_terminated`` to annotate C strings and the
 generalized form ``__terminated_by(T)`` to annotate pointers and arrays with an
 end marked by a sentinel value. The model prevents dereferencing a
@@ -439,17 +439,17 @@ extension`_ for more details about the toolchain header):
 
 .. code-block:: C
 
-#define __ptrcheck_abi_assume_single() \
-   _Pragma("clang abi_ptr_attr set(single)")
+   #define __ptrcheck_abi_assume_single() \
+      _Pragma("clang abi_ptr_attr set(single)")
 
-#define __ptrcheck_abi_assume_indexable() \
-  _Pragma("clang abi_ptr_attr set(indexable)")
+   #define __ptrcheck_abi_assume_indexable() \
+     _Pragma("clang abi_ptr_attr set(indexable)")
 
-#define __ptrcheck_abi_assume_bidi_indexable() \
-  _Pragma("clang abi_ptr_attr set(bidi_indexable)")
+   #define __ptrcheck_abi_assume_bidi_indexable() \
+     _Pragma("clang abi_ptr_attr set(bidi_indexable)")
 
-#define __ptrcheck_abi_assume_unsafe_indexable() \
-  _Pragma("clang abi_ptr_attr set(unsafe_indexable)")
+   #define __ptrcheck_abi_assume_unsafe_indexable() \
+     _Pragma("clang abi_ptr_attr set(unsafe_indexable)")
 
 
 ABI implications of default bounds annotations

@@ -23,8 +23,8 @@ AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
   if (MI.getOpcode() != AArch64::G_DUP)
     return std::nullopt;
   Register Src = MI.getOperand(1).getReg();
-  if (auto ValAndVReg =
-          getAnyConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI))
+  if (auto ValAndVReg = getAnyConstantVRegValWithLookThrough(
+          Src, MRI, /*LookThroughInstrs=*/true, /*LookThroughAnyExt=*/true))
     return RegOrConstant(ValAndVReg->Value.getSExtValue());
   return RegOrConstant(Src);
 }
@@ -62,12 +62,13 @@ bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
 
 bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
                                      MachineIRBuilder &MIRBuilder,
+                                     const LibcallLoweringInfo &Libcalls,
                                      bool MinSize) {
   assert(MI.getOpcode() == TargetOpcode::G_MEMSET);
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-  if (!TLI.getLibcallName(RTLIB::BZERO))
+  if (Libcalls.getLibcallImpl(RTLIB::BZERO) == RTLIB::Unsupported)
     return false;
+
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   auto Zero =
       getIConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
   if (!Zero || Zero->Value.getSExtValue() != 0)

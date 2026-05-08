@@ -38,49 +38,49 @@
 @InvocIndex = external local_unnamed_addr addrspace(1) constant i64, align 8
 @"func_object1" = internal addrspace(3) global %class.kfunc zeroinitializer, align 8
 
-define spir_kernel void @test_full_move(%struct.SomeStruct addrspace(1)* captures(none) readonly %in, %struct.SomeStruct addrspace(1)* captures(none) %out) {
-  %1 = bitcast %struct.SomeStruct addrspace(1)* %in to i8 addrspace(1)*
-  %2 = bitcast %struct.SomeStruct addrspace(1)* %out to i8 addrspace(1)*
-  call void @llvm.memmove.p1i8.p1i8.i32(i8 addrspace(1)* align 64 %2, i8 addrspace(1)* align 64 %1, i32 64, i1 false)
+define spir_kernel void @test_full_move(ptr addrspace(1) captures(none) readonly %in, ptr addrspace(1) captures(none) %out) {
+  %1 = bitcast ptr addrspace(1) %in to ptr addrspace(1)
+  %2 = bitcast ptr addrspace(1) %out to ptr addrspace(1)
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) align 64 %2, ptr addrspace(1) align 64 %1, i32 64, i1 false)
   ret void
 }
 
-define spir_kernel void @test_partial_move(%struct.SomeStruct addrspace(1)* captures(none) readonly %in, %struct.SomeStruct addrspace(4)* captures(none) %out) {
-  %1 = bitcast %struct.SomeStruct addrspace(1)* %in to i8 addrspace(1)*
-  %2 = bitcast %struct.SomeStruct addrspace(4)* %out to i8 addrspace(4)*
-  %3 = addrspacecast i8 addrspace(4)* %2 to i8 addrspace(1)*
-  call void @llvm.memmove.p1i8.p1i8.i32(i8 addrspace(1)* align 64 %3, i8 addrspace(1)* align 64 %1, i32 36, i1 false)
+define spir_kernel void @test_partial_move(ptr addrspace(1) captures(none) readonly %in, ptr addrspace(4) captures(none) %out) {
+  %1 = bitcast ptr addrspace(1) %in to ptr addrspace(1)
+  %2 = bitcast ptr addrspace(4) %out to ptr addrspace(4)
+  %3 = addrspacecast ptr addrspace(4) %2 to ptr addrspace(1)
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) align 64 %3, ptr addrspace(1) align 64 %1, i32 36, i1 false)
   ret void
 }
 
-define spir_kernel void @test_array(i8 addrspace(1)* %in, i8 addrspace(1)* %out) {
-  call void @llvm.memmove.p1i8.p1i8.i32(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i32 30, i1 false)
+define spir_kernel void @test_array(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 30, i1 false)
   ret void
 }
 
 define weak_odr dso_local spir_kernel void @test_phi() local_unnamed_addr {
 entry:
   %0 = alloca i32, align 8
-  %1 = addrspacecast i32* %0 to i32 addrspace(4)*
-  %2 = load i64, i64 addrspace(1)* @InvocIndex, align 8
+  %1 = addrspacecast ptr %0 to ptr addrspace(4)
+  %2 = load i64, ptr addrspace(1) @InvocIndex, align 8
   %cmp = icmp eq i64 %2, 0
   br i1 %cmp, label %leader, label %entry.merge_crit_edge
 
 entry.merge_crit_edge:                            ; preds = %entry
-  %3 = bitcast i32 addrspace(4)* %1 to i8 addrspace(4)*
+  %3 = bitcast ptr addrspace(4) %1 to ptr addrspace(4)
   br label %merge
 
 leader:                                           ; preds = %entry
-  %4 = bitcast i32 addrspace(4)* %1 to i8 addrspace(4)*
+  %4 = bitcast ptr addrspace(4) %1 to ptr addrspace(4)
   br label %merge
 
 merge:                                            ; preds = %entry.merge_crit_edge, %leader
-  %phi = phi i8 addrspace(4)* [ %3, %entry.merge_crit_edge ], [ %4, %leader ]
-  %5 = addrspacecast i8 addrspace(3)* bitcast (%class.kfunc addrspace(3)* @"func_object1" to i8 addrspace(3)*) to i8 addrspace(4)*
-  call void @llvm.memmove.p4i8.p4i8.i64(i8 addrspace(4)* align 8 dereferenceable(32) %5, i8 addrspace(4)* align 8 dereferenceable(32) %phi, i64 32, i1 false)
+  %phi = phi ptr addrspace(4) [ %3, %entry.merge_crit_edge ], [ %4, %leader ]
+  %5 = addrspacecast ptr addrspace(3) @"func_object1" to ptr addrspace(4)
+  call void @llvm.memmove.p4.p4.i64(ptr addrspace(4) align 8 dereferenceable(32) %5, ptr addrspace(4) align 8 dereferenceable(32) %phi, i64 32, i1 false)
   ret void
 }
 
-declare void @llvm.memmove.p4i8.p4i8.i64(i8 addrspace(4)* captures(none) writeonly, i8 addrspace(4)* captures(none) readonly, i64, i1 immarg)
+declare void @llvm.memmove.p4.p4.i64(ptr addrspace(4) captures(none) writeonly, ptr addrspace(4) captures(none) readonly, i64, i1 immarg)
 
-declare void @llvm.memmove.p1i8.p1i8.i32(i8 addrspace(1)* captures(none), i8 addrspace(1)* captures(none) readonly, i32, i1)
+declare void @llvm.memmove.p1.p1.i32(ptr addrspace(1) captures(none), ptr addrspace(1) captures(none) readonly, i32, i1)

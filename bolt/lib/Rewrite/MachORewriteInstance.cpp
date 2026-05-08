@@ -354,6 +354,7 @@ void MachORewriteInstance::runOptimizationPasses() {
       std::make_unique<ReorderBasicBlocks>(opts::PrintReordered));
   Manager.registerPass(
       std::make_unique<FixupBranches>(opts::PrintAfterBranchFixup));
+  Manager.registerPass(std::make_unique<PopulateOutputFunctions>());
   // This pass should always run last.*
   Manager.registerPass(
       std::make_unique<FinalizeFunctions>(opts::PrintFinalized));

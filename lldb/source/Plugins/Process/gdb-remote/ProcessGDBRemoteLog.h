@@ -34,6 +34,7 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 class ProcessGDBRemoteLog {
 public:
   static void Initialize();
+  static void Terminate();
 };
 
 } // namespace process_gdb_remote

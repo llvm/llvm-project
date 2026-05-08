@@ -97,6 +97,8 @@ public:
   std::unique_ptr<PrerequisiteModules>
   buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS &TFS);
 
+  bool hasRequiredModules(PathRef File);
+
 private:
   class ModulesBuilderImpl;
   std::unique_ptr<ModulesBuilderImpl> Impl;

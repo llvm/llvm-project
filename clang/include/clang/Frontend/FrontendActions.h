@@ -114,6 +114,15 @@ public:
 };
 
 class GenerateModuleAction : public ASTFrontendAction {
+public:
+  /// When \c OS is non-null, uses it for outputting the PCM file instead of
+  /// automatically creating an output file.
+  explicit GenerateModuleAction(std::unique_ptr<raw_pwrite_stream> OS = nullptr)
+      : OS(std::move(OS)) {}
+
+private:
+  std::unique_ptr<raw_pwrite_stream> OS;
+
   virtual std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) = 0;
 
@@ -145,6 +154,9 @@ protected:
 };
 
 class GenerateModuleFromModuleMapAction : public GenerateModuleAction {
+public:
+  using GenerateModuleAction::GenerateModuleAction;
+
 private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 

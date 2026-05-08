@@ -13,12 +13,29 @@ function baz(a)
     baz = a
 end function baz
 
+subroutine importer()
+    external ext_routine
+    integer ext_function
+    external ext_function
+    !$omp declare target(ext_routine)
+    !$omp declare target(ext_function)
+    !CHECK: ext_function, EXTERNAL (Function, OmpDeclareTarget): ProcEntity {{.*}}
+    !CHECK: ext_routine, EXTERNAL (OmpDeclareTarget): ProcEntity
+end subroutine importer
+
 program main
 real a
+external ext_routine
+integer ext_function
+external ext_function
 !CHECK: bar (Subroutine, OmpDeclareTarget): HostAssoc
 !CHECK: baz (Function, OmpDeclareTarget): HostAssoc
+!CHECK: ext_function, EXTERNAL (Function, OmpDeclareTarget): ProcEntity {{.*}}
+!CHECK: ext_routine, EXTERNAL (OmpDeclareTarget): ProcEntity
 !$omp declare target(bar)
 !$omp declare target(baz)
+!$omp declare target(ext_function)
+!$omp declare target(ext_routine)
 
 a = baz(a)
 call bar(2,a)

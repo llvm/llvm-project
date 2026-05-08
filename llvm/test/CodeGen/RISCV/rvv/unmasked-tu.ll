@@ -437,8 +437,9 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_wv_nxv16f32_nxv16f32_nxv16f16(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_nxv16f32_nxv16f32_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl4re16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, tu, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v16, v24
 ; CHECK-NEXT:    ret
 entry:

@@ -235,3 +235,32 @@
 !qalias = !quant.uniform<i8:f16:{0:1,1:2},
     {{6.6e4:120,9.987200e-01:127}, {2.000000e+02:256,9.987200e-01}}>
 
+// -----
+// Illegal storage min/max: max > defaultMax
+// expected-error@+1 {{illegal storage type maximum: 60000}}
+!qalias = !quant.uniform<f8E5M2<-57344:60000>:f32, 0.99872:127>
+
+// -----
+// Illegal storage min/max: min < defaultMin
+// expected-error@+1 {{illegal storage type minimum: -60000}}
+!qalias = !quant.uniform<f8E5M2<-60000:57344>:f32, 0.99872:127>
+
+// -----
+// Illegal storage min/max: max > defaultMax
+// expected-error@+1 {{illegal storage type maximum: 500}}
+!qalias = !quant.uniform<f8E4M3FN<-448:500>:f32, 0.99872:127>
+
+// -----
+// Illegal storage min/max: min < defaultMin
+// expected-error@+1 {{illegal storage type minimum: -500}}
+!qalias = !quant.uniform<f8E4M3FN<-500:448>:f32, 0.99872:127>
+
+// -----
+// Illegal storage min/max: max > defaultMax
+// expected-error@+1 {{illegal storage type maximum: 10}}
+!qalias = !quant.uniform<f4E2M1FN<-6:10>:f32, 0.99872:127>
+
+// -----
+// Illegal storage min/max: min < defaultMin
+// expected-error@+1 {{illegal storage type minimum: -10}}
+!qalias = !quant.uniform<f4E2M1FN<-10:6>:f32, 0.99872:127>

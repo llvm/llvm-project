@@ -5,9 +5,10 @@
 define <vscale x 64 x i8> @callee(<vscale x 64 x i8> %arg0, <vscale x 64 x i8> %arg1, <vscale x 64 x i8> %arg2) {
 ; RV64IV-LABEL: callee:
 ; RV64IV:       # %bb.0:
-; RV64IV-NEXT:    vl8r.v v24, (a0)
-; RV64IV-NEXT:    li a0, 1024
-; RV64IV-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
+; RV64IV-NEXT:    li a1, 1024
+; RV64IV-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; RV64IV-NEXT:    vle8.v v24, (a0)
+; RV64IV-NEXT:    vsetvli zero, zero, e8, m8, tu, ma
 ; RV64IV-NEXT:    vmacc.vv v8, v16, v24
 ; RV64IV-NEXT:    ret
   %ret = call <vscale x 64 x i8> @llvm.riscv.vmacc.nxv64i8.nxv64i8(

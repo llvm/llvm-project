@@ -73,6 +73,11 @@ getDataAttribute(mlir::MLIRContext *mlirContext,
     case Fortran::common::CUDADataAttr::Unified:
       attr = cuf::DataAttribute::Unified;
       break;
+    case Fortran::common::CUDADataAttr::UseDevice:
+      attr = cuf::DataAttribute::Device;
+      break;
+    case Fortran::common::CUDADataAttr::Value:
+      return {}; // Extension, not a real CUDA Fortran data attribute
     }
     return cuf::DataAttributeAttr::get(mlirContext, attr);
   }
@@ -111,6 +116,14 @@ cuf::DataAttributeAttr getDataAttr(mlir::Operation *op);
 
 /// Returns true if the operation has a data attribute with the given value.
 bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value);
+
+/// Check if a CUDA data attribute represents device data.
+/// Returns true for Device, Managed, Constant, Shared, and Unified attributes.
+bool isDeviceDataAttribute(cuf::DataAttribute attr);
+
+/// Returns true if the operation has a `cuf::DataAttributeAttr`
+/// whose value returns true for `isDeviceDataAttribute`.
+bool hasDeviceDataAttr(mlir::Operation *op);
 
 } // namespace cuf
 

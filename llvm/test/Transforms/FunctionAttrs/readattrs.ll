@@ -33,7 +33,7 @@ define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 
 ; TODO: Missing with attributor-light: argmem: none, inaccessiblemem: none
 define ptr @test2(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem0: none, target_mem1: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem: none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test2
 ; FNATTRS-SAME: (ptr readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr @x, align 4
@@ -138,13 +138,13 @@ define void @test6_2(ptr %p, ptr %q) {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test6_2
-; ATTRIBUTOR-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr nofree [[Q:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr [[Q:%.*]]) {
 ; ATTRIBUTOR-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; ATTRIBUTOR-NEXT:    call void @test6_1()
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@test6_2
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr nofree [[Q:%.*]]) {
+; ATTRIBUTOR-CGSCC-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr [[Q:%.*]]) {
 ; ATTRIBUTOR-CGSCC-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; ATTRIBUTOR-CGSCC-NEXT:    call void @test6_1()
 ; ATTRIBUTOR-CGSCC-NEXT:    ret void
@@ -346,19 +346,19 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 }
 
 define i32 @volatile_load(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; FNATTRS-LABEL: define {{[^@]+}}@volatile_load
 ; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
 ; FNATTRS-NEXT:    ret i32 [[LOAD]]
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@volatile_load
 ; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
 ; ATTRIBUTOR-NEXT:    ret i32 [[LOAD]]
 ;
-; ATTRIBUTOR-CGSCC: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR-CGSCC: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@volatile_load
 ; ATTRIBUTOR-CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR10:[0-9]+]] {
 ; ATTRIBUTOR-CGSCC-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4

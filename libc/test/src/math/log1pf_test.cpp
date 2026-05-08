@@ -36,7 +36,7 @@ TEST_F(LlvmLibcLog1pfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcLog1pfTest, TrickyInputs) {
-  constexpr int N = 27;
+  constexpr int N = 28;
   constexpr uint32_t INPUTS[N] = {
       0x35c00006U, /*0x1.80000cp-20f*/
       0x35400003U, /*0x1.800006p-21f*/
@@ -51,6 +51,7 @@ TEST_F(LlvmLibcLog1pfTest, TrickyInputs) {
       0x3efd81adU, /*0x1.fb035ap-2f*/
       0x41078febU, /*0x1.0f1fd6p+3f*/
       0x4cc1c80bU, /*0x1.839016p+26f*/
+      0x55185f82U, /*0x1.30bf04p+43f*/
       0x5cd69e88U, /*0x1.ad3d1p+58f*/
       0x5ee8984eU, /*0x1.d1309cp+62f*/
       0x65d890d3U, /*0x1.b121a6p+76f*/
@@ -81,6 +82,6 @@ TEST_F(LlvmLibcLog1pfTest, InFloatRange) {
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
-                                   LIBC_NAMESPACE::log1pf(x), 0.5);
+                                   LIBC_NAMESPACE::log1pf(x), TOLERANCE + 0.5);
   }
 }

@@ -54,6 +54,14 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  // Exception handling support.
+  Register getExceptionPointerRegister(const Constant *) const override {
+    return BPF::R0;
+  }
+  Register getExceptionSelectorRegister(const Constant *) const override {
+    return BPF::R0;
+  }
+
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
   unsigned getJumpTableEncoding() const override;
@@ -68,9 +76,8 @@ private:
   // Allows Misalignment
   bool AllowsMisalignedMemAccess;
 
-  bool AllowBuiltinCalls;
-
   SDValue LowerSDIVSREM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
@@ -165,9 +172,6 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
-
-  // Returns true if arguments should be sign-extended in lib calls.
-  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool IsVarArg,

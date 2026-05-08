@@ -284,7 +284,7 @@ define half @test_ui_ui_i8_mul_C_fail_overlow(i8 noundef %x_in) {
 ; CHECK-LABEL: @test_ui_ui_i8_mul_C_fail_overlow(
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 14
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xH4CC0
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xH4CC0
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 14
@@ -317,7 +317,7 @@ define half @test_si_si_i8_mul_fail_maybe_zero(i8 noundef %x_in, i8 noundef %y_i
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[Y_IN:%.*]], -8
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i8 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 7
@@ -333,7 +333,7 @@ define half @test_si_si_i8_mul_C_fail_no_repr(i8 noundef %x_in) {
 ; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X_IN:%.*]], 6
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i8 [[XX]], 1
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xHC780
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xHC780
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 6
@@ -348,7 +348,7 @@ define half @test_si_si_i8_mul_C_fail_overflow(i8 noundef %x_in) {
 ; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X_IN:%.*]], 6
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i8 [[XX]], 1
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xHCCC0
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xHCCC0
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 6
@@ -403,7 +403,7 @@ define half @test_ui_si_i8_mul_fail_signed(i8 noundef %x_in, i8 noundef %y_in) {
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[Y_IN:%.*]], -4
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = uitofp i8 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 7
@@ -609,7 +609,7 @@ define half @test_ui_ui_i16_mul_fail_no_promotion(i16 noundef %x_in, i16 noundef
 ; CHECK-NEXT:    [[Y:%.*]] = and i16 [[Y_IN:%.*]], 3
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i16 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = uitofp nneg i16 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i16 %x_in, 4095
@@ -645,7 +645,7 @@ define half @test_si_si_i16_mul_fail_overflow(i16 noundef %x_in, i16 noundef %y_
 ; CHECK-NEXT:    [[Y:%.*]] = or i16 [[Y_IN:%.*]], -257
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i16 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i16 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i16 %x_in, 126
@@ -661,7 +661,7 @@ define half @test_si_si_i16_mul_C_fail_overflow(i16 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i16_mul_C_fail_overflow(
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[X_IN:%.*]], -129
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i16 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xH5800
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xH5800
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i16 %x_in, -129
@@ -674,7 +674,7 @@ define half @test_si_si_i16_mul_C_fail_no_promotion(i16 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i16_mul_C_fail_no_promotion(
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[X_IN:%.*]], -4097
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i16 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xH4500
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xH4500
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i16 %x_in, -4097
@@ -917,7 +917,7 @@ define half @test_si_si_i12_mul_fail_overflow(i12 noundef %x_in, i12 noundef %y_
 ; CHECK-NEXT:    [[Y:%.*]] = or i12 [[Y_IN:%.*]], -128
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i12 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i12 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i12 %x_in, 30
@@ -935,7 +935,7 @@ define half @test_si_si_i12_mul_fail_maybe_non_zero(i12 noundef %x_in, i12 nound
 ; CHECK-NEXT:    [[Y:%.*]] = or i12 [[Y_IN:%.*]], -128
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i12 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i12 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i12 %x_in, 30
@@ -963,7 +963,7 @@ define half @test_si_si_i12_mul_C_fail_overflow(i12 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i12_mul_C_fail_overflow(
 ; CHECK-NEXT:    [[X:%.*]] = or i12 [[X_IN:%.*]], -64
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i12 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xHD400
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xHD400
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i12 %x_in, -64
@@ -1010,11 +1010,8 @@ define float @test_ui_add_with_signed_constant(i32 %shr.i) {
 define float @missed_nonzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @missed_nonzero_check_on_constant_for_si_fmul(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc nuw i32 [[SEL]] to i16
-; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp i16 [[CONV_I]] to float
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[CONV1_I]])
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret float [[MUL3_I_I]]
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i = trunc i32 %sel to i16
@@ -1027,13 +1024,8 @@ define float @missed_nonzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g
 define <2 x float> @missed_nonzero_check_on_constant_for_si_fmul_vec(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @missed_nonzero_check_on_constant_for_si_fmul_vec(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
-; CHECK-NEXT:    [[CONV_I_S:%.*]] = trunc nuw i32 [[SEL]] to i16
-; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
-; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> [[CONV1_I]])
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
+; CHECK-NEXT:    ret <2 x float> splat (float -0.000000e+00)
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i.s = trunc i32 %sel to i16
@@ -1048,12 +1040,8 @@ define <2 x float> @missed_nonzero_check_on_constant_for_si_fmul_vec(i1 %c, i1 %
 define float @negzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @negzero_check_on_constant_for_si_fmul(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc nuw i32 [[SEL]] to i16
-; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp i16 [[CONV_I]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[CONV1_I]]
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret float [[MUL3_I_I]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i = trunc i32 %sel to i16
@@ -1071,7 +1059,7 @@ define <2 x half> @test_ui_ui_i8_mul_vec(<2 x i8> noundef %x_in, <2 x i8> nounde
 ; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[Y_IN:%.*]], splat (i8 15)
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg <2 x i8> [[X]] to <2 x half>
 ; CHECK-NEXT:    [[YF:%.*]] = uitofp nneg <2 x i8> [[Y]] to <2 x half>
-; CHECK-NEXT:    [[R:%.*]] = fmul <2 x half> [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan <2 x half> [[XF]], [[YF]]
 ; CHECK-NEXT:    ret <2 x half> [[R]]
 ;
   %x = and <2 x i8> %x_in, splat (i8 15)
@@ -1085,13 +1073,8 @@ define <2 x half> @test_ui_ui_i8_mul_vec(<2 x i8> noundef %x_in, <2 x i8> nounde
 define <2 x float> @nonzero_check_on_constant_for_si_fmul_vec_w_poison(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_vec_w_poison(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
-; CHECK-NEXT:    [[CONV_I_S:%.*]] = trunc nuw i32 [[SEL]] to i16
-; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
-; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float poison, float 0.000000e+00>, <2 x float> [[CONV1_I]])
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
+; CHECK-NEXT:    ret <2 x float> <float poison, float -0.000000e+00>
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i.s = trunc i32 %sel to i16
@@ -1110,7 +1093,7 @@ define <2 x float> @nonzero_check_on_constant_for_si_fmul_nz_vec_w_poison(i1 %c,
 ; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MUL3_I_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
-; CHECK-NEXT:    [[MUL3_I_I1:%.*]] = fmul <2 x float> [[MUL3_I_I]], <float poison, float 1.000000e+00>
+; CHECK-NEXT:    [[MUL3_I_I1:%.*]] = fmul nnan <2 x float> [[MUL3_I_I]], <float poison, float 1.000000e+00>
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
 ; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I1]]
 ;
@@ -1127,14 +1110,8 @@ define <2 x float> @nonzero_check_on_constant_for_si_fmul_nz_vec_w_poison(i1 %c,
 define <2 x float> @nonzero_check_on_constant_for_si_fmul_negz_vec_w_poison(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_negz_vec_w_poison(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
-; CHECK-NEXT:    [[CONV_I_S:%.*]] = trunc nuw i32 [[SEL]] to i16
-; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
-; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[CONV1_I]]
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float poison, float -0.000000e+00>, <2 x float> [[TMP1]])
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
+; CHECK-NEXT:    ret <2 x float> <float poison, float 0.000000e+00>
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i.s = trunc i32 %sel to i16

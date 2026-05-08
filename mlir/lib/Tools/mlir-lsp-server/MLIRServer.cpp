@@ -19,7 +19,9 @@
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 
@@ -34,14 +36,28 @@ static SMRange convertTokenLocToRange(SMLoc loc) {
 
 /// Returns a language server location from the given MLIR file location.
 /// `uriScheme` is the scheme to use when building new uris.
-static std::optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
-                                                       FileLineColLoc loc) {
+static std::optional<lsp::Location>
+getLocationFromLoc(StringRef uriScheme, FileLineColLoc loc,
+                   StringRef workspaceRoot) {
+  StringRef filename = loc.getFilename();
+  SmallString<128> absPath;
+  // Always make the path absolute. Skip paths that start with a separator:
+  // prevents incorrect resolution of virtual paths used in tests on Windows.
+  if (!llvm::sys::path::is_absolute(filename) && !filename.starts_with("/") &&
+      !filename.starts_with("\\")) {
+    if (!workspaceRoot.empty())
+      llvm::sys::path::append(absPath, workspaceRoot, filename);
+    else
+      absPath = filename;
+    llvm::sys::fs::make_absolute(absPath);
+    filename = absPath;
+  }
+
   llvm::Expected<lsp::URIForFile> sourceURI =
-      lsp::URIForFile::fromFile(loc.getFilename(), uriScheme);
+      lsp::URIForFile::fromFile(filename, uriScheme);
   if (!sourceURI) {
     llvm::lsp::Logger::error("Failed to create URI for file `{0}`: {1}",
-                             loc.getFilename(),
-                             llvm::toString(sourceURI.takeError()));
+                             filename, llvm::toString(sourceURI.takeError()));
     return std::nullopt;
   }
 
@@ -57,15 +73,16 @@ static std::optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
 /// present, is used to filter sub locations that do not share the same uri.
 static std::optional<lsp::Location>
 getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
-                   StringRef uriScheme, const lsp::URIForFile *uri = nullptr) {
+                   StringRef uriScheme, StringRef workspaceRoot,
+                   const lsp::URIForFile *uri = nullptr) {
   std::optional<lsp::Location> location;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
+    auto fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc)
       return WalkResult::advance();
 
     std::optional<lsp::Location> sourceLoc =
-        getLocationFromLoc(uriScheme, fileLoc);
+        getLocationFromLoc(uriScheme, fileLoc, workspaceRoot);
     if (sourceLoc && (!uri || sourceLoc->uri == *uri)) {
       location = *sourceLoc;
       SMLoc loc = sourceMgr.FindLocForLineAndColumn(
@@ -90,7 +107,8 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
 /// contained within the given URI.
 static void collectLocationsFromLoc(Location loc,
                                     std::vector<lsp::Location> &locations,
-                                    const lsp::URIForFile &uri) {
+                                    const lsp::URIForFile &uri,
+                                    StringRef workspaceRoot) {
   SetVector<Location> visitedLocs;
   loc->walk([&](Location nestedLoc) {
     FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
@@ -98,7 +116,7 @@ static void collectLocationsFromLoc(Location loc,
       return WalkResult::advance();
 
     std::optional<lsp::Location> sourceLoc =
-        getLocationFromLoc(uri.scheme(), fileLoc);
+        getLocationFromLoc(uri.scheme(), fileLoc, workspaceRoot);
     if (sourceLoc && sourceLoc->uri != uri)
       locations.push_back(*sourceLoc);
     return WalkResult::advance();
@@ -172,11 +190,6 @@ static std::optional<StringRef> getTextFromRange(SMRange range) {
   return StringRef(startPtr, range.End.getPointer() - startPtr);
 }
 
-/// Given a block, return its position in its parent region.
-static unsigned getBlockNumber(Block *block) {
-  return std::distance(block->getParent()->begin(), block->getIterator());
-}
-
 /// Given a block and source location, print the source name of the block to the
 /// given output stream.
 static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
@@ -188,7 +201,7 @@ static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
   }
 
   // Otherwise, we don't have a name so print the block number.
-  os << "<Block #" << getBlockNumber(block) << ">";
+  os << "<Block #" << block->computeBlockNumber() << ">";
 }
 static void printDefBlockName(raw_ostream &os,
                               const AsmParserState::BlockDefinition &def) {
@@ -198,7 +211,8 @@ static void printDefBlockName(raw_ostream &os,
 /// Convert the given MLIR diagnostic to the LSP form.
 static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
                                                Diagnostic &diag,
-                                               const lsp::URIForFile &uri) {
+                                               const lsp::URIForFile &uri,
+                                               StringRef workspaceRoot) {
   lsp::Diagnostic lspDiag;
   lspDiag.source = "mlir";
 
@@ -210,8 +224,8 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
   // TODO: For simplicity, we just grab the first one. It may be likely that we
   // will need a more interesting heuristic here.'
   StringRef uriScheme = uri.scheme();
-  std::optional<lsp::Location> lspLocation =
-      getLocationFromLoc(sourceMgr, diag.getLocation(), uriScheme, &uri);
+  std::optional<lsp::Location> lspLocation = getLocationFromLoc(
+      sourceMgr, diag.getLocation(), uriScheme, workspaceRoot, &uri);
   if (lspLocation)
     lspDiag.range = lspLocation->range;
 
@@ -235,8 +249,8 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
   std::vector<llvm::lsp::DiagnosticRelatedInformation> relatedDiags;
   for (Diagnostic &note : diag.getNotes()) {
     lsp::Location noteLoc;
-    if (std::optional<lsp::Location> loc =
-            getLocationFromLoc(sourceMgr, note.getLocation(), uriScheme))
+    if (std::optional<lsp::Location> loc = getLocationFromLoc(
+            sourceMgr, note.getLocation(), uriScheme, workspaceRoot))
       noteLoc = *loc;
     else
       noteLoc.uri = uri;
@@ -257,7 +271,8 @@ namespace {
 /// document.
 struct MLIRDocument {
   MLIRDocument(MLIRContext &context, const lsp::URIForFile &uri,
-               StringRef contents, std::vector<lsp::Diagnostic> &diagnostics);
+               StringRef contents, StringRef workspaceRoot,
+               std::vector<lsp::Diagnostic> &diagnostics);
   MLIRDocument(const MLIRDocument &) = delete;
   MLIRDocument &operator=(const MLIRDocument &) = delete;
 
@@ -342,14 +357,19 @@ struct MLIRDocument {
 
   /// The source manager containing the contents of the input file.
   llvm::SourceMgr sourceMgr;
+
+  /// The workspace root of the server.
+  std::string workspaceRoot;
 };
 } // namespace
 
 MLIRDocument::MLIRDocument(MLIRContext &context, const lsp::URIForFile &uri,
-                           StringRef contents,
-                           std::vector<lsp::Diagnostic> &diagnostics) {
+                           StringRef contents, StringRef workspaceRoot,
+                           std::vector<lsp::Diagnostic> &diagnostics)
+    : workspaceRoot(workspaceRoot.str()) {
   ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
-    diagnostics.push_back(getLspDiagnoticFromDiag(sourceMgr, diag, uri));
+    diagnostics.push_back(
+        getLspDiagnoticFromDiag(sourceMgr, diag, uri, workspaceRoot));
   });
 
   // Try to parsed the given IR string.
@@ -392,14 +412,17 @@ void MLIRDocument::getLocationsOf(const lsp::URIForFile &uri,
   // Check all definitions related to operations.
   for (const AsmParserState::OperationDefinition &op : asmState.getOpDefs()) {
     if (contains(op.loc, posLoc))
-      return collectLocationsFromLoc(op.op->getLoc(), locations, uri);
+      return collectLocationsFromLoc(op.op->getLoc(), locations, uri,
+                                     workspaceRoot);
     for (const auto &result : op.resultGroups)
       if (containsPosition(result.definition))
-        return collectLocationsFromLoc(op.op->getLoc(), locations, uri);
+        return collectLocationsFromLoc(op.op->getLoc(), locations, uri,
+                                       workspaceRoot);
     for (const auto &symUse : op.symbolUses) {
       if (contains(symUse, posLoc)) {
         locations.emplace_back(uri, sourceMgr, op.loc);
-        return collectLocationsFromLoc(op.op->getLoc(), locations, uri);
+        return collectLocationsFromLoc(op.op->getLoc(), locations, uri,
+                                       workspaceRoot);
       }
     }
   }
@@ -622,7 +645,7 @@ MLIRDocument::buildHoverForBlock(SMRange hoverRange,
 
   // Display the parent operation, block number, predecessors, and successors.
   os << "Operation: \"" << block.block->getParentOp()->getName() << "\"\n\n"
-     << "Block #" << getBlockNumber(block.block) << "\n\n";
+     << "Block #" << block.block->computeBlockNumber() << "\n\n";
   if (!block.block->hasNoPredecessors()) {
     os << "Predecessors: ";
     llvm::interleaveComma(block.block->getPredecessors(), os,
@@ -973,8 +996,10 @@ namespace {
 struct MLIRTextFileChunk {
   MLIRTextFileChunk(MLIRContext &context, uint64_t lineOffset,
                     const lsp::URIForFile &uri, StringRef contents,
+                    StringRef workspaceRoot,
                     std::vector<lsp::Diagnostic> &diagnostics)
-      : lineOffset(lineOffset), document(context, uri, contents, diagnostics) {}
+      : lineOffset(lineOffset),
+        document(context, uri, contents, workspaceRoot, diagnostics) {}
 
   /// Adjust the line number of the given range to anchor at the beginning of
   /// the file, instead of the beginning of this chunk.
@@ -1002,7 +1027,8 @@ namespace {
 class MLIRTextFile {
 public:
   MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-               int64_t version, lsp::DialectRegistryFn registry_fn,
+               int64_t version, lsp::DialectRegistryFn registryFn,
+               StringRef workspaceRoot,
                std::vector<lsp::Diagnostic> &diagnostics);
 
   /// Return the current version of this text file.
@@ -1051,9 +1077,10 @@ private:
 } // namespace
 
 MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-                           int64_t version, lsp::DialectRegistryFn registry_fn,
+                           int64_t version, lsp::DialectRegistryFn registryFn,
+                           StringRef workspaceRoot,
                            std::vector<lsp::Diagnostic> &diagnostics)
-    : context(registry_fn(uri), MLIRContext::Threading::DISABLED),
+    : context(registryFn(uri), MLIRContext::Threading::DISABLED),
       contents(fileContents.str()), version(version) {
   context.allowUnregisteredDialects();
 
@@ -1061,13 +1088,14 @@ MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
   SmallVector<StringRef, 8> subContents;
   StringRef(contents).split(subContents, kDefaultSplitMarker);
   chunks.emplace_back(std::make_unique<MLIRTextFileChunk>(
-      context, /*lineOffset=*/0, uri, subContents.front(), diagnostics));
+      context, /*lineOffset=*/0, uri, subContents.front(), workspaceRoot,
+      diagnostics));
 
   uint64_t lineOffset = subContents.front().count('\n');
   for (StringRef docContents : llvm::drop_begin(subContents)) {
     unsigned currentNumDiags = diagnostics.size();
-    auto chunk = std::make_unique<MLIRTextFileChunk>(context, lineOffset, uri,
-                                                     docContents, diagnostics);
+    auto chunk = std::make_unique<MLIRTextFileChunk>(
+        context, lineOffset, uri, docContents, workspaceRoot, diagnostics);
     lineOffset += docContents.count('\n');
 
     // Adjust locations used in diagnostics to account for the offset from the
@@ -1268,29 +1296,33 @@ MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
 //===----------------------------------------------------------------------===//
 
 struct lsp::MLIRServer::Impl {
-  Impl(lsp::DialectRegistryFn registry_fn) : registry_fn(registry_fn) {}
+  Impl(lsp::DialectRegistryFn registryFn) : registryFn(registryFn) {}
 
   /// The registry factory for containing dialects that can be recognized in
   /// parsed .mlir files.
-  lsp::DialectRegistryFn registry_fn;
+  lsp::DialectRegistryFn registryFn;
 
   /// The files held by the server, mapped by their URI file name.
   llvm::StringMap<std::unique_ptr<MLIRTextFile>> files;
+
+  /// The workspace root of the server.
+  std::string workspaceRoot;
 };
 
 //===----------------------------------------------------------------------===//
 // MLIRServer
 //===----------------------------------------------------------------------===//
 
-lsp::MLIRServer::MLIRServer(lsp::DialectRegistryFn registry_fn)
-    : impl(std::make_unique<Impl>(registry_fn)) {}
+lsp::MLIRServer::MLIRServer(lsp::DialectRegistryFn registryFn)
+    : impl(std::make_unique<Impl>(registryFn)) {}
 lsp::MLIRServer::~MLIRServer() = default;
 
 void lsp::MLIRServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<llvm::lsp::Diagnostic> &diagnostics) {
-  impl->files[uri.file()] = std::make_unique<MLIRTextFile>(
-      uri, contents, version, impl->registry_fn, diagnostics);
+  impl->files[uri.file()] =
+      std::make_unique<MLIRTextFile>(uri, contents, version, impl->registryFn,
+                                     impl->workspaceRoot, diagnostics);
 }
 
 std::optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
@@ -1353,7 +1385,7 @@ void lsp::MLIRServer::getCodeActions(const URIForFile &uri, const Range &pos,
 
 llvm::Expected<lsp::MLIRConvertBytecodeResult>
 lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
-  MLIRContext tempContext(impl->registry_fn(uri));
+  MLIRContext tempContext(impl->registryFn(uri));
   tempContext.allowUnregisteredDialects();
 
   // Collect any errors during parsing.
@@ -1411,4 +1443,8 @@ lsp::MLIRServer::convertToBytecode(const URIForFile &uri) {
         llvm::lsp::ErrorCode::RequestFailed);
   }
   return fileIt->second->convertToBytecode();
+}
+
+void lsp::MLIRServer::setWorkspaceRoot(StringRef root) {
+  impl->workspaceRoot = root.str();
 }

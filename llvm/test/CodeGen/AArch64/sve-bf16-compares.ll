@@ -35,16 +35,13 @@ define <vscale x 4 x i1> @fcmp_oeq_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_oeq_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_oeq_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -83,16 +80,13 @@ define <vscale x 4 x i1> @fcmp_ogt_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_ogt_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ogt_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -131,16 +125,13 @@ define <vscale x 4 x i1> @fcmp_oge_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_oge_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_oge_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmge p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -179,16 +170,13 @@ define <vscale x 4 x i1> @fcmp_olt_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_olt_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_olt_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z0.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p0.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -227,16 +215,13 @@ define <vscale x 4 x i1> @fcmp_ole_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_ole_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ole_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    fcmge p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z0.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p0.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -279,17 +264,14 @@ define <vscale x 4 x i1> @fcmp_one_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_one_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_one_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z3.s, z2.s
-; CHECK-NEXT:    fcmgt p2.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z0.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
+; CHECK-NEXT:    fcmgt p2.s, p0/z, z3.s, z4.s
 ; CHECK-NEXT:    fcmgt p3.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    fcmgt p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    mov p1.b, p2/m, p2.b
@@ -333,20 +315,17 @@ define <vscale x 4 x i1> @fcmp_ord_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_ord_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ord_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmuo p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmuo p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmuo p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ord <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -387,17 +366,14 @@ define <vscale x 4 x i1> @fcmp_ueq_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_ueq_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ueq_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmuo p1.s, p0/z, z3.s, z2.s
-; CHECK-NEXT:    fcmeq p2.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmuo p1.s, p0/z, z4.s, z3.s
+; CHECK-NEXT:    fcmeq p2.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmuo p3.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    mov p1.b, p2/m, p2.b
@@ -441,20 +417,17 @@ define <vscale x 4 x i1> @fcmp_ugt_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_ugt_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ugt_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    fcmge p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z0.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ugt <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -493,20 +466,17 @@ define <vscale x 4 x i1> @fcmp_uge_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_uge_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_uge_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z0.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p2.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp uge <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -545,20 +515,17 @@ define <vscale x 4 x i1> @fcmp_ult_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_ult_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ult_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmge p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ult <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -597,20 +564,17 @@ define <vscale x 4 x i1> @fcmp_ule_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_ule_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ule_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    not p0.b, p0/z, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    not p2.b, p0/z, p2.b
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p1.h
 ; CHECK-NEXT:    ret
   %res = fcmp ule <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x i1> %res
@@ -647,16 +611,13 @@ define <vscale x 4 x i1> @fcmp_une_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_une_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_une_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmne p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmne p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -695,16 +656,13 @@ define <vscale x 4 x i1> @fcmp_uno_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x i1> @fcmp_uno_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_uno_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmuo p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmuo p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmuo p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -743,16 +701,13 @@ define <vscale x 4 x i1> @fcmp_eq_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4
 define <vscale x 8 x i1> @fcmp_eq_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_eq_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -791,16 +746,13 @@ define <vscale x 4 x i1> @fcmp_gt_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4
 define <vscale x 8 x i1> @fcmp_gt_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_gt_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -839,16 +791,13 @@ define <vscale x 4 x i1> @fcmp_ge_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4
 define <vscale x 8 x i1> @fcmp_ge_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ge_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmge p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -887,16 +836,13 @@ define <vscale x 4 x i1> @fcmp_lt_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4
 define <vscale x 8 x i1> @fcmp_lt_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_lt_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z0.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmgt p0.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -935,16 +881,13 @@ define <vscale x 4 x i1> @fcmp_le_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4
 define <vscale x 8 x i1> @fcmp_le_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_le_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    fcmge p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z0.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    fcmge p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmge p0.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret
@@ -983,16 +926,13 @@ define <vscale x 4 x i1> @fcmp_ne_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4
 define <vscale x 8 x i1> @fcmp_ne_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fcmp_ne_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fcmne p1.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fcmne p1.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    ret

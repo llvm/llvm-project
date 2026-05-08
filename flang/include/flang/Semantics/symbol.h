@@ -475,6 +475,12 @@ public:
     return usedAsProcedureHere_;
   }
   void set_usedAsProcedureHere(SourceName here) { usedAsProcedureHere_ = here; }
+  const std::vector<OpenACCRoutineInfo> &openACCRoutineInfos() const {
+    return openACCRoutineInfos_;
+  }
+  void add_openACCRoutineInfo(OpenACCRoutineInfo info) {
+    openACCRoutineInfos_.push_back(info);
+  }
 
 private:
   const Symbol *rawProcInterface_{nullptr};
@@ -482,6 +488,7 @@ private:
   std::optional<const Symbol *> init_;
   bool isCUDAKernel_{false};
   std::optional<SourceName> usedAsProcedureHere_;
+  std::vector<OpenACCRoutineInfo> openACCRoutineInfos_;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ProcEntityDetails &);
 };
@@ -762,6 +769,22 @@ public:
     for (auto t : typeList_) {
       if (*t == type) {
         return true;
+      }
+    }
+    // For derived and class-derived types, match on the type symbol pointer.
+    if (type.category() == DeclTypeSpec::TypeDerived ||
+        type.category() == DeclTypeSpec::ClassDerived) {
+      const auto &rhs = type.derivedTypeSpec();
+      const auto &rhsSym = rhs.typeSymbol();
+      for (auto t : typeList_) {
+        if (t->category() == DeclTypeSpec::TypeDerived ||
+            t->category() == DeclTypeSpec::ClassDerived) {
+          const auto &lhs = t->derivedTypeSpec();
+          const auto &lhsSym = lhs.typeSymbol();
+          if (&lhsSym == &rhsSym) {
+            return true;
+          }
+        }
       }
     }
     return false;

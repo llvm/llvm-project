@@ -182,12 +182,15 @@ public:
   /// instruction into MBB before MI. The new instruction is mapped, but
   /// liveness is not updated. If ReplaceIndexMI is not null it will be replaced
   /// by new MI in the index map.
+  /// \p UsedLanes is a bitmask of the lanes that are live at the
+  /// rematerialization point, forwarded to TII.reMaterialize.
   /// Return the SlotIndex of the new instruction.
   SlotIndex rematerializeAt(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,
                             const Remat &RM, const TargetRegisterInfo &,
                             bool Late = false, unsigned SubIdx = 0,
-                            MachineInstr *ReplaceIndexMI = nullptr);
+                            MachineInstr *ReplaceIndexMI = nullptr,
+                            LaneBitmask UsedLanes = LaneBitmask::getAll());
 
   /// markRematerialized - explicitly mark a value as rematerialized after doing
   /// it manually.

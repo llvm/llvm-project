@@ -24,6 +24,7 @@
 
 namespace llvm {
 class GlobalValueSummary;
+class LLVMContext;
 class Module;
 class OptimizationRemarkEmitter;
 
@@ -93,7 +94,10 @@ public:
 
   void run(ModuleSummaryIndex &Index,
            function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-               isPrevailing);
+               isPrevailing,
+           LLVMContext &Ctx,
+           function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark =
+               nullptr);
 };
 
 /// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline

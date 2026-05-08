@@ -106,3 +106,25 @@ subroutine defaultmap_dtype_aggregate_to()
 
     return
 end subroutine
+
+subroutine defaultmap_scalar_implicit_mapper()
+    implicit none
+    type :: dtype
+        integer(4) :: array_i(10)
+        integer(4) :: k
+    end type dtype
+
+    type(dtype), allocatable :: obj
+
+! CHECK-LABEL: func.func @_QPdefaultmap_scalar_implicit_mapper
+! CHECK: %[[BASE_MAP:.*]] = omp.map.info {{.*}} map_clauses(implicit, tofrom) capture(ByRef) {{.*}} mapper(@{{.*}}) -> {{.*}} {name = ""}
+! CHECK: %[[DESC_MAP:.*]] = omp.map.info {{.*}} map_clauses(always, implicit, to) capture(ByRef) members(%[[BASE_MAP]] : [0] : {{.*}}) -> {{.*}} {name = "obj"}
+! CHECK: omp.target map_entries(%[[DESC_MAP]] -> {{.*}}, %[[BASE_MAP]] -> {{.*}})
+    allocate(obj)
+    !$omp target defaultmap(tofrom: scalar)
+        obj%k = 40
+        obj%array_i(1) = 50
+    !$omp end target
+
+    return
+end subroutine

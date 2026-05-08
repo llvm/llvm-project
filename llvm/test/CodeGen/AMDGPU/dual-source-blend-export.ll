@@ -38,8 +38,8 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpC
 ; GCN-NEXT:    v_mov_b32_dpp v4, v4 dpp8:[1,0,3,2,5,4,7,6]
 ; GCN-NEXT:    v_mov_b32_dpp v5, v5 dpp8:[1,0,3,2,5,4,7,6]
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1
-; GCN-NEXT:    exp dual_src_blend0 v3, v2, off, off
-; GCN-NEXT:    exp dual_src_blend1 v4, v5, off, off done
+; GCN-NEXT:    exp dual_src_blend0, v3, v2, off, off
+; GCN-NEXT:    exp dual_src_blend1, v4, v5, off, off done
 ; GCN-NEXT:    s_endpgm
 .entry:
   %InterpCenter.i0 = extractelement <2 x float> %InterpCenter, i64 0

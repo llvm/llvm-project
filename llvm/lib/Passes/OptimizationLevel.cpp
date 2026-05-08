@@ -10,21 +10,7 @@
 
 using namespace llvm;
 
-const OptimizationLevel OptimizationLevel::O0 = {
-    /*SpeedLevel*/ 0,
-    /*SizeLevel*/ 0};
-const OptimizationLevel OptimizationLevel::O1 = {
-    /*SpeedLevel*/ 1,
-    /*SizeLevel*/ 0};
-const OptimizationLevel OptimizationLevel::O2 = {
-    /*SpeedLevel*/ 2,
-    /*SizeLevel*/ 0};
-const OptimizationLevel OptimizationLevel::O3 = {
-    /*SpeedLevel*/ 3,
-    /*SizeLevel*/ 0};
-const OptimizationLevel OptimizationLevel::Os = {
-    /*SpeedLevel*/ 2,
-    /*SizeLevel*/ 1};
-const OptimizationLevel OptimizationLevel::Oz = {
-    /*SpeedLevel*/ 2,
-    /*SizeLevel*/ 2};
+const OptimizationLevel OptimizationLevel::O0 = {0};
+const OptimizationLevel OptimizationLevel::O1 = {1};
+const OptimizationLevel OptimizationLevel::O2 = {2};
+const OptimizationLevel OptimizationLevel::O3 = {3};

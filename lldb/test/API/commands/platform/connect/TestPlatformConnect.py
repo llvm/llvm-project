@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 
 class TestPlatformProcessConnect(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     @skipIfRemote
     @expectedFailureAll(hostoslist=["windows"], triple=".*-android")

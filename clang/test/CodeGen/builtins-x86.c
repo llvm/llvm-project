@@ -290,7 +290,7 @@ void f0(void) {
   (void) __builtin_ia32_movnti64(tmp_LLip, tmp_LLi);
 #endif
   tmp_V2LLi = __builtin_ia32_psadbw128(tmp_V16c, tmp_V16c);
-  tmp_V2LLi = __builtin_ia32_cvtpd2dq(tmp_V2d);
+  tmp_V4i = __builtin_ia32_cvtpd2dq(tmp_V2d);
   tmp_V4f = __builtin_ia32_cvtpd2ps(tmp_V2d);
   tmp_V4i = __builtin_ia32_cvttpd2dq(tmp_V2d);
   tmp_i = __builtin_ia32_cvtsd2si(tmp_V2d);

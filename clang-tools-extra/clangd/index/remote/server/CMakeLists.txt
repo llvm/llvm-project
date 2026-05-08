@@ -7,6 +7,9 @@ add_clang_executable(clangd-index-server
   DEPENDS
   clangdRemoteIndexProto
   clangdRemoteIndexServiceProto
+
+  # Disable PCH, gRPC adds -pthread.
+  DISABLE_PCH_REUSE
   )
 
 target_link_libraries(clangd-index-server

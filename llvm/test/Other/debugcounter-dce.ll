@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: opt -passes=dce -S -debug-counter=dce-transform=1-2  < %s | FileCheck %s --check-prefixes=CHECK,NO-PRINT
 ; RUN: opt -passes=dce -S -debug-counter=dce-transform=1-2 -print-debug-counter-queries < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 ;; Test that, with debug counters on, we will skip the first DCE opportunity, perform next 2,

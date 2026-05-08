@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GENERIC_SINCOS_EVAL_H
-#define LLVM_LIBC_SRC_MATH_GENERIC_SINCOS_EVAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINCOS_EVAL_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SINCOS_EVAL_H
 
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -139,4 +139,4 @@ LIBC_INLINE void sincos_eval(const Float128 &u, Float128 &sin_u,
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF_EVAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINCOS_EVAL_H

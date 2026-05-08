@@ -125,8 +125,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
   }
 
   if (func_local_addr == LLDB_INVALID_ADDRESS) {
-    ret = Status::FromErrorStringWithFormat(
-        "Couldn't find function %s for disassembly", m_name.AsCString());
+    ret = Status::FromErrorStringWithFormatv(
+        "Couldn't find function {0} for disassembly", m_name);
     return ret;
   }
 
@@ -140,8 +140,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
   func_range = GetRemoteRangeForLocal(func_local_addr);
 
   if (func_range.first == 0 && func_range.second == 0) {
-    ret = Status::FromErrorStringWithFormat(
-        "Couldn't find code range for function %s", m_name.AsCString());
+    ret = Status::FromErrorStringWithFormatv(
+        "Couldn't find code range for function {0}", m_name);
     return ret;
   }
 
@@ -615,8 +615,8 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
 
 void IRExecutionUnit::CollectCandidateCNames(std::vector<ConstString> &C_names,
                                              ConstString name) {
-  if (m_strip_underscore && name.AsCString()[0] == '_')
-    C_names.insert(C_names.begin(), ConstString(&name.AsCString()[1]));
+  if (m_strip_underscore && name.GetStringRef().starts_with('_'))
+    C_names.insert(C_names.begin(), ConstString(&name.GetCString()[1]));
   C_names.push_back(name);
 }
 
@@ -729,7 +729,7 @@ ResolveFunctionCallLabel(FunctionCallLabel &label,
   symbol_was_missing_weak = false;
 
   if (!sc.target_sp)
-    return llvm::createStringError("target not available.");
+    return llvm::createStringError("target not available");
 
   auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
   if (!module_sp)

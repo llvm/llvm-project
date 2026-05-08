@@ -13,11 +13,13 @@
 
 #include "mlir/Transforms/Passes.h"
 
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CANONICALIZER
+#define GEN_PASS_DEF_CANONICALIZERPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -25,8 +27,8 @@ using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
-  Canonicalizer() = default;
+struct Canonicalizer : public impl::CanonicalizerPassBase<Canonicalizer> {
+  using impl::CanonicalizerPassBase<Canonicalizer>::CanonicalizerPassBase;
   Canonicalizer(const GreedyRewriteConfig &config,
                 ArrayRef<std::string> disabledPatterns,
                 ArrayRef<std::string> enabledPatterns)
@@ -35,8 +37,16 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     this->regionSimplifyLevel = config.getRegionSimplificationLevel();
     this->maxIterations = config.getMaxIterations();
     this->maxNumRewrites = config.getMaxNumRewrites();
+    this->cseBetweenIterations = config.isCSEBetweenIterationsEnabled();
     this->disabledPatterns = disabledPatterns;
     this->enabledPatterns = enabledPatterns;
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    // Force-load any dialects named via the `filter-dialects` option. The
+    // allocator is resolved later from the MLIRContext's own registry.
+    for (const std::string &name : filterDialects)
+      registry.addDialectToPreload(StringRef(name));
   }
 
   /// Initialize the canonicalizer by building the set of patterns used during
@@ -47,12 +57,27 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     config.setRegionSimplificationLevel(regionSimplifyLevel);
     config.setMaxIterations(maxIterations);
     config.setMaxNumRewrites(maxNumRewrites);
+    config.enableCSEBetweenIterations(cseBetweenIterations);
+
+    llvm::DenseSet<TypeID> allowedDialects;
+    for (const std::string &name : filterDialects) {
+      Dialect *dialect = context->getLoadedDialect(name);
+      assert(dialect && "filter-dialect should have been preloaded by the "
+                        "PassManager via getDependentDialects");
+      allowedDialects.insert(dialect->getTypeID());
+    }
+    auto isAllowed = [&](Dialect *dialect) {
+      return allowedDialects.empty() ||
+             allowedDialects.contains(dialect->getTypeID());
+    };
 
     RewritePatternSet owningPatterns(context);
     for (auto *dialect : context->getLoadedDialects())
-      dialect->getCanonicalizationPatterns(owningPatterns);
+      if (isAllowed(dialect))
+        dialect->getCanonicalizationPatterns(owningPatterns);
     for (RegisteredOperationName op : context->getRegisteredOperations())
-      op.getCanonicalizationPatterns(owningPatterns, context);
+      if (isAllowed(&op.getDialect()))
+        op.getCanonicalizationPatterns(owningPatterns, context);
 
     patterns = std::make_shared<FrozenRewritePatternSet>(
         std::move(owningPatterns), disabledPatterns, enabledPatterns);
@@ -69,11 +94,6 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
   std::shared_ptr<const FrozenRewritePatternSet> patterns;
 };
 } // namespace
-
-/// Create a Canonicalizer pass.
-std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
-  return std::make_unique<Canonicalizer>();
-}
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
 std::unique_ptr<Pass>

@@ -163,7 +163,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
       Builder.CreateICmp(Predicate, IncrementedIV, UB, "polly.loop_cond");
 
   // Create the loop latch and annotate it as such.
-  BranchInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
+  CondBrInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
 
   // Don't annotate vectorize metadata when both LoopVectDisabled and
   // PollyVectorizeMetadata are disabled. Annotate vectorize metadata to false

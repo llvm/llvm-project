@@ -13,6 +13,7 @@
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-generic -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic < %s | FileCheck -check-prefix=W32 %s
 
 ; Checks 10.1, 10.3 and 11 generic targets allow cumode/wave64.
 

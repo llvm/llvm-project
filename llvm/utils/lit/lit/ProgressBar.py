@@ -3,7 +3,10 @@
 # Source: http://code.activestate.com/recipes/475116/, with
 # modifications by Daniel Dunbar.
 
-import sys, re, time
+import os
+import re
+import sys
+import time
 
 
 def to_bytes(str):
@@ -81,23 +84,40 @@ class TerminalController:
     BG_BLACK = BG_BLUE = BG_GREEN = BG_CYAN = ""
     BG_RED = BG_MAGENTA = BG_YELLOW = BG_WHITE = ""
 
+    _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
+
+    def __new__(cls, term_stream=sys.stdout):
+        if cls is TerminalController:
+            if sys.platform == "win32":
+                return super().__new__(_WindowsTerminalController)
+            return super().__new__(_PosixTerminalController)
+        return super().__new__(cls)
+
+    def render(self, template):
+        """
+        Replace each $-substitutions in the given template string with
+        the corresponding terminal control string (if it's defined) or
+        '' (if it's not).
+        """
+        return re.sub(r"\$\$|\${\w+}", self._render_sub, template)
+
+    def _render_sub(self, match):
+        s = match.group()
+        if s == "$$":
+            return s
+        else:
+            return getattr(self, s[2:-1])
+
+
+class _PosixTerminalController(TerminalController):
     _STRING_CAPABILITIES = """
     BOL=cr UP=cuu1 DOWN=cud1 LEFT=cub1 RIGHT=cuf1
     CLEAR_SCREEN=clear CLEAR_EOL=el CLEAR_BOL=el1 CLEAR_EOS=ed BOLD=bold
     BLINK=blink DIM=dim REVERSE=rev UNDERLINE=smul NORMAL=sgr0
     HIDE_CURSOR=cinvis SHOW_CURSOR=cnorm""".split()
     _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
-    _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
 
     def __init__(self, term_stream=sys.stdout):
-        """
-        Create a `TerminalController` and initialize its attributes
-        with appropriate values for the current terminal.
-        `term_stream` is the stream that will be used for terminal
-        output; if this stream is not a tty, then the terminal is
-        assumed to be a dumb terminal (i.e., have no capabilities).
-        """
-        # Curses isn't available on all platforms
         try:
             import curses
         except:
@@ -160,20 +180,60 @@ class TerminalController:
             cap = cap.decode("utf-8")
         return re.sub(r"\$<\d+>[/*]?", "", cap)
 
-    def render(self, template):
-        """
-        Replace each $-substitutions in the given template string with
-        the corresponding terminal control string (if it's defined) or
-        '' (if it's not).
-        """
-        return re.sub(r"\$\$|\${\w+}", self._render_sub, template)
 
-    def _render_sub(self, match):
-        s = match.group()
-        if s == "$$":
-            return s
-        else:
-            return getattr(self, s[2:-1])
+class _WindowsTerminalController(TerminalController):
+    def __init__(self, term_stream=sys.stdout):
+        try:
+            import ctypes
+            import ctypes.wintypes
+            import msvcrt
+
+            kernel32 = ctypes.windll.kernel32
+            ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+            handle = msvcrt.get_osfhandle(term_stream.fileno())
+            mode = ctypes.wintypes.DWORD()
+            if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                return
+            if not kernel32.SetConsoleMode(
+                handle, mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING
+            ):
+                return
+
+            self.BOL = "\r"
+            self.UP = "\033[A"
+            self.DOWN = "\033[B"
+            self.LEFT = "\033[D"
+            self.RIGHT = "\033[C"
+
+            self.CLEAR_SCREEN = "\033[2J\033[H"
+            self.CLEAR_EOL = "\033[K"
+            self.CLEAR_BOL = "\033[1K"
+            self.CLEAR_EOS = "\033[J"
+
+            self.BOLD = "\033[1m"
+            self.BLINK = "\033[5m"
+            self.DIM = "\033[2m"
+            self.REVERSE = "\033[7m"
+            self.NORMAL = "\033[0m"
+
+            self.HIDE_CURSOR = "\033[?25l"
+            self.SHOW_CURSOR = "\033[?25h"
+
+            for i, color in enumerate(self._ANSICOLORS):
+                setattr(self, color, "\033[%dm" % (30 + i))
+                setattr(self, "BG_" + color, "\033[%dm" % (40 + i))
+
+            try:
+                size = os.get_terminal_size(term_stream.fileno())
+                self.COLS = size.columns
+                self.LINES = size.lines
+            except (AttributeError, ValueError, OSError):
+                pass
+
+            # The Windows Terminal handles the right-margin newline correctly.
+            self.XN = True
+        except Exception:
+            return
 
 
 #######################################################################
@@ -237,7 +297,7 @@ class ProgressBar:
     BAR = "%s${%s}[${BOLD}%s%s${NORMAL}${%s}]${NORMAL}%s"
     HEADER = "${BOLD}${CYAN}%s${NORMAL}\n\n"
 
-    def __init__(self, term, header, useETA=True):
+    def __init__(self, term, header, minOutputInterval, useETA=True):
         self.term = term
         if not (self.term.CLEAR_EOL and self.term.UP and self.term.BOL):
             raise ValueError(
@@ -261,7 +321,23 @@ class ProgressBar:
             self.startTime = time.time()
         # self.update(0, '')
 
+        self.lastUpdateTime = 0
+        self.minOutputInterval = minOutputInterval
+        # the checks preceeding us should prevent getting here if output is redirected
+        # - we don't want to rate limit (ie drop) output to a file
+        assert sys.stdout.isatty()
+
     def update(self, percent, message):
+        # ratelimit updates
+        if self.minOutputInterval is not None:
+            now = time.time()
+            if now - self.lastUpdateTime < self.minOutputInterval:
+                # ... too soon. Technically, this means we could 'starve'
+                # the output if the next update takes too long to come, but that
+                # doesn't seem to be an issue in practice
+                return
+            self.lastUpdateTime = now
+
         if self.cleared:
             sys.stdout.write(self.header)
             self.cleared = 0

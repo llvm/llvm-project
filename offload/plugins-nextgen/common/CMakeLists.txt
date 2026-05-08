@@ -13,6 +13,7 @@ add_library(PluginCommon OBJECT
   src/PluginInterface.cpp
   src/GlobalHandler.cpp
   src/JIT.cpp
+  src/RecordReplay.cpp
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
@@ -35,9 +36,14 @@ endif()
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 
+if (TARGET flang_rt.runtime.static)
+  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static)
+  target_compile_definitions(PluginCommon PRIVATE OFFLOAD_HAS_FLANG_RT)
+endif()
+
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
-  TARGET_NAME="PluginInterface"
+  TARGET_NAME=PluginInterface
   DEBUG_PREFIX="PluginInterface"
 )
 
@@ -47,6 +53,7 @@ target_link_options(PluginCommon PUBLIC ${offload_link_flags})
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/../../liboffload/API
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}

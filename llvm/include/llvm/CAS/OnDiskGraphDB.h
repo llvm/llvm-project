@@ -17,8 +17,10 @@
 #define LLVM_CAS_ONDISKGRAPHDB_H
 
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include <atomic>
 
 namespace llvm::cas::ondisk {
 
@@ -262,6 +264,19 @@ public:
   LLVM_ABI_FOR_TEST Error store(ObjectID ID, ArrayRef<ObjectID> Refs,
                                 ArrayRef<char> Data);
 
+  /// Associates the data of a file with a particular object ID. If there is
+  /// already a record for this object the operation is a no-op.
+  ///
+  /// This is more than a convenience variant of \c store(), \c storeFile() can
+  /// perform optimizations that reduce I/O and disk space consumption.
+  ///
+  /// If there are any concurrent modifications to the file, the contents in the
+  /// CAS may be corrupt.
+  ///
+  /// \param ID the object ID to associate the data with.
+  /// \param FilePath the path of the file data.
+  LLVM_ABI_FOR_TEST Error storeFile(ObjectID ID, StringRef FilePath);
+
   /// \returns \p nullopt if the object associated with \p Ref does not exist.
   LLVM_ABI_FOR_TEST Expected<std::optional<ObjectHandle>> load(ObjectID Ref);
 
@@ -279,7 +294,7 @@ public:
   ///
   /// Returns \p nullopt if the object is not stored in this CAS.
   LLVM_ABI_FOR_TEST std::optional<ObjectID>
-  getExistingReference(ArrayRef<uint8_t> Digest);
+  getExistingReference(ArrayRef<uint8_t> Digest, bool CheckUpstream = true);
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function will fault-in according to the policy.
@@ -287,8 +302,21 @@ public:
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function does not fault-in.
-  bool containsObject(ObjectID Ref) const {
-    return containsObject(Ref, /*CheckUpstream=*/true);
+  bool containsObject(ObjectID Ref, bool CheckUpstream = true) const {
+    auto Presence = getObjectPresence(Ref, CheckUpstream);
+    if (!Presence) {
+      consumeError(Presence.takeError());
+      return false;
+    }
+    switch (*Presence) {
+    case ObjectPresence::Missing:
+      return false;
+    case ObjectPresence::InPrimaryDB:
+      return true;
+    case ObjectPresence::OnlyInUpstreamDB:
+      return true;
+    }
+    llvm_unreachable("Unknown ObjectPresence enum");
   }
 
   /// \returns the data part of the provided object handle.
@@ -299,6 +327,31 @@ public:
     InternalRefArrayRef Refs = getInternalRefs(Node);
     return make_range(Refs.begin(), Refs.end());
   }
+
+  /// Encapsulates file info for an underlying object node.
+  struct FileBackedData {
+    /// The data of the object node.
+    ArrayRef<char> Data;
+
+    struct FileInfoTy {
+      /// The file path of the object node.
+      std::string FilePath;
+      /// Whether the file of the object leaf node has an extra nul appended at
+      /// the end. If the file is copied the extra nul needs to be removed.
+      bool IsFileNulTerminated;
+    };
+    /// File information for the object, if available.
+    std::optional<FileInfoTy> FileInfo;
+  };
+
+  /// Provides access to the underlying file path, that represents an object
+  /// leaf node, when available.
+  ///
+  /// This enables reducing I/O and disk space consumption, i.e. instead of
+  /// loading the data in memory and then writing it to a file, the client could
+  /// clone the underlying file directly. The client *must not* write to or
+  /// delete the underlying file, the path is provided only for reading/copying.
+  FileBackedData getInternalFileBackedObjectData(ObjectHandle Node) const;
 
   /// \returns Total size of stored objects.
   ///
@@ -324,6 +377,10 @@ public:
   /// CAS database.
   /// \param Hasher is the hashing function used for objects inside CAS.
   Error validate(bool Deep, HashingFuncT Hasher) const;
+
+  /// Checks that \p ID exists in the index. It is allowed to not have data
+  /// associated with it.
+  LLVM_ABI_FOR_TEST Error validateObjectID(ObjectID ID) const;
 
   /// How to fault-in nodes if an upstream database is used.
   enum class FaultInPolicy {
@@ -352,6 +409,7 @@ public:
   LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
        OnDiskGraphDB *UpstreamDB = nullptr,
+       std::shared_ptr<OnDiskCASLogger> Logger = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
   LLVM_ABI_FOR_TEST ~OnDiskGraphDB();
@@ -370,24 +428,6 @@ private:
   LLVM_ABI_FOR_TEST Expected<ObjectPresence>
   getObjectPresence(ObjectID Ref, bool CheckUpstream) const;
 
-  /// \returns true if object can be found in database.
-  bool containsObject(ObjectID Ref, bool CheckUpstream) const {
-    auto Presence = getObjectPresence(Ref, CheckUpstream);
-    if (!Presence) {
-      consumeError(Presence.takeError());
-      return false;
-    }
-    switch (*Presence) {
-    case ObjectPresence::Missing:
-      return false;
-    case ObjectPresence::InPrimaryDB:
-      return true;
-    case ObjectPresence::OnlyInUpstreamDB:
-      return true;
-    }
-    llvm_unreachable("Unknown ObjectPresence enum");
-  }
-
   /// When \p load is called for a node that doesn't exist, this function tries
   /// to load it from the upstream store and copy it to the primary one.
   Expected<std::optional<ObjectHandle>> faultInFromUpstream(ObjectID PrimaryID);
@@ -396,12 +436,19 @@ private:
   Error importFullTree(ObjectID PrimaryID, ObjectHandle UpstreamNode);
   /// Import only the \param UpstreamNode.
   Error importSingleNode(ObjectID PrimaryID, ObjectHandle UpstreamNode);
+  Error importUpstreamData(ObjectID PrimaryID, ArrayRef<ObjectID> PrimaryRefs,
+                           ObjectHandle UpstreamNode);
+
+  enum class InternalUpstreamImportKind { Leaf, Leaf0 };
+  /// Private \c storeFile than optimizes internal upstream database imports.
+  Error storeFile(ObjectID ID, StringRef FilePath,
+                  std::optional<InternalUpstreamImportKind> ImportKind);
 
   /// Found the IndexProxy for the hash.
   Expected<IndexProxy> indexHash(ArrayRef<uint8_t> Hash);
 
   /// Get path for creating standalone data file.
-  void getStandalonePath(StringRef FileSuffix, const IndexProxy &I,
+  void getStandalonePath(StringRef FileSuffix, FileOffset IndexOffset,
                          SmallVectorImpl<char> &Path) const;
   /// Create a standalone leaf file.
   Error createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data);
@@ -446,7 +493,7 @@ private:
   // Private constructor.
   OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                 OnDiskDataAllocator DataPool, OnDiskGraphDB *UpstreamDB,
-                FaultInPolicy Policy);
+                FaultInPolicy Policy, std::shared_ptr<OnDiskCASLogger> Logger);
 
   /// Mapping from hash to object reference.
   ///
@@ -469,6 +516,9 @@ private:
 
   /// The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;
+
+  /// Debug Logger.
+  std::shared_ptr<OnDiskCASLogger> Logger;
 };
 
 } // namespace llvm::cas::ondisk

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mattr=+promote-alloca,+max-private-element-size-4 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mattr=-promote-alloca,+max-private-element-size-4 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mattr=+max-private-element-size-4 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+max-private-element-size-4 < %s | FileCheck -check-prefix=GCN %s
 
 ; Pointer value is stored in a candidate for LDS usage.
 

@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class NamespaceBreakpointTestCase(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])
@@ -24,6 +25,12 @@ class NamespaceBreakpointTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
         module_list = lldb.SBFileSpecList()
         module_list.Append(lldb.SBFileSpec(exe, False))
+        self.assertEqual(
+            module_list[0].GetFilename(), lldb.SBFileSpec(exe, False).GetFilename()
+        )
+        self.assertEqual(
+            module_list[-1].GetFilename(), lldb.SBFileSpec(exe, False).GetFilename()
+        )
         cu_list = lldb.SBFileSpecList()
         # Set a breakpoint by name "func" which should pick up all functions
         # whose basename is "func"

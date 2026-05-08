@@ -39,6 +39,8 @@ public:
     return H.finish();
   }
 
+  static Expected<HashT> hashFile(StringRef FilePath);
+
 private:
   HashT finish() { return Hasher.final(); }
 

@@ -30,7 +30,7 @@ ldr x3, [x10]
 # CHECK-NEXT:  1      1     1.00           *            str	x1, [x10]
 # CHECK-NEXT:  1      1     1.00           *            str	x1, [x10]
 # CHECK-NEXT:  1      3     1.00    *                   ldr	x2, [x10]
-# CHECK-NEXT:  1      1     1.00    *      *      U     nop
+# CHECK-NEXT:  1      1     1.00                        nop
 # CHECK-NEXT:  1      3     1.00    *                   ldr	x2, [x10]
 # CHECK-NEXT:  1      3     1.00    *                   ldr	x3, [x10]
 

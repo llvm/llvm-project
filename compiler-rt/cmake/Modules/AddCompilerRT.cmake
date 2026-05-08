@@ -185,6 +185,12 @@ function(add_compiler_rt_runtime name type)
     set(NO_LTO_FLAGS "")
   endif()
 
+  # The GPU build does not support shared libraries, just suppress them here as
+  # there is no global config for this.
+  if(COMPILER_RT_GPU_BUILD AND type MATCHES "SHARED")
+    return()
+  endif()
+
   # By default do not instrument or use profdata for compiler-rt.
   set(NO_PGO_FLAGS "")
   if(NOT COMPILER_RT_ENABLE_PGO)
@@ -669,6 +675,7 @@ macro(add_custom_libcxx name prefix)
     CMAKE_STRIP
     CMAKE_READELF
     CMAKE_SYSROOT
+    CMAKE_INSTALL_MESSAGE
     CMAKE_TOOLCHAIN_FILE
     LIBCXX_HAS_MUSL_LIBC
     LIBCXX_HAS_GCC_S_LIB
@@ -705,14 +712,14 @@ macro(add_custom_libcxx name prefix)
     PREFIX ${prefix}
     SOURCE_DIR ${LLVM_MAIN_SRC_DIR}/../runtimes
     BINARY_DIR ${prefix}/build
-    CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
+    CMAKE_ARGS -DCMAKE_INSTALL_MESSAGE=NEVER
+               ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
                ${verbose}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-               -DCMAKE_INSTALL_MESSAGE=LAZY
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
                -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
                -DLIBCXXABI_USE_LLVM_UNWINDER=OFF

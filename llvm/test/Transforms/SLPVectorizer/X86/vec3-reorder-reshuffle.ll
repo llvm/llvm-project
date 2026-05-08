@@ -417,12 +417,11 @@ define void @reuse_shuffle_indices_cost_crash_2(ptr %bezt, float %0) {
 ; POW2-ONLY-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[FNEG]], i32 0
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP2]], <2 x float> [[TMP4]], <2 x float> zeroinitializer)
-; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[BEZT]], align 4
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
+; POW2-ONLY-NEXT:    store float [[TMP1]], ptr [[BEZT]], align 4
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
+; POW2-ONLY-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr float, ptr [[BEZT]], i64 1
+; POW2-ONLY-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX5_I]], align 4
 ; POW2-ONLY-NEXT:    [[TMP6:%.*]] = tail call float @llvm.fmuladd.f32(float [[FNEG]], float 0.000000e+00, float 0.000000e+00)
 ; POW2-ONLY-NEXT:    [[ARRAYIDX8_I831:%.*]] = getelementptr float, ptr [[BEZT]], i64 2
 ; POW2-ONLY-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX8_I831]], align 4
@@ -446,12 +445,11 @@ define void @reuse_shuffle_indices_cost_crash_3(ptr %m, double %conv, double %co
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB19:%.*]] = fsub double 0.000000e+00, [[CONV2]]
-; CHECK-NEXT:    [[CONV20:%.*]] = fptrunc double [[SUB19]] to float
-; CHECK-NEXT:    store float [[CONV20]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 0.000000e+00
-; CHECK-NEXT:    [[CONV239:%.*]] = fptrunc double [[ADD]] to float
-; CHECK-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 1
-; CHECK-NEXT:    store float [[CONV239]], ptr [[ARRAYIDX25]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double [[CONV]], [[CONV]]
 ; CHECK-NEXT:    [[CONV27:%.*]] = fptrunc double [[ADD26]] to float
 ; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 2
@@ -522,12 +520,11 @@ define void @common_mask(ptr %m, double %conv, double %conv2) {
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB19:%.*]] = fsub double [[CONV]], [[CONV]]
-; CHECK-NEXT:    [[CONV20:%.*]] = fptrunc double [[SUB19]] to float
-; CHECK-NEXT:    store float [[CONV20]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV2]], 0.000000e+00
-; CHECK-NEXT:    [[CONV239:%.*]] = fptrunc double [[ADD]] to float
-; CHECK-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 1
-; CHECK-NEXT:    store float [[CONV239]], ptr [[ARRAYIDX25]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double 0.000000e+00, [[CONV]]
 ; CHECK-NEXT:    [[CONV27:%.*]] = fptrunc double [[ADD26]] to float
 ; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 2

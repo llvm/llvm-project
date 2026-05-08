@@ -99,4 +99,5 @@ driver_executable("clang") {
     "cc1gen_reproducer_main.cpp",
     "driver.cpp",
   ]
+  needs_posix_utility_signal_handling = true
 }

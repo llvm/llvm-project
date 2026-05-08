@@ -1,9 +1,9 @@
-<!--===- docs/C++style.md 
-  
+<!--===- docs/C++style.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Flang C++ Style Guide
@@ -96,6 +96,18 @@ when creating names.
 1. Comments should matter.  Assume that the reader knows current C++ at least as
 well as you do and avoid distracting her by calling out usage of new
 features in comments.
+
+### Referencing the Fortran Standard
+When referencing the Fortran Standard, always qualify the reference
+with the version. Use the format `F<version>` as a prefix. For
+sections and paragraphs, use e.g., `F2023 9.7.3.2 p7` (Fortran
+2023, section 9.7.3.2, paragraph 7). For rules and constraints,
+use e.g., `F2023 R1526` or `F2018 C919`.
+
+#### Notes
+1. If no version is mentioned, the default is assumed to be `F2018`.
+1. Existing code may use the `F'2023` style (with an apostrophe).
+   New code should omit the apostrophe for consistency.
 
 ### Layout
 Always run `clang-format` on your changes before committing code. LLVM

@@ -8,11 +8,11 @@ target triple = "nvptx64-unknown-unknown"
 %struct.S = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define ptx_kernel void @_Z11TakesStruct1SPi(ptr byval(%struct.S) nocapture readonly %input, ptr nocapture %output) #0 {
+define ptx_kernel void @_Z11TakesStruct1SPi(ptr byval(%struct.S) align 4 nocapture readonly %input, ptr nocapture %output) #0 {
 entry:
 ; CHECK-LABEL: @_Z11TakesStruct1SPi
 ; PTX-LABEL: .visible .entry _Z11TakesStruct1SPi(
-; CHECK: call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr %input)
+; CHECK: call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr %input)
   %b = getelementptr inbounds %struct.S, ptr %input, i64 0, i32 1
   %0 = load i32, ptr %b, align 4
 ; PTX-NOT: ld.param.b32 {{%r[0-9]+}}, [{{%rd[0-9]+}}]

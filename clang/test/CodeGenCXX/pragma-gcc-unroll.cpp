@@ -144,18 +144,21 @@ void test_value_dependent(int n) {
   value_dependent<true>(n);
 }
 
-// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[UNROLL_ENABLE:.*]]}
-// CHECK: ![[UNROLL_ENABLE]] = !{!"llvm.loop.unroll.enable"}
-// CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2:.*]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[UNROLL_DISABLE]] = !{!"llvm.loop.unroll.disable"}
-// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], [[MP]], ![[UNROLL_8:.*]]}
-// CHECK: ![[UNROLL_8]] = !{!"llvm.loop.unroll.count", i32 8}
-// CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[UNROLL_4:.*]]}
-// CHECK: ![[UNROLL_4]] = !{!"llvm.loop.unroll.count", i32 4}
-// CHECK: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[UNROLL_8:.*]]}
-// CHECK: ![[LOOP_6]] = distinct !{![[LOOP_6]], ![[UNROLL_8:.*]]}
-// CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[UNROLL_8:.*]]}
-// CHECK: ![[LOOP_14]] = distinct !{![[LOOP_14]], [[MP]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[LOOP_15]] = distinct !{![[LOOP_15]], [[MP]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[LOOP_16]] = distinct !{![[LOOP_16]], [[MP]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[LOOP_17]] = distinct !{![[LOOP_17]], [[MP]], ![[UNROLL_DISABLE:.*]]}
+// CHECK-DAG: ![[MP:[0-9]+]] = !{!"llvm.loop.mustprogress"}
+//
+// CHECK-DAG: ![[UNROLL_ENABLE:[0-9]+]] = !{!"llvm.loop.unroll.enable"}
+// CHECK-DAG: ![[UNROLL_DISABLE:[0-9]+]] = !{!"llvm.loop.unroll.disable"}
+// CHECK-DAG: ![[UNROLL_4:[0-9]+]] = !{!"llvm.loop.unroll.count", i32 4}
+// CHECK-DAG: ![[UNROLL_8:[0-9]+]] = !{!"llvm.loop.unroll.count", i32 8}
+//
+// CHECK-DAG: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[MP]], ![[UNROLL_ENABLE]]}
+// CHECK-DAG: ![[LOOP_2]] = distinct !{![[LOOP_2]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[UNROLL_4]]}
+// CHECK-DAG: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_6]] = distinct !{![[LOOP_6]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_14]] = distinct !{![[LOOP_14]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_15]] = distinct !{![[LOOP_15]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_16]] = distinct !{![[LOOP_16]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_17]] = distinct !{![[LOOP_17]], ![[MP]], ![[UNROLL_DISABLE]]}

@@ -40,6 +40,7 @@ namespace clang {
   class HeaderSearchOptions;
   class LangOptions;
   class PreprocessorOptions;
+  class CompilerInstance;
 
 namespace CodeGen {
   class CodeGenModule;
@@ -47,12 +48,13 @@ namespace CodeGen {
 }
 
 /// The primary public interface to the Clang code generator.
-///
-/// This is not really an abstract interface.
 class CodeGenerator : public ASTConsumer {
   virtual void anchor();
 
 protected:
+  /// Use CreateLLVMCodeGen() below to create an instance of this class.
+  CodeGenerator() = default;
+
   /// True if we've finished generating IR. This prevents us from generating
   /// additional LLVM IR after emitting output in HandleTranslationUnit. This
   /// can happen when Clang plugins trigger additional AST deserialization.
@@ -78,7 +80,7 @@ public:
   ///
   /// It is illegal to call methods other than GetModule on the
   /// CodeGenerator after releasing its module.
-  llvm::Module *ReleaseModule();
+  std::unique_ptr<llvm::Module> ReleaseModule();
 
   /// Return debug info code generator.
   CodeGen::CGDebugInfo *getCGDebugInfo();
@@ -109,16 +111,20 @@ public:
 };
 
 /// CreateLLVMCodeGen - Create a CodeGenerator instance.
-/// It is the responsibility of the caller to call delete on
-/// the allocated CodeGenerator instance.
-CodeGenerator *CreateLLVMCodeGen(DiagnosticsEngine &Diags,
-                                 llvm::StringRef ModuleName,
-                                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                                 const HeaderSearchOptions &HeaderSearchOpts,
-                                 const PreprocessorOptions &PreprocessorOpts,
-                                 const CodeGenOptions &CGO,
-                                 llvm::LLVMContext &C,
-                                 CoverageSourceInfo *CoverageInfo = nullptr);
+///
+/// Remember to call Initialize() if you plan to use this directly.
+std::unique_ptr<CodeGenerator>
+CreateLLVMCodeGen(const CompilerInstance &CI, llvm::StringRef ModuleName,
+                  llvm::LLVMContext &C,
+                  CoverageSourceInfo *CoverageInfo = nullptr);
+
+std::unique_ptr<CodeGenerator>
+CreateLLVMCodeGen(DiagnosticsEngine &Diags, llvm::StringRef ModuleName,
+                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                  const HeaderSearchOptions &HeaderSearchOpts,
+                  const PreprocessorOptions &PreprocessorOpts,
+                  const CodeGenOptions &CGO, llvm::LLVMContext &C,
+                  CoverageSourceInfo *CoverageInfo = nullptr);
 
 namespace CodeGen {
 /// Demangle the artificial function name (\param FuncName) used to encode trap

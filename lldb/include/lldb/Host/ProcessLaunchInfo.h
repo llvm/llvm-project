@@ -17,11 +17,24 @@
 
 #include "lldb/Host/FileAction.h"
 #include "lldb/Host/Host.h"
+#ifdef _WIN32
+#include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
+#else
 #include "lldb/Host/PseudoTerminal.h"
+#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 
 namespace lldb_private {
+
+#if defined(_WIN32)
+using PTY = PseudoConsole;
+using FileActionImpl = WindowsFileAction;
+#else
+using PTY = PseudoTerminal;
+using FileActionImpl = FileAction;
+#endif
 
 // ProcessLaunchInfo
 //
@@ -36,13 +49,17 @@ public:
                     const FileSpec &stderr_file_spec,
                     const FileSpec &working_dir, uint32_t launch_flags);
 
-  void AppendFileAction(const FileAction &info) {
+  void AppendFileAction(const FileActionImpl &info) {
     m_file_actions.push_back(info);
   }
 
   bool AppendCloseFileAction(int fd);
 
   bool AppendDuplicateFileAction(int fd, int dup_fd);
+
+#ifdef _WIN32
+  bool AppendDuplicateFileAction(HANDLE fh, HANDLE dup_fh);
+#endif
 
   bool AppendOpenFileAction(int fd, const FileSpec &file_spec, bool read,
                             bool write);
@@ -53,6 +70,14 @@ public:
   // descriptor is specified. (So if stdin and stdout already have file actions,
   // but stderr doesn't, then only stderr will be redirected to a pty.)
   llvm::Error SetUpPtyRedirection();
+
+#ifdef _WIN32
+  // Redirect stdin/stdout/stderr to anonymous pipes instead of a ConPTY.
+  // Used when terminal emulation is not needed (e.g. lldb-dap internalConsole).
+  llvm::Error SetUpPipeRedirection();
+#endif
+
+  bool HasPTY() const { return m_pty != nullptr; }
 
   size_t GetNumFileActions() const { return m_file_actions.size(); }
 
@@ -118,7 +143,22 @@ public:
 
   bool MonitorProcess() const;
 
-  PseudoTerminal &GetPTY() { return *m_pty; }
+  PTY &GetPTY() const { return *m_pty; }
+
+  std::shared_ptr<PTY> TakePTY() { return std::move(m_pty); }
+
+  /// Returns whether if lldb should read information from the PTY. This is
+  /// always true on non Windows.
+  bool ShouldUsePTY() const {
+#ifdef _WIN32
+    if (!m_pty)
+      return false;
+    return GetPTY().GetMode() != PseudoConsole::Mode::None &&
+           GetNumFileActions() == 0;
+#else
+    return true;
+#endif
+  }
 
   void SetLaunchEventData(const char *data) { m_event_data.assign(data); }
 
@@ -135,8 +175,9 @@ protected:
   std::string m_plugin_name;
   FileSpec m_shell;
   Flags m_flags; // Bitwise OR of bits from lldb::LaunchFlags
-  std::vector<FileAction> m_file_actions; // File actions for any other files
-  std::shared_ptr<PseudoTerminal> m_pty;
+  std::vector<FileActionImpl>
+      m_file_actions; // File actions for any other files
+  std::shared_ptr<PTY> m_pty;
   uint32_t m_resume_count = 0; // How many times do we resume after launching
   Host::MonitorChildProcessCallback m_monitor_callback;
   std::string m_event_data; // A string passed to the plugin launch, having no

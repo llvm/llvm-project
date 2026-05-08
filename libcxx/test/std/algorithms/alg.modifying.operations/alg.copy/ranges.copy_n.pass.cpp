@@ -24,6 +24,7 @@
 #include "almost_satisfies_types.h"
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class In, class Out = In, class Count = std::size_t>
 concept HasCopyNIt = requires(In in, Count count, Out out) { std::ranges::copy_n(in, count, out); };

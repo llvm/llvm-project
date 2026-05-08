@@ -1099,10 +1099,10 @@ namespace {
 
 StringRef getTypeMangling(Type type, bool isSigned) {
   return llvm::TypeSwitch<Type, StringRef>(type)
-      .Case<Float16Type>([](auto) { return "Dh"; })
-      .Case<Float32Type>([](auto) { return "f"; })
-      .Case<Float64Type>([](auto) { return "d"; })
-      .Case<IntegerType>([isSigned](IntegerType intTy) {
+      .Case([](Float16Type) { return "Dh"; })
+      .Case([](Float32Type) { return "f"; })
+      .Case([](Float64Type) { return "d"; })
+      .Case([isSigned](IntegerType intTy) {
         switch (intTy.getWidth()) {
         case 1:
           return "b";

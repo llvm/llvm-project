@@ -1,14 +1,9 @@
-#RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_constant
-legalized:       true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_constant
+body: |
   bb.0:
    ; CHECK: Bad machine code: Instruction cannot use a vector result type
    ; CHECK: Bad machine code: inconsistent constant size
@@ -38,5 +33,4 @@ body:             |
 
     ; CHECK: Bad machine code: inconsistent constant size
     %6:_(p0) = G_CONSTANT i128 0
-
 ...

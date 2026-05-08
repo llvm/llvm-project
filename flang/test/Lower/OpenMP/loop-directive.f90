@@ -112,7 +112,7 @@ subroutine test_nested_directives
 
   ! CHECK: omp.teams {
 
-  ! Verify the first `loop` directive was combined with `target teams` into 
+  ! Verify the first `loop` directive was combined with `target teams` into
   ! `target teams distribute parallel do`.
   ! CHECK:   omp.parallel {{.*}} {
   ! CHECK:     omp.distribute {
@@ -371,7 +371,7 @@ subroutine teams_loop_cannot_be_parallel_for_with_reductions
   ! CHECK: %[[ADD_RED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QF{{.*}}Ex"}
   ! CHECK: %[[MUL_RED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QF{{.*}}Ey"}
   ! CHECK: omp.teams reduction(
-  ! CHECK-SAME:  @add_reduction_i32 %[[ADD_RED]]#0 -> %[[ADD_RED_ARG:[^[:space:]]*]], 
+  ! CHECK-SAME:  @add_reduction_i32 %[[ADD_RED]]#0 -> %[[ADD_RED_ARG:[^[:space:]]*]],
   ! CHECK-SAME:  @multiply_reduction_i32 %[[MUL_RED]]#0 -> %[[MUL_RED_ARG:.*]] : {{.*}}) {
 
   ! CHECK:       omp.distribute private(@{{.*}} %{{.*}} -> %{{.*}}, @{{.*}} %{{.*}} -> %{{.*}} : {{.*}}) {

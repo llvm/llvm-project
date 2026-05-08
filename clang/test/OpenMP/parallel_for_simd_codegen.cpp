@@ -734,7 +734,7 @@ void if_clause(int a) {
 for (int i = 0; i < 10; ++i);
 }
 // CHECK: call void @__kmpc_for_static_init_4(
-// OMP50: [[COND:%.+]] = trunc i8 %{{.+}} to i1
+// OMP50: [[COND:%.+]] = icmp ne i8 %{{.+}}, 0
 // OMP50: br i1 [[COND]], label {{%?}}[[THEN:.+]], label {{%?}}[[ELSE:.+]]
 
 // OMP50: [[THEN]]:

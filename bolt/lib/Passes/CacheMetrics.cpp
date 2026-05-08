@@ -30,7 +30,7 @@ constexpr unsigned ITLBEntries = 16;
 
 /// Initialize and return a position map for binary basic blocks
 void extractBasicBlockInfo(
-    const std::vector<BinaryFunction *> &BinaryFunctions,
+    const BinaryFunctionListType &BinaryFunctions,
     std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
     std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
 
@@ -54,7 +54,7 @@ void extractBasicBlockInfo(
 /// the ordering of basic blocks. The method returns a pair
 /// (the number of fallthrough branches, the total number of branches)
 std::pair<uint64_t, uint64_t>
-calcTSPScore(const std::vector<BinaryFunction *> &BinaryFunctions,
+calcTSPScore(const BinaryFunctionListType &BinaryFunctions,
              const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
              const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
   uint64_t Score = 0;
@@ -95,7 +95,7 @@ using Predecessors = std::vector<std::pair<BinaryFunction *, uint64_t>>;
 /// Build a simplified version of the call graph: For every function, keep
 /// its callers and the frequencies of the calls
 std::unordered_map<const BinaryFunction *, Predecessors>
-extractFunctionCalls(const std::vector<BinaryFunction *> &BinaryFunctions) {
+extractFunctionCalls(const BinaryFunctionListType &BinaryFunctions) {
   std::unordered_map<const BinaryFunction *, Predecessors> Calls;
 
   for (BinaryFunction *SrcFunction : BinaryFunctions) {
@@ -140,7 +140,7 @@ extractFunctionCalls(const std::vector<BinaryFunction *> &BinaryFunctions) {
 /// the page. The following procedure detects short and long calls, and
 /// estimates the expected number of cache misses for the long ones.
 double expectedCacheHitRatio(
-    const std::vector<BinaryFunction *> &BinaryFunctions,
+    const BinaryFunctionListType &BinaryFunctions,
     const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
     const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
   std::unordered_map<const BinaryFunction *, Predecessors> Calls =
@@ -213,7 +213,7 @@ double expectedCacheHitRatio(
 } // namespace
 
 void CacheMetrics::printAll(raw_ostream &OS,
-                            const std::vector<BinaryFunction *> &BFs) {
+                            const BinaryFunctionListType &BFs) {
   // Stats related to hot-cold code splitting
   size_t NumFunctions = 0;
   size_t NumProfiledFunctions = 0;

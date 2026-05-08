@@ -1,6 +1,6 @@
-ARG LLVM_VERSION=21.1.0
+ARG LLVM_VERSION=22.1.0
 # FIXME: Use "${LLVM_VERSION%%.*}" instead of "LLVM_VERSION_MAJOR" once we update runners to Ubuntu-26.04 with Buildah >= 1.37
-ARG LLVM_VERSION_MAJOR=21
+ARG LLVM_VERSION_MAJOR=22
 
 FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
 ARG LLVM_VERSION
@@ -109,14 +109,7 @@ RUN apt-get update && \
     abi-dumper \
     autoconf \
     parallel \
-    pkg-config && \
+    pkg-config \
+    universal-ctags && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-RUN git clone https://github.com/universal-ctags/ctags.git && \
-    cd ctags && \
-    ./autogen.sh && \
-    ./configure && \
-    sudo make install && \
-    rm -Rf ../ctags
-

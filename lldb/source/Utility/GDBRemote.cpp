@@ -19,9 +19,8 @@ using namespace llvm;
 
 StreamGDBRemote::StreamGDBRemote() : StreamString() {}
 
-StreamGDBRemote::StreamGDBRemote(uint32_t flags, uint32_t addr_size,
-                                 ByteOrder byte_order)
-    : StreamString(flags, addr_size, byte_order) {}
+StreamGDBRemote::StreamGDBRemote(uint32_t flags, ByteOrder byte_order)
+    : StreamString(flags, byte_order) {}
 
 StreamGDBRemote::~StreamGDBRemote() = default;
 

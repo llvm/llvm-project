@@ -190,11 +190,13 @@ public:
   /// Client can specify empty string or null to get all settings.
   ///
   /// Example usages:
+  /// \code
   /// lldb::SBStructuredData settings = debugger.GetSetting();
   /// lldb::SBStructuredData settings = debugger.GetSetting(nullptr);
   /// lldb::SBStructuredData settings = debugger.GetSetting("");
   /// lldb::SBStructuredData settings = debugger.GetSetting("target.arg0");
   /// lldb::SBStructuredData settings = debugger.GetSetting("target");
+  /// \endcode
   lldb::SBStructuredData GetSetting(const char *setting = nullptr);
 
   /// Set whether the debugger should run in asynchronous mode.
@@ -360,7 +362,7 @@ public:
                                            const char *arch);
 
   /// Find a target with the specified unique ID.
-  lldb::SBTarget FindTargetByGloballyUniqueID(lldb::user_id_t id);
+  lldb::SBTarget FindTargetByGloballyUniqueID(lldb::user_id_t id) const;
 
   /// Get the number of targets in the debugger.
   uint32_t GetNumTargets();

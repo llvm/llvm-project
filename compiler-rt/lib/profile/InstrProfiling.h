@@ -10,7 +10,10 @@
 #define PROFILE_INSTRPROFILING_H_
 
 #include "InstrProfilingPort.h"
+#include <stddef.h>
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <stdio.h>
+#endif
 
 // Make sure __LLVM_INSTR_PROFILE_GENERATE is always defined before
 // including instr_prof_interface.h so the interface functions are
@@ -53,6 +56,11 @@ typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
 } VTableProfData;
+
+typedef struct __llvm_profile_gpu_sections {
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} __llvm_profile_gpu_sections;
 
 typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
     __llvm_gcov_init_func_struct {
@@ -164,6 +172,16 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
                                             uint64_t CounterValue);
 
 /*!
+ * \brief Wave-cooperative counter increment for GPU targets.
+ *
+ * Reduces per-lane atomic contention by electing a single lane per wave to
+ * perform the counter update. \c Uniform is an optional counter tracking the
+ * number of uniform.
+ */
+void __llvm_profile_instrument_gpu(uint64_t *Counter, uint64_t *Uniform,
+                                   uint64_t Step);
+
+/*!
  * \brief Write instrumentation data to the current file.
  *
  * Writes to the file with the last name given to \a *
@@ -200,7 +218,9 @@ int __llvm_profile_write_file(void);
  * copying the old profile file to new profile file and this function is usually
  * used when the proess doesn't have permission to open file.
  */
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 int __llvm_profile_set_file_object(FILE *File, int EnableMerge);
+#endif
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);

@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+
+
+
 // CHECK: @a = global i32 10
 int a = 10;
 // CHECK: @ar = constant ptr @a
@@ -72,6 +78,10 @@ __int128_t PR11705 = (__int128_t)&PR11705;
 // Make sure we don't try to fold this either.
 // CHECK: @_ZZ23UnfoldableAddrLabelDiffvE1x = internal global i128 0
 void UnfoldableAddrLabelDiff() { static __int128_t x = (long)&&a-(long)&&b; a:b:return;}
+
+// CHECK: @_ZZ24UnfoldableAddrLabelDiff2vE1x = internal global i16 0
+void UnfoldableAddrLabelDiff2() { static short x = (long)&&a-(long)&&b; a:b:return;}
+
 
 // But make sure we do fold this.
 // CHECK: @_ZZ21FoldableAddrLabelDiffvE1x = internal global i64 sub (i64 ptrtoint (ptr blockaddress(@_Z21FoldableAddrLabelDiffv

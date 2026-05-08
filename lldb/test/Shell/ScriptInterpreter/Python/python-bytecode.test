@@ -1,0 +1,32 @@
+# RUN: mkdir -p %t
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format c --type-name RigidArray --output %t/c-output.txt
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format swift --type-name RigidArray --output %t/swift-output.txt
+# RUN: diff -u --strip-trailing-cr %S/Inputs/FormatterBytecode/RigidArrayLLDBFormatterC.txt %t/c-output.txt
+# RUN: diff -u --strip-trailing-cr %S/Inputs/FormatterBytecode/RigidArrayLLDBFormatterSwift.txt %t/swift-output.txt
+import lldb
+
+
+class RigidArraySynthetic:
+    valobj: lldb.SBValue
+    storage: lldb.SBValue
+    count: int
+
+    def __init__(self, valobj: lldb.SBValue, _) -> None:
+        self.valobj = valobj
+
+    def num_children(self) -> int:
+        return self.count
+
+    def get_child_at_index(self, idx: int) -> lldb.SBValue:
+        return self.storage.GetChildAtIndex(idx)
+
+    def update(self) -> bool:
+        self.storage = self.valobj.GetChildMemberWithName(
+            "_storage"
+        ).GetSyntheticValue()
+        self.count = (
+            self.valobj.GetChildMemberWithName("_count")
+            .GetSyntheticValue()
+            .GetValueAsUnsigned()
+        )
+        return True

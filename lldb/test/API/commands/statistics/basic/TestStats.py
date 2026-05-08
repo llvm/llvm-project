@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def test_enable_disable(self):
         """

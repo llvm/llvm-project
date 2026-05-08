@@ -27,6 +27,12 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
   switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS:
+  case llvm::Triple::WatchOS:
+  case llvm::Triple::BridgeOS:
+  case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     location.module_spec = FileSpec("libsystem_kernel.dylib");
     location.symbols.push_back(ConstString("__pthread_kill"));
     break;
@@ -60,6 +66,12 @@ bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
   switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS:
+  case llvm::Triple::WatchOS:
+  case llvm::Triple::BridgeOS:
+  case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     location.module_spec = FileSpec("libsystem_c.dylib");
     location.symbols.push_back(ConstString("__assert_rtn"));
     break;

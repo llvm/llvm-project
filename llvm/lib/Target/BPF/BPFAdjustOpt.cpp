@@ -218,8 +218,8 @@ bool BPFAdjustOptImpl::serializeICMPCrossBB(BasicBlock &BB) {
     return false;
 
   Instruction *TI = B2->getTerminator();
-  auto *BI = dyn_cast<BranchInst>(TI);
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(TI);
+  if (!BI)
     return false;
   auto *Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond || &*B2->getFirstNonPHIIt() != Cond)
@@ -228,8 +228,8 @@ bool BPFAdjustOptImpl::serializeICMPCrossBB(BasicBlock &BB) {
   auto Cond2Op = Cond->getPredicate();
 
   TI = B1->getTerminator();
-  BI = dyn_cast<BranchInst>(TI);
-  if (!BI || !BI->isConditional())
+  BI = dyn_cast<CondBrInst>(TI);
+  if (!BI)
     return false;
   Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond)

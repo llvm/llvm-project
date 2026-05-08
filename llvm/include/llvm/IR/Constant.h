@@ -69,9 +69,6 @@ public:
   /// getZeroValueForNegation.
   LLVM_ABI bool isNegativeZeroValue() const;
 
-  /// Return true if the value is negative zero or null value.
-  LLVM_ABI bool isZeroValue() const;
-
   /// Return true if the value is not the smallest signed value, or,
   /// for vectors, does not contain smallest signed value elements.
   LLVM_ABI bool isNotMinSignedValue() const;

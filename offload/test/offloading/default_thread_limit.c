@@ -7,6 +7,7 @@
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
 
 // REQUIRES: amdgpu
+// XFAIL: intelgpu
 
 __attribute__((optnone)) int optnone() { return 1; }
 

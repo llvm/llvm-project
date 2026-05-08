@@ -287,60 +287,11 @@ define void @sve_load_store_nxv18i8(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    ldr z1, [x0]
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, x8]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z1.s, z0.h
-; CHECK-NEXT:    uunpkhi z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z0.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpklo z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEXT:    uzp1 z2.s, z0.s, z2.s
-; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpklo z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z0.s
-; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEXT:    uzp1 z2.s, z0.s, z2.s
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z0.s
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
-; CHECK-NEXT:    ldr z1, [x0]
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
@@ -380,18 +331,6 @@ define void @sve_load_store_nxv20i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z0.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uzp1 z1.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x1, #4, mul vl]
@@ -435,15 +374,7 @@ define void @sve_load_store_nxv22i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z0.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uzp1 z1.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpkhi z1.s, z0.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -803,18 +734,6 @@ define void @sve_load_store_nxv10i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z1.h, z0.h, z0.h
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z1.h, z0.h, z1.h
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x1, #4, mul vl]

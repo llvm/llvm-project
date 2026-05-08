@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ThreadStepOutTestCase(TestBase):
     @skipIfWindows  # This test will hang on windows llvm.org/pr21753
     @expectedFailureAll(oslist=["windows"])

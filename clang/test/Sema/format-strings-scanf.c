@@ -36,8 +36,9 @@ int vscanf(const char * restrict, va_list);
 int vfscanf(FILE * restrict, const char * restrict, va_list);
 int vsscanf(const char * restrict, const char * restrict, va_list);
 
-void test(const char *s, int *i) {
-  scanf(s, i); // expected-warning{{format string is not a string literal}}
+void test(const char *s, int *i) { // #test
+  scanf(s, i); // expected-warning{{diagnostic behavior may be improved by adding the 'format(scanf, 1, 2)' attribute to the declaration of 'test'}}
+  // expected-note@#test {{'test' declared here}}
   scanf("%0d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%00d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%d%[asdfasdfd", i, s); // expected-warning{{no closing ']' for '%[' in scanf format string}}

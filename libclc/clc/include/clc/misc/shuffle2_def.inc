@@ -9,7 +9,7 @@
 #if (__CLC_VECSIZE_OR_1 == 2 || __CLC_VECSIZE_OR_1 == 4 ||                     \
      __CLC_VECSIZE_OR_1 == 8 || __CLC_VECSIZE_OR_1 == 16)
 
-#include <clc/utils.h>
+#include "clc/utils.h"
 
 #ifndef __CLC_IMPL_FUNCTION
 #define __CLC_IMPL_FUNCTION(x) __CLC_CONCAT(__clc_, x)

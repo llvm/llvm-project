@@ -114,23 +114,6 @@ hand, backwards compatibility is generally guaranteed.
 
 There are multiple ABI flags that change the symbols exported from the built library:
 
-``_LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON``
--------------------------------------------------
-This removes ``__basic_string_common<true>::__throw_length_error()`` and
-``__basic_string_common<true>::__throw_out_of_range()``. These symbols have been used by ``basic_string`` in the past,
-but are not referenced from the headers anymore.
-
-``_LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON``
-------------------------------------------------
-This removes ``__vector_base_common<true>::__throw_length_error()`` and
-``__vector_base_common<true>::__throw_out_of_range()``. These symbols have been used by ``vector`` in the past, but are
-not referenced from the headers anymore.
-
-``_LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10``
-----------------------------------------------
-This removes ``__itoa::__u32toa()`` and ``__iota::__u64toa``. These symbols have been used by ``to_chars`` in the past,
-but are not referenced from the headers anymore.
-
 ``_LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION``
 -------------------------------------------------------
 This replaces the symbols that are exported for ``basic_string`` to avoid exporting functions which are likely to be
@@ -157,6 +140,10 @@ This flag adds ``[[clang::trivial_abi]]`` to ``unique_ptr``, which makes it triv
 ---------------------------------------------
 This flag adds ``[[clang::trivial_abi]]`` to ``shared_ptr``, which makes it trivial for the purpose of calls.
 
+``_LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR``
+-----------------------------------------------
+This flag makes ``__bit_iterator`` (a.k.a. ``vector<bool>::iterator``) trivially copyable as well as trivial for the
+purpose of calls, since the copy constructor is made trivial.
 
 Types that public aliases reference
 ===================================
@@ -204,6 +191,16 @@ This changes the value of ``regex_constants::syntax_option-type::ECMAScript`` to
 This flag fixes the implementation of CityHash used for ``hash<fundamental-type>``. The incorrect implementation of
 CityHash has the problem that it drops some bits on the floor. Fixing the implementation changes the hash of values,
 resulting in an ABI break.
+
+``_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE``
+------------------------------------------
+This flag changes the implementation of ``atomic::wait()`` and ``atomic::notify_one()/notify_all()`` to use the
+native atomic wait/notify operations on platforms that support them based on the size of the atomic type, instead
+of the type itself. This means for example that a type with ``sizeof(T) == 4`` on Linux that doesn't have padding
+bytes would be able to use the underlying platform's atomic wait primitive, which is otherwise only used for ``int32_t``.
+Since the whole program must use the same implementation for correctness, changing this is an ABI break since libc++
+supports linking against TUs that were compiled against older versions of the library.
+
 
 inline namespaces
 =================

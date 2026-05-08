@@ -1654,20 +1654,18 @@ ComputePostOrders(Function &F,
   BasicBlock *EntryBB = &F.getEntryBlock();
   BBState &MyStates = BBStates[EntryBB];
   MyStates.SetAsEntry();
-  Instruction *EntryTI = EntryBB->getTerminator();
-  SuccStack.push_back(std::make_pair(EntryBB, succ_iterator(EntryTI)));
+  SuccStack.push_back(std::make_pair(EntryBB, succ_begin(EntryBB)));
   Visited.insert(EntryBB);
   OnStack.insert(EntryBB);
   do {
   dfs_next_succ:
     BasicBlock *CurrBB = SuccStack.back().first;
-    succ_iterator SE(CurrBB->getTerminator(), false);
+    succ_iterator SE = succ_end(CurrBB->getTerminator());
 
     while (SuccStack.back().second != SE) {
       BasicBlock *SuccBB = *SuccStack.back().second++;
       if (Visited.insert(SuccBB).second) {
-        SuccStack.push_back(
-            std::make_pair(SuccBB, succ_iterator(SuccBB->getTerminator())));
+        SuccStack.push_back(std::make_pair(SuccBB, succ_begin(SuccBB)));
         BBStates[CurrBB].addSucc(SuccBB);
         BBState &SuccStates = BBStates[SuccBB];
         SuccStates.addPred(CurrBB);
@@ -2504,17 +2502,32 @@ bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
     if (!Callee->hasExactDefinition())
       return true;
     for (const BasicBlock &BB : *Callee) {
+      // Track nested autorelease pools in a single pass. Autoreleases inside a
+      // pool are drained before the pool ends; only effects at function scope
+      // (empty stack) or in a pool not closed in this block matter.
+      SmallVector<bool, 4> PoolStack;
       for (const Instruction &I : BB) {
-        // TODO: Ignore all instructions between autorelease pools
         ARCInstKind InstKind = GetBasicARCInstKind(&I);
         switch (InstKind) {
+        case ARCInstKind::AutoreleasepoolPush:
+          PoolStack.push_back(false);
+          break;
+
+        case ARCInstKind::AutoreleasepoolPop:
+          if (!PoolStack.empty())
+            PoolStack.pop_back();
+          break;
+
         case ARCInstKind::Autorelease:
         case ARCInstKind::AutoreleaseRV:
         case ARCInstKind::FusedRetainAutorelease:
         case ARCInstKind::FusedRetainAutoreleaseRV:
         case ARCInstKind::LoadWeak:
           // These may produce autoreleases
-          return true;
+          if (PoolStack.empty())
+            return true;
+          PoolStack.back() = true;
+          break;
 
         case ARCInstKind::Retain:
         case ARCInstKind::RetainRV:
@@ -2529,16 +2542,17 @@ bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
         case ARCInstKind::CopyWeak:
         case ARCInstKind::DestroyWeak:
         case ARCInstKind::StoreStrong:
-        case ARCInstKind::AutoreleasepoolPush:
-        case ARCInstKind::AutoreleasepoolPop:
           // These ObjC runtime functions don't produce autoreleases
           break;
 
         case ARCInstKind::CallOrUser:
         case ARCInstKind::Call:
-          // For non-ObjC function calls, recursively analyze
-          if (MayAutorelease(cast<CallBase>(I), Depth + 1))
-            return true;
+          // For non-ObjC function calls, recursively analyze.
+          if (MayAutorelease(cast<CallBase>(I), Depth + 1)) {
+            if (PoolStack.empty())
+              return true;
+            PoolStack.back() = true;
+          }
           break;
 
         case ARCInstKind::IntrinsicUser:
@@ -2548,6 +2562,8 @@ bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
           break;
         }
       }
+      if (!PoolStack.empty() && llvm::is_contained(PoolStack, true))
+        return true;
     }
     return false;
   }

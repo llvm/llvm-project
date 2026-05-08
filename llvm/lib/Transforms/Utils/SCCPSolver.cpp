@@ -393,8 +393,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
 
   // SCCP can only determine non-feasible edges for br, switch and indirectbr.
   Instruction *TI = BB->getTerminator();
-  assert((isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
-          isa<IndirectBrInst>(TI)) &&
+  assert((isa<UncondBrInst, CondBrInst, SwitchInst, IndirectBrInst>(TI)) &&
          "Terminator must be a br, switch or indirectbr");
 
   if (FeasibleSuccessors.size() == 0) {
@@ -426,7 +425,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
 
-    Instruction *BI = BranchInst::Create(OnlyFeasibleSuccessor, BB);
+    Instruction *BI = UncondBrInst::Create(OnlyFeasibleSuccessor, BB);
     BI->setDebugLoc(TI->getDebugLoc());
     TI->eraseFromParent();
     DTU.applyUpdatesPermissive(Updates);
@@ -1251,12 +1250,12 @@ bool SCCPInstVisitor::markEdgeExecutable(BasicBlock *Source, BasicBlock *Dest) {
 void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
                                             SmallVectorImpl<bool> &Succs) {
   Succs.resize(TI.getNumSuccessors());
-  if (auto *BI = dyn_cast<BranchInst>(&TI)) {
-    if (BI->isUnconditional()) {
-      Succs[0] = true;
-      return;
-    }
+  if (isa<UncondBrInst>(TI)) {
+    Succs[0] = true;
+    return;
+  }
 
+  if (auto *BI = dyn_cast<CondBrInst>(&TI)) {
     const ValueLatticeElement &BCValue = getValueState(BI->getCondition());
     ConstantInt *CI = getConstantInt(BCValue, BI->getCondition()->getType());
     if (!CI) {
@@ -1498,8 +1497,11 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
   if (Constant *OpC = getConstant(OpSt, I.getOperand(0)->getType())) {
     // Fold the constant as we build.
     if (Constant *C =
-            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL))
-      return (void)markConstant(&I, C);
+            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL)) {
+      auto &LV = ValueState[&I];
+      mergeInValue(LV, &I, ValueLatticeElement::get(C));
+      return;
+    }
   }
 
   // Ignore bitcasts, as they may change the number of vector elements.
@@ -2060,7 +2062,7 @@ void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
     // a chained predicate, as the != x information is more likely to be
     // helpful in practice.
     if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
-      NewCR = CopyOfCR;
+      NewCR = std::move(CopyOfCR);
 
     // The new range is based on a branch condition. That guarantees that
     // neither of the compare operands can be undef in the branch targets,
@@ -2095,6 +2097,39 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
     if (II->getIntrinsicID() == Intrinsic::vscale) {
       unsigned BitWidth = CB.getType()->getScalarSizeInBits();
       const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
+    }
+    if (II->getIntrinsicID() == Intrinsic::experimental_get_vector_length) {
+      Value *CountArg = II->getArgOperand(0);
+      Value *VF = II->getArgOperand(1);
+      bool Scalable = cast<ConstantInt>(II->getArgOperand(2))->isOne();
+
+      // Computation happens in the larger type.
+      unsigned BitWidth = std::max(CountArg->getType()->getScalarSizeInBits(),
+                                   VF->getType()->getScalarSizeInBits());
+
+      ConstantRange Count = getValueState(CountArg)
+                                .asConstantRange(CountArg->getType(), false)
+                                .zeroExtend(BitWidth);
+      ConstantRange MaxLanes = getValueState(VF)
+                                   .asConstantRange(VF->getType(), false)
+                                   .zeroExtend(BitWidth);
+      if (Scalable)
+        MaxLanes =
+            MaxLanes.multiply(getVScaleRange(II->getFunction(), BitWidth));
+
+      // The result is always less than both Count and MaxLanes.
+      ConstantRange Result = ConstantRange::getNonEmpty(
+          APInt::getZero(BitWidth),
+          APIntOps::umin(Count.getUnsignedMax(), MaxLanes.getUnsignedMax()) +
+              1);
+
+      // If Count <= MaxLanes, getvectorlength(Count, MaxLanes) = Count
+      if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
+        Result = std::move(Count);
+
+      Result = Result.truncate(II->getType()->getScalarSizeInBits());
       return (void)mergeInValue(ValueState[II], II,
                                 ValueLatticeElement::getRange(Result));
     }

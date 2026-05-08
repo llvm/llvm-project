@@ -663,7 +663,7 @@ void Writer::treatSpecialUndefineds() {
 }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const lld::macho::Reloc &r) {
+                                    const Relocation &r) {
   if (!sym->isLive()) {
     if (Defined *defined = dyn_cast<Defined>(sym)) {
       if (config->emitInitOffsets &&
@@ -707,7 +707,7 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      lld::macho::Reloc &r = *it;
+      Relocation &r = *it;
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.

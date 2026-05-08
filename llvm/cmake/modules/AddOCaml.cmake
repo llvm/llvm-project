@@ -57,9 +57,12 @@ function(add_ocaml_library name)
                   "-ccopt" "-Wl,-rpath,\\$CAMLORIGIN/../.."
                   ${ocaml_pkgs})
 
+  set(ocaml_dep_inputs)
   foreach( ocaml_dep ${ARG_OCAMLDEP} )
     get_target_property(dep_ocaml_flags "ocaml_${ocaml_dep}" OCAML_FLAGS)
     list(APPEND ocaml_flags ${dep_ocaml_flags})
+    get_target_property(dep_ocaml_outputs "ocaml_${ocaml_dep}" OCAML_OUTPUTS)
+    list(APPEND ocaml_dep_inputs ${dep_ocaml_outputs})
   endforeach()
 
   if( NOT BUILD_SHARED_LIBS )
@@ -157,7 +160,7 @@ function(add_ocaml_library name)
     OUTPUT ${ocaml_outputs}
     COMMAND "${OCAMLFIND}" "ocamlmklib" "-ocamlcflags" "-bin-annot"
       "-o" "${name}" ${ocaml_flags} ${ocaml_params}
-    DEPENDS ${ocaml_inputs} ${c_outputs}
+    DEPENDS ${ocaml_inputs} ${ocaml_dep_inputs} ${c_outputs}
     COMMENT "Building OCaml library ${name}"
     VERBATIM)
 
@@ -168,7 +171,7 @@ function(add_ocaml_library name)
             "-I" "${LLVM_LIBRARY_DIR}/ocaml/llvm/"
             "-dump" "${bin}/${name}.odoc"
             ${ocaml_pkgs} ${ocaml_inputs}
-    DEPENDS ${ocaml_inputs} ${ocaml_outputs}
+    DEPENDS ${ocaml_inputs} ${ocaml_dep_inputs} ${ocaml_outputs}
     COMMENT "Building OCaml documentation for ${name}"
     VERBATIM)
 
@@ -180,6 +183,8 @@ function(add_ocaml_library name)
     OCAML_FLAGS "-I;${bin}")
   set_target_properties("ocaml_${name}" PROPERTIES
     OCAML_ODOC "${bin}/${name}.odoc")
+  set_target_properties("ocaml_${name}" PROPERTIES
+    OCAML_OUTPUTS "${ocaml_outputs}")
 
   foreach( ocaml_dep ${ARG_OCAMLDEP} )
     add_dependencies("ocaml_${name}" "ocaml_${ocaml_dep}")

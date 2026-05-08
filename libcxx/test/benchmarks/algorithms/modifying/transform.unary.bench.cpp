@@ -55,9 +55,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::transform(vector<int>) (identity transform)", std_transform);
     bm.operator()<std::deque<int>>("std::transform(deque<int>) (identity transform)", std_transform);
     bm.operator()<std::list<int>>("std::transform(list<int>) (identity transform)", std_transform);
-    bm.operator()<std::vector<int>>("rng::transform(vector<int>) (identity transform)", std::ranges::transform);
-    bm.operator()<std::deque<int>>("rng::transform(deque<int>) (identity transform)", std::ranges::transform);
-    bm.operator()<std::list<int>>("rng::transform(list<int>) (identity transform)", std::ranges::transform);
   }
 
   benchmark::Initialize(&argc, argv);

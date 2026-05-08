@@ -6,34 +6,36 @@
 ## can be run on these versions of Android.
 
 # RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android %s -o %t.o
-# RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-heap %t.o -o %t
+# RUN: ld.lld -shared -z memtag-mode=async -z memtag-heap --android-memtag-note %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,NOSTACK,ASYNC
 
-# RUN: ld.lld -shared --android-memtag-mode=sync --android-memtag-heap %t.o -o %t
+# RUN: ld.lld -shared -z memtag-mode=sync -z memtag-heap --android-memtag-note %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,NOSTACK,SYNC
 
-# RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-stack %t.o -o %t
+# RUN: ld.lld -shared -z memtag-mode=async -z memtag-stack --android-memtag-note %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,NOHEAP,STACK,ASYNC
 
-# RUN: ld.lld -shared --android-memtag-mode=sync --android-memtag-stack %t.o -o %t
+# RUN: ld.lld -shared -z memtag-mode=sync -z memtag-stack --android-memtag-note %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,NOHEAP,STACK,SYNC
 
-# RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-heap \
-# RUN:    --android-memtag-stack %t.o -o %t
+# RUN: ld.lld -shared -z memtag-mode=async -z memtag-heap \
+# RUN:    -z memtag-stack --android-memtag-note %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,STACK,ASYNC
 
-# RUN: ld.lld -shared --android-memtag-mode=sync --android-memtag-heap \
-# RUN:    --android-memtag-stack %t.o -o %t
+# RUN: ld.lld -shared -z memtag-mode=sync -z memtag-heap \
+# RUN:    -z memtag-stack --android-memtag-note %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,STACK,SYNC
 
-# RUN: ld.lld -shared --android-memtag-heap %t.o -o %t 2>&1 | \
+# RUN: ld.lld -shared --android-memtag-note %t.o -o %t 2>&1 | \
 # RUN:    FileCheck %s --check-prefixes=MISSING-MODE
-# RUN: ld.lld -shared --android-memtag-stack %t.o -o %t 2>&1 | \
+# RUN: ld.lld -shared -z memtag-heap --android-memtag-note %t.o -o %t 2>&1 | \
 # RUN:    FileCheck %s --check-prefixes=MISSING-MODE
-# RUN: ld.lld -shared --android-memtag-heap --android-memtag-stack %t.o -o %t 2>&1 | \
+# RUN: ld.lld -shared -z memtag-stack --android-memtag-note %t.o -o %t 2>&1 | \
 # RUN:    FileCheck %s --check-prefixes=MISSING-MODE
-# MISSING-MODE: warning: --android-memtag-mode is unspecified, leaving
-# MISSING-MODE: --android-memtag-{{(heap|stack)}} a no-op
+# RUN: ld.lld -shared -z memtag-heap -z memtag-stack --android-memtag-note %t.o -o %t 2>&1 | \
+# RUN:    FileCheck %s --check-prefixes=MISSING-MODE
+# MISSING-MODE: warning: -z memtag-mode is none, leaving
+# MISSING-MODE-SAME: {{(--android-memtag-note|-z memtag-(heap|stack))}} a no-op
 
 # CHECK: Memtag Dynamic Entries
 # SYNC:    AARCH64_MEMTAG_MODE: Synchronous (0)
@@ -51,13 +53,12 @@
 # STACK-NEXT:   Stack: Enabled
 # NOSTACK-NEXT: Stack: Disabled
 
-# RUN: not ld.lld -shared --android-memtag-mode=asymm --android-memtag-heap 2>&1 | \
+# RUN: not ld.lld -shared -z memtag-mode=asymm -z memtag-heap --android-memtag-note 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=BAD-MODE
-# BAD-MODE: error: unknown --android-memtag-mode value: "asymm", should be one of
-# BAD-MODE: {async, sync, none}
+# BAD-MODE: error: unknown -z memtag-mode= value: asymm
 
-# RUN: ld.lld -static --android-memtag-mode=sync --android-memtag-heap \
-# RUN:    --android-memtag-stack %t.o -o %t
+# RUN: ld.lld -static -z memtag-mode=sync -z memtag-heap \
+# RUN:    -z memtag-stack --android-memtag-note %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=STATIC
 
 # STATIC:      Memtag Dynamic Entries:

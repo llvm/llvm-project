@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: mkdir -p %t/yaml %t/md
+// RUN: mkdir -p %t/yaml %t/md %t/md_mustache
 
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/yaml
 // RUN: FileCheck %s < %t/yaml/index.yaml --check-prefix=YAML
@@ -7,12 +7,18 @@
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/md --format=md
 // RUN: FileCheck %s < %t/md/GlobalNamespace/index.md  --check-prefix=MD
 
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/md_mustache --format=md_mustache
+// RUN: FileCheck %s < %t/md/GlobalNamespace/index.md  --check-prefix=MD-MUSTACHE
+
 //      YAML: ---
 // YAML-NEXT: USR:             '0000000000000000000000000000000000000000'
 // YAML-NEXT: ChildFunctions:
 
 // MD: # Global Namespace
 // MD: ## Functions
+
+// MD-MUSTACHE: # Global Namespace
+// MD-MUSTACHE: ## Functions
 
 extern bool b();
 
@@ -29,6 +35,9 @@ extern bool b();
 // MD: ### b
 // MD: *bool b()*
 
+// MD-MUSTACHE: ### b
+// MD-MUSTACHE: *bool b()*
+
 char c();
 
 // YAML-NEXT:   - USR:             'EA3287837B3F175C8DB154406B4DAD2924F479B5'
@@ -43,6 +52,9 @@ char c();
 
 // MD: ### c
 // MD: *char c()*
+
+// MD-MUSTACHE: ### c
+// MD-MUSTACHE: *char c()*
 
 double d();
 
@@ -59,6 +71,9 @@ double d();
 // MD: ### d
 // MD: *double d()*
 
+// MD-MUSTACHE: ### d
+// MD-MUSTACHE: *double d()*
+
 float f();
 
 // YAML-NEXT:   - USR:             'B3A9EC6BECD5869CF3ACDFB25153CFE6BBDD5EAB'
@@ -73,6 +88,9 @@ float f();
 
 // MD: ### f
 // MD: *float f()*
+
+// MD-MUSTACHE: ### f
+// MD-MUSTACHE: *float f()*
 
 int i();
 
@@ -89,6 +107,9 @@ int i();
 // MD: ### i
 // MD: *int i()*
 
+// MD-MUSTACHE: ### i
+// MD-MUSTACHE: *int i()*
+
 long l();
 
 // YAML-NEXT:   - USR:             'A1CE9AB0064C412F857592E01332C641C1A06F37'
@@ -103,6 +124,9 @@ long l();
 
 // MD: ### l
 // MD: *long l()*
+
+// MD-MUSTACHE: ### l
+// MD-MUSTACHE: *long l()*
 
 long long ll();
 
@@ -119,6 +143,9 @@ long long ll();
 // MD: ### ll
 // MD: *long long ll()*
 
+// MD-MUSTACHE: ### ll
+// MD-MUSTACHE: *long long ll()*
+
 short s();
 
 // YAML-NEXT:   - USR:             '412341570FD3AD2C3A1E9A1DE7B3C01C07BEACFE'
@@ -134,3 +161,6 @@ short s();
 
 // MD: ### s
 // MD: *short s()*
+
+// MD-MUSTACHE: ### s
+// MD-MUSTACHE: *short s()*

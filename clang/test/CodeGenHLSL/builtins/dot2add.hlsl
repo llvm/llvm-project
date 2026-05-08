@@ -157,9 +157,9 @@ float test_int64_arg1_arg2_type(int64_t2 p1, int64_t2 p2, float p3) {
 
 // CHECK-LABEL: define {{.*}}test_bool_arg1_arg2_type
 float test_bool_arg1_arg2_type(bool2 p1, bool2 p2, float p3) {
-  // CHECK:  %loadedv = trunc <2 x i32> %{{.*}} to <2 x i1>
+  // CHECK:  %loadedv = icmp ne <2 x i32> %{{.*}}, zeroinitializer
   // CHECK:  %conv = uitofp <2 x i1> %loadedv to <2 x half>
-  // CHECK:  %loadedv1 = trunc <2 x i32> %{{.*}} to <2 x i1>
+  // CHECK:  %loadedv1 = icmp ne <2 x i32> %{{.*}}, zeroinitializer
   // CHECK:  %conv2 = uitofp <2 x i1> %loadedv1 to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float

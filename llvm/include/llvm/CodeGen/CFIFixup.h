@@ -22,9 +22,7 @@ class CFIFixup : public MachineFunctionPass {
 public:
   static char ID;
 
-  CFIFixup() : MachineFunctionPass(ID) {
-    initializeCFIFixupPass(*PassRegistry::getPassRegistry());
-  }
+  CFIFixup() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

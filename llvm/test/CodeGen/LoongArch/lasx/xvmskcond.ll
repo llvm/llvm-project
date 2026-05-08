@@ -863,8 +863,7 @@ define i8 @xvmsk_ne_v4i32_concat_poison(<4 x i32> %vec) {
 ; CHECK-LABEL: xvmsk_ne_v4i32_concat_poison:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vseqi.w $vr0, $vr0, 0
-; CHECK-NEXT:    vrepli.b $vr1, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
 ; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1

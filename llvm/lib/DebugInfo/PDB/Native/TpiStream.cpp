@@ -222,6 +222,20 @@ codeview::CVType TpiStream::getType(codeview::TypeIndex Index) {
   return Types->getType(Index);
 }
 
+codeview::CVType TpiStream::getTypeOrEmpty(codeview::TypeIndex Index) {
+  return Types->tryGetType(Index).value_or<CVType>({});
+}
+
+std::optional<codeview::CVType>
+TpiStream::tryGetType(codeview::TypeIndex Index) {
+  return Types->tryGetType(Index);
+}
+
+Expected<codeview::CVType>
+TpiStream::getTypeOrError(codeview::TypeIndex Index) {
+  return Types->getTypeOrError(Index);
+}
+
 BinarySubstreamRef TpiStream::getTypeRecordsSubstream() const {
   return TypeRecordsSubstream;
 }

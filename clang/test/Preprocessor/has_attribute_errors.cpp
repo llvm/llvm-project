@@ -14,3 +14,20 @@ __has_cpp_attribute(__clang__::fallthrough) // expected-error {{missing ')' afte
                                             // expected-note {{to match this '('}} \
                                             // expected-error {{builtin feature check macro requires a parenthesized identifier}}
 
+namespace GH178098 {
+// expected-error@+2 {{builtin feature check macro requires a parenthesized identifier}}
+// expected-error@+1 {{expected value in expression}}
+#if __has_cpp_attribute(clang::
+#endif
+
+// expected-error@+4 {{unterminated function-like macro invocation}}
+// expected-error@+3 {{missing ')' after 'clang'}}
+// expected-error@+2 {{expected value in expression}}
+// expected-note@+1 {{to match this '('}}
+#if __has_attribute(clang::
+#endif
+
+// expected-error@+3 {{builtin feature check macro requires a parenthesized identifier}}
+// expected-error@+2 {{unterminated function-like macro invocation}}
+__has_cpp_attribute(clang::
+}

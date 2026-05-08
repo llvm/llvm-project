@@ -7,16 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/nexttowardbf16.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/nexttowardbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bfloat16, nexttowardbf16, (bfloat16 x, long double y)) {
-  // nextafter<T, U> where T != U is nexttoward
-  return fputil::nextafter(x, y);
+  return math::nexttowardbf16(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

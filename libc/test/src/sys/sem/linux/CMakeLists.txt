@@ -1,0 +1,20 @@
+add_custom_target(libc_sys_sem_unittests)
+
+add_libc_unittest(
+  sem_test
+  SUITE
+    libc_sys_sem_unittests
+  SRCS
+    sem_test.cpp
+  DEPENDS
+    libc.hdr.sys_ipc_macros
+    libc.hdr.sys_sem_macros
+    libc.hdr.types.struct_sembuf
+    libc.hdr.types.struct_semid_ds
+    libc.src.errno.errno
+    libc.src.sys.sem.semget
+    libc.src.sys.sem.semctl
+    libc.src.sys.sem.semop
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

@@ -228,7 +228,7 @@ __cxa_exception* __cxa_init_primary_exception(void* object, std::type_info* tinf
 }
 
 //  This function shall allocate a __cxa_dependent_exception and
-//  return a pointer to it. (Really to the object, not past its' end).
+//  return a pointer to it. (Really to the object, not past its end).
 //  Otherwise, it will work like __cxa_allocate_exception.
 void * __cxa_allocate_dependent_exception () {
     size_t actual_size = sizeof(__cxa_dependent_exception);

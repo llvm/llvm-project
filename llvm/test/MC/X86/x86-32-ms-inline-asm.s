@@ -1,4 +1,4 @@
-// RUN: llvm-mc -x86-asm-syntax=intel -triple i386-unknown-unknown --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -x86-asm-syntax=intel --output-asm-variant=0 -triple i386-unknown-unknown --show-encoding %s | FileCheck %s
 
 mov eax, [ebx].0
 mov [ebx].4, ecx

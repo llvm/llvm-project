@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mattr=-xnack < %s | FileCheck -check-prefixes=GCN,SDAG,GFX8 -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal -mattr=-xnack -mattr=+dx10-clamp-and-ieee-mode < %s | FileCheck -check-prefixes=GCN,SDAG,GFX8 -enable-var-scope %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -mattr=-xnack < %s | FileCheck -check-prefixes=GCN,SDAG,GFX9 -enable-var-scope %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mattr=-xnack -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GISEL,GFX9 -enable-var-scope %s
 

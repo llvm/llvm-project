@@ -120,12 +120,12 @@ public:
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
   void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
+  void DeclarationMarkedOpenMPIndirectCall(const Decl *D) override;
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
-  void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
   void AddedAnonymousNamespace(const TranslationUnitDecl *,
@@ -240,6 +240,11 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPAllocate(
   for (ASTMutationListener *L : Listeners)
     L->DeclarationMarkedOpenMPAllocate(D, A);
 }
+void MultiplexASTMutationListener::DeclarationMarkedOpenMPIndirectCall(
+    const Decl *D) {
+  for (ASTMutationListener *L : Listeners)
+    L->DeclarationMarkedOpenMPIndirectCall(D);
+}
 void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
     const Decl *D, const Attr *Attr) {
   for (auto *L : Listeners)
@@ -256,11 +261,6 @@ void MultiplexASTMutationListener::AddedAttributeToRecord(
                                                     const RecordDecl *Record) {
   for (auto *L : Listeners)
     L->AddedAttributeToRecord(Attr, Record);
-}
-
-void MultiplexASTMutationListener::EnteringModulePurview() {
-  for (auto *L : Listeners)
-    L->EnteringModulePurview();
 }
 
 void MultiplexASTMutationListener::AddedManglingNumber(const Decl *D,

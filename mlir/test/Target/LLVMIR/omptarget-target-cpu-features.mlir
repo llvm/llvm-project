@@ -16,7 +16,7 @@ module attributes {omp.is_target_device = false} {
 }
 
 // CHECK: define void @omp_target_region() #[[ATTRS:.*]] {
-// CHECK: define internal void @__omp_offloading_{{.*}}_omp_target_region_{{.*}}() #[[ATTRS]] {
+// CHECK: define internal void @__omp_offloading_{{.*}}_omp_target_region_{{.*}}(ptr %{{.*}}) #[[ATTRS]] {
 
 // CHECK: attributes #[[ATTRS]] = {
 // CHECK-SAME: "target-cpu"="x86-64"

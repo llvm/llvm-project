@@ -205,6 +205,9 @@ private:
     Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD,
                                bool IsBootstrapping);
 
+    Error registerFiniSections(jitlink::LinkGraph &G, JITDylib &JD,
+                               bool IsBootstrapping);
+
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
     std::mutex PluginMutex;
@@ -262,6 +265,10 @@ private:
       ES.intern("__orc_rt_elfnix_register_init_sections")};
   RuntimeFunction DeregisterInitSections{
       ES.intern("__orc_rt_elfnix_deregister_init_sections")};
+  RuntimeFunction RegisterFiniSections{
+      ES.intern("__orc_rt_elfnix_register_fini_sections")};
+  RuntimeFunction DeregisterFiniSections{
+      ES.intern("__orc_rt_elfnix_deregister_fini_sections")};
   RuntimeFunction CreatePThreadKey{
       ES.intern("__orc_rt_elfnix_create_pthread_key")};
 

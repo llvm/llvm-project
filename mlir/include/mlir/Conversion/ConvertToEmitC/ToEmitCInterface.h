@@ -20,19 +20,6 @@ class MLIRContext;
 class Operation;
 class RewritePatternSet;
 class AnalysisManager;
-
-class ConvertToEmitCPatternInterface
-    : public DialectInterface::Base<ConvertToEmitCPatternInterface> {
-public:
-  ConvertToEmitCPatternInterface(Dialect *dialect) : Base(dialect) {}
-
-  /// Hook for derived dialect interface to provide conversion patterns
-  /// and mark dialect legal for the conversion target.
-  virtual void populateConvertToEmitCConversionPatterns(
-      ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns) const = 0;
-};
-
 /// Recursively walk the IR and collect all dialects implementing the interface,
 /// and populate the conversion patterns.
 void populateConversionTargetFromOperation(Operation *op,
@@ -41,5 +28,7 @@ void populateConversionTargetFromOperation(Operation *op,
                                            RewritePatternSet &patterns);
 
 } // namespace mlir
+
+#include "mlir/Conversion/ConvertToEmitC/ConvertToEmitCPatternInterface.h.inc"
 
 #endif // MLIR_CONVERSION_CONVERTTOEMITC_TOEMITCINTERFACE_H

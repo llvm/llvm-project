@@ -147,9 +147,17 @@ def bp_compression_sort_startup_functions: Flag<["--"], "bp-compression-sort-sta
     Group<grp_lld>;
 def no_bp_compression_sort_startup_functions: Flag<["--"], "no-bp-compression-sort-startup-functions">,
     HelpText<"Do not order startup function for compression">, Group<grp_lld>;
-def bp_compression_sort: Joined<["--"], "bp-compression-sort=">,
-    MetaVarName<"[none,function,data,both]">,
-    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def bp_compression_sort
+    : Joined<["--"], "bp-compression-sort=">,
+      MetaVarName<"[none,function,data,both]">,
+      HelpText<"Order sections to improve compressed size. Deprecated. Please "
+               "use --bp-compression-sort-section">,
+      Group<grp_lld>;
+def bp_compression_sort_section
+    : Joined<["--"], "bp-compression-sort-section=">,
+      MetaVarName<"<glob>[=<layout_priority>[=<match_priority>]]">,
+      HelpText<"Reorder sections whose segment+section name (e.g. __TEXT__text) matches <glob> to improve Lempel-Ziv compression, while letting users split sections into groups, run BP independently per group, and exclude unsuitable sections. layout_priority controls group placement order (default 0). match_priority resolves conflicts when multiple globs match (default: last match wins). May be specified multiple times">,
+      Group<grp_lld>;
 def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
 def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
     Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
@@ -188,6 +196,8 @@ def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
     HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def lto_emit_llvm: Flag<["--"], "lto-emit-llvm">,
+    HelpText<"Emit LLVM-IR bitcode">, Group<grp_lld>;
 def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
 def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
     Alias<!cast<Separate>(load_pass_plugins)>,
@@ -1094,6 +1104,14 @@ defm separate_cstring_literal_sections
 defm tail_merge_strings
     : BB<"tail-merge-strings", "Enable string tail merging",
          "Disable string tail merging to improve link-time performance">,
+      Group<grp_rare>;
+def slop_scale_eq
+    : Joined<["--"], "slop_scale=">,
+      MetaVarName<"<unsigned_int>">,
+      HelpText<"Specify the slop scale. Default value is 256. If your binary "
+               "has too many consecutive branch instructions resulting in "
+               "thunk-range overrun, then you need to increase this value to a "
+               "higher value, such as 512 or 1024, etc">,
       Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;

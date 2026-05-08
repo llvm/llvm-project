@@ -15,7 +15,20 @@
 #include "lldb/lldb-private.h"
 #include <map>
 
-enum class SVEState : uint8_t { Unknown, Disabled, FPSIMD, Full, Streaming };
+enum class SVEState : uint8_t {
+  // We have yet to look what features there are.
+  Unknown,
+  // We know that there is no SVE or streaming SVE (SME).
+  Disabled,
+  // We are in non-streaming mode but SVE is not active.
+  FPSIMD,
+  // We are in non-streaming mode and SVE is active.
+  Full,
+  // We are in streaming mode using streaming SVE.
+  Streaming,
+  // We are in non-streaming mode, and only have SVE while in streaming mode.
+  StreamingFPSIMD
+};
 
 class RegisterInfoPOSIX_arm64
     : public lldb_private::RegisterInfoAndSetInterface {
@@ -34,6 +47,7 @@ public:
     eRegsetMaskZT = 64,
     eRegsetMaskFPMR = 128,
     eRegsetMaskGCS = 256,
+    eRegsetMaskPOE = 512,
     eRegsetMaskDynamic = ~1,
   };
 
@@ -118,6 +132,8 @@ public:
 
   void AddRegSetGCS();
 
+  void AddRegSetPOE();
+
   uint32_t ConfigureVectorLengthSVE(uint32_t sve_vq);
 
   void ConfigureVectorLengthZA(uint32_t za_vq);
@@ -138,11 +154,13 @@ public:
   bool IsTLSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
   bool IsFPMRPresent() const { return m_opt_regsets.AnySet(eRegsetMaskFPMR); }
   bool IsGCSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskGCS); }
+  bool IsPOEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskPOE); }
 
   bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;
   bool IsSVEPReg(unsigned reg) const;
   bool IsSVERegVG(unsigned reg) const;
+  bool IsSVERegFFR(unsigned reg) const;
   bool IsPAuthReg(unsigned reg) const;
   bool IsMTEReg(unsigned reg) const;
   bool IsTLSReg(unsigned reg) const;
@@ -151,11 +169,13 @@ public:
   bool IsSMERegZT(unsigned reg) const;
   bool IsFPMRReg(unsigned reg) const;
   bool IsGCSReg(unsigned reg) const;
+  bool IsPOEReg(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
   uint32_t GetRegNumSVEFFR() const;
   uint32_t GetRegNumFPCR() const;
   uint32_t GetRegNumFPSR() const;
+  uint32_t GetRegNumFPV0() const;
   uint32_t GetRegNumSVEVG() const;
   uint32_t GetRegNumSMESVG() const;
   uint32_t GetPAuthOffset() const;
@@ -164,6 +184,7 @@ public:
   uint32_t GetSMEOffset() const;
   uint32_t GetFPMROffset() const;
   uint32_t GetGCSOffset() const;
+  uint32_t GetPOEOffset() const;
 
 private:
   typedef std::map<uint32_t, std::vector<lldb_private::RegisterInfo>>
@@ -197,6 +218,7 @@ private:
   std::vector<uint32_t> m_sme_regnum_collection;
   std::vector<uint32_t> m_fpmr_regnum_collection;
   std::vector<uint32_t> m_gcs_regnum_collection;
+  std::vector<uint32_t> m_poe_regnum_collection;
 };
 
 #endif

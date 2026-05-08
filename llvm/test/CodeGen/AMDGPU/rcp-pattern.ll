@@ -1411,10 +1411,10 @@ define amdgpu_kernel void @s_div_arcp_neg_k_x_pat_f32_daz(ptr addrspace(1) %out)
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.sqrt.f32(float) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-attributes #4 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
+attributes #2 = { nounwind denormal_fpenv(float: preservesign) }
+attributes #3 = { nounwind denormal_fpenv(float: ieee|ieee) }
+attributes #4 = { nounwind denormal_fpenv(float: ieee|ieee) }
 
 !0 = !{float 2.500000e+00}

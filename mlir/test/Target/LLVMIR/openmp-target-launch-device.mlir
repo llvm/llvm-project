@@ -14,7 +14,7 @@
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%num_teams : !llvm.ptr) {
-    // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]], ptr %[[NUM_TEAMS_ARG:.*]]) #[[ATTRS1:[0-9]+]]
+    // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[NUM_TEAMS_ARG:.*]], ptr %[[KERNEL_ARGS:.*]]) #[[ATTRS1:[0-9]+]]
     // CHECK: %{{.*}} = call i32 @__kmpc_target_init(ptr @[[KERNEL1_ENV]], ptr %[[KERNEL_ARGS]])
     %target_threads = llvm.mlir.constant(20) : i32
     %0 = omp.map.info var_ptr(%num_teams : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr

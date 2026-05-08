@@ -121,6 +121,13 @@ static const char kStdSuppressions[] =
 #  if SANITIZER_APPLE
     // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
     "leak:*_os_trace*\n"
+#    if SANITIZER_ARM64
+    // Apple Aarch64 leaks in dyld on startup.
+    // See https://github.com/llvm/llvm-project/issues/115992.
+    "leak:*_fetchInitializingClassList*\n"
+    // Apple Aarch64 leaks when using thread locals.
+    "leak:*dyld4::RuntimeState::_instantiateTLVs*\n"
+#    endif
 #  endif
     // TLS leak in some glibc versions, described in
     // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.

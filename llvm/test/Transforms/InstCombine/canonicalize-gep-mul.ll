@@ -62,7 +62,7 @@ define ptr @usemul(ptr %p, i64 %x) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[X]], 5
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[MUL]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[MUL]]
 ; CHECK-NEXT:    call void @use(i64 [[MUL]])
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;

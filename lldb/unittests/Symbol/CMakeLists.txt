@@ -6,6 +6,7 @@ add_lldb_unittest(SymbolTests
   PostfixExpressionTest.cpp
   SymbolTest.cpp
   SymtabTest.cpp
+  SymStoreTest.cpp
   TestTypeSystem.cpp
   TestTypeSystemClang.cpp
   TestClangASTImporter.cpp
@@ -24,6 +25,7 @@ add_lldb_unittest(SymbolTests
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
     lldbPluginTypeSystemClang
+    lldbPluginSymbolLocatorSymStore
     LLVMTestingSupport
   )
 

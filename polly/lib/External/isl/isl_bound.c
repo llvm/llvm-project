@@ -8,6 +8,8 @@
  * 91893 Orsay, France 
  */
 
+#include <isl/aff.h>
+#include <isl/val.h>
 #include <isl_ctx_private.h>
 #include <isl_map_private.h>
 #include <isl_bound.h>
@@ -83,9 +85,8 @@ static isl_stat add_constant_poly(__isl_take isl_basic_set *bset,
  * it can be added to "bound" directly.
  */
 static isl_stat compressed_guarded_poly_bound(__isl_take isl_basic_set *bset,
-	__isl_take isl_qpolynomial *poly, void *user)
+	__isl_take isl_qpolynomial *poly, struct isl_bound *bound)
 {
-	struct isl_bound *bound = (struct isl_bound *)user;
 	isl_ctx *ctx;
 	int bounded;
 	int degree;
@@ -117,9 +118,8 @@ error:
 }
 
 static isl_stat unwrapped_guarded_poly_bound(__isl_take isl_basic_set *bset,
-	__isl_take isl_qpolynomial *poly, void *user)
+	__isl_take isl_qpolynomial *poly, struct isl_bound *bound)
 {
-	struct isl_bound *bound = (struct isl_bound *)user;
 	isl_pw_qpolynomial_fold *top_pwf;
 	isl_pw_qpolynomial_fold *top_pwf_tight;
 	isl_space *space;
@@ -132,7 +132,7 @@ static isl_stat unwrapped_guarded_poly_bound(__isl_take isl_basic_set *bset,
 		goto error;
 
 	if (bset->n_eq == 0)
-		return compressed_guarded_poly_bound(bset, poly, user);
+		return compressed_guarded_poly_bound(bset, poly, bound);
 
 	morph = isl_basic_set_full_compression(bset);
 
@@ -151,7 +151,7 @@ static isl_stat unwrapped_guarded_poly_bound(__isl_take isl_basic_set *bset,
 						  bound->type);
 	bound->pwf_tight = isl_pw_qpolynomial_fold_zero(space, bound->type);
 
-	r = compressed_guarded_poly_bound(bset, poly, user);
+	r = compressed_guarded_poly_bound(bset, poly, bound);
 
 	morph = isl_morph_dom_params(morph);
 	morph = isl_morph_ran_params(morph);
@@ -173,27 +173,34 @@ error:
 }
 
 /* Update bound->pwf and bound->pwf_tight with a bound
- * of type bound->type on the polynomial "poly" over the domain "bset".
+ * of type bound->type on the (quasi-)polynomial "qp" over the domain "bset",
+ * by calling "unwrapped" on unwrapped versions of "bset and "qp".
+ * If "qp" is a polynomial, then "unwrapped" will also be called
+ * on a polynomial.
  *
- * If the original problem had a wrapped relation in the domain,
- * meaning that the bound should be computed over the range
- * of this relation, then temporarily treat the domain dimensions
- * of this wrapped relation as parameters, compute a bound
+ * If the original problem did not have a wrapped relation in the domain,
+ * then call "unwrapped" directly.
+ *
+ * Otherwise, the bound should be computed over the range
+ * of the wrapped relation.  Temporarily treat the domain dimensions
+ * of this wrapped relation as parameters, compute a bound using "unwrapped"
  * in terms of these and the original parameters,
  * turn the parameters back into set dimensions and
  * add the results to bound->pwf and bound->pwf_tight.
  *
  * Note that even though "bset" is known to live in the same space
- * as the domain of "poly", the names of the set dimensions
+ * as the domain of "qp", the names of the set dimensions
  * may be different (or missing).  Make sure the naming is exactly
  * the same before turning these dimensions into parameters
  * to ensure that the spaces are still the same after
  * this operation.
  */
-static isl_stat guarded_poly_bound(__isl_take isl_basic_set *bset,
-	__isl_take isl_qpolynomial *poly, void *user)
+static isl_stat unwrap(__isl_take isl_basic_set *bset,
+	__isl_take isl_qpolynomial *qp,
+	isl_stat (*unwrapped)(__isl_take isl_basic_set *bset,
+		__isl_take isl_qpolynomial *qp, struct isl_bound *bound),
+	struct isl_bound *bound)
 {
-	struct isl_bound *bound = (struct isl_bound *)user;
 	isl_space *space;
 	isl_pw_qpolynomial_fold *top_pwf;
 	isl_pw_qpolynomial_fold *top_pwf_tight;
@@ -202,19 +209,19 @@ static isl_stat guarded_poly_bound(__isl_take isl_basic_set *bset,
 	isl_stat r;
 
 	if (!bound->wrapping)
-		return unwrapped_guarded_poly_bound(bset, poly, user);
+		return unwrapped(bset, qp, bound);
 
 	nparam = isl_space_dim(bound->dim, isl_dim_param);
 	n_in = isl_space_dim(bound->dim, isl_dim_in);
 	if (nparam < 0 || n_in < 0)
 		goto error;
 
-	space = isl_qpolynomial_get_domain_space(poly);
+	space = isl_qpolynomial_get_domain_space(qp);
 	bset = isl_basic_set_reset_space(bset, space);
 
 	bset = isl_basic_set_move_dims(bset, isl_dim_param, nparam,
 					isl_dim_set, 0, n_in);
-	poly = isl_qpolynomial_move_dims(poly, isl_dim_param, nparam,
+	qp = isl_qpolynomial_move_dims(qp, isl_dim_param, nparam,
 					isl_dim_in, 0, n_in);
 
 	space = isl_basic_set_get_space(bset);
@@ -229,7 +236,7 @@ static isl_stat guarded_poly_bound(__isl_take isl_basic_set *bset,
 						  bound->type);
 	bound->pwf_tight = isl_pw_qpolynomial_fold_zero(space, bound->type);
 
-	r = unwrapped_guarded_poly_bound(bset, poly, user);
+	r = unwrapped(bset, qp, bound);
 
 	bound->pwf = isl_pw_qpolynomial_fold_reset_space(bound->pwf,
 						    isl_space_copy(bound->dim));
@@ -242,14 +249,123 @@ static isl_stat guarded_poly_bound(__isl_take isl_basic_set *bset,
 	return r;
 error:
 	isl_basic_set_free(bset);
-	isl_qpolynomial_free(poly);
+	isl_qpolynomial_free(qp);
 	return isl_stat_error;
 }
 
+/* Update bound->pwf and bound->pwf_tight with a bound
+ * of type bound->type on the polynomial "poly" over the domain "bset",
+ * handling any wrapping in the domain.
+ */
+static isl_stat guarded_poly_bound(__isl_take isl_basic_set *bset,
+	__isl_take isl_qpolynomial *poly, void *user)
+{
+	struct isl_bound *bound = (struct isl_bound *)user;
+
+	return unwrap(bset, poly, &unwrapped_guarded_poly_bound, bound);
+}
+
+/* Is "bset" bounded and is "qp" a quasi-affine expression?
+ */
+static isl_bool is_bounded_affine(__isl_keep isl_basic_set *bset,
+	__isl_keep isl_qpolynomial *qp)
+{
+	isl_bool affine;
+
+	affine = isl_qpolynomial_isa_aff(qp);
+	if (affine < 0 || !affine)
+		return affine;
+	return isl_basic_set_is_bounded(bset);
+}
+
+/* Update bound->pwf and bound->pwf_tight with a bound
+ * of type bound->type on the quasi-polynomial "qp" over the domain "bset",
+ * for the case where "bset" is bounded and
+ * "qp" is a quasi-affine expression and
+ * they have both been unwrapped already if needed.
+ *
+ * Consider the set of possible function values of "qp" over "bset" and
+ * take the minimum or maximum value in this set, depending
+ * on whether a lower or an upper bound is being computed.
+ * Do this by calling isl_set_lexmin_pw_multi_aff or
+ * isl_set_lexmax_pw_multi_aff, which compute a regular minimum or maximum
+ * since the set is one-dimensional.
+ * Since this computation is exact, the bound is always tight.
+ *
+ * Note that the minimum or maximum integer value is being computed,
+ * so if "qp" has some non-trivial denominator, then it needs
+ * to be multiplied out first and then taken into account again
+ * after computing the minimum or maximum.
+ */
+static isl_stat unwrapped_affine_qp(__isl_take isl_basic_set *bset,
+	__isl_take isl_qpolynomial *qp, struct isl_bound *bound)
+{
+	isl_val *d;
+	isl_aff *aff;
+	isl_basic_map *bmap;
+	isl_set *range;
+	isl_pw_multi_aff *opt;
+	isl_pw_aff *pa;
+	isl_pw_qpolynomial *pwqp;
+	isl_pw_qpolynomial_fold *pwf;
+
+	aff = isl_qpolynomial_as_aff(qp);
+	d = isl_aff_get_denominator_val(aff);
+	aff = isl_aff_scale_val(aff, isl_val_copy(d));
+	bmap = isl_basic_map_from_aff(aff);
+	bmap = isl_basic_map_intersect_domain(bmap, bset);
+	range = isl_set_from_basic_set(isl_basic_map_range(bmap));
+	if (bound->type == isl_fold_min)
+		opt = isl_set_lexmin_pw_multi_aff(range);
+	else
+		opt = isl_set_lexmax_pw_multi_aff(range);
+	pa = isl_pw_multi_aff_get_at(opt, 0);
+	isl_pw_multi_aff_free(opt);
+	pa = isl_pw_aff_scale_down_val(pa, d);
+	pwqp = isl_pw_qpolynomial_from_pw_aff(pa);
+	pwf = isl_pw_qpolynomial_fold_from_pw_qpolynomial(bound->type, pwqp);
+
+	bound->pwf_tight = isl_pw_qpolynomial_fold_fold(bound->pwf_tight, pwf);
+
+	return isl_stat_non_null(bound->pwf_tight);
+}
+
+/* Update bound->pwf and bound->pwf_tight with a bound
+ * of type bound->type on the quasi-polynomial "qp" over the domain bound->bset,
+ * for the case where bound->bset is bounded and
+ * "qp" is a quasi-affine expression,
+ * handling any wrapping in the domain.
+ */
+static isl_stat affine_qp(__isl_take isl_qpolynomial *qp,
+	struct isl_bound *bound)
+{
+	isl_basic_set *bset;
+
+	bset = isl_basic_set_copy(bound->bset);
+	return unwrap(bset, qp, &unwrapped_affine_qp, bound);
+}
+
+/* Update bound->pwf and bound->pwf_tight with a bound
+ * of type bound->type on the quasi-polynomial "qp" over the domain bound->bset.
+ *
+ * If bound->bset is bounded and if "qp" is a quasi-affine expression,
+ * then use a specialized version.
+ *
+ * Otherwise, treat the integer divisions as extra variables and
+ * compute a bound over the polynomial in terms of the original and
+ * the extra variables.
+ */
 static isl_stat guarded_qp(__isl_take isl_qpolynomial *qp, void *user)
 {
 	struct isl_bound *bound = (struct isl_bound *)user;
 	isl_stat r;
+	isl_bool bounded_affine;
+
+	bounded_affine = is_bounded_affine(bound->bset, qp);
+	if (bounded_affine < 0)
+		qp = isl_qpolynomial_free(qp);
+	else if (bounded_affine)
+		return affine_qp(qp, bound);
 
 	r = isl_qpolynomial_as_polynomial_on_domain(qp, bound->bset,
 						    &guarded_poly_bound, user);

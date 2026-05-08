@@ -181,7 +181,7 @@ public:
   uint64_t writeObject() override;
 
   bool hasRelocationAddend() const;
-  bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
+  bool usesRela(const MCTargetOptions &TO, const MCSectionELF &Sec) const;
 
   bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
                         unsigned Type) const;

@@ -54,7 +54,7 @@ body:             |
 
     renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
     %6:vgpr_32 = COPY renamable $sgpr0
-    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $agpr0
+    INLINEASM &"; def $0", sideeffect attdialect, regdef, implicit-def $agpr0
     undef %4.sub0:av_512 = COPY $agpr0
     %3:areg_512 = COPY %4
     %7:vgpr_32 = COPY killed renamable $sgpr1
@@ -65,7 +65,7 @@ body:             |
     %5:areg_512 = V_MFMA_F32_16X16X1F32_mac_e64 %6, %7, %5, 0, 0, 0, implicit $mode, implicit $exec
     %8:vgpr_32 = COPY %5.sub3
     $agpr1 = COPY %8
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 9 /* reguse */, killed $agpr1
+    INLINEASM &"; use $0", sideeffect attdialect, reguse, killed $agpr1
     S_ENDPGM 0
 
 ...

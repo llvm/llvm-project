@@ -438,7 +438,7 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "(AND|EOR|NOT|
   "(ORR|BIC)v(16i8|4i32|8i16)$", "MVNIv(4i32|4s|8i16)")>;
 // ASIMD max/min, basic
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i32|8i16)")>;
 // SIMD max/min, reduce
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "[SU](MAX|MIN)Vv")>;
 // ASIMD multiply, by element
@@ -617,7 +617,7 @@ def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^PTRUES_[BHS
 def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
-def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs PTEST_PP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^TRN[12]_PPP_[BHSDQ]")>;
@@ -652,7 +652,7 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>],
                         "^(ADD|SUB|SUBR)_ZI_[BHSD]",
                         "^ADR_[SU]XTW_ZZZ_D_[0123]",
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]")>;
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]")>;
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>],
              (instregex "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",

@@ -25,7 +25,7 @@ class RegionsFromBBs final : public FunctionPass {
   RegionPassManager RPM;
 
 public:
-  RegionsFromBBs(StringRef Pipeline);
+  RegionsFromBBs(StringRef Pipeline, StringRef AuxArg);
   bool runOnFunction(Function &F, const Analyses &A) final;
   void printPipeline(raw_ostream &OS) const final {
     OS << getName() << "\n";

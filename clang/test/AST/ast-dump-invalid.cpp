@@ -48,7 +48,7 @@ double Str::foo1(double, invalid_type)
 { return 45; }
 }
 // CHECK: NamespaceDecl {{.*}} <{{.*}}> {{.*}} TestInvalidFunctionDecl
-// CHECK-NEXT: |-CXXRecordDecl {{.*}} <line:44:1, line:46:1> line:44:8 struct Str definition
+// CHECK-NEXT: |-CXXRecordDecl {{.*}} <line:44:1, line:46:1> line:44:8 referenced struct Str definition
 // CHECK:      | |-CXXRecordDecl {{.*}} <col:1, col:8> col:8 implicit struct Str
 // CHECK-NEXT: | `-CXXMethodDecl {{.*}} <line:45:4, col:36> col:11 invalid foo1 'double (double, int)'
 // CHECK-NEXT: |   |-ParmVarDecl {{.*}} <col:16> col:22 'double'

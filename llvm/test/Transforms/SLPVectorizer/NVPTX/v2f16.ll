@@ -32,10 +32,10 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
 ; NOVECTOR-NEXT:    store half [[TMP9]], ptr [[TMP6]], align 8
 ; NOVECTOR-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[ARG1]], i64 [[TMP10]]
 ; NOVECTOR-NEXT:    [[TMP12:%.*]] = load half, ptr [[TMP11]], align 2
-; NOVECTOR-NEXT:    [[TMP13:%.*]] = fmul fast half [[TMP12]], 0xH5380
-; NOVECTOR-NEXT:    [[TMP14:%.*]] = fadd fast half [[TMP13]], 0xH57F0
+; NOVECTOR-NEXT:    [[TMP18:%.*]] = fmul fast half [[TMP12]], 0xH5380
+; NOVECTOR-NEXT:    [[TMP19:%.*]] = fadd fast half [[TMP18]], 0xH57F0
 ; NOVECTOR-NEXT:    [[TMP15:%.*]] = getelementptr inbounds half, ptr [[ARG]], i64 [[TMP10]]
-; NOVECTOR-NEXT:    store half [[TMP14]], ptr [[TMP15]], align 2
+; NOVECTOR-NEXT:    store half [[TMP19]], ptr [[TMP15]], align 2
 ; NOVECTOR-NEXT:    ret void
 ;
   %1 = shl nuw nsw i32 %arg2, 6
@@ -64,16 +64,15 @@ define ptx_kernel void @add_f16(ptr addrspace(1) %0, { half, half } %1, { half, 
 ; VECTOR-NEXT:    [[TMP5:%.*]] = extractvalue { half, half } [[TMP1]], 1
 ; VECTOR-NEXT:    [[TMP6:%.*]] = extractvalue { half, half } [[TMP2:%.*]], 0
 ; VECTOR-NEXT:    [[TMP7:%.*]] = extractvalue { half, half } [[TMP2]], 1
-; VECTOR-NEXT:    [[TMP8:%.*]] = insertelement <2 x half> poison, half [[TMP4]], i32 0
-; VECTOR-NEXT:    [[TMP9:%.*]] = insertelement <2 x half> [[TMP8]], half [[TMP5]], i32 1
-; VECTOR-NEXT:    [[TMP10:%.*]] = insertelement <2 x half> poison, half [[TMP6]], i32 0
-; VECTOR-NEXT:    [[TMP11:%.*]] = insertelement <2 x half> [[TMP10]], half [[TMP7]], i32 1
-; VECTOR-NEXT:    [[TMP12:%.*]] = fadd <2 x half> [[TMP9]], [[TMP11]]
+; VECTOR-NEXT:    [[TMP8:%.*]] = fadd half [[TMP4]], [[TMP6]]
+; VECTOR-NEXT:    [[TMP9:%.*]] = fadd half [[TMP5]], [[TMP7]]
 ; VECTOR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; VECTOR-NEXT:    [[TMP14:%.*]] = shl i32 [[TMP13]], 1
 ; VECTOR-NEXT:    [[TMP15:%.*]] = and i32 [[TMP14]], 62
 ; VECTOR-NEXT:    [[TMP16:%.*]] = zext nneg i32 [[TMP15]] to i64
 ; VECTOR-NEXT:    [[TMP17:%.*]] = getelementptr half, ptr addrspace(1) [[TMP0:%.*]], i64 [[TMP16]]
+; VECTOR-NEXT:    [[TMP18:%.*]] = insertelement <2 x half> poison, half [[TMP8]], i64 0
+; VECTOR-NEXT:    [[TMP12:%.*]] = insertelement <2 x half> [[TMP18]], half [[TMP9]], i64 1
 ; VECTOR-NEXT:    store <2 x half> [[TMP12]], ptr addrspace(1) [[TMP17]], align 4
 ; VECTOR-NEXT:    ret void
 ;

@@ -4,6 +4,7 @@ from lldbsuite.test import lldbutil
 
 
 class Universal64TestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def do_test(self):

@@ -5,8 +5,8 @@
 ! CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: {{.*}}debug-module-2.f90{{.*}})
 ! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}file: ![[FILE]]{{.*}} globals: ![[GLOBALS:.*]])
 ! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE]]{{.*}})
-! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real", size: 32, encoding: DW_ATE_float)
-! CHECK-DAG: ![[I4:.*]] = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
+! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
+! CHECK-DAG: ![[I4:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 module helper
 ! CHECK-DAG: ![[GLR:.*]] = distinct !DIGlobalVariable(name: "glr", linkageName: "_QMhelperEglr", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+2]], type: ![[R4]], isLocal: false, isDefinition: true)
 ! CHECK-DAG: ![[GLRX:.*]] = !DIGlobalVariableExpression(var: ![[GLR]], expr: !DIExpression())

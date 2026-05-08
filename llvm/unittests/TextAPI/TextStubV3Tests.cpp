@@ -937,4 +937,52 @@ TEST(TBDv3, InterfaceInequality) {
   }));
 }
 
+TEST(TBDv3, SkipUnknownArch) {
+  static const char TBDv3WithUnknownArch[] = "--- !tapi-tbd-v3\n"
+                                             "archs: [ arm64, foo ]\n"
+                                             "platform: ios\n"
+                                             "install-name: Test.dylib\n"
+                                             "exports:\n"
+                                             "  - archs: [ arm64 ]\n"
+                                             "    symbols: [ _knownSym ]\n"
+                                             "  - archs: [ foo ]\n"
+                                             "    symbols: [ _unknownSym ]\n"
+                                             "  - archs: [ arm64, foo ]\n"
+                                             "    symbols: [ _mixedSym ]\n"
+                                             "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv3WithUnknownArch, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(ArchitectureSet(AK_arm64), File->getArchitectures());
+
+  llvm::DenseSet<StringRef> SymbolNames;
+  for (const auto *Sym : File->exports())
+    SymbolNames.insert(Sym->getName());
+
+  EXPECT_TRUE(SymbolNames.count("_knownSym"));
+  EXPECT_TRUE(SymbolNames.count("_mixedSym"));
+  EXPECT_FALSE(SymbolNames.count("_unknownSym"));
+}
+
+TEST(TBDv3, SkipAllUnknownArchs) {
+  static const char TBDv3AllUnknown[] = "--- !tapi-tbd-v3\n"
+                                        "archs: [ foo, bar ]\n"
+                                        "platform: ios\n"
+                                        "install-name: Test.dylib\n"
+                                        "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv3AllUnknown, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_TRUE(File->getArchitectures().empty());
+  EXPECT_EQ(File->symbolsCount(), 0U);
+}
+
 } // namespace TBDv3

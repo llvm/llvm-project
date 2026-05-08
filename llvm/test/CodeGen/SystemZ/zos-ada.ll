@@ -2,11 +2,11 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
 
-; CHECK-LABEL: caller:
+; CHECK-LABEL: caller DS 0H
 ; CHECK:         stmg 6,8,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lgr 8,5
-; CHECK-NEXT:    brasl 7,callee_internal@PLT
+; CHECK-NEXT:    brasl 7,callee_internal
 ; CHECK-NEXT:    bcr 0,3
 ; CHECK-NEXT:    lg 6,8(8)
 ; CHECK-NEXT:    lg 5,0(8)

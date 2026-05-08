@@ -117,7 +117,7 @@ removeEmptyPTLoad(Ctx &ctx, SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
   for (auto it2 = it; it2 != phdrs.end(); ++it2)
     removed.insert(it2->get());
   for (OutputSection *sec : ctx.outputSections)
-    if (removed.count(sec->ptLoad))
+    if (removed.contains(sec->ptLoad))
       sec->ptLoad = nullptr;
   phdrs.erase(it, phdrs.end());
 }
@@ -401,11 +401,11 @@ static void markUsedLocalSymbolsImpl(ObjFile<ELFT> *file,
   for (const RelTy &rel : rels) {
     Symbol &sym = file->getRelocTargetSym(rel);
     if (sym.isLocal())
-      sym.used = true;
+      sym.setFlags(USED);
   }
 }
 
-// The function ensures that the "used" field of local symbols reflects the fact
+// The function ensures that the USED flag of local symbols reflects the fact
 // that the symbol is used in a relocation from a live section.
 template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
   // With --gc-sections, the field is already filled.
@@ -428,7 +428,7 @@ template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
         for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
           Symbol &sym = file->getSymbol(r.r_symidx);
           if (sym.isLocal())
-            sym.used = true;
+            sym.setFlags(USED);
         }
       }
     }
@@ -441,7 +441,7 @@ static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
 
   // If --emit-reloc or -r is given, preserve symbols referenced by relocations
   // from live sections.
-  if (sym.used && ctx.arg.copyRelocs)
+  if (sym.hasFlag(USED) && ctx.arg.copyRelocs)
     return true;
 
   // Exclude local symbols pointing to .ARM.exidx sections.
@@ -482,7 +482,7 @@ bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
       return s->getSectionPiece(d->value).live;
     return true;
   }
-  return b.used || !ctx.arg.gcSections;
+  return b.hasFlag(USED) || !ctx.arg.gcSections;
 }
 
 // Scan local symbols to:
@@ -492,9 +492,11 @@ bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
 // - copy eligible symbols to .symTab
 static void demoteAndCopyLocalSymbols(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Add local symbols");
-  for (ELFFileBase *file : ctx.objectFiles) {
+  auto symsVec =
+      std::make_unique<SmallVector<Symbol *, 0>[]>(ctx.objectFiles.size());
+  parallelFor(0, ctx.objectFiles.size(), [&](size_t i) {
     DenseMap<SectionBase *, size_t> sectionIndexMap;
-    for (Symbol *b : file->getLocalSymbols()) {
+    for (Symbol *b : ctx.objectFiles[i]->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
       if (!dr)
@@ -504,9 +506,12 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
         demoteDefined(*dr, sectionIndexMap);
       else if (ctx.in.symTab && includeInSymtab(ctx, *b) &&
                shouldKeepInSymtab(ctx, *dr))
-        ctx.in.symTab->addSymbol(b);
+        symsVec[i].push_back(b);
     }
-  }
+  });
+  for (auto &syms : ArrayRef(symsVec.get(), ctx.objectFiles.size()))
+    for (Symbol *sym : syms)
+      ctx.in.symTab->addSymbol(sym);
 }
 
 // Create a section symbol for each output section so that we can represent
@@ -682,7 +687,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
 
   // We want to put section specified by -T option first, so we
   // can start assigning VA starting from them later.
-  if (ctx.arg.sectionStartMap.count(osec.name))
+  if (ctx.arg.sectionStartMap.contains(osec.name))
     return rank;
   rank |= RF_NOT_ADDR_SET;
 
@@ -1104,11 +1109,12 @@ static void maybeShuffle(Ctx &ctx,
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
   if (ctx.arg.bpStartupFunctionSort || ctx.arg.bpFunctionOrderForCompression ||
-      ctx.arg.bpDataOrderForCompression) {
+      ctx.arg.bpDataOrderForCompression ||
+      !ctx.arg.bpCompressionSortSpecs.empty()) {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
     sectionOrder = runBalancedPartitioning(
         ctx, ctx.arg.bpStartupFunctionSort ? ctx.arg.irpgoProfilePath : "",
-        ctx.arg.bpFunctionOrderForCompression,
+        ctx.arg.bpCompressionSortSpecs, ctx.arg.bpFunctionOrderForCompression,
         ctx.arg.bpDataOrderForCompression,
         ctx.arg.bpCompressionSortStartupFunctions,
         ctx.arg.bpVerboseSectionOrderer);
@@ -1533,10 +1539,6 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   };
   finalizeOrderDependentContent();
 
-  // Converts call x@GDPLT to call __tls_get_addr
-  if (ctx.arg.emachine == EM_HEXAGON)
-    hexagonTLSSymbolUpdate(ctx);
-
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
@@ -1583,9 +1585,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
             part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
-              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
               if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
+              reloc.expr = R_NONE;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
                                       reloc.offset, false, *reloc.sym,
                                       reloc.addend, R_ABS});
@@ -1602,6 +1605,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrAuthDyn->updateAllocSize(ctx);
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
+      if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
+        changed |= part.ehFrameHdr->updateAllocSize(ctx);
     }
 
     std::pair<const OutputSection *, const Defined *> changes =
@@ -1626,6 +1631,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // Spilling can change relative section order.
       finalizeOrderDependentContent();
     }
+    // If updateAllocSize reported errors (e.g. "unknown FDE size encoding" for
+    // part.ehFrameHdr), break to avoid duplicate diagnostics from the loop.
+    if (errCount(ctx))
+      break;
   }
   if (!ctx.arg.relocatable)
     ctx.target->finalizeRelax(pass);
@@ -1735,7 +1744,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
     for (size_t i = 0, e = sections.size(); i != e; ++i) {
       InputSection *next = i + 1 < sections.size() ? sections[i + 1] : nullptr;
       InputSection &sec = *sections[i];
-      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, sec.file, next);
+      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, next);
     }
     if (numDeleted > 0) {
       ctx.script->assignAddresses();
@@ -1798,10 +1807,10 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
       for (SectionCommand *cmd : osec->commands)
         if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
           llvm::erase_if(isd->sections, [&](InputSection *isec) {
-            return unused.count(isec);
+            return unused.contains(isec);
           });
   llvm::erase_if(ctx.script->orphanSections, [&](const InputSectionBase *sec) {
-    return unused.count(sec);
+    return unused.contains(sec);
   });
 }
 
@@ -1942,7 +1951,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (SharedFile *file : ctx.sharedFiles) {
         bool allNeededIsKnown =
             llvm::all_of(file->dtNeeded, [&](StringRef needed) {
-              return ctx.symtab->soNames.count(CachedHashStringRef(needed));
+              return ctx.symtab->soNames.contains(CachedHashStringRef(needed));
             });
         if (!allNeededIsKnown)
           continue;
@@ -2030,17 +2039,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       sec->addrExpr = [=] { return i->second; };
   }
 
-  // With the ctx.outputSections available check for GDPLT relocations
-  // and add __tls_get_addr symbol if needed.
-  if (ctx.arg.emachine == EM_HEXAGON &&
-      hexagonNeedsTLSSymbol(ctx.outputSections)) {
-    Symbol *sym =
-        ctx.symtab->addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
-                                        STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
-    sym->isPreemptible = true;
-    ctx.partitions[0].dynSymTab->addSymbol(sym);
-  }
-
   // This is a bit of a hack. A value of 0 means undef, so we set it
   // to 1 to make __ehdr_start defined. The section number is not
   // particularly relevant.
@@ -2110,20 +2108,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : ctx.partitions) {
-      if (part.relaDyn) {
-        part.relaDyn->mergeRels();
-        // Compute DT_RELACOUNT to be used by part.dynamic.
-        part.relaDyn->partitionRels();
-        finalizeSynthetic(ctx, part.relaDyn.get());
-      }
-      if (part.relrDyn) {
-        part.relrDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrDyn.get());
-      }
-      if (part.relrAuthDyn) {
-        part.relrAuthDyn->mergeRels();
-        finalizeSynthetic(ctx, part.relrAuthDyn.get());
-      }
+      finalizeSynthetic(ctx, part.relaDyn.get());
+      finalizeSynthetic(ctx, part.relrDyn.get());
+      finalizeSynthetic(ctx, part.relrAuthDyn.get());
 
       finalizeSynthetic(ctx, part.dynSymTab.get());
       finalizeSynthetic(ctx, part.gnuHashTab.get());
@@ -2459,8 +2446,7 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     ret.push_back(std::move(relRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (part.ehFrame->isNeeded() && part.ehFrameHdr &&
-      part.ehFrame->getParent() && part.ehFrameHdr->getParent())
+  if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
     addHdr(PT_GNU_EH_FRAME, part.ehFrameHdr->getParent()->getPhdrFlags())
         ->add(part.ehFrameHdr->getParent());
 
@@ -2970,14 +2956,25 @@ static void fillTrap(std::array<uint8_t, 4> trapInstr, uint8_t *i,
     memcpy(i, trapInstr.data(), 4);
 }
 
-// Fill the last page of executable segments with trap instructions
-// instead of leaving them as zero. Even though it is not required by any
-// standard, it is in general a good thing to do for security reasons.
-//
-// We'll leave other pages in segments as-is because the rest will be
-// overwritten by output sections.
+// Fill executable segments with trap instructions. This includes both the
+// gaps between sections (due to alignment) and the tail padding to the page
+// boundary. Even though it is not required by any standard, it is in general
+// a good thing to do for security reasons.
 template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   for (Partition &part : ctx.partitions) {
+    // Fill gaps between consecutive sections in the same executable segment.
+    OutputSection *prev = nullptr;
+    for (OutputSection *sec : ctx.outputSections) {
+      PhdrEntry *p = sec->ptLoad;
+      if (!p || !(p->p_flags & PF_X))
+        continue;
+      if (prev && prev->ptLoad == p)
+        fillTrap(ctx.target->trapInstr,
+                 ctx.bufferStart + alignDown(prev->offset + prev->size, 4),
+                 ctx.bufferStart + sec->offset);
+      prev = sec;
+    }
+
     // Fill the last page.
     for (std::unique_ptr<PhdrEntry> &p : part.phdrs)
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))

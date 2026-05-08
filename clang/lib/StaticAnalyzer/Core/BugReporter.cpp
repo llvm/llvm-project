@@ -25,7 +25,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
@@ -324,7 +323,7 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
   CallExitEnd CExit = P.castAs<CallExitEnd>();
 
   // FIXME: Use CallEvent to abstract this over all calls.
-  const Stmt *CallSite = CExit.getCalleeContext()->getCallSite();
+  const Expr *CallSite = CExit.getCalleeContext()->getCallSite();
   const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
   if (!CE)
     return {};
@@ -1162,7 +1161,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     if (C.shouldAddPathEdges()) {
       // Add an edge to the start of the function.
-      const StackFrameContext *CalleeLC = CE->getCalleeContext();
+      const StackFrame *CalleeLC = CE->getCalleeContext();
       const Decl *D = CalleeLC->getDecl();
       // Add the edge only when the callee has body. We jump to the beginning
       // of the *declaration*, however we expect it to be followed by the
@@ -2075,7 +2074,7 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   if (PDC->shouldAddPathEdges()) {
     // Add an edge to the start of the function.
     // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrameContext *CalleeLC =
+    const StackFrame *CalleeLC =
         Construct.getLocationContextForActivePath()->getStackFrame();
     const Decl *D = CalleeLC->getDecl();
     addEdgeToPath(Construct.getActivePath(), PrevLoc,

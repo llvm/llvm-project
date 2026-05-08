@@ -5,12 +5,13 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=GFX1030
 ; RUN: not --crash llc < %s -mtriple=amdgcn -mcpu=gfx1100 2>&1 | FileCheck %s -check-prefix=GFX11-ERR
 
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=verde | FileCheck %s -check-prefix=G_SI
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=hawaii | FileCheck %s  -check-prefix=G_GFX7
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefix=G_GFX10
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=G_GFX1030
-; RUN: not llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1100 2>&1 | FileCheck %s -check-prefix=G_GFX11-ERR
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=verde | FileCheck %s -check-prefix=G_SI
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=hawaii | FileCheck %s  -check-prefix=G_GFX7
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefix=G_GFX10
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=G_GFX1030
+; RUN: not llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 2>&1 | FileCheck %s -check-prefix=G_GFX11-ERR
 
+; image_atomic_fmin and image_atomic_fmax was removed on gfx11+
 ; GFX11-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.image.atomic.f
 ; G_GFX11-ERR: LLVM ERROR: cannot select: {{.*}} = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.f
 

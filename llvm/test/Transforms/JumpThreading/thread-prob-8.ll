@@ -8,7 +8,6 @@
 ; prob[L0->2] + prob[L0->3]
 
 ; CHECK: Computing probabilities for entry
-; CHECK: eraseBlock L0
 ; CHECK-NOT: set edge L0 -> 0 successor probability to 0x12492492 / 0x80000000 = 14.29%
 ; CHECK-NOT: set edge L0 -> 1 successor probability to 0x24924925 / 0x80000000 = 28.57%
 ; CHECK-NOT: set edge L0 -> 2 successor probability to 0x24924925 / 0x80000000 = 28.57%

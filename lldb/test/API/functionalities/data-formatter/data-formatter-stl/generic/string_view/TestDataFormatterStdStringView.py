@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 
 class StdStringViewDataFormatterTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         # Call super's setUp().
@@ -173,6 +174,11 @@ class StdStringViewDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
 
     @add_test_categories(["msvcstl"])

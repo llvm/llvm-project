@@ -2410,9 +2410,10 @@ body: |
     ; CI-NEXT: [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32) from unknown-address + 24)
     ; CI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32)
     ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; CI-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; CI-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; CI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; CI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; CI-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32), [[DEF]](s32)
+    ; CI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     ;
     ; VI-LABEL: name: test_load_flat_s224_align4
     ; VI: liveins: $vgpr0_vgpr1
@@ -2439,9 +2440,10 @@ body: |
     ; VI-NEXT: [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32) from unknown-address + 24)
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32)
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; VI-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; VI-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; VI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32), [[DEF]](s32)
+    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     ;
     ; GFX9PLUS-LABEL: name: test_load_flat_s224_align4
     ; GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -2455,9 +2457,10 @@ body: |
     ; GFX9PLUS-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; GFX9PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32)
     ; GFX9PLUS-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; GFX9PLUS-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; GFX9PLUS-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; GFX9PLUS-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9PLUS-NEXT: [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; GFX9PLUS-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[DEF]](s32)
+    ; GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     ;
     ; GFX11PLUS-LABEL: name: test_load_flat_s224_align4
     ; GFX11PLUS: liveins: $vgpr0_vgpr1
@@ -2471,9 +2474,10 @@ body: |
     ; GFX11PLUS-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; GFX11PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32)
     ; GFX11PLUS-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; GFX11PLUS-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11PLUS-NEXT: [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; GFX11PLUS-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[DEF]](s32)
+    ; GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     ;
     ; GFX12-LABEL: name: test_load_flat_s224_align4
     ; GFX12: liveins: $vgpr0_vgpr1
@@ -2487,9 +2491,10 @@ body: |
     ; GFX12-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; GFX12-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32)
     ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; GFX12-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; GFX12-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-NEXT: [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; GFX12-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[DEF]](s32)
+    ; GFX12-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_s224_align4
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -2503,9 +2508,10 @@ body: |
     ; UNALIGNED_GFX9PLUS-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; UNALIGNED_GFX9PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32)
     ; UNALIGNED_GFX9PLUS-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; UNALIGNED_GFX9PLUS-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; UNALIGNED_GFX9PLUS-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; UNALIGNED_GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; UNALIGNED_GFX9PLUS-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; UNALIGNED_GFX9PLUS-NEXT: [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; UNALIGNED_GFX9PLUS-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[DEF]](s32)
+    ; UNALIGNED_GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     ;
     ; UNALIGNED_GFX11PLUS-LABEL: name: test_load_flat_s224_align4
     ; UNALIGNED_GFX11PLUS: liveins: $vgpr0_vgpr1
@@ -2519,9 +2525,10 @@ body: |
     ; UNALIGNED_GFX11PLUS-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; UNALIGNED_GFX11PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32)
     ; UNALIGNED_GFX11PLUS-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; UNALIGNED_GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; UNALIGNED_GFX11PLUS-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; UNALIGNED_GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; UNALIGNED_GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; UNALIGNED_GFX11PLUS-NEXT: [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; UNALIGNED_GFX11PLUS-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[DEF]](s32)
+    ; UNALIGNED_GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     ;
     ; UNALIGNED_GFX12-LABEL: name: test_load_flat_s224_align4
     ; UNALIGNED_GFX12: liveins: $vgpr0_vgpr1
@@ -2535,9 +2542,10 @@ body: |
     ; UNALIGNED_GFX12-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; UNALIGNED_GFX12-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32)
     ; UNALIGNED_GFX12-NEXT: [[BITCAST:%[0-9]+]]:_(s224) = G_BITCAST [[BUILD_VECTOR]](<7 x s32>)
-    ; UNALIGNED_GFX12-NEXT: [[DEF:%[0-9]+]]:_(s256) = G_IMPLICIT_DEF
-    ; UNALIGNED_GFX12-NEXT: [[INSERT:%[0-9]+]]:_(s256) = G_INSERT [[DEF]], [[BITCAST]](s224), 0
-    ; UNALIGNED_GFX12-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
+    ; UNALIGNED_GFX12-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; UNALIGNED_GFX12-NEXT: [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s224)
+    ; UNALIGNED_GFX12-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[DEF]](s32)
+    ; UNALIGNED_GFX12-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(s224) = G_LOAD %0 :: (load (s224), align 4, addrspace 0)
      %2:_(s256) = G_IMPLICIT_DEF

@@ -14,6 +14,7 @@
 #include "mlir-c/IR.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 
 MlirOperation createOperationWithName(MlirContext ctx, const char *name) {
@@ -534,6 +535,52 @@ void testReplaceUses(MlirContext ctx) {
   mlirModuleDestroy(module);
 }
 
+void testGreedyRewriteDriverConfig(MlirContext ctx) {
+  // CHECK-LABEL: @testGreedyRewriteDriverConfig
+  fprintf(stderr, "@testGreedyRewriteDriverConfig\n");
+
+  // Test config creation and destruction
+  MlirGreedyRewriteDriverConfig config = mlirGreedyRewriteDriverConfigCreate();
+
+  // Test all configuration setters
+  mlirGreedyRewriteDriverConfigSetMaxIterations(config, 5);
+  mlirGreedyRewriteDriverConfigSetMaxNumRewrites(config, 100);
+  mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(config, true);
+  mlirGreedyRewriteDriverConfigEnableFolding(config, false);
+  mlirGreedyRewriteDriverConfigSetStrictness(
+      config, MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS);
+  mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
+      config, MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL);
+  mlirGreedyRewriteDriverConfigEnableConstantCSE(config, false);
+
+  // Test all configuration getters and verify values
+  // CHECK: MaxIterations: 5
+  fprintf(stderr, "MaxIterations: %" PRId64 "\n",
+          mlirGreedyRewriteDriverConfigGetMaxIterations(config));
+  // CHECK: MaxNumRewrites: 100
+  fprintf(stderr, "MaxNumRewrites: %" PRId64 "\n",
+          mlirGreedyRewriteDriverConfigGetMaxNumRewrites(config));
+  // CHECK: UseTopDownTraversal: 1
+  fprintf(stderr, "UseTopDownTraversal: %d\n",
+          mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(config));
+  // CHECK: FoldingEnabled: 0
+  fprintf(stderr, "FoldingEnabled: %d\n",
+          mlirGreedyRewriteDriverConfigIsFoldingEnabled(config));
+  // CHECK: Strictness: 2
+  fprintf(stderr, "Strictness: %d\n",
+          mlirGreedyRewriteDriverConfigGetStrictness(config));
+  // CHECK: RegionSimplificationLevel: 1
+  fprintf(stderr, "RegionSimplificationLevel: %d\n",
+          mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(config));
+  // CHECK: ConstantCSEEnabled: 0
+  fprintf(stderr, "ConstantCSEEnabled: %d\n",
+          mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(config));
+
+  // CHECK: Config test completed successfully
+  fprintf(stderr, "Config test completed successfully\n");
+  mlirGreedyRewriteDriverConfigDestroy(config);
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -547,6 +594,7 @@ int main(void) {
   testMove(ctx);
   testOpModification(ctx);
   testReplaceUses(ctx);
+  testGreedyRewriteDriverConfig(ctx);
 
   mlirContextDestroy(ctx);
   return 0;

@@ -8,7 +8,7 @@ integer OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 integer NUMTHRDS, TID
 integer N, CSZ, CNUM, I
 parameter (N=100)
-parameter (CSZ=10) 
+parameter (CSZ=10)
 real A(N), B(N), C(N)
 
 do 10 I = 1, N

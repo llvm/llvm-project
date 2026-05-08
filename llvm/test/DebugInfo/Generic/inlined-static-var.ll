@@ -14,18 +14,17 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_abstract_origin {{.*}} "_Z11not_removedv"
-; TODO: This variable should be emitted in abstract subprogram DIE.
-; CHECK:     DW_TAG_variable
-; CHECK:       DW_AT_name     ("B")
-; CHECK:     NULL
-; CHECK:   DW_TAG_base_type
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name       ("removed")
 ; CHECK:     DW_TAG_variable
 ; CHECK:       DW_AT_name     ("A")
 ; CHECK:     NULL
+; CHECK:   DW_TAG_base_type
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name       ("not_removed")
+; CHECK:     DW_TAG_variable
+; CHECK:       DW_AT_name     ("B")
+; CHECK:     NULL
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name       ("foo")
 ; CHECK:     DW_TAG_inlined_subroutine

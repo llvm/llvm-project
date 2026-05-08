@@ -178,7 +178,81 @@ public:
   }
 
 private:
-  StringMap<std::string> Placeholders;
+  SmallVector<std::pair<std::string, std::string>> Placeholders;
+};
+
+/// Loads an object file and provides access to it.
+///
+/// Owns the underlying `ObjectFile` and ensures it is valid.
+/// Any errors encountered during construction are stored and
+/// returned when attempting to access the file.
+class ObjectFileLoader {
+public:
+  /// Construct an object file loader from the given path.
+  explicit ObjectFileLoader(StringRef Path) {
+    auto ObjOrErr = loadObjectFileWithOwnership(Path);
+    if (ObjOrErr)
+      Obj = std::move(*ObjOrErr);
+    else {
+      consumeError(std::move(Err));
+      Err = ObjOrErr.takeError();
+    }
+  }
+
+  ObjectFileLoader(const ObjectFileLoader &) = delete;
+  ObjectFileLoader &operator=(const ObjectFileLoader &) = delete;
+
+  ObjectFileLoader(ObjectFileLoader &&) = default;
+  ObjectFileLoader &operator=(ObjectFileLoader &&) = default;
+
+  /// Get the loaded object file, or return an error if loading failed.
+  Expected<object::ObjectFile &> getObjectFile() {
+    if (Err) {
+      // allow the error to be taken only once
+      if (ErrorTaken)
+        return createStringError(inconvertibleErrorCode(),
+                                 "error already taken");
+
+      ErrorTaken = true;
+      return std::move(Err);
+    }
+    return *Obj.getBinary();
+  }
+
+  static bool isArchitectureCompatible(const object::ObjectFile &Obj);
+
+private:
+  object::OwningBinary<object::ObjectFile> Obj;
+  Error Err = Error::success();
+  bool ErrorTaken = false;
+
+  static Expected<object::OwningBinary<object::ObjectFile>>
+  loadObjectFileWithOwnership(StringRef FilePath);
+};
+
+class ObjFileCache {
+public:
+  void insert(StringRef Path, ObjectFileLoader &&Loader) {
+    Cache.insert({Path, std::move(Loader)});
+  }
+
+  // Take ownership
+  std::optional<ObjectFileLoader> take(StringRef Path) {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    auto It = Cache.find(Path);
+    if (It == Cache.end())
+      return std::nullopt;
+
+    ObjectFileLoader L = std::move(It->second);
+    Cache.erase(It);
+    return std::move(L);
+  }
+
+  bool contains(StringRef Path) const { return Cache.count(Path) != 0; }
+
+private:
+  mutable std::shared_mutex Mtx;
+  StringMap<ObjectFileLoader> Cache;
 };
 
 /// Validates and normalizes dynamic library paths.
@@ -187,9 +261,16 @@ private:
 /// checks whether they point to valid shared libraries.
 class DylibPathValidator {
 public:
-  DylibPathValidator(PathResolver &PR) : LibPathResolver(PR) {}
+  DylibPathValidator(PathResolver &PR, LibraryPathCache &LC,
+                     ObjFileCache *ObjCache = nullptr)
+      : LibPathResolver(PR), LibPathCache(LC), ObjCache(ObjCache) {}
 
-  static bool isSharedLibrary(StringRef Path);
+  bool isSharedLibrary(StringRef Path) const;
+  bool isSharedLibraryCached(StringRef Path) const {
+    if (LibPathCache.hasSeen(Path))
+      return true;
+    return isSharedLibrary(Path);
+  }
 
   std::optional<std::string> normalize(StringRef Path) const {
     std::error_code ec;
@@ -202,11 +283,13 @@ public:
 
   /// Validate the given path as a shared library.
   std::optional<std::string> validate(StringRef Path) const {
+    if (LibPathCache.hasSeen(Path))
+      return Path.str();
     auto realOpt = normalize(Path);
     if (!realOpt)
       return std::nullopt;
 
-    if (!isSharedLibrary(*realOpt))
+    if (!isSharedLibraryCached(*realOpt))
       return std::nullopt;
 
     return realOpt;
@@ -214,6 +297,8 @@ public:
 
 private:
   PathResolver &LibPathResolver;
+  LibraryPathCache &LibPathCache;
+  mutable ObjFileCache *ObjCache;
 };
 
 enum class SearchPathType {
@@ -232,6 +317,7 @@ public:
   SearchPathResolver(const SearchPathConfig &Cfg,
                      StringRef PlaceholderPrefix = "")
       : Kind(Cfg.type), PlaceholderPrefix(PlaceholderPrefix) {
+    Paths.reserve(Cfg.Paths.size());
     for (auto &path : Cfg.Paths)
       Paths.emplace_back(path.str());
   }
@@ -338,14 +424,15 @@ public:
   addBasePath(const std::string &P,
               PathType Kind =
                   PathType::Unknown); // Add a canonical directory for scanning
-  std::vector<std::shared_ptr<LibrarySearchPath>>
-  getNextBatch(PathType Kind, size_t batchSize);
+
+  void getNextBatch(PathType Kind, size_t batchSize,
+                    SmallVectorImpl<const LibrarySearchPath *> &Out);
 
   bool leftToScan(PathType K) const;
   void resetToScan();
 
   bool isTrackedBasePath(StringRef P) const;
-  std::vector<std::shared_ptr<LibrarySearchPath>> getAllUnits() const;
+  bool hasSearchPath() const { return !LibSearchPaths.empty(); }
 
   SmallVector<StringRef> getSearchPaths() const {
     SmallVector<StringRef> SearchPaths;
@@ -374,51 +461,10 @@ private:
   std::shared_ptr<LibraryPathCache> LibPathCache;
   std::shared_ptr<PathResolver> LibPathResolver;
 
-  StringMap<std::shared_ptr<LibrarySearchPath>>
+  StringMap<std::unique_ptr<LibrarySearchPath>>
       LibSearchPaths; // key: canonical path
   std::deque<StringRef> UnscannedUsr;
   std::deque<StringRef> UnscannedSys;
-};
-
-/// Loads an object file and provides access to it.
-///
-/// Owns the underlying `ObjectFile` and ensures it is valid.
-/// Any errors encountered during construction are stored and
-/// returned when attempting to access the file.
-class ObjectFileLoader {
-public:
-  /// Construct an object file loader from the given path.
-  explicit ObjectFileLoader(StringRef Path) {
-    auto ObjOrErr = loadObjectFileWithOwnership(Path);
-    if (ObjOrErr)
-      Obj = std::move(*ObjOrErr);
-    else {
-      consumeError(std::move(Err));
-      Err = ObjOrErr.takeError();
-    }
-  }
-
-  ObjectFileLoader(const ObjectFileLoader &) = delete;
-  ObjectFileLoader &operator=(const ObjectFileLoader &) = delete;
-
-  ObjectFileLoader(ObjectFileLoader &&) = default;
-  ObjectFileLoader &operator=(ObjectFileLoader &&) = default;
-
-  /// Get the loaded object file, or return an error if loading failed.
-  Expected<object::ObjectFile &> getObjectFile() {
-    if (Err)
-      return std::move(Err);
-    return *Obj.getBinary();
-  }
-
-  static bool isArchitectureCompatible(const object::ObjectFile &Obj);
-
-private:
-  object::OwningBinary<object::ObjectFile> Obj;
-  Error Err = Error::success();
-
-  static Expected<object::OwningBinary<object::ObjectFile>>
-  loadObjectFileWithOwnership(StringRef FilePath);
 };
 
 /// Scans libraries, resolves dependencies, and registers them.
@@ -429,7 +475,9 @@ public:
   LibraryScanner(
       LibraryScanHelper &H, LibraryManager &LibMgr,
       ShouldScanFn ShouldScanCall = [](StringRef path) { return true; })
-      : ScanHelper(H), LibMgr(LibMgr),
+      : ObjCache(ObjFileCache()), ScanHelper(H), LibMgr(LibMgr),
+        Validator(ScanHelper.getPathResolver(), ScanHelper.getCache(),
+                  &ObjCache),
         ShouldScanCall(std::move(ShouldScanCall)) {}
 
   void scanNext(PathType Kind, size_t batchSize = 1);
@@ -452,16 +500,19 @@ public:
   };
 
 private:
+  ObjFileCache ObjCache;
   LibraryScanHelper &ScanHelper;
   LibraryManager &LibMgr;
+  DylibPathValidator Validator;
   ShouldScanFn ShouldScanCall;
 
-  std::optional<std::string> shouldScan(StringRef FilePath);
+  bool shouldScan(StringRef FilePath, bool IsResolvingDep = false);
+
   Expected<LibraryDepsInfo> extractDeps(StringRef FilePath);
 
-  void handleLibrary(StringRef P, PathType K, int level = 1);
+  void handleLibrary(StringRef FilePath, PathType K, int level = 0);
 
-  void scanBaseDir(std::shared_ptr<LibrarySearchPath> U);
+  void scanBaseDir(LibrarySearchPath *U);
 };
 
 using LibraryDepsInfo = LibraryScanner::LibraryDepsInfo;

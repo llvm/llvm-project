@@ -9,7 +9,27 @@
 #ifndef ORC_RT_UNITTEST_COMMONTESTUTILS_H
 #define ORC_RT_UNITTEST_COMMONTESTUTILS_H
 
+#include "orc-rt/Error.h"
+#include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/TaskDispatcher.h"
+#include "orc-rt/move_only_function.h"
+
 #include <cstddef>
+#include <future>
+
+inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
+
+inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
+  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
+}
+
+class NoDispatcher : public orc_rt::TaskDispatcher {
+public:
+  void dispatch(std::unique_ptr<orc_rt::Task> T) override {
+    assert(false && "strictly no dispatching!");
+  }
+  void shutdown() override {}
+};
 
 template <size_t Idx = 0> class OpCounter {
 public:
@@ -63,5 +83,18 @@ template <size_t Idx> size_t OpCounter<Idx>::CopyAssignments = 0;
 template <size_t Idx> size_t OpCounter<Idx>::MoveConstructions = 0;
 template <size_t Idx> size_t OpCounter<Idx>::MoveAssignments = 0;
 template <size_t Idx> size_t OpCounter<Idx>::Destructions = 0;
+
+template <typename T>
+orc_rt::move_only_function<void(T)> waitFor(std::future<T> &F) {
+  std::promise<T> P;
+  F = P.get_future();
+  return [P = std::move(P)](T Val) mutable { P.set_value(std::move(Val)); };
+}
+
+inline orc_rt::move_only_function<void()> waitFor(std::future<void> &F) {
+  std::promise<void> P;
+  F = P.get_future();
+  return [P = std::move(P)]() mutable { P.set_value(); };
+}
 
 #endif // ORC_RT_UNITTEST_COMMONTESTUTILS_H

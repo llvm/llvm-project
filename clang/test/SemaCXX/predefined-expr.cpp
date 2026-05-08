@@ -26,8 +26,8 @@ int baz() {
   []() {
     static_assert(sizeof(__func__) == 11, "operator()");
     static_assert(sizeof(__FUNCTION__) == 11, "operator()");
-    static_assert(sizeof(__PRETTY_FUNCTION__) == 50,
-                  "auto baz()::<anonymous class>::operator()() const");
+    static_assert(sizeof(__PRETTY_FUNCTION__) == 41,
+                  "auto baz()::<lambda>::operator()() const");
     return 0;
   }
   ();
@@ -56,8 +56,8 @@ int main() {
   []() {
     static_assert(sizeof(__func__) == 11, "operator()");
     static_assert(sizeof(__FUNCTION__) == 11, "operator()");
-    static_assert(sizeof(__PRETTY_FUNCTION__) == 51,
-                  "auto main()::<anonymous class>::operator()() const");
+    static_assert(sizeof(__PRETTY_FUNCTION__) == 42,
+                  "auto main()::<lambda>::operator()() const");
     return 0;
   }
   ();
@@ -87,8 +87,8 @@ int main() {
     {
       static_assert(sizeof(__func__) == 11, "operator()");
       static_assert(sizeof(__FUNCTION__) == 11, "operator()");
-      static_assert(sizeof(__PRETTY_FUNCTION__) == 51,
-                    "auto main()::<anonymous class>::operator()() const");
+      static_assert(sizeof(__PRETTY_FUNCTION__) == 42,
+                    "auto main()::<lambda>::operator()() const");
     }
   }
   ();

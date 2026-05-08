@@ -185,7 +185,8 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
     m_address_of_backend = ValueObjectConstResult::Create(
         exe_ctx.GetBestExecutionContextScope(), compiler_type.GetPointerType(),
         ConstString(new_name.c_str()), buffer, endian::InlHostByteOrder(),
-        exe_ctx.GetAddressByteSize());
+        exe_ctx.GetAddressByteSize(), LLDB_INVALID_ADDRESS,
+        m_impl_backend->GetManager());
 
     m_address_of_backend->GetValue().SetValueType(Value::ValueType::Scalar);
     m_address_of_backend->GetValue().GetScalar() = m_live_address;

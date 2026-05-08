@@ -47,5 +47,6 @@ int main(int argc, char** argv) {
   }
 
   SBDebugger::Destroy(dbg);
+  SBDebugger::Terminate();
   return code;
 }

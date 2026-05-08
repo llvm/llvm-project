@@ -80,11 +80,12 @@ std::optional<ModuleSpec> SymbolLocatorDefault::LocateExecutableObjectFile(
       exec_fspec ? exec_fspec.GetFilename().AsCString("<NULL>") : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 
-  ModuleSpecList module_specs;
   ModuleSpec matched_module_spec;
-  if (exec_fspec &&
-      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0, module_specs) &&
-      module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
+  if (!exec_fspec)
+    return {};
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0);
+  if (module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
     ModuleSpec result;
     result.GetFileSpec() = exec_fspec;
     return result;
@@ -200,7 +201,7 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
       // Some debug files may stored in the module directory like this:
       //   /usr/lib/debug/usr/lib/library.so.debug
       if (!file_dir.IsEmpty())
-        files.push_back(dirname + file_dir.AsCString() + "/" +
+        files.push_back(dirname + file_dir.GetString() + "/" +
                         symbol_file_spec.GetFilename().GetCString());
     }
 
@@ -215,12 +216,11 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
         continue;
 
       if (FileSystem::Instance().Exists(file_spec)) {
-        lldb_private::ModuleSpecList specs;
-        const size_t num_specs =
-            ObjectFile::GetModuleSpecifications(file_spec, 0, 0, specs);
+        lldb_private::ModuleSpecList specs =
+            ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
         ModuleSpec mspec;
         bool valid_mspec = false;
-        if (num_specs == 2) {
+        if (specs.GetSize() == 2) {
           // Special case to handle both i386 and i686 from ObjectFilePECOFF
           ModuleSpec mspec2;
           if (specs.GetModuleSpecAtIndex(0, mspec) &&
@@ -231,9 +231,9 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
           }
         }
         if (!valid_mspec) {
-          assert(num_specs <= 1 &&
+          assert(specs.GetSize() <= 1 &&
                  "Symbol Vendor supports only a single architecture");
-          if (num_specs == 1) {
+          if (specs.GetSize() == 1) {
             if (specs.GetModuleSpecAtIndex(0, mspec)) {
               valid_mspec = true;
             }

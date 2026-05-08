@@ -133,6 +133,7 @@ private:
       const SomeExpr &, common::DefinedIo, parser::CharBlock) const;
   parser::Message *CheckForBadIoType(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;
+  void CheckForAssumedRank(const Symbol *, parser::CharBlock) const;
 
   void CheckNamelist(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;

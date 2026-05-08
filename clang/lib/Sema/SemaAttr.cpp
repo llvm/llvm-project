@@ -136,6 +136,8 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
       "unordered_map",
       "unordered_multiset",
       "unordered_multimap",
+      "flat_map",
+      "flat_set",
   };
 
   static const llvm::StringSet<> Iterators{"iterator", "const_iterator",
@@ -189,6 +191,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "unordered_multiset",
       "unordered_multimap",
       "variant",
+      "flat_map",
+      "flat_set",
   };
   static const llvm::StringSet<> StdPointers{
       "basic_string_view",
@@ -215,6 +219,20 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 
   // Handle nested classes that could be a gsl::Pointer.
   inferGslPointerAttribute(Record, Record);
+}
+
+// This uses recursion and is only safe for small Stmt (e.g., the body of
+// std::make_unique). Do not use this for other Stmt without addressing the
+// potential for stack exhaustion.
+static const CXXNewExpr *findCXXNewExpr(const Stmt *S) {
+  if (!S)
+    return nullptr;
+  if (const auto *E = dyn_cast<CXXNewExpr>(S))
+    return E;
+  for (const Stmt *Child : S->children())
+    if (const CXXNewExpr *E = findCXXNewExpr(Child))
+      return E;
+  return nullptr;
 }
 
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
@@ -246,6 +264,29 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
     }
     return;
   }
+
+  // Handle std::make_unique to propagate lifetimebound attributes from the
+  // constructed type's constructor to make_unique's parameters by looking
+  // into its body.
+  if (FD->getDeclName().isIdentifier() && FD->getName() == "make_unique") {
+    const FunctionDecl *BodyDecl = nullptr;
+    if (FD->getBody(BodyDecl))
+      if (const CXXNewExpr *NewExpr = findCXXNewExpr(BodyDecl->getBody()))
+        if (const CXXConstructExpr *ConstructExpr = NewExpr->getConstructExpr())
+          if (const CXXConstructorDecl *Ctor = ConstructExpr->getConstructor())
+            for (unsigned I = 0; I < Ctor->getNumParams(); ++I)
+              // Only infer lifetimebound for references. For pointers and
+              // views, the forwarding reference in make_unique would
+              // incorrectly track the lifetime of the local pointer variable
+              // itself, rather than the data it points to.
+              if (I < FD->getNumParams() &&
+                  Ctor->getParamDecl(I)->hasAttr<LifetimeBoundAttr>() &&
+                  Ctor->getParamDecl(I)->getType()->isReferenceType())
+                FD->getParamDecl(I)->addAttr(LifetimeBoundAttr::CreateImplicit(
+                    Context, FD->getLocation()));
+    return;
+  }
+
   if (auto *CMD = dyn_cast<CXXMethodDecl>(FD)) {
     const auto *CRD = CMD->getParent();
     if (!CRD->isInStdNamespace() || !CRD->getIdentifier())
@@ -315,6 +356,8 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
   static const llvm::StringSet<> CapturingMethods{
       "insert", "insert_or_assign", "push", "push_front", "push_back"};
   if (!CapturingMethods.contains(MD->getName()))
+    return;
+  if (MD->getName() == "insert" && MD->getParent()->getName() == "basic_string")
     return;
   Annotate(MD);
 }
@@ -1325,6 +1368,66 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
                            MSFunctionNoBuiltins.end());
   if (!MSFunctionNoBuiltins.empty())
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
+}
+
+NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
+                                                 SourceLocation NameLoc,
+                                                 Scope *curScope) {
+  LookupResult Result(*this, IdentId, NameLoc, LookupOrdinaryName);
+  LookupName(Result, curScope);
+  if (!getLangOpts().CPlusPlus)
+    return Result.getAsSingle<NamedDecl>();
+  for (NamedDecl *D : Result) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      if (FD->isExternC())
+        return D;
+    if (isa<VarDecl>(D))
+      return D;
+  }
+  return nullptr;
+}
+
+void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
+                             Scope *curScope) {
+  if (!CurContext->getRedeclContext()->isFileContext()) {
+    Diag(NameLoc, diag::err_pragma_expected_file_scope) << "export";
+    return;
+  }
+
+  PendingPragmaInfo Info;
+  Info.NameLoc = NameLoc;
+  Info.Used = false;
+
+  NamedDecl *PrevDecl =
+      lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
+  if (!PrevDecl) {
+    PendingExportedNames[IdentId] = Info;
+    return;
+  }
+
+  if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!FD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (FD->hasBody()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!VD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (VD->hasDefinition() == VarDecl::Definition) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  }
+  mergeVisibilityType(PrevDecl->getCanonicalDecl(), NameLoc,
+                      VisibilityAttr::Default);
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;

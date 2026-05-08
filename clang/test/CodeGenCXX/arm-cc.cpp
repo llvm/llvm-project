@@ -17,4 +17,4 @@ void baz() {
 }
 
 // CHECK: declare void @_Z3fooPv(ptr dead_on_unwind writable sret(%class.SMLoc) align 4, ptr noundef)
-// CHECK: declare void @_Z3zed5SMLoc(ptr dead_on_return noundef)
+// CHECK: declare void @_Z3zed5SMLoc(ptr noundef dead_on_return)

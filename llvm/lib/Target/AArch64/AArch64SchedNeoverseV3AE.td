@@ -1945,7 +1945,7 @@ def : InstRW<[V3AEWrite_2c_1M], (instregex "^PTRUES_[BHSD]")>;
 def : InstRW<[V3AEWrite_2c_1M], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
-def : InstRW<[V3AEWrite_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[V3AEWrite_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[V3AEWrite_2c_1M], (instregex "^TRN[12]_PPP_[BHSD]")>;
@@ -1982,7 +1982,7 @@ def : InstRW<[V3AEWrite_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
@@ -2045,7 +2045,8 @@ def : InstRW<[V3AEWrite_4c_1V], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[V3AEWrite_6c_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[V3AEWrite_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ")>;
+def : InstRW<[V3AEWrite_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ",
+                                           "^(EON|NAND|NOR)_ZZZ$")>;
 
 // Count/reverse bits
 def : InstRW<[V3AEWrite_2c_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;

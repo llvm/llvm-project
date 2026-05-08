@@ -526,14 +526,16 @@ TEST(DIBuilder, FixedPointType) {
   DIBuilder DIB(*M);
 
   DIFixedPointType *Ty = DIB.createBinaryFixedPointType(
-      {}, 32, 0, dwarf::DW_ATE_signed_fixed, DINode::FlagZero, -4);
+      {}, nullptr, 0, nullptr, 32, 0, dwarf::DW_ATE_signed_fixed,
+      DINode::FlagZero, -4);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointBinary);
   EXPECT_TRUE(Ty->getFactor() == -4);
   EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_signed_fixed);
   EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 
-  Ty = DIB.createDecimalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createDecimalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                       dwarf::DW_ATE_unsigned_fixed,
                                        DINode::FlagZero, -7);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointDecimal);
@@ -543,7 +545,8 @@ TEST(DIBuilder, FixedPointType) {
 
   APSInt Num(APInt(32, 1));
   APSInt Denom(APInt(33, 72));
-  Ty = DIB.createRationalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createRationalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                        dwarf::DW_ATE_unsigned_fixed,
                                         DINode::FlagZero, Num, Denom);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointRational);
@@ -646,7 +649,7 @@ TEST(AssignmentTrackingTest, Utils) {
     define dso_local void @fun3() !dbg !21 {
     entry:
       %local = alloca i32, align 4, !DIAssignID !24
-        #dbg_assign(i32 undef, !22, !DIExpression(), !24, i32* undef, !DIExpression(), !23)
+        #dbg_assign(i32 undef, !22, !DIExpression(), !24, ptr undef, !DIExpression(), !23)
       ret void
     }
 
@@ -784,11 +787,11 @@ TEST(AssignmentTrackingTest, InstrMethods) {
       %Local = alloca [2 x i32], align 4, !DIAssignID !12
       call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !12, metadata [2 x i32]* %Local, metadata !DIExpression()), !dbg !18
       %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %Local, i64 0, i64 0, !dbg !19
-      store i32 5, i32* %arrayidx, align 4, !dbg !20, !DIAssignID !21
-      call void @llvm.dbg.assign(metadata i32 5, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !21, metadata i32* %arrayidx, metadata !DIExpression()), !dbg !18
+      store i32 5, ptr %arrayidx, align 4, !dbg !20, !DIAssignID !21
+      call void @llvm.dbg.assign(metadata i32 5, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !21, metadata ptr %arrayidx, metadata !DIExpression()), !dbg !18
       %arrayidx1 = getelementptr inbounds [2 x i32], [2 x i32]* %Local, i64 0, i64 1, !dbg !22
-      store i32 6, i32* %arrayidx1, align 4, !dbg !23, !DIAssignID !24
-      call void @llvm.dbg.assign(metadata i32 6, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !24, metadata i32* %arrayidx1, metadata !DIExpression()), !dbg !18
+      store i32 6, ptr %arrayidx1, align 4, !dbg !23, !DIAssignID !24
+      call void @llvm.dbg.assign(metadata i32 6, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !24, metadata ptr %arrayidx1, metadata !DIExpression()), !dbg !18
       ret void, !dbg !25
     }
 
@@ -1270,10 +1273,12 @@ TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
     !2 = !{i32 2, !"Debug Info Version", i32 3}
 
     ; Subprograms for each function in the call chain
-    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, unit: !0)
-    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, unit: !0)
-    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, unit: !0)
-    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, unit: !0)
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, type: !14, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, type: !14, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, type: !14, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, type: !14, unit: !0)
+    !14 = !DISubroutineType(types: !15)
+    !15 = !{null}
 
     ; Location in inline3 (line 401), inlined at location !21
     !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)

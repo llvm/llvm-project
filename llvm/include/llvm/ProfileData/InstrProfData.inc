@@ -142,6 +142,38 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
 #undef INSTR_PROF_VALUE_NODE
 /* INSTR_PROF_VALUE_NODE end. */
 
+/* INSTR_PROF_GPU_SECT start. */
+/* Fields of the GPU profile section bounds structure, populated by the
+ * compiler runtime and read by the host to extract profiling data. */
+#ifndef INSTR_PROF_GPU_SECT
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer)
+#else
+#define INSTR_PROF_DATA_DEFINED
+#endif
+INSTR_PROF_GPU_SECT(const char *, llvm::PointerType::getUnqual(Ctx),           \
+                    NamesStart,                                                \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const char *, llvm::PointerType::getUnqual(Ctx),           \
+                    NamesStop,                                                 \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    CountersStart,                                             \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    CountersStop,                                              \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const __llvm_profile_data *, llvm::PointerType::getUnqual( \
+                    Ctx), DataStart,                                           \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const __llvm_profile_data *, llvm::PointerType::getUnqual( \
+                    Ctx), DataStop,                                            \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(uint64_t *, llvm::PointerType::getUnqual(Ctx),             \
+                    VersionVar,                                                \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+#undef INSTR_PROF_GPU_SECT
+/* INSTR_PROF_GPU_SECT end. */
+
 /* INSTR_PROF_RAW_HEADER  start */
 /* Definition of member fields of the raw profile header data structure. */
 /* Please update llvm/docs/InstrProfileFormat.rst as appropriate when updating
@@ -760,6 +792,10 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* The variable that holds the name of the profile data
  * specified via command line. */
 #define INSTR_PROF_PROFILE_NAME_VAR __llvm_profile_filename
+
+/* GPU profiling section bounds structure, populated by the compiler runtime
+ * and read by the host to extract profiling data. */
+#define INSTR_PROF_SECT_BOUNDS_TABLE __llvm_profile_sections
 
 /* section name strings common to all targets other
    than WIN32 */

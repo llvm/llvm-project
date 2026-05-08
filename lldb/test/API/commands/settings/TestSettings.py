@@ -22,8 +22,7 @@ class SettingsCommandTestCase(TestBase):
             "apropos 'environment variable'",
             substrs=[
                 "target.env-vars",
-                "environment variables",
-                "executable's environment",
+                "A list of user",
             ],
         )
 

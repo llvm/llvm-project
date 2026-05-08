@@ -64,9 +64,12 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#elif defined(HAS_FILENO_AND_ISATTY) // !_LIBCPP_WIN32API
+#elif defined(HAS_FILENO_AND_ISATTY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 23 // !_LIBCPP_WIN32API
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
 _LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream) { return isatty(fileno(__stream)); }
+_LIBCPP_DIAGNOSTIC_POP
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

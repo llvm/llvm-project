@@ -1,0 +1,19 @@
+functions:
+  ftok:
+    in-latest-posix: ''
+
+macros:
+  IPC_CREAT:
+    in-latest-posix: ''
+  IPC_EXCL:
+    in-latest-posix: ''
+  IPC_NOWAIT:
+    in-latest-posix: ''
+  IPC_PRIVATE:
+    in-latest-posix: ''
+  IPC_RMID:
+    in-latest-posix: ''
+  IPC_SET:
+    in-latest-posix: ''
+  IPC_STAT:
+    in-latest-posix: ''

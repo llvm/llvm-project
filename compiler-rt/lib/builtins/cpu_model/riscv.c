@@ -142,6 +142,10 @@ struct {
 #define ZCLSD_BITMASK (1ULL << 9)
 #define ZCMP_GROUPID 1
 #define ZCMP_BITMASK (1ULL << 10)
+#define ZIFENCEI_GROUPID 1
+#define ZIFENCEI_BITMASK (1ULL << 11)
+#define ZMMUL_GROUPID 1
+#define ZMMUL_BITMASK (1ULL << 12)
 
 #if defined(__linux__)
 
@@ -337,6 +341,8 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
   for (i = 0; i < RISCV_FEATURE_BITS_LENGTH; i++)
     __riscv_feature_bits.features[i] = features[i];
+
+  __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
 }
 
 #endif // defined(__linux__)
@@ -363,8 +369,6 @@ void __init_riscv_feature_bits(void *PlatformArgs) {
 
   if (FeaturesBitCached)
     return;
-
-  __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
 
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {

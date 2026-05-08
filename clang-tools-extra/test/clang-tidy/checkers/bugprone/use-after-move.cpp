@@ -1,37 +1,31 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
+
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <memory>
+#include <vector>
 
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-typedef unsigned size_t;
-
-template <typename T>
-struct unique_ptr {
-  unique_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-  T& operator[](size_t i) const;
-};
-
-template <typename T>
-struct shared_ptr {
-  shared_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-};
-
-template <typename T>
-struct weak_ptr {
-  weak_ptr();
-  bool expired() const;
-};
 
 template <typename T>
 struct optional {
@@ -45,97 +39,6 @@ struct any {
   any();
   void reset();
 };
-
-template <typename T1, typename T2>
-struct pair {};
-
-template <typename Key, typename T>
-struct map {
-  struct iterator {};
-
-  map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-template <typename Key, typename T>
-struct unordered_map {
-  struct iterator {};
-
-  unordered_map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-#define DECLARE_STANDARD_CONTAINER(name) \
-  template <typename T>                  \
-  struct name {                          \
-    name();                              \
-    void clear();                        \
-    bool empty();                        \
-  }
-
-#define DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(name) \
-  template <typename T>                              \
-  struct name {                                      \
-    name();                                          \
-    void clear();                                    \
-    bool empty();                                    \
-    void assign(size_t, const T &);                  \
-  }
-
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(basic_string);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(vector);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(deque);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(forward_list);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(list);
-DECLARE_STANDARD_CONTAINER(set);
-DECLARE_STANDARD_CONTAINER(multiset);
-DECLARE_STANDARD_CONTAINER(multimap);
-DECLARE_STANDARD_CONTAINER(unordered_set);
-DECLARE_STANDARD_CONTAINER(unordered_multiset);
-DECLARE_STANDARD_CONTAINER(unordered_multimap);
-
-typedef basic_string<char> string;
-
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
-  return static_cast<typename remove_reference<_Tp>::type &&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
 
 } // namespace std
 
@@ -184,6 +87,36 @@ void selfMove() {
   A a;
   a = std::move(a);
   a.foo();
+}
+
+void * operator new(size_t, void *p);
+
+// Don't flag an explicit destructor call
+void explicitDestructor() {
+  alignas(A) char storage[sizeof(A)];
+  A& a = *new (storage) A();
+  std::move(a);
+  a.~A(); // It's always valid to destruct a moved object.
+
+  using B = AnnotatedContainer<int>;
+  alignas(B) char other_storage[sizeof(B)];
+  B& a_p = *new (other_storage) B();
+  std::move(a_p);
+  a_p.~B(); // Same as above, but with a template class.
+
+  A& b = *new (storage) A();
+  std::move(b);
+  (b).~A(); // Parenthesis should not change the behavior.
+  b.foo(); // But destruction is not a reinitialization.
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'b' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:3: note: move occurred here
+
+  A& c = *new (storage) A();
+  std::move(c);
+  c.foo();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'c' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+  c.~A();
 }
 
 // A warning should only be emitted for one use-after-move.
@@ -248,7 +181,7 @@ void standardSmartPtr() {
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
-    std::unique_ptr<A> ptr;
+    std::unique_ptr<A[]> ptr;
     std::move(ptr);
     ptr[0];
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
@@ -901,7 +834,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::multimap<int> container;
+    std::multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
@@ -925,7 +858,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::unordered_multimap<int> container;
+    std::unordered_multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
@@ -1072,6 +1005,107 @@ void reinitAnnotation() {
     // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests for annotations on smart-pointer-like types
+
+namespace null_after_move {
+
+template <typename T>
+class [[clang::annotate("clang-tidy",
+                        "bugprone-use-after-move",
+                        "null_after_move")]] SmartPtrAlike {
+public:
+  SmartPtrAlike();
+  ~SmartPtrAlike();
+  SmartPtrAlike(const SmartPtrAlike&) = delete;
+  SmartPtrAlike &operator=(const SmartPtrAlike&) = delete;
+  SmartPtrAlike(SmartPtrAlike&& other);
+  SmartPtrAlike &operator=(SmartPtrAlike&& other);
+  T* get() const;
+  T& operator*() const;
+};
+
+// Don't flag uses of smart-pointer-like types correctly annotated, unless it's
+// a dereference.
+void smartPointerLikeTypeUseAfterMove() {
+  SmartPtrAlike<int> ptr;
+  ptr.get();
+  SmartPtrAlike<int> other_ptr = std::move(ptr);
+  ptr.get();
+  int inv_value = *ptr;
+  // CHECK-NOTES: [[@LINE-1]]:20: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:34: note: move occurred here
+}
+
+class [[clang::annotate("other"),
+      clang::annotate("clang-tidy",
+                      "bugprone-use-after-move",
+                      "null_after_move")]] MultipleAnnotationsType {
+public:
+  MultipleAnnotationsType();
+  ~MultipleAnnotationsType();
+  MultipleAnnotationsType(const MultipleAnnotationsType&) = delete;
+  MultipleAnnotationsType &operator=(const MultipleAnnotationsType&) = delete;
+  MultipleAnnotationsType(MultipleAnnotationsType&& other);
+  MultipleAnnotationsType &operator=(MultipleAnnotationsType&& other);
+  int* get() const;
+  int& operator*() const;
+};
+
+// Handle smart-pointer-like types correctly annotated, even in the case of
+// multiple annotations.
+void typeWithMultipleAnnotations() {
+  MultipleAnnotationsType ptr;
+  ptr.get();
+  MultipleAnnotationsType other_ptr = std::move(ptr);
+  ptr.get();
+  int inv_value = *ptr;
+  // CHECK-NOTES: [[@LINE-1]]:20: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:39: note: move occurred here
+}
+
+class [[clang::annotate("null_after_move")]] BadAnnotation {
+public:
+  BadAnnotation();
+  ~BadAnnotation();
+  BadAnnotation(const BadAnnotation&) = delete;
+  BadAnnotation &operator=(const BadAnnotation&) = delete;
+  BadAnnotation(BadAnnotation&& other);
+  BadAnnotation &operator=(BadAnnotation&& other);
+  int* get() const;
+};
+
+// Flag uses of smart-pointer-like types with incorrect annotate.
+void badUseAfterMoveAnnotationIgnored() {
+  BadAnnotation ptr;
+  BadAnnotation other_ptr = std::move(ptr);
+  ptr.get();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:29: note: move occurred here
+}
+
+class [[clang::annotate("clang-tidy", "null_after_move")]] BadAnnotationArgs {
+public:
+  BadAnnotationArgs();
+  ~BadAnnotationArgs();
+  BadAnnotationArgs(const BadAnnotationArgs&) = delete;
+  BadAnnotationArgs &operator=(const BadAnnotationArgs&) = delete;
+  BadAnnotationArgs(BadAnnotationArgs&& other);
+  BadAnnotationArgs &operator=(BadAnnotationArgs&& other);
+  int* get() const;
+};
+
+// Flag uses of smart-pointer-like types with wrong annotate arguments.
+void UseAfterMoveAnnotationWithBadArgsIgnored() {
+  BadAnnotationArgs ptr;
+  BadAnnotationArgs other_ptr = std::move(ptr);
+  ptr.get();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:33: note: move occurred here
+}
+
+} // namespace null_after_move
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tests related to order of evaluation within expressions
@@ -1645,3 +1679,114 @@ void create() {
 }
 
 } // namespace issue82023
+
+namespace custom_invalidation
+{
+
+template<class T = int>
+struct Database {
+  template<class...>
+  void CloseConnection(T = T()) {}
+  template<class...>
+  static void StaticCloseConnection(Database&, T = T()) {}
+  template<class...>
+  friend void FriendCloseConnection(Database&, T = T()) {}
+  void Query();
+};
+
+void FreeCloseConnection(Database<int>&) {}
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  db1.CloseConnection();
+  db1.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db1' used after it was invalidated by 'CloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
+
+  DB db2;
+  DB::StaticCloseConnection(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was invalidated by 'StaticCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db3;
+  DB().StaticCloseConnection(db3);
+  db3.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db3' used after it was invalidated by 'StaticCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db4;
+  FriendCloseConnection(db4);
+  db4.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db4' used after it was invalidated by 'FriendCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db5;
+  FriendCloseConnection(db5, /*disconnect timeout*/ 5);
+  db5.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db5' used after it was invalidated by 'FriendCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db6;
+  FreeCloseConnection(db6);
+  db6.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db6' used after it was invalidated by 'FreeCloseConnection'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+}
+
+} // namespace custom_invalidation
+
+namespace custom_reinitialization {
+
+template <class T = int>
+struct Database {
+  template <class... Args>
+  void Reset(T = T(), Args &&...) {}
+  template <class... Args>
+  static void StaticReset(Database &, T = T(), Args &&...) {}
+  template <class... Args>
+  friend void FriendReset(Database &, T = T(), Args &&...) {}
+  void Query(T = T()) {}
+};
+
+template <class T = int>
+void RegularReset(Database<T> &d, T = T()) {}
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  std::move(db1);
+  db1.Reset();
+  db1.Query();
+
+  DB db2;
+  std::move(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+  db2.Reset();
+
+  DB db3;
+  std::move(db3);
+  DB::StaticReset(db3);
+  db3.Query();
+
+  DB db4;
+  std::move(db4);
+  FriendReset(db4);
+  db4.Query();
+
+  DB db5;
+  std::move(db5);
+  db5.Reset(0, 1.5, "extra");
+  db5.Query();
+
+  DB db6;
+  std::move(db6);
+  RegularReset(db6);
+  db6.Query();
+}
+} // namespace custom_reinitialization

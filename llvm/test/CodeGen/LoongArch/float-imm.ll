@@ -43,8 +43,9 @@ define float @f32_negative_zero() nounwind {
 define float @f32_constant_ins1() nounwind {
 ; LA32-0-LABEL: f32_constant_ins1:
 ; LA32-0:       # %bb.0:
-; LA32-0-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-0-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI2_0)
+; LA32-0-NEXT:  .Lpcadd_hi0:
+; LA32-0-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI2_0)
+; LA32-0-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-0-NEXT:    ret
 ;
 ; LA32-2-LABEL: f32_constant_ins1:
@@ -82,14 +83,16 @@ define float @f32_constant_ins1() nounwind {
 define float @f32_constant_pi() nounwind {
 ; LA32-0-LABEL: f32_constant_pi:
 ; LA32-0:       # %bb.0:
-; LA32-0-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-0-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
+; LA32-0-NEXT:  .Lpcadd_hi1:
+; LA32-0-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; LA32-0-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-0-NEXT:    ret
 ;
 ; LA32-2-LABEL: f32_constant_pi:
 ; LA32-2:       # %bb.0:
-; LA32-2-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-2-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
+; LA32-2-NEXT:  .Lpcadd_hi0:
+; LA32-2-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; LA32-2-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-2-NEXT:    ret
 ;
 ; LA32-3-LABEL: f32_constant_pi:

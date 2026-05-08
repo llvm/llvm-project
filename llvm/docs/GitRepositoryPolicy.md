@@ -2,8 +2,10 @@
 
 This document explains our current policies around git repositories. Everything
 not covered in this document is most likely a case-by-case decision. In these
-cases please create an issue with the
-[Infrastructure Working Group](https://github.com/llvm/llvm-iwg/issues).
+cases please create an issue in
+[LLVM's Github Issue Tracker](https://github.com/llvm/llvm-project/issues) and
+ping the[infrastructure area team](https://github.com/orgs/llvm/teams/infrastructure-area-team)
+group.
 
 ## New GitHub repositories
 
@@ -22,8 +24,10 @@ If you want to integrate your project as part of the Monorepo, please take a
 look at the
 [Developer Policy](project:DeveloperPolicy.rst#Adding an Established Project To the LLVM Monorepo).
 
-To request a new repository, please create an issue with the
-[Infrastructure Working Group](https://github.com/llvm/llvm-iwg/issues).
+To request a new repository, please create an issue with in
+[LLVM's Github Issue Tracker](https://github.com/llvm/llvm-project/issues) and
+ping the[infrastructure area team](https://github.com/orgs/llvm/teams/infrastructure-area-team)
+group.
 
 ## Repo access on GitHub
 

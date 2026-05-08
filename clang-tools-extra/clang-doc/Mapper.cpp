@@ -9,7 +9,7 @@
 #include "Mapper.h"
 #include "Serialize.h"
 #include "clang/AST/Comment.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Mutex.h"
@@ -62,7 +62,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
       return true;
   }
 
-  std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>> CP;
+  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> CP;
 
   {
     llvm::TimeTraceScope TS("emit info from astnode");
@@ -83,7 +83,8 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     bool IsFileInRootDir;
     llvm::SmallString<128> File =
         getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
-    CP = serialize::emitInfo(D, getComment(D, D->getASTContext()),
+    serialize::Serializer Serializer;
+    CP = Serializer.emitInfo(D, getComment(D, D->getASTContext()),
                              getDeclLocation(D), CDCtx.PublicOnly);
   }
 
@@ -95,10 +96,10 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     // this decl for some reason (e.g. we're only reporting public decls).
     if (Child)
       CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Child->USR)),
-                               serialize::serialize(Child));
+                               serialize::serialize(Child, CDCtx.Diags));
     if (Parent)
       CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Parent->USR)),
-                               serialize::serialize(Parent));
+                               serialize::serialize(Parent, CDCtx.Diags));
   }
   return true;
 }

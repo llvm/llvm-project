@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVCONVERGENCEREGIONANALYSIS_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVCONVERGENCEREGIONANALYSIS_H
+#ifndef LLVM_LIB_TARGET_SPIRV_ANALYSIS_SPIRVCONVERGENCEREGIONANALYSIS_H
+#define LLVM_LIB_TARGET_SPIRV_ANALYSIS_SPIRVCONVERGENCEREGIONANALYSIS_H
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/CFG.h"
@@ -181,4 +181,4 @@ ConvergenceRegionInfo getConvergenceRegions(Function &F, DominatorTree &DT,
 } // namespace SPIRV
 
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVCONVERGENCEREGIONANALYSIS_H
+#endif // LLVM_LIB_TARGET_SPIRV_ANALYSIS_SPIRVCONVERGENCEREGIONANALYSIS_H

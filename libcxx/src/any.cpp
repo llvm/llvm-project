@@ -14,6 +14,8 @@ const char* bad_any_cast::what() const noexcept { return "bad any cast"; }
 
 #include <__config>
 
+#if _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 7
+
 //  Preserve std::experimental::any_bad_cast for ABI compatibility
 //  Even though it no longer exists in a header file
 _LIBCPP_BEGIN_NAMESPACE_LFTS
@@ -26,3 +28,5 @@ public:
 const char* bad_any_cast::what() const noexcept { return "bad any cast"; }
 
 _LIBCPP_END_NAMESPACE_LFTS
+
+#endif

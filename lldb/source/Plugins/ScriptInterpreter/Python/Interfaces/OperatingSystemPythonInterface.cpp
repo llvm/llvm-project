@@ -7,12 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
 
 // clang-format off
 // LLDB Python header must be included first
@@ -105,5 +102,3 @@ void OperatingSystemPythonInterface::Initialize() {
 void OperatingSystemPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif

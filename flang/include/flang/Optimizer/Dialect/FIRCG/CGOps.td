@@ -22,7 +22,6 @@ include "mlir/IR/BuiltinAttributes.td"
 def fircg_Dialect : Dialect {
   let name = "fircg";
   let cppNamespace = "::fir::cg";
-  let usePropertiesForAttributes = 1;
 }
 
 // Base class for FIR CG operations.

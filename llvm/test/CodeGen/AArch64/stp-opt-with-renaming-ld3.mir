@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -aarch64-load-store-renaming=true -o - -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -passes=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -aarch64-load-store-renaming=true -o - %s | FileCheck %s
 --- |
   define void @test_ld3(ptr %a1) {
   entry:

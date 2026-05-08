@@ -34,6 +34,8 @@ public:
       : Opts(std::move(Opts)) {};
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
+  static bool isRequired() { return true; }
+
   LLVM_ABI static bool IsRequested();
   LLVM_ABI void
   printPipeline(raw_ostream &OS,

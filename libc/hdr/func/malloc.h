@@ -12,8 +12,11 @@
 #ifdef LIBC_FULL_BUILD
 
 #include "hdr/types/size_t.h"
+#include "include/__llvm-libc-common.h"
 
-extern "C" void *malloc(size_t) noexcept;
+__BEGIN_C_DECLS
+void *malloc(size_t) __NOEXCEPT;
+__END_C_DECLS
 
 #else // Overlay mode
 

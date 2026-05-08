@@ -953,3 +953,143 @@ define half @vreduce_fmax_nxv12f16(<vscale x 12 x half> %v) {
   %red = call half @llvm.vector.reduce.fmax.nxv12f16(<vscale x 12 x half> %v)
   ret half %red
 }
+
+define float @vreduce_fmul_nxv1f32(<vscale x 1 x float> %v, float %s) {
+; CHECK-LABEL: vreduce_fmul_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 3
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:  .LBB75_1: # %rdx.loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vslidedown.vx v9, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    fmul.s fa0, fa0, fa5
+; CHECK-NEXT:    bne a0, a1, .LBB75_1
+; CHECK-NEXT:  # %bb.2: # %rdx.exit
+; CHECK-NEXT:    ret
+  %red = call reassoc float @llvm.vector.reduce.fmul.nxv1f32(float %s, <vscale x 1 x float> %v)
+  ret float %red
+}
+
+define float @vreduce_ord_fmul_nxv1f32(<vscale x 1 x float> %v, float %s) {
+; CHECK-LABEL: vreduce_ord_fmul_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 3
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:  .LBB76_1: # %rdx.loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vslidedown.vx v9, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    fmul.s fa0, fa0, fa5
+; CHECK-NEXT:    bne a0, a1, .LBB76_1
+; CHECK-NEXT:  # %bb.2: # %rdx.exit
+; CHECK-NEXT:    ret
+  %red = call float @llvm.vector.reduce.fmul.nxv1f32(float %s, <vscale x 1 x float> %v)
+  ret float %red
+}
+
+define float @vreduce_fmul_nxv2f32(<vscale x 2 x float> %v, float %s) {
+; CHECK-LABEL: vreduce_fmul_nxv2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 2
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:  .LBB77_1: # %rdx.loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vslidedown.vx v9, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    fmul.s fa0, fa0, fa5
+; CHECK-NEXT:    bne a0, a1, .LBB77_1
+; CHECK-NEXT:  # %bb.2: # %rdx.exit
+; CHECK-NEXT:    ret
+  %red = call reassoc float @llvm.vector.reduce.fmul.nxv2f32(float %s, <vscale x 2 x float> %v)
+  ret float %red
+}
+
+define float @vreduce_ord_fmul_nxv2f32(<vscale x 2 x float> %v, float %s) {
+; CHECK-LABEL: vreduce_ord_fmul_nxv2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 2
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:  .LBB78_1: # %rdx.loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vslidedown.vx v9, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    fmul.s fa0, fa0, fa5
+; CHECK-NEXT:    bne a0, a1, .LBB78_1
+; CHECK-NEXT:  # %bb.2: # %rdx.exit
+; CHECK-NEXT:    ret
+  %red = call float @llvm.vector.reduce.fmul.nxv2f32(float %s, <vscale x 2 x float> %v)
+  ret float %red
+}
+
+define float @vreduce_fmul_nxv4f32(<vscale x 4 x float> %v, float %s) {
+; CHECK-LABEL: vreduce_fmul_nxv4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; CHECK-NEXT:  .LBB79_1: # %rdx.loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vslidedown.vx v10, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa5, v10
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    fmul.s fa0, fa0, fa5
+; CHECK-NEXT:    bne a0, a1, .LBB79_1
+; CHECK-NEXT:  # %bb.2: # %rdx.exit
+; CHECK-NEXT:    ret
+  %red = call reassoc float @llvm.vector.reduce.fmul.nxv4f32(float %s, <vscale x 4 x float> %v)
+  ret float %red
+}
+
+define double @vreduce_fmul_nxv1f64(<vscale x 1 x double> %v, double %s) {
+; CHECK-LABEL: vreduce_fmul_nxv1f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 3
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:  .LBB80_1: # %rdx.loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vslidedown.vx v9, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    fmul.d fa0, fa0, fa5
+; CHECK-NEXT:    bne a0, a1, .LBB80_1
+; CHECK-NEXT:  # %bb.2: # %rdx.exit
+; CHECK-NEXT:    ret
+  %red = call reassoc double @llvm.vector.reduce.fmul.nxv1f64(double %s, <vscale x 1 x double> %v)
+  ret double %red
+}
+
+define double @vreduce_ord_fmul_nxv1f64(<vscale x 1 x double> %v, double %s) {
+; CHECK-LABEL: vreduce_ord_fmul_nxv1f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 3
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:  .LBB81_1: # %rdx.loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vslidedown.vx v9, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    fmul.d fa0, fa0, fa5
+; CHECK-NEXT:    bne a0, a1, .LBB81_1
+; CHECK-NEXT:  # %bb.2: # %rdx.exit
+; CHECK-NEXT:    ret
+  %red = call double @llvm.vector.reduce.fmul.nxv1f64(double %s, <vscale x 1 x double> %v)
+  ret double %red
+}

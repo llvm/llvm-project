@@ -245,3 +245,14 @@ define <vscale x 1 x i64> @vmerge(<vscale x 1 x i64> %passthru, <vscale x 1 x i6
   %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %a, iXLen %avl)
   ret <vscale x 1 x i64> %b
 }
+
+define <vscale x 4 x float> @commute_vfmadd(<vscale x 4 x float> %passthru, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl) {
+; CHECK-LABEL: commute_vfmadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vfmacc.vv v8, v12, v10
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x float> @llvm.riscv.vfmadd(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %passthru, iXLen 7, iXLen %vl, iXLen 3)
+  %w = call <vscale x 4 x float> @llvm.riscv.vmv.v.v(<vscale x 4 x float> %passthru, <vscale x 4 x float> %v, iXLen %vl)
+  ret <vscale x 4 x float> %w
+}

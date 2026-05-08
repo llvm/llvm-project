@@ -349,6 +349,12 @@ private:
   // A reverse mapping from dependencies to the non-local dependees.
   ReverseDepMapType ReverseNonLocalDeps;
 
+  /// Visited map for getNonLocalPointerDependency. Stored here to reuse the
+  /// allocation. Map from block number to Value; second value is epoch to
+  /// avoid clearing the vector for each query.
+  SmallVector<std::pair<Value *, unsigned>, 0> NonLocalPointerDepVisited;
+  unsigned NonLocalPointerDepEpoch = 0;
+
   /// Current AA implementation, just a cache.
   AAResults &AA;
   AssumptionCache &AC;
@@ -487,12 +493,14 @@ private:
   MemDepResult getCallDependencyFrom(CallBase *Call, bool isReadOnlyCall,
                                      BasicBlock::iterator ScanIt,
                                      BasicBlock *BB);
+  void setNonLocalPointerDepVisited(BasicBlock *BB, Value *V);
+  bool isNonLocalPointerDepVisited(BasicBlock *BB) const;
+  Value *lookupNonLocalPointerDepVisited(BasicBlock *BB) const;
   bool getNonLocalPointerDepFromBB(Instruction *QueryInst,
                                    const PHITransAddr &Pointer,
                                    const MemoryLocation &Loc, bool isLoad,
                                    BasicBlock *BB,
                                    SmallVectorImpl<NonLocalDepResult> &Result,
-                                   SmallDenseMap<BasicBlock *, Value *, 16> &Visited,
                                    bool SkipFirstBlock = false,
                                    bool IsIncomplete = false);
   MemDepResult getNonLocalInfoForBlock(Instruction *QueryInst,

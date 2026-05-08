@@ -13,7 +13,9 @@ static std::unique_ptr<Generator> getJSONGenerator() {
   return std::move(G.get());
 }
 
-TEST(JSONGeneratorTest, emitRecordJSON) {
+class JSONGeneratorTest : public ClangDocContextTest {};
+
+TEST_F(JSONGeneratorTest, emitRecordJSON) {
   RecordInfo I;
   I.Name = "Foo";
   I.IsTypeDef = false;
@@ -55,15 +57,16 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw({
   "Bases": [
     {
       "Access": "public",
       "End": true,
-      "HasPublicFunctions": true,
+      "HasMembers": true,
       "HasPublicMembers": true,
+      "HasPublicMethods": true,
       "InfoType": "record",
       "IsParent": true,
       "IsTypedef": false,
@@ -71,7 +74,14 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
       "MangledName": "",
       "Name": "F",
       "Path": "path/to/F",
-      "PublicFunctions": [
+      "PublicMembers": [
+        {
+          "IsStatic": false,
+          "Name": "N",
+          "Type": "int"
+        }
+      ],
+      "PublicMethods": [
         {
           "InfoType": "function",
           "IsStatic": false,
@@ -82,18 +92,10 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
             "Name": "",
             "QualName": "",
             "USR": "0000000000000000000000000000000000000000"
-          },
-          "USR": "0000000000000000000000000000000000000000"
+          }
         }
       ],
-      "PublicMembers": [
-        {
-          "Name": "N",
-          "Type": "int"
-        }
-      ],
-      "TagType": "struct",
-      "USR": "0000000000000000000000000000000000000000"
+      "TagType": "struct"
     }
   ],
   "Enums": [
@@ -108,13 +110,16 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
         }
       ],
       "Name": "Color",
-      "Scoped": false,
-      "USR": "0000000000000000000000000000000000000000"
+      "Scoped": false
     }
   ],
   "HasEnums": true,
-  "HasPublicFunctions": true,
+  "HasMembers": true,
+  "HasParents": true,
+  "HasProtectedMembers": true,
+  "HasPublicMethods": true,
   "HasRecords": true,
+  "HasVirtualParents": true,
   "InfoType": "record",
   "IsTypedef": false,
   "Location": {
@@ -130,7 +135,6 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
     {
       "End": true,
       "Name": "F",
-      "Path": "",
       "QualName": "",
       "USR": "0000000000000000000000000000000000000000"
     }
@@ -138,11 +142,12 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   "Path": "GlobalNamespace",
   "ProtectedMembers": [
     {
+      "IsStatic": false,
       "Name": "X",
       "Type": "int"
     }
   ],
-  "PublicFunctions": [
+  "PublicMethods": [
     {
       "InfoType": "function",
       "IsStatic": false,
@@ -153,8 +158,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
         "Name": "",
         "QualName": "",
         "USR": "0000000000000000000000000000000000000000"
-      },
-      "USR": "0000000000000000000000000000000000000000"
+      }
     }
   ],
   "Records": [
@@ -169,10 +173,13 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   "TagType": "class",
   "Template": {
     "Parameters": [
-      "class T"
-    ]
+      {
+        "End": true,
+        "Param": "class T"
+      }
+    ],
+    "VerticalDisplay": false
   },
-  "USR": "0000000000000000000000000000000000000000",
   "VirtualParents": [
     {
       "End": true,
@@ -186,15 +193,16 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(JSONGeneratorTest, emitNamespaceJSON) {
+TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Path = "path/to/A";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.Children.Namespaces.emplace_back(
-      EmptySID, "ChildNamespace", InfoType::IT_namespace,
-      "path::to::A::Namespace::ChildNamespace", "path/to/A/Namespace");
+  Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
+                         "path::to::A::Namespace::ChildNamespace",
+                         "path/to/A/Namespace");
+  I.Children.Namespaces.push_back(NewNamespace);
   I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
                                   "path::to::A::Namespace::ChildStruct",
                                   "path/to/A/Namespace");
@@ -208,7 +216,7 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw({
   "Enums": [
@@ -216,8 +224,7 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
       "End": true,
       "InfoType": "enum",
       "Name": "OneEnum",
-      "Scoped": false,
-      "USR": "0000000000000000000000000000000000000000"
+      "Scoped": false
     }
   ],
   "Functions": [
@@ -232,14 +239,15 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
         "Name": "",
         "QualName": "",
         "USR": "0000000000000000000000000000000000000000"
-      },
-      "USR": "0000000000000000000000000000000000000000"
+      }
     }
   ],
   "HasEnums": true,
+  "HasFunctions": true,
+  "HasNamespaces": true,
   "HasRecords": true,
   "InfoType": "namespace",
-  "Name": "Namespace",
+  "Name": "Global Namespace",
   "Namespace": [
     "A"
   ],
@@ -261,8 +269,7 @@ TEST(JSONGeneratorTest, emitNamespaceJSON) {
       "QualName": "path::to::A::Namespace::ChildStruct",
       "USR": "0000000000000000000000000000000000000000"
     }
-  ],
-  "USR": "0000000000000000000000000000000000000000"
+  ]
 })raw";
   EXPECT_EQ(Expected, Actual.str());
 }

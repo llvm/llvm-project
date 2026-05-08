@@ -24,7 +24,8 @@
 // will export the ObjectFile protocol
 class ObjectFileMachO : public lldb_private::ObjectFile {
 public:
-  ObjectFileMachO(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
+  ObjectFileMachO(const lldb::ModuleSP &module_sp,
+                  lldb::DataExtractorSP extractor_sp,
                   lldb::offset_t data_offset,
                   const lldb_private::FileSpec *file, lldb::offset_t offset,
                   lldb::offset_t length);
@@ -47,27 +48,26 @@ public:
   }
 
   static lldb_private::ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  CreateInstance(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const lldb_private::FileSpec *file, lldb::offset_t file_offset,
+                 lldb::offset_t length);
 
   static lldb_private::ObjectFile *CreateMemoryInstance(
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        lldb_private::ModuleSpecList &specs);
+  static lldb_private::ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
-                              lldb::addr_t length);
+  static bool MagicBytesMatch(lldb::DataExtractorSP extractor_sp,
+                              lldb::addr_t offset, lldb::addr_t length);
 
   // LLVM RTTI support
   static char ID;
@@ -154,7 +154,7 @@ public:
 
   bool CanTrustAddressRanges() override;
 
-  static bool ParseHeader(lldb_private::DataExtractor &data,
+  static bool ParseHeader(lldb::DataExtractorSP &data,
                           lldb::offset_t *data_offset_ptr,
                           llvm::MachO::mach_header &header);
 
@@ -247,8 +247,8 @@ protected:
   };
 
   struct LCNoteEntry {
-    LCNoteEntry(uint32_t addr_byte_size, lldb::ByteOrder byte_order)
-        : payload(lldb_private::Stream::eBinary, addr_byte_size, byte_order) {}
+    explicit LCNoteEntry(lldb::ByteOrder byte_order)
+        : payload(lldb_private::Stream::eBinary, byte_order) {}
 
     std::string name;
     lldb::addr_t payload_file_offset = 0;

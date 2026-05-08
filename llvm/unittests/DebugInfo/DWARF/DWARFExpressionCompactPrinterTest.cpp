@@ -58,7 +58,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
   // result is as expected.
   std::string Result;
   raw_string_ostream OS(Result);
-  DataExtractor DE(ExprData, true, 8);
+  DataExtractor DE(ExprData, true);
   DWARFExpression Expr(DE, 8);
 
   auto GetRegName = [&](uint64_t DwarfRegNum, bool IsEH) -> StringRef {

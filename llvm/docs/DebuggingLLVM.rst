@@ -17,14 +17,14 @@ this depends on the build system used by your program.
   and filter the output by the targeted source file name. For example:
   ``ninja -t commands myprogram | grep path/to/file.cpp``.
 
-- For Bazel-based build systems using Bazel 9 or newer (not released yet
-  as of this writing), you can pass ``--output=commands`` to the ``bazel
-  aquery`` subcommand for a similar result. For example: ``bazel aquery
-  --output=commands 'deps(//myprogram)' | grep path/to/file.cpp``. Build
-  commands must generally be run from a subdirectory of the source
-  directory named ``bazel-$PROJECTNAME``. Bazel typically makes the target
-  paths of ``-o`` and ``-MF`` read-only when running commands outside
-  of a build, so it may be necessary to change or remove these flags.
+- For Bazel-based build systems using Bazel 9 or newer, you can pass
+  ``--output=commands`` to the ``bazel aquery`` subcommand for
+  a similar result. For example: ``bazel aquery --output=commands
+  'deps(//myprogram)' | grep path/to/file.cpp``. Build commands must
+  generally be run from a subdirectory of the source directory named
+  ``bazel-$PROJECTNAME``. Bazel typically makes the target paths of
+  ``-o`` and ``-MF`` read-only when running commands outside of a build,
+  so it may be necessary to change or remove these flags.
 
 - A method that should work with any build system is to build your program
   under `Bear <https://github.com/rizsotto/Bear>`_ and look for the
@@ -86,6 +86,10 @@ to see the stack trace. It is also possible that an instruction was
 created multiple times at the same address, so you may need to continue
 until reaching the desired location, but in the author's experience this
 is unlikely to occur.
+
+Similar flags exist for the backend: ``-print-sdnode-addrs`` for
+printing ``SDNode`` addresses, and ``-print-mi-addrs`` for printing
+``MachineInstr`` addresses.
 
 Identifying the source locations of instructions
 ================================================

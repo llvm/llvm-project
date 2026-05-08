@@ -37,6 +37,27 @@ func.func @empty_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
 // CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
 // CHECK-NEXT:   return %[[INIT]]
 
+#encoding = #test.tensor_encoding<"encoding">
+
+func.func @empty_expand_encoding() -> tensor<2x3x4x2xf32, #encoding> {
+  %0 = tensor.empty() : tensor<6x8xf32, #encoding>
+  %1 = tensor.expand_shape %0 [[0, 1], [2, 3]] output_shape [2, 3, 4, 2] : tensor<6x8xf32, #encoding> into tensor<2x3x4x2xf32, #encoding>
+  return %1 : tensor<2x3x4x2xf32, #encoding>
+}
+// CHECK-LABEL:   func.func @empty_expand_encoding
+// CHECK:           %[[INIT:.+]] = tensor.empty() : tensor<2x3x4x2xf32, #test.tensor_encoding<"encoding">>
+// CHECK-NEXT:      return %[[INIT]]
+
+func.func @empty_collapse_encoding() -> tensor<6x8xf32, #encoding> {
+  %0 = tensor.empty() : tensor<2x3x4x2xf32, #encoding>
+  %1 = tensor.collapse_shape %0 [[0, 1], [2, 3]]
+      : tensor<2x3x4x2xf32, #encoding> into tensor<6x8xf32, #encoding>
+  return %1 : tensor<6x8xf32, #encoding>
+}
+// CHECK-LABEL:   func.func @empty_collapse_encoding
+// CHECK:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<6x8xf32, #test.tensor_encoding<"encoding">>
+// CHECK-NEXT:      return %[[EMPTY_0]]
+
 func.func @fold_empty_tensor_with_slice
   (%arg0 : index, %arg1 : index) -> tensor<5x?x20xf32>
 {
@@ -126,3 +147,19 @@ func.func @concats_of_empty(
 //   CHECK-DAG:   %[[SUM:.+]] = affine.apply #[[MAP]]()[%[[D0_1]], %[[D1_1]]]
 //       CHECK:   %[[NEW_EMPTY:.+]] = tensor.empty(%[[SUM]], %[[D2]])
 //       CHECK:   return %[[NEW_EMPTY]]
+
+#encoding = #test.tensor_encoding<"encoding">
+
+func.func @concats_of_empty_encoding(
+    %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index)
+    -> tensor<5x?x?xf32, #encoding>
+{
+  %0 = tensor.empty(%arg0, %arg1) : tensor<5x?x?xf32, #encoding>
+  %1 = tensor.empty(%arg2, %arg3) : tensor<5x?x?xf32, #encoding>
+  %2 = tensor.concat dim(1) %0, %1
+      : (tensor<5x?x?xf32, #encoding>, tensor<5x?x?xf32, #encoding>)
+      -> tensor<5x?x?xf32, #encoding>
+  return %2 : tensor<5x?x?xf32, #encoding>
+}
+// CHECK-LABEL: func @concats_of_empty_encoding(
+//       CHECK:   return %{{.+}} : tensor<5x?x?xf32, #test.tensor_encoding<"encoding">>

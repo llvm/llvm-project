@@ -116,58 +116,58 @@ contains
 end
 
 ! CHECK-LABEL: func.func @_QMmod1Pfadd
-! CHECK: fir.call @__nv_fadd_rn
-! CHECK: fir.call @__nv_fadd_rz
-! CHECK: fir.call @__nv_fadd_rd
-! CHECK: fir.call @__nv_fadd_ru
+! CHECK: fir.call @__fadd_rn
+! CHECK: fir.call @__fadd_rz
+! CHECK: fir.call @__fadd_rd
+! CHECK: fir.call @__fadd_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pdadd
-! CHECK: fir.call @__nv_dadd_rn
-! CHECK: fir.call @__nv_dadd_rz
-! CHECK: fir.call @__nv_dadd_rd
-! CHECK: fir.call @__nv_dadd_ru
+! CHECK: fir.call @__dadd_rn
+! CHECK: fir.call @__dadd_rz
+! CHECK: fir.call @__dadd_rd
+! CHECK: fir.call @__dadd_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pfmul
-! CHECK: fir.call @__nv_fmul_rn
-! CHECK: fir.call @__nv_fmul_rz
-! CHECK: fir.call @__nv_fmul_rd
-! CHECK: fir.call @__nv_fmul_ru
+! CHECK: fir.call @__fmul_rn
+! CHECK: fir.call @__fmul_rz
+! CHECK: fir.call @__fmul_rd
+! CHECK: fir.call @__fmul_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pdmul
-! CHECK: fir.call @__nv_dmul_rn
-! CHECK: fir.call @__nv_dmul_rz
-! CHECK: fir.call @__nv_dmul_rd
-! CHECK: fir.call @__nv_dmul_ru
+! CHECK: fir.call @__dmul_rn
+! CHECK: fir.call @__dmul_rz
+! CHECK: fir.call @__dmul_rd
+! CHECK: fir.call @__dmul_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pfmaf
-! CHECK: fir.call @__nv_fmaf_rn
-! CHECK: fir.call @__nv_fmaf_rz
-! CHECK: fir.call @__nv_fmaf_rd
-! CHECK: fir.call @__nv_fmaf_ru
+! CHECK: fir.call @__fmaf_rn
+! CHECK: fir.call @__fmaf_rz
+! CHECK: fir.call @__fmaf_rd
+! CHECK: fir.call @__fmaf_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pfma
-! CHECK: fir.call @__nv_fma_rn
-! CHECK: fir.call @__nv_fma_rz
-! CHECK: fir.call @__nv_fma_rd
-! CHECK: fir.call @__nv_fma_ru
+! CHECK: fir.call @__fma_rn
+! CHECK: fir.call @__fma_rz
+! CHECK: fir.call @__fma_rd
+! CHECK: fir.call @__fma_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pfrcp
-! CHECK: fir.call @__nv_frcp_rn
-! CHECK: fir.call @__nv_frcp_rz
-! CHECK: fir.call @__nv_frcp_rd
-! CHECK: fir.call @__nv_frcp_ru
+! CHECK: fir.call @__frcp_rn
+! CHECK: fir.call @__frcp_rz
+! CHECK: fir.call @__frcp_rd
+! CHECK: fir.call @__frcp_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pfsqrt
-! CHECK: fir.call @__nv_fsqrt_rn
-! CHECK: fir.call @__nv_fsqrt_rz
-! CHECK: fir.call @__nv_fsqrt_rd
-! CHECK: fir.call @__nv_fsqrt_ru
+! CHECK: fir.call @__fsqrt_rn
+! CHECK: fir.call @__fsqrt_rz
+! CHECK: fir.call @__fsqrt_rd
+! CHECK: fir.call @__fsqrt_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Pfdiv
-! CHECK: fir.call @__nv_fdiv_rn
-! CHECK: fir.call @__nv_fdiv_rz
-! CHECK: fir.call @__nv_fdiv_rd
-! CHECK: fir.call @__nv_fdiv_ru
+! CHECK: fir.call @__fdiv_rn
+! CHECK: fir.call @__fdiv_rz
+! CHECK: fir.call @__fdiv_rd
+! CHECK: fir.call @__fdiv_ru
 
 ! CHECK-LABEL: func.func @_QMmod1Ptestsincosf
 ! CHECK: fir.call @__nv_sincosf

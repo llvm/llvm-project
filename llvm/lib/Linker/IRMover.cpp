@@ -446,7 +446,9 @@ public:
         AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
         GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
         IsPerformingImport(IsPerformingImport),
-        Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
+        Mapper(ValueMap,
+               RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals |
+                   (IsPerformingImport ? RF_Importing : RF_None),
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
             IndirectSymbolValueMap, &LValMaterializer)) {
@@ -943,6 +945,16 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   GlobalValue *NewGV;
   if (DGV && !ShouldLink) {
     NewGV = DGV;
+
+    // If the source is an exact definition, optimizations may have modified
+    // its attributes, e.g. by dropping noundef attributes when replacing
+    // arguments with poison. In this case, it is important for correctness
+    // that we use the signature from the exact definition.
+    if (isa<Function>(SGV) && DGV->isDeclaration() &&
+        SGV->hasExactDefinition() && !DoneLinkingBodies) {
+      NewGV = copyGlobalValueProto(SGV, /*ForDefinition=*/false);
+      NeedsRenaming = true;
+    }
   } else {
     // If we are done linking global value bodies (i.e. we are performing
     // metadata linking), don't link in the global value due to this

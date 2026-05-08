@@ -133,9 +133,6 @@ private:
     lldb::addr_t m_properties_ptr;
     lldb::addr_t m_protocols_ptr;
 
-    ObjCLanguageRuntime::ObjCISA m_firstSubclass;
-    ObjCLanguageRuntime::ObjCISA m_nextSiblingClass;
-
     bool Read(Process *process, lldb::addr_t addr);
   };
 
@@ -176,6 +173,10 @@ private:
     bool Read(DataExtractor &extractor, Process *process, lldb::addr_t addr,
               lldb::addr_t relative_string_base_addr, bool is_small,
               bool has_direct_sel, bool has_relative_types);
+
+    /// Fill in `m_name` and `m_types` efficiently by batching read requests.
+    static void ReadNames(llvm::MutableArrayRef<method_t> methods,
+                          Process &process);
   };
 
   llvm::SmallVector<method_t, 0>

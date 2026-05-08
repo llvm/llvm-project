@@ -36,12 +36,12 @@ module attributes {omp.is_target_device = false} {
 // Verify that we directly emit a call to the "target" region's body from the
 // parent function of the the `omp.target` op.
 // CHECK: define internal void @omp_target_nowait_..omp_par
-// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_nowait__l[[LINE:.*]](ptr {{.*}})
+// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_nowait__l[[LINE:.*]](ptr {{.*}}, ptr null)
 // CHECK-NEXT: br label %[[BLOCK_AFTER_TARGET_TASK_BODY:.*]]
 // CHECK: [[BLOCK_AFTER_TARGET_TASK_BODY]]:
 // CHECK-NEXT: ret void
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_nowait__l[[LINE]](ptr %[[ADDR_X:.*]])
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_nowait__l[[LINE]](ptr %[[ADDR_X:.*]], ptr %{{.*}})
 // CHECK: store float 5{{.*}}, ptr %[[ADDR_X]], align 4
 
 // The following check test for the fix of problem #1 as described in https://github.com/llvm/llvm-project/issues/126949

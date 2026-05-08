@@ -476,12 +476,12 @@ struct PageReleaseContext {
     if (FirstBlockInRange >= ToInRegion)
       return true;
 
-    // First block may not sit at the first pape in the range, move
+    // First block may not sit at the first page in the range, move
     // `FromInRegion` to the first block page.
     FromInRegion = roundDown(FirstBlockInRange, PageSize);
 
     // When The first block is not aligned to the range boundary, which means
-    // there is a block sitting acorss `From`, that looks like,
+    // there is a block sitting across `From`, that looks like,
     //
     //   From                                             To
     //     V                                               V

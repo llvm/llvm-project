@@ -39,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -49,6 +50,12 @@
 #define DEBUG_TYPE "regbankselect"
 
 using namespace llvm;
+
+/// Cost value representing an impossible or invalid repairing.
+/// This matches the value returned by RegisterBankInfo::copyCost() and
+/// RegisterBankInfo::getBreakDownCost() when the cost cannot be computed.
+static constexpr unsigned ImpossibleRepairCost =
+    std::numeric_limits<unsigned>::max();
 
 static cl::opt<RegBankSelect::Mode> RegBankSelectMode(
     cl::desc("Mode of the RegBankSelect pass"), cl::Hidden, cl::Optional,
@@ -83,7 +90,6 @@ void RegBankSelect::init(MachineFunction &MF) {
   assert(RBI && "Cannot work without RegisterBankInfo");
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  TPC = &getAnalysis<TargetPassConfig>();
   if (OptMode != Mode::Fast) {
     MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
     MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
@@ -278,12 +284,11 @@ uint64_t RegBankSelect::getRepairCost(
     // repairing placement.
     unsigned Cost = RBI->copyCost(*DesiredRegBank, *CurRegBank,
                                   RBI->getSizeInBits(MO.getReg(), *MRI, *TRI));
-    // TODO: use a dedicated constant for ImpossibleCost.
-    if (Cost != std::numeric_limits<unsigned>::max())
+    if (Cost != ImpossibleRepairCost)
       return Cost;
     // Return the legalization cost of that repairing.
   }
-  return std::numeric_limits<unsigned>::max();
+  return ImpossibleRepairCost;
 }
 
 const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
@@ -308,7 +313,8 @@ const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
         RepairPts.emplace_back(std::move(RepairPt));
     }
   }
-  if (!BestMapping && !TPC->isGlobalISelAbortEnabled()) {
+  if (!BestMapping && MI.getMF()->getTarget().Options.GlobalISelAbort !=
+                          GlobalISelAbortMode::Enable) {
     // If none of the mapping worked that means they are all impossible.
     // Thus, pick the first one and set an impossible repairing point.
     // It will trigger the failed isel mode.
@@ -534,7 +540,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     uint64_t RepairCost = getRepairCost(MO, ValMapping);
 
     // This is an impossible to repair cost.
-    if (RepairCost == std::numeric_limits<unsigned>::max())
+    if (RepairCost == ImpossibleRepairCost)
       return MappingCost::ImpossibleCost();
 
     // Bias used for splitting: 5%.
@@ -708,7 +714,7 @@ bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
         continue;
 
       if (!assignInstr(MI)) {
-        reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+        reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
         return false;
       }
@@ -722,7 +728,7 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
 #ifndef NDEBUG
   if (!DisableGISelLegalityCheck) {
     if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
-      reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+      reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                          "instruction is not legal", *MI);
       return false;
     }

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -47,6 +48,22 @@ struct CPUInfo {
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
+/// Fatal errors encountered during parsing.
+struct ParserError : public ErrorInfo<ParserError, StringError> {
+  using ErrorInfo<ParserError, StringError>::ErrorInfo;
+  explicit ParserError(const Twine &S)
+      : ErrorInfo(S, inconvertibleErrorCode()) {}
+  static char ID;
+};
+
+/// Warnings encountered during parsing.
+struct ParserWarning : public ErrorInfo<ParserWarning, StringError> {
+  using ErrorInfo<ParserWarning, StringError>::ErrorInfo;
+  explicit ParserWarning(const Twine &S)
+      : ErrorInfo(S, inconvertibleErrorCode()) {}
+  static char ID;
+};
+
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
 static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
@@ -54,6 +71,15 @@ static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
 LLVM_ABI void getFeaturesForCPU(StringRef CPU,
                                 SmallVectorImpl<std::string> &EnabledFeatures,
                                 bool NeedPlus = false);
+LLVM_ABI void getAllTuneFeatures(SmallVectorImpl<StringRef> &TuneFeatures);
+LLVM_ABI void
+getCPUConfigurableTuneFeatures(StringRef CPU,
+                               SmallVectorImpl<StringRef> &Directives);
+/// Parse the tune feature string with the respective processor. If \p ProcName
+/// is empty, directives are not filtered by processor.
+LLVM_ABI Error
+parseTuneFeatureString(StringRef ProcName, StringRef TFString,
+                       SmallVectorImpl<std::string> &TuneFeatures);
 LLVM_ABI bool parseCPU(StringRef CPU, bool IsRV64);
 LLVM_ABI bool parseTuneCPU(StringRef CPU, bool IsRV64);
 LLVM_ABI StringRef getMArchFromMcpu(StringRef CPU);
@@ -148,16 +174,22 @@ inline static unsigned getXSfmmWiden(unsigned VType) {
   return 1 << (TWiden - 1);
 }
 
-static inline bool isValidXSfmmVType(unsigned VTypeI) {
-  return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
-         RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64;
-}
-
 inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
 
 inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
+
+inline static bool isValidVType(unsigned VType) {
+  return getSEW(VType) <= 64 && getVLMUL(VType) != LMUL_RESERVED &&
+         (!isAltFmt(VType) || getSEW(VType) < 32);
+}
+
+static inline bool isValidXSfmmVType(unsigned VTypeI) {
+  return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
+         RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64 &&
+         isValidVType(VTypeI);
+}
 
 LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
 
@@ -165,8 +197,7 @@ LLVM_ABI void printXSfmmVType(unsigned VType, raw_ostream &OS);
 
 LLVM_ABI unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 
-LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL,
-                                               unsigned EEW);
+LLVM_ABI std::optional<VLMUL> getSameRatioLMUL(unsigned Ratio, unsigned EEW);
 } // namespace RISCVVType
 
 } // namespace llvm

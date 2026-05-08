@@ -352,7 +352,7 @@ public:
 
   /// Applies composition by the dims of `this` to the integer `values` and
   /// returns the resulting values. `this` must be symbol-less.
-  SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
+  SmallVector<int64_t, 8> compose(ArrayRef<int64_t> values) const;
 
   /// Returns the number of "zero" results (constant values == 0) in this map.
   ///

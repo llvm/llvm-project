@@ -240,3 +240,51 @@ define half @fptrunc_to_bfloat_bitcast_to_half(float %src) {
   %cast = bitcast bfloat %trunc to half
   ret half %cast
 }
+
+; Convert from integer is exact, so cast to float even if fpext is simplified.
+
+define float @fptrunc_narrow_sitofp_with_fpext(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_sitofp_with_fpext(
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X:%.*]], 74383
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %1 = urem i64 %x, 74383
+  %conv  = sitofp i64 %1 to float
+  %conv2 = fpext float %conv to double
+  %div3  = fdiv double %conv2, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+; Convert from integer is exact, so cast to float.
+
+define float @fptrunc_narrow_urem_within_float_range(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_urem_within_float_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X:%.*]], 74383
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %1 = urem i64 %x,74383
+  %conv = sitofp i64 %1 to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+; Negative test - input is not known, so cast cannot be narrowed to float.
+
+define float @fptrunc_narrow_outside_float_range(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_outside_float_range(
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i64 [[X:%.*]] to double
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[CONV]], 7.438300e+04
+; CHECK-NEXT:    [[CONV4:%.*]] = fptrunc double [[DIV3]] to float
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %conv = sitofp i64 %x to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}

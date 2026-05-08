@@ -19,7 +19,7 @@
 
 # CHECK-LABEL: name: exp_done_waitcnt{{$}}
 # CHECK: EXP_DONE
-# CHECK-NEXT: S_WAITCNT 3855
+# CHECK-NEXT: S_WAITCNT .Expcnt_0
 # CHECK: $vgpr0 = V_MOV_B32
 # CHECK: $vgpr1 = V_MOV_B32
 # CHECK: $vgpr2 = V_MOV_B32

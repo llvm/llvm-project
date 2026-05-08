@@ -85,7 +85,7 @@ public:
   virtual MCSymbol *emitDwarfDebugRangeListHeader(const CompileUnit &Unit) = 0;
 
   /// Emit debug ranges (.debug_ranges, .debug_rnglists) fragment.
-  virtual void emitDwarfDebugRangeListFragment(
+  virtual Error emitDwarfDebugRangeListFragment(
       const CompileUnit &Unit, const AddressRanges &LinkedRanges,
       PatchLocation Patch, DebugDieValuePool &AddrPool) = 0;
 
@@ -97,7 +97,7 @@ public:
   virtual MCSymbol *emitDwarfDebugLocListHeader(const CompileUnit &Unit) = 0;
 
   /// Emit debug locations (.debug_loc, .debug_loclists) fragment.
-  virtual void emitDwarfDebugLocListFragment(
+  virtual Error emitDwarfDebugLocListFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
       PatchLocation Patch, DebugDieValuePool &AddrPool) = 0;
@@ -265,10 +265,6 @@ public:
   /// Update index tables only(do not modify rest of DWARF).
   void setUpdateIndexTablesOnly(bool Update) override {
     Options.Update = Update;
-  }
-
-  /// Allow generating valid, but non-deterministic output.
-  void setAllowNonDeterministicOutput(bool) override { /* Nothing to do. */
   }
 
   /// Set whether to keep the enclosing function for a static variable.
@@ -595,13 +591,13 @@ private:
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
     /// nothing to clone/emit.
-    LLVM_ABI uint64_t cloneAllCompileUnits(DWARFContext &DwarfContext,
-                                           const DWARFFile &File,
-                                           bool IsLittleEndian);
+    LLVM_ABI Expected<uint64_t> cloneAllCompileUnits(DWARFContext &DwarfContext,
+                                                     const DWARFFile &File,
+                                                     bool IsLittleEndian);
 
     /// Emit the .debug_addr section for the \p Unit.
-    LLVM_ABI void emitDebugAddrSection(CompileUnit &Unit,
-                                       const uint16_t DwarfVersion) const;
+    LLVM_ABI Error emitDebugAddrSection(CompileUnit &Unit,
+                                        const uint16_t DwarfVersion) const;
 
     using ExpressionHandlerRef = function_ref<void(
         SmallVectorImpl<uint8_t> &, SmallVectorImpl<uint8_t> &,
@@ -609,9 +605,9 @@ private:
 
     /// Compute and emit debug locations (.debug_loc, .debug_loclists)
     /// for \p Unit, patch the attributes referencing it.
-    LLVM_ABI void generateUnitLocations(CompileUnit &Unit,
-                                        const DWARFFile &File,
-                                        ExpressionHandlerRef ExprHandler);
+    LLVM_ABI Error generateUnitLocations(CompileUnit &Unit,
+                                         const DWARFFile &File,
+                                         ExpressionHandlerRef ExprHandler);
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
@@ -728,7 +724,7 @@ private:
     /// Clone and emit the line table for the specified \p Unit.
     /// Translate directories and file names if necessary.
     /// Relocate address ranges.
-    void generateLineTableForUnit(CompileUnit &Unit);
+    Error generateLineTableForUnit(CompileUnit &Unit);
   };
 
   /// Assign an abbreviation number to \p Abbrev
@@ -736,8 +732,8 @@ private:
 
   /// Compute and emit debug ranges(.debug_aranges, .debug_ranges,
   /// .debug_rnglists) for \p Unit, patch the attributes referencing it.
-  void generateUnitRanges(CompileUnit &Unit, const DWARFFile &File,
-                          DebugDieValuePool &AddrPool) const;
+  Error generateUnitRanges(CompileUnit &Unit, const DWARFFile &File,
+                           DebugDieValuePool &AddrPool) const;
 
   /// Emit the accelerator entries for \p Unit.
   void emitAcceleratorEntriesForUnit(CompileUnit &Unit);

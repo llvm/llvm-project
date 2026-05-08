@@ -111,6 +111,29 @@ private:
   DictionaryAttr propertiesAttr;
 };
 
+// Attribute converter that populates a NamedAttrList by removing the nonNeg
+// attribute from the source operation attributes, and setting it as a property
+// on the target LLVM operation.
+template <typename SourceOp, typename TargetOp>
+class AttrConvertNonNegToLLVM {
+public:
+  AttrConvertNonNegToLLVM(SourceOp srcOp) {
+    convertedAttr = NamedAttrList{srcOp->getAttrs()};
+    if (!convertedAttr.erase("nonNeg"))
+      return;
+    MLIRContext *ctx = srcOp.getOperation()->getContext();
+    Builder b(ctx);
+    NamedAttribute attr{"nonNeg", b.getUnitAttr()};
+    propertiesAttr = b.getDictionaryAttr(ArrayRef(attr));
+  }
+  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+  Attribute getPropAttr() const { return propertiesAttr; }
+
+private:
+  NamedAttrList convertedAttr;
+  DictionaryAttr propertiesAttr;
+};
+
 template <typename SourceOp, typename TargetOp>
 class AttrConverterConstrainedFPToLLVM {
   static_assert(TargetOp::template hasTrait<
@@ -134,6 +157,11 @@ public:
       convertedAttr.set(TargetOp::getRoundingModeAttrName(),
                         convertArithRoundingModeAttrToLLVM(arithAttr));
     }
+    // Constrained intrinsics (llvm.intr.experimental.constrained.*) do not
+    // support fastmath flags. Remove the arith fastmath attribute if present.
+    if constexpr (SourceOp::template hasTrait<
+                      arith::ArithFastMathInterface::Trait>())
+      convertedAttr.erase(srcOp.getFastMathAttrName());
     convertedAttr.set(TargetOp::getFPExceptionBehaviorAttrName(),
                       getLLVMDefaultFPExceptionBehavior(*srcOp->getContext()));
   }

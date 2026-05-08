@@ -470,7 +470,7 @@ void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
 // CHECK: %[[ADDR_CUR1:.*]] = phi ptr
 
 // CHECK: %[[V6:.*]] = load volatile i8, ptr %[[ADDR_CUR1]], align 1
-// CHECK: %[[TOBOOL:.*]] = trunc i8 %[[V6]] to i1
+// CHECK: %[[TOBOOL:.*]] = icmp ne i8 %[[V6]], 0
 // CHECK: %[[FROMBOOL:.*]] = zext i1 %[[TOBOOL]] to i8
 // CHECK: store volatile i8 %[[FROMBOOL]], ptr %[[ADDR_CUR]], align 1
 

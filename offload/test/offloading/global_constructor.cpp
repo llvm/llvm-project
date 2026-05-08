@@ -1,4 +1,6 @@
+// clang-format off
 // RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic | %fcheck-generic
+// clang-format on
 
 #include <cstdio>
 

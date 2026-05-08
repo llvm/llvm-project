@@ -9,5 +9,5 @@ typedef __attribute__((vector_size(16))) int v4i32;
 
 v4i32 Var;
 
-//CHECK: !llvm.module.flags = !{!0, !1}
+//CHECK: !llvm.module.flags = !{!0}
 //CHECK: !0 = !{i32 2, !"s390x-visible-vector-ABI", i32 1}

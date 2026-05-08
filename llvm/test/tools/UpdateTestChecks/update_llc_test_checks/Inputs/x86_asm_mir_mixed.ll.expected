@@ -34,7 +34,7 @@ define i64 @test2(i32 %i) nounwind readnone {
 ; MIR-NEXT: {{  $}}
 ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
 ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[COPY]], %stack.0.loc, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (dereferenceable load (s32) from %ir.loc)
-; MIR-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[ADD32rm]], %subreg.sub_32bit
+; MIR-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[ADD32rm]], %subreg.sub_32bit
 ; MIR-NEXT:   $rax = COPY [[SUBREG_TO_REG]]
 ; MIR-NEXT:   RET 0, $rax
   %loc = alloca i32

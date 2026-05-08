@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
@@ -30,14 +31,15 @@ class ModuleSpec {
 public:
   ModuleSpec() = default;
 
-  /// If the \c data argument is passed, its contents will be used
+  /// If the \c extractor_sp argument is passed, its contents will be used
   /// as the module contents instead of trying to read them from
   /// \c file_spec .
   ModuleSpec(const FileSpec &file_spec, const UUID &uuid = UUID(),
-             lldb::DataBufferSP data = lldb::DataBufferSP())
-      : m_file(file_spec), m_uuid(uuid), m_object_offset(0), m_data(data) {
-    if (data)
-      m_object_size = data->GetByteSize();
+             lldb::DataExtractorSP extractor_sp = lldb::DataExtractorSP())
+      : m_file(file_spec), m_uuid(uuid), m_object_offset(0),
+        m_extractor_sp(extractor_sp) {
+    if (extractor_sp)
+      m_object_size = extractor_sp->GetByteSize();
     else if (m_file)
       m_object_size = FileSystem::Instance().GetByteSize(file_spec);
   }
@@ -126,7 +128,7 @@ public:
 
   PathMappingList &GetSourceMappingList() const { return m_source_mappings; }
 
-  lldb::DataBufferSP GetData() const { return m_data; }
+  lldb::DataExtractorSP GetExtractor() const { return m_extractor_sp; }
 
   lldb::TargetSP GetTargetSP() const { return m_target_wp.lock(); }
 
@@ -136,7 +138,16 @@ public:
   /// settings, like the executable and debug info search paths, can be
   /// essential. The target's platform can also be used to locate or download
   /// the specified module.
-  void SetTarget(std::shared_ptr<Target> target) { m_target_wp = target; }
+  void SetTarget(lldb::TargetSP target) { m_target_wp = target; }
+
+  lldb::PlatformSP GetPlatformSP() const { return m_platform_wp.lock(); }
+
+  /// Set the platform to be used when resolving a module.
+  ///
+  /// This is useful when a Target is not yet available (e.g., during target
+  /// creation) but a Platform is. The platform can be used to invoke locate
+  /// module callbacks and other platform-specific module resolution logic.
+  void SetPlatform(lldb::PlatformSP platform) { m_platform_wp = platform; }
 
   void Clear() {
     m_file.Clear();
@@ -150,6 +161,7 @@ public:
     m_source_mappings.Clear(false);
     m_object_mod_time = llvm::sys::TimePoint<>();
     m_target_wp.reset();
+    m_platform_wp.reset();
   }
 
   explicit operator bool() const {
@@ -283,11 +295,14 @@ protected:
   /// debug info search paths, can be essential. The target's platform can also
   /// be used to locate or download the specified module.
   std::weak_ptr<Target> m_target_wp;
+  /// The platform used when resolving a module. This is useful when a Target
+  /// is not yet available (e.g., during target creation) but a Platform is.
+  std::weak_ptr<Platform> m_platform_wp;
   uint64_t m_object_offset = 0;
   uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
   mutable PathMappingList m_source_mappings;
-  lldb::DataBufferSP m_data = {};
+  lldb::DataExtractorSP m_extractor_sp = {};
 };
 
 class ModuleSpecList {

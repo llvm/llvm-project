@@ -8,6 +8,7 @@
 
 #include "lldb/Symbol/Variable.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -43,13 +44,20 @@ Variable::Variable(lldb::user_id_t uid, const char *name, const char *mangled,
                    const RangeList &scope_range, Declaration *decl_ptr,
                    const DWARFExpressionList &location_list, bool external,
                    bool artificial, bool location_is_constant_data,
-                   bool static_member)
+                   bool static_member, std::optional<uint64_t> tag_offset)
     : UserID(uid), m_name(name), m_mangled(ConstString(mangled)),
       m_symfile_type_sp(symfile_type_sp), m_scope(scope),
       m_owner_scope(context), m_scope_range(scope_range),
-      m_declaration(decl_ptr), m_location_list(location_list), m_external(external),
-      m_artificial(artificial), m_loc_is_const_data(location_is_constant_data),
-      m_static_member(static_member) {}
+      m_declaration(decl_ptr), m_location_list(location_list),
+      m_external(external), m_artificial(artificial),
+      m_loc_is_const_data(location_is_constant_data),
+      m_static_member(static_member), m_tag_offset(tag_offset) {
+#ifndef NDEBUG
+  if (TestingProperties::GetGlobalTestingProperties()
+          .GetInjectVarLocListError())
+    m_location_list.Clear();
+#endif
+}
 
 Variable::~Variable() = default;
 
@@ -88,7 +96,7 @@ bool Variable::NameMatches(ConstString name) const {
   return m_mangled.NameMatches(name);
 }
 bool Variable::NameMatches(const RegularExpression &regex) const {
-  if (regex.Execute(m_name.AsCString()))
+  if (regex.Execute(m_name.AsCString(nullptr)))
     return true;
   if (m_mangled)
     return m_mangled.NameMatches(regex);
@@ -570,7 +578,7 @@ static void PrivateAutoComplete(
       case eTypeClassObjCObjectPointer:
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
-        if (llvm::expectedToStdOptional(
+        if (llvm::expectedToOptional(
                 compiler_type.GetNumChildren(omit_empty_base_classes, nullptr))
                 .value_or(0))
           request.AddCompletion((prefix_path + "->").str());
@@ -582,13 +590,14 @@ static void PrivateAutoComplete(
     } else {
       if (frame) {
         const bool get_file_globals = true;
+        const bool include_synthetic_vars = true;
 
-        VariableList *variable_list = frame->GetVariableList(get_file_globals,
-                                                             nullptr);
+        VariableList *variable_list = frame->GetVariableList(
+            get_file_globals, include_synthetic_vars, nullptr);
 
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
-            request.AddCompletion(var_sp->GetName().AsCString());
+            request.AddCompletion(var_sp->GetName());
         }
       }
     }
@@ -678,9 +687,10 @@ static void PrivateAutoComplete(
         } else if (frame) {
           // We haven't found our variable yet
           const bool get_file_globals = true;
+          const bool include_synthetic_vars = true;
 
-          VariableList *variable_list =
-              frame->GetVariableList(get_file_globals, nullptr);
+          VariableList *variable_list = frame->GetVariableList(
+              get_file_globals, include_synthetic_vars, nullptr);
 
           if (!variable_list)
             break;

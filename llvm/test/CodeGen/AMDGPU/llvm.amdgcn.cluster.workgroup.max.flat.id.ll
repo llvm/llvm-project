@@ -9,8 +9,8 @@ declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id() #0
 define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 {
 ; CHECK-UNKNOWN-LABEL: test_workgroup_max_flat_id:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; CHECK-UNKNOWN-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
 ; CHECK-UNKNOWN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-UNKNOWN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -88,8 +88,8 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
-; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; CHECK-MESA3D-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
 ; CHECK-MESA3D-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-MESA3D-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -99,8 +99,8 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_flat_id:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; CHECK-G-UNKNOWN-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
 ; CHECK-G-UNKNOWN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-G-UNKNOWN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -178,8 +178,8 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-G-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-G-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
-; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; CHECK-G-MESA3D-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
 ; CHECK-G-MESA3D-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-G-MESA3D-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2

@@ -40,8 +40,8 @@ void test_is_finite(__fp16 *H, float F, double D, long double LD) {
     // OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 504)
 
     res = finite(D);
-    // CIR: cir.call @finite(%{{.*}}) nothrow side_effect(const) : (!cir.double) -> !s32i
-    // LLVM: call i32 @finite(double {{.*}})
+    // CIR: cir.is_fp_class %{{.*}}, fcFinite : (!cir.double) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 504)
     // OGCG: call i1 @llvm.is.fpclass.f64(double %20, i32 504)
     res = __builtin_isnormal(*H);
     // CIR: cir.is_fp_class %{{.*}}, fcNormal : (!cir.f16) -> !cir.bool

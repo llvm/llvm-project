@@ -85,7 +85,7 @@ public:
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  LLVM_ABI static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
+  LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended
@@ -773,7 +773,8 @@ class ConstantPointerNull final : public Constant {
 public:
   LLVM_ABI static ConstantPointerNull *get(PointerType *Ty);
 
-  LLVM_ABI PointerType *getType() const;
+  LLVM_ABI Type *getType() const;
+  LLVM_ABI PointerType *getPointerType() const;
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -1379,7 +1380,7 @@ public:
   /// the only global-initializer user of the ptrauth signed pointer.
   LLVM_ABI Constant *getAddrDiscriminator() const;
 
-  Constant *getDeactivationSymbol() const;
+  LLVM_ABI Constant *getDeactivationSymbol() const;
 
   /// Whether there is any non-null address discriminator.
   bool hasAddressDiscriminator() const {

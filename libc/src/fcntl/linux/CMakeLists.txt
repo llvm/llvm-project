@@ -31,7 +31,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.mode_t
     libc.hdr.fcntl_macros
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.errno.errno
 )
 

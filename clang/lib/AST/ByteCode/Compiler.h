@@ -104,7 +104,7 @@ struct VarCreationState {
   bool notCreated() const { return !S; }
 };
 
-enum class ScopeKind { Call, Block };
+enum class ScopeKind { Block, FullExpression, Call };
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -230,6 +230,8 @@ public:
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -299,6 +301,8 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  /// Similar, but will also pop the pointer.
+  bool visitInitializerPop(const Expr *E);
   bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
@@ -307,10 +311,8 @@ protected:
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
   VarCreationState visitVarDecl(const VarDecl *VD, const Expr *Init,
-                                bool Toplevel = false,
-                                bool IsConstexprUnknown = false);
-  VarCreationState visitDecl(const VarDecl *VD,
-                             bool IsConstexprUnknown = false);
+                                bool Toplevel = false);
+  VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
@@ -330,15 +332,11 @@ protected:
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
-                                  const ValueDecl *ExtendingDecl = nullptr,
-                                  ScopeKind SC = ScopeKind::Block,
-                                  bool IsConstexprUnknown = false);
+                                  ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
   UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                               const ValueDecl *ExtendingDecl = nullptr,
-                               ScopeKind = ScopeKind::Block,
-                               bool IsConstexprUnknown = false);
+                               ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
@@ -408,6 +406,11 @@ private:
     return *this->classify(T->getAs<VectorType>()->getElementType());
   }
 
+  PrimType classifyMatrixElementType(QualType T) const {
+    assert(T->isMatrixType());
+    return *this->classify(T->getAs<MatrixType>()->getElementType());
+  }
+
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
@@ -420,6 +423,29 @@ private:
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
   bool emitBuiltinBitCast(const CastExpr *E);
+
+  bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
+                              QualType DestType, const Expr *E);
+
+  /// A scalar element extracted during HLSL aggregate flattening.
+  struct HLSLFlatElement {
+    unsigned LocalOffset;
+    PrimType Type;
+  };
+  unsigned countHLSLFlatElements(QualType Ty);
+  bool emitHLSLFlattenAggregate(QualType SrcType, unsigned SrcPtrOffset,
+                                SmallVectorImpl<HLSLFlatElement> &Elements,
+                                unsigned MaxElements, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  unsigned &ElemIdx, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  const Expr *E) {
+    unsigned ElemIdx = 0;
+    return emitHLSLConstructAggregate(DestType, Elements, ElemIdx, E);
+  }
+
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
@@ -451,6 +477,8 @@ protected:
   bool InStmtExpr = false;
   bool ToLValue = false;
 
+  bool VariablesAreConstexprUnknown = false;
+
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
@@ -476,9 +504,8 @@ extern template class Compiler<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
-  VariableScope(Compiler<Emitter> *Ctx, const ValueDecl *VD,
-                ScopeKind Kind = ScopeKind::Block)
-      : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD), Kind(Kind) {
+  VariableScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
+      : Ctx(Ctx), Parent(Ctx->VarScope), Kind(Kind) {
     if (Parent)
       this->LocalsAlwaysEnabled = Parent->LocalsAlwaysEnabled;
     Ctx->VarScope = this;
@@ -489,33 +516,18 @@ public:
   virtual void addLocal(Scope::Local Local) {
     llvm_unreachable("Shouldn't be called");
   }
-
-  void addExtended(const Scope::Local &Local, const ValueDecl *ExtendingDecl) {
-    // Walk up the chain of scopes until we find the one for ExtendingDecl.
-    // If there is no such scope, attach it to the parent one.
-    VariableScope *P = this;
-    while (P) {
-      if (P->ValDecl == ExtendingDecl) {
-        P->addLocal(Local);
-        return;
-      }
-      P = P->Parent;
-      if (!P)
-        break;
-    }
-
-    // Use the parent scope.
-    if (this->Parent)
-      this->Parent->addLocal(Local);
-    else
-      this->addLocal(Local);
-  }
-
   /// Like addExtended, but adds to the nearest scope of the given kind.
   void addForScopeKind(const Scope::Local &Local, ScopeKind Kind) {
     VariableScope *P = this;
     while (P) {
+      // We found the right scope kind.
       if (P->Kind == Kind) {
+        P->addLocal(Local);
+        return;
+      }
+      // If we reached the root scope and we're looking for a Block scope,
+      // attach it to the root instead of the current scope.
+      if (!P->Parent && Kind == ScopeKind::Block) {
         P->addLocal(Local);
         return;
       }
@@ -523,12 +535,14 @@ public:
       if (!P)
         break;
     }
+
     // Add to this scope.
     this->addLocal(Local);
   }
 
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
+  virtual void forceInit() {}
   VariableScope *getParent() const { return Parent; }
   ScopeKind getKind() const { return Kind; }
 
@@ -542,7 +556,6 @@ protected:
   Compiler<Emitter> *Ctx;
   /// Link to the parent scope.
   VariableScope *Parent;
-  const ValueDecl *ValDecl = nullptr;
   ScopeKind Kind;
 };
 
@@ -550,9 +563,7 @@ protected:
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
   LocalScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : VariableScope<Emitter>(Ctx, nullptr, Kind) {}
-  LocalScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : VariableScope<Emitter>(Ctx, VD) {}
+      : VariableScope<Emitter>(Ctx, Kind) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
@@ -561,7 +572,6 @@ public:
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
   }
-
   /// Explicit destruction of local variables.
   bool destroyLocals(const Expr *E = nullptr) override {
     if (!Idx)
@@ -585,10 +595,22 @@ public:
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
+  /// Force-initialize this scope. Usually, scopes are lazily initialized when
+  /// the first local variable is created, but in scenarios with conditonal
+  /// operators, we need to ensure scope is initialized just in case one of the
+  /// arms will create a local and the other won't. In such a case, the
+  /// InitScope() op would be part of the arm that created the local.
+  void forceInit() override {
+    if (!Idx) {
+      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
+      this->Ctx->Descriptors.emplace_back();
+      this->Ctx->emitInitScope(*Idx, {});
+    }
+  }
+
   bool emitDestructors(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
-    assert(!this->Ctx->Descriptors[*Idx].empty());
 
     // Emit destructor calls for local variables of record
     // type with a destructor.
@@ -600,7 +622,7 @@ public:
         typename Emitter::LabelTy EndLabel = this->Ctx->getLabel();
         if (!this->Ctx->emitGetLocalEnabled(Local.Offset, E))
           return false;
-        if (!this->Ctx->jumpFalse(EndLabel))
+        if (!this->Ctx->jumpFalse(EndLabel, E))
           return false;
 
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
@@ -609,6 +631,7 @@ public:
         if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
           return false;
 
+        this->Ctx->fallthrough(EndLabel);
         this->Ctx->emitLabel(EndLabel);
       } else {
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))

@@ -4,7 +4,7 @@ target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "powerpc64-unknown-linux-gnu"
 
 define float @test1(float %x) nounwind  {
-  %call = tail call float @floorf(float %x) nounwind readnone
+  %call = tail call float @llvm.floor.f32(float %x) nounwind readnone
   ret float %call
 
 ; CHECK-LABEL: test1:
@@ -13,10 +13,10 @@ define float @test1(float %x) nounwind  {
 ; CHECK-VSX: xsrdpim 1, 1
 }
 
-declare float @floorf(float) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
 
 define double @test2(double %x) nounwind  {
-  %call = tail call double @floor(double %x) nounwind readnone
+  %call = tail call double @llvm.floor.f64(double %x) nounwind readnone
   ret double %call
 
 ; CHECK-LABEL: test2:
@@ -25,10 +25,10 @@ define double @test2(double %x) nounwind  {
 ; CHECK-VSX: xsrdpim 1, 1
 }
 
-declare double @floor(double) nounwind readnone
+declare double @llvm.floor.f64(double) nounwind readnone
 
 define float @test3(float %x) nounwind  {
-  %call = tail call float @roundf(float %x) nounwind readnone
+  %call = tail call float @llvm.round.f32(float %x) nounwind readnone
   ret float %call
 
 ; CHECK-LABEL: test3:
@@ -37,10 +37,10 @@ define float @test3(float %x) nounwind  {
 ; CHECK-VSX: xsrdpi 1, 1
 }
 
-declare float @roundf(float) nounwind readnone
+declare float @llvm.round.f32(float) nounwind readnone
 
 define double @test4(double %x) nounwind  {
-  %call = tail call double @round(double %x) nounwind readnone
+  %call = tail call double @llvm.round.f64(double %x) nounwind readnone
   ret double %call
 
 ; CHECK-LABEL: test4:
@@ -49,10 +49,10 @@ define double @test4(double %x) nounwind  {
 ; CHECK-VSX: xsrdpi 1, 1
 }
 
-declare double @round(double) nounwind readnone
+declare double @llvm.round.f64(double) nounwind readnone
 
 define float @test5(float %x) nounwind  {
-  %call = tail call float @ceilf(float %x) nounwind readnone
+  %call = tail call float @llvm.ceil.f32(float %x) nounwind readnone
   ret float %call
 
 ; CHECK-LABEL: test5:
@@ -61,10 +61,10 @@ define float @test5(float %x) nounwind  {
 ; CHECK-VSX: xsrdpip 1, 1
 }
 
-declare float @ceilf(float) nounwind readnone
+declare float @llvm.ceil.f32(float) nounwind readnone
 
 define double @test6(double %x) nounwind  {
-  %call = tail call double @ceil(double %x) nounwind readnone
+  %call = tail call double @llvm.ceil.f64(double %x) nounwind readnone
   ret double %call
 
 ; CHECK-LABEL: test6:
@@ -73,10 +73,10 @@ define double @test6(double %x) nounwind  {
 ; CHECK-VSX: xsrdpip 1, 1
 }
 
-declare double @ceil(double) nounwind readnone
+declare double @llvm.ceil.f64(double) nounwind readnone
 
 define float @test9(float %x) nounwind  {
-  %call = tail call float @truncf(float %x) nounwind readnone
+  %call = tail call float @llvm.trunc.f32(float %x) nounwind readnone
   ret float %call
 
 ; CHECK-LABEL: test9:
@@ -85,10 +85,10 @@ define float @test9(float %x) nounwind  {
 ; CHECK-VSX: xsrdpiz 1, 1
 }
 
-declare float @truncf(float) nounwind readnone
+declare float @llvm.trunc.f32(float) nounwind readnone
 
 define double @test10(double %x) nounwind  {
-  %call = tail call double @trunc(double %x) nounwind readnone
+  %call = tail call double @llvm.trunc.f64(double %x) nounwind readnone
   ret double %call
 
 ; CHECK-LABEL: test10:
@@ -97,5 +97,5 @@ define double @test10(double %x) nounwind  {
 ; CHECK-VSX: xsrdpiz 1, 1
 }
 
-declare double @trunc(double) nounwind readnone
+declare double @llvm.trunc.f64(double) nounwind readnone
 

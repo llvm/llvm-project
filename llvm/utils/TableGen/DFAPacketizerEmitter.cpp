@@ -101,7 +101,9 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
   LLVM_DEBUG(dbgs() << "collectAllFuncUnits");
   LLVM_DEBUG(dbgs() << " (" << ProcModels.size() << " itineraries)\n");
 
-  std::set<const Record *> ProcItinList;
+  // Use the LessRecord comparator to make the traversal deterministic with the
+  // same input
+  std::set<const Record *, LessRecord> ProcItinList;
   for (const CodeGenProcModel *Model : ProcModels)
     ProcItinList.insert(Model->ItinsDef);
 

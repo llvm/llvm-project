@@ -34,7 +34,7 @@ EXTERNC int empty_align16_arg(struct EmptyAlign16 a, int b) {
   return b;
 }
 
-// CXX: define{{.*}} i32 @empty_align32_arg(ptr dead_on_return noundef %a, i32 noundef %b)
+// CXX: define{{.*}} i32 @empty_align32_arg(ptr noundef dead_on_return %a, i32 noundef %b)
 struct EmptyAlign32 { long long int __attribute__((aligned(32))) : 0; };
 EXTERNC int empty_align32_arg(struct EmptyAlign32 a, int b) {
   return b;

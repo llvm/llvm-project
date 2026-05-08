@@ -5,6 +5,7 @@
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,RISCV %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,RISCV %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=loongarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,LOONGARCH64 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=hexagon-unknown-linux-musl %s | FileCheck --check-prefixes=CHECK,HEXAGON %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -137,6 +138,7 @@ define i1 @foo(ptr %p) {
 ; ARM: define private void @[[JT]]() #{{.*}} align 4 {
 ; RISCV: define private void @[[JT]]() #{{.*}} align 8 {
 ; LOONGARCH64: define private void @[[JT]]() #{{.*}} align 8 {
+; HEXAGON: define private void @[[JT]]() #{{.*}} align 4 {
 
 ; CHECK-LABEL: define internal void @__cfi_global_var_init() section ".text.startup" {
 ; CHECK-NEXT: entry:

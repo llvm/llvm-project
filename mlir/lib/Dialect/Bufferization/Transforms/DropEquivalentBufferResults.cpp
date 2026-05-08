@@ -74,8 +74,8 @@ static bool operandsEqualFuncArgument(ArrayRef<Value> operands,
   return true;
 }
 
-LogicalResult
-mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
+LogicalResult mlir::bufferization::dropEquivalentBufferResults(
+    ModuleOp module, DropBufferResultsOpts options) {
   IRRewriter rewriter(module.getContext());
 
   DenseMap<func::FuncOp, DenseSet<func::CallOp>> callerMap;
@@ -83,13 +83,18 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
   module.walk([&](func::CallOp callOp) {
     if (func::FuncOp calledFunc =
             dyn_cast_or_null<func::FuncOp>(callOp.resolveCallable())) {
-      if (!calledFunc.isPublic() && !calledFunc.isExternal())
+      if (calledFunc.isPublic() && !options.modifyPublicFunctions)
+        return WalkResult::advance();
+      if (!calledFunc.isExternal())
         callerMap[calledFunc].insert(callOp);
     }
+    return WalkResult::advance();
   });
 
   for (auto funcOp : module.getOps<func::FuncOp>()) {
-    if (funcOp.isExternal() || funcOp.isPublic())
+    if (funcOp.isPublic() && !options.modifyPublicFunctions)
+      continue;
+    if (funcOp.isExternal())
       continue;
     SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
     if (returnOps.empty())
@@ -166,9 +171,18 @@ namespace {
 struct DropEquivalentBufferResultsPass
     : bufferization::impl::DropEquivalentBufferResultsPassBase<
           DropEquivalentBufferResultsPass> {
+  using Base::Base;
+
   void runOnOperation() override {
-    if (failed(bufferization::dropEquivalentBufferResults(getOperation())))
+    // Convert pass options.
+    options.modifyPublicFunctions = modifyPublicFunctions;
+
+    if (failed(bufferization::dropEquivalentBufferResults(getOperation(),
+                                                          options)))
       return signalPassFailure();
   }
+
+private:
+  bufferization::DropBufferResultsOpts options;
 };
 } // namespace

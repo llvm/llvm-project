@@ -1,0 +1,10 @@
+## --all should be able to be used many times in a row. As it is not
+## repeatable and starts fresh each time.
+
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %lldb %t.out -b -o 'b main' -o 'run' -o 'memory region --all' \
+# RUN:    -o 'memory region --all' | FileCheck %s
+# CHECK-LABEL: memory region --all
+# CHECK-NEXT: [0x{{[0-9a-f]+}}-0x{{[0-9a-f]+}})
+# CHECK-LABEL: memory region --all
+# CHECK-NEXT: [0x{{[0-9a-f]+}}-0x{{[0-9a-f]+}})

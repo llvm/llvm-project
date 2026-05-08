@@ -2,6 +2,7 @@
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s --check-prefix=CHECK-EXT
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXT
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-EXT: OpCapability MemoryAccessAliasingINTEL
 ; CHECK-EXT: OpExtension "SPV_INTEL_memory_access_aliasing"
@@ -14,13 +15,13 @@
 ; CHECK-EXT: %[[#Domain3:]] = OpAliasDomainDeclINTEL
 ; CHECK-EXT: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain3]]
 ; CHECK-EXT: %[[#List3:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
-; CHECK-EXT: OpDecorate %[[#Fun1:]] AliasScopeINTEL %[[#List1]]
-; CHECK-EXT: OpDecorate %[[#Fun2:]] AliasScopeINTEL %[[#List1]]
-; CHECK-EXT: OpDecorate %[[#Fun2]] NoAliasINTEL %[[#List2]]
-; CHECK-EXT: OpDecorate %[[#Fun3:]] NoAliasINTEL %[[#List1]]
-; CHECK-EXT: OpDecorate %[[#Fun4:]] AliasScopeINTEL %[[#List3]]
-; CHECK-EXT: OpDecorate %[[#Fun5:]] AliasScopeINTEL %[[#List3]]
-; CHECK-EXT: OpDecorate %[[#Fun6:]] NoAliasINTEL %[[#List3]]
+; CHECK-EXT: OpDecorateId %[[#Fun1:]] AliasScopeINTEL %[[#List1]]
+; CHECK-EXT: OpDecorateId %[[#Fun2:]] AliasScopeINTEL %[[#List1]]
+; CHECK-EXT: OpDecorateId %[[#Fun2]] NoAliasINTEL %[[#List2]]
+; CHECK-EXT: OpDecorateId %[[#Fun3:]] NoAliasINTEL %[[#List1]]
+; CHECK-EXT: OpDecorateId %[[#Fun4:]] AliasScopeINTEL %[[#List3]]
+; CHECK-EXT: OpDecorateId %[[#Fun5:]] AliasScopeINTEL %[[#List3]]
+; CHECK-EXT: OpDecorateId %[[#Fun6:]] NoAliasINTEL %[[#List3]]
 ; CHECK-EXT: %[[#Fun1]] = OpFunctionCall
 ; CHECK-EXT: %[[#Fun2]] = OpFunctionCall
 ; CHECK-EXT: %[[#Fun3]] = OpFunctionCall

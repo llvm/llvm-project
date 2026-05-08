@@ -16,13 +16,13 @@
 
 #include "ClangTidyMain.h"
 #include "../ClangTidy.h"
-#include "../ClangTidyForceLinker.h"
+#include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -77,6 +77,7 @@ Configuration files:
                                  (if any exists) will be taken and the current
                                  config file will be applied on top of the
                                  parent one.
+  RemovedArgs                  - Same as '--removed-arg'.
   SystemHeaders                - Same as '--system-headers'.
   UseColor                     - Same as '--use-color'.
   User                         - Specifies the name or e-mail of the user
@@ -104,8 +105,7 @@ Configuration files:
 )");
 
 const char DefaultChecks[] = // Enable these checks by default:
-    "clang-diagnostic-*,"    //   * compiler diagnostics
-    "clang-analyzer-*";      //   * Static Analyzer checks
+    "clang-diagnostic-*";    //   * compiler diagnostics
 
 static cl::opt<std::string> Checks("checks", desc(R"(
 Comma-separated list of globs with optional '-'
@@ -357,6 +357,16 @@ see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
                                               cl::init(false),
                                               cl::cat(ClangTidyCategory));
 
+static cl::list<std::string> RemovedArgs("removed-arg", desc(R"(
+List of arguments to remove from the command
+line sent to the compiler. Please note that
+removing arguments might change the semantic
+of the analyzed code, possibly leading to
+compiler errors, false positives or
+false negatives. This option is applied 
+before --extra-arg and --extra-arg-before)"),
+                                         cl::cat(ClangTidyCategory));
+
 namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
@@ -423,6 +433,8 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
     OverrideOptions.FormatStyle = FormatStyle;
   if (UseColor.getNumOccurrences() > 0)
     OverrideOptions.UseColor = UseColor;
+  if (RemovedArgs.getNumOccurrences() > 0)
+    OverrideOptions.RemovedArgs = RemovedArgs;
 
   auto LoadConfig =
       [&](StringRef Configuration,
@@ -511,15 +523,15 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
     if (llvm::none_of(AllChecks.keys(),
                       [&Item](StringRef S) { return Item.Regex.match(S); })) {
       AnyInvalid = true;
-      if (Item.Text.contains('*'))
+      if (Item.Text.contains('*')) {
         llvm::WithColor::warning(llvm::errs(), Source)
             << "check glob '" << Item.Text << "' doesn't match any known check"
             << VerifyConfigWarningEnd;
-      else {
+      } else {
         llvm::raw_ostream &Output =
             llvm::WithColor::warning(llvm::errs(), Source)
             << "unknown check '" << Item.Text << '\'';
-        const llvm::StringRef Closest = closest(Item.Text, AllChecks);
+        const StringRef Closest = closest(Item.Text, AllChecks);
         if (!Closest.empty())
           Output << "; did you mean '" << Closest << '\'';
         Output << VerifyConfigWarningEnd;
@@ -559,7 +571,7 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
     AnyInvalid = true;
     auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
                    << "unknown check option '" << Key << '\'';
-    const llvm::StringRef Closest = closest(Key, ValidOptions);
+    const StringRef Closest = closest(Key, ValidOptions);
     if (!Closest.empty())
       Output << "; did you mean '" << Closest << '\'';
     Output << VerifyConfigWarningEnd;
@@ -567,7 +579,7 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
   return AnyInvalid;
 }
 
-static SmallString<256> makeAbsolute(llvm::StringRef Input) {
+static SmallString<256> makeAbsolute(StringRef Input) {
   if (Input.empty())
     return {};
   SmallString<256> AbsolutePath(Input);
@@ -636,9 +648,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   StringRef FileName("dummy");
   auto PathList = OptionsParser->getSourcePathList();
-  if (!PathList.empty()) {
+  if (!PathList.empty())
     FileName = PathList.front();
-  }
 
   const SmallString<256> FilePath = makeAbsolute(FileName);
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
@@ -649,8 +660,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
-    std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
-        RawOptions = OptionsProvider->getRawOptions(FilePath);
+    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
+        OptionsProvider->getRawOptions(FilePath);
     for (const std::string &Check : EnabledChecks) {
       for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
         if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {

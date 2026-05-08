@@ -86,6 +86,12 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mbig-endian | FileCheck --check-prefix=CHECK-BIG-ENDIAN %s
 // CHECK-BIG-ENDIAN: -mbig-endian
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fsanitize=shadow-call-stack | FileCheck --check-prefix=CHECK-SHADOW-CALL-STACK %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fno-sanitize=shadow-call-stack | FileCheck --check-prefix=CHECK-NO-SHADOW-CALL-STACK %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf | FileCheck --check-prefix=CHECK-NO-SHADOW-CALL-STACK %s
+// CHECK-SHADOW-CALL-STACK: -fsanitize=shadow-call-stack
+// CHECK-NO-SHADOW-CALL-STACK: -fno-sanitize=shadow-call-stack
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv32-none-elf -march=rv32g | FileCheck --check-prefix=CHECK-RV32 %s
 // CHECK-RV32: --target=riscv32-unknown-none-elf
 // CHECK-RV32: -mabi=ilp32d
@@ -103,8 +109,10 @@
 
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=armv8m.main-none-eabi -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-ARM-MULTILIB-CUSTOM-FLAG %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=aarch64-none-eabi     -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-AARCH64-MULTILIB-CUSTOM-FLAG %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-RISCV-MULTILIB-CUSTOM-FLAG %s
 // CHECK-ARM-MULTILIB-CUSTOM-FLAG:     --target=thumbv8m.main-unknown-none-eabi
 // CHECK-AARCH64-MULTILIB-CUSTOM-FLAG: --target=aarch64-unknown-none-eabi
+// CHECK-RISCV-MULTILIB-CUSTOM-FLAG:   --target=riscv64-unknown-none-elf
 // CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=foo
 // CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=bar
 

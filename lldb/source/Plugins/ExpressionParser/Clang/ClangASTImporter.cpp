@@ -969,10 +969,10 @@ void ClangASTImporter::SetDeclOrigin(const clang::Decl *decl,
 }
 
 void ClangASTImporter::RegisterNamespaceMap(const clang::NamespaceDecl *decl,
-                                            NamespaceMapSP &namespace_map) {
+                                            NamespaceMapSP namespace_map) {
   ASTContextMetadataSP context_md = GetContextMetadata(&decl->getASTContext());
 
-  context_md->m_namespace_maps[decl] = namespace_map;
+  context_md->m_namespace_maps[decl] = std::move(namespace_map);
 }
 
 ClangASTImporter::NamespaceMapSP

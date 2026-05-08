@@ -52,7 +52,7 @@ struct ConstantShardingInterface
                     ArrayRef<Sharding> resultShardings) const {
     assert(resultShardings.size() == 1 &&
            "Expecting exactly one result sharding for arith.constant");
-    auto resultSharding = resultShardings[0];
+    const auto &resultSharding = resultShardings[0];
     if (!resultSharding) {
       return failure();
     }
@@ -73,12 +73,12 @@ struct ConstantShardingInterface
                           SymbolTableCollection &symbolTable,
                           OpBuilder &builder) const {
     auto cOp = cast<ConstantOp>(op);
-    if (auto value = dyn_cast<DenseIntOrFPElementsAttr>(cOp.getValue())) {
+    if (auto value = dyn_cast<DenseTypedElementsAttr>(cOp.getValue())) {
       if (!value.isSplat() || !resultShardings[0]) {
         // Currently non-splat constants are not supported.
         return failure();
       }
-      auto sharding = resultShardings[0];
+      const auto &sharding = resultShardings[0];
       auto newType = cast<RankedTensorType>(shardType(
           cOp.getType(), getGrid(op, sharding.getGridAttr(), symbolTable),
           sharding));

@@ -173,9 +173,9 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wv_nxv16f32_nxv16f32_nxv16bf16(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x bfloat> %2, <vscale x 16 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv16f32_nxv16f32_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl4re16.v v24, (a0)
-; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e16alt, m4, ta, mu
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfwsub.wv v8, v16, v24, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret

@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +21,8 @@ void trivially_copyable() {
   struct X {
     X() = default;
     X(X const&) {} // -> not trivially copyable
-  } x;
+  };
+  alignas(std::atomic_ref<X>::required_alignment) X x;
   // expected-error-re@*:* {{static assertion failed {{.*}}atomic_ref<T> requires that 'T' be a trivially copyable type}}
   std::atomic_ref<X> r(x);
 }

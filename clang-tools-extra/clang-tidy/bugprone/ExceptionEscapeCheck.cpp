@@ -13,7 +13,29 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::bugprone {
+namespace clang::tidy {
+
+template <>
+struct OptionEnumMapping<
+    bugprone::ExceptionEscapeCheck::TreatFunctionsWithoutSpecification> {
+  using TreatFunctionsWithoutSpecification =
+      bugprone::ExceptionEscapeCheck::TreatFunctionsWithoutSpecification;
+
+  static llvm::ArrayRef<
+      std::pair<TreatFunctionsWithoutSpecification, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<TreatFunctionsWithoutSpecification, StringRef>
+        Mapping[] = {
+            {TreatFunctionsWithoutSpecification::None, "None"},
+            {TreatFunctionsWithoutSpecification::OnlyUndefined,
+             "OnlyUndefined"},
+            {TreatFunctionsWithoutSpecification::All, "All"},
+        };
+    return {Mapping};
+  }
+};
+
+namespace bugprone {
 namespace {
 
 AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
@@ -42,8 +64,11 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       CheckDestructors(Options.get("CheckDestructors", true)),
       CheckMoveMemberFunctions(Options.get("CheckMoveMemberFunctions", true)),
       CheckMain(Options.get("CheckMain", true)),
-      CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)) {
-  llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
+      CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)),
+      TreatFunctionsWithoutSpecificationAsThrowing(
+          Options.get("TreatFunctionsWithoutSpecificationAsThrowing",
+                      TreatFunctionsWithoutSpecification::None)) {
+  SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
       IgnoredExceptionsVec, CheckedSwapFunctionsVec;
   RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
                                        false);
@@ -57,6 +82,14 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
+
+  Tracer.assumeMissingDefinitionsFunctionsAsThrowing(
+      TreatFunctionsWithoutSpecificationAsThrowing !=
+      TreatFunctionsWithoutSpecification::None);
+
+  Tracer.assumeUnannotatedFunctionsAsThrowing(
+      TreatFunctionsWithoutSpecificationAsThrowing ==
+      TreatFunctionsWithoutSpecification::All);
 }
 
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -68,11 +101,14 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckMoveMemberFunctions", CheckMoveMemberFunctions);
   Options.store(Opts, "CheckMain", CheckMain);
   Options.store(Opts, "CheckNothrowFunctions", CheckNothrowFunctions);
+  Options.store(Opts, "TreatFunctionsWithoutSpecificationAsThrowing",
+                TreatFunctionsWithoutSpecificationAsThrowing);
 }
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
   auto MatchIf = [](bool Enabled, const auto &Matcher) {
-    ast_matchers::internal::Matcher<FunctionDecl> Nothing = unless(anything());
+    const ast_matchers::internal::Matcher<FunctionDecl> Nothing =
+        unless(anything());
     return Enabled ? Matcher : Nothing;
   };
   Finder->addMatcher(
@@ -110,17 +146,28 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
                                    "%0 which should not throw exceptions")
       << MatchedDecl;
 
+  if (Info.getExceptions().empty())
+    return;
+
   const auto &[ThrowType, ThrowInfo] = *Info.getExceptions().begin();
 
   if (ThrowInfo.Loc.isInvalid())
     return;
 
   const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
-  diag(ThrowInfo.Loc,
-       "frame #0: unhandled exception of type %0 may be thrown in function %1 "
-       "here",
-       DiagnosticIDs::Note)
-      << QualType(ThrowType, 0U) << Stack.back().first;
+  if (ThrowType) {
+    diag(ThrowInfo.Loc,
+         "frame #0: unhandled exception of type %0 may be thrown in function "
+         "%1 here",
+         DiagnosticIDs::Note)
+        << QualType(ThrowType, 0U) << Stack.back().first;
+  } else {
+    diag(ThrowInfo.Loc,
+         "frame #0: an exception of unknown type may be thrown in function %0 "
+         "here",
+         DiagnosticIDs::Note)
+        << Stack.back().first;
+  }
 
   size_t FrameNo = 1;
   for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
@@ -141,4 +188,5 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace clang::tidy::bugprone
+} // namespace bugprone
+} // namespace clang::tidy

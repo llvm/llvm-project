@@ -100,7 +100,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   //  Strictly speaking, the zero does not matter since
   // __ockl_printf_append_string_n ignores the length if the pointer is null.
   BasicBlock *Join = nullptr;
-  if (Prev->getTerminator()) {
+  if (Prev->hasTerminator()) {
     Join = Prev->splitBasicBlock(Builder.GetInsertPoint(),
                                  "strlen.join");
     Prev->getTerminator()->eraseFromParent();
@@ -119,7 +119,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   Builder.SetInsertPoint(Prev);
   auto CmpNull =
       Builder.CreateICmpEQ(Str, Constant::getNullValue(Str->getType()));
-  BranchInst::Create(Join, While, CmpNull, Prev);
+  Builder.CreateCondBr(CmpNull, Join, While);
 
   // Entry to the while loop.
   Builder.SetInsertPoint(While);
@@ -136,13 +136,12 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 
   // Add one to the computed length.
   Builder.SetInsertPoint(WhileDone, WhileDone->begin());
-  auto Begin = Builder.CreatePtrToInt(Str, Int64Ty);
-  auto End = Builder.CreatePtrToInt(PtrPhi, Int64Ty);
-  auto Len = Builder.CreateSub(End, Begin);
+  auto Len = Builder.CreatePtrDiff(PtrPhi, Str);
+  Len = Builder.CreateZExt(Len, Int64Ty);
   Len = Builder.CreateAdd(Len, One);
 
   // Final join.
-  BranchInst::Create(Join, WhileDone);
+  UncondBrInst::Create(Join, WhileDone);
   Builder.SetInsertPoint(Join, Join->begin());
   auto LenPhi = Builder.CreatePHI(Len->getType(), 2);
   LenPhi->addIncoming(Len, WhileDone);
@@ -460,7 +459,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     BasicBlock *ArgPush = BasicBlock::Create(
         Ctx, "argpush.block", Builder.GetInsertBlock()->getParent());
 
-    BranchInst::Create(ArgPush, End, Cmp, Builder.GetInsertBlock());
+    CondBrInst::Create(Cmp, ArgPush, End, Builder.GetInsertBlock());
     Builder.SetInsertPoint(ArgPush);
 
     // Create controlDWord and store as the first entry, format as follows
@@ -476,7 +475,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 
     Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, 4);
 
-    // Create MD5 hash for costant format string, push low 64 bits of the
+    // Create MD5 hash for constant format string, push low 64 bits of the
     // same onto buffer and metadata.
     NamedMDNode *metaD = M->getOrInsertNamedMetadata("llvm.printf.fmts");
     if (IsConstFmtStr) {
@@ -513,7 +512,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                               IsConstFmtStr);
 
     // End block, returns -1 on failure
-    BranchInst::Create(End, ArgPush);
+    UncondBrInst::Create(End, ArgPush);
     Builder.SetInsertPoint(End);
     return Builder.CreateSExt(Builder.CreateNot(Cmp), Int32Ty, "printf_result");
   }

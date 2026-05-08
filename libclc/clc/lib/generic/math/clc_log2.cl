@@ -6,21 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
-#include <clc/math/tables.h>
-
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#endif // cl_khr_fp64
-
-#ifdef cl_khr_fp16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif // cl_khr_fp16
+#include "clc/clc_convert.h"
+#include "clc/float/definitions.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_ep.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_frexp.h"
+#include "clc/math/clc_ldexp.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/math.h"
+#include "clc/math/tables.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isnan.h"
 
 #define COMPILING_LOG2
-#include "clc_log_base.h"
+#define __CLC_BODY "clc_log_base.inc"
+#include "clc/math/gentype.inc"
 #undef COMPILING_LOG2
 
 #define __CLC_FUNCTION __clc_log2
-#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/unary_def_scalarize_loop.inc"
+#include "clc/math/gentype.inc"

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #define DEBUG_TYPE "vector-interleave-lowering"
 
@@ -173,8 +174,8 @@ struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
     }
     int64_t n = sourceType.getNumElements();
     auto seq = llvm::seq<int64_t>(2 * n);
-    auto zip = llvm::to_vector(llvm::map_range(
-        seq, [n](int64_t i) { return (i % 2 ? n : 0) + i / 2; }));
+    auto zip = llvm::map_to_vector(
+        seq, [n](int64_t i) { return (i % 2 ? n : 0) + i / 2; });
     rewriter.replaceOpWithNewOp<ShuffleOp>(op, op.getLhs(), op.getRhs(), zip);
     return success();
   }

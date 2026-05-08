@@ -90,6 +90,12 @@ public:
 
   StructuredData::ObjectSP FetchThreadExtendedInfo() override;
 
+  std::vector<lldb::addr_t> FetchNewlyAddedBinaries() override;
+  StructuredData::ObjectSP FetchDetailedBinariesInfo() override;
+
+  void SetNewlyAddedBinaries(const std::vector<lldb::addr_t> &added_binaries);
+  void SetDetailedBinariesInfo(StructuredData::ObjectSP &detailed_info);
+
 protected:
   friend class ProcessGDBRemote;
 
@@ -104,6 +110,9 @@ protected:
   lldb_private::LazyBool m_associated_with_libdispatch_queue;
 
   GDBRemoteDynamicRegisterInfoSP m_reg_info_sp;
+
+  std::vector<lldb::addr_t> m_added_binaries;
+  lldb_private::StructuredData::ObjectSP m_detailed_binaries_info;
 
   bool PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data);
 

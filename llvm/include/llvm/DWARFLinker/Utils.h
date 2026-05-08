@@ -9,14 +9,32 @@
 #ifndef LLVM_DWARFLINKER_UTILS_H
 #define LLVM_DWARFLINKER_UTILS_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 namespace llvm {
 namespace dwarf_linker {
+
+/// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
+/// the first-row index (in \p LT.Rows) of the corresponding line-table
+/// sequence. Seeds the map from \p LT.Sequences (the DWARF parser's
+/// discovered sequences), then augments it by walking row boundaries
+/// (DW_LNE_end_sequence markers) and matching them against the sorted
+/// input offsets in \p SortedStmtSeqOffsets, using the parser's results
+/// as ground-truth anchors. This recovers sequences the parser may not
+/// have registered and keeps the classic and parallel DWARFLinkers in
+/// lockstep. Caller passes \p SortedStmtSeqOffsets sorted ascending
+/// and deduplicated.
+void buildStmtSeqOffsetToFirstRowIndex(
+    const DWARFDebugLine::LineTable &LT,
+    ArrayRef<uint64_t> SortedStmtSeqOffsets,
+    DenseMap<uint64_t, uint64_t> &SeqOffToFirstRow);
 
 /// This function calls \p Iteration() until it returns false.
 /// If number of iterations exceeds \p MaxCounter then an Error is returned.

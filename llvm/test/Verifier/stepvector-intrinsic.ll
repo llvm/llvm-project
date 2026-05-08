@@ -3,7 +3,7 @@
 ; Reject stepvector intrinsics that return a scalar
 
 define i32 @stepvector_i32() {
-; CHECK: Intrinsic has incorrect return type!
+; CHECK: intrinsic has incorrect return type!
   %1 = call i32 @llvm.stepvector.i32()
   ret i32 %1
 }

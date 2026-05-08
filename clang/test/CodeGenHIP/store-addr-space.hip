@@ -2,6 +2,8 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device \
 // RUN:   -o - %s | FileCheck --check-prefix=AMDGCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device \
+// RUN:   -o - %s | FileCheck --check-prefix=SPIRV --enable-var-scope %s
 
 struct Foo {
   unsigned long long val;
@@ -12,19 +14,18 @@ struct Foo {
 };
 
 // AMDGCN-LABEL: define dso_local void @_Z3barPK3Foo(
-// AMDGCN-SAME: ptr addrspace(5) dead_on_unwind noalias writable sret([[STRUCT_FOO:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr noundef [[SRC_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+// AMDGCN-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOO:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr noundef [[SRC_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// AMDGCN-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN-NEXT:    [[SRC_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN-NEXT:    [[DST:%.*]] = alloca [[UNION_ANON:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[RESULT_PTR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_PTR]] to ptr
 // AMDGCN-NEXT:    [[SRC_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_PTR_ADDR]] to ptr
-// AMDGCN-NEXT:    [[AGG_RESULT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
 // AMDGCN-NEXT:    [[DST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DST]] to ptr
-// AMDGCN-NEXT:    store ptr addrspace(5) [[AGG_RESULT]], ptr [[RESULT_PTR_ASCAST]], align 4
+// AMDGCN-NEXT:    store ptr [[AGG_RESULT]], ptr [[RESULT_PTR_ASCAST]], align 8
 // AMDGCN-NEXT:    store ptr [[SRC_PTR]], ptr [[SRC_PTR_ADDR_ASCAST]], align 8
-// AMDGCN-NEXT:    call void @_ZN3FooC1Ev(ptr noundef nonnull align 8 dereferenceable(8) [[AGG_RESULT_ASCAST]]) #[[ATTR1:[0-9]+]]
-// AMDGCN-NEXT:    store ptr [[AGG_RESULT_ASCAST]], ptr [[DST_ASCAST]], align 8
+// AMDGCN-NEXT:    call void @_ZN3FooC1Ev(ptr noundef nonnull align 8 dereferenceable(8) [[AGG_RESULT]]) #[[ATTR1:[0-9]+]]
+// AMDGCN-NEXT:    store ptr [[AGG_RESULT]], ptr [[DST_ASCAST]], align 8
 // AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SRC_PTR_ADDR_ASCAST]], align 8
 // AMDGCN-NEXT:    [[VAL:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO]], ptr [[TMP0]], i32 0, i32 0
 // AMDGCN-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VAL]], align 8
@@ -32,6 +33,27 @@ struct Foo {
 // AMDGCN-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 0
 // AMDGCN-NEXT:    store i64 [[TMP1]], ptr [[ARRAYIDX]], align 8
 // AMDGCN-NEXT:    ret void
+//
+// SPIRV-LABEL: define spir_func void @_Z3barPK3Foo(
+// SPIRV-SAME: ptr addrspace(4) dead_on_unwind noalias writable sret([[STRUCT_FOO:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr addrspace(4) noundef [[SRC_PTR:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] {
+// SPIRV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[SRC_PTR_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-NEXT:    [[DST:%.*]] = alloca [[UNION_ANON:%.*]], align 8
+// SPIRV-NEXT:    [[RESULT_PTR_ASCAST:%.*]] = addrspacecast ptr [[RESULT_PTR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[SRC_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_PTR_ADDR]] to ptr addrspace(4)
+// SPIRV-NEXT:    [[DST_ASCAST:%.*]] = addrspacecast ptr [[DST]] to ptr addrspace(4)
+// SPIRV-NEXT:    store ptr addrspace(4) [[AGG_RESULT]], ptr addrspace(4) [[RESULT_PTR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[SRC_PTR]], ptr addrspace(4) [[SRC_PTR_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    call spir_func addrspace(4) void @_ZN3FooC1Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(8) [[AGG_RESULT]]) #[[ATTR1:[0-9]+]]
+// SPIRV-NEXT:    store ptr addrspace(4) [[AGG_RESULT]], ptr addrspace(4) [[DST_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SRC_PTR_ADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[VAL:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO]], ptr addrspace(4) [[TMP0]], i32 0, i32 0
+// SPIRV-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[VAL]], align 8
+// SPIRV-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DST_ASCAST]], align 8
+// SPIRV-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr addrspace(4) [[TMP2]], i64 0
+// SPIRV-NEXT:    store i64 [[TMP1]], ptr addrspace(4) [[ARRAYIDX]], align 8
+// SPIRV-NEXT:    ret void
 //
 __attribute__((device)) Foo bar(const Foo *const src_ptr) {
   Foo result;

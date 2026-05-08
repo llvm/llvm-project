@@ -9,12 +9,12 @@ define i1 @unordered_floating_point_compare_on_v8f32(<8 x float> %a_vec) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
-; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    umaxv h0, v0.8h
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %a_cmp = fcmp ule <8 x float> %a_vec, zeroinitializer
   %cmp_result = bitcast <8 x i1> %a_cmp to i8
@@ -27,16 +27,16 @@ define i1 @unordered_floating_point_compare_on_v16f32(<16 x float> %a_vec) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmgt v3.4s, v3.4s, #0.0
 ; CHECK-NEXT:    fcmgt v2.4s, v2.4s, #0.0
-; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
 ; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    umaxv b0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    bic w0, w9, w8
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %a_cmp = fcmp ule <16 x float> %a_vec, zeroinitializer
   %cmp_result = bitcast <16 x i1> %a_cmp to i16

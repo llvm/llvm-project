@@ -2277,7 +2277,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{CharPtrRestrictTy, IntTy, FilePtrRestrictTy},
                   RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+            .Case({NotNull(Ret), ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({IsNull(Ret)}, ErrnoIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
@@ -2645,7 +2645,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "mkdtemp", Signature(ArgTypes{CharPtrTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+            .Case({NotNull(Ret), ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
@@ -2657,7 +2657,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case({NotNull(0),
                    ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
-                   ReturnValueCondition(BO_EQ, ArgNo(0))},
+                   ReturnValueCondition(BO_EQ, ArgNo(0)), NotNull(Ret)},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({NotNull(0),
                    ArgumentCondition(1, WithinRange, SingleValue(0)),

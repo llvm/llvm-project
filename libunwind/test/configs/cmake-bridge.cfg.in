@@ -15,6 +15,7 @@ import os, site
 site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
 import libcxx.test.format
 from lit.util import which
+import re as _re
 
 # Basic configuration of the test suite
 config.name = os.path.basename('@LIBUNWIND_TEST_CONFIG@')
@@ -28,6 +29,14 @@ if @LIBUNWIND_USES_ARM_EHABI@:
     config.available_features.add('libunwind-arm-ehabi')
 if not @LIBUNWIND_ENABLE_THREADS@:
     config.available_features.add('libunwind-no-threads')
+
+# Apple uses "arm64" and "arm64e" in target triples where the canonical LLVM
+# name is "aarch64".  REQUIRES directives like `REQUIRES: target={{aarch64-.+}}`
+# would otherwise never match on any Apple AArch64 target.  Add a normalised
+# alias so those directives work correctly.
+_norm_triple = _re.sub(r'^arm64([^-]*)', 'aarch64', config.target_triple)
+if _norm_triple != config.target_triple:
+    config.available_features.add('target={}'.format(_norm_triple))
 
 # Add substitutions for bootstrapping the test suite configuration
 config.substitutions.append(('%{install-prefix}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@'))

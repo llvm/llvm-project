@@ -208,7 +208,8 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
   Value *NumBits = IRB.CreateTypeSize(IntptrTy, TypeStoreSize);
   Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
   Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
-  Value *SizeMinusOne = IRB.CreateAdd(Size, ConstantInt::get(IntptrTy, -1));
+  Value *SizeMinusOne =
+      IRB.CreateAdd(Size, ConstantInt::getAllOnesValue(IntptrTy));
   Value *LastByte =
       IRB.CreateIntToPtr(IRB.CreateAdd(AddrLong, SizeMinusOne), AddrTy);
   instrumentAddressImpl(M, IRB, OrigIns, InsertBefore, Addr, {}, 8, IsWrite,

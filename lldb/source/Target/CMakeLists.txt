@@ -6,6 +6,10 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
+lldb_tablegen(TargetProperties.json -dump-json
+  SOURCE TargetProperties.td
+  TARGET LLDBTargetPropertiesJsonGen)
+
 # TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbTarget
 add_lldb_library(lldbTarget
   ABI.cpp
@@ -41,6 +45,7 @@ add_lldb_library(lldbTarget
   SyntheticFrameProvider.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
+  BorrowedStackFrame.cpp
   StackFrame.cpp
   StackFrameList.cpp
   StackFrameRecognizer.cpp

@@ -13,69 +13,21 @@
 ; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,IR-DAZ,IR-DAZ-GISEL %s
 
 define float @v_fdiv_f32(float %x, float %y) {
-; CODEGEN-IEEE-SDAG-LABEL: v_fdiv_f32:
-; CODEGEN-IEEE-SDAG:       ; %bb.0:
-; CODEGEN-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; CODEGEN-IEEE-SDAG-NEXT:    v_rcp_f32_e32 v3, v2
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v3, v4, v3, v3
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; CODEGEN-IEEE-SDAG-NEXT:    v_mul_f32_e32 v5, v4, v3
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v5, v6, v3, v5
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; CODEGEN-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; CODEGEN-IEEE-GISEL-LABEL: v_fdiv_f32:
-; CODEGEN-IEEE-GISEL:       ; %bb.0:
-; CODEGEN-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; CODEGEN-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v3, v2
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v3, v5, v3, v3
-; CODEGEN-IEEE-GISEL-NEXT:    v_mul_f32_e32 v5, v4, v3
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v5, v6, v3, v5
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; CODEGEN-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; IR-IEEE-SDAG-LABEL: v_fdiv_f32:
-; IR-IEEE-SDAG:       ; %bb.0:
-; IR-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-IEEE-SDAG-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; IR-IEEE-SDAG-NEXT:    v_rcp_f32_e32 v3, v2
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v3, v4, v3, v3
-; IR-IEEE-SDAG-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; IR-IEEE-SDAG-NEXT:    v_mul_f32_e32 v5, v4, v3
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v5, v6, v3, v5
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; IR-IEEE-SDAG-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; IR-IEEE-SDAG-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; IR-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; IR-IEEE-GISEL-LABEL: v_fdiv_f32:
-; IR-IEEE-GISEL:       ; %bb.0:
-; IR-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-IEEE-GISEL-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; IR-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v3, v2
-; IR-IEEE-GISEL-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v3, v5, v3, v3
-; IR-IEEE-GISEL-NEXT:    v_mul_f32_e32 v5, v4, v3
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v5, v6, v3, v5
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; IR-IEEE-GISEL-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; IR-IEEE-GISEL-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; IR-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; IEEE-LABEL: v_fdiv_f32:
+; IEEE:       ; %bb.0:
+; IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
+; IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; IEEE-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
+; IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; IEEE-NEXT:    v_fma_f32 v3, v5, v3, v3
+; IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
+; IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
+; IEEE-NEXT:    v_fma_f32 v5, v6, v3, v5
+; IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; DAZ-LABEL: v_fdiv_f32:
 ; DAZ:       ; %bb.0:
@@ -110,69 +62,21 @@ define float @v_fdiv_f32_afn(float %x, float %y) {
 }
 
 define float @v_fdiv_f32_arcp(float %x, float %y) {
-; CODEGEN-IEEE-SDAG-LABEL: v_fdiv_f32_arcp:
-; CODEGEN-IEEE-SDAG:       ; %bb.0:
-; CODEGEN-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; CODEGEN-IEEE-SDAG-NEXT:    v_rcp_f32_e32 v3, v2
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v3, v4, v3, v3
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; CODEGEN-IEEE-SDAG-NEXT:    v_mul_f32_e32 v5, v4, v3
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v5, v6, v3, v5
-; CODEGEN-IEEE-SDAG-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; CODEGEN-IEEE-SDAG-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; CODEGEN-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; CODEGEN-IEEE-GISEL-LABEL: v_fdiv_f32_arcp:
-; CODEGEN-IEEE-GISEL:       ; %bb.0:
-; CODEGEN-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; CODEGEN-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v3, v2
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v3, v5, v3, v3
-; CODEGEN-IEEE-GISEL-NEXT:    v_mul_f32_e32 v5, v4, v3
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v5, v6, v3, v5
-; CODEGEN-IEEE-GISEL-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; CODEGEN-IEEE-GISEL-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; CODEGEN-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; IR-IEEE-SDAG-LABEL: v_fdiv_f32_arcp:
-; IR-IEEE-SDAG:       ; %bb.0:
-; IR-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-IEEE-SDAG-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; IR-IEEE-SDAG-NEXT:    v_rcp_f32_e32 v3, v2
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v3, v4, v3, v3
-; IR-IEEE-SDAG-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; IR-IEEE-SDAG-NEXT:    v_mul_f32_e32 v5, v4, v3
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v5, v6, v3, v5
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; IR-IEEE-SDAG-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; IR-IEEE-SDAG-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; IR-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; IR-IEEE-GISEL-LABEL: v_fdiv_f32_arcp:
-; IR-IEEE-GISEL:       ; %bb.0:
-; IR-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-IEEE-GISEL-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; IR-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v3, v2
-; IR-IEEE-GISEL-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v3, v5, v3, v3
-; IR-IEEE-GISEL-NEXT:    v_mul_f32_e32 v5, v4, v3
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v5, v6, v3, v5
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; IR-IEEE-GISEL-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; IR-IEEE-GISEL-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; IR-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; IEEE-LABEL: v_fdiv_f32_arcp:
+; IEEE:       ; %bb.0:
+; IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
+; IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; IEEE-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
+; IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; IEEE-NEXT:    v_fma_f32 v3, v5, v3, v3
+; IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
+; IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
+; IEEE-NEXT:    v_fma_f32 v5, v6, v3, v5
+; IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; DAZ-LABEL: v_fdiv_f32_arcp:
 ; DAZ:       ; %bb.0:
@@ -1329,37 +1233,21 @@ define float @v_fdiv_f32_ulp25(float %x, float %y) {
 ; CODEGEN-IEEE-GISEL-NEXT:    v_ldexp_f32_e32 v0, v2, v0
 ; CODEGEN-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; IR-IEEE-SDAG-LABEL: v_fdiv_f32_ulp25:
-; IR-IEEE-SDAG:       ; %bb.0:
-; IR-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-IEEE-SDAG-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; IR-IEEE-SDAG-NEXT:    v_rcp_f32_e32 v3, v2
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v3, v4, v3, v3
-; IR-IEEE-SDAG-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; IR-IEEE-SDAG-NEXT:    v_mul_f32_e32 v5, v4, v3
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v5, v6, v3, v5
-; IR-IEEE-SDAG-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; IR-IEEE-SDAG-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; IR-IEEE-SDAG-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; IR-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; IR-IEEE-GISEL-LABEL: v_fdiv_f32_ulp25:
-; IR-IEEE-GISEL:       ; %bb.0:
-; IR-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-IEEE-GISEL-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; IR-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v3, v2
-; IR-IEEE-GISEL-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v3, v5, v3, v3
-; IR-IEEE-GISEL-NEXT:    v_mul_f32_e32 v5, v4, v3
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v5, v6, v3, v5
-; IR-IEEE-GISEL-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; IR-IEEE-GISEL-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; IR-IEEE-GISEL-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
-; IR-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; IR-IEEE-LABEL: v_fdiv_f32_ulp25:
+; IR-IEEE:       ; %bb.0:
+; IR-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
+; IR-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
+; IR-IEEE-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
+; IR-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; IR-IEEE-NEXT:    v_fma_f32 v3, v5, v3, v3
+; IR-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
+; IR-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
+; IR-IEEE-NEXT:    v_fma_f32 v5, v6, v3, v5
+; IR-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; IR-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; IR-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; IR-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CODEGEN-DAZ-SDAG-LABEL: v_fdiv_f32_ulp25:
 ; CODEGEN-DAZ-SDAG:       ; %bb.0:

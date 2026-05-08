@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
 #define _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
 
+#include <__algorithm/specialized_algorithms.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__fwd/ios.h>
@@ -17,6 +18,8 @@
 #include <__fwd/streambuf.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/is_same.h>
+#include <__utility/pair.h>
 #include <iosfwd> // for forward declaration of ostreambuf_iterator
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -64,6 +67,26 @@ public:
   friend _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_Ch, _Tr> __pad_and_output(
       ostreambuf_iterator<_Ch, _Tr> __s, const _Ch* __ob, const _Ch* __op, const _Ch* __oe, ios_base& __iob, _Ch __fl);
 #endif // _LIBCPP_HAS_LOCALIZATION
+
+  template <class, class...>
+  friend struct __specialized_algorithm;
+};
+
+template <class _InCharT, class _CharT, class _Traits>
+struct __specialized_algorithm<_Algorithm::__copy,
+                               __iterator_pair<_InCharT*, _InCharT*>,
+                               __single_iterator<ostreambuf_iterator<_CharT, _Traits> > > {
+  static const bool __has_algorithm = is_same<const _CharT, const _InCharT>::value;
+
+  _LIBCPP_HIDE_FROM_ABI static pair<_InCharT*, ostreambuf_iterator<_CharT, _Traits> >
+  operator()(_InCharT* __first, _InCharT* __last, ostreambuf_iterator<_CharT, _Traits> __result) {
+    auto __size = __last - __first;
+    if (__result.__sbuf_ && __size > 0) {
+      if (__result.__sbuf_->sputn(__first, __last - __first) != __size)
+        __result.__sbuf_ = nullptr;
+    }
+    return pair<_InCharT*, ostreambuf_iterator<_CharT, _Traits> >(__last, __result);
+  }
 };
 
 _LIBCPP_END_NAMESPACE_STD

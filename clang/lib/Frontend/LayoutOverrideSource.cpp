@@ -186,7 +186,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
   // Flush the last type/layout, if there is one.
   if (!CurrentType.empty())
-    Layouts[CurrentType] = CurrentLayout;
+    Layouts[CurrentType] = std::move(CurrentLayout);
 }
 
 bool

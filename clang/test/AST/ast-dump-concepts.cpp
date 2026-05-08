@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -x c++ -std=c++20 -triple x86_64-unknown-unknown -include-pch %t \
 // RUN: -ast-dump-all -ast-dump-decl-types -ast-dump-filter Foo /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN: | FileCheck --strict-whitespace %s
 
 template <typename T>
@@ -19,7 +20,7 @@ template <typename T>
 struct Foo {
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'binary_concept'
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13, col:31> 'bool' Concept {{.*}} 'binary_concept'
-  // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:13:9> col:9
+  // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:{{.+}}:9> col:9
   // CHECK-NEXT:   | |-TemplateArgument type 'R'
   // CHECK-NEXT:   | | `-TemplateTypeParmType {{.*}} 'R' dependent {{.*}}depth 1 index 0
   // CHECK-NEXT:   | |   `-TemplateTypeParm {{.*}} 'R'
@@ -35,7 +36,7 @@ struct Foo {
 
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'unary_concept'
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13> 'bool'
-  // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:10:9> col:9
+  // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:{{.+}}:9> col:9
   // CHECK-NEXT:   | `-TemplateArgument type 'R'
   // CHECK-NEXT:   |   `-TemplateTypeParmType {{.*}} 'R' dependent {{.*}}depth 1 index 0
   // CHECK-NEXT:   |     `-TemplateTypeParm {{.*}} 'R'
@@ -58,7 +59,7 @@ struct Foo {
   // CHECK: CXXFoldExpr {{.*}} <col:13, col:34>
   template <variadic_concept<int>... Ts>
   Foo();
-  
+
   // CHECK:InjectedClassNameType
   // CHECK-NEXT: CXXRecord {{.*}} 'Foo'
 };
@@ -133,5 +134,10 @@ void g(C<T> auto Foo) {}
 
 // CHECK: TemplateTypeParmDecl {{.*}} depth 0 index 1 Foo:auto
 // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:8, col:11>
-
 }
+
+namespace constraint_auto_return {
+  template <class T, class K> concept D = true;
+  template<class T> D<T> auto Foo() { return T(); }
+  // CHECK: AutoType {{.*}} 'D<T> auto' dependent deduced-as-dependent
+} // namespace constraint_auto_return

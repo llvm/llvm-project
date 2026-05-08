@@ -187,8 +187,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
   /// Returns the ValueObject for the _Tree_node at index \ref idx.
   ///
@@ -229,7 +227,7 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_inner_sp)
-      return llvm::createStringError("There are no children.");
+      return llvm::createStringError("there are no children");
     return m_inner_sp->GetIndexOfChildWithName(name);
   }
 
@@ -262,7 +260,7 @@ lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::CalculateNumChildren() {
     return m_count;
   }
 
-  return llvm::createStringError("Failed to read size.");
+  return llvm::createStringError("failed to read size");
 }
 
 ValueObjectSP
@@ -335,20 +333,9 @@ lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-llvm::Expected<size_t>
-lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
-}
-
 lldb::ChildCacheState MsvcStlTreeIterSyntheticFrontEnd::Update() {
   m_inner_sp = nullptr;
-  auto node_sp = m_backend.GetChildMemberWithName("_Ptr");
+  ValueObjectSP node_sp = m_backend.GetChildMemberWithName("_Ptr");
   if (!node_sp)
     return lldb::eRefetch;
 

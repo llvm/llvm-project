@@ -69,7 +69,7 @@ copyright = "2007-%d, The Clang Team" % date.today().year
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build"]
+exclude_patterns = ["_build", "CIR/_raw/*"]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None

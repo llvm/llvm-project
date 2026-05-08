@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-pointer-arithmetic-on-polymorphic-object %t --
 
+#include <map>
+
 class Base {
 public:  
   virtual ~Base() {}
@@ -138,3 +140,13 @@ void typeAliases(BaseAlias *b, DerivedAlias *d, FinalDerivedAlias *fd,
   fdp += 1;
   // no-warning
 }
+
+template <typename T>
+struct TemplateHolder : Base {
+  std::map<Base *, T> _map;
+  void test() {
+    auto &x = _map[this];
+    // no-warning
+    (void)x;
+  }
+};

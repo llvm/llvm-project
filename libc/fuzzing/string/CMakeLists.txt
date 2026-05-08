@@ -48,3 +48,11 @@ add_libc_fuzzer(
   DEPENDS
     libc.src.string.strlen
 )
+
+add_libc_fuzzer(
+  strnlen_s_differential_fuzz
+  SRCS
+    strnlen_s_differential_fuzz.cpp
+  DEPENDS
+    libc.src.string.strnlen_s
+)

@@ -57,6 +57,137 @@ TEST(Hover, Structured) {
          HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
+      {R"cpp(
+          // Best foo ever.
+          void [[fo^o]](auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x, auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x, auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"auto"}, std::string("y"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          void [[fo^o]](C<int> auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(C<int> auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"C<int> auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x, C<int> auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x, C<int> auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"C<int> auto"}, std::string("y"), std::nullopt},
+         };
+       }},
       // Inside namespace
       {R"cpp(
           namespace ns1 { namespace ns2 {
@@ -885,6 +1016,26 @@ class Foo final {})cpp";
          HI.Parameters.emplace();
          HI.AccessSpecifier = "public";
        }},
+      {// Getter with comment
+       R"cpp(
+          struct X {
+            // An int named Y
+            int Y;
+            float [[^y]]() { return Y; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "y";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "float y()";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial accessor for `Y`.\n\nAn int named Y";
+         HI.Type = "float ()";
+         HI.ReturnType = "float";
+         HI.Parameters.emplace();
+         HI.AccessSpecifier = "public";
+       }},
       {// Setter
        R"cpp(
           struct X { int Y; void [[^setY]](float v) { Y = v; } };
@@ -935,6 +1086,29 @@ class Foo final {})cpp";
          HI.Definition = "void setY(float v)";
          HI.LocalScope = "X::";
          HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "void (float)";
+         HI.ReturnType = "void";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+         HI.AccessSpecifier = "public";
+       }},
+      {// Setter with comment
+       R"cpp(
+          struct X {
+            // An int named Y
+            int Y;
+            void [[^setY]](float v) { Y = v; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "void setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.\n\nAn int named Y";
          HI.Type = "void (float)";
          HI.ReturnType = "void";
          HI.Parameters.emplace();
@@ -1606,6 +1780,18 @@ TEST(Hover, NoHover) {
   }
 }
 
+TEST(Hover, OffsetOfBuiltin) {
+  Annotations T(R"cpp(
+    struct Foo { int x; };
+    int y = __builtin_o^ffsetof(Foo, x);
+  )cpp");
+  auto AST = TestTU::withCode(T.code()).build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Name, "expression");
+  EXPECT_EQ(H->Kind, index::SymbolKind::Unknown);
+}
+
 TEST(Hover, All) {
   struct {
     const char *const Code;
@@ -1832,6 +2018,50 @@ TEST(Hover, All) {
             HI.LocalScope = "Foo::";
             HI.Type = "int";
             HI.Definition = "int x";
+          }},
+      {
+          R"cpp(// Field, offsetof
+            struct Foo { int x; int y; };
+            int z = __builtin_offsetof(Foo, ^[[x]]);
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "x";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Foo::";
+            HI.Type = "int";
+            HI.Definition = "int x";
+            HI.Value = "0";
+          }},
+      {
+          R"cpp(// Outer field, nested offsetof designator
+            struct Inner { int c; };
+            struct A { Inner B; };
+            int z = __builtin_offsetof(A, ^[[B]].c);
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "B";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "A::";
+            HI.Type = "Inner";
+            HI.Definition = "Inner B";
+            HI.Value = "0";
+          }},
+      {
+          R"cpp(// Inner field, nested offsetof designator
+            struct Inner { int c; };
+            struct A { Inner B; };
+            int z = __builtin_offsetof(A, B.^[[c]]);
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "c";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Inner::";
+            HI.Type = "int";
+            HI.Definition = "int c";
+            HI.Value = "0";
           }},
       {
           R"cpp(// Method call

@@ -33,7 +33,7 @@ class CacheKey {
 public:
   StringRef getKey() const { return Key; }
 
-  CacheKey(const CASID &ID);
+  LLVM_ABI CacheKey(const CASID &ID);
   LLVM_ABI_FOR_TEST CacheKey(const ObjectProxy &Proxy);
   CacheKey(const ObjectStore &CAS, const ObjectRef &Ref);
 

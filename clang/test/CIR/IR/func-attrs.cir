@@ -1,0 +1,77 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_Struct = !cir.record<struct "Struct" padded {!u8i}>
+!rec_anon_struct = !cir.record<struct  {!s64i, !s64i}>
+
+cir.func no_inline dso_local @Func1(%arg0: !s32i {llvm.noundef}, %arg1: !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef}) {
+// CHECK: cir.func no_inline dso_local @Func1(%arg0: !s32i {llvm.noundef}, %arg1: !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef}) {
+  %ret = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["ret"] {alignment = 8 : i64}
+  %ret_load = cir.load %ret : !cir.ptr<!cir.float>, !cir.float
+  cir.return %ret_load : !cir.float
+}
+
+cir.func no_inline dso_local @Func2(%arg0: !s32i {llvm.noundef}, %arg1: !cir.float) -> (!cir.float {llvm.noundef}) {
+// CHECK: cir.func no_inline dso_local @Func2(%arg0: !s32i {llvm.noundef}, %arg1: !cir.float) -> (!cir.float {llvm.noundef}) {
+  %ret = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["ret"] {alignment = 8 : i64}
+  %ret_load = cir.load %ret : !cir.ptr<!cir.float>, !cir.float
+  cir.return %ret_load : !cir.float
+}
+
+cir.func no_inline dso_local @Func3(%arg0: !s32i, %arg1: !cir.float {llvm.noundef}) -> !cir.float {
+// CHECK: cir.func no_inline dso_local @Func3(%arg0: !s32i, %arg1: !cir.float {llvm.noundef}) -> !cir.float {
+  %ret = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["ret"] {alignment = 8 : i64}
+  %ret_load = cir.load %ret : !cir.ptr<!cir.float>, !cir.float
+  cir.return %ret_load : !cir.float
+}
+
+cir.func no_inline dso_local @Func4(%arg0: !s32i, %arg1: !cir.float) -> (!cir.float {llvm.noundef}) {
+// CHECK: cir.func no_inline dso_local @Func4(%arg0: !s32i, %arg1: !cir.float) -> (!cir.float {llvm.noundef}) {
+  %ret = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["ret"] {alignment = 8 : i64}
+  %ret_load = cir.load %ret : !cir.ptr<!cir.float>, !cir.float
+  cir.return %ret_load : !cir.float
+}
+
+cir.func no_inline dso_local @Func5(%arg0: !s32i, %arg1: !cir.float) -> !cir.float {
+// CHECK: cir.func no_inline dso_local @Func5(%arg0: !s32i, %arg1: !cir.float) -> !cir.float {
+  %ret = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["ret"] {alignment = 8 : i64}
+  %ret_load = cir.load %ret : !cir.ptr<!cir.float>, !cir.float
+  cir.return %ret_load : !cir.float
+}
+
+cir.func no_inline comdat linkonce_odr @MemFunc(%arg0: !cir.ptr<!rec_Struct> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, %arg1: !s32i {llvm.noundef}, %arg2: !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef}) {
+// CHECK: cir.func no_inline comdat linkonce_odr @MemFunc(%arg0: !cir.ptr<!rec_Struct> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, %arg1: !s32i {llvm.noundef}, %arg2: !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef}) {
+  %ret = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["ret"] {alignment = 8 : i64}
+  %ret_load = cir.load %ret : !cir.ptr<!cir.float>, !cir.float
+  cir.return %ret_load : !cir.float
+}
+
+cir.func @make_calls() {
+  %int = cir.const #cir.int<1> : !s32i  
+  %float = cir.cast int_to_float %int : !s32i -> !cir.float
+  cir.call @Func1(%int, %float) : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef})
+  // CHECK: cir.call @Func1(%{{.*}}, %{{.*}}) : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef})
+  cir.call @Func2(%int, %float) : (!s32i {llvm.noundef}, !cir.float) -> (!cir.float {llvm.noundef})
+  // CHECK: cir.call @Func2(%{{.*}}, %{{.*}}) : (!s32i {llvm.noundef}, !cir.float) -> (!cir.float {llvm.noundef})
+  cir.call @Func3(%int, %float) : (!s32i, !cir.float {llvm.noundef}) -> (!cir.float)
+  // CHECK: cir.call @Func3(%{{.*}}, %{{.*}}) : (!s32i, !cir.float {llvm.noundef}) -> !cir.float
+  cir.call @Func4(%int, %float) : (!s32i, !cir.float) -> (!cir.float {llvm.noundef})
+  // CHECK: cir.call @Func4(%{{.*}}, %{{.*}}) : (!s32i, !cir.float) -> (!cir.float {llvm.noundef})
+  cir.call @Func5(%int, %float) : (!s32i, !cir.float) -> (!cir.float)
+  // CHECK: cir.call @Func5(%{{.*}}, %{{.*}}) : (!s32i, !cir.float) -> !cir.float
+
+  %struct = cir.alloca !rec_Struct, !cir.ptr<!rec_Struct>, ["s"] {alignment = 1 : i64}
+  cir.call @MemFunc(%struct, %int, %float) : (!cir.ptr<!rec_Struct> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef, llvm.hot}, !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef})
+  // CHECK: cir.call @MemFunc(%{{.*}}, %{{.*}}, %{{.*}}) : (!cir.ptr<!rec_Struct> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.hot, llvm.noundef}, !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef})
+
+  %fptr = cir.alloca !cir.ptr<!cir.func<(!s32i, !cir.float) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.float) -> !s32i>>>, ["fp"] {alignment = 8 : i64}
+  %fptr_load = cir.load align(8) %fptr : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.float) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !cir.float) -> !s32i>>
+  cir.call %fptr_load(%int, %float) : (!cir.ptr<!cir.func<(!s32i, !cir.float) -> !s32i>>, !s32i {llvm.noundef, llvm.hot}, !cir.float {llvm.noundef}) -> (!s32i {llvm.noundef})
+  // CHECK: cir.call %{{.*}}(%{{.*}}, %{{.*}}) : (!cir.ptr<!cir.func<(!s32i, !cir.float) -> !s32i>>, !s32i {llvm.hot, llvm.noundef}, !cir.float {llvm.noundef}) -> (!s32i {llvm.noundef})
+
+  cir.return
+}

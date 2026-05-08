@@ -483,32 +483,6 @@ mfloat8x16_t test_vrev16q_mf8(mfloat8x16_t a) {
   return vrev16q_mf8(a);
 }
 
-// CHECK-LABEL: define dso_local <8 x i8> @test_vbsl_mf8(
-// CHECK-SAME: <8 x i8> noundef [[V1:%.*]], <8 x i8> [[V2:%.*]], <8 x i8> [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VBSL_I:%.*]] = and <8 x i8> [[V1]], [[V2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = xor <8 x i8> [[V1]], splat (i8 -1)
-// CHECK-NEXT:    [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], [[V3]]
-// CHECK-NEXT:    [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
-// CHECK-NEXT:    ret <8 x i8> [[VBSL2_I]]
-//
-mfloat8x8_t test_vbsl_mf8(uint8x8_t v1, mfloat8x8_t v2, mfloat8x8_t v3) {
-  return vbsl_mf8(v1, v2, v3);
-}
-
-// CHECK-LABEL: define dso_local <16 x i8> @test_vbslq_mf8(
-// CHECK-SAME: <16 x i8> noundef [[V1:%.*]], <16 x i8> [[V2:%.*]], <16 x i8> [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VBSL_I:%.*]] = and <16 x i8> [[V1]], [[V2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = xor <16 x i8> [[V1]], splat (i8 -1)
-// CHECK-NEXT:    [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[V3]]
-// CHECK-NEXT:    [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
-// CHECK-NEXT:    ret <16 x i8> [[VBSL2_I]]
-//
-mfloat8x16_t test_vbslq_mf8(uint8x16_t v1, mfloat8x16_t v2, mfloat8x16_t v3) {
-  return vbslq_mf8(v1, v2, v3);
-}
-
 // CHECK-LABEL: define dso_local %struct.mfloat8x8x2_t @test_vtrn_mf8(
 // CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -543,42 +517,6 @@ mfloat8x8x2_t test_vtrn_mf8(mfloat8x8_t a, mfloat8x8_t b) {
 //
 mfloat8x16x2_t test_vtrnq_mf8(mfloat8x16_t a, mfloat8x16_t b) {
   return vtrnq_mf8(a, b);
-}
-
-// CHECK-LABEL: define dso_local %struct.mfloat8x8x2_t @test_vzip_mf8(
-// CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VZIP_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK-NEXT:    [[VZIP1_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK-NEXT:    [[DOTFCA_0_0_INSERT1:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T:%.*]] poison, <8 x i8> [[VZIP_I]], 0, 0
-// CHECK-NEXT:    [[DOTFCA_0_1_INSERT2:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_0_INSERT1]], <8 x i8> [[VZIP1_I]], 0, 1
-// CHECK-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_1_INSERT2]], 0
-// CHECK-NEXT:    [[DOTFCA_0_EXTRACT:%.*]] = extractvalue [2 x <8 x i8>] [[TMP0]], 0
-// CHECK-NEXT:    [[DOTFCA_1_EXTRACT:%.*]] = extractvalue [2 x <8 x i8>] [[TMP0]], 1
-// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T]] poison, <8 x i8> [[DOTFCA_0_EXTRACT]], 0, 0
-// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_0_INSERT]], <8 x i8> [[DOTFCA_1_EXTRACT]], 0, 1
-// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_1_INSERT]]
-//
-mfloat8x8x2_t test_vzip_mf8(mfloat8x8_t a, mfloat8x8_t b) {
-  return vzip_mf8(a, b);
-}
-
-// CHECK-LABEL: define dso_local %struct.mfloat8x16x2_t @test_vzipq_mf8(
-// CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VZIP_I:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-// CHECK-NEXT:    [[VZIP1_I:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// CHECK-NEXT:    [[DOTFCA_0_0_INSERT1:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T:%.*]] poison, <16 x i8> [[VZIP_I]], 0, 0
-// CHECK-NEXT:    [[DOTFCA_0_1_INSERT2:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_0_INSERT1]], <16 x i8> [[VZIP1_I]], 0, 1
-// CHECK-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_1_INSERT2]], 0
-// CHECK-NEXT:    [[DOTFCA_0_EXTRACT:%.*]] = extractvalue [2 x <16 x i8>] [[TMP0]], 0
-// CHECK-NEXT:    [[DOTFCA_1_EXTRACT:%.*]] = extractvalue [2 x <16 x i8>] [[TMP0]], 1
-// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T]] poison, <16 x i8> [[DOTFCA_0_EXTRACT]], 0, 0
-// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[DOTFCA_1_EXTRACT]], 0, 1
-// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_1_INSERT]]
-//
-mfloat8x16x2_t test_vzipq_mf8(mfloat8x16_t a, mfloat8x16_t b) {
-  return vzipq_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local %struct.mfloat8x8x2_t @test_vuzp_mf8(
@@ -729,26 +667,6 @@ mfloat8x16_t test_vtrn1q_mf8(mfloat8x16_t a, mfloat8x16_t b) {
   return vtrn1q_mf8(a, b);
 }
 
-// CHECK-LABEL: define dso_local <8 x i8> @test_vzip1_mf8(
-// CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK-NEXT:    ret <8 x i8> [[SHUFFLE_I]]
-//
-mfloat8x8_t test_vzip1_mf8(mfloat8x8_t a, mfloat8x8_t b) {
-  return vzip1_mf8(a, b);
-}
-
-// CHECK-LABEL: define dso_local <16 x i8> @test_vzip1q_mf8(
-// CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-// CHECK-NEXT:    ret <16 x i8> [[SHUFFLE_I]]
-//
-mfloat8x16_t test_vzip1q_mf8(mfloat8x16_t a, mfloat8x16_t b) {
-  return vzip1q_mf8(a, b);
-}
-
 // CHECK-LABEL: define dso_local <8 x i8> @test_vuzp1_mf8(
 // CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -787,26 +705,6 @@ mfloat8x8_t test_vtrn2_mf8(mfloat8x8_t a, mfloat8x8_t b) {
 //
 mfloat8x16_t test_vtrn2q_mf8(mfloat8x16_t a, mfloat8x16_t b) {
   return vtrn2q_mf8(a, b);
-}
-
-// CHECK-LABEL: define dso_local <8 x i8> @test_vzip2_mf8(
-// CHECK-SAME: <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK-NEXT:    ret <8 x i8> [[SHUFFLE_I]]
-//
-mfloat8x8_t test_vzip2_mf8(mfloat8x8_t a, mfloat8x8_t b) {
-  return vzip2_mf8(a, b);
-}
-
-// CHECK-LABEL: define dso_local <16 x i8> @test_vzip2q_mf8(
-// CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// CHECK-NEXT:    ret <16 x i8> [[SHUFFLE_I]]
-//
-mfloat8x16_t test_vzip2q_mf8(mfloat8x16_t a, mfloat8x16_t b) {
-  return vzip2q_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local <8 x i8> @test_vuzp2_mf8(

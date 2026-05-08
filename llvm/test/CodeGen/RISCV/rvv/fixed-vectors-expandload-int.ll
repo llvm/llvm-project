@@ -64,6 +64,24 @@ define <8 x i8> @expandload_v8i8(ptr %base, <8 x i8> %src0, <8 x i1> %mask) {
   ret <8 x i8>%res
 }
 
+define <7 x i8> @expandload_v7i8(ptr %base, <7 x i1> %mask) {
+; CHECK-LABEL: expandload_v7i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 127
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vmand.mm v0, v0, v8
+; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    viota.m v10, v0
+; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  %res = call <7 x i8> @llvm.masked.expandload.v7i8(ptr %base, <7 x i1> %mask, <7 x i8> poison)
+  ret <7 x i8>%res
+}
+
 define <1 x i16> @expandload_v1i16(ptr %base, <1 x i16> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1i16:
 ; CHECK:       # %bb.0:

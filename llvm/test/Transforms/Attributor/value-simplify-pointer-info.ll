@@ -1267,7 +1267,7 @@ entry:
 define void @noalias_arg_simplifiable_2(ptr %Bytes) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define void @noalias_arg_simplifiable_2(
-; TUNIT-SAME: ptr nofree nonnull captures(none) dereferenceable(24) [[BYTES:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: ptr nofree captures(none) [[BYTES:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:  [[ENTRY:.*]]:
 ; TUNIT-NEXT:    br label %[[FOR_COND:.*]]
 ; TUNIT:       [[FOR_COND]]:
@@ -1344,7 +1344,7 @@ define void @noalias_arg_simplifiable_2(ptr %Bytes) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define void @noalias_arg_simplifiable_2(
-; CGSCC-SAME: ptr nofree nonnull align 4 captures(none) dereferenceable(1024) [[BYTES:%.*]]) #[[ATTR3]] {
+; CGSCC-SAME: ptr nofree captures(none) [[BYTES:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:  [[ENTRY:.*]]:
 ; CGSCC-NEXT:    br label %[[FOR_COND:.*]]
 ; CGSCC:       [[FOR_COND]]:
@@ -1399,7 +1399,7 @@ define void @noalias_arg_simplifiable_2(ptr %Bytes) {
 ; CGSCC-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 1023
 ; CGSCC-NEXT:    store i8 0, ptr [[ARRAYIDX24]], align 1, !tbaa [[CHAR_TBAA15]]
 ; CGSCC-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 500
-; CGSCC-NEXT:    call void @write_arg(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(524) [[ARRAYIDX25]], i32 noundef 0) #[[ATTR21]]
+; CGSCC-NEXT:    call void @write_arg(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[ARRAYIDX25]], i32 noundef 0) #[[ATTR21]]
 ; CGSCC-NEXT:    br label %[[FOR_COND27:.*]]
 ; CGSCC:       [[FOR_COND27]]:
 ; CGSCC-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], %[[FOR_INC35:.*]] ], [ 0, %[[FOR_END23]] ]
@@ -2663,7 +2663,7 @@ define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define dso_local void @test_nested_memory(
-; CGSCC-SAME: ptr nofree [[DST:%.*]], ptr nofree [[SRC:%.*]]) {
+; CGSCC-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
 ; CGSCC-NEXT:  [[ENTRY:.*:]]
 ; CGSCC-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
 ; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 2
@@ -3635,7 +3635,7 @@ declare void @llvm.assume(i1 noundef)
 ; TUNIT: attributes #[[ATTR13]] = { nofree norecurse nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR15:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; TUNIT: attributes #[[ATTR16:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR16:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR17]] = { nofree willreturn }
 ; TUNIT: attributes #[[ATTR18]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR19]] = { nocallback }
@@ -3663,7 +3663,7 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR16]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR17]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR18:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; CGSCC: attributes #[[ATTR19:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR19:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR20]] = { nofree willreturn }
 ; CGSCC: attributes #[[ATTR21]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR22]] = { nocallback }

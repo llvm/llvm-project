@@ -17,13 +17,13 @@
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 
-extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
+extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerVTuneImpl(const char *ArgData, size_t ArgSize);
 
-extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
+extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_unregisterVTuneImpl(const char *ArgData, size_t ArgSize);
 
-extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
+extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_test_registerVTuneImpl(const char *ArgData, size_t ArgSize);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_JITLOADERVTUNE_H

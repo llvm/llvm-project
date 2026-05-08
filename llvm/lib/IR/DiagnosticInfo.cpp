@@ -104,7 +104,7 @@ void DiagnosticInfoRegAllocFailure::print(DiagnosticPrinter &DP) const {
 }
 
 DiagnosticInfoResourceLimit::DiagnosticInfoResourceLimit(
-    const Function &Fn, const char *ResourceName, uint64_t ResourceSize,
+    const Function &Fn, const Twine &ResourceName, uint64_t ResourceSize,
     uint64_t ResourceLimit, DiagnosticSeverity Severity, DiagnosticKind Kind)
     : DiagnosticInfoWithLocationBase(Kind, Severity, Fn, Fn.getSubprogram()),
       Fn(Fn), ResourceName(ResourceName), ResourceSize(ResourceSize),
@@ -217,8 +217,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
     raw_string_ostream OS(Val);
     V->printAsOperand(OS, /*PrintType=*/false);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V)) {
-    raw_string_ostream OS(Val);
-    OS << "call " << II->getCalledFunction()->getName();
+    raw_string_ostream(Val) << "call " << II->getCalledFunction()->getName();
   } else if (auto *I = dyn_cast<Instruction>(V)) {
     Val = I->getOpcodeName();
   } else if (auto *MD = dyn_cast<MetadataAsValue>(V)) {
@@ -229,8 +228,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)
     : Key(std::string(Key)) {
-  raw_string_ostream OS(Val);
-  OS << *T;
+  raw_string_ostream(Val) << *T;
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, StringRef S)
@@ -413,11 +411,10 @@ bool DiagnosticInfoOptimizationFailure::isEnabled() const {
 
 void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
   std::string Str;
-  raw_string_ostream OS(Str);
-
-  OS << getLocationStr() << ": in function " << getFunction().getName() << ' '
-     << *getFunction().getFunctionType() << ": " << Msg << '\n';
-  OS.flush();
+  raw_string_ostream(Str) << getLocationStr() << ": in function "
+                          << getFunction().getName() << ' '
+                          << *getFunction().getFunctionType() << ": " << Msg
+                          << '\n';
   DP << Str;
 }
 
@@ -487,8 +484,27 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
       if (MDNode *MD = CI.getMetadata("srcloc"))
         LocCookie =
             mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      MDNode *InlinedFromMD = CI.getMetadata("inlined.from");
       DiagnosticInfoDontCall D(F->getName(), A.getValueAsString(), Sev,
-                               LocCookie);
+                               LocCookie, InlinedFromMD);
+
+      if (const DebugLoc &DL = CI.getDebugLoc()) {
+        SmallVector<DebugInlineInfo, 4> DebugChain;
+        auto AddLocation = [&](const DILocation *Loc) {
+          if (auto *Scope = Loc->getScope())
+            if (auto *SP = Scope->getSubprogram())
+              DebugChain.push_back({SP->getName(), Loc->getFilename(),
+                                    Loc->getLine(), Loc->getColumn()});
+        };
+        if (const DILocation *Loc = DL.get()) {
+          AddLocation(Loc);
+          for (const DILocation *InlinedAt = Loc->getInlinedAt(); InlinedAt;
+               InlinedAt = InlinedAt->getInlinedAt())
+            AddLocation(InlinedAt);
+        }
+        D.setDebugInlineChain(std::move(DebugChain));
+      }
+
       F->getContext().diagnose(D);
     }
   }
@@ -502,4 +518,21 @@ void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
     DP << "warn\"";
   if (!getNote().empty())
     DP << ": " << getNote();
+}
+
+SmallVector<std::pair<StringRef, uint64_t>>
+DiagnosticInfoDontCall::getInliningDecisions() const {
+  SmallVector<std::pair<StringRef, uint64_t>> Chain;
+  if (!InlinedFromMD)
+    return Chain;
+
+  for (unsigned I = 0, E = InlinedFromMD->getNumOperands(); I + 1 < E; I += 2) {
+    auto *NameMD = dyn_cast<MDString>(InlinedFromMD->getOperand(I));
+    auto *LocMD =
+        mdconst::dyn_extract<ConstantInt>(InlinedFromMD->getOperand(I + 1));
+    if (NameMD && !NameMD->getString().empty())
+      Chain.emplace_back(NameMD->getString(),
+                         LocMD ? LocMD->getZExtValue() : 0);
+  }
+  return Chain;
 }

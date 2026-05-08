@@ -165,7 +165,7 @@ static void test_no_resolve_symlink_on_symlink()
     };
     for (auto const& TC : cases) {
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(_AIX)
-        // On OS X symlink permissions are supported. We should get an empty
+        // On macOS symlink permissions are supported. We should get an empty
         // error code and the expected permissions.
         const auto expected_link_perms = TC.expected;
         std::error_code expected_ec;

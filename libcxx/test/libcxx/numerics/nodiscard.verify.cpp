@@ -25,11 +25,24 @@ void test() {
   // clang-format off
 #if TEST_STD_VER >= 26
   // [numeric.sat]
-  std::add_sat(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::sub_sat(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::mul_sat(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::div_sat(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::saturate_cast<signed int>(49); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::saturating_add(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::saturating_sub(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::saturating_mul(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::saturating_div(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::saturating_cast<signed int>(49);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif // TEST_STD_VER >= 26
   // clang-format on
+
+#if TEST_STD_VER >= 20
+  {
+    int arr[]{94, 82, 49};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(94, 82);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(arr, arr + 2);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(94.0, 82.0);
+  }
+#endif
 }

@@ -7,7 +7,7 @@ subroutine malloc_ptr()
   pointer (ptr_x, x)
   ! CHECK:           %[[X:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
   ! CHECK:           %[[X_PTR:.*]] = fir.alloca i64 {bindc_name = "ptr_x", uniq_name = "_QFmalloc_ptrEptr_x"}
-  ! CHECK:           %[[X_PTR_DECL:.*]]:2 = hlfir.declare %[[X_PTR]] {uniq_name = "_QFmalloc_ptrEptr_x"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+  ! CHECK:           %[[X_PTR_DECL:.*]]:2 = hlfir.declare %[[X_PTR]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFmalloc_ptrEptr_x"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
   ! CHECK:           %[[CST:.*]] = arith.constant 4 : i32
   ! CHECK:           %[[CST_I64:.*]] = fir.convert %[[CST]] : (i32) -> i64
   ! CHECK:           %[[ALLOC:.*]] = fir.call @_FortranAMalloc(%[[CST_I64]]) fastmath<contract> : (i64) -> i64

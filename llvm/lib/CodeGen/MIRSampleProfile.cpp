@@ -248,7 +248,7 @@ void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
       assert(BBWeight >= EdgeWeight &&
              "BBweight is larger than EdgeWeight -- should not happen.\n");
 
-      BranchProbability OldProb = BFI->getMBPI()->getEdgeProbability(BB, SI);
+      BranchProbability OldProb = BB->getSuccProbability(SI);
       BranchProbability NewProb(EdgeWeight, BBWeight);
       if (OldProb == NewProb)
         continue;
@@ -370,8 +370,6 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
 
   MF.RenumberBlocks();
-  MDT->updateBlockNumbers();
-  MPDT->updateBlockNumbers();
 
   MIRSampleLoader->setInitVals(
       MDT, MPDT, &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,

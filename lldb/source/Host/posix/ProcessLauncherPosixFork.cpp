@@ -229,8 +229,8 @@ struct ForkLaunchInfo {
 // End of code running in the child process.
 
 ForkFileAction::ForkFileAction(const FileAction &act)
-    : action(act.GetAction()), fd(act.GetFD()), path(act.GetPath().str()),
-      arg(act.GetActionArgument()) {}
+    : action(act.GetAction()), fd(act.GetFD()),
+      path(act.GetFileSpec().GetPath()), arg(act.GetActionArgument()) {}
 
 static std::vector<ForkFileAction>
 MakeForkActions(const ProcessLaunchInfo &info) {

@@ -37,7 +37,7 @@ export void foo() {
 // CHECK-SAME: (ptr {{.*}} @Buf1, i32 noundef 1, i32 noundef 2, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf1Str]])
 
 // Buf1 initialization part 2 - body of ByteAddressBuffer::__createFromBinding
-// CHECK: define {{.*}} void @hlsl::ByteAddressBuffer::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK: define linkonce_odr hidden void @hlsl::ByteAddressBuffer::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::ByteAddressBuffer") align 4 %[[RetValue1:.*]], i32 noundef %registerNo, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK: %[[Tmp1:.*]] = alloca %"class.hlsl::ByteAddressBuffer", align 4
@@ -54,7 +54,7 @@ export void foo() {
 // CHECK-SAME: (ptr {{.*}} @Buf2, i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf2Str]])
 
 // Buf2 initialization part 2 - body of RWByteAddressBuffer::__createFromImplicitBinding
-// CHECK: define hidden void @hlsl::RWByteAddressBuffer::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK: define linkonce_odr hidden void @hlsl::RWByteAddressBuffer::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWByteAddressBuffer") align 4 %[[RetValue2:.*]], i32 noundef %orderId,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK: %[[Tmp2:.*]] = alloca %"class.hlsl::RWByteAddressBuffer", align 4

@@ -22,7 +22,7 @@ define void @test1(ptr nocapture %A, ptr nocapture %B, i32 %N) #0 {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %gep.0, align 4 --> Dst: store i32 %add, ptr %gep.B, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %gep.1, align 4 --> Dst: %1 = load i32, ptr %gep.1, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [*]!
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %gep.1, align 4 --> Dst: store i32 %add, ptr %gep.B, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %add, ptr %gep.B, align 4 --> Dst: store i32 %add, ptr %gep.B, align 4
@@ -67,7 +67,7 @@ define void @test2(ptr, i32) #3 {
 ; CHECK-NEXT:  Src: %10 = load i32, ptr %9, align 4 --> Dst: %10 = load i32, ptr %9, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %10 = load i32, ptr %9, align 4 --> Dst: store i32 %10, ptr %12, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1]!
+; CHECK-NEXT:    da analyze - anti [1]!
 ; CHECK-NEXT:  Src: store i32 %10, ptr %12, align 4 --> Dst: store i32 %10, ptr %12, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

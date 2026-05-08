@@ -62,9 +62,9 @@ static MCInstPrinter *createNVPTXMCInstPrinter(const Triple &T,
 }
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &,
+                                                 formatted_raw_ostream &OS,
                                                  MCInstPrinter *) {
-  return new NVPTXAsmTargetStreamer(S);
+  return new NVPTXAsmTargetStreamer(S, OS);
 }
 
 static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {

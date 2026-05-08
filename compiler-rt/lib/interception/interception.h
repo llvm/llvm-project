@@ -362,6 +362,16 @@ const interpose_substitution substitution_##func_name[]             \
 // so we use casts via uintptr_t (the local __sanitizer::uptr equivalent).
 namespace __interception {
 
+// Dynamic library loading helpers (dlopen/LoadLibrary, dlsym/GetProcAddress).
+// Implemented in interception_linux.cpp on non-Windows targets and
+// interception_win.cpp on Windows.
+bool DynamicLoaderAvailable();
+void* OpenLibrary(const char* name);
+void* LookupSymbol(void* handle, const char* symbol);
+void* LookupSymbolDefault(const char* symbol);
+void* LookupSymbolNext(const char* symbol);
+void* LookupSymbolNextVersioned(const char* symbol, const char* version);
+
 #if defined(__ELF__) && !SANITIZER_FUCHSIA
 // The use of interceptors makes many sanitizers unusable for static linking.
 // Define a function, if called, will cause a linker error (undefined _DYNAMIC).

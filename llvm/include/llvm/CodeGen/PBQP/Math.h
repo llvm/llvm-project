@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/InterleavedRange.h"
 #include <algorithm>
 #include <cassert>
@@ -41,10 +42,10 @@ public:
   Vector(Vector &&V) : Data(std::move(V.Data)) {}
 
   // Iterator-based access.
-  const PBQPNum *begin() const { return Data.begin(); }
-  const PBQPNum *end() const { return Data.end(); }
-  PBQPNum *begin() { return Data.begin(); }
-  PBQPNum *end() { return Data.end(); }
+  const PBQPNum *begin() const { return Data.data(); }
+  const PBQPNum *end() const { return Data.data() + Data.size(); }
+  PBQPNum *begin() { return Data.data(); }
+  PBQPNum *end() { return Data.data() + Data.size(); }
 
   /// Comparison operator.
   bool operator==(const Vector &V) const {
@@ -87,7 +88,7 @@ public:
   }
 
 private:
-  OwningArrayRef<PBQPNum> Data;
+  llvm::SmallVector<PBQPNum, 0> Data;
 };
 
 /// Return a hash_value for the given vector.

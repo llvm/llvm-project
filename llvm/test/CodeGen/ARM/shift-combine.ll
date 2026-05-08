@@ -1240,6 +1240,67 @@ define <4 x i32> @or_tree_with_shifts_vec_i32(<4 x i32> %a, <4 x i32> %b, <4 x i
 ; CHECK-BE-NEXT:    vorr q8, q8, q10
 ; CHECK-BE-NEXT:    vrev64.32 q0, q8
 ; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: or_tree_with_shifts_vec_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #16]
+; CHECK-ALIGN-NEXT:    orr.w r12, r12, r0
+; CHECK-ALIGN-NEXT:    ldr r0, [sp]
+; CHECK-ALIGN-NEXT:    orr.w r12, r0, r12, lsl #16
+; CHECK-ALIGN-NEXT:    ldr r0, [sp, #32]
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #20]
+; CHECK-ALIGN-NEXT:    orr.w r12, r12, r1
+; CHECK-ALIGN-NEXT:    ldr r1, [sp, #4]
+; CHECK-ALIGN-NEXT:    orr.w r12, r1, r12, lsl #16
+; CHECK-ALIGN-NEXT:    ldr r1, [sp, #36]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #24]
+; CHECK-ALIGN-NEXT:    orr.w r12, r12, r2
+; CHECK-ALIGN-NEXT:    ldr r2, [sp, #8]
+; CHECK-ALIGN-NEXT:    orr.w r12, r2, r12, lsl #16
+; CHECK-ALIGN-NEXT:    ldr r2, [sp, #40]
+; CHECK-ALIGN-NEXT:    orr.w r2, r2, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #28]
+; CHECK-ALIGN-NEXT:    orr.w r12, r12, r3
+; CHECK-ALIGN-NEXT:    ldr r3, [sp, #12]
+; CHECK-ALIGN-NEXT:    orr.w r12, r3, r12, lsl #16
+; CHECK-ALIGN-NEXT:    ldr r3, [sp, #44]
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, r12
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: or_tree_with_shifts_vec_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    ldr r4, [sp, #24]
+; CHECK-V6M-NEXT:    orrs r4, r0
+; CHECK-V6M-NEXT:    lsls r0, r4, #16
+; CHECK-V6M-NEXT:    ldr r4, [sp, #8]
+; CHECK-V6M-NEXT:    orrs r4, r0
+; CHECK-V6M-NEXT:    ldr r0, [sp, #40]
+; CHECK-V6M-NEXT:    orrs r0, r4
+; CHECK-V6M-NEXT:    ldr r4, [sp, #28]
+; CHECK-V6M-NEXT:    orrs r4, r1
+; CHECK-V6M-NEXT:    lsls r1, r4, #16
+; CHECK-V6M-NEXT:    ldr r4, [sp, #12]
+; CHECK-V6M-NEXT:    orrs r4, r1
+; CHECK-V6M-NEXT:    ldr r1, [sp, #44]
+; CHECK-V6M-NEXT:    orrs r1, r4
+; CHECK-V6M-NEXT:    ldr r4, [sp, #32]
+; CHECK-V6M-NEXT:    orrs r4, r2
+; CHECK-V6M-NEXT:    lsls r2, r4, #16
+; CHECK-V6M-NEXT:    ldr r4, [sp, #16]
+; CHECK-V6M-NEXT:    orrs r4, r2
+; CHECK-V6M-NEXT:    ldr r2, [sp, #48]
+; CHECK-V6M-NEXT:    orrs r2, r4
+; CHECK-V6M-NEXT:    ldr r4, [sp, #36]
+; CHECK-V6M-NEXT:    orrs r4, r3
+; CHECK-V6M-NEXT:    lsls r3, r4, #16
+; CHECK-V6M-NEXT:    ldr r4, [sp, #20]
+; CHECK-V6M-NEXT:    orrs r4, r3
+; CHECK-V6M-NEXT:    ldr r3, [sp, #52]
+; CHECK-V6M-NEXT:    orrs r3, r4
+; CHECK-V6M-NEXT:    pop {r4, pc}
   %a.shifted = shl <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>
   %c.shifted = shl <4 x i32> %c, <i32 16, i32 16, i32 16, i32 16>
   %or.ab = or <4 x i32> %a.shifted, %b
@@ -1271,6 +1332,72 @@ define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32
 ; CHECK-BE-NEXT:    vorr q8, q9, q8
 ; CHECK-BE-NEXT:    vrev64.32 q0, q8
 ; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: or_tree_with_mismatching_shifts_vec_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    push {r7, lr}
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #24]
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #40]
+; CHECK-ALIGN-NEXT:    orr.w r12, lr, r12, lsl #17
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #8]
+; CHECK-ALIGN-NEXT:    orr.w r0, lr, r0, lsl #16
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #44]
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #28]
+; CHECK-ALIGN-NEXT:    orr.w r12, lr, r12, lsl #17
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #12]
+; CHECK-ALIGN-NEXT:    orr.w r1, lr, r1, lsl #16
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #48]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #32]
+; CHECK-ALIGN-NEXT:    orr.w r12, lr, r12, lsl #17
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #16]
+; CHECK-ALIGN-NEXT:    orr.w r2, lr, r2, lsl #16
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #52]
+; CHECK-ALIGN-NEXT:    orr.w r2, r2, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #36]
+; CHECK-ALIGN-NEXT:    orr.w r12, lr, r12, lsl #17
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #20]
+; CHECK-ALIGN-NEXT:    orr.w r3, lr, r3, lsl #16
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, r12
+; CHECK-ALIGN-NEXT:    pop {r7, pc}
+;
+; CHECK-V6M-LABEL: or_tree_with_mismatching_shifts_vec_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    push {r4, r5, r7, lr}
+; CHECK-V6M-NEXT:    ldr r4, [sp, #32]
+; CHECK-V6M-NEXT:    lsls r4, r4, #17
+; CHECK-V6M-NEXT:    ldr r5, [sp, #48]
+; CHECK-V6M-NEXT:    orrs r5, r4
+; CHECK-V6M-NEXT:    lsls r4, r0, #16
+; CHECK-V6M-NEXT:    ldr r0, [sp, #16]
+; CHECK-V6M-NEXT:    orrs r0, r4
+; CHECK-V6M-NEXT:    orrs r0, r5
+; CHECK-V6M-NEXT:    ldr r4, [sp, #36]
+; CHECK-V6M-NEXT:    lsls r4, r4, #17
+; CHECK-V6M-NEXT:    ldr r5, [sp, #52]
+; CHECK-V6M-NEXT:    orrs r5, r4
+; CHECK-V6M-NEXT:    lsls r4, r1, #16
+; CHECK-V6M-NEXT:    ldr r1, [sp, #20]
+; CHECK-V6M-NEXT:    orrs r1, r4
+; CHECK-V6M-NEXT:    orrs r1, r5
+; CHECK-V6M-NEXT:    ldr r4, [sp, #40]
+; CHECK-V6M-NEXT:    lsls r4, r4, #17
+; CHECK-V6M-NEXT:    ldr r5, [sp, #56]
+; CHECK-V6M-NEXT:    orrs r5, r4
+; CHECK-V6M-NEXT:    lsls r4, r2, #16
+; CHECK-V6M-NEXT:    ldr r2, [sp, #24]
+; CHECK-V6M-NEXT:    orrs r2, r4
+; CHECK-V6M-NEXT:    orrs r2, r5
+; CHECK-V6M-NEXT:    ldr r4, [sp, #44]
+; CHECK-V6M-NEXT:    lsls r4, r4, #17
+; CHECK-V6M-NEXT:    ldr r5, [sp, #60]
+; CHECK-V6M-NEXT:    orrs r5, r4
+; CHECK-V6M-NEXT:    lsls r4, r3, #16
+; CHECK-V6M-NEXT:    ldr r3, [sp, #28]
+; CHECK-V6M-NEXT:    orrs r3, r4
+; CHECK-V6M-NEXT:    orrs r3, r5
+; CHECK-V6M-NEXT:    pop {r4, r5, r7, pc}
   %a.shifted = shl <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>
   %c.shifted = shl <4 x i32> %c, <i32 17, i32 17, i32 17, i32 17>
   %or.ab = or <4 x i32> %a.shifted, %b
@@ -1389,4 +1516,1180 @@ entry:
   %lshr = lshr i32 %zext, 5
   %and = and i32 %lshr, 2040
   ret i32 %and
+}
+
+define <8 x i8> @lshr_into_vsri_i8(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-ARM-LABEL: lshr_into_vsri_i8:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsri.8 d0, d1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: lshr_into_vsri_i8:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.8 d16, d1
+; CHECK-BE-NEXT:    vrev64.8 d17, d0
+; CHECK-BE-NEXT:    vsri.8 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.8 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: lshr_into_vsri_i8:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #20]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #52]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #7]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #16]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #48]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #6]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #12]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #44]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #5]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #8]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #40]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #4]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #4]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #36]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #3]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #32]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #2]
+; CHECK-ALIGN-NEXT:    and r1, r3, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r3, [sp, #28]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #1]
+; CHECK-ALIGN-NEXT:    and r1, r2, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r2, [sp, #24]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r2, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0]
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: lshr_into_vsri_i8:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, r5, r7, lr}
+; CHECK-V6M-NEXT:    add r1, sp, #36
+; CHECK-V6M-NEXT:    ldrb r4, [r1]
+; CHECK-V6M-NEXT:    movs r1, #224
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #68
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #7]
+; CHECK-V6M-NEXT:    add r4, sp, #32
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #64
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #6]
+; CHECK-V6M-NEXT:    add r4, sp, #28
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #60
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #5]
+; CHECK-V6M-NEXT:    add r4, sp, #24
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #56
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #4]
+; CHECK-V6M-NEXT:    add r4, sp, #20
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #52
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #3]
+; CHECK-V6M-NEXT:    add r4, sp, #16
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #48
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #2]
+; CHECK-V6M-NEXT:    ands r3, r1
+; CHECK-V6M-NEXT:    add r4, sp, #44
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    lsrs r4, r4, #3
+; CHECK-V6M-NEXT:    adds r3, r4, r3
+; CHECK-V6M-NEXT:    strb r3, [r0, #1]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    add r1, sp, #40
+; CHECK-V6M-NEXT:    ldrb r1, [r1]
+; CHECK-V6M-NEXT:    lsrs r1, r1, #3
+; CHECK-V6M-NEXT:    adds r1, r1, r2
+; CHECK-V6M-NEXT:    strb r1, [r0]
+; CHECK-V6M-NEXT:    pop {r4, r5, r7, pc}
+bb1:
+  %0 = and <8 x i8> %a, splat (i8 -32)
+  %1 = lshr <8 x i8> %b, splat (i8 3)
+  %2 = or disjoint <8 x i8> %1, %0
+  ret <8 x i8> %2
+}
+
+define <8 x i8> @shl_into_vsli_i8(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-ARM-LABEL: shl_into_vsli_i8:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsli.8 d0, d1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: shl_into_vsli_i8:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.8 d16, d1
+; CHECK-BE-NEXT:    vrev64.8 d17, d0
+; CHECK-BE-NEXT:    vsli.8 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.8 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: shl_into_vsli_i8:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #20]
+; CHECK-ALIGN-NEXT:    and r12, r1, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #52]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #7]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #16]
+; CHECK-ALIGN-NEXT:    and r12, r1, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #48]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #6]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #12]
+; CHECK-ALIGN-NEXT:    and r12, r1, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #44]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #5]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #8]
+; CHECK-ALIGN-NEXT:    and r12, r1, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #40]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #4]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #4]
+; CHECK-ALIGN-NEXT:    and r12, r1, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #36]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #3]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp]
+; CHECK-ALIGN-NEXT:    and r12, r1, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #32]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #2]
+; CHECK-ALIGN-NEXT:    and r1, r3, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r3, [sp, #28]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #1]
+; CHECK-ALIGN-NEXT:    and r1, r2, #7
+; CHECK-ALIGN-NEXT:    ldrb.w r2, [sp, #24]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r2, lsl #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0]
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: shl_into_vsli_i8:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    movs r1, #7
+; CHECK-V6M-NEXT:    ands r3, r1
+; CHECK-V6M-NEXT:    ldr r4, [sp, #36]
+; CHECK-V6M-NEXT:    lsls r4, r4, #3
+; CHECK-V6M-NEXT:    adds r3, r4, r3
+; CHECK-V6M-NEXT:    strb r3, [r0, #1]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    ldr r3, [sp, #32]
+; CHECK-V6M-NEXT:    lsls r3, r3, #3
+; CHECK-V6M-NEXT:    adds r2, r3, r2
+; CHECK-V6M-NEXT:    strb r2, [r0]
+; CHECK-V6M-NEXT:    add r2, sp, #28
+; CHECK-V6M-NEXT:    ldrb r2, [r2]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    ldr r3, [sp, #60]
+; CHECK-V6M-NEXT:    lsls r3, r3, #3
+; CHECK-V6M-NEXT:    adds r2, r3, r2
+; CHECK-V6M-NEXT:    strb r2, [r0, #7]
+; CHECK-V6M-NEXT:    add r2, sp, #24
+; CHECK-V6M-NEXT:    ldrb r2, [r2]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    ldr r3, [sp, #56]
+; CHECK-V6M-NEXT:    lsls r3, r3, #3
+; CHECK-V6M-NEXT:    adds r2, r3, r2
+; CHECK-V6M-NEXT:    strb r2, [r0, #6]
+; CHECK-V6M-NEXT:    add r2, sp, #20
+; CHECK-V6M-NEXT:    ldrb r2, [r2]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    ldr r3, [sp, #52]
+; CHECK-V6M-NEXT:    lsls r3, r3, #3
+; CHECK-V6M-NEXT:    adds r2, r3, r2
+; CHECK-V6M-NEXT:    strb r2, [r0, #5]
+; CHECK-V6M-NEXT:    add r2, sp, #16
+; CHECK-V6M-NEXT:    ldrb r2, [r2]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    ldr r3, [sp, #48]
+; CHECK-V6M-NEXT:    lsls r3, r3, #3
+; CHECK-V6M-NEXT:    adds r2, r3, r2
+; CHECK-V6M-NEXT:    strb r2, [r0, #4]
+; CHECK-V6M-NEXT:    add r2, sp, #12
+; CHECK-V6M-NEXT:    ldrb r2, [r2]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    ldr r3, [sp, #44]
+; CHECK-V6M-NEXT:    lsls r3, r3, #3
+; CHECK-V6M-NEXT:    adds r2, r3, r2
+; CHECK-V6M-NEXT:    strb r2, [r0, #3]
+; CHECK-V6M-NEXT:    add r2, sp, #8
+; CHECK-V6M-NEXT:    ldrb r2, [r2]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    ldr r1, [sp, #40]
+; CHECK-V6M-NEXT:    lsls r1, r1, #3
+; CHECK-V6M-NEXT:    adds r1, r1, r2
+; CHECK-V6M-NEXT:    strb r1, [r0, #2]
+; CHECK-V6M-NEXT:    pop {r4, pc}
+bb1:
+  %0 = and <8 x i8> %a, splat (i8 7)
+  %1 = shl <8 x i8> %b, splat (i8 3)
+  %2 = or disjoint <8 x i8> %1, %0
+  ret <8 x i8> %2
+}
+
+define <4 x i16> @lshr_into_vsri_i16(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-ARM-LABEL: lshr_into_vsri_i16:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsri.16 d0, d1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: lshr_into_vsri_i16:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.16 d16, d1
+; CHECK-BE-NEXT:    vrev64.16 d17, d0
+; CHECK-BE-NEXT:    vsri.16 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.16 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: lshr_into_vsri_i16:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    movw r12, #8191
+; CHECK-ALIGN-NEXT:    bfc r1, #0, #13
+; CHECK-ALIGN-NEXT:    bic.w r12, r0, r12
+; CHECK-ALIGN-NEXT:    ldrh.w r0, [sp]
+; CHECK-ALIGN-NEXT:    bfc r2, #0, #13
+; CHECK-ALIGN-NEXT:    bfc r3, #0, #13
+; CHECK-ALIGN-NEXT:    orr.w r0, r12, r0, lsr #3
+; CHECK-ALIGN-NEXT:    ldrh.w r12, [sp, #4]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r12, lsr #3
+; CHECK-ALIGN-NEXT:    ldrh.w r12, [sp, #8]
+; CHECK-ALIGN-NEXT:    orr.w r2, r2, r12, lsr #3
+; CHECK-ALIGN-NEXT:    ldrh.w r12, [sp, #12]
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, r12, lsr #3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: lshr_into_vsri_i16:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, r5, r7, lr}
+; CHECK-V6M-NEXT:    ldr r4, .LCPI41_0
+; CHECK-V6M-NEXT:    ands r0, r4
+; CHECK-V6M-NEXT:    add r5, sp, #16
+; CHECK-V6M-NEXT:    ldrh r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r0, r5, r0
+; CHECK-V6M-NEXT:    ands r1, r4
+; CHECK-V6M-NEXT:    add r5, sp, #20
+; CHECK-V6M-NEXT:    ldrh r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r1, r5, r1
+; CHECK-V6M-NEXT:    ands r2, r4
+; CHECK-V6M-NEXT:    add r5, sp, #24
+; CHECK-V6M-NEXT:    ldrh r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r2, r5, r2
+; CHECK-V6M-NEXT:    ands r3, r4
+; CHECK-V6M-NEXT:    add r4, sp, #28
+; CHECK-V6M-NEXT:    ldrh r4, [r4]
+; CHECK-V6M-NEXT:    lsrs r4, r4, #3
+; CHECK-V6M-NEXT:    adds r3, r4, r3
+; CHECK-V6M-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-V6M-NEXT:    .p2align 2
+; CHECK-V6M-NEXT:  @ %bb.1:
+; CHECK-V6M-NEXT:  .LCPI41_0:
+; CHECK-V6M-NEXT:    .long 4294959104 @ 0xffffe000
+bb1:
+  %0 = and <4 x i16> %a, splat (i16 -8192)
+  %1 = lshr <4 x i16> %b, splat (i16 3)
+  %2 = or disjoint <4 x i16> %1, %0
+  ret <4 x i16> %2
+}
+
+define <4 x i16> @shl_into_vsli_i16(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-ARM-LABEL: shl_into_vsli_i16:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsli.16 d0, d1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: shl_into_vsli_i16:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.16 d16, d1
+; CHECK-BE-NEXT:    vrev64.16 d17, d0
+; CHECK-BE-NEXT:    vsli.16 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.16 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: shl_into_vsli_i16:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    and r12, r0, #7
+; CHECK-ALIGN-NEXT:    ldrh.w r0, [sp]
+; CHECK-ALIGN-NEXT:    orr.w r0, r12, r0, lsl #3
+; CHECK-ALIGN-NEXT:    and r12, r1, #7
+; CHECK-ALIGN-NEXT:    ldrh.w r1, [sp, #4]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsl #3
+; CHECK-ALIGN-NEXT:    and r12, r2, #7
+; CHECK-ALIGN-NEXT:    ldrh.w r2, [sp, #8]
+; CHECK-ALIGN-NEXT:    orr.w r2, r12, r2, lsl #3
+; CHECK-ALIGN-NEXT:    and r12, r3, #7
+; CHECK-ALIGN-NEXT:    ldrh.w r3, [sp, #12]
+; CHECK-ALIGN-NEXT:    orr.w r3, r12, r3, lsl #3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: shl_into_vsli_i16:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, r5, r7, lr}
+; CHECK-V6M-NEXT:    movs r4, #7
+; CHECK-V6M-NEXT:    ands r0, r4
+; CHECK-V6M-NEXT:    ldr r5, [sp, #16]
+; CHECK-V6M-NEXT:    lsls r5, r5, #3
+; CHECK-V6M-NEXT:    adds r0, r5, r0
+; CHECK-V6M-NEXT:    ands r1, r4
+; CHECK-V6M-NEXT:    ldr r5, [sp, #20]
+; CHECK-V6M-NEXT:    lsls r5, r5, #3
+; CHECK-V6M-NEXT:    adds r1, r5, r1
+; CHECK-V6M-NEXT:    ands r2, r4
+; CHECK-V6M-NEXT:    ldr r5, [sp, #24]
+; CHECK-V6M-NEXT:    lsls r5, r5, #3
+; CHECK-V6M-NEXT:    adds r2, r5, r2
+; CHECK-V6M-NEXT:    ands r3, r4
+; CHECK-V6M-NEXT:    ldr r4, [sp, #28]
+; CHECK-V6M-NEXT:    lsls r4, r4, #3
+; CHECK-V6M-NEXT:    adds r3, r4, r3
+; CHECK-V6M-NEXT:    pop {r4, r5, r7, pc}
+bb1:
+  %0 = and <4 x i16> %a, splat (i16 7)
+  %1 = shl <4 x i16> %b, splat (i16 3)
+  %2 = or disjoint <4 x i16> %1, %0
+  ret <4 x i16> %2
+}
+
+define <2 x i32> @lshr_into_vsri_i32(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-ARM-LABEL: lshr_into_vsri_i32:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsri.32 d0, d1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: lshr_into_vsri_i32:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsri.32 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: lshr_into_vsri_i32:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    and r0, r0, #-536870912
+; CHECK-ALIGN-NEXT:    and r1, r1, #-536870912
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r2, lsr #3
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsr #3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: lshr_into_vsri_i32:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    movs r4, #7
+; CHECK-V6M-NEXT:    lsls r4, r4, #29
+; CHECK-V6M-NEXT:    ands r0, r4
+; CHECK-V6M-NEXT:    lsrs r2, r2, #3
+; CHECK-V6M-NEXT:    adds r0, r2, r0
+; CHECK-V6M-NEXT:    ands r1, r4
+; CHECK-V6M-NEXT:    lsrs r2, r3, #3
+; CHECK-V6M-NEXT:    adds r1, r2, r1
+; CHECK-V6M-NEXT:    pop {r4, pc}
+bb1:
+  %0 = and <2 x i32> %a, splat (i32 -536870912)
+  %1 = lshr <2 x i32> %b, splat (i32 3)
+  %2 = or disjoint <2 x i32> %1, %0
+  ret <2 x i32> %2
+}
+
+define <2 x i32> @shl_into_vsli_i32(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-ARM-LABEL: shl_into_vsli_i32:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsli.32 d0, d1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: shl_into_vsli_i32:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsli.32 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: shl_into_vsli_i32:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    and r0, r0, #7
+; CHECK-ALIGN-NEXT:    and r1, r1, #7
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r2, lsl #3
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsl #3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: shl_into_vsli_i32:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    movs r4, #7
+; CHECK-V6M-NEXT:    ands r0, r4
+; CHECK-V6M-NEXT:    lsls r2, r2, #3
+; CHECK-V6M-NEXT:    adds r0, r2, r0
+; CHECK-V6M-NEXT:    ands r1, r4
+; CHECK-V6M-NEXT:    lsls r2, r3, #3
+; CHECK-V6M-NEXT:    adds r1, r2, r1
+; CHECK-V6M-NEXT:    pop {r4, pc}
+bb1:
+  %0 = and <2 x i32> %a, splat (i32 7)
+  %1 = shl <2 x i32> %b, splat (i32 3)
+  %2 = or disjoint <2 x i32> %1, %0
+  ret <2 x i32> %2
+}
+
+define <2 x i32> @lshr_into_vsri_shift1_i32(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-ARM-LABEL: lshr_into_vsri_shift1_i32:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsri.32 d0, d1, #1
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: lshr_into_vsri_shift1_i32:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsri.32 d17, d16, #1
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: lshr_into_vsri_shift1_i32:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    and r0, r0, #-2147483648
+; CHECK-ALIGN-NEXT:    and r1, r1, #-2147483648
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r2, lsr #1
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsr #1
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: lshr_into_vsri_shift1_i32:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    movs r4, #1
+; CHECK-V6M-NEXT:    lsls r4, r4, #31
+; CHECK-V6M-NEXT:    ands r0, r4
+; CHECK-V6M-NEXT:    lsrs r2, r2, #1
+; CHECK-V6M-NEXT:    adds r0, r2, r0
+; CHECK-V6M-NEXT:    ands r1, r4
+; CHECK-V6M-NEXT:    lsrs r2, r3, #1
+; CHECK-V6M-NEXT:    adds r1, r2, r1
+; CHECK-V6M-NEXT:    pop {r4, pc}
+bb1:
+  %0 = and <2 x i32> %a, splat (i32 -2147483648)
+  %1 = lshr <2 x i32> %b, splat (i32 1)
+  %2 = or disjoint <2 x i32> %1, %0
+  ret <2 x i32> %2
+}
+
+define <2 x i32> @shl_into_vsli_shift1(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-ARM-LABEL: shl_into_vsli_shift1:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsli.32 d0, d1, #1
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: shl_into_vsli_shift1:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsli.32 d17, d16, #1
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: shl_into_vsli_shift1:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    and r0, r0, #1
+; CHECK-ALIGN-NEXT:    and r1, r1, #1
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r2, lsl #1
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsl #1
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: shl_into_vsli_shift1:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    movs r4, #1
+; CHECK-V6M-NEXT:    ands r0, r4
+; CHECK-V6M-NEXT:    lsls r2, r2, #1
+; CHECK-V6M-NEXT:    adds r0, r2, r0
+; CHECK-V6M-NEXT:    ands r1, r4
+; CHECK-V6M-NEXT:    lsls r2, r3, #1
+; CHECK-V6M-NEXT:    adds r1, r2, r1
+; CHECK-V6M-NEXT:    pop {r4, pc}
+bb1:
+  %0 = and <2 x i32> %a, splat (i32 1)
+  %1 = shl <2 x i32> %b, splat (i32 1)
+  %2 = or disjoint <2 x i32> %1, %0
+  ret <2 x i32> %2
+}
+
+define <2 x i64> @lshr_into_vsri_i64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-ARM-LABEL: lshr_into_vsri_i64:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsri.64 q0, q1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: lshr_into_vsri_i64:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vsri.64 q0, q1, #3
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: lshr_into_vsri_i64:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    ldr r0, [sp]
+; CHECK-ALIGN-NEXT:    and r1, r1, #-536870912
+; CHECK-ALIGN-NEXT:    ldr r2, [sp, #4]
+; CHECK-ALIGN-NEXT:    and r3, r3, #-536870912
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #12]
+; CHECK-ALIGN-NEXT:    lsrs r0, r0, #3
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r2, lsl #29
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r2, lsr #3
+; CHECK-ALIGN-NEXT:    ldr r2, [sp, #8]
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, r12, lsr #3
+; CHECK-ALIGN-NEXT:    lsrs r2, r2, #3
+; CHECK-ALIGN-NEXT:    orr.w r2, r2, r12, lsl #29
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: lshr_into_vsri_i64:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, r5, r6, lr}
+; CHECK-V6M-NEXT:    ldr r4, [sp, #20]
+; CHECK-V6M-NEXT:    lsls r0, r4, #29
+; CHECK-V6M-NEXT:    ldr r2, [sp, #16]
+; CHECK-V6M-NEXT:    lsrs r2, r2, #3
+; CHECK-V6M-NEXT:    adds r0, r2, r0
+; CHECK-V6M-NEXT:    ldr r5, [sp, #28]
+; CHECK-V6M-NEXT:    lsls r2, r5, #29
+; CHECK-V6M-NEXT:    ldr r6, [sp, #24]
+; CHECK-V6M-NEXT:    lsrs r6, r6, #3
+; CHECK-V6M-NEXT:    adds r2, r6, r2
+; CHECK-V6M-NEXT:    movs r6, #7
+; CHECK-V6M-NEXT:    lsls r6, r6, #29
+; CHECK-V6M-NEXT:    ands r1, r6
+; CHECK-V6M-NEXT:    lsrs r4, r4, #3
+; CHECK-V6M-NEXT:    adds r1, r4, r1
+; CHECK-V6M-NEXT:    ands r3, r6
+; CHECK-V6M-NEXT:    lsrs r4, r5, #3
+; CHECK-V6M-NEXT:    adds r3, r4, r3
+; CHECK-V6M-NEXT:    pop {r4, r5, r6, pc}
+bb1:
+  %0 = and <2 x i64> %a, splat (i64 -2305843009213693952)
+  %1 = lshr <2 x i64> %b, splat (i64 3)
+  %2 = or disjoint <2 x i64> %1, %0
+  ret <2 x i64> %2
+}
+
+define <2 x i64> @shl_into_vsli_i64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-ARM-LABEL: shl_into_vsli_i64:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsli.64 q0, q1, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: shl_into_vsli_i64:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vsli.64 q0, q1, #3
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: shl_into_vsli_i64:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    ldr r3, [sp, #4]
+; CHECK-ALIGN-NEXT:    and r0, r0, #7
+; CHECK-ALIGN-NEXT:    ldr r1, [sp]
+; CHECK-ALIGN-NEXT:    and r2, r2, #7
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #8]
+; CHECK-ALIGN-NEXT:    lsls r3, r3, #3
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r1, lsl #3
+; CHECK-ALIGN-NEXT:    orr.w r1, r3, r1, lsr #29
+; CHECK-ALIGN-NEXT:    ldr r3, [sp, #12]
+; CHECK-ALIGN-NEXT:    orr.w r2, r2, r12, lsl #3
+; CHECK-ALIGN-NEXT:    lsls r3, r3, #3
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, r12, lsr #29
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: shl_into_vsli_i64:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    movs r3, #7
+; CHECK-V6M-NEXT:    ands r0, r3
+; CHECK-V6M-NEXT:    ldr r1, [sp, #8]
+; CHECK-V6M-NEXT:    lsls r4, r1, #3
+; CHECK-V6M-NEXT:    adds r0, r4, r0
+; CHECK-V6M-NEXT:    lsrs r1, r1, #29
+; CHECK-V6M-NEXT:    ldr r4, [sp, #12]
+; CHECK-V6M-NEXT:    lsls r4, r4, #3
+; CHECK-V6M-NEXT:    adds r1, r4, r1
+; CHECK-V6M-NEXT:    ands r2, r3
+; CHECK-V6M-NEXT:    ldr r3, [sp, #16]
+; CHECK-V6M-NEXT:    lsls r4, r3, #3
+; CHECK-V6M-NEXT:    adds r2, r4, r2
+; CHECK-V6M-NEXT:    lsrs r3, r3, #29
+; CHECK-V6M-NEXT:    ldr r4, [sp, #20]
+; CHECK-V6M-NEXT:    lsls r4, r4, #3
+; CHECK-V6M-NEXT:    adds r3, r4, r3
+; CHECK-V6M-NEXT:    pop {r4, pc}
+bb1:
+  %0 = and <2 x i64> %a, splat (i64 7)
+  %1 = shl <2 x i64> %b, splat (i64 3)
+  %2 = or disjoint <2 x i64> %1, %0
+  ret <2 x i64> %2
+}
+
+define <2 x i64> @lshr_into_vsri_shift1_i64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-ARM-LABEL: lshr_into_vsri_shift1_i64:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    adr r0, .LCPI49_0
+; CHECK-ARM-NEXT:    vshr.u64 q9, q1, #1
+; CHECK-ARM-NEXT:    vld1.64 {d16, d17}, [r0:128]
+; CHECK-ARM-NEXT:    vand q8, q0, q8
+; CHECK-ARM-NEXT:    vorr q0, q9, q8
+; CHECK-ARM-NEXT:    bx lr
+; CHECK-ARM-NEXT:    .p2align 4
+; CHECK-ARM-NEXT:  @ %bb.1:
+; CHECK-ARM-NEXT:  .LCPI49_0:
+; CHECK-ARM-NEXT:    .long 2147483648 @ 0x80000000
+; CHECK-ARM-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-ARM-NEXT:    .long 2147483648 @ 0x80000000
+; CHECK-ARM-NEXT:    .long 4294967295 @ 0xffffffff
+;
+; CHECK-BE-LABEL: lshr_into_vsri_shift1_i64:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    adr r0, .LCPI49_0
+; CHECK-BE-NEXT:    vshr.u64 q9, q1, #1
+; CHECK-BE-NEXT:    vld1.64 {d16, d17}, [r0:128]
+; CHECK-BE-NEXT:    vand q8, q0, q8
+; CHECK-BE-NEXT:    vorr q0, q9, q8
+; CHECK-BE-NEXT:    bx lr
+; CHECK-BE-NEXT:    .p2align 4
+; CHECK-BE-NEXT:  @ %bb.1:
+; CHECK-BE-NEXT:  .LCPI49_0:
+; CHECK-BE-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-BE-NEXT:    .long 2147483648 @ 0x80000000
+; CHECK-BE-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-BE-NEXT:    .long 2147483648 @ 0x80000000
+;
+; CHECK-ALIGN-LABEL: lshr_into_vsri_shift1_i64:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    push {r7, lr}
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #12]
+; CHECK-ALIGN-NEXT:    and r0, r0, #-2147483648
+; CHECK-ALIGN-NEXT:    ldr.w lr, [sp, #20]
+; CHECK-ALIGN-NEXT:    and r2, r2, #-2147483648
+; CHECK-ALIGN-NEXT:    lsrs.w r12, r12, #1
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #8]
+; CHECK-ALIGN-NEXT:    rrx r12, r12
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r12
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #16]
+; CHECK-ALIGN-NEXT:    lsrs.w lr, lr, #1
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, lr
+; CHECK-ALIGN-NEXT:    rrx r12, r12
+; CHECK-ALIGN-NEXT:    orr.w r2, r2, r12
+; CHECK-ALIGN-NEXT:    pop {r7, pc}
+;
+; CHECK-V6M-LABEL: lshr_into_vsri_shift1_i64:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-V6M-NEXT:    sub sp, #4
+; CHECK-V6M-NEXT:    movs r4, #1
+; CHECK-V6M-NEXT:    lsls r4, r4, #31
+; CHECK-V6M-NEXT:    ands r0, r4
+; CHECK-V6M-NEXT:    ldr r5, [sp, #28]
+; CHECK-V6M-NEXT:    lsls r6, r5, #31
+; CHECK-V6M-NEXT:    ldr r7, [sp, #24]
+; CHECK-V6M-NEXT:    lsrs r7, r7, #1
+; CHECK-V6M-NEXT:    adds r6, r7, r6
+; CHECK-V6M-NEXT:    orrs r0, r6
+; CHECK-V6M-NEXT:    ands r2, r4
+; CHECK-V6M-NEXT:    ldr r4, [sp, #36]
+; CHECK-V6M-NEXT:    lsls r6, r4, #31
+; CHECK-V6M-NEXT:    ldr r7, [sp, #32]
+; CHECK-V6M-NEXT:    lsrs r7, r7, #1
+; CHECK-V6M-NEXT:    adds r6, r7, r6
+; CHECK-V6M-NEXT:    orrs r2, r6
+; CHECK-V6M-NEXT:    lsrs r5, r5, #1
+; CHECK-V6M-NEXT:    orrs r1, r5
+; CHECK-V6M-NEXT:    lsrs r4, r4, #1
+; CHECK-V6M-NEXT:    orrs r3, r4
+; CHECK-V6M-NEXT:    add sp, #4
+; CHECK-V6M-NEXT:    pop {r4, r5, r6, r7, pc}
+bb1:
+  %0 = and <2 x i64> %a, splat (i64 -2147483648)
+  %1 = lshr <2 x i64> %b, splat (i64 1)
+  %2 = or disjoint <2 x i64> %1, %0
+  ret <2 x i64> %2
+}
+
+define <32 x i8> @lshr_into_vsri_v32i8(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-ARM-LABEL: lshr_into_vsri_v32i8:
+; CHECK-ARM:       @ %bb.0: @ %bb1
+; CHECK-ARM-NEXT:    vsri.8 q0, q2, #3
+; CHECK-ARM-NEXT:    vsri.8 q1, q3, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: lshr_into_vsri_v32i8:
+; CHECK-BE:       @ %bb.0: @ %bb1
+; CHECK-BE-NEXT:    vrev64.8 q8, q2
+; CHECK-BE-NEXT:    vrev64.8 q9, q0
+; CHECK-BE-NEXT:    vrev64.8 q10, q3
+; CHECK-BE-NEXT:    vsri.8 q9, q8, #3
+; CHECK-BE-NEXT:    vrev64.8 q11, q1
+; CHECK-BE-NEXT:    vsri.8 q11, q10, #3
+; CHECK-BE-NEXT:    vrev64.8 q0, q9
+; CHECK-BE-NEXT:    vrev64.8 q1, q11
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: lshr_into_vsri_v32i8:
+; CHECK-ALIGN:       @ %bb.0: @ %bb1
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #116]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #244]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #31]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #112]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #240]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #30]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #108]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #236]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #29]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #104]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #232]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #28]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #100]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #228]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #27]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #96]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #224]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #26]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #92]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #220]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #25]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #88]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #216]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #24]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #84]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #212]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #23]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #80]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #208]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #22]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #76]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #204]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #21]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #72]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #200]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #20]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #68]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #196]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #19]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #64]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #192]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #18]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #60]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #188]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #17]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #56]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #184]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #16]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #52]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #180]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #15]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #48]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #176]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #14]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #44]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #172]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #13]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #40]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #168]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #12]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #36]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #164]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #11]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #32]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #160]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #10]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #28]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #156]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #9]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #24]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #152]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #8]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #20]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #148]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #7]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #16]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #144]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #6]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #12]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #140]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #5]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #8]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #136]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #4]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #4]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #132]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #3]
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp]
+; CHECK-ALIGN-NEXT:    and r12, r1, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r1, [sp, #128]
+; CHECK-ALIGN-NEXT:    orr.w r1, r12, r1, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #2]
+; CHECK-ALIGN-NEXT:    and r1, r3, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r3, [sp, #124]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0, #1]
+; CHECK-ALIGN-NEXT:    and r1, r2, #224
+; CHECK-ALIGN-NEXT:    ldrb.w r2, [sp, #120]
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r2, lsr #3
+; CHECK-ALIGN-NEXT:    strb r1, [r0]
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: lshr_into_vsri_v32i8:
+; CHECK-V6M:       @ %bb.0: @ %bb1
+; CHECK-V6M-NEXT:    push {r4, r5, r7, lr}
+; CHECK-V6M-NEXT:    add r1, sp, #132
+; CHECK-V6M-NEXT:    ldrb r4, [r1]
+; CHECK-V6M-NEXT:    movs r1, #224
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #260
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #31]
+; CHECK-V6M-NEXT:    add r4, sp, #128
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #256
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #30]
+; CHECK-V6M-NEXT:    add r4, sp, #124
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #252
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #29]
+; CHECK-V6M-NEXT:    add r4, sp, #120
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #248
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #28]
+; CHECK-V6M-NEXT:    add r4, sp, #116
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #244
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #27]
+; CHECK-V6M-NEXT:    add r4, sp, #112
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #240
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #26]
+; CHECK-V6M-NEXT:    add r4, sp, #108
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #236
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #25]
+; CHECK-V6M-NEXT:    add r4, sp, #104
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #232
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #24]
+; CHECK-V6M-NEXT:    add r4, sp, #100
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #228
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #23]
+; CHECK-V6M-NEXT:    add r4, sp, #96
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #224
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #22]
+; CHECK-V6M-NEXT:    add r4, sp, #92
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #220
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #21]
+; CHECK-V6M-NEXT:    add r4, sp, #88
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #216
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #20]
+; CHECK-V6M-NEXT:    add r4, sp, #84
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #212
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #19]
+; CHECK-V6M-NEXT:    add r4, sp, #80
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #208
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #18]
+; CHECK-V6M-NEXT:    add r4, sp, #76
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #204
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #17]
+; CHECK-V6M-NEXT:    add r4, sp, #72
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #200
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #16]
+; CHECK-V6M-NEXT:    add r4, sp, #68
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #196
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #15]
+; CHECK-V6M-NEXT:    add r4, sp, #64
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #192
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #14]
+; CHECK-V6M-NEXT:    add r4, sp, #60
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #188
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #13]
+; CHECK-V6M-NEXT:    add r4, sp, #56
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #184
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #12]
+; CHECK-V6M-NEXT:    add r4, sp, #52
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #180
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #11]
+; CHECK-V6M-NEXT:    add r4, sp, #48
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #176
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #10]
+; CHECK-V6M-NEXT:    add r4, sp, #44
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #172
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #9]
+; CHECK-V6M-NEXT:    add r4, sp, #40
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #168
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #8]
+; CHECK-V6M-NEXT:    add r4, sp, #36
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #164
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #7]
+; CHECK-V6M-NEXT:    add r4, sp, #32
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #160
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #6]
+; CHECK-V6M-NEXT:    add r4, sp, #28
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #156
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #5]
+; CHECK-V6M-NEXT:    add r4, sp, #24
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #152
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #4]
+; CHECK-V6M-NEXT:    add r4, sp, #20
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #148
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #3]
+; CHECK-V6M-NEXT:    add r4, sp, #16
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    ands r4, r1
+; CHECK-V6M-NEXT:    add r5, sp, #144
+; CHECK-V6M-NEXT:    ldrb r5, [r5]
+; CHECK-V6M-NEXT:    lsrs r5, r5, #3
+; CHECK-V6M-NEXT:    adds r4, r5, r4
+; CHECK-V6M-NEXT:    strb r4, [r0, #2]
+; CHECK-V6M-NEXT:    ands r3, r1
+; CHECK-V6M-NEXT:    add r4, sp, #140
+; CHECK-V6M-NEXT:    ldrb r4, [r4]
+; CHECK-V6M-NEXT:    lsrs r4, r4, #3
+; CHECK-V6M-NEXT:    adds r3, r4, r3
+; CHECK-V6M-NEXT:    strb r3, [r0, #1]
+; CHECK-V6M-NEXT:    ands r2, r1
+; CHECK-V6M-NEXT:    add r1, sp, #136
+; CHECK-V6M-NEXT:    ldrb r1, [r1]
+; CHECK-V6M-NEXT:    lsrs r1, r1, #3
+; CHECK-V6M-NEXT:    adds r1, r1, r2
+; CHECK-V6M-NEXT:    strb r1, [r0]
+; CHECK-V6M-NEXT:    pop {r4, r5, r7, pc}
+bb1:
+  %0 = and <32 x i8> %a, splat (i8 -32)
+  %1 = lshr <32 x i8> %b, splat (i8 3)
+  %2 = or disjoint <32 x i8> %1, %0
+  ret <32 x i8> %2
 }

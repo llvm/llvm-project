@@ -233,9 +233,9 @@ void DebuggerThread::DebugLoop() {
   Log *log = GetLog(WindowsLog::Event);
   DEBUG_EVENT dbe = {};
   bool should_debug = true;
-  LLDB_LOGV(log, "Entering WaitForDebugEvent loop");
+  LLDB_LOG_VERBOSE(log, "Entering WaitForDebugEvent loop");
   while (should_debug) {
-    LLDB_LOGV(log, "Calling WaitForDebugEvent");
+    LLDB_LOG_VERBOSE(log, "Calling WaitForDebugEvent");
     BOOL wait_result = WaitForDebugEvent(&dbe, INFINITE);
     if (wait_result) {
       DWORD continue_status = DBG_CONTINUE;
@@ -287,9 +287,10 @@ void DebuggerThread::DebugLoop() {
         break;
       }
 
-      LLDB_LOGV(log, "calling ContinueDebugEvent({0}, {1}, {2}) on thread {3}.",
-                dbe.dwProcessId, dbe.dwThreadId, continue_status,
-                ::GetCurrentThreadId());
+      LLDB_LOG_VERBOSE(
+          log, "calling ContinueDebugEvent({0}, {1}, {2}) on thread {3}.",
+          dbe.dwProcessId, dbe.dwThreadId, continue_status,
+          ::GetCurrentThreadId());
 
       ::ContinueDebugEvent(dbe.dwProcessId, dbe.dwThreadId, continue_status);
 

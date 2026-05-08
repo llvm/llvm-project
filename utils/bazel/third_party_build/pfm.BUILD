@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "make_variant")
 
 filegroup(
@@ -12,6 +13,9 @@ filegroup(
 make_variant(
     name = "pfm",
     copts = ["-w"],
+    env = {
+        "CONFIG_PFMLIB_SHARED": "n",
+    },
     lib_name = "libpfm",
     lib_source = ":sources",
     target_compatible_with = select({

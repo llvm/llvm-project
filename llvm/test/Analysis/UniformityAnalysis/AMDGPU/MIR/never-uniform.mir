@@ -65,7 +65,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: MachineUniformityInfo for function:  @dsreads
-    ; CHECK-NEXT: ALL VALUES UNIFORM
+    ; CHECK: ALL VALUES UNIFORM
     %0:vreg_64 = IMPLICIT_DEF
     $m0 = S_MOV_B32 0
     %1:vgpr_32 = DS_READ_ADDTID_B32 0, 0, implicit $m0, implicit $exec

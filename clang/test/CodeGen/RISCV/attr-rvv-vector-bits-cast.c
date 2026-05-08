@@ -122,7 +122,7 @@ vbool32_t to_vbool32_t(fixed_bool32_t type) {
 }
 
 // CHECK-LABEL: define dso_local <vscale x 2 x i32> @to_vint32m1_t__from_gnu_int32m1_t(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TYPE:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA10:![0-9]+]]
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[TYPE]], i64 0)
@@ -144,7 +144,7 @@ gnu_int32m1_t from_vint32m1_t__to_gnu_int32m1_t(vint32m1_t type) {
 }
 
 // CHECK-LABEL: define dso_local <vscale x 2 x i32> @to_fixed_int32m1_t__from_gnu_int32m1_t(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TYPE:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA10]]
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[TYPE]], i64 0)

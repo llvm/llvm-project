@@ -3,10 +3,12 @@
 ! CHECK: #access_group = #llvm.access_group<id = distinct[0]<>>
 ! CHECK: #access_group1 = #llvm.access_group<id = distinct[1]<>>
 ! CHECK: #access_group2 = #llvm.access_group<id = distinct[2]<>>
+! CHECK: #access_group3 = #llvm.access_group<id = distinct[3]<>>
 ! CHECK: #loop_vectorize = #llvm.loop_vectorize<disable = false>
-! CHECK: #loop_annotation = #llvm.loop_annotation<vectorize = #loop_vectorize, parallelAccesses = #access_group>
-! CHECK: #loop_annotation1 = #llvm.loop_annotation<vectorize = #loop_vectorize, parallelAccesses = #access_group1>
-! CHECK: #loop_annotation2 = #llvm.loop_annotation<vectorize = #loop_vectorize, parallelAccesses = #access_group2>
+! CHECK: #loop_annotation = #llvm.loop_annotation<parallelAccesses = #access_group>
+! CHECK: #loop_annotation1 = #llvm.loop_annotation<parallelAccesses = #access_group1>
+! CHECK: #loop_annotation2 = #llvm.loop_annotation<parallelAccesses = #access_group2>
+! CHECK: #loop_annotation3 = #llvm.loop_annotation<vectorize = #loop_vectorize, parallelAccesses = #access_group3>
 
 ! CHECK-LABEL: ivdep_test1
 subroutine ivdep_test1 
@@ -92,3 +94,13 @@ subroutine ivdep_test3
     end subroutine
 end subroutine ivdep_test3
 
+! CHECK-LABEL: ivdep_test4
+subroutine ivdep_test4
+  integer :: a(10)
+  !dir$ ivdep
+  !dir$ vector always
+  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation3}
+  do i=1,10
+     a(i)=i
+  end do
+end subroutine ivdep_test4

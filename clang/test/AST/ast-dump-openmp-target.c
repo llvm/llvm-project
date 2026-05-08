@@ -6,7 +6,7 @@ void test(void) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-target.c:3:1, line:6:1> line:3:6 test 'void (void)'
+// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-target.c:3:1, line:6:1> line:3:6 test 'void (void)' external-linkage
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:17, line:6:1>
 // CHECK-NEXT:     `-OMPTargetDirective {{.*}} <line:4:1, col:19>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:5:3>
@@ -14,7 +14,8 @@ void test(void) {
 // CHECK-NEXT:           |-CapturedStmt {{.*}} <col:3>
 // CHECK-NEXT:           | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:           |   |-NullStmt {{.*}} <col:3>
-// CHECK-NEXT:           |   `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target.c:4:1) *const restrict'
+// CHECK-NEXT:           |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target.c:4:1) *const restrict'
+// CHECK-NEXT:           |   `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT:           |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .global_tid. 'const int'
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .part_id. 'const int *const restrict'
@@ -26,4 +27,5 @@ void test(void) {
 // CHECK-NEXT:           | `-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:           `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:             |-NullStmt {{.*}} <line:5:3>
-// CHECK-NEXT:             `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target.c:4:1) *const restrict'
+// CHECK-NEXT:             |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target.c:4:1) *const restrict'
+// CHECK-NEXT:             `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'

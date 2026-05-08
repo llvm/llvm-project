@@ -46,16 +46,16 @@ void main() {
 // CHECK: call {{.*}} @_ZN4hlsl8RWBufferIfEaSERKS1_(ptr {{.*}} %[[Ptr3]], ptr {{.*}} @_ZL1C)
   Second[2] = C;
 
-  // NOTE: _ZN4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>
+  // NOTE: _ZNK4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>
 
 // get First[1][0] value
 // CHECK: %[[First_1_Ptr:.*]] = getelementptr inbounds [3 x %"class.hlsl::RWBuffer"], ptr %First, i32 0, i32 1
-// CHECK: %[[BufPtr1:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[First_1_Ptr]], i32 noundef 0)
+// CHECK: %[[BufPtr1:.*]] = call {{.*}} ptr @_ZNK4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[First_1_Ptr]], i32 noundef 0)
 // CHECK: %[[Value1:.*]] = load float, ptr %[[BufPtr1]], align 4
 
 // get Second[2][0] value
 // CHECK: %[[Second_2_Ptr:.*]] = getelementptr inbounds [4 x %"class.hlsl::RWBuffer"], ptr %Second, i32 0, i32 2
-// CHECK: %[[BufPtr2:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[Second_2_Ptr]], i32 noundef 0)
+// CHECK: %[[BufPtr2:.*]] = call {{.*}} ptr @_ZNK4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[Second_2_Ptr]], i32 noundef 0)
 // CHECK: %[[Value2:.*]] = load float, ptr %[[BufPtr2]], align 4
 
 // add them

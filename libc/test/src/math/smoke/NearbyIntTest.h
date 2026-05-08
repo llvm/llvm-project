@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"

@@ -108,7 +108,10 @@ void SPIRV64TargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "SPIRV64", Opts);
 }
 
-static const AMDGPUTargetInfo AMDGPUTI(llvm::Triple("amdgcn-amd-amdhsa"), {});
+static const AMDGPUTargetInfo
+    AMDGPUTI(llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
+                          llvm::Triple::AMD, llvm::Triple::AMDHSA),
+             {});
 
 ArrayRef<const char *> SPIRV64AMDGCNTargetInfo::getGCCRegNames() const {
   return AMDGPUTI.getGCCRegNames();
@@ -145,6 +148,9 @@ void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
   Builder.defineMacro("__AMDGCN__");
+
+  if (Opts.AtomicIgnoreDenormalMode)
+    Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 }
 
 void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
@@ -180,4 +186,13 @@ void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
     HasFloat128 = true;
     Float128Format = DoubleFormat;
   }
+}
+
+bool SPIRV64AMDGCNTargetInfo::isValidCPUName(StringRef CPU) const {
+  return AMDGPUTI.isValidCPUName(CPU);
+}
+
+void SPIRV64AMDGCNTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  return AMDGPUTI.fillValidCPUList(Values);
 }

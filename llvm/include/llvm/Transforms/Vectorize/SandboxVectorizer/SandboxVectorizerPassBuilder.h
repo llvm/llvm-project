@@ -21,10 +21,10 @@ namespace llvm::sandboxir {
 
 class SandboxVectorizerPassBuilder {
 public:
-  static std::unique_ptr<FunctionPass> createFunctionPass(StringRef Name,
-                                                          StringRef Args);
-  static std::unique_ptr<RegionPass> createRegionPass(StringRef Name,
-                                                      StringRef Args);
+  static std::unique_ptr<FunctionPass>
+  createFunctionPass(StringRef Name, StringRef Args, StringRef AuxArg);
+  static std::unique_ptr<RegionPass>
+  createRegionPass(StringRef Name, StringRef Args, StringRef AuxArg);
 };
 
 } // namespace llvm::sandboxir

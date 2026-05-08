@@ -12,6 +12,9 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
+// Missing mkstemp
+// XFAIL: LLVM-LIBC-FIXME
+
 // [container.adaptors.format]
 // For each of queue, priority_queue, and stack, the library provides the
 // following formatter specialization where adaptor-type is the name of the

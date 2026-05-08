@@ -9,10 +9,11 @@
 // This test verifies that setting the assertion semantic to a value that's not part of the predefined constants
 // triggers a compile-time error.
 
-// Modules build produces a different error ("Could not build module 'std'").
-// UNSUPPORTED: clang-modules-build
 // UNSUPPORTED: c++03, libcpp-has-no-experimental-hardening-observe-semantic
 // REQUIRES: verify-support
+
+// TODO: Investigate
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // RUN: %{verify} -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=42
 // `hardening-dependent` cannot be set as the semantic (it's only an indicator to use hardening-related logic to pick

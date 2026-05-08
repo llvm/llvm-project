@@ -40,6 +40,12 @@ inline IntT getRandomInteger(IntT Min, IntT Max) {
   return static_cast<IntT>(dist(getRandomEngine()));
 }
 
+template <class FloatT>
+inline FloatT getRandomFloat(FloatT Min, FloatT Max) {
+  std::uniform_real_distribution<FloatT> dist(Min, Max);
+  return static_cast<FloatT>(dist(getRandomEngine()));
+}
+
 inline std::string getRandomString(std::size_t Len) {
   std::string str(Len, 0);
   std::generate_n(str.begin(), Len, &getRandomChar);
@@ -192,6 +198,15 @@ struct Generate<T> {
   static T cheap() { return 42; }
   static T expensive() { return 42; }
   static T random() { return getRandomInteger<T>(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()); }
+};
+
+template <class T>
+  requires std::floating_point<T>
+struct Generate<T> {
+  static T arbitrary() { return 42; }
+  static T cheap() { return 42; }
+  static T expensive() { return 42; }
+  static T random() { return getRandomFloat<T>(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()); }
 };
 
 template <>

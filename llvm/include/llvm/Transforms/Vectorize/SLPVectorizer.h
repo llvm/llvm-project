@@ -143,6 +143,12 @@ private:
   bool vectorizeCmpInsts(iterator_range<ItT> CmpInsts, BasicBlock *BB,
                          slpvectorizer::BoUpSLP &R);
 
+  /// Tries to vectorize the operand chains of the non-vectorizable
+  /// instructions in \p Insts.
+  template <typename ItT>
+  bool vectorizeNonVectorizableInsts(iterator_range<ItT> Insts, BasicBlock *BB,
+                                     slpvectorizer::BoUpSLP &R);
+
   /// Tries to vectorize constructs started from InsertValueInst or
   /// InsertElementInst instructions.
   bool vectorizeInserts(InstSetVector &Instructions, BasicBlock *BB,

@@ -1,0 +1,23 @@
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-linux-gnu %s | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-CPU --match-full-lines
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=generic %s | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-CPU --match-full-lines
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=apple-m1 %s | FileCheck %s -check-prefixes=ALL,ZCM-FPR128-CPU --match-full-lines
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 %s | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-ATTR --match-full-lines
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 %s | FileCheck %s -check-prefixes=ALL,ZCM-FPR128-ATTR --match-full-lines
+
+---
+name: zero_cycle_regmove_FPR8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $b0
+
+    ; ALL-LABEL: name: zero_cycle_regmove_FPR8
+
+    ; NOZCM-FPR128-CPU: $s1 = FMOVSr $s0
+
+    ; ZCM-FPR128-CPU: $q1 = ORRv16i8 undef $q0, undef $q0, implicit $b0
+
+    ; NOZCM-FPR128-ATTR: $s1 = FMOVSr $s0
+
+    ; ZCM-FPR128-ATTR: $q1 = ORRv16i8 undef $q0, undef $q0, implicit $b0
+    $b1 = COPY $b0

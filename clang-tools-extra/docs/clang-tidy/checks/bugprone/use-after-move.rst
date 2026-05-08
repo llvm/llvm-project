@@ -193,16 +193,19 @@ Use
 ---
 
 Any occurrence of the moved variable that is not a reinitialization (see below)
-is considered to be a use.
+or an explicit call to the variable destructor is considered to be a use.
 
-An exception to this are objects of type ``std::unique_ptr``,
-``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``.
 An exception to this are objects of type ``std::unique_ptr``,
 ``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``,
 which can be reinitialized via ``reset``. For smart pointers specifically, the
 moved-from objects have a well-defined state of being ``nullptr``s, and only
 ``operator*``, ``operator->`` and ``operator[]`` are considered bad accesses as
 they would be dereferencing a ``nullptr``.
+
+User-defined types can be annotated as having the same semantics as standard
+smart pointers with ``[[clang::annotate("clang-tidy",
+"bugprone-use-after-move", "null_after_move")]]``. This expresses that a
+moved-from object of this type is a null pointer.
 
 If multiple uses occur after a move, only the first of these is flagged.
 
@@ -253,3 +256,21 @@ For example, if an additional member variable is added to ``S``, it is easy to
 forget to add the reinitialization for this additional member. Instead, it is
 safer to assign to the entire struct in one go, and this will also avoid the
 use-after-move warning.
+
+Options
+-------
+
+.. option:: InvalidationFunctions
+
+  A semicolon-separated list of regular expressions matching names of functions
+  that cause their first arguments to be invalidated (e.g., closing a handle).
+  For member functions, the first argument is considered to be the implicit
+  object argument (``this``). Default value is an empty string.
+
+.. option:: ReinitializationFunctions
+
+  A semicolon-separated list of regular expressions matching names of functions
+  that reinitialize the object. For member functions, the implicit object
+  argument (``*this``) is considered to be reinitialized. For non-member or
+  static member functions, the first argument is considered to be
+  reinitialized. Default value is an empty string.

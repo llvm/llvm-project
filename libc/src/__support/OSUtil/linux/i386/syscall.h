@@ -14,19 +14,20 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE long syscall_impl(long num) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long num) {
   long ret;
   LIBC_INLINE_ASM("int $128" : "=a"(ret) : "a"(num) : "memory");
   return ret;
 }
 
-LIBC_INLINE long syscall_impl(long num, long arg1) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long num, long arg1) {
   long ret;
   LIBC_INLINE_ASM("int $128" : "=a"(ret) : "a"(num), "b"(arg1) : "memory");
   return ret;
 }
 
-LIBC_INLINE long syscall_impl(long num, long arg1, long arg2) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long num, long arg1,
+                                                     long arg2) {
   long ret;
   LIBC_INLINE_ASM("int $128"
                   : "=a"(ret)
@@ -35,7 +36,8 @@ LIBC_INLINE long syscall_impl(long num, long arg1, long arg2) {
   return ret;
 }
 
-LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long num, long arg1,
+                                                     long arg2, long arg3) {
   long ret;
   LIBC_INLINE_ASM("int $128"
                   : "=a"(ret)
@@ -44,8 +46,8 @@ LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3) {
   return ret;
 }
 
-LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
-                              long arg4) {
+[[gnu::always_inline]] LIBC_INLINE long
+syscall_impl(long num, long arg1, long arg2, long arg3, long arg4) {
   long ret;
   LIBC_INLINE_ASM("int $128"
                   : "=a"(ret)
@@ -54,8 +56,8 @@ LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
   return ret;
 }
 
-LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
-                              long arg4, long arg5) {
+[[gnu::always_inline]] LIBC_INLINE long
+syscall_impl(long num, long arg1, long arg2, long arg3, long arg4, long arg5) {
   long ret;
   LIBC_INLINE_ASM("int $128"
                   : "=a"(ret)
@@ -65,8 +67,10 @@ LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
   return ret;
 }
 
-LIBC_INLINE long syscall_impl(long num, long arg1, long arg2, long arg3,
-                              long arg4, long arg5, long arg6) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long num, long arg1,
+                                                     long arg2, long arg3,
+                                                     long arg4, long arg5,
+                                                     long arg6) {
   long ret;
   LIBC_INLINE_ASM(R"(
     push %[arg6]
