@@ -16,6 +16,7 @@ include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.td"
 
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
@@ -623,6 +624,29 @@ def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
   let builders = [
     OpBuilder<(ins)>
   ];
+}
+
+def WasmSSA_SelectOp : WasmSSA_Op<"select", [
+    AllTypesMatch<["true_value", "false_value", "result"]>,
+    Pure]> {
+  let summary = "Select between two values based on a condition.";
+  let description = [{
+     Returns `true_value` if `condition` is non-zero, `false_value` otherwise.
+     Both operands and the result must share the same Wasm value type.
+
+     Example:
+
+     ```mlir
+     // Returns %a if %cond is non-zero, otherwise %b.
+     %r = wasmssa.select %cond, %a, %b : i32
+     ```
+    }];
+  let arguments = (ins WasmSSA_ValType: $true_value,
+                       WasmSSA_ValType: $false_value,
+                       I32: $condition);
+  let results = (outs WasmSSA_ValType: $result);
+  let assemblyFormat =
+      "$condition `,` $true_value `,` $false_value attr-dict `:` type($result)";
 }
 
 // ---- Numeric ops
