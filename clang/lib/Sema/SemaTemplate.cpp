@@ -11053,7 +11053,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     // instantiated now, and its linkage might have changed.
     Consumer.HandleTopLevelDecl(DeclGroupRef(Specialization));
   } else if (TSK == TSK_ExplicitInstantiationDefinition) {
-    // C++2c [expr.prim.lambda#closure-19] A member of a closure type shall not
+    // C++2c [expr.prim.lambda.closure]/19 A member of a closure type shall not
     // be explicitly instantiated.
     if (const auto *RD = dyn_cast<CXXRecordDecl>(Specialization->getParent());
         RD && RD->isLambda()) {
