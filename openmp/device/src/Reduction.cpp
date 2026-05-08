@@ -20,7 +20,6 @@
 
 using namespace ompx;
 
-[[clang::always_inline]]
 static void gpu_regular_warp_reduce(void *reduce_data,
                                     ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
@@ -29,7 +28,6 @@ static void gpu_regular_warp_reduce(void *reduce_data,
   }
 }
 
-[[clang::always_inline]]
 static void gpu_irregular_warp_reduce(void *reduce_data,
                                       ShuffleReductFnTy shflFct, uint32_t size,
                                       uint32_t tid) {
@@ -44,7 +42,6 @@ static void gpu_irregular_warp_reduce(void *reduce_data,
   }
 }
 
-[[clang::always_inline]]
 static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
                                           ShuffleReductFnTy shflFct) {
   uint32_t size, remote_id, physical_lane_id;
@@ -64,7 +61,6 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
   return (logical_lane_id == 0);
 }
 
-[[clang::always_inline]]
 static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
                                             ShuffleReductFnTy shflFct,
                                             InterWarpCopyFnTy cpyFct) {
@@ -159,7 +155,6 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   return BlockThreadId == 0;
 }
 
-[[clang::always_inline]]
 static uint32_t roundToWarpsize(uint32_t s) {
   if (s < mapping::getWarpSize())
     return 1;
