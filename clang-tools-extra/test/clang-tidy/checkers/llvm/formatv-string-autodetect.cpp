@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy %s llvm-formatv-string %t -- \
-// RUN:   -config='{CheckOptions: {llvm-formatv-string.AdditionalFunctions: "llvm::createStringErrorV"}}'
+// RUN: %check_clang_tidy %s llvm-formatv-string %t
 
 namespace llvm {
 
