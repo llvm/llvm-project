@@ -2152,7 +2152,7 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
          TLI.isOperationLegalOrCustomOrPromote(ISD::FCOPYSIGN, EltVT)) ||
         (VT.getVectorNumElements() < 6 &&
          TLI.isOperationLegal(ISD::FCOPYSIGN, EltVT) &&
-         TLI.isExtractVecEltCheap(VT, 0)))
+         TLI.isExtractVecEltCheap(VT, 0) && TLI.isExtractVecEltCheap(VT, 1)))
       return SDValue();
   }
 
