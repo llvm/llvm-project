@@ -498,6 +498,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set DAG combine for LA32 and LA64.
   if (Subtarget.hasBasicF()) {
     setTargetDAGCombine(ISD::SINT_TO_FP);
+    setTargetDAGCombine(ISD::UINT_TO_FP);
   }
 
   setTargetDAGCombine(ISD::AND);
@@ -7749,6 +7750,25 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
+  // Sign-extend src to avoid scalarization.
+  if (VT.isVector()) {
+    SDValue Src = N->getOperand(0);
+    EVT SrcVT = Src.getValueType();
+
+    unsigned DstElts = VT.getVectorNumElements();
+    unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+    unsigned DstEltBits = VT.getScalarSizeInBits();
+
+    if (SrcEltBits >= DstEltBits)
+      return SDValue();
+
+    MVT WidenEltVT = MVT::getIntegerVT(DstEltBits);
+    MVT WidenSrcVT = MVT::getVectorVT(WidenEltVT, DstElts);
+
+    SDValue Extend = DAG.getNode(ISD::SIGN_EXTEND, DL, WidenSrcVT, Src);
+    return DAG.getNode(ISD::SINT_TO_FP, DL, VT, Extend);
+  }
+
   if (VT != MVT::f32 && VT != MVT::f64)
     return SDValue();
   if (VT == MVT::f32 && !Subtarget.hasBasicF())
@@ -7777,6 +7797,34 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
     // to use the new Chain.
     DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), Load.getValue(1));
     return DAG.getNode(LoongArchISD::SITOF, SDLoc(N), VT, Load);
+  }
+
+  return SDValue();
+}
+
+static SDValue performUINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const LoongArchSubtarget &Subtarget) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Zero-extend src to avoid scalarization.
+  if (VT.isVector()) {
+    SDValue Src = N->getOperand(0);
+    EVT SrcVT = Src.getValueType();
+
+    unsigned DstElts = VT.getVectorNumElements();
+    unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+    unsigned DstEltBits = VT.getScalarSizeInBits();
+
+    if (SrcEltBits >= DstEltBits)
+      return SDValue();
+
+    MVT WidenEltVT = MVT::getIntegerVT(DstEltBits);
+    MVT WidenSrcVT = MVT::getVectorVT(WidenEltVT, DstElts);
+
+    SDValue Extend = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenSrcVT, Src);
+    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, Extend);
   }
 
   return SDValue();
@@ -8067,6 +8115,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performEXTENDCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
     return performSINT_TO_FPCombine(N, DAG, DCI, Subtarget);
+  case ISD::UINT_TO_FP:
+    return performUINT_TO_FPCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:
