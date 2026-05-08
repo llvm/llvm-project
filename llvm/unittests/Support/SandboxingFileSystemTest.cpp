@@ -26,6 +26,8 @@ TEST(SandboxingFileSystemTest, Basic) {
       vfs::createSandboxingFileSystem(BaseFS, {"//root/dir1", "dir3"})
           .moveInto(SandBoxFS),
       Succeeded());
+  EXPECT_TRUE(SandBoxFS->exists("//root/dir1"));
+  EXPECT_TRUE(SandBoxFS->exists("//root/dir1/"));
   EXPECT_TRUE(SandBoxFS->exists("//root/dir1/a1"));
   EXPECT_FALSE(SandBoxFS->exists("//root/dir2/a2"));
   EXPECT_FALSE(SandBoxFS->exists("//root/dir1a/aa"));

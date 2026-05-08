@@ -17,14 +17,16 @@
 using namespace llvm;
 
 // FIXME: Move to llvm/Support/Path.h?
-/// \returns true if \p Path is a nested directory in \p ParentPath.
-/// \p Path should be absolute. Returns false if \p ParentPath is relative.
+/// \returns true if \p Path is a nested directory in \p ParentPath or equal to
+/// it. \p Path should be absolute. Returns false if \p ParentPath is relative.
 static bool isPathNestedIn(StringRef Path, StringRef ParentPath) {
   assert(sys::path::is_absolute(Path));
-  if (Path.size() <= ParentPath.size())
+  if (Path.size() < ParentPath.size())
     return false;
   if (!Path.starts_with(ParentPath))
     return false;
+  if (Path.size() == ParentPath.size())
+    return true;
   return sys::path::is_separator(Path.drop_front(ParentPath.size()).front());
 }
 
