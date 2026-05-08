@@ -789,7 +789,7 @@ __amd_streamOpsDecrement(
     __global atomic_ulong* ptrUlong,
     ulong value) {
 
-    [[clang::atomic(remote_memory, fine_grained_memory)]]
+    __attribute__((atomic(remote_memory, fine_grained_memory)))
     {
       if (ptrUint) {
         __scoped_atomic_fetch_sub((volatile uint*)ptrUint, (uint)value, memory_order_relaxed, __MEMORY_SCOPE_SYSTEM);
