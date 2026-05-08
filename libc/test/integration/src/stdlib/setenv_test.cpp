@@ -23,7 +23,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
 
     // Verify it was set
     char *value = LIBC_NAMESPACE::getenv("SETENV_TEST_VAR");
-    ASSERT_TRUE(value != nullptr);
+    ASSERT_NE(value, nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, "test_value"), 0);
   }
 
