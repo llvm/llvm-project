@@ -3189,8 +3189,17 @@ static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
 static Value *simplifyICmpUsingMonotonicValues(CmpPredicate Pred, Value *LHS,
                                                Value *RHS,
                                                const SimplifyQuery &Q) {
-  if (Pred != ICmpInst::ICMP_UGE && Pred != ICmpInst::ICMP_ULT)
+  if (Pred != ICmpInst::ICMP_UGE && Pred != ICmpInst::ICMP_ULT &&
+      Pred != ICmpInst::ICMP_UGT && Pred != ICmpInst::ICMP_ULE)
     return nullptr;
+
+  if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE) {
+    const APInt *C;
+    if (!match(RHS, m_APIntAllowPoison(C)) || C->isMaxValue())
+      return nullptr;
+    RHS = ConstantInt::get(RHS->getType(), *C + 1);
+    Pred = Pred == ICmpInst::ICMP_UGT ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
+  }
 
   // We have LHS uge GreaterValues and LowerValues uge RHS. If any of the
   // GreaterValues and LowerValues are the same, it follows that LHS uge RHS.
@@ -3477,13 +3486,22 @@ static Value *simplifyICmpWithBinOp(CmpPredicate Pred, Value *LHS, Value *RHS,
   }
 
   // If C is a power-of-2:
-  // (C << X)  >u 0x8000 --> false
-  // (C << X) <=u 0x8000 --> true
-  if (match(LHS, m_Shl(m_Power2(), m_Value())) && match(RHS, m_SignMask())) {
-    if (Pred == ICmpInst::ICMP_UGT)
-      return ConstantInt::getFalse(getCompareTy(RHS));
-    if (Pred == ICmpInst::ICMP_ULE)
-      return ConstantInt::getTrue(getCompareTy(RHS));
+  // (C << X)  >u 0x8000 or >=u 0x8001--> false
+  // (C << X) <=u 0x8000 or  <u 0x8001--> true
+  const APInt *RC;
+  if (match(LHS, m_Shl(m_Power2(), m_Value())) &&
+      match(RHS, m_APIntAllowPoison(RC))) {
+    if (RC->isSignMask()) {
+      if (Pred == ICmpInst::ICMP_UGT)
+        return ConstantInt::getFalse(getCompareTy(RHS));
+      if (Pred == ICmpInst::ICMP_ULE)
+        return ConstantInt::getTrue(getCompareTy(RHS));
+    } else if (!RC->isZero() && (*RC - 1).isSignMask()) {
+      if (Pred == ICmpInst::ICMP_UGE)
+        return ConstantInt::getFalse(getCompareTy(RHS));
+      if (Pred == ICmpInst::ICMP_ULT)
+        return ConstantInt::getTrue(getCompareTy(RHS));
+    }
   }
 
   if (!MaxRecurse || !LBO || !RBO || LBO->getOpcode() != RBO->getOpcode())
