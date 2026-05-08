@@ -32,3 +32,6 @@ class TestCase(TestBase):
         )
         self.expect("v ic", substrs=["[0] = 10", "[1] = 20"])
         self.expect("v fc", substrs=["[0] = 10.5", "[1] = 20.25"])
+
+    def test_failure(self):
+        self.expect("command script import broken_formatter.py", error=True)
