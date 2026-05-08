@@ -637,9 +637,9 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     // Check for direct ivars access which helps us with implicit access to
     // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
-    llvm::StringRef instance_var_name = m_sc.GetInstanceVariableName();
-    if (!instance_var_name.empty()) {
-      var_sp = variable_list->FindVariable(ConstString(instance_var_name));
+    llvm::StringRef instance_name = m_sc.GetInstanceName();
+    if (!instance_name.empty()) {
+      var_sp = variable_list->FindVariable(ConstString(instance_name));
       if (var_sp) {
         separator_idx = 0;
         if (Type *var_type = var_sp->GetType())
