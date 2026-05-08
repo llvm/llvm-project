@@ -386,14 +386,19 @@ TEST(EJitRuntimeState, ActivateAndDeactivate) {
 TEST(EJitRuntimeState, ActivateAllAndDeactivateAll) {
   EJitRuntimeState state;
 
+  // Register a period array so activateAll/deactivateAll know the cell range
+  int dummy[8];
+  state.getRegistry().registerArray("cell", "dummy_cells", dummy, 8);
+
   state.activateAll("cell");
 
-  // After activateAll, specific cells should still track individually
-  state.activate("cell", 5);
-  EXPECT_TRUE(state.isActive("cell", 5));
+  // After activateAll, all cells of the registered array are active
+  EXPECT_TRUE(state.isActive("cell", 0));
+  EXPECT_TRUE(state.isActive("cell", 7));
 
   state.deactivateAll("cell");
-  EXPECT_FALSE(state.isActive("cell", 5));
+  EXPECT_FALSE(state.isActive("cell", 0));
+  EXPECT_FALSE(state.isActive("cell", 7));
 }
 
 TEST(EJitRuntimeState, IndependentPeriods) {
@@ -513,16 +518,23 @@ TEST(EJit, ConstructionAndBasicOps) {
 }
 
 TEST(EJit, ActivateAllAndDeactivateAll) {
+  // Register a period array before constructing EJit so
+  // activateAll/deactivateAll know the cell range.
+  int dummy[4];
+  EJitRegistrationStore::instance().consume(); // clear leftover
+  EJitRegistrationStore::instance().registerPeriodArray(
+      "p1", "dummy_arr", dummy, 4);
+
   EJit ejit(Config{});
 
-  ejit.activate("p1", 0);
-  ejit.activate("p1", 1);
   ejit.activateAll("p1");
+  EXPECT_TRUE(ejit.isActive("p1", 0));
+  EXPECT_TRUE(ejit.isActive("p1", 3));
 
   // deactivateAll should clear all
   ejit.deactivateAll("p1");
   EXPECT_FALSE(ejit.isActive("p1", 0));
-  EXPECT_FALSE(ejit.isActive("p1", 1));
+  EXPECT_FALSE(ejit.isActive("p1", 3));
 }
 
 TEST(EJit, CacheOperations) {
@@ -1287,6 +1299,84 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionIntFloat) {
   auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
   ASSERT_NE(RetVal, nullptr);
   EXPECT_EQ(RetVal->getSExtValue(), 13);
+}
+
+//===----------------------------------------------------------------------===//
+// EJitStructFieldPass multi-dimensional array test
+//===----------------------------------------------------------------------===//
+
+/// Create a function accessing a 2D period array: g_arr[1][2]
+/// The GEP has 3 indices: {0, 1, 2}. Tests the multi-index offset fix.
+static Function *createMultiDimArrayFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  auto *InnerTy = ArrayType::get(Int32Ty, 8);   // [8 x i32]
+  auto *OuterTy = ArrayType::get(InnerTy, 4);    // [4 x [8 x i32]]
+
+  auto *GVar = new GlobalVariable(M, OuterTy, false, GlobalValue::InternalLinkage,
+                                   ConstantAggregateZero::get(OuterTy), "g_2d");
+
+  Metadata *ArrOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "access_2d", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  // g_2d[1][2] with 3-index GEP
+  Value *Indices[] = {B.getInt32(0), B.getInt64(1), B.getInt64(2)};
+  auto *GEP = B.CreateInBoundsGEP(OuterTy, GVar, Indices, "gep_2d");
+  auto *Load = B.CreateLoad(Int32Ty, GEP, "val_2d");
+  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  B.CreateRet(Load);
+  return F;
+}
+
+TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultiDimArray) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_2d", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createMultiDimArrayFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  // 2D mock: [4][8] int32
+  // g_2d[1][2] = element at row 1, col 2 = offset 1*8*4 + 2*4 = 40 bytes
+  int32_t mock2D[4][8] = {
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 99, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+  };
+
+  PeriodArrayRegistry reg;
+  GlobalVariable *GV = M->getGlobalVariable("g_2d", true);
+  ASSERT_NE(GV, nullptr);
+  reg.registerArray("cell", "g_2d", mock2D, 4);
+
+  EJitStructFieldPass sp(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  sp.run(*F, FAM);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 99);
 }
 
 //===----------------------------------------------------------------------===//

@@ -83,24 +83,23 @@ accumulateFullOffset(const DataLayout &DL, const Value *PtrOp) {
     if (!GEP)
       return std::nullopt;
 
+    // Compute the total offset for all indices of this GEP in one call.
+    // getIndexedOffsetInType already returns the cumulative offset from the
+    // start of the source element type through all given indices.
+    SmallVector<Value *, 4> IdxList;
+    bool allConstant = true;
     for (auto I = GEP->idx_begin(), E = GEP->idx_end(); I != E; ++I) {
-      auto *CI = dyn_cast<ConstantInt>(*I);
-      if (!CI)
-        return std::nullopt;
-
-      if (I == GEP->idx_begin()) {
-        total += CI->getValue().sextOrTrunc(total.getBitWidth()) *
-                 APInt(total.getBitWidth(),
-                       DL.getTypeAllocSize(GEP->getSourceElementType()));
-      } else {
-        SmallVector<Value *, 4> IdxList;
-        for (auto J = GEP->idx_begin(); J != I + 1; ++J)
-          IdxList.push_back(*J);
-        total += APInt(total.getBitWidth(),
-                       DL.getIndexedOffsetInType(
-                           GEP->getSourceElementType(), IdxList));
+      if (!isa<ConstantInt>(*I)) {
+        allConstant = false;
+        break;
       }
+      IdxList.push_back(*I);
     }
+    if (!allConstant)
+      return std::nullopt;
+    total += APInt(total.getBitWidth(),
+                   DL.getIndexedOffsetInType(
+                       GEP->getSourceElementType(), IdxList));
 
     PtrOp = GEP->getPointerOperand();
   }
