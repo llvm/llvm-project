@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILValueEnumerator.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"
@@ -361,7 +362,9 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
   return Stack;
 }
 
-ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
+ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
+                                 const DXILDebugInfoMap &DebugInfo)
+    : DebugInfo(DebugInfo) {
   EnumerateType(PrefixType);
   
   UseListOrders = predictUseListOrder(M);
@@ -543,22 +546,26 @@ void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
   for (const auto &I : Map) {
     const Value *V = I.first;
     if (V->hasName())
-      OS << "Value: " << V->getName();
+      OS << "Value: " << V->getName() << '\n';
     else
       OS << "Value: [null]\n";
-    V->print(errs());
-    errs() << '\n';
+    V->print(OS);
+    OS << '\n';
 
-    OS << " Uses(" << V->getNumUses() << "):";
-    for (const Use &U : V->uses()) {
-      if (&U != &*V->use_begin())
-        OS << ",";
-      if (U->hasName())
-        OS << " " << U->getName();
-      else
-        OS << " [null]";
+    if (V->hasUseList()) {
+      OS << " Uses(" << V->getNumUses() << "):";
+      for (const Use &U : V->uses()) {
+        if (&U != &*V->use_begin())
+          OS << ",";
+        if (U->hasName())
+          OS << " " << U->getName();
+        else
+          OS << " [null]";
+      }
+      OS << '\n';
     }
-    OS << "\n\n";
+
+    OS << '\n';
   }
 }
 
@@ -644,6 +651,8 @@ void ValueEnumerator::dropFunctionFromMetadata(
 }
 
 void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
+  MD = getDXILMetadata(MD);
+
   // It's vital for reader efficiency that uniqued subgraphs are done in
   // post-order; it's expensive when their operands have forward references.
   // If a distinct node is referenced from a uniqued node, it'll be delayed
@@ -665,7 +674,7 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
         Worklist.back().second, N->op_end(),
         [&](const Metadata *MD) { return enumerateMetadataImpl(F, MD); });
     if (I != N->op_end()) {
-      auto *Op = cast<MDNode>(*I);
+      auto *Op = cast<MDNode>(getDXILMetadata(*I));
       Worklist.back().second = ++I;
 
       // Delay traversing Op if it's a distinct node and N is uniqued.
@@ -674,6 +683,15 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
       else
         Worklist.push_back(std::make_pair(Op, Op->op_begin()));
       continue;
+    }
+
+    if (const Metadata *ExtraMD = DebugInfo.MDExtra.lookup(N)) {
+      if (enumerateMetadataImpl(F, ExtraMD)) {
+        if (const auto *ExtraN = dyn_cast<MDNode>(ExtraMD)) {
+          Worklist.push_back(std::make_pair(ExtraN, ExtraN->op_begin()));
+          continue;
+        }
+      }
     }
 
     // All the operands have been visited.  Now assign an ID.
@@ -693,6 +711,8 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
 
 const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F,
                                                      const Metadata *MD) {
+  MD = getDXILMetadata(MD);
+
   if (!MD)
     return nullptr;
 
@@ -861,6 +881,12 @@ void ValueEnumerator::organizeMetadata() {
   }
   R.Last = FunctionMDs.size();
   FunctionMDInfo[PrevF] = R;
+}
+
+const Metadata *ValueEnumerator::getDXILMetadata(const Metadata *M) const {
+  if (const Metadata *Replace = DebugInfo.MDReplace.lookup(M))
+    return Replace;
+  return M;
 }
 
 void ValueEnumerator::incorporateFunctionMetadata(const Function &F) {

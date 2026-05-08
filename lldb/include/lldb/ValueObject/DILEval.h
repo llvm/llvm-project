@@ -30,7 +30,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// Given the name of an identifier, check to see if it matches the name of a
 /// global variable. If so, find the ValueObject for that global variable, and
 /// create and return an IdentifierInfo object containing all the relevant
-/// informatin about it.
+/// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
                                            lldb::TargetSP target_sp,
@@ -143,10 +143,10 @@ private:
   std::shared_ptr<StackFrame> m_exe_ctx_scope;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
   // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
   [[maybe_unused]] bool m_allow_var_updates;
+  bool m_allow_globals = true;
 };
 
 } // namespace lldb_private::dil

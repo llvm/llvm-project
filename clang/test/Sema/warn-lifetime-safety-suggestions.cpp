@@ -570,3 +570,70 @@ void test_inference() {
   (void)ptr; // expected-note {{later used here}}
 }
 } // namespace make_unique_suggestion
+
+namespace new_allocation_suggestion {
+
+View* MakeView(const MyObj& in) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return new View(in);            // expected-note {{param returned here}} {{destroyed here}}
+}
+
+void test_new_allocation() {
+  View* v = MakeView(MyObj{}); // expected-warning {{object whose reference is captured does not live long enough}} \
+                               // expected-note {{destroyed here}}
+  (void)v;                     // expected-note {{later used here}}
+}
+
+struct LifetimeBoundCtor {
+  View v;
+  LifetimeBoundCtor();
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]) : v(obj) {}
+};
+
+struct HasCtorField {
+  LifetimeBoundCtor* field;                                             // expected-note {{escapes to this field}}
+  HasCtorField(const MyObj& obj) : field(new LifetimeBoundCtor(obj)) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+HasCtorField test_dangling_field_ctor() {
+  MyObj obj;
+  HasCtorField x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x;            // expected-note {{returned here}}
+}
+
+struct HasSetterField {
+  LifetimeBoundCtor* field; // expected-note {{this field dangles}}
+  // FIXME: Does not currently suggest `lifetime_capture_by(this)` (even without `new`)
+  void set(const MyObj& obj) {
+    field = new LifetimeBoundCtor(obj);
+  }
+  void reset() {
+    MyObj obj;
+    field = new LifetimeBoundCtor(obj); // expected-warning {{address of stack memory escapes to a field}}
+  }
+};
+
+HasSetterField test_dangling_field_member_fn() {
+  MyObj obj;
+  HasSetterField x;
+  x.set(obj);
+  return x;
+}
+
+} // namespace new_allocation_suggestion
+
+namespace GH193747 {
+
+std::unique_ptr<int> create_up();
+std::shared_ptr<int> create_sp() {
+  return create_up();
+}
+
+struct S {
+  int* field;
+  S(std::unique_ptr<int>&& up) : field(up.get()) { up.release(); }
+};
+
+S foo() {
+  return S(create_up());
+}
+} // namespace GH193747

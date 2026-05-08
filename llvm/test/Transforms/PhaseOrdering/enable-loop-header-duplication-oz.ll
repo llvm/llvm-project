@@ -5,8 +5,8 @@
 ;; memset. If loop idiom recognition begins to recognize unrotated loops, this
 ;; test will need to be updated.
 
-; RUN: opt -passes='default<Oz>' -S < %s  | FileCheck %s --check-prefix=NOROTATION
-; RUN: opt -passes='default<Oz>' -S  -enable-loop-header-duplication-at-minsize < %s  | FileCheck %s --check-prefix=ROTATION
+; RUN: opt -passes='default<O2>' -S < %s  | FileCheck %s --check-prefix=NOROTATION
+; RUN: opt -passes='default<O2>' -S  -enable-loop-header-duplication-at-minsize < %s  | FileCheck %s --check-prefix=ROTATION
 
 define void @test(i8* noalias nonnull align 1 %start, i8* %end) minsize {
 ; NOROTATION-LABEL: define void @test(

@@ -722,6 +722,9 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
     else
       MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
     break;
+  case Triple::mipsel:
+    MachineType = COFF::IMAGE_FILE_MACHINE_R4000;
+    break;
   default:
     fatalError("Unsupported architecture in target '" + Twine(TargetTriple) +
                "'");

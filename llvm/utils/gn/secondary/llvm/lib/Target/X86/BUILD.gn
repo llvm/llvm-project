@@ -154,6 +154,7 @@ static_library("LLVMX86CodeGen") {
     "X86ISelLoweringCall.cpp",
     "X86IndirectBranchTracking.cpp",
     "X86IndirectThunks.cpp",
+    "X86InsertVZeroUpper.cpp",
     "X86InsertX87Wait.cpp",
     "X86InstCombineIntrinsic.cpp",
     "X86InstrFMA3Info.cpp",
@@ -184,7 +185,6 @@ static_library("LLVMX86CodeGen") {
     "X86TargetObjectFile.cpp",
     "X86TargetTransformInfo.cpp",
     "X86TileConfig.cpp",
-    "X86VZeroUpper.cpp",
     "X86WinEHState.cpp",
     "X86WinEHUnwindV2.cpp",
   ]
