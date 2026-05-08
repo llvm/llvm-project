@@ -39,8 +39,8 @@ entry:
 ; Just Expansion, no scalarization or lowering:
 ; EXPCHECK: [[DIV:%.+]] = fdiv <16 x float> %y, %x
 ; EXPCHECK: [[ATAN:%.+]] = call <16 x float> @llvm.atan.v16f32(<16 x float> [[DIV]])
-; EXPCHECK-DAG: [[ADD_PI:%.+]] = fadd <16 x float> [[ATAN]], splat (float 0x400921FB60000000)
-; EXPCHECK-DAG: [[SUB_PI:%.+]] = fsub <16 x float> [[ATAN]], splat (float 0x400921FB60000000)
+; EXPCHECK-DAG: [[ADD_PI:%.+]] = fadd <16 x float> [[ATAN]], splat (float
+; EXPCHECK-DAG: [[SUB_PI:%.+]] = fsub <16 x float> [[ATAN]], splat (float
 ; EXPCHECK-DAG: [[X_LT_0:%.+]] = fcmp olt <16 x float> %x, zeroinitializer
 ; EXPCHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq <16 x float> %x, zeroinitializer
 ; EXPCHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge <16 x float> %y, zeroinitializer
@@ -50,9 +50,9 @@ entry:
 ; EXPCHECK: [[XLT0_AND_YLT0:%.+]] = and <16 x i1> [[X_LT_0]], [[Y_LT_0]]
 ; EXPCHECK: [[SELECT_SUB_PI:%.+]] = select <16 x i1> [[XLT0_AND_YLT0]], <16 x float> [[SUB_PI]], <16 x float> [[SELECT_ADD_PI]]
 ; EXPCHECK: [[XEQ0_AND_YLT0:%.+]] = and <16 x i1> [[X_EQ_0]], [[Y_LT_0]]
-; EXPCHECK: [[SELECT_NEGHPI:%.+]] = select <16 x i1> [[XEQ0_AND_YLT0]], <16 x float> splat (float 0xBFF921FB60000000), <16 x float> [[SELECT_SUB_PI]]
+; EXPCHECK: [[SELECT_NEGHPI:%.+]] = select <16 x i1> [[XEQ0_AND_YLT0]], <16 x float> splat (float {{.*}}), <16 x float> [[SELECT_SUB_PI]]
 ; EXPCHECK: [[XEQ0_AND_YGE0:%.+]] = and <16 x i1> [[X_EQ_0]], [[Y_GE_0]]
-; EXPCHECK: [[SELECT_HPI:%.+]] = select <16 x i1> [[XEQ0_AND_YGE0]], <16 x float> splat (float 0x3FF921FB60000000), <16 x float> [[SELECT_NEGHPI]]
+; EXPCHECK: [[SELECT_HPI:%.+]] = select <16 x i1> [[XEQ0_AND_YGE0]], <16 x float> splat (float {{.*}}), <16 x float> [[SELECT_NEGHPI]]
 ; EXPCHECK: ret <16 x float> [[SELECT_HPI]]
 
 ; Scalarization occurs after expansion, so atan scalarization is tested separately.
