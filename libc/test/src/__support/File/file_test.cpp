@@ -850,7 +850,8 @@ TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
   auto result = f->write(&euro, 1);
 
   // The incomplete character must not be counted as written.
-  EXPECT_TRUE(result.has_error() || result.value < 1);
+  EXPECT_TRUE(result.has_error());
+  EXPECT_LT(result.value, 1);
 
   // The error indicator on the stream should be set.
   EXPECT_TRUE(f->error());
