@@ -5843,7 +5843,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
                                           UndefPoisonKind Kind,
                                           bool ConsiderFlags,
                                           unsigned Depth) const {
-  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+  if (ConsiderFlags && includesPoison(Kind) && Op->hasPoisonGeneratingFlags())
     return true;
 
   unsigned Opcode = Op.getOpcode();
@@ -5970,7 +5970,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
     // If the max shift amount isn't in range, then the shift can
     // create poison.
-    return !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
+    return includesPoison(Kind) &&
+           !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
 
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ_ZERO_UNDEF:
