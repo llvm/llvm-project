@@ -38,7 +38,9 @@ public:
   }
 
   void handleFileDependency(StringRef File) override {
-    Dependencies.push_back(std::string(File));
+    SmallString<128> NormalizedFile = File;
+    llvm::sys::path::remove_dots(NormalizedFile, /*remove_dot_dot=*/true);
+    Dependencies.emplace_back(NormalizedFile.str());
   }
 
   // These are ignored for the make format as it can't support the full
