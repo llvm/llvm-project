@@ -111,28 +111,60 @@ bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
          mangling_scheme == Mangled::eManglingSchemeMSVC;
 }
 
+static bool IsPossibleMangledFunction(llvm::StringRef name) {
+  // Itanium
+  if (name.starts_with("_Z")) {
+    return name.size() >= 3 &&
+           name[2] != 'T' && // avoid virtual table, VTT structure,
+                             // typeinfo structure, and typeinfo
+                             // mangled_name
+           name[2] != 'G' && // avoid guard variables
+           name[2] != 'Z';   // named local entities (if we
+                             // eventually handle eSymbolTypeData,
+                             // we will want this back)
+  }
+  // Microsoft
+  if (name.starts_with('?')) {
+    // Avoid any special intrinsics. This matches consumeSpecialIntrinsicKind()
+    // from MicrosoftDemangle.
+    if (name.size() < 4 || name[1] != '?' || name[2] != '_')
+      return true;
+
+    switch (name[3]) {
+    case '7': // vftable
+    case '8': // vbtable
+    case '9': // vcall thunk
+    case 'A': // typeof
+    case 'B': // local static guard
+    case 'C': // string literal symbol
+    case 'P': // udt returning
+    case 'R': // rtti
+    case 'S': // local vftable
+      return false;
+    case '_':
+      return name.size() < 5 || name[4] != 'E' || // dynamic initializer
+             name[4] != 'F' ||                    // dynamic atexit destructor
+             name[4] != 'J';                      // local static thread guard
+    }
+    return true;
+  }
+
+  return false;
+}
+
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
     Mangled mangled) const {
   const char *mangled_name_cstr = mangled.GetMangledName().GetCString();
   ConstString demangled_name = mangled.GetDemangledName();
-  if (demangled_name && mangled_name_cstr && mangled_name_cstr[0]) {
-    if (mangled_name_cstr[0] == '_' && mangled_name_cstr[1] == 'Z' &&
-        (mangled_name_cstr[2] != 'T' && // avoid virtual table, VTT structure,
-                                        // typeinfo structure, and typeinfo
-                                        // mangled_name
-         mangled_name_cstr[2] != 'G' && // avoid guard variables
-         mangled_name_cstr[2] != 'Z'))  // named local entities (if we
-                                        // eventually handle eSymbolTypeData,
-                                        // we will want this back)
-    {
-      CxxMethodName cxx_method(demangled_name);
-      if (!cxx_method.GetBasename().empty()) {
-        std::string shortname;
-        if (!cxx_method.GetContext().empty())
-          shortname = cxx_method.GetContext().str() + "::";
-        shortname += cxx_method.GetBasename().str();
-        return ConstString(shortname);
-      }
+  if (demangled_name && mangled_name_cstr &&
+      IsPossibleMangledFunction(mangled_name_cstr)) {
+    CxxMethodName cxx_method(demangled_name);
+    if (!cxx_method.GetBasename().empty()) {
+      std::string shortname;
+      if (!cxx_method.GetContext().empty())
+        shortname = cxx_method.GetContext().str() + "::";
+      shortname += cxx_method.GetBasename().str();
+      return ConstString(shortname);
     }
   }
   if (demangled_name)
