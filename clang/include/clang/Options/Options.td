@@ -5964,9 +5964,10 @@ def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
 def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>, TargetSpecific;
-def mno_inline_glue : Flag<["-"], "mno-inline-glue">, Group<m_Group>,
+def maix_ptr_glue : Flag<["-"], "maix-use-ptrgl">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
   HelpText<"Use ._ptrgl routine for indirect calls (AIX only)">;
-def minline_glue : Flag<["-"], "minline-glue">, Group<m_Group>,
+def mnoaix_ptr_glue : Flag<["-"], "mno-aix-use-ptrgl">, Group<m_Group>, TargetSpecific,
   HelpText<"Emit indirect calls inline (AIX only) (default)">;
 
 
