@@ -513,6 +513,15 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
   AffineMap transMap =
       dir == CrdTransDirectionKind::dim2lvl ? getDimToLvl() : getLvlToDim();
 
+  // Check if transMap is valid. There are cases where the lvlToDim map is
+  // uninitialized due to the format used, e.g. ELL. This is visible as
+  // inferring lvlToDim (see inferLvlToDim function below) may return an
+  // uninitialized affine map. Fallback to dynamic shapes.
+  if (!transMap) {
+    ret.resize(rank, ShapedType::kDynamic);
+    return ret;
+  }
+
   SmallVector<AffineExpr> dimRep;
   dimRep.reserve(srcShape.size());
   for (int64_t sz : srcShape) {

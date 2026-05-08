@@ -14,7 +14,7 @@ entry:
 define <4 x float> @test_tdo_v2_f32_atan() {
 ; CHECK-LABEL: define <4 x float> @test_tdo_v2_f32_atan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x float> <float 0.000000e+00, float -0.000000e+00, float 0x3FE921FB60000000, float 0xBFE921FB60000000>
+; CHECK-NEXT:    ret <4 x float> <float 0.000000e+00, float -0.000000e+00, float f0x3F490FDB, float f0xBF490FDB>
 ;
 entry:
   %c = call <4 x float> @_Z4atanDv4_f(<4 x float> <float 0.000000e+00, float -0.000000e+00, float 1.000000e+00, float -1.000000e+00>)
@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_atan() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_atan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
 entry:
   %c = call half @_Z4atanDh(half 0.000000e+00)
@@ -34,7 +34,7 @@ entry:
 define <4 x half> @test_tdo_v2_f16_atan() {
 ; CHECK-LABEL: define <4 x half> @test_tdo_v2_f16_atan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x half> <half 0xH0000, half 0xH8000, half 0xH3A48, half 0xHBA48>
+; CHECK-NEXT:    ret <4 x half> <half 0.000000e+00, half -0.000000e+00, half 7.851560e-01, half -7.851560e-01>
 ;
 entry:
   %c = call <4 x half> @_Z4atanDv4_Dh(<4 x half> <half 0.000000e+00, half -0.000000e+00, half 1.000000e+00, half -1.000000e+00>)
@@ -54,7 +54,7 @@ entry:
 define <4 x double> @test_tdo_v2_f64_atan() {
 ; CHECK-LABEL: define <4 x double> @test_tdo_v2_f64_atan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x double> <double 0.000000e+00, double -0.000000e+00, double 0x3FE921FB54442D18, double 0xBFE921FB54442D18>
+; CHECK-NEXT:    ret <4 x double> <double 0.000000e+00, double -0.000000e+00, double f0x3FE921FB54442D18, double f0xBFE921FB54442D18>
 ;
 entry:
   %c = call <4 x double> @_Z4atanDv4_d(<4 x double> <double 0.000000e+00, double -0.000000e+00, double 1.000000e+00, double -1.000000e+00>)

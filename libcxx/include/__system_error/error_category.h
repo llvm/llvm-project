@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class error_condition;
 class _LIBCPP_EXPORTED_FROM_ABI error_code;
@@ -70,6 +71,7 @@ public:
 [[__gnu__::__const__]] [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& generic_category() _NOEXCEPT;
 [[__gnu__::__const__]] [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& system_category() _NOEXCEPT;
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
