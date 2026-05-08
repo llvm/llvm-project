@@ -29,7 +29,7 @@
 EMPTY: !<thin>
 
 # File instance counting should respect Windows case-insensitive name matching.
-# Otherwise, if you have foo.txt and FOO.TXT, "-N 2 foo.txt" fails with because
+# Otherwise, if you have foo.txt and FOO.TXT, "-N 2 foo.txt" fails because
 # file is not found.
 
 # RUN: mkdir -p %t/a %t/b
