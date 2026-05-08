@@ -75,7 +75,8 @@ static llvm::Expected<ParseResult> parseFormatvString(llvm::StringRef Fmt) {
       HasAutomatic = true;
     } else {
       if (IndexStr.getAsInteger(10, Index))
-        return llvm::createStringError("invalid replacement index");
+        return llvm::createStringError(
+            "invalid replacement index in format string");
       HasExplicit = true;
     }
 
@@ -163,8 +164,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto ParsedOrErr = parseFormatvString(FmtString);
   if (!ParsedOrErr) {
-    diag(FmtLiteral->getBeginLoc(), "formatv() %0")
-        << llvm::toString(ParsedOrErr.takeError());
+    diag(FmtLiteral->getBeginLoc(), llvm::toString(ParsedOrErr.takeError()));
     return;
   }
 
@@ -173,7 +173,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (NumRequiredArgs != NumFmtArgs) {
     diag(FmtLiteral->getBeginLoc(),
-         "formatv() format string requires %0 argument%s0, but %1 argument%s1 "
+         "format string requires %0 argument%s0, but %1 argument%s1 "
          "%plural{1:was|:were}1 provided")
         << NumRequiredArgs << NumFmtArgs;
     return;
@@ -189,8 +189,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
     if (0 <= UnusedIndex && UnusedIndex < NumRequiredArgs) {
       // Point to the unused argument.
       const Expr *UnusedArg = Call->getArg(PackParamIndex + UnusedIndex);
-      diag(UnusedArg->getBeginLoc(),
-           "formatv() argument unused in format string");
+      diag(UnusedArg->getBeginLoc(), "argument unused in format string");
       return;
     }
   }

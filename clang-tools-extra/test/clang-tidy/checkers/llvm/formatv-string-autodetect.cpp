@@ -17,8 +17,8 @@ void correct() {
 
 void wrong_count() {
   llvm::createStringErrorV(0, "{0} {1}", 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: formatv() format string requires 2 arguments, but 1 argument was provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: format string requires 2 arguments, but 1 argument was provided
 
   llvm::createStringErrorV("{0} {1}", 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: formatv() format string requires 2 arguments, but 1 argument was provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: format string requires 2 arguments, but 1 argument was provided
 }

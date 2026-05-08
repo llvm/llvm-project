@@ -15,13 +15,13 @@ This check diagnoses the following issues:
 
 .. code-block:: c++
 
-  // warning: formatv() format string requires 2 arguments, but 1 argument was provided
+  // warning: format string requires 2 arguments, but 1 argument was provided
   llvm::formatv("{0} {1}", x);
 
-  // warning: formatv() format string mixes automatic and explicit indices
+  // warning: format string mixes automatic and explicit indices
   llvm::formatv("{} {1}", x, y);
 
-  // warning: formatv() argument unused in format string
+  // warning: argument unused in format string
   llvm::formatv("{0} {2}", x, y, z);
 
   // OK.

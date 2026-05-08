@@ -28,28 +28,28 @@ void correct() {
 
 void too_few_args() {
   llvm::formatv("{0} {1}", 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 2 arguments, but 1 argument was provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: format string requires 2 arguments, but 1 argument was provided
 
   llvm::formatv("{0} {1} {2}", 1, 2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 3 arguments, but 2 arguments were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: format string requires 3 arguments, but 2 arguments were provided
 }
 
 void too_many_args() {
   llvm::formatv("{0}", 1, 2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 1 argument, but 2 arguments were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: format string requires 1 argument, but 2 arguments were provided
 
   llvm::formatv("no replacements", 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string requires 0 arguments, but 1 argument was provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: format string requires 0 arguments, but 1 argument was provided
 }
 
 void mixed_indices() {
   llvm::formatv("{} {1}", 1, 2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: formatv() format string mixes automatic and explicit indices
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: format string mixes automatic and explicit indices
 }
 
 void holes_in_indices() {
   llvm::formatv("{0} {2}", 1, 2, 3);
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: formatv() argument unused in format string
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: argument unused in format string
 }
 
 void non_literal_format_string(const char *fmt) {
@@ -60,5 +60,10 @@ void non_literal_format_string(const char *fmt) {
 void bool_overload() {
   llvm::formatv(false, "{0} {1}", 1, 2);
   llvm::formatv(true, "{0}", 1, 2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: formatv() format string requires 1 argument, but 2 arguments were provided
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: format string requires 1 argument, but 2 arguments were provided
+}
+
+void invalid_index() {
+  llvm::formatv("{abc}", 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: invalid replacement index in format string
 }
