@@ -10874,15 +10874,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
           return false;
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
         // old name of the object to be used to name the new object.
-        unsigned SubobjectSize = 1;
-        unsigned AllocSize = 1;
-        if (auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
-          AllocSize = CAT->getZExtSize();
-        if (auto *CAT = dyn_cast<ConstantArrayType>(SubobjType))
-          SubobjectSize = CAT->getZExtSize();
-        if (SubobjectSize < AllocSize ||
-            !Info.Ctx.hasSimilarType(Info.Ctx.getBaseElementType(SubobjType),
-                                     Info.Ctx.getBaseElementType(AllocType))) {
+        if (!Info.Ctx.hasSimilarType(SubobjType, AllocType)) {
           Info.FFDiag(E, diag::note_constexpr_placement_new_wrong_type)
               << SubobjType << AllocType;
           return false;
@@ -10899,6 +10891,22 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         return false;
       }
     } Handler = {Info, E, AllocType, AK, nullptr};
+
+    if (AllocType->isArrayType() &&
+        Result.Designator.MostDerivedIsArrayElement &&
+        Result.Designator.Entries.back().getAsArrayIndex() == 0) {
+      // The destination of placement new is pointing to the first element
+      // of an array.  There's a special case in [expr.const]: "[...] if T is an
+      // array type, to the first element of such an object [...]".  Handle
+      // that case here by dropping the last entry in the designator list.
+      QualType AllocElementType =
+          Info.Ctx.getAsArrayType(AllocType)->getElementType();
+      if (Info.Ctx.hasSimilarType(AllocElementType,
+                                  Result.Designator.MostDerivedType)) {
+        Result.Designator.truncate(Info.Ctx, Result.Base,
+                                   Result.Designator.MostDerivedPathLength - 1);
+      }
+    }
 
     CompleteObject Obj = findCompleteObject(Info, E, AK, Result, AllocType);
     if (!Obj || !findSubobject(Info, E, Obj, Result.Designator, Handler))

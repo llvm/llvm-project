@@ -2233,8 +2233,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
-  QualType StorageType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
   const ASTContext &ASTCtx = S.getASTContext();
+  QualType StorageType = Ptr.getType();
   QualType AllocType;
   if (ArraySize) {
     AllocType = ASTCtx.getConstantArrayType(
@@ -2245,16 +2245,18 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     AllocType = NewExpr->getAllocatedType();
   }
 
-  unsigned StorageSize = 1;
-  unsigned AllocSize = 1;
-  if (const auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
-    AllocSize = CAT->getZExtSize();
-  if (const auto *CAT = dyn_cast<ConstantArrayType>(StorageType))
-    StorageSize = CAT->getZExtSize();
+  if (AllocType->isArrayType() && Ptr.isArrayElement() && Ptr.getIndex() == 0) {
+    // The destination of placement new is pointing to the first element
+    // of an array.  There's a special case in [expr.const]: "[...] if T is an
+    // array type, to the first element of such an object [...]".  Handle
+    // that case here by using the base of the Pointer.
+    QualType AllocElementType =
+        ASTCtx.getAsArrayType(AllocType)->getElementType();
+    if (ASTCtx.hasSimilarType(AllocElementType, StorageType))
+      StorageType = Ptr.getBase().getType();
+  }
 
-  if (AllocSize > StorageSize ||
-      !ASTCtx.hasSimilarType(ASTCtx.getBaseElementType(AllocType),
-                             ASTCtx.getBaseElementType(StorageType))) {
+  if (!ASTCtx.hasSimilarType(AllocType, StorageType)) {
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_constexpr_placement_new_wrong_type)
         << StorageType << AllocType;
