@@ -489,8 +489,6 @@ define float @ftrunc_freeze_fround(float %a0) nounwind {
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll roundf
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    calll truncf
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;

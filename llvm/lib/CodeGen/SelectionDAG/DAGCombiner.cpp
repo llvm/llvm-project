@@ -20316,6 +20316,7 @@ SDValue DAGCombiner::visitFTRUNC(SDNode *N) {
   case ISD::FRINT:
   case ISD::FTRUNC:
   case ISD::FNEARBYINT:
+  case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FFLOOR:
   case ISD::FCEIL:
