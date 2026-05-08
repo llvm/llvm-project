@@ -329,6 +329,8 @@ public:
 
   virtual ~TargetInfo();
 
+  llvm::TextEncodingConverter *ExecStrConverter;
+
   /// Retrieve the target options.
   TargetOptions &getTargetOpts() const {
     assert(TargetOpts && "Missing target options");
