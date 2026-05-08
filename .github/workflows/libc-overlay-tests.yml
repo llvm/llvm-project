@@ -56,13 +56,19 @@ jobs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
-          cpu_model=$(cat /proc/cpuinfo | grep 'model name' | head -1 | cut -d: -f2 | xargs | tr ' ' '-')
+          # x86 has 'model name', ARM has 'CPU implementer' + 'CPU part'.
+          cpu_model=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs | tr ' ' '-' || true)
+          if [ -z "$cpu_model" ]; then
+            impl=$(grep -m1 'CPU implementer' /proc/cpuinfo | cut -d: -f2 | xargs)
+            part=$(grep -m1 'CPU part' /proc/cpuinfo | cut -d: -f2 | xargs)
+            cpu_model="arm-${impl:-unknown}-${part:-unknown}"
+          fi
         elif [ "$RUNNER_OS" = "macOS" ]; then
           cpu_model=$(sysctl -n machdep.cpu.brand_string | tr ' ' '-')
         else
           cpu_model="generic"
         fi
-        echo "cpu-model=${cpu_model}" >> "$GITHUB_OUTPUT"
+        echo "cpu-model=${cpu_model:-unknown}" >> "$GITHUB_OUTPUT"
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
