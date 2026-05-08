@@ -47,7 +47,7 @@ public:
 };
 
 class FreeMachineFunctionPass
-    : public OptionalPassInfoMixin<FreeMachineFunctionPass> {
+    : public RequiredPassInfoMixin<FreeMachineFunctionPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

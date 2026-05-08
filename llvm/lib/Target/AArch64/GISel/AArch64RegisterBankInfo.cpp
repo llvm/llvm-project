@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64RegisterBankInfo.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -378,6 +379,13 @@ static bool preferGPRForFPImm(const MachineInstr &MI,
 
   const APFloat Imm = MI.getOperand(1).getFPImm()->getValueAPF();
   const APInt ImmBits = Imm.bitcastToAPInt();
+
+  // If all the uses are stores use a gpr constant
+  if (all_of(MRI.use_nodbg_instructions(Dst), [&](const MachineInstr &UseMI) {
+        return UseMI.getOpcode() == TargetOpcode::G_STORE &&
+               UseMI.getOperand(0).getReg() == Dst;
+      }))
+    return true;
 
   // Check if we can encode this as a movi. Note, we only have one pattern so
   // far for movis, hence the one check.

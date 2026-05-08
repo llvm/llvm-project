@@ -867,7 +867,8 @@ let Command = "log enable" in {
   def log_file : Option<"file", "f">,
                  Group<1>,
                  Arg<"Filename">,
-                 Desc<"Set the destination file to log to.">;
+                 Desc<"Set the destination file that all the enabled "
+                      "categories in the specified log channel will log to.">;
   def log_handler : Option<"log-handler", "h">,
                     Group<1>,
                     EnumArg<"LogHandler">,

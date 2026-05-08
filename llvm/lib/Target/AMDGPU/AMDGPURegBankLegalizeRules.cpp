@@ -1726,9 +1726,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_rsq, amdgcn_rsq_clamp}, Standard)
-      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
+      .Uni(S16, {{Sgpr16}, {IntrId, Sgpr16}}, hasPST)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}}, !hasPST)
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
-      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}})
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}});
@@ -1752,7 +1754,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
-  addRulesForIOpcs({amdgcn_cvt_f32_bf8, amdgcn_cvt_f32_fp8}, Standard)
+  addRulesForIOpcs(
+      {amdgcn_cvt_off_f32_i4, amdgcn_cvt_f32_bf8, amdgcn_cvt_f32_fp8}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
 
