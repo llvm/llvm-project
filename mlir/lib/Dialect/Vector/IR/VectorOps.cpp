@@ -5529,6 +5529,77 @@ static AffineMap inverseWithUnusedDims(AffineMap map) {
 }
 
 namespace {
+
+/// Folds transfer_read(tensor.empty).
+///
+/// Since tensor.empty has unspecified contents, reading from it produces
+/// an unspecified value, which is exactly the semantics of ub.poison.
+///
+///   Case 1 — fully in-bounds, no mask:
+///     %e = tensor.empty() : tensor<128xf16>
+///     %r = vector.transfer_read %e[%c0], %pad {in_bounds = [true]}
+///   ->
+///     %r = ub.poison : vector<128xf16>
+///
+///   Case 2 — fully in-bounds, masked:
+///     %e = tensor.empty() : tensor<128xf16>
+///     %r = vector.transfer_read %e[%c0], %pad, %mask {in_bounds = [true]}
+///   ->
+///     %poison = ub.poison : vector<128xf16>
+///     %bcast  = vector.broadcast %pad : f16 to vector<128xf16>
+///     %r = arith.select %mask, %poison, %bcast
+///
+///   Case 3 — not fully in-bounds (with or without mask):
+///     Out-of-bounds lanes produce pad, in-bounds lanes read unspecified
+///     contents from tensor.empty, so we may choose pad for all lanes.
+///   ->
+///     %r = vector.broadcast %pad : f16 to vector<128xf16>
+struct FoldTransferReadOfEmptyTensor : public OpRewritePattern<TransferReadOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(TransferReadOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!op.hasPureTensorSemantics())
+      return failure();
+
+    if (!op.getBase().getDefiningOp<tensor::EmptyOp>())
+      return failure();
+
+    if (!op.getPermutationMap().isMinorIdentity())
+      return failure();
+
+    bool fullyInBounds =
+        llvm::all_of(op.getInBoundsValues(), [](bool v) { return v; });
+    TypedValue<VectorType> mask = op.getMask();
+
+    if (mask && fullyInBounds) {
+      Value rPad = op.getPadding();
+      assert(!isa<VectorType>(rPad.getType()) &&
+             "masked transfers on vector element types are not supported; "
+             "see verifyTransferOp");
+      Value poison = ub::PoisonOp::create(rewriter, op.getLoc(), op.getType());
+      Value padVal = vector::BroadcastOp::create(rewriter, rPad.getLoc(),
+                                                 op.getType(), rPad);
+      rewriter.replaceOpWithNewOp<arith::SelectOp>(op, mask, poison, padVal);
+      return success();
+    }
+
+    if (!mask && fullyInBounds) {
+      rewriter.replaceOp(
+          op, ub::PoisonOp::create(rewriter, op.getLoc(), op.getType()));
+      return success();
+    }
+
+    // Not fully in-bounds (with or without mask): out-of-bounds lanes
+    // produce pad, and in-bounds lanes read unspecified contents from
+    // tensor.empty, so we may choose pad for those too.
+    Value rPad = op.getPadding();
+    rewriter.replaceOp(op, vector::BroadcastOp::create(rewriter, rPad.getLoc(),
+                                                       op.getType(), rPad));
+    return success();
+  }
+};
+
 /// Store to load forwarding for transfer operations with permuation maps.
 /// Even if the permutation maps are different we can still propagate the store
 /// into the load if the size of the dimensions read and written match. Then we
@@ -5629,7 +5700,8 @@ struct TransferReadAfterWriteToBroadcast
 
 void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add<TransferReadAfterWriteToBroadcast>(context);
+  results.add<FoldTransferReadOfEmptyTensor, TransferReadAfterWriteToBroadcast>(
+      context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
