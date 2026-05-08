@@ -171,7 +171,7 @@ const char *toString(std::optional<DWARFFormValueType> F) {
 
 /// Resolve the DW_AT_type of \c D until we reach a DIE that is not a
 /// DW_TAG_typedef. Gives up if a cycle is detected in malformed DWARF.
-/// In this case, return the last typedef DIE before the cycle is formed.
+/// In this case, returns the typedef DIE where the cycle is formed.
 template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
   SmallSet<uint64_t, 4> Visited;
   while (true) {
@@ -184,7 +184,7 @@ template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
       return Unwrapped;
 
     if (!Visited.insert(Unwrapped.getOffset()).second)
-      return D;
+      return Unwrapped;
 
     D = Unwrapped;
   }
