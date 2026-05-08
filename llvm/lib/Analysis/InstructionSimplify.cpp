@@ -3126,9 +3126,6 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
         *MulC != 0 && C->srem(*MulC) != 0)))
     return ConstantInt::get(ITy, Pred == ICmpInst::ICMP_NE);
 
-  if (Pred == ICmpInst::ICMP_UGE && C->isOne() && isKnownNonZero(LHS, Q))
-    return ConstantInt::getTrue(ITy);
-
   return nullptr;
 }
 
@@ -3892,6 +3889,16 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
 
   if (Value *V = simplifyICmpOfBools(Pred, LHS, RHS, Q))
     return V;
+
+  const APInt *C;
+  if (match(RHS, m_APIntAllowPoison(C)) &&
+      ICmpInst::isNonStrictPredicate(Pred)) {
+    if (auto Flipped = getFlippedStrictnessPredicateAndConstant(
+            Pred, ConstantInt::get(LHS->getType(), *C))) {
+      Pred = Flipped->first;
+      RHS = Flipped->second;
+    }
+  }
 
   // TODO: Sink/common this with other potentially expensive calls that use
   //       ValueTracking? See comment below for isKnownNonEqual().
