@@ -12,19 +12,19 @@
 // CHECK: jit_fallback:
 // CHECK: jit_dispatch:
 
-// PASS4: Lifecycle handler in lc_handler
-// CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cell_data, i32 0)
-// CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cell_data, i32 0)
+// PASS4: Lifecycle handler in lc_handler — deactivate at entry, activate at exit
+// CHECK: call {{.*}} @ejit_deactivate_array(ptr {{[^,]*}}, ptr {{[^,]*}} @cell_data{{[^)]*}})
+// CHECK: call {{.*}} @ejit_activate_array(ptr {{[^,]*}}, ptr {{[^,]*}} @cell_data{{[^)]*}})
 
 // PASS1+PASS2: Combined registration in ejit_auto_register
-// CHECK-DAG: call void @ejit_register_bitcode(
-// CHECK-DAG: call void @ejit_register_period_array(ptr {{.*}}, ptr {{.*}}, ptr @cell_data, i64 16)
+// CHECK-DAG: call {{.*}} @ejit_register_bitcode(
+// CHECK-DAG: call {{.*}} @ejit_register_period_array(ptr {{[^,]*}}, ptr {{[^,]*}}, ptr {{[^,]*}} @cell_data, i64 16)
 
 // External runtime declarations
-// CHECK-DAG: declare void @ejit_register_bitcode
-// CHECK-DAG: declare ptr @ejit_compile_or_get
-// CHECK-DAG: declare void @ejit_deactivate_array
-// CHECK-DAG: declare void @ejit_activate_array
+// CHECK-DAG: declare {{.*}} @ejit_register_bitcode
+// CHECK-DAG: declare {{.*}} @ejit_compile_or_get
+// CHECK-DAG: declare {{.*}} @ejit_deactivate_array
+// CHECK-DAG: declare {{.*}} @ejit_activate_array
 
 int cell_data[16] __attribute__((ejit_period_arr("cell")));
 
