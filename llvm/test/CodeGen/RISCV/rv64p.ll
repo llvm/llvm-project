@@ -1782,16 +1782,12 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
 define i64 @and_mul_32bitsplat(i64 %x) {
 ; CHECK-LABEL: and_mul_32bitsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 65793
+; CHECK-NEXT:    pli.b a1, 1
 ; CHECK-NEXT:    lui a2, 65664
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    addi a2, a2, 1024
-; CHECK-NEXT:    addi a1, a1, 257
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    addi a1, a1, 257
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    slli a1, a2, 27
-; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    addi a1, a2, 1024
+; CHECK-NEXT:    slli a2, a1, 27
+; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = and i64 %x, u0x0101010101010101

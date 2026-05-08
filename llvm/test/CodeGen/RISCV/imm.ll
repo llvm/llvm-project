@@ -4784,9 +4784,8 @@ define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
 ;
 ; RV64I-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 524280
-; RV64I-NEXT:    addi a1, a1, 1
-; RV64I-NEXT:    slli a1, a1, 17
+; RV64I-NEXT:    lui a1, 1015809
+; RV64I-NEXT:    slli a1, a1, 5
 ; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    slli a1, a1, 15
 ; RV64I-NEXT:    and a0, a0, a1
@@ -4794,19 +4793,16 @@ define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
 ;
 ; RV64IZBA-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV64IZBA:       # %bb.0:
-; RV64IZBA-NEXT:    lui a1, 524280
-; RV64IZBA-NEXT:    addi a1, a1, 1
-; RV64IZBA-NEXT:    slli a1, a1, 17
-; RV64IZBA-NEXT:    addi a1, a1, -1
-; RV64IZBA-NEXT:    slli a1, a1, 15
+; RV64IZBA-NEXT:    lui a1, 1048568
+; RV64IZBA-NEXT:    slli a2, a1, 32
+; RV64IZBA-NEXT:    add.uw a1, a1, a2
 ; RV64IZBA-NEXT:    and a0, a0, a1
 ; RV64IZBA-NEXT:    ret
 ;
 ; RV64IZBB-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV64IZBB:       # %bb.0:
-; RV64IZBB-NEXT:    lui a1, 524280
-; RV64IZBB-NEXT:    addi a1, a1, 1
-; RV64IZBB-NEXT:    slli a1, a1, 17
+; RV64IZBB-NEXT:    lui a1, 1015809
+; RV64IZBB-NEXT:    slli a1, a1, 5
 ; RV64IZBB-NEXT:    addi a1, a1, -1
 ; RV64IZBB-NEXT:    slli a1, a1, 15
 ; RV64IZBB-NEXT:    and a0, a0, a1
@@ -4814,9 +4810,8 @@ define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
 ;
 ; RV64IZBS-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    lui a1, 524280
-; RV64IZBS-NEXT:    addi a1, a1, 1
-; RV64IZBS-NEXT:    slli a1, a1, 17
+; RV64IZBS-NEXT:    lui a1, 1015809
+; RV64IZBS-NEXT:    slli a1, a1, 5
 ; RV64IZBS-NEXT:    addi a1, a1, -1
 ; RV64IZBS-NEXT:    slli a1, a1, 15
 ; RV64IZBS-NEXT:    and a0, a0, a1
@@ -4824,9 +4819,8 @@ define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
 ;
 ; RV64IXTHEADBB-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV64IXTHEADBB:       # %bb.0:
-; RV64IXTHEADBB-NEXT:    lui a1, 524280
-; RV64IXTHEADBB-NEXT:    addi a1, a1, 1
-; RV64IXTHEADBB-NEXT:    slli a1, a1, 17
+; RV64IXTHEADBB-NEXT:    lui a1, 1015809
+; RV64IXTHEADBB-NEXT:    slli a1, a1, 5
 ; RV64IXTHEADBB-NEXT:    addi a1, a1, -1
 ; RV64IXTHEADBB-NEXT:    slli a1, a1, 15
 ; RV64IXTHEADBB-NEXT:    and a0, a0, a1
@@ -4842,9 +4836,8 @@ define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
 ;
 ; RV64-REMAT-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV64-REMAT:       # %bb.0:
-; RV64-REMAT-NEXT:    lui a1, 524280
-; RV64-REMAT-NEXT:    addi a1, a1, 1
-; RV64-REMAT-NEXT:    slli a1, a1, 17
+; RV64-REMAT-NEXT:    lui a1, 1015809
+; RV64-REMAT-NEXT:    slli a1, a1, 5
 ; RV64-REMAT-NEXT:    addi a1, a1, -1
 ; RV64-REMAT-NEXT:    slli a1, a1, 15
 ; RV64-REMAT-NEXT:    and a0, a0, a1

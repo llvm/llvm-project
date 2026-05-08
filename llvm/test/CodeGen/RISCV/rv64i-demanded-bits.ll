@@ -214,13 +214,12 @@ entry:
 define i64 @and_mul_32bitsplat(i64 %x) {
 ; CHECK-LABEL: and_mul_32bitsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 65793
+; CHECK-NEXT:    lui a1, 4112
+; CHECK-NEXT:    addi a1, a1, 257
+; CHECK-NEXT:    slli a2, a1, 32
+; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    lui a2, 65664
-; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    addi a2, a2, 1024
-; CHECK-NEXT:    addi a1, a1, 257
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    addi a1, a1, 257
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    slli a1, a2, 27
 ; CHECK-NEXT:    add a1, a2, a1
@@ -238,12 +237,14 @@ define i64 @and_mul_32bitsplat(i64 %x) {
 define i64 @ctop_hibit_zero(i63 zeroext %x) {
 ; CHECK-LABEL: ctop_hibit_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI14_0)
+; CHECK-NEXT:    lui a1, 349525
 ; CHECK-NEXT:    lui a2, 209715
 ; CHECK-NEXT:    lui a3, 61681
-; CHECK-NEXT:    ld a1, %lo(.LCPI14_0)(a1)
+; CHECK-NEXT:    addi a1, a1, 1365
 ; CHECK-NEXT:    addi a2, a2, 819
 ; CHECK-NEXT:    addi a3, a3, -241
+; CHECK-NEXT:    slli a4, a1, 32
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    slli a4, a2, 32
 ; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    slli a4, a3, 32
@@ -254,14 +255,14 @@ define i64 @ctop_hibit_zero(i63 zeroext %x) {
 ; CHECK-NEXT:    and a1, a0, a2
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    lui a2, 4112
+; CHECK-NEXT:    addi a2, a2, 257
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    srli a1, a0, 4
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    lui a1, 4112
-; CHECK-NEXT:    addi a1, a1, 257
+; CHECK-NEXT:    slli a1, a2, 32
 ; CHECK-NEXT:    and a0, a0, a3
-; CHECK-NEXT:    slli a2, a1, 32
-; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    srli a0, a0, 56
 ; CHECK-NEXT:    ret
