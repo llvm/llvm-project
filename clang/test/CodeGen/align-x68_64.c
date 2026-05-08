@@ -15,6 +15,7 @@ void test1_g(void) {
 // CHECK: @test1_g
 // CHECK: alloca [4 x float], align 16
 
+// The "large array" alignment increase does not apply on windows-msvc.
 // MSVC: @arr = {{.*}} align 8
 // MSVC: @test1_g
 // MSVC: alloca [4 x float], align 4
