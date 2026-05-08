@@ -4862,10 +4862,14 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   unsigned Opc = Cond.getOpcode();
 
+  bool OptimizeMul =
+      (Opc == ISD::SMULO || Opc == ISD::UMULO) && !Subtarget->isThumb1Only();
   if (Cond.getResNo() == 1 &&
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
-       Opc == ISD::USUBO)) {
-    if (!isTypeLegal(Cond->getValueType(0)))
+       Opc == ISD::USUBO || OptimizeMul)) {
+
+    // Only lower legal XALUO ops.
+    if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
       return SDValue();
 
     SDValue Value, OverflowCmp;
@@ -5488,7 +5492,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
        Opc == ISD::USUBO || OptimizeMul)) {
     // Only lower legal XALUO ops.
-    if (!isTypeLegal(Cond->getValueType(0)))
+    if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
       return SDValue();
 
     // The actual operation with overflow check.
@@ -5530,12 +5534,12 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = LHS.getOpcode();
   bool OptimizeMul = (Opc == ISD::SMULO || Opc == ISD::UMULO) &&
                       !Subtarget->isThumb1Only();
-  if (LHS.getResNo() == 1 && (isOneConstant(RHS) || isNullConstant(RHS)) &&
+  if (LHS.getResNo() == 1 && isOneConstant(RHS) &&
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
        Opc == ISD::USUBO || OptimizeMul) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     // Only lower legal XALUO ops.
-    if (!isTypeLegal(LHS->getValueType(0)))
+    if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS->getValueType(0)))
       return SDValue();
 
     // The actual operation with overflow check.
@@ -5543,16 +5547,16 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     SDValue ARMcc;
     std::tie(Value, OverflowCmp) = getARMXALUOOp(LHS.getValue(0), DAG, ARMcc);
 
-    if ((CC == ISD::SETNE) != isOneConstant(RHS)) {
-      // Reverse the condition code.
+    if (CC == ISD::SETEQ)
       ARMcc = getInvertedARMCondCode(ARMcc, DAG);
-    }
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
                        OverflowCmp);
   }
 
-  if (LHS.getValueType() == MVT::i32) {
+  if (LHS.getValueType().isInteger()) {
+    assert((LHS.getValueType() == RHS.getValueType()) &&
+           (LHS.getValueType() == MVT::i32));
     SDValue ARMcc;
     SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc, Cmp);
@@ -5568,17 +5572,15 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       return Result;
   }
 
+  SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl);
   ARMCC::CondCodes CondCode, CondCode2;
   FPCCToARMCC(CC, CondCode, CondCode2);
-
   SDValue ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
-  SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl);
-  SDValue Ops[] = {Chain, Dest, ARMcc, Cmp};
-  SDValue Res = DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Ops);
+  SDValue Res =
+      DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc, Cmp);
   if (CondCode2 != ARMCC::AL) {
-    ARMcc = DAG.getConstant(CondCode2, dl, MVT::i32);
-    SDValue Ops[] = {Res, Dest, ARMcc, Cmp};
-    Res = DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Ops);
+    SDValue ARMcc2 = DAG.getConstant(CondCode2, dl, MVT::i32);
+    return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Res, Dest, ARMcc2, Cmp);
   }
   return Res;
 }
