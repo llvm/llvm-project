@@ -6472,14 +6472,37 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
         LookupResult R(SemaRef, OpName, Loc, Sema::LookupOrdinaryName);
         SemaRef.LookupQualifiedName(R, DC);
         R.suppressDiagnostics();
-        SmallVector<Expr *, 12> ArgExprs(1, NakedFn);
-        ArgExprs.append(ArgsWithoutDependentTypes.begin(),
-                        ArgsWithoutDependentTypes.end());
-        SemaRef.AddFunctionCandidates(R.asUnresolvedSet(), ArgExprs,
-                                      CandidateSet,
-                                      /*ExplicitArgs=*/nullptr,
-                                      /*SuppressUserConversions=*/false,
-                                      /*PartialOverloading=*/true);
+        for (NamedDecl *D : R) {
+          NamedDecl *UD = D->getUnderlyingDecl();
+          if (auto *FD = dyn_cast<FunctionDecl>(UD)) {
+            if (FD->isStatic()) {
+              SemaRef.AddOverloadCandidate(
+                  FD, DeclAccessPair::make(FD, FD->getAccess()),
+                  ArgsWithoutDependentTypes, CandidateSet,
+                  /*SuppressUserConversions=*/false,
+                  /*PartialOverloading=*/true);
+              continue;
+            }
+          } else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(UD)) {
+            if (FTD->getTemplatedDecl()->isStatic()) {
+              SemaRef.AddTemplateOverloadCandidate(
+                  FTD, DeclAccessPair::make(FTD, FTD->getAccess()), nullptr,
+                  ArgsWithoutDependentTypes, CandidateSet,
+                  /*SuppressUserConversions=*/false,
+                  /*PartialOverloading=*/true);
+              continue;
+            }
+          }
+          SmallVector<Expr *, 12> ArgExprs(1, NakedFn);
+          ArgExprs.append(ArgsWithoutDependentTypes.begin(),
+                          ArgsWithoutDependentTypes.end());
+          UnresolvedSet<1> Candidate;
+          Candidate.addDecl(D, D->getAccess());
+          SemaRef.AddFunctionCandidates(Candidate, ArgExprs, CandidateSet,
+                                        /*ExplicitArgs=*/nullptr,
+                                        /*SuppressUserConversions=*/false,
+                                        /*PartialOverloading=*/true);
+        }
       }
     } else {
       // Lastly we check whether expression's type is function pointer or
