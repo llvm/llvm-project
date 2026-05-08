@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-windows -ffreestanding -emit-llvm -O0 \
-// RUN: -x c++ -o - %s | FileCheck %s
-
-// FIXME: add tests here.
+// RUN: %clang_cc1 -triple aarch64-windows-msvc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc  -emit-llvm -o - %s | FileCheck %s
 
 struct size1 { char str[1]; };
 struct size2 { char str[2]; };
