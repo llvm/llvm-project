@@ -508,6 +508,7 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   const auto *CE = dyn_cast_if_present<CallExpr>(Call.getOriginExpr());
   if (!CE)
     return false;
+
   ProgramStateRef State = C.getState();
 
   if (!StdMoveCall.matches(Call))
