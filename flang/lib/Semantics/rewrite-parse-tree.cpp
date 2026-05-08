@@ -62,6 +62,7 @@ public:
   void Post(parser::IfConstruct &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
+  void Post(parser::AccObjectList &);
 
   // Name resolution yet implemented:
   // TODO: Can some/all of these now be enabled?
@@ -494,6 +495,13 @@ void RewriteMutator::Post(parser::ReadStmt &x) {
 
 void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
+}
+
+// Erase AccObjects flagged by resolve-directives as same-kind data-sharing
+// duplicates. Cross-kind duplicates remain hard errors and never reach this
+// pass.
+void RewriteMutator::Post(parser::AccObjectList &x) {
+  x.v.remove_if([](const parser::AccObject &o) { return o.isDuplicate; });
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

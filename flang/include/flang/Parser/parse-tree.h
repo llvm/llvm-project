@@ -5498,6 +5498,12 @@ struct OpenMPInvalidDirective {
 struct AccObject {
   UNION_CLASS_BOILERPLATE(AccObject);
   std::variant<Designator, /*common block*/ Name> u;
+  // Set by resolve-directives when this occurrence is a same-kind data-sharing
+  // duplicate (e.g. the second `x` in `private(x, x)`). Erased by
+  // rewrite-parse-tree so subsequent passes see a deduplicated clause list.
+  // Mutable so the attribute visitors, which walk the parse tree by const
+  // reference, can mark the offending occurrence in place.
+  mutable bool isDuplicate{false};
 };
 
 WRAPPER_CLASS(AccObjectList, std::list<AccObject>);
