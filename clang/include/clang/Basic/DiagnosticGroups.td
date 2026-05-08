@@ -626,7 +626,7 @@ Warning to detect invalidation of references.
 
 def LifetimeSafetyLifetimeboundViolation : DiagGroup<"lifetime-safety-lifetimebound-violation"> {
   code Documentation = [{
-Warning to detect lifetimebound violations introduced by marking parameter as lifetimebound but not returning it in any way.
+Detects parameters marked as [[clang::lifetimebound]] that do not escape through the return value.
   }];
 }
 
@@ -635,8 +635,7 @@ def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          LifetimeSafetyReturnStackAddr,
                                          LifetimeSafetyDanglingField,
                                          LifetimeSafetyDanglingGlobal,
-                                         LifetimeSafetyUseAfterFree,
-                                         LifetimeSafetyLifetimeboundViolation]>;
+                                         LifetimeSafetyUseAfterFree]>;
 
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     [LifetimeSafetyPermissive,
@@ -673,10 +672,10 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
 }
 
 def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                          [LifetimeSafetyNoescape]> {
+                                          [LifetimeSafetyNoescape, LifetimeSafetyLifetimeboundViolation]> {
   code Documentation = [{
 Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
-like verifying [[clang::noescape]] and [[clang::lifetimebound]] (upcoming).
+like verifying [[clang::noescape]] and [[clang::lifetimebound]].
   }];
 }
 
