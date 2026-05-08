@@ -59,9 +59,12 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
 } // namespace mlir::dataflow
 
 /// Budget for merge-site joins per integer-range lattice element before the
-/// solver forces the element to max-range. Sized for realistic DAG nesting
-/// depth; loops with dynamic bounds trip well before 2^31 iterations.
-static constexpr unsigned kIntegerRangeWideningBudget = 16;
+/// solver forces the element to max-range. Sized as 2 * max supported integer
+/// bitwidth (i64): the longest legitimate strictly-monotone join chain a
+/// ConstantIntRanges lattice can produce is one bit per step on either the lo
+/// or hi end, so any chain longer than 2 * bitwidth is sub-bit-per-iteration
+/// growth (i.e. the +1 ratchet pathology that this hook exists to cut off).
+static constexpr unsigned kIntegerRangeWideningBudget = 128;
 
 IntegerRangeAnalysis::IntegerRangeAnalysis(DataFlowSolver &solver)
     : SparseForwardDataFlowAnalysis(solver) {
