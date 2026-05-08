@@ -5843,7 +5843,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
                                           UndefPoisonKind Kind,
                                           bool ConsiderFlags,
                                           unsigned Depth) const {
-  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+  if (ConsiderFlags && includesPoison(Kind) && Op->hasPoisonGeneratingFlags())
     return true;
 
   unsigned Opcode = Op.getOpcode();
@@ -5853,7 +5853,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertAlign:
   case ISD::AssertNoFPClass:
     // Assertion nodes can create poison if the assertion fails.
-    return true;
+    return includesPoison(Kind);
 
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
@@ -5900,6 +5900,13 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
   case ISD::FABS:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUND:
+  case ISD::FROUNDEVEN:
     return false;
 
   case ISD::ABS:
@@ -5970,7 +5977,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
     // If the max shift amount isn't in range, then the shift can
     // create poison.
-    return !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
+    return includesPoison(Kind) &&
+           !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
 
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ_ZERO_UNDEF:

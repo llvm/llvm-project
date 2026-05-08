@@ -1113,7 +1113,13 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
-  unsigned CurrScore = UB + 1;
+  unsigned Increment = 1;
+  if (T == AMDGPU::VA_VDST && AMDGPU::getHasMatrixScale(Inst.getOpcode())) {
+    // V_WMMA_SCALE instructions use VOP3PX2 encoding. Hardware treats this as
+    // two VOP3P instructions and increments VA_VDST twice.
+    Increment = 2;
+  }
+  unsigned CurrScore = UB + Increment;
   if (CurrScore == 0)
     report_fatal_error("InsertWaitcnt score wraparound");
   // PendingEvents and ScoreUB need to be update regardless if this event
