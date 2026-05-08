@@ -38,7 +38,7 @@ define <4 x float> @test_mul2x2_f32(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; AVX1-LABEL: test_mul2x2_f32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX1-NEXT:    vmovsldup {{.*#+}} xmm3 = xmm1[0,0,2,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
 ; AVX1-NEXT:    vmulps %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
 ; AVX1-NEXT:    vmulps %xmm4, %xmm2, %xmm4

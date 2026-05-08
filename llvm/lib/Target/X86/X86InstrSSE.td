@@ -7832,6 +7832,8 @@ let Predicates = [HasAVX, NoVLX] in {
 let Predicates = [HasAVX1Only] in {
   def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
             (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)>;
+  def : Pat<(v4f32 (X86VBroadcast v4f32:$src)),
+            (VPERMILPSri VR128:$src, 0)>;
   def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
             (VINSERTF128rri (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
               (v4f32 (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)), sub_xmm),
@@ -7851,6 +7853,8 @@ let Predicates = [HasAVX1Only] in {
 
   def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
             (VPSHUFDri (VMOVDI2PDIrr GR32:$src), 0)>;
+  def : Pat<(v4i32 (X86VBroadcast v4i32:$src)),
+            (VPSHUFDri VR128:$src, 0)>;
   def : Pat<(v8i32 (X86VBroadcast GR32:$src)),
             (VINSERTF128rri (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
               (v4i32 (VPSHUFDri (VMOVDI2PDIrr GR32:$src), 0)), sub_xmm),
@@ -7862,6 +7866,8 @@ let Predicates = [HasAVX1Only] in {
 
   def : Pat<(v2i64 (X86VBroadcast i64:$src)),
             (VPSHUFDri (VMOV64toPQIrr GR64:$src), 0x44)>;
+  def : Pat<(v2i64 (X86VBroadcast v2i64:$src)),
+            (VPSHUFDri VR128:$src, 0x44)>;
   def : Pat<(v4i64 (X86VBroadcast v2i64:$src)),
             (VINSERTF128rri (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)),
               (v2i64 (VPSHUFDri VR128:$src, 0x44)), sub_xmm),

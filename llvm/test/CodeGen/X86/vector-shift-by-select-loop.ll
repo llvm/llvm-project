@@ -152,8 +152,12 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX1-NEXT:  .LBB0_3: # %vector.ph
 ; AVX1-NEXT:    movl %r9d, %edx
 ; AVX1-NEXT:    andl $-32, %edx
-; AVX1-NEXT:    vmovd %eax, %xmm7
-; AVX1-NEXT:    vmovd %r8d, %xmm8
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm7
+; AVX1-NEXT:    vmovd %r8d, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm8
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm7[0],zero,xmm7[1],zero
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
