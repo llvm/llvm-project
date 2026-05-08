@@ -36,6 +36,7 @@ ALL_TESTS=(
   ejit_jit_verify_test
   ejit_lifecycle_test
   ejit_multiversion_test
+  ejit_nested_struct_test
   ejit_opt_level_test
   ejit_perf_bench
   ejit_trace_test
@@ -49,6 +50,7 @@ TEST_ARGS[ejit_multiversion_test]="0 3 7"
 TEST_ARGS[ejit_jit_verify_test]="0 1 5"
 TEST_ARGS[ejit_external_idx_test]="3 1"
 TEST_ARGS[ejit_lifecycle_test]="3 7 2"
+TEST_ARGS[ejit_nested_struct_test]="0"
 TEST_ARGS[ejit_trace_test]="0"
 TEST_ARGS[ejit_attr_test]="0"
 TEST_ARGS[ejit_config_api_test]="0"
