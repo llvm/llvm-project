@@ -588,7 +588,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     } else {
       IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(),
-          CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+          CGM.getHLSLRuntime().getCreateResourceGetBasePointerIntrinsic(),
           {RetTy, HandleOp->getType()});
       CI = EmitRuntimeCall(IntrFn, {HandleOp});
     }
