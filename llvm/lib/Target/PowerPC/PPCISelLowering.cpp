@@ -5545,6 +5545,7 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   // copies together, a TOC access in the caller could be scheduled between
   // the assignment of the callee TOC and the branch to the callee, which leads
   // to incorrect code.
+
   // Start by loading the function address from the descriptor.
   SDValue LDChain = getOutputChainFromCallSeq(CallSeqStart);
   auto MMOFlags = Subtarget.hasInvariantFunctionDescriptors()
