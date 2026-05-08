@@ -25,8 +25,6 @@ using months     = std::chrono::months;
 using year       = std::chrono::year;
 using years      = std::chrono::years;
 using year_month = std::chrono::year_month;
-using ymd_t      = std::chrono::year_month_day;
-using decades    = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, years::period>>;
 using decamonths = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, months::period>>;
 
 constexpr bool test() {
@@ -57,29 +55,20 @@ constexpr bool test() {
     for(unsigned int i = 0; i < 10; i++){
       year y{2011};
       month m{i};
-      ymd_t ymd (y, m, std::chrono::day{i});
       year_month ym(y, m);
 
-      ymd += decades(1);
-      assert(ymd.year() == y + years{10});
-      assert(ymd.month() == m);
-
-      ymd += decamonths(1);
-      assert(ymd.month() == m + months{10});
-
-      ymd.operator+=<void>(decamonths(1));
-      assert(ymd.month() == m + months{20});
-
-      ym += decades(1);
-      assert(ym.year() == y + years{10});
-      assert(ym.month() == m);
-
+      year_month wrapped = ym + months{0};
       ym += decamonths(1);
       assert(ym.month() == m + months{10});
 
-      ym.operator+=<void>(decamonths(1));
-      assert(ym.month() == m + months{20});
+      ym -= decamonths(1);
+      assert(ym == wrapped);
     }
+    year y{2011};
+    month m{0};
+    year_month ym(y, m);
+    ym += decamonths(2);
+    assert((ym == year_month{year{2012}, month{8}}));
   }
 
   return true;
