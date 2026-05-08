@@ -2089,9 +2089,9 @@ private:
     std::optional<mlir::Type> resultType;
     if (stmt.typedCall->hasAlternateReturns())
       resultType = builder->getIndexType();
-    auto hlfirRes = Fortran::lower::convertCallToHLFIR(
-        toLocation(), *this, *stmt.typedCall, resultType, localSymbols,
-        stmtCtx);
+    auto hlfirRes =
+        Fortran::lower::convertCallToHLFIR(toLocation(), *this, *stmt.typedCall,
+                                           resultType, localSymbols, stmtCtx);
     if (hlfirRes)
       res = *hlfirRes;
 
