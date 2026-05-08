@@ -66,57 +66,57 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %maxnum = call float @llvm.maxnum.f32(float 1.000000e+00, float 2.000000e+00) => float 2.000000e+00
 ; CHECK-NEXT:   %maxnum_neg_zero = call float @llvm.maxnum.f32(float -0.000000e+00, float 0.000000e+00) => float 0.000000e+00
-; CHECK-NEXT:   %maxnum_qnan_lhs = call float @llvm.maxnum.f32(float 0x7FF8000840000000, float 2.000000e+00) => float 2.000000e+00
-; CHECK-NEXT:   %maxnum_qnan_rhs = call float @llvm.maxnum.f32(float 2.000000e+00, float 0x7FF8000840000000) => float 2.000000e+00
-; CHECK-NEXT:   %maxnum_snan_lhs = call float @llvm.maxnum.f32(float 0x7FF0000840000000, float 2.000000e+00) => float 0xFFC00042
-; CHECK-NEXT:   %maxnum_snan_rhs = call float @llvm.maxnum.f32(float 2.000000e+00, float 0x7FF0000840000000) => float 0x7F800042
+; CHECK-NEXT:   %maxnum_qnan_lhs = call float @llvm.maxnum.f32(float +nan(0x42), float 2.000000e+00) => float 2.000000e+00
+; CHECK-NEXT:   %maxnum_qnan_rhs = call float @llvm.maxnum.f32(float 2.000000e+00, float +nan(0x42)) => float 2.000000e+00
+; CHECK-NEXT:   %maxnum_snan_lhs = call float @llvm.maxnum.f32(float +snan(0x42), float 2.000000e+00) => float 0xFFC00042
+; CHECK-NEXT:   %maxnum_snan_rhs = call float @llvm.maxnum.f32(float 2.000000e+00, float +snan(0x42)) => float 0x7F800042
 ; CHECK-NEXT:   %maxnum_poison_lhs = call float @llvm.maxnum.f32(float poison, float 2.000000e+00) => poison
 ; CHECK-NEXT:   %maxnum_poison_rhs = call float @llvm.maxnum.f32(float 1.000000e+00, float poison) => poison
-; CHECK-NEXT:   %maxnum_vec = call <4 x float> @llvm.maxnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float 0x7FF8000840000000, float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 2.000000e+00, poison, float 2.000000e+00, poison }
+; CHECK-NEXT:   %maxnum_vec = call <4 x float> @llvm.maxnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float +nan(0x42), float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 2.000000e+00, poison, float 2.000000e+00, poison }
 ; CHECK-NEXT:   %minnum = call float @llvm.minnum.f32(float 1.000000e+00, float 2.000000e+00) => float 1.000000e+00
 ; CHECK-NEXT:   %minnum_neg_zero = call float @llvm.minnum.f32(float -0.000000e+00, float 0.000000e+00) => float -0.000000e+00
-; CHECK-NEXT:   %minnum_qnan_lhs = call float @llvm.minnum.f32(float 0x7FF8000840000000, float 2.000000e+00) => float 2.000000e+00
-; CHECK-NEXT:   %minnum_qnan_rhs = call float @llvm.minnum.f32(float 2.000000e+00, float 0x7FF8000840000000) => float 2.000000e+00
-; CHECK-NEXT:   %minnum_snan_lhs = call float @llvm.minnum.f32(float 0x7FF0000840000000, float 2.000000e+00) => float 2.000000e+00
-; CHECK-NEXT:   %minnum_snan_rhs = call float @llvm.minnum.f32(float 2.000000e+00, float 0x7FF0000840000000) => float 0x7F800042
+; CHECK-NEXT:   %minnum_qnan_lhs = call float @llvm.minnum.f32(float +nan(0x42), float 2.000000e+00) => float 2.000000e+00
+; CHECK-NEXT:   %minnum_qnan_rhs = call float @llvm.minnum.f32(float 2.000000e+00, float +nan(0x42)) => float 2.000000e+00
+; CHECK-NEXT:   %minnum_snan_lhs = call float @llvm.minnum.f32(float +snan(0x42), float 2.000000e+00) => float 2.000000e+00
+; CHECK-NEXT:   %minnum_snan_rhs = call float @llvm.minnum.f32(float 2.000000e+00, float +snan(0x42)) => float 0x7F800042
 ; CHECK-NEXT:   %minnum_poison_lhs = call float @llvm.minnum.f32(float poison, float 2.000000e+00) => poison
 ; CHECK-NEXT:   %minnum_poison_rhs = call float @llvm.minnum.f32(float 1.000000e+00, float poison) => poison
-; CHECK-NEXT:   %minnum_vec = call <4 x float> @llvm.minnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float 0x7FF8000840000000, float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 1.000000e+00, poison, float 2.000000e+00, poison }
+; CHECK-NEXT:   %minnum_vec = call <4 x float> @llvm.minnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float +nan(0x42), float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 1.000000e+00, poison, float 2.000000e+00, poison }
 ; CHECK-NEXT:   %maximum = call float @llvm.maximum.f32(float 1.000000e+00, float 2.000000e+00) => float 2.000000e+00
 ; CHECK-NEXT:   %maximum_neg_zero = call float @llvm.maximum.f32(float -0.000000e+00, float 0.000000e+00) => float 0.000000e+00
-; CHECK-NEXT:   %maximum_qnan_lhs = call float @llvm.maximum.f32(float 0x7FF8000840000000, float 2.000000e+00) => float 0xFFC00000
-; CHECK-NEXT:   %maximum_qnan_rhs = call float @llvm.maximum.f32(float 2.000000e+00, float 0x7FF8000840000000) => float NaN
-; CHECK-NEXT:   %maximum_snan_lhs = call float @llvm.maximum.f32(float 0x7FF0000840000000, float 2.000000e+00) => float 0x7F800042
-; CHECK-NEXT:   %maximum_snan_rhs = call float @llvm.maximum.f32(float 2.000000e+00, float 0x7FF0000840000000) => float 0xFF800042
+; CHECK-NEXT:   %maximum_qnan_lhs = call float @llvm.maximum.f32(float +nan(0x42), float 2.000000e+00) => float 0xFFC00000
+; CHECK-NEXT:   %maximum_qnan_rhs = call float @llvm.maximum.f32(float 2.000000e+00, float +nan(0x42)) => float NaN
+; CHECK-NEXT:   %maximum_snan_lhs = call float @llvm.maximum.f32(float +snan(0x42), float 2.000000e+00) => float 0x7F800042
+; CHECK-NEXT:   %maximum_snan_rhs = call float @llvm.maximum.f32(float 2.000000e+00, float +snan(0x42)) => float 0xFF800042
 ; CHECK-NEXT:   %maximum_poison_lhs = call float @llvm.maximum.f32(float poison, float 2.000000e+00) => poison
 ; CHECK-NEXT:   %maximum_poison_rhs = call float @llvm.maximum.f32(float 1.000000e+00, float poison) => poison
-; CHECK-NEXT:   %maximum_vec = call <4 x float> @llvm.maximum.v4f32(<4 x float> <float 1.000000e+00, float poison, float 0x7FF8000840000000, float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 2.000000e+00, poison, float 0xFFC00000, poison }
+; CHECK-NEXT:   %maximum_vec = call <4 x float> @llvm.maximum.v4f32(<4 x float> <float 1.000000e+00, float poison, float +nan(0x42), float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 2.000000e+00, poison, float 0xFFC00000, poison }
 ; CHECK-NEXT:   %minimum = call float @llvm.minimum.f32(float 1.000000e+00, float 2.000000e+00) => float 1.000000e+00
 ; CHECK-NEXT:   %minimum_neg_zero = call float @llvm.minimum.f32(float -0.000000e+00, float 0.000000e+00) => float -0.000000e+00
-; CHECK-NEXT:   %minimum_qnan_lhs = call float @llvm.minimum.f32(float 0x7FF8000840000000, float 2.000000e+00) => float 0xFFC00042
-; CHECK-NEXT:   %minimum_qnan_rhs = call float @llvm.minimum.f32(float 2.000000e+00, float 0x7FF8000840000000) => float NaN
-; CHECK-NEXT:   %minimum_snan_lhs = call float @llvm.minimum.f32(float 0x7FF0000840000000, float 2.000000e+00) => float 0x7FC00042
-; CHECK-NEXT:   %minimum_snan_rhs = call float @llvm.minimum.f32(float 2.000000e+00, float 0x7FF0000840000000) => float NaN
+; CHECK-NEXT:   %minimum_qnan_lhs = call float @llvm.minimum.f32(float +nan(0x42), float 2.000000e+00) => float 0xFFC00042
+; CHECK-NEXT:   %minimum_qnan_rhs = call float @llvm.minimum.f32(float 2.000000e+00, float +nan(0x42)) => float NaN
+; CHECK-NEXT:   %minimum_snan_lhs = call float @llvm.minimum.f32(float +snan(0x42), float 2.000000e+00) => float 0x7FC00042
+; CHECK-NEXT:   %minimum_snan_rhs = call float @llvm.minimum.f32(float 2.000000e+00, float +snan(0x42)) => float NaN
 ; CHECK-NEXT:   %minimum_poison_lhs = call float @llvm.minimum.f32(float poison, float 2.000000e+00) => poison
 ; CHECK-NEXT:   %minimum_poison_rhs = call float @llvm.minimum.f32(float 1.000000e+00, float poison) => poison
-; CHECK-NEXT:   %minimum_vec = call <4 x float> @llvm.minimum.v4f32(<4 x float> <float 1.000000e+00, float poison, float 0x7FF8000840000000, float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 1.000000e+00, poison, float 0xFFC00042, poison }
+; CHECK-NEXT:   %minimum_vec = call <4 x float> @llvm.minimum.v4f32(<4 x float> <float 1.000000e+00, float poison, float +nan(0x42), float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 1.000000e+00, poison, float 0xFFC00042, poison }
 ; CHECK-NEXT:   %maximumnum = call float @llvm.maximumnum.f32(float 1.000000e+00, float 2.000000e+00) => float 2.000000e+00
 ; CHECK-NEXT:   %maximumnum_neg_zero = call float @llvm.maximumnum.f32(float -0.000000e+00, float 0.000000e+00) => float 0.000000e+00
-; CHECK-NEXT:   %maximumnum_qnan_lhs = call float @llvm.maximumnum.f32(float 0x7FF8000840000000, float 2.000000e+00) => float 2.000000e+00
-; CHECK-NEXT:   %maximumnum_qnan_rhs = call float @llvm.maximumnum.f32(float 2.000000e+00, float 0x7FF8000840000000) => float 2.000000e+00
-; CHECK-NEXT:   %maximumnum_snan_lhs = call float @llvm.maximumnum.f32(float 0x7FF0000840000000, float 2.000000e+00) => float 2.000000e+00
-; CHECK-NEXT:   %maximumnum_snan_rhs = call float @llvm.maximumnum.f32(float 2.000000e+00, float 0x7FF0000840000000) => float 2.000000e+00
+; CHECK-NEXT:   %maximumnum_qnan_lhs = call float @llvm.maximumnum.f32(float +nan(0x42), float 2.000000e+00) => float 2.000000e+00
+; CHECK-NEXT:   %maximumnum_qnan_rhs = call float @llvm.maximumnum.f32(float 2.000000e+00, float +nan(0x42)) => float 2.000000e+00
+; CHECK-NEXT:   %maximumnum_snan_lhs = call float @llvm.maximumnum.f32(float +snan(0x42), float 2.000000e+00) => float 2.000000e+00
+; CHECK-NEXT:   %maximumnum_snan_rhs = call float @llvm.maximumnum.f32(float 2.000000e+00, float +snan(0x42)) => float 2.000000e+00
 ; CHECK-NEXT:   %maximumnum_poison_lhs = call float @llvm.maximumnum.f32(float poison, float 2.000000e+00) => poison
 ; CHECK-NEXT:   %maximumnum_poison_rhs = call float @llvm.maximumnum.f32(float 1.000000e+00, float poison) => poison
-; CHECK-NEXT:   %maximumnum_vec = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float 0x7FF8000840000000, float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 2.000000e+00, poison, float 2.000000e+00, poison }
+; CHECK-NEXT:   %maximumnum_vec = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float +nan(0x42), float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 2.000000e+00, poison, float 2.000000e+00, poison }
 ; CHECK-NEXT:   %minimumnum = call float @llvm.minimumnum.f32(float 1.000000e+00, float 2.000000e+00) => float 1.000000e+00
 ; CHECK-NEXT:   %minimumnum_neg_zero = call float @llvm.minimumnum.f32(float -0.000000e+00, float 0.000000e+00) => float -0.000000e+00
-; CHECK-NEXT:   %minimumnum_qnan_lhs = call float @llvm.minimumnum.f32(float 0x7FF8000840000000, float 2.000000e+00) => float 2.000000e+00
-; CHECK-NEXT:   %minimumnum_qnan_rhs = call float @llvm.minimumnum.f32(float 2.000000e+00, float 0x7FF8000840000000) => float 2.000000e+00
-; CHECK-NEXT:   %minimumnum_snan_lhs = call float @llvm.minimumnum.f32(float 0x7FF0000840000000, float 2.000000e+00) => float 2.000000e+00
-; CHECK-NEXT:   %minimumnum_snan_rhs = call float @llvm.minimumnum.f32(float 2.000000e+00, float 0x7FF0000840000000) => float 2.000000e+00
+; CHECK-NEXT:   %minimumnum_qnan_lhs = call float @llvm.minimumnum.f32(float +nan(0x42), float 2.000000e+00) => float 2.000000e+00
+; CHECK-NEXT:   %minimumnum_qnan_rhs = call float @llvm.minimumnum.f32(float 2.000000e+00, float +nan(0x42)) => float 2.000000e+00
+; CHECK-NEXT:   %minimumnum_snan_lhs = call float @llvm.minimumnum.f32(float +snan(0x42), float 2.000000e+00) => float 2.000000e+00
+; CHECK-NEXT:   %minimumnum_snan_rhs = call float @llvm.minimumnum.f32(float 2.000000e+00, float +snan(0x42)) => float 2.000000e+00
 ; CHECK-NEXT:   %minimumnum_poison_lhs = call float @llvm.minimumnum.f32(float poison, float 2.000000e+00) => poison
 ; CHECK-NEXT:   %minimumnum_poison_rhs = call float @llvm.minimumnum.f32(float 1.000000e+00, float poison) => poison
-; CHECK-NEXT:   %minimumnum_vec = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float 0x7FF8000840000000, float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 1.000000e+00, poison, float 2.000000e+00, poison }
+; CHECK-NEXT:   %minimumnum_vec = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float +nan(0x42), float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 1.000000e+00, poison, float 2.000000e+00, poison }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

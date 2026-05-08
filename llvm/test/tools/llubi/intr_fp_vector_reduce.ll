@@ -55,10 +55,10 @@ define void @main() {
 ; CHECK-NEXT:   %fmul_poison_vec = call float @llvm.vector.reduce.fmul.v4f32(float 2.000000e+00, <4 x float> <float 2.000000e+00, float poison, float 4.000000e+00, float 5.000000e+00>) => poison
 ; CHECK-NEXT:   %fmax = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float 2.000000e+00, float 4.000000e+00, float 5.000000e+00>) => float 5.000000e+00
 ; CHECK-NEXT:   %fmax_poison = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float poison, float 4.000000e+00, float 5.000000e+00>) => poison
-; CHECK-NEXT:   %fmax_snan = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float 0x7FF0000840000000, float 4.000000e+00, float 5.000000e+00>) => float 5.000000e+00
+; CHECK-NEXT:   %fmax_snan = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 5.000000e+00>) => float 5.000000e+00
 ; CHECK-NEXT:   %fmin = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float 2.000000e+00, float 4.000000e+00, float 5.000000e+00>) => float 1.000000e+00
 ; CHECK-NEXT:   %fmin_poison = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float poison, float 4.000000e+00, float 5.000000e+00>) => poison
-; CHECK-NEXT:   %fmin_snan = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float 0x7FF0000840000000, float 4.000000e+00, float 5.000000e+00>) => float 0x7F800042
+; CHECK-NEXT:   %fmin_snan = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 5.000000e+00>) => float 0x7F800042
 ; CHECK-NEXT:   %fmaximum = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> <float 1.000000e+00, float 2.000000e+00, float 4.000000e+00, float 5.000000e+00>) => float 5.000000e+00
 ; CHECK-NEXT:   %fmaximum_poison = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> <float 1.000000e+00, float poison, float 4.000000e+00, float 5.000000e+00>) => poison
 ; CHECK-NEXT:   %fminimum = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> <float 1.000000e+00, float 2.000000e+00, float 4.000000e+00, float 5.000000e+00>) => float 1.000000e+00

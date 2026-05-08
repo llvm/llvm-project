@@ -27,14 +27,14 @@ define void @main() {
 ; CHECK-NEXT:   %slarge_neg = call i8 @llvm.fptosi.sat.i8.f32(float -1.000000e+10) => i8 -128
 ; CHECK-NEXT:   %spoison = call i8 @llvm.fptosi.sat.i8.f32(float poison) => poison
 ; CHECK-NEXT:   %svec = call <4 x i8> @llvm.fptosi.sat.v4i8.v4f32(<4 x float> <float 1.250000e+00, float poison, float 1.000000e+10, float -1.000000e+10>) => { i8 1, poison, i8 127, i8 -128 }
-; CHECK-NEXT:   %sqnan = call i8 @llvm.fptosi.sat.i8.f32(float 0x7FF8000840000000) => i8 0
-; CHECK-NEXT:   %ssnan = call i8 @llvm.fptosi.sat.i8.f32(float 0x7FF0000840000000) => i8 0
+; CHECK-NEXT:   %sqnan = call i8 @llvm.fptosi.sat.i8.f32(float +nan(0x42)) => i8 0
+; CHECK-NEXT:   %ssnan = call i8 @llvm.fptosi.sat.i8.f32(float +snan(0x42)) => i8 0
 ; CHECK-NEXT:   %upos = call i8 @llvm.fptoui.sat.i8.f32(float 2.557500e+02) => i8 -1
 ; CHECK-NEXT:   %uneg = call i8 @llvm.fptoui.sat.i8.f32(float -1.250000e+00) => i8 0
 ; CHECK-NEXT:   %ularge = call i8 @llvm.fptoui.sat.i8.f32(float 1.000000e+10) => i8 -1
 ; CHECK-NEXT:   %upoison = call i8 @llvm.fptoui.sat.i8.f32(float poison) => poison
 ; CHECK-NEXT:   %uvec = call <4 x i8> @llvm.fptoui.sat.v4i8.v4f32(<4 x float> <float 1.250000e+00, float poison, float 1.000000e+10, float -1.250000e+00>) => { i8 1, poison, i8 -1, i8 0 }
-; CHECK-NEXT:   %uqnan = call i8 @llvm.fptoui.sat.i8.f32(float 0x7FF8000840000000) => i8 0
-; CHECK-NEXT:   %usnan = call i8 @llvm.fptoui.sat.i8.f32(float 0x7FF0000840000000) => i8 0
+; CHECK-NEXT:   %uqnan = call i8 @llvm.fptoui.sat.i8.f32(float +nan(0x42)) => i8 0
+; CHECK-NEXT:   %usnan = call i8 @llvm.fptoui.sat.i8.f32(float +snan(0x42)) => i8 0
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
