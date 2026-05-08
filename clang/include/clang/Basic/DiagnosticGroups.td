@@ -626,7 +626,8 @@ Warning to detect invalidation of references.
 
 def LifetimeSafetyLifetimeboundViolation : DiagGroup<"lifetime-safety-lifetimebound-violation"> {
   code Documentation = [{
-Detects parameters marked as [[clang::lifetimebound]] that do not escape through the return value.
+Detects parameters marked as [[clang::lifetimebound]] for which we could not verify that the return value can be lifetime bound to them.
+This may contain false-positives, e.g. when we fail to track origin propagation for the return value.
   }];
 }
 

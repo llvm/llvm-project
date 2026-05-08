@@ -179,6 +179,7 @@ public:
       const ParmVarDecl *ParmWithLifetimebound) override {
     S.Diag(ParmWithLifetimebound->getLocation(),
            diag::warn_lifetime_safety_param_lifetimebound_violation)
+        << ParmWithLifetimebound->getName()
         << ParmWithLifetimebound->getSourceRange();
   }
 

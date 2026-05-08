@@ -20,7 +20,7 @@ View not_lb(const MyObj &obj);
 View lb(const MyObj &obj [[clang::lifetimebound]]);
 
 View return_through_unannotated_passthrough(
-    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
   return not_lb(obj);
 }
 
@@ -33,7 +33,7 @@ View lb2(const MyObj &obj [[clang::lifetimebound]]) {
   return lb(obj);
 }
 
-View lose_lb(const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
+View lose_lb(const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
   return not_lb(obj);
 }
 
@@ -43,7 +43,7 @@ View return_through_alias(const MyObj &obj [[clang::lifetimebound]]) {
 }
 
 View return_alias_through_unannotated_passthrough(
-    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
   const MyObj &alias = obj;
   return not_lb(alias);
 }
@@ -58,12 +58,12 @@ View not_lb_view(View v);
 View lb_view(View v [[clang::lifetimebound]]);
 
 View return_through_nested_broken_chain(
-    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
   return not_lb_view(lb_view(View(obj)));
 }
 
 View return_constructed_view_through_unannotated_forwarder(
-    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
   return not_lb_view(View(obj));
 }
 
@@ -74,7 +74,7 @@ View return_constructed_view_through_lifetimebound_forwarder(
 
 View verify_each_annotated_param_independently(
     const MyObj &a [[clang::lifetimebound]],
-    const MyObj &b [[clang::lifetimebound]], // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
-    const MyObj &c [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
+    const MyObj &b [[clang::lifetimebound]], // expected-warning {{could not verify that the return value can be lifetime bound to 'b'}}
+    const MyObj &c [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}}
   return cond() ? a : not_lb(b);
 }
