@@ -44,6 +44,7 @@ class LegalizerInfo;
 struct LegalityQuery;
 class RegisterBank;
 class RegisterBankInfo;
+class TargetInstrInfo;
 class TargetLowering;
 class TargetRegisterInfo;
 
@@ -120,6 +121,7 @@ protected:
   MachineDominatorTree *MDT;
   bool IsPreLegalize;
   const LegalizerInfo *LI;
+  const TargetInstrInfo *TII;
   const RegisterBankInfo *RBI;
   const TargetRegisterInfo *TRI;
 
@@ -134,6 +136,12 @@ public:
   MachineIRBuilder &getBuilder() const {
     return Builder;
   }
+
+  const TargetInstrInfo &getTII() const { return *TII; }
+
+  const TargetRegisterInfo &getTRI() const { return *TRI; }
+
+  const RegisterBankInfo &getRBI() const { return *RBI; }
 
   const TargetLowering &getTargetLowering() const;
 

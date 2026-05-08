@@ -84,12 +84,11 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // Verify we reset MatchData on each tryCombineAll
 // CHECK:      bool GenMyCombiner::tryCombineAll(MachineInstr &I) const {
-// CHECK-NEXT:   const TargetSubtargetInfo &ST = MF.getSubtarget();
 // CHECK-NEXT:   const PredicateBitset AvailableFeatures = getAvailableFeatures();
 // CHECK-NEXT:   B.setInstrAndDebugLoc(I);
 // CHECK-NEXT:   State.MIs.clear();
 // CHECK-NEXT:   State.MIs.push_back(&I);
-// CHECK-NEXT:   if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), *ST.getInstrInfo(), MRI, *MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures, /*CoverageInfo*/ nullptr))
+// CHECK-NEXT:   if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), Helper.getTII(), MRI, Helper.getTRI(), Helper.getRBI(), AvailableFeatures, /*CoverageInfo*/ nullptr))
 // CHECK-NEXT:     return true;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:

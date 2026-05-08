@@ -2560,15 +2560,14 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
 void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
   OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
      << "(MachineInstr &I) const {\n"
-     << "  const TargetSubtargetInfo &ST = MF.getSubtarget();\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
      << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
      << "  if (executeMatchTable(*this, State, ExecInfo, B"
-     << ", getMatchTable(), *ST.getInstrInfo(), MRI, "
-        "*MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures"
+     << ", getMatchTable(), Helper.getTII(), MRI, Helper.getTRI(), "
+        "Helper.getRBI(), AvailableFeatures"
      << ", /*CoverageInfo*/ nullptr)) {\n"
      << "    return true;\n"
      << "  }\n\n"
