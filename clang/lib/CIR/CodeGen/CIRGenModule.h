@@ -596,6 +596,9 @@ public:
                           GlobalDecl aliasGD, cir::FuncOp aliasee,
                           cir::GlobalLinkageKind linkage);
 
+  /// Emit a definition for an `__attribute__((alias))` declaration.
+  void emitAliasDefinition(GlobalDecl gd);
+
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.

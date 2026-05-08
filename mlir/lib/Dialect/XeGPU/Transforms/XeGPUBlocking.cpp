@@ -488,6 +488,12 @@ void XeGPUBlockingPass::runOnOperation() {
       }
     }
 
+    // Drop left-over inst_data if the unroll pattern does not being applied,
+    // say, inst_data just matches their shape.
+    SmallVector<NamedAttribute> newAttrs =
+        xegpu::dropInstDataOnAttrs(op->getAttrs());
+    op->setAttrs(newAttrs);
+
     // Resolve unrealized conversion cast ops emulating pack/unpack
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);

@@ -108,6 +108,10 @@ public:
   void SetPseudoConsoleHandle() override;
 
 protected:
+  /// Block until the stdio read thread has surfaced everything currently
+  /// buffered in the ConPTY/pipe to the process's STDOUT cache.
+  void DrainProcessStdout();
+
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
   Status DoGetMemoryRegionInfo(lldb::addr_t vm_addr,

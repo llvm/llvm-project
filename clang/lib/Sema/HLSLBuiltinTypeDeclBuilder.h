@@ -64,7 +64,7 @@ public:
   ~BuiltinTypeDeclBuilder();
 
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
-                                                  ConceptDecl *CD);
+                                                  ConceptDecl *CD = nullptr);
   BuiltinTypeDeclBuilder &
   addSimpleTemplateParams(ArrayRef<StringRef> Names,
                           ArrayRef<QualType> DefaultTypes, ConceptDecl *CD);
@@ -83,6 +83,7 @@ public:
   addTextureHandle(ResourceClass RC, bool IsROV, ResourceDimension RD,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
+  BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
   BuiltinTypeDeclBuilder &addArraySubscriptOperators(
       ResourceDimension Dim = ResourceDimension::Unknown);
 

@@ -112,8 +112,14 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     break;
   }
   // Zksed
-  case RISCV::BI__builtin_riscv_sm4ks:
-  case RISCV::BI__builtin_riscv_sm4ed:
+  case RISCV::BI__builtin_riscv_sm4ks: {
+    intrinsicName = "riscv.sm4ks";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sm4ed: {
+    intrinsicName = "riscv.sm4ed";
+    break;
+  }
   // Zksh
   case RISCV::BI__builtin_riscv_sm3p0:
   case RISCV::BI__builtin_riscv_sm3p1:

@@ -116,6 +116,10 @@ def FeatureStdExtZiccif
     : RISCVExtension<1, 0,
                      "Main Memory Supports Instruction Fetch with Atomicity Requirement">;
 
+def FeatureStdExtZiccid
+    : RISCVExtension<1, 0,
+                     "Instruction/Data Coherence and Consistency", [FeatureStdExtZiccif]>;
+
 def FeatureStdExtZicclsm
     : RISCVExtension<1, 0, "Main Memory Supports Misaligned Loads/Stores">;
 

@@ -13,6 +13,7 @@
 #include "include/tzdb/tzdb_list_private.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
@@ -40,4 +41,5 @@ _LIBCPP_EXPORTED_FROM_ABI tzdb_list::const_iterator tzdb_list::__erase_after(con
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

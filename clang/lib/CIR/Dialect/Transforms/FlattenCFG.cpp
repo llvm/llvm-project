@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRTransformUtils.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
@@ -680,70 +681,6 @@ collectThrowingCalls(mlir::Region &region,
 static void collectResumeOps(mlir::Region &region,
                              llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) {
   region.walk([&](cir::ResumeOp resumeOp) { resumeOps.push_back(resumeOp); });
-}
-
-// Replace a cir.call with a cir.try_call that unwinds to the `unwindDest`
-// block if an exception is thrown.
-static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
-                                   mlir::Location loc,
-                                   mlir::PatternRewriter &rewriter) {
-  mlir::Block *callBlock = callOp->getBlock();
-
-  assert(!callOp.getNothrow() && "call is not expected to throw");
-
-  // Split the block after the call - remaining ops become the normal
-  // destination.
-  mlir::Block *normalDest =
-      rewriter.splitBlock(callBlock, std::next(callOp->getIterator()));
-
-  // Build the try_call to replace the original call.
-  rewriter.setInsertionPoint(callOp);
-  cir::TryCallOp tryCallOp;
-  if (callOp.isIndirect()) {
-    mlir::Value indTarget = callOp.getIndirectCall();
-    auto ptrTy = mlir::cast<cir::PointerType>(indTarget.getType());
-    auto resTy = mlir::cast<cir::FuncType>(ptrTy.getPointee());
-    tryCallOp =
-        cir::TryCallOp::create(rewriter, loc, indTarget, resTy, normalDest,
-                               unwindDest, callOp.getArgOperands());
-  } else {
-    mlir::Type resType = callOp->getNumResults() > 0
-                             ? callOp->getResult(0).getType()
-                             : mlir::Type();
-    tryCallOp =
-        cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
-                               normalDest, unwindDest, callOp.getArgOperands());
-  }
-
-  // Copy all attributes from the original call except those already set by
-  // TryCallOp::create or that are operation-specific and should not be copied.
-  llvm::StringRef excludedAttrs[] = {
-      CIRDialect::getCalleeAttrName(), // Set by create()
-      CIRDialect::getOperandSegmentSizesAttrName(),
-  };
-#ifndef NDEBUG
-  // We don't expect to ever see any of these attributes on a call that we
-  // converted to a try_call.
-  llvm::StringRef unexpectedAttrs[] = {
-      CIRDialect::getNoThrowAttrName(),
-      CIRDialect::getNoUnwindAttrName(),
-  };
-#endif
-  for (mlir::NamedAttribute attr : callOp->getAttrs()) {
-    if (llvm::is_contained(excludedAttrs, attr.getName()))
-      continue;
-    assert(!llvm::is_contained(unexpectedAttrs, attr.getName()) &&
-           "unexpected attribute on converted call");
-    tryCallOp->setAttr(attr.getName(), attr.getValue());
-  }
-
-  // Replace uses of the call result with the try_call result.
-  // Use the rewriter API so that the pattern rewriter is notified of the
-  // in-place modifications to each user operation.
-  if (callOp->getNumResults() > 0)
-    rewriter.replaceAllUsesWith(callOp->getResult(0), tryCallOp.getResult());
-
-  rewriter.eraseOp(callOp);
 }
 
 // Create a shared unwind destination block. The block contains a

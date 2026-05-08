@@ -6722,7 +6722,7 @@ enum class MinMaxOptResult {
 // quieted), or to choose either option in the case of undef/poison.
 static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
                                            const Intrinsic::ID IID,
-                                           const CallBase *Call,
+                                           FastMathFlags FMF,
                                            Constant **OutNewConstVal) {
   assert(OutNewConstVal != nullptr);
 
@@ -6758,15 +6758,14 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
     return MinMaxOptResult::UseOtherVal;
   }
 
-  if (CAPF.isInfinity() || (Call && Call->hasNoInfs() && CAPF.isLargest())) {
+  if (CAPF.isInfinity() || (FMF.noInfs() && CAPF.isLargest())) {
     // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
     // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
     // minimum(X, -inf) -> -inf if nnan
     // maximum(X, +inf) -> +inf if nnan
     // minimumnum(X, -inf) -> -inf
     // maximumnum(X, +inf) -> +inf
-    if (CAPF.isNegative() == IsMin &&
-        (!PropagateNaN || (Call && Call->hasNoNaNs()))) {
+    if (CAPF.isNegative() == IsMin && (!PropagateNaN || FMF.noNaNs())) {
       *OutNewConstVal = const_cast<Constant *>(RHSConst);
       return MinMaxOptResult::UseNewConstVal;
     }
@@ -6777,8 +6776,7 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
     // maximum(X, -inf) -> X (ignoring quieting of sNaNs)
     // minimumnum(X, +inf) -> X if nnan
     // maximumnum(X, -inf) -> X if nnan
-    if (CAPF.isNegative() != IsMin &&
-        (PropagateNaN || (Call && Call->hasNoNaNs())))
+    if (CAPF.isNegative() != IsMin && (PropagateNaN || FMF.noNaNs()))
       return MinMaxOptResult::UseOtherVal;
   }
   return MinMaxOptResult::CannotOptimize;
@@ -6841,19 +6839,18 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
 }
 
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                     Value *Op0, Value *Op1,
-                                     const SimplifyQuery &Q,
-                                     const CallBase *Call) {
+                                     Value *Op0, Value *Op1, FastMathFlags FMF,
+                                     const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    if (!Call)
+    if (!Q.CxtI)
       break;
 
-    const Function *F = Call->getFunction();
+    const Function *F = Q.CxtI->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
@@ -7138,7 +7135,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
         if (Constant *SplatVal = C->getSplatValue()) {
           // Handle splat vectors (including scalable vectors)
-          OptResult = OptimizeConstMinMax(SplatVal, IID, Call, &NewConst);
+          OptResult = OptimizeConstMinMax(SplatVal, IID, FMF, &NewConst);
           if (OptResult == MinMaxOptResult::UseNewConstVal)
             NewConst = ConstantVector::getSplat(ElemCount, NewConst);
 
@@ -7157,7 +7154,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
               OptResult = MinMaxOptResult::CannotOptimize;
               break;
             }
-            auto ElemResult = OptimizeConstMinMax(Elt, IID, Call, &NewConst);
+            auto ElemResult = OptimizeConstMinMax(Elt, IID, FMF, &NewConst);
             if (ElemResult == MinMaxOptResult::CannotOptimize ||
                 (ElemResult != OptResult &&
                  OptResult != MinMaxOptResult::UseEither &&
@@ -7174,7 +7171,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
         }
       } else {
         // Handle scalar inputs
-        OptResult = OptimizeConstMinMax(C, IID, Call, &NewConst);
+        OptResult = OptimizeConstMinMax(C, IID, FMF, &NewConst);
       }
 
       if (OptResult == MinMaxOptResult::UseOtherVal ||
@@ -7253,9 +7250,13 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   if (NumOperands == 1)
     return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
 
-  if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1], Q,
-                                   Call);
+  if (NumOperands == 2) {
+    FastMathFlags FMF;
+    if (auto *FPMO = dyn_cast<FPMathOperator>(Call))
+      FMF = FPMO->getFastMathFlags();
+    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1],
+                                   FMF, Q.getWithInstruction(Call));
+  }
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {

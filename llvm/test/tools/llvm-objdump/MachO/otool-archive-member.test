@@ -1,0 +1,48 @@
+# Test llvm-otool archive(member) input syntax and -m flag.
+
+RUN: mkdir -p %t.dir
+RUN: cp %p/Inputs/hello.obj.macho-x86_64 %t.dir/foo.o
+RUN: cp %p/Inputs/ObjC.obj.macho-x86_64 %t.dir/bar.o
+RUN: llvm-ar rcs %t.dir/lib.a %t.dir/foo.o %t.dir/bar.o
+
+# archive(member) syntax extracts only the named member.
+RUN: llvm-otool -l "%t.dir/lib.a(bar.o)" \
+RUN: | FileCheck %s --check-prefix=MEMBER --implicit-check-not="foo.o"
+
+MEMBER: bar.o
+
+# Without archive(member), both members are shown.
+RUN: llvm-otool -l %t.dir/lib.a \
+RUN: | FileCheck %s --check-prefix=BOTH
+
+BOTH: foo.o
+BOTH: bar.o
+
+# -m disables archive(member) parsing, treating the filename literally.
+RUN: not llvm-otool -mh "%t.dir/lib.a(bar.o)" 2>&1 \
+RUN: | FileCheck %s --check-prefix=NOPAREN -DMSG=%errc_ENOENT -DPATH=%t.dir
+
+NOPAREN: error: '[[PATH]]/lib.a(bar.o)': [[MSG]]
+
+# Non-existent member gives an error.
+RUN: not llvm-otool -h "%t.dir/lib.a(nonexistent)" 2>&1 \
+RUN: | FileCheck %s --check-prefix=BADMEMBER -DPATH=%t.dir
+
+BADMEMBER: error: '[[PATH]]/lib.a': archive does not contain a member named: nonexistent
+
+# archive(member) on a non-archive file gives an error.
+RUN: not llvm-otool -h "%p/Inputs/hello.obj.macho-x86_64(foo)" 2>&1 \
+RUN: | FileCheck %s --check-prefix=NOTARCHIVE
+
+NOTARCHIVE: error: '{{.*}}hello.obj.macho-x86_64': not an archive (cannot extract member: foo)
+
+# Handle multiple inputs with archive(member) syntax.
+RUN: llvm-otool -h "%t.dir/lib.a(foo.o)" "%t.dir/lib.a(bar.o)" \
+RUN: | FileCheck %s --check-prefix=MULTI
+
+MULTI:      Archive :
+MULTI-NEXT: Mach header
+MULTI:      496
+MULTI-NEXT: Archive :
+MULTI-NEXT: Mach header
+MULTI:      896

@@ -1199,8 +1199,12 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
     guardAlignment = clang::CharUnits::One();
   } else if (useARMGuardVarABI()) {
-    globalOp->emitError("NYI: ARM-style guard variables for static locals");
-    return;
+    // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
+    const unsigned sizeTypeSize =
+        astCtx->getTypeSize(astCtx->getSignedSizeType());
+    guardTy = cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
+    guardAlignment =
+        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
   } else {
     guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
     guardAlignment =
@@ -1283,10 +1287,11 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     //   This ABI instead only specifies the value bit 0 of the static guard
     //   variable; all other bits are platform defined. Bit 0 shall be 0 when
     //   the variable is not initialized and 1 when it is.
-    if (useARMGuardVarABI()) {
-      globalOp->emitError(
-          "NYI: ARM-style guard variable check (bit 0 only) for static locals");
-      return;
+    if (useARMGuardVarABI() && !useInt8GuardVariable) {
+      auto one = builder.getConstantInt(
+          localInitOp.getLoc(), mlir::cast<cir::IntType>(guardLoad.getType()),
+          1);
+      guardLoad = builder.createAnd(localInitOp.getLoc(), guardLoad, one);
     }
 
     // Check if the first byte of the guard variable is zero.

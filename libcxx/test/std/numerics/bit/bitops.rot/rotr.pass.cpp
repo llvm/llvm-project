@@ -165,5 +165,61 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+    // rotr uses numeric_limits::digits internally, so only byte-aligned
+    // widths are safe.
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      T32 m32 = ~T32(0);
+      T32 h32 = T32(1) << 31;
+      assert(std::rotr(T32(1), 0) == T32(1));
+      assert(std::rotr(T32(16), 4) == T32(1));
+      assert(std::rotr(T32(128), 1) == T32(64));
+      assert(std::rotr(T32(128), 7) == T32(1));
+      assert(std::rotr(T32(1), -1) == T32(2));
+      assert(std::rotr(T32(1), -7) == T32(128));
+      assert(std::rotr(T32(m32 - 1), 0) == T32(m32 - 1));
+      assert(std::rotr(T32(m32 - 1), 1) == T32(m32 - h32));
+      // Full rotation returns original.
+      assert(std::rotr(T32(1), 32) == T32(1));
+
+      assert(std::rotr(T64(1), 0) == T64(1));
+      assert(std::rotr(T64(16), 4) == T64(1));
+      assert(std::rotr(T64(1), -1) == T64(2));
+      assert(std::rotr(T64(1), 64) == T64(1));
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T128 = unsigned _BitInt(128);
+      assert(std::rotr(T128(1), 0) == T128(1));
+      assert(std::rotr(T128(16), 4) == T128(1));
+      assert(std::rotr(T128(1), -1) == T128(2));
+      assert(std::rotr(T128(1), 128) == T128(1));
+      // Wrap low bit to high position.
+      assert(std::rotr(T128(1), 1) == T128(1) << 127);
+      // Multi-bit rotation across the 64-bit boundary.
+      assert(std::rotr(T128(3), 2) == ((T128(1) << 127) | (T128(1) << 126)));
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::rotr(T256(1), 0) == T256(1));
+      assert(std::rotr(T256(16), 4) == T256(1));
+      assert(std::rotr(T256(1) << 200, 200) == T256(1));
+      assert(std::rotr(T256(1), -1) == T256(2));
+      assert(std::rotr(T256(1), 256) == T256(1));
+      assert(std::rotr(T256(~T256(0) - 1), 1) == T256(~T256(0) - (T256(1) << 255)));
+      // Wrap low bit to highest.
+      assert(std::rotr(T256(1), 1) == T256(1) << 255);
+      // Modulo: rotation amount larger than width.
+      assert(std::rotr(T256(1), 256 + 4) == T256(1) << 252);
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
+
     return 0;
 }

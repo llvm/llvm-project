@@ -17,6 +17,7 @@
 #define __riscv_intrinsic_xsfmm32a32f 1
 #define __riscv_intrinsic_xsfmm32a8f 1
 #define __riscv_intrinsic_xsfmm32a8i 1
+#define __riscv_intrinsic_xsfmm32a 1
 #define __riscv_intrinsic_xsfmm64a64f 1
 #define __riscv_intrinsic_xsfmmbase 1
 #define __riscv_intrinsic_xsfvcp 1

@@ -51,7 +51,7 @@ FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createAArch64StorePairSuppressPass();
 FunctionPass *createAArch64ExpandPseudoLegacyPass();
-FunctionPass *createAArch64SLSHardeningPass();
+FunctionPass *createAArch64SLSHardeningLegacyPass();
 FunctionPass *createAArch64SpeculationHardeningPass();
 FunctionPass *createAArch64LoadStoreOptLegacyPass();
 ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
@@ -166,7 +166,7 @@ void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
 void initializeAArch64RedundantCondBranchLegacyPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptLegacyPass(PassRegistry &);
-void initializeAArch64SLSHardeningPass(PassRegistry &);
+void initializeAArch64SLSHardeningLegacyPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
 void initializeAArch64StackTaggingPreRALegacyPass(PassRegistry &);
@@ -283,6 +283,12 @@ public:
 
 class AArch64PointerAuthPass
     : public OptionalPassInfoMixin<AArch64PointerAuthPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SLSHardeningPass : public PassInfoMixin<AArch64SLSHardeningPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

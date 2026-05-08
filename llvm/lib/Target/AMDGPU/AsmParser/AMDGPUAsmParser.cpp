@@ -1052,7 +1052,9 @@ public:
     return getModifiers().hasIntModifiers();
   }
 
-  bool isForcedLit64() const { return getModifiers().isForcedLit64(); }
+  bool isForcedLit64() const {
+    return isImmLiteral() && getModifiers().isForcedLit64();
+  }
 
   uint64_t applyInputFPModifiers(uint64_t Val, unsigned Size) const;
 
@@ -5126,10 +5128,11 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       Imm = getLitValue(MO.getExpr());
 
     bool IsAnotherLiteral = false;
+    bool IsForcedLit64 = findMCOperand(Operands, OpIdx).isForcedLit64();
     if (!Imm.has_value()) {
       // Literal value not known, so we conservately assume it's different.
       IsAnotherLiteral = true;
-    } else if (!isInlineConstant(Inst, OpIdx)) {
+    } else if (IsForcedLit64 || !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = *Imm;
       bool IsForcedFP64 =
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
@@ -5138,7 +5141,6 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       bool IsFP64 = (IsForcedFP64 || AMDGPU::isSISrcFPOperand(Desc, OpIdx)) &&
                     AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
       bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
-      bool IsForcedLit64 = findMCOperand(Operands, OpIdx).isForcedLit64();
 
       if (((!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
             !IsForcedFP64) ||

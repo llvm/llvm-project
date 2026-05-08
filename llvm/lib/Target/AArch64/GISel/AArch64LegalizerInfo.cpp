@@ -872,9 +872,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customIf([](const LegalityQuery &Q) {
         LLT DstTy = Q.Types[0];
         LLT SrcTy = Q.Types[1];
-        return SrcTy.isFixedVector() && DstTy.isFixedVector() &&
-               SrcTy.getScalarType().isFloat64() &&
-               DstTy.getScalarType().isFloat16();
+        return SrcTy.getScalarSizeInBits() == 64 &&
+               DstTy.getScalarSizeInBits() == 16;
       })
       .lowerFor({{bf16, f32}, {v4bf16, v4f32}})
       // Clamp based on input
@@ -2659,6 +2658,20 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
                                            MachineIRBuilder &MIRBuilder,
                                            MachineRegisterInfo &MRI) const {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  // This function legalizes f64 -> bf16 and f64 -> f16 truncations via f64 ->
+  // f32 G_FPTRUNC_ODD and f32 -> [b]f16 G_FPTRUNC, which apparently avoids the
+  // usual double-rounding issue that could be present from using twin
+  // G_FPTRUNC.
+
+  if (DstTy.isBFloat16() && SrcTy.isFloat64()) {
+    auto Mid =
+        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()}, {Src});
+    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid});
+    MI.eraseFromParent();
+    return true;
+  }
+
   assert(SrcTy.isFixedVector() && isPowerOf2_32(SrcTy.getNumElements()) &&
          "Expected a power of 2 elements");
 

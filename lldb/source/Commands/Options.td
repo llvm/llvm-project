@@ -71,6 +71,9 @@ let Command = "settings clear" in {
 let Command = "settings show" in {
   def setshow_defaults : Option<"defaults", "d">,
                          Desc<"Include ${d}efault values if defined.">;
+  def setshow_changed : Option<"changed", "c">,
+                        Desc<"Only show settings whose value differs from the "
+                             "default.">;
 }
 
 let Command = "breakpoint list" in {

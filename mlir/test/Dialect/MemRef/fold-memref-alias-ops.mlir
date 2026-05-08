@@ -642,6 +642,26 @@ func.func @fold_vector_load_subview(%src : memref<24x64xf32>,
 
 // -----
 
+// TODO: This should fold, but implementing IndexedAccessOpInterface on vector.load
+// in a way that would allow the fold added complexity (emitting
+// `vector.shape_cast`s) that people wanted to keep out of the initial
+// implementation during previous discussions. (Note: this didn't work in the
+// pre-interface version of the pass either.)
+func.func @no_fold_scalar_equivalent_vector_load_subview(
+  %arg0 : memref<16xf32>, %off : index, %idx : index) -> vector<1xf32> {
+  %0 = memref.subview %arg0[%off][4][2] : memref<16xf32> to memref<4xf32, strided<[2], offset: ?>>
+  %1 = vector.load %0[%idx] : memref<4xf32, strided<[2], offset: ?>>, vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK-LABEL: func @no_fold_scalar_equivalent_vector_load_subview
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<16xf32>
+//       CHECK:   %[[SUBVIEW:.*]] = memref.subview %[[ARG0]]
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.load %[[SUBVIEW]]
+
+// -----
+
 func.func @fold_vector_maskedload_subview(
   %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3: vector<32xi1>, %arg4: vector<32xf32>) -> vector<32xf32> {
   %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
@@ -656,6 +676,21 @@ func.func @fold_vector_maskedload_subview(
 // CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<32xi1>
 // CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<32xf32>
 //      CHECK:   vector.maskedload %[[ARG0]][%[[ARG1]], %[[ARG2]]], %[[ARG3]], %[[ARG4]] : memref<12x32xf32>, vector<32xi1>, vector<32xf32> into vector<32xf32>
+
+// -----
+
+func.func @no_fold_vector_maskedload_subview_high_rank_vector(
+  %arg0 : memref<8xf32>, %idx : index,
+  %mask : vector<2x2x2xi1>, %pass : vector<2x2x2xf32>) -> vector<2x2x2xf32> {
+  %0 = memref.subview %arg0[%idx][1][1] : memref<8xf32> to memref<1xf32, strided<[1], offset: ?>>
+  %1 = vector.maskedload %0[%idx], %mask, %pass : memref<1xf32, strided<[1], offset: ?>>, vector<2x2x2xi1>, vector<2x2x2xf32> into vector<2x2x2xf32>
+  return %1 : vector<2x2x2xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedload_subview_high_rank_vector
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<8xf32>
+//       CHECK:   %[[SUBVIEW:.*]] = memref.subview %[[ARG0]]
+//       CHECK:   vector.maskedload %[[SUBVIEW]]
 
 // -----
 
@@ -723,6 +758,24 @@ func.func @fold_vector_load_expand_shape(
 
 // -----
 
+// Folding this would require changing the vector op rank. That is handled by
+// vector drop-leading-unit-dim patterns, not by fold-memref-alias-ops.
+func.func @no_fold_vector_load_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index) -> vector<1x8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.load %0[%arg1, %c0] : memref<4x8xf32>, vector<1x8xf32>
+  return %1 : vector<1x8xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_load_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//       CHECK:   memref.expand_shape %[[ARG0]]
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.load
+
+// -----
+
 func.func @fold_vector_maskedload_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
@@ -739,6 +792,22 @@ func.func @fold_vector_maskedload_expand_shape(
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
 //       CHECK:   vector.maskedload %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @no_fold_vector_maskedload_expand_shape_high_rank_vector(
+  %arg0 : memref<32xf32>, %arg1 : index,
+  %mask : vector<2x2x2xi1>, %pass : vector<2x2x2xf32>) -> vector<2x2x2xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.maskedload %0[%arg1, %c0], %mask, %pass : memref<4x8xf32>, vector<2x2x2xi1>, vector<2x2x2xf32> into vector<2x2x2xf32>
+  return %1 : vector<2x2x2xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedload_expand_shape_high_rank_vector
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.maskedload %[[EXPAND]]
 
 // -----
 
@@ -759,6 +828,24 @@ func.func @fold_vector_store_expand_shape(
 
 // -----
 
+// Folding this would require changing the vector op rank. That is handled by
+// vector drop-leading-unit-dim patterns, not by fold-memref-alias-ops.
+func.func @no_fold_vector_store_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index, %val : vector<1x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.store %val, %0[%arg1, %c0] : memref<4x8xf32>, vector<1x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @no_fold_vector_store_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//       CHECK:   memref.expand_shape %[[ARG0]]
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.store
+
+// -----
+
 func.func @fold_vector_maskedstore_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) {
   %c0 = arith.constant 0 : index
@@ -775,6 +862,44 @@ func.func @fold_vector_maskedstore_expand_shape(
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
 //       CHECK:   vector.maskedstore %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_vector_expandload_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.expandload %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_expandload_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.expandload %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_vector_compressstore_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.compressstore %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_compressstore_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.compressstore %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
 
 // -----
 

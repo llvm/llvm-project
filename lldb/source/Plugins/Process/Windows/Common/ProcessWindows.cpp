@@ -655,6 +655,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
   if (m_pty) {
+    DrainProcessStdout();
     m_pty->SetStopping(true);
     m_pty->Close();
     m_stdio_communication.InterruptRead();
@@ -673,6 +674,32 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   SetPrivateState(eStateExited);
 
   ProcessDebugger::OnExitProcess(exit_code);
+}
+
+void ProcessWindows::DrainProcessStdout() {
+  if (!m_stdio_communication.ReadThreadIsRunning())
+    return;
+  m_stdio_communication.SynchronizeWithReadThread();
+  if (!m_pty || m_pty->GetMode() != PseudoConsole::Mode::ConPTY)
+    return;
+
+  HANDLE pipe = m_pty->GetSTDOUTHandle();
+  for (int consec_empty = 0; consec_empty < 3;) {
+    if (!m_stdio_communication.ReadThreadIsRunning())
+      break;
+    DWORD avail = 0;
+    // PeekNamedPipe is thread safe.
+    if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &avail, nullptr))
+      break;
+    if (avail > 0) {
+      consec_empty = 0;
+      m_stdio_communication.SynchronizeWithReadThread();
+    } else {
+      ++consec_empty;
+      if (consec_empty < 3)
+        ::SleepEx(1, FALSE);
+    }
+  }
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -741,41 +768,10 @@ ProcessWindows::OnDebugException(bool first_chance,
     return ExceptionResult::SendToApplication;
   }
 
-  // Drain any in-flight process output before announcing the stop. The I/O
-  // reader thread and this debug-event thread run concurrently. Without
-  // synchronization the eBroadcastBitStateChanged(Stopped) event can reach
-  // the Debugger event thread before the preceding eBroadcastBitSTDOUT
-  // events.
-  auto drain_stdout = [this] {
-    if (!m_stdio_communication.ReadThreadIsRunning())
-      return;
-    m_stdio_communication.SynchronizeWithReadThread();
-    if (!m_pty || m_pty->GetMode() != PseudoConsole::Mode::ConPTY)
-      return;
-
-    HANDLE pipe = m_pty->GetSTDOUTHandle();
-    for (int consec_empty = 0; consec_empty < 3;) {
-      if (!m_stdio_communication.ReadThreadIsRunning())
-        break;
-      DWORD avail = 0;
-      // PeekNamedPipe is thread safe.
-      if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &avail, nullptr))
-        break;
-      if (avail > 0) {
-        consec_empty = 0;
-        m_stdio_communication.SynchronizeWithReadThread();
-      } else {
-        ++consec_empty;
-        if (consec_empty < 3)
-          ::SleepEx(1, FALSE);
-      }
-    }
-  };
-
   if (!first_chance) {
     // Not any second chance exception is an application crash by definition.
     // It may be an expression evaluation crash.
-    drain_stdout();
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
   }
 
@@ -796,12 +792,17 @@ ProcessWindows::OnDebugException(bool first_chance,
       LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
                record.GetExceptionAddress());
     }
-    drain_stdout();
+    // Drain any in-flight process output before announcing the stop. The I/O
+    // reader thread and this debug-event thread run concurrently. Without
+    // synchronization the eBroadcastBitStateChanged(Stopped) event can reach
+    // the Debugger event thread before the preceding eBroadcastBitSTDOUT
+    // events.
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
   case EXCEPTION_SINGLE_STEP:
     result = ExceptionResult::BreakInDebugger;
-    drain_stdout();
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
   default:

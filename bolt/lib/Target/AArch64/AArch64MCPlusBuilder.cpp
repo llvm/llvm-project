@@ -715,12 +715,10 @@ public:
     return Inst.getOpcode() == AArch64::ADDXri;
   }
 
-  bool isLDRWl(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::LDRWl;
-  }
-
-  bool isLDRXl(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::LDRXl;
+  bool isLoadLiteralGPR(const MCInst &Inst) const override {
+    unsigned OpCode = Inst.getOpcode();
+    return OpCode == AArch64::LDRWl || OpCode == AArch64::LDRXl ||
+           OpCode == AArch64::LDRSWl;
   }
 
   MCPhysReg getADRReg(const MCInst &Inst) const {
@@ -744,16 +742,36 @@ public:
 
   InstructionListType createAdrpLdr(const MCInst &LDRInst,
                                     MCContext *Ctx) const override {
-    assert((isLDRXl(LDRInst) || isLDRWl(LDRInst)) &&
-           "LDR (literal, 32 or 64-bit integer load) instruction expected");
+    assert(isLoadLiteralGPR(LDRInst) &&
+           "LDR (literal) or LDRSW (literal) expected");
     assert(LDRInst.getOperand(0).isReg() &&
            "unexpected operand in LDR instruction");
     const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
-    const MCPhysReg AddrReg =
-        isLDRXl(LDRInst) ? DataReg
-                         : (MCPhysReg)RegInfo->getMatchingSuperReg(
-                               DataReg, AArch64::sub_32,
-                               &RegInfo->getRegClass(AArch64::GPR64RegClassID));
+    MCPhysReg AddrReg;
+    unsigned OpCode;
+    uint32_t RelType;
+    switch (LDRInst.getOpcode()) {
+    case AArch64::LDRWl:
+      AddrReg = (MCPhysReg)RegInfo->getMatchingSuperReg(
+          DataReg, AArch64::sub_32,
+          &RegInfo->getRegClass(AArch64::GPR64RegClassID));
+      OpCode = AArch64::LDRWui;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
+      break;
+    case AArch64::LDRXl:
+      AddrReg = DataReg;
+      OpCode = AArch64::LDRXui;
+      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      break;
+    case AArch64::LDRSWl:
+      AddrReg = DataReg;
+      OpCode = AArch64::LDRSWui;
+      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      break;
+    default:
+      llvm_unreachable("LDR (literal) or LDRSW (literal) expected");
+    }
+
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
     assert(Target && "missing target symbol in LDR instruction");
 
@@ -764,15 +782,13 @@ public:
     Insts[0].addOperand(MCOperand::createImm(0));
     setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
                           ELF::R_AARCH64_NONE);
-    Insts[1].setOpcode(isLDRXl(LDRInst) ? AArch64::LDRXui : AArch64::LDRWui);
+    Insts[1].setOpcode(OpCode);
     Insts[1].clear();
     Insts[1].addOperand(MCOperand::createReg(DataReg));
     Insts[1].addOperand(MCOperand::createReg(AddrReg));
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx,
-                          isLDRXl(LDRInst) ? ELF::R_AARCH64_LDST64_ABS_LO12_NC
-                                           : ELF::R_AARCH64_LDST32_ABS_LO12_NC);
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx, RelType);
     return Insts;
   }
 

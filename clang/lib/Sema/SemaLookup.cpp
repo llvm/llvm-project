@@ -2032,7 +2032,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   // Directly imported module are necessarily reachable.
   // Since we can't export import a module implementation partition unit, we
   // don't need to count for Exports here.
-  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+  if (CurrentM &&
+      llvm::is_contained(CurrentM->getTopLevelModule()->Imports, DeclTopModule))
     return true;
 
   // Then we treat all module implementation partition unit as unreachable.

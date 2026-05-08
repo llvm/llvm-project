@@ -919,6 +919,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // AST Top-Level Block.
   BLOCK(AST_BLOCK);
+  RECORD(SUBMODULE_METADATA);
   RECORD(TYPE_OFFSET);
   RECORD(DECL_OFFSET);
   RECORD(IDENTIFIER_OFFSET);
@@ -997,7 +998,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // Submodule Block.
   BLOCK(SUBMODULE_BLOCK);
-  RECORD(SUBMODULE_METADATA);
+  RECORD(SUBMODULE_END);
   RECORD(SUBMODULE_DEFINITION);
   RECORD(SUBMODULE_UMBRELLA_HEADER);
   RECORD(SUBMODULE_HEADER);
@@ -1016,6 +1017,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_PRIVATE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_INITIALIZERS);
   RECORD(SUBMODULE_EXPORT_AS);
+  RECORD(SUBMODULE_CHILD);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -2983,16 +2985,6 @@ unsigned ASTWriter::getSubmoduleID(Module *Mod) {
   return ID;
 }
 
-/// Compute the number of modules within the given tree (including the
-/// given module).
-static unsigned getNumberOfModules(Module *Mod) {
-  unsigned ChildModules = 0;
-  for (Module *Submodule : Mod->submodules())
-    ChildModules += getNumberOfModules(Submodule);
-
-  return ChildModules + 1;
-}
-
 void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   // Enter the submodule description block.
   Stream.EnterSubblock(SUBMODULE_BLOCK_ID, /*bits for abbreviations*/5);
@@ -3088,11 +3080,16 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
   unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-  // Write the submodule metadata block.
-  RecordData::value_type Record[] = {
-      getNumberOfModules(WritingModule),
-      FirstSubmoduleID - NUM_PREDEF_SUBMODULE_IDS};
-  Stream.EmitRecord(SUBMODULE_METADATA, Record);
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_CHILD));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Child submodule ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Child name
+  unsigned ChildAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+  SmallVector<uint64_t> SubmoduleOffsets;
+  uint64_t SubmoduleOffsetBase = Stream.GetCurrentBitNo();
+
+  unsigned TopLevelID = getSubmoduleID(WritingModule);
 
   // Write all of the submodules.
   std::queue<Module *> Q;
@@ -3101,6 +3098,19 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     Module *Mod = Q.front();
     Q.pop();
     unsigned ID = getSubmoduleID(Mod);
+    if (ID < FirstSubmoduleID) {
+      assert(0 && "Loaded submodule entered WritingModule ?");
+      continue;
+    }
+
+    // Record the local offset of this submodule.
+    unsigned Index = ID - FirstSubmoduleID;
+    if (Index >= SubmoduleOffsets.size())
+      SubmoduleOffsets.resize(Index + 1);
+
+    uint64_t Offset = Stream.GetCurrentBitNo() - SubmoduleOffsetBase;
+    assert((Offset >> 32) == 0 && "Submodule offset too large");
+    SubmoduleOffsets[Index] = Offset;
 
     uint64_t ParentID = 0;
     if (Mod->Parent) {
@@ -3259,6 +3269,20 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
       Stream.EmitRecordWithBlob(ExportAsAbbrev, Record, Mod->ExportAsModule);
     }
 
+    // Emit one SUBMODULE_CHILD record per direct child so the reader can
+    // populate PendingSubmodules and demand-load children by name.
+    for (Module *Child : Mod->submodules()) {
+      RecordData::value_type Record[] = {SUBMODULE_CHILD,
+                                         getSubmoduleID(Child)};
+      Stream.EmitRecordWithBlob(ChildAbbrev, Record, Child->Name);
+    }
+
+    // Emit the sentinel signifying the end of this submodule.
+    {
+      RecordData Record;
+      Stream.EmitRecord(SUBMODULE_END, Record);
+    }
+
     // Queue up the submodules of this module.
     for (Module *M : Mod->submodules())
       Q.push(M);
@@ -3266,10 +3290,23 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
   Stream.ExitBlock();
 
-  assert((NextSubmoduleID - FirstSubmoduleID ==
-          getNumberOfModules(WritingModule)) &&
+  assert((NextSubmoduleID - FirstSubmoduleID == SubmoduleOffsets.size()) &&
          "Wrong # of submodules; found a reference to a non-local, "
          "non-imported submodule?");
+
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_METADATA));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Submodule count
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Base submodule ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Top-level submod ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Submodule offsets
+  unsigned SubmoduleMetadataAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+  RecordData::value_type Record[] = {
+      SUBMODULE_METADATA, SubmoduleOffsets.size(),
+      FirstSubmoduleID - NUM_PREDEF_SUBMODULE_IDS, TopLevelID};
+  Stream.EmitRecordWithBlob(SubmoduleMetadataAbbrev, Record,
+                            bytes(SubmoduleOffsets));
 }
 
 void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,

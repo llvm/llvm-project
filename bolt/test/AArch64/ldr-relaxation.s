@@ -114,6 +114,29 @@ _start:
 .size _start, .-_start
 .endif
 
+## Check LDR relaxation works on LDRSW (literal)
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:    --defsym RELAX_SIMPLE_LDRSW=1 %s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.so -Wl,-q
+# RUN: llvm-bolt %t.so -o %t.bolt
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX_LDRSW
+
+# RELAX_LDRSW: adrp
+# RELAX_LDRSW-NEXT: ldrsw
+
+.ifdef RELAX_SIMPLE_LDRSW
+  .text
+  .global _start
+  .type _start, %function
+_start:
+  .cfi_startproc
+  ldrsw x0, _foo
+  ret
+  .cfi_endproc
+.size _start, .-_start
+.endif
+
   .section .text_cold
   .global _foo
   .align 3

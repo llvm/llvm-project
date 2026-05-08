@@ -117,9 +117,11 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   if (ignoreTKR.test(common::IgnoreTKR::Device)) {
     return true;
   }
-  // A use_device(...) actual is compatible with any dummy.
+  // A use_device(...) actual is compatible only with a Device dummy or a
+  // host dummy (no CUDA attribute); other attributes (Managed, Unified,
+  // Pinned, ...) require the actual to live in that specific kind of memory.
   if (y && *y == CUDADataAttr::UseDevice)
-    return true;
+    return !x || *x == CUDADataAttr::Device;
   if (!y && isHostDeviceProcedure) {
     return true;
   }

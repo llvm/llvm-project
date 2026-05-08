@@ -17,8 +17,6 @@ from lldbsuite.test.gdbclientutils import *
 # Runs on systems where we can always predict the software break size
 @skipIf(archs=no_match(["x86_64", "arm64", "aarch64"]))
 class TestMultiBreakpoint(TestBase):
-    NO_DEBUG_INFO_TESTCASE = True
-
     def check_invalid_packet(self, packet_str):
         reply = lldbutil.send_packet_get_reply(self, packet_str)
         if reply.startswith("E"):
@@ -62,9 +60,6 @@ class TestMultiBreakpoint(TestBase):
         return f"{addr:x}"
 
     def test_multi_breakpoint(self):
-        # Debugserver uses refcounted breakpoints
-        breakpoints_are_refcounted = self.platformIsDarwin()
-
         self.build()
         source_file = lldb.SBFileSpec("main.c")
         self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -156,9 +151,7 @@ class TestMultiBreakpoint(TestBase):
         # Clean up both.
         array = [f"z0,{addr_a},{bp_kind}", f"z0,{addr_a},{bp_kind}"]
         reply = self.send_packet(make_packet(array))
-        self.assertMultiResponse(
-            reply, ["OK", "OK" if breakpoints_are_refcounted else "error"]
-        )
+        self.assertMultiResponse(reply, ["OK", "OK"])
 
         # --- Set the same breakpoint twice, but remove it thrice.
         array = [f"Z0,{addr_a},{bp_kind}", f"Z0,{addr_a},{bp_kind}"]
@@ -170,9 +163,7 @@ class TestMultiBreakpoint(TestBase):
             f"z0,{addr_a},{bp_kind}",
         ]
         reply = self.send_packet(make_packet(array))
-        self.assertMultiResponse(
-            reply, ["OK", "OK" if breakpoints_are_refcounted else "error", "error"]
-        )
+        self.assertMultiResponse(reply, ["OK", "OK", "error"])
 
         # --- Set and remove the same address in a single packet ---
         # The spec requires requests to be executed in order, so the set

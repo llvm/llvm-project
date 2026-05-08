@@ -12,8 +12,8 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
-#include "src/__support/File/linux/lseekImpl.h"
 #include "src/__support/OSUtil/fcntl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/lseek.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/alloc-checker.h"
 #include "src/__support/libc_errno.h" // For error macros
@@ -47,10 +47,7 @@ FileIOResult linux_file_read(File *f, void *buf, size_t size) {
 
 ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  auto result = internal::lseekimpl(lf->get_fd(), offset, whence);
-  if (!result.has_value())
-    return result.error();
-  return result.value();
+  return linux_syscalls::lseek(lf->get_fd(), offset, whence);
 }
 
 int linux_file_close(File *f) {

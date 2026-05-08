@@ -44,6 +44,31 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
+
+    # The libc build uses -march=native for opt_host tests, which means
+    # the generated object files are specific to the runner's CPU model.
+    # sccache treats -march=native as a literal string in its cache key,
+    # so without per-CPU cache keys, object files compiled on one CPU
+    # model are silently served to runners with a different CPU, causing
+    # illegal instruction crashes at runtime.
+    - name: Detect CPU model
+      id: cpu-info
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          # x86 has 'model name', ARM has 'CPU implementer' + 'CPU part'.
+          cpu_model=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs | tr ' ' '-' || true)
+          if [ -z "$cpu_model" ]; then
+            impl=$(grep -m1 'CPU implementer' /proc/cpuinfo | cut -d: -f2 | xargs)
+            part=$(grep -m1 'CPU part' /proc/cpuinfo | cut -d: -f2 | xargs)
+            cpu_model="arm-${impl:-unknown}-${part:-unknown}"
+          fi
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          cpu_model=$(sysctl -n machdep.cpu.brand_string | tr ' ' '-')
+        else
+          cpu_model="generic"
+        fi
+        echo "cpu-model=${cpu_model:-unknown}" >> "$GITHUB_OUTPUT"
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
@@ -56,7 +81,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
       with:
         max-size: 1G
-        key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
+        key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}_${{ steps.cpu-info.outputs.cpu-model }}
         variant: sccache
     
     # MPFR is required by some of the mathlib tests.

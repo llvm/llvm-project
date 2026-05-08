@@ -40,7 +40,6 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i16
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptrunc_double
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrt
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_powi
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sin
@@ -109,7 +108,6 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i16
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptrunc_double
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrt
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_powi
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sin
@@ -1034,21 +1032,21 @@ define <4 x bfloat> @test_fptrunc_float(<4 x float> %a) {
 }
 
 define <4 x bfloat> @test_fptrunc_double(<4 x double> %a) {
-; CHECK-CVT-LABEL: test_fptrunc_double:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    fcvtxn2 v0.4s, v1.2d
-; CHECK-CVT-NEXT:    movi v1.4s, #1
-; CHECK-CVT-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-CVT-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-CVT-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-CVT-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
-; CHECK-CVT-NEXT:    orr v0.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-CVT-NEXT:    bit v0.16b, v1.16b, v3.16b
-; CHECK-CVT-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptrunc_double:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
+; CHECK-CVT-SD-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-CVT-SD-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: test_fptrunc_double:
 ; CHECK-BF16:       // %bb.0:
@@ -1056,6 +1054,24 @@ define <4 x bfloat> @test_fptrunc_double(<4 x double> %a) {
 ; CHECK-BF16-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptrunc_double:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    movi v5.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #1
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v4.4s, v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    orr v0.16b, v0.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    mvn v3.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
   %1 = fptrunc <4 x double> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }

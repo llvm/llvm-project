@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/InstrumentorConfigFile.h"
+#include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -264,6 +265,8 @@ PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
     return PreservedAnalyses::all();
 
   writeConfigToJSON(IConf, WriteConfigFile, IIRB.Ctx);
+
+  printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
 
   bool Changed = Impl.instrument();
   if (!Changed)

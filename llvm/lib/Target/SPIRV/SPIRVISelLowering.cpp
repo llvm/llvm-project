@@ -429,7 +429,7 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
   // We'd like to avoid the needless second processing pass.
-  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+  if (MF.getRegInfo().reservedRegsFrozen())
     return;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
@@ -604,7 +604,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       }
     }
   }
-  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }
 

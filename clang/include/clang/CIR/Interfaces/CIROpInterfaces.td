@@ -171,6 +171,32 @@ let cppNamespace = "::cir" in {
         return mlir::dyn_cast_if_present<mlir::StringAttr>(
             $_op->getAttr("section"));
       }]
+      >,
+      // Added for readability.
+      InterfaceMethod<"",
+      "bool", "isDefinition", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return !$_op.isDeclaration();
+      }]
+      >,
+      // TODO(cir): Make GlobalAlias a separate op.
+      InterfaceMethod<"",
+      "void", "setAliasee", (ins "::std::optional<::llvm::StringRef>":$val), [{}],
+      /*defaultImplementation=*/[{
+        if (val) {
+          auto aliaseeRef =
+              ::mlir::FlatSymbolRefAttr::get($_op->getContext(), *val);
+          $_op->setAttr("aliasee", aliaseeRef);
+        } else {
+          $_op->removeAttr("aliasee");
+        }
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setLinkage", (ins "::cir::GlobalLinkageKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setLinkage(val);
+      }]
       >
     ];
     let extraClassDeclaration = [{

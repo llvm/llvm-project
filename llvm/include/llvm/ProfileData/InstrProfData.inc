@@ -893,6 +893,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALUE_PROF_MEMOP_FUNC __llvm_profile_instrument_memop
 #define INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR                                   \
   INSTR_PROF_QUOTE(INSTR_PROF_VALUE_PROF_MEMOP_FUNC)
+#define INSTR_PROF_INSTRUMENT_GPU_FUNC __llvm_profile_instrument_gpu
+#define INSTR_PROF_INSTRUMENT_GPU_FUNC_STR                                     \
+  INSTR_PROF_QUOTE(INSTR_PROF_INSTRUMENT_GPU_FUNC)
 
 /* InstrProfile per-function control data alignment.  */
 #define INSTR_PROF_DATA_ALIGNMENT 8

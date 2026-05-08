@@ -42,7 +42,7 @@ _EXTRA_ALIASES = {
     "lld": ["ld", "lld-link", "ld.lld", "ld64.lld", "wasm-ld"],
     "llvm-ar": ["ranlib", "lib", "dlltool"],
     "llvm-cxxfilt": ["c++filt"],
-    "llvm-objcopy": ["bitcode-strip", "install-name-tool", "strip"],
+    "llvm-objcopy": ["bitcode-strip", "install-name-tool", "strip", "extract-bundle-entry"],
     "llvm-objdump": ["otool"],
     "llvm-rc": ["windres"],
     "llvm-readobj": ["readelf"],

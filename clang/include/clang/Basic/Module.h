@@ -48,8 +48,16 @@ namespace clang {
 
 class FileManager;
 class LangOptions;
+class Module;
 class ModuleMap;
 class TargetInfo;
+
+/// Interface for on-demand deserialization of submodules stored in a PCM file.
+class ExternalSubmoduleSource {
+public:
+  virtual Module *getSubmodule(uint32_t GlobalID) = 0;
+  virtual ~ExternalSubmoduleSource() = default;
+};
 
 /// Describes the name of a module.
 using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
@@ -222,6 +230,62 @@ struct ModuleAttributes {
         NoUndeclaredIncludes(false) {}
 };
 
+/// Reference to a module that consists of either an existing/materialized
+/// Module object, reference to a serialized submodule record, both, or
+/// neither (null).
+class ModuleRef {
+  /// The existing/materialized Module object.
+  mutable Module *Existing = nullptr;
+
+  /// The external submodule source (i.e. \c ASTReader), and a boolean
+  /// signifying whether it's already been used to deserialize \c SubmoduleID.
+  mutable llvm::PointerIntPair<ExternalSubmoduleSource *, 1, bool>
+      ExternalSource = {nullptr, false};
+
+  /// Identifier of the external submodule in \c ExternalSource.
+  mutable uint64_t SubmoduleID = 0;
+
+public:
+  /// Create an empty reference.
+  ModuleRef() = default;
+
+  /// Create reference to a materialized module.
+  ModuleRef(Module *M) : Existing(M) {}
+
+  /// Create reference to a serialized submodule record.
+  ModuleRef(ExternalSubmoduleSource *ExtSrc, uint64_t SubmoduleID)
+      : ExternalSource(ExtSrc, false), SubmoduleID(SubmoduleID) {}
+
+  /// Get the existing/materialized module, if there's any.
+  Module *getExisting() const { return Existing; }
+  /// Add the existing/materialized module.
+  void setExisting(Module *E) { Existing = E; }
+
+  /// Add the serialized submodule record reference.
+  void setExternal(ExternalSubmoduleSource *ExtSrc, uint64_t ID) {
+    ExternalSource = {ExtSrc, false};
+    SubmoduleID = ID;
+  }
+
+  /// Check whether this is a non-empty reference.
+  operator bool() const {
+    return Existing || (ExternalSource.getPointer() && SubmoduleID);
+  }
+
+  /// Get the existing/materialized module. Try materializing it on-demand from
+  /// the serialized submodule record if possible.
+  operator Module *() const {
+    if (!ExternalSource.getInt() && ExternalSource.getPointer() &&
+        SubmoduleID) {
+      Existing = ExternalSource.getPointer()->getSubmodule(SubmoduleID);
+      ExternalSource.setInt(true);
+    }
+    return Existing;
+  }
+
+  Module *operator->() const { return *this; }
+};
+
 /// Required to construct a Module.
 ///
 /// This tag type is only constructible by ModuleMap, guaranteeing it ownership
@@ -348,7 +412,7 @@ public:
 
 private:
   /// The submodules of this module, indexed by name.
-  std::vector<Module *> SubModules;
+  std::vector<ModuleRef> SubModules;
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
@@ -552,17 +616,17 @@ public:
 
   /// The set of modules imported by this module, and on which this
   /// module depends.
-  llvm::SmallSetVector<Module *, 2> Imports;
+  llvm::SmallVector<ModuleRef, 2> Imports;
 
   /// The set of top-level modules that affected the compilation of this module,
   /// but were not imported.
-  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
+  llvm::SmallVector<ModuleRef, 2> AffectingClangModules;
 
   /// Describes an exported module.
   ///
   /// The pointer is the module being re-exported, while the bit will be true
   /// to indicate that this is a wildcard export.
-  using ExportDecl = std::pair<Module *, bool>;
+  using ExportDecl = std::pair<ModuleRef, bool>;
 
   /// The set of export declarations.
   SmallVector<ExportDecl, 2> Exports;
@@ -640,7 +704,7 @@ public:
   /// A conflict between two modules.
   struct Conflict {
     /// The module that this module conflicts with.
-    Module *Other;
+    ModuleRef Other;
 
     /// The message provided to the user when there is a conflict.
     std::string Message;
@@ -740,6 +804,23 @@ public:
     Parent = M;
     Parent->SubModuleIndex[M->Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
+  }
+
+  /// Add a child submodule.
+  void addSubmodule(StringRef Name, Module *Submodule) {
+    auto [It, New] = SubModuleIndex.insert({Name, SubModules.size()});
+    if (New)
+      SubModules.emplace_back();
+    SubModules[It->second].setExisting(Submodule);
+  }
+
+  /// Add the external part of a submodule ModuleRef.
+  void addSubmodule(StringRef Name, ExternalSubmoduleSource *ExternalSource,
+                    uint64_t SubmoduleID) {
+    auto [It, New] = SubModuleIndex.insert({Name, SubModules.size()});
+    if (New)
+      SubModules.emplace_back();
+    SubModules[It->second].setExternal(ExternalSource, SubmoduleID);
   }
 
   /// Is this module have similar semantics as headers.
@@ -913,7 +994,7 @@ public:
   /// Find the submodule with the given name.
   ///
   /// \returns The submodule if found, or NULL otherwise.
-  Module *findSubmodule(StringRef Name) const;
+  ModuleRef findSubmodule(StringRef Name) const;
 
   /// Get the Global Module Fragment (sub-module) for this module, it there is
   /// one.
@@ -941,8 +1022,8 @@ public:
 
   unsigned getVisibilityID() const { return VisibilityID; }
 
-  using submodule_iterator = std::vector<Module *>::iterator;
-  using submodule_const_iterator = std::vector<Module *>::const_iterator;
+  using submodule_iterator = std::vector<ModuleRef>::iterator;
+  using submodule_const_iterator = std::vector<ModuleRef>::const_iterator;
 
   llvm::iterator_range<submodule_iterator> submodules() {
     return llvm::make_range(SubModules.begin(), SubModules.end());

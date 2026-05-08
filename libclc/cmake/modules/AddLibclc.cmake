@@ -111,7 +111,9 @@ function(link_libclc_builtin_library target_name)
     DEPENDS ${link_deps}
   )
 
-  if(ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64)
+  string(REPLACE "-" ";" triple_parts "${ARG_TRIPLE}")
+  list(GET triple_parts 2 triple_os)
+  if((ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv32 OR ARG_ARCH STREQUAL spirv64) AND NOT triple_os STREQUAL vulkan)
     # SPIR-V targets produce a .spv file from the linked bitcode.
     set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.spv)
     if(LIBCLC_USE_SPIRV_BACKEND)

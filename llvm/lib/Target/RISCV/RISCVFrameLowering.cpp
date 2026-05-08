@@ -1999,6 +1999,7 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
                       needsDwarfCFI(MF) && !hasFP(MF),
                       /*NeedProbe=*/true, ProbeSize, DynAllocation,
                       MachineInstr::NoFlags);
+        inlineStackProbe(MF, MBB);
       } else {
         const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
         RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),

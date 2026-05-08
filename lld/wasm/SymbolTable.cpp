@@ -399,9 +399,9 @@ Symbol *SymbolTable::addSharedTag(StringRef name, uint32_t flags,
     return s;
   }
 
-  if (s->isDefined()) {
+  // Shared symbols should never replace locally-defined ones
+  if (s->isDefined())
     return s;
-  }
 
   // undefined existing sym
   const WasmSignature *oldSig = existingTag->signature;
@@ -438,9 +438,8 @@ Symbol *SymbolTable::addSharedFunction(StringRef name, uint32_t flags,
   }
 
   // Shared symbols should never replace locally-defined ones
-  if (s->isDefined()) {
+  if (s->isDefined())
     return s;
-  }
 
   LLVM_DEBUG(dbgs() << "resolving existing undefined symbol: " << s->getName()
                     << "\n");
@@ -477,9 +476,8 @@ Symbol *SymbolTable::addSharedData(StringRef name, uint32_t flags,
   }
 
   // Shared symbols should never replace locally-defined ones
-  if (s->isDefined()) {
+  if (s->isDefined())
     return s;
-  }
 
   checkDataType(s, file);
   replaceSymbol<SharedData>(s, name, flags, file);
