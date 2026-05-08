@@ -357,11 +357,9 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
                                 "match parameter name %1")
               << Matches[2] << II;
           if (isLikelyTypo(Callee->parameters(), Matches[2], II->getName())) {
-            const std::string CorrectedComment = llvm::Twine(Matches[1])
-                                                     .concat(II->getName())
-                                                     .concat(Matches[3])
-                                                     .str();
-            Diag << FixItHint::CreateReplacement(Comment.Loc, CorrectedComment);
+            Diag << FixItHint::CreateReplacement(
+                Comment.Loc,
+                llvm::Twine(Matches[1] + II->getName() + Matches[3]).str());
           }
         }
         diag(PVD->getLocation(), "%0 declared here", DiagnosticIDs::Note) << II;
@@ -378,9 +376,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     const CommentKind Kind = shouldAddComment(Args[I]);
     if (Comments.empty() && Kind != CommentKind::None) {
       SmallString<32> ArgComment;
-      llvm::Twine("/*")
-          .concat(II->getName())
-          .concat("=*/")
+      llvm::Twine(llvm::Twine("/*") + II->getName() + "=*/")
           .toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
           diag(Args[I]->getBeginLoc(),

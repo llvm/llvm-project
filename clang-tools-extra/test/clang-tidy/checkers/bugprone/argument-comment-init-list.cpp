@@ -8,7 +8,7 @@
 // RUN: %check_clang_tidy -check-suffix=TEMP %s bugprone-argument-comment %t -- \
 // RUN:   -config="{CheckOptions: { \
 // RUN:     bugprone-argument-comment.CommentParenthesizedTemporaries: true}}" --
-// RUN: %check_clang_tidy -check-suffix=BOTH %s bugprone-argument-comment %t -- \
+// RUN: %check_clang_tidy -check-suffix=BOTH-INIT %s bugprone-argument-comment %t -- \
 // RUN:   -config="{CheckOptions: { \
 // RUN:     bugprone-argument-comment.CommentAnonymousInitLists: true, \
 // RUN:     bugprone-argument-comment.CommentTypedInitLists: true}}" --
@@ -55,8 +55,8 @@ void test_braced_init_list() {
   // CHECK-FIXES-TYPED: foo(some_arg, /*dims=*/{});
   // CHECK-MESSAGES-TEMP: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-TEMP: foo(some_arg, /*dims=*/{});
-  // CHECK-MESSAGES-BOTH: warning: argument name 'dim' in comment does not match parameter name 'dims'
-  // CHECK-FIXES-BOTH: foo(some_arg, /*dims=*/{});
+  // CHECK-MESSAGES-BOTH-INIT: warning: argument name 'dim' in comment does not match parameter name 'dims'
+  // CHECK-FIXES-BOTH-INIT: foo(some_arg, /*dims=*/{});
   // CHECK-MESSAGES-ALL: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-ALL: foo(some_arg, /*dims=*/{});
 
@@ -69,8 +69,8 @@ void test_braced_init_list() {
   // CHECK-FIXES-TYPED: foo(some_arg, /*dims=*/std::vector<int>{});
   // CHECK-MESSAGES-TEMP: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-TEMP: foo(some_arg, /*dims=*/std::vector<int>{});
-  // CHECK-MESSAGES-BOTH: warning: argument name 'dim' in comment does not match parameter name 'dims'
-  // CHECK-FIXES-BOTH: foo(some_arg, /*dims=*/std::vector<int>{});
+  // CHECK-MESSAGES-BOTH-INIT: warning: argument name 'dim' in comment does not match parameter name 'dims'
+  // CHECK-FIXES-BOTH-INIT: foo(some_arg, /*dims=*/std::vector<int>{});
   // CHECK-MESSAGES-ALL: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-ALL: foo(some_arg, /*dims=*/std::vector<int>{});
 
@@ -80,8 +80,8 @@ void test_braced_init_list() {
   // CHECK-FIXES-ANON: foo(some_arg, /*dims=*/{});
   // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-4]]:17: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:17: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:17: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo(some_arg, /*dims=*/{});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:17: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo(some_arg, /*dims=*/{});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:17: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo(some_arg, /*dims=*/{});
 
@@ -91,8 +91,8 @@ void test_braced_init_list() {
   // CHECK-MESSAGES-TYPED: [[@LINE-3]]:17: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TYPED: foo(some_arg, /*dims=*/std::vector<int>{});
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:17: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:17: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo(some_arg, /*dims=*/std::vector<int>{});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:17: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo(some_arg, /*dims=*/std::vector<int>{});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:17: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo(some_arg, /*dims=*/std::vector<int>{});
 }
@@ -106,8 +106,8 @@ void test_initializer_list() {
   // CHECK-FIXES-ANON: foo_init_list(some_arg, /*dims=*/{1, 2, 3});
   // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-4]]:27: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:27: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:27: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_init_list(some_arg, /*dims=*/{1, 2, 3});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:27: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_init_list(some_arg, /*dims=*/{1, 2, 3});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:27: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_init_list(some_arg, /*dims=*/{1, 2, 3});
 
@@ -117,8 +117,8 @@ void test_initializer_list() {
   // CHECK-MESSAGES-TYPED: [[@LINE-3]]:27: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TYPED: foo_init_list(some_arg, /*dims=*/std::initializer_list<int>{1, 2, 3});
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:27: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:27: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_init_list(some_arg, /*dims=*/std::initializer_list<int>{1, 2, 3});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:27: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_init_list(some_arg, /*dims=*/std::initializer_list<int>{1, 2, 3});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:27: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_init_list(some_arg, /*dims=*/std::initializer_list<int>{1, 2, 3});
 }
@@ -132,8 +132,8 @@ void test_nested_initializer_list() {
   // CHECK-FIXES-ANON: foo_nested_init_list(some_arg, /*dims=*/{{.*}});
   // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-4]]:34: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:34: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_nested_init_list(some_arg, /*dims=*/{{.*}});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_nested_init_list(some_arg, /*dims=*/{{.*}});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_nested_init_list(some_arg, /*dims=*/{{.*}});
 }
@@ -150,8 +150,8 @@ void test_parenthesized_temporary() {
   // CHECK-FIXES-TYPED: foo_dims(some_arg, /*dims=*/Dims());
   // CHECK-MESSAGES-TEMP: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-TEMP: foo_dims(some_arg, /*dims=*/Dims());
-  // CHECK-MESSAGES-BOTH: warning: argument name 'dim' in comment does not match parameter name 'dims'
-  // CHECK-FIXES-BOTH: foo_dims(some_arg, /*dims=*/Dims());
+  // CHECK-MESSAGES-BOTH-INIT: warning: argument name 'dim' in comment does not match parameter name 'dims'
+  // CHECK-FIXES-BOTH-INIT: foo_dims(some_arg, /*dims=*/Dims());
   // CHECK-MESSAGES-ALL: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-ALL: foo_dims(some_arg, /*dims=*/Dims());
 
@@ -161,8 +161,8 @@ void test_parenthesized_temporary() {
   // CHECK-MESSAGES-TYPED: [[@LINE-3]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TYPED: foo_dims(some_arg, /*dims=*/Dims{});
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:22: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_dims(some_arg, /*dims=*/Dims{});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_dims(some_arg, /*dims=*/Dims{});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_dims(some_arg, /*dims=*/Dims{});
 
@@ -172,7 +172,7 @@ void test_parenthesized_temporary() {
   // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-3]]:22: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-TEMP: [[@LINE-4]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TEMP: foo_dims(some_arg, /*dims=*/Dims());
-  // CHECK-MESSAGES-BOTH-NOT: :[[@LINE-6]]:22: warning: argument comment missing for argument 'dims'
+  // CHECK-MESSAGES-BOTH-INIT-NOT: :[[@LINE-6]]:22: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-ALL: [[@LINE-7]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_dims(some_arg, /*dims=*/Dims());
 
@@ -182,7 +182,7 @@ void test_parenthesized_temporary() {
   // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-3]]:22: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-TEMP: [[@LINE-4]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TEMP: foo_dims(some_arg, /*dims=*/Dims(1, 2, 3));
-  // CHECK-MESSAGES-BOTH-NOT: :[[@LINE-6]]:22: warning: argument comment missing for argument 'dims'
+  // CHECK-MESSAGES-BOTH-INIT-NOT: :[[@LINE-6]]:22: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-ALL: [[@LINE-7]]:22: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_dims(some_arg, /*dims=*/Dims(1, 2, 3));
 
@@ -202,8 +202,8 @@ void test_template_dependent_init_list() {
   // CHECK-FIXES-ANON: foo_template<ElemTy>(some_arg, /*dims=*/{});
   // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-4]]:34: warning: argument comment missing for argument 'dims'
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:34: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_template<ElemTy>(some_arg, /*dims=*/{});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_template<ElemTy>(some_arg, /*dims=*/{});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_template<ElemTy>(some_arg, /*dims=*/{});
 
@@ -213,8 +213,8 @@ void test_template_dependent_init_list() {
   // CHECK-MESSAGES-TYPED: [[@LINE-3]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TYPED: foo_template<ElemTy>(some_arg, /*dims=*/std::vector<ElemTy>{});
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:34: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_template<ElemTy>(some_arg, /*dims=*/std::vector<ElemTy>{});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_template<ElemTy>(some_arg, /*dims=*/std::vector<ElemTy>{});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:34: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_template<ElemTy>(some_arg, /*dims=*/std::vector<ElemTy>{});
 }
@@ -229,8 +229,8 @@ void test_template_dependent_typed_init_list() {
   // CHECK-MESSAGES-TYPED: [[@LINE-3]]:40: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TYPED: foo_template_typed<DimsTy>(some_arg, /*dims=*/DimsTy{1, 2, 3});
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:40: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:40: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_template_typed<DimsTy>(some_arg, /*dims=*/DimsTy{1, 2, 3});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:40: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_template_typed<DimsTy>(some_arg, /*dims=*/DimsTy{1, 2, 3});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:40: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_template_typed<DimsTy>(some_arg, /*dims=*/DimsTy{1, 2, 3});
 }

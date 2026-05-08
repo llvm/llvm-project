@@ -8,7 +8,7 @@
 // RUN: %check_clang_tidy -check-suffix=TEMP -std=c++20-or-later %s bugprone-argument-comment %t -- \
 // RUN:   -config="{CheckOptions: { \
 // RUN:     bugprone-argument-comment.CommentParenthesizedTemporaries: true}}" --
-// RUN: %check_clang_tidy -check-suffix=BOTH -std=c++20-or-later %s bugprone-argument-comment %t -- \
+// RUN: %check_clang_tidy -check-suffix=BOTH-INIT -std=c++20-or-later %s bugprone-argument-comment %t -- \
 // RUN:   -config="{CheckOptions: { \
 // RUN:     bugprone-argument-comment.CommentAnonymousInitLists: true, \
 // RUN:     bugprone-argument-comment.CommentTypedInitLists: true}}" --
@@ -41,8 +41,8 @@ void test_designated_init() {
   // CHECK-FIXES-TYPED: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
   // CHECK-MESSAGES-TEMP: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-TEMP: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
-  // CHECK-MESSAGES-BOTH: warning: argument name 'dim' in comment does not match parameter name 'dims'
-  // CHECK-FIXES-BOTH: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
+  // CHECK-MESSAGES-BOTH-INIT: warning: argument name 'dim' in comment does not match parameter name 'dims'
+  // CHECK-FIXES-BOTH-INIT: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
   // CHECK-MESSAGES-ALL: warning: argument name 'dim' in comment does not match parameter name 'dims'
   // CHECK-FIXES-ALL: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
 
@@ -52,8 +52,8 @@ void test_designated_init() {
   // CHECK-MESSAGES-TYPED: [[@LINE-3]]:28: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-TYPED: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
   // CHECK-MESSAGES-TEMP-NOT: :[[@LINE-5]]:28: warning: argument comment missing for argument 'dims'
-  // CHECK-MESSAGES-BOTH: [[@LINE-6]]:28: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
-  // CHECK-FIXES-BOTH: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
+  // CHECK-MESSAGES-BOTH-INIT: [[@LINE-6]]:28: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH-INIT: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:28: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
 }
