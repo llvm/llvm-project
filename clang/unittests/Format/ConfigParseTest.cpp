@@ -168,7 +168,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
-  CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
@@ -434,6 +433,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("Standard: c++14", Standard, FormatStyle::LS_Cpp14);
   CHECK_PARSE("Standard: c++17", Standard, FormatStyle::LS_Cpp17);
   CHECK_PARSE("Standard: c++20", Standard, FormatStyle::LS_Cpp20);
+  CHECK_PARSE("Standard: c++23", Standard, FormatStyle::LS_Cpp23);
+  CHECK_PARSE("Standard: c++26", Standard, FormatStyle::LS_Cpp26);
   CHECK_PARSE("Standard: Auto", Standard, FormatStyle::LS_Auto);
   CHECK_PARSE("Standard: Latest", Standard, FormatStyle::LS_Latest);
   // Legacy aliases:
@@ -534,18 +535,28 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeInheritanceComma: true", BreakInheritanceList,
               FormatStyle::BILS_BeforeComma);
 
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
-  CHECK_PARSE("BinPackParameters: BinPack", BinPackParameters,
-              FormatStyle::BPPS_BinPack);
-  CHECK_PARSE("BinPackParameters: OnePerLine", BinPackParameters,
-              FormatStyle::BPPS_OnePerLine);
-  CHECK_PARSE("BinPackParameters: AlwaysOnePerLine", BinPackParameters,
-              FormatStyle::BPPS_AlwaysOnePerLine);
-  // For backward compatibility.
-  CHECK_PARSE("BinPackParameters: true", BinPackParameters,
-              FormatStyle::BPPS_BinPack);
-  CHECK_PARSE("BinPackParameters: false", BinPackParameters,
-              FormatStyle::BPPS_OnePerLine);
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  CHECK_PARSE_NESTED_VALUE("BinPack: BinPack", PackArguments, BinPack,
+                           FormatStyle::BPAS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: OnePerLine", PackArguments, BinPack,
+                           FormatStyle::BPAS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: UseBreakAfter", PackArguments, BinPack,
+                           FormatStyle::BPAS_UseBreakAfter);
+  CHECK_PARSE_NESTED_VALUE("BreakAfter: 1234", PackArguments, BreakAfter,
+                           1234u);
+  // For backward compatibility:
+  CHECK_PARSE("PackArguments:\n"
+              "  BinPack: OnePerLine\n"
+              "BinPackArguments: true",
+              PackArguments.BinPack, FormatStyle::BPAS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: true", PackArguments, BinPack,
+                           FormatStyle::BPAS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: false", PackArguments, BinPack,
+                           FormatStyle::BPAS_OnePerLine);
+  CHECK_PARSE("BinPackArguments: true", PackArguments.BinPack,
+              FormatStyle::BPAS_BinPack);
+  CHECK_PARSE("BinPackArguments: false", PackArguments.BinPack,
+              FormatStyle::BPAS_OnePerLine);
 
   Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   CHECK_PARSE("PackConstructorInitializers: Never", PackConstructorInitializers,
@@ -574,6 +585,37 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("ConstructorInitializerAllOnOneLineOrOnePerLine: true\n"
               "AllowAllConstructorInitializersOnNextLine: false",
               PackConstructorInitializers, FormatStyle::PCIS_CurrentLine);
+
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
+  CHECK_PARSE_NESTED_VALUE("BinPack: BinPack", PackParameters, BinPack,
+                           FormatStyle::BPPS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: OnePerLine", PackParameters, BinPack,
+                           FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: AlwaysOnePerLine", PackParameters, BinPack,
+                           FormatStyle::BPPS_AlwaysOnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: UseBreakAfter", PackParameters, BinPack,
+                           FormatStyle::BPPS_UseBreakAfter);
+  CHECK_PARSE_NESTED_VALUE("BreakAfter: 1234", PackParameters, BreakAfter,
+                           1234u);
+  // For backward compatibility:
+  CHECK_PARSE("PackParameters:\n"
+              "  BinPack: OnePerLine\n"
+              "BinPackParameters: BinPack",
+              PackParameters.BinPack, FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE_NESTED_VALUE("BinPack: true", PackParameters, BinPack,
+                           FormatStyle::BPPS_BinPack);
+  CHECK_PARSE_NESTED_VALUE("BinPack: false", PackParameters, BinPack,
+                           FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE("BinPackParameters: BinPack", PackParameters.BinPack,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: OnePerLine", PackParameters.BinPack,
+              FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE("BinPackParameters: AlwaysOnePerLine", PackParameters.BinPack,
+              FormatStyle::BPPS_AlwaysOnePerLine);
+  CHECK_PARSE("BinPackParameters: true", PackParameters.BinPack,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: false", PackParameters.BinPack,
+              FormatStyle::BPPS_OnePerLine);
 
   Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   CHECK_PARSE("EmptyLineBeforeAccessModifier: Never",
@@ -1670,7 +1712,8 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   // Test 9.8: use inheritance from a file without BasedOnStyle
   ASSERT_TRUE(FS.addFile(
       "/e/withoutbase/.clang-format", 0,
-      llvm::MemoryBuffer::getMemBuffer("BracedInitializerIndentWidth: 2\n"
+      llvm::MemoryBuffer::getMemBuffer("AlignAfterOpenBracket: false\n"
+                                       "BracedInitializerIndentWidth: 2\n"
                                        "ColumnLimit: 123")));
   ASSERT_TRUE(
       FS.addFile("/e/withoutbase/sub/.clang-format", 0,
@@ -1681,6 +1724,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.AlignAfterOpenBracket = false;
     Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     return Style;
@@ -1690,6 +1734,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.AlignAfterOpenBracket = false;
     Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     Style.IndentWidth = 7;

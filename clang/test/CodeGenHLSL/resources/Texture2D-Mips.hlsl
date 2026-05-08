@@ -2,7 +2,7 @@
 
 Texture2D<float4> t;
 
-// CHECK: define internal {{.*}} <4 x float> @test_mips(float vector[2])(<2 x float> {{.*}} %loc)
+// CHECK: define internal {{.*}} <4 x float> @test_mips(float vector[2])(<2 x float> {{.*}} %loc) #1 {
 // CHECK: entry:
 // CHECK: %[[LOC_ADDR:.*]] = alloca <2 x float>
 // CHECK: %[[REF_TMP:.*]] = alloca %"struct.hlsl::Texture2D<>::mips_slice_type"

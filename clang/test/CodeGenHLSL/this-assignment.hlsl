@@ -35,7 +35,6 @@ void main() {
 // This tests reference like implicit this in HLSL
 // CHECK-LABEL:     define {{.*}}getFirst
 // CHECK-NEXT:entry:
-// CHECK-NEXT:%[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%Another = alloca %struct.Pair, align 1
 // CHECK-NEXT:store ptr %this, ptr %this.addr, align 4
@@ -46,7 +45,6 @@ void main() {
 
 // CHECK-LABEL:     define {{.*}}getSecond
 // CHECK-NEXT:entry:
-// CHECK-NEXT:%[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%ref.tmp = alloca %struct.Pair, align 1
 // CHECK-NEXT:store ptr %this, ptr %this.addr, align 4
@@ -57,7 +55,6 @@ void main() {
 
 // CHECK-LABEL:     define {{.*}}DoSilly
 // CHECK-NEXT:entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: [[ThisPtrAddr:%.*]] = alloca ptr
 // CHECK-NEXT: store ptr {{.*}}, ptr [[ThisPtrAddr]]
 // CHECK-NEXT: [[ThisPtr:%.*]] = load ptr, ptr [[ThisPtrAddr]]

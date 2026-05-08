@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-use-equals-delete
-.. meta::
-   :http-equiv=refresh: 5;URL=../modernize/use-equals-delete.html
 
 hicpp-use-equals-delete
 =======================

@@ -10,8 +10,7 @@ void main(unsigned GI : SV_GroupIndex) {}
 // CHECK-NOT:@llvm.global_dtors
 //CHECK:      define void @main()
 //CHECK-NEXT: entry:
-//CHECK-NEXT:   %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 //CHECK-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructors.hlsl()
-//CHECK-NEXT:   %[[#THREAD_ID:]] = call i32 @llvm.dx.flattened.thread.id.in.group()
-//CHECK-NEXT:   call void @_Z4mainj(i32 %[[#THREAD_ID]])
+//CHECK-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
+//CHECK-NEXT:   call void @_Z4mainj(i32 %0)
 //CHECK-NEXT:   ret void

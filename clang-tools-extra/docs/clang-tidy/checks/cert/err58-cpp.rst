@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-err58-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/throwing-static-initialization.html
 
 cert-err58-cpp
 ==============

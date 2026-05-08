@@ -641,6 +641,13 @@ define amdgpu_gs void @ds_sub_gs_reg_rtn_i64(i32 %val, ptr addrspace(1) %out) {
   ret void
 }
 
+; CHECK: DIVERGENT: %tmp0 = call i64 @llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64(ptr addrspace(3) %bar, i64 %count)
+define amdgpu_gs void @ds_atomic_barrier_arrive_rtn_b64(ptr addrspace(3) %bar, i64 %count, ptr addrspace(1) %out) {
+  %tmp0 = call i64 @llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64(ptr addrspace(3) %bar, i64 %count)
+  store i64 %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
 ; CHECK: DIVERGENT: %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0)
 define amdgpu_kernel void @mfma_f32_16x16x32_f16(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg2, ptr addrspace(1) %out) {
   %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0)

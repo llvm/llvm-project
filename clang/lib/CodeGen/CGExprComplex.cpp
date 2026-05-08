@@ -949,10 +949,7 @@ ComplexPairTy ComplexExprEmitter::EmitAlgebraicDiv(llvm::Value *LHSr,
 
 // EmitFAbs - Emit a call to @llvm.fabs.
 static llvm::Value *EmitllvmFAbs(CodeGenFunction &CGF, llvm::Value *Value) {
-  llvm::Function *Func =
-      CGF.CGM.getIntrinsic(llvm::Intrinsic::fabs, Value->getType());
-  llvm::Value *Call = CGF.Builder.CreateCall(Func, Value);
-  return Call;
+  return CGF.Builder.CreateFAbs(Value);
 }
 
 // EmitRangeReductionDiv - Implements Smith's algorithm for complex division.

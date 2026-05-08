@@ -22,6 +22,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
@@ -72,6 +73,12 @@ class CIRGenTypes {
 
   llvm::SmallVector<const clang::RecordDecl *, 8> deferredRecords;
 
+  /// Cache of record type keys known to be safe to convert (i.e.,
+  /// isSafeToConvert returned true). Cleared whenever recordsBeingLaidOut
+  /// changes, since the safety result depends on which records are currently
+  /// being laid out.
+  llvm::DenseSet<const clang::Type *> safeToConvertCache;
+
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
 
@@ -104,6 +111,16 @@ public:
   bool noRecordsBeingLaidOut() const { return recordsBeingLaidOut.empty(); }
   bool isRecordBeingLaidOut(const clang::Type *ty) const {
     return recordsBeingLaidOut.count(ty);
+  }
+
+  /// Check if a record type key is in the safe-to-convert cache.
+  bool isCachedSafeToConvert(const clang::Type *key) const {
+    return safeToConvertCache.count(key);
+  }
+
+  /// Add a record type key to the safe-to-convert cache.
+  void cacheSafeToConvert(const clang::Type *key) {
+    safeToConvertCache.insert(key);
   }
 
   const ABIInfo &getABIInfo() const { return theABIInfo; }

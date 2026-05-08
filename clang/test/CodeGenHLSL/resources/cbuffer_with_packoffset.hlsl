@@ -50,7 +50,6 @@ float foo() {
 }
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer_with_packoffset.hlsl()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @_init_buffer_CB.cb()
 
 [numthreads(4,1,1)]
