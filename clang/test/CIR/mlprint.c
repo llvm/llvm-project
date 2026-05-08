@@ -8,7 +8,7 @@ int foo(void) {
 
 // CIR: IR Dump After CIRCanonicalize: cir-canonicalize
 // CIR:  cir.func{{.*}} @foo() -> !s32i
-// LLVM: IR Dump After cir::direct::ConvertCIRToLLVMPass (cir-flat-to-llvm)
+// LLVM: IR Dump After cir::direct::ConvertCIRToLLVMPass: cir-flat-to-llvm
 // LLVM: llvm.func @foo() -> i32
 // LLVM: IR Dump After
 // LLVM: define{{.*}} i32 @foo()
