@@ -90,6 +90,9 @@ private:
   template <typename InfoType, typename T, typename CallbackFunction>
   llvm::Error handleSubBlock(unsigned ID, T Parent, CallbackFunction Function);
 
+  template <typename InfoType, typename T>
+  llvm::Error handleSubBlock(unsigned ID, T Parent);
+
   template <typename InfoType, typename T, typename CallbackFunction>
   llvm::Error handleTypeSubBlock(unsigned ID, T Parent,
                                  CallbackFunction Function);

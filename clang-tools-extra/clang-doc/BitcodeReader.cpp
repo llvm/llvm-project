@@ -1118,6 +1118,20 @@ static void addChild(Target I, Child &&R) {
                                     "invalid child type for info"));
 }
 
+template <typename Target, typename Child>
+static void addChildPtr(Target I, Child *Node) {
+  if constexpr (std::is_pointer_v<Target>) {
+    using Pointee = std::remove_pointer_t<Target>;
+    if constexpr (has_children<Pointee>::value &&
+                  is_valid_child<Child>::value) {
+      getList(I->Children, Node).push_back(*allocateListNodeTransient(Node));
+      return;
+    }
+  }
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid child type for info"));
+}
+
 // TemplateParam children. These go into either a TemplateInfo (for template
 // parameters) or TemplateSpecializationInfo (for the specialization's
 // parameters).
@@ -1271,6 +1285,15 @@ llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent,
   }
 }
 
+template <typename InfoType, typename T>
+llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent) {
+  InfoType *Info = allocatePtr<InfoType>();
+  if (auto Err = readBlock(ID, Info))
+    return Err;
+  addChildPtr(Parent, Info);
+  return llvm::Error::success();
+}
+
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   llvm::TimeTraceScope("Reducing infos", "readSubBlock");
@@ -1312,16 +1335,14 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     return llvm::Error::success();
   }
   case BI_FUNCTION_BLOCK_ID: {
-    return handleSubBlock<FunctionInfo>(
-        ID, I, CreateAddFunc(addChild<T, FunctionInfo>));
+    return handleSubBlock<FunctionInfo>(ID, I);
   }
   case BI_BASE_RECORD_BLOCK_ID: {
     return handleSubBlock<BaseRecordInfo>(
         ID, I, CreateAddFunc(addChild<T, BaseRecordInfo>));
   }
   case BI_ENUM_BLOCK_ID: {
-    return handleSubBlock<EnumInfo>(ID, I,
-                                    CreateAddFunc(addChild<T, EnumInfo>));
+    return handleSubBlock<EnumInfo>(ID, I);
   }
   case BI_ENUM_VALUE_BLOCK_ID: {
     return handleSubBlock<EnumValueInfo>(
@@ -1339,19 +1360,17 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
         ID, I, CreateAddFunc(addTemplateParam<T>));
   }
   case BI_TYPEDEF_BLOCK_ID: {
-    return handleSubBlock<TypedefInfo>(ID, I,
-                                       CreateAddFunc(addChild<T, TypedefInfo>));
+    return handleSubBlock<TypedefInfo>(ID, I);
   }
   case BI_CONSTRAINT_BLOCK_ID: {
     return handleSubBlock<ConstraintInfo>(ID, I,
                                           CreateAddFunc(addConstraint<T>));
   }
   case BI_CONCEPT_BLOCK_ID: {
-    return handleSubBlock<ConceptInfo>(ID, I,
-                                       CreateAddFunc(addChild<T, ConceptInfo>));
+    return handleSubBlock<ConceptInfo>(ID, I);
   }
   case BI_VAR_BLOCK_ID: {
-    return handleSubBlock<VarInfo>(ID, I, CreateAddFunc(addChild<T, VarInfo>));
+    return handleSubBlock<VarInfo>(ID, I);
   }
   case BI_FRIEND_BLOCK_ID: {
     return handleSubBlock<FriendInfo>(ID, I,
