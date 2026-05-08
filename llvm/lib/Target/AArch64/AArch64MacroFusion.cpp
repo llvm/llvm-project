@@ -117,7 +117,8 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-/// AES crypto encoding or decoding.
+/// AES crypto encoding or decoding. The pair must write to the same dest
+/// register to be fused.
 static bool isAESPair(const MachineInstr *FirstMI,
                       const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
@@ -125,11 +126,21 @@ static bool isAESPair(const MachineInstr *FirstMI,
   // AES encode.
   case AArch64::AESMCrr:
   case AArch64::AESMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESErr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESErr)
+      return false;
+    return SecondMI.getOpcode() == AArch64::AESMCrrTied ||
+           FirstMI->getOperand(0).getReg() == SecondMI.getOperand(0).getReg();
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESDrr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESDrr)
+      return false;
+    return SecondMI.getOpcode() == AArch64::AESIMCrrTied ||
+           FirstMI->getOperand(0).getReg() == SecondMI.getOperand(0).getReg();
   }
 
   return false;
