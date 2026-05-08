@@ -642,10 +642,11 @@ func.func @fold_vector_load_subview(%src : memref<24x64xf32>,
 
 // -----
 
-// This should fold, but implementing IndexedAccessOpInterface on vector.load
+// TODO: This should fold, but implementing IndexedAccessOpInterface on vector.load
 // in a way that would allow the fold added complexity (emitting
 // `vector.shape_cast`s) that people wanted to keep out of the initial
-// implementation during previous discussions, so we leave it negative for now.
+// implementation during previous discussions. (Note: this didn't work in the
+// pre-interface version of the pass either.)
 func.func @no_fold_scalar_equivalent_vector_load_subview(
   %arg0 : memref<16xf32>, %off : index, %idx : index) -> vector<1xf32> {
   %0 = memref.subview %arg0[%off][4][2] : memref<16xf32> to memref<4xf32, strided<[2], offset: ?>>
