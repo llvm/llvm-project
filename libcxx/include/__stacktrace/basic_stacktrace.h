@@ -70,20 +70,20 @@ struct _Trace {
   _LIBCPP_HIDE_FROM_ABI _Trace(function<_EntryIters()> __entry_iters, function<_Entry&()> __entry_append)
       : __entry_iters_(__entry_iters), __entry_append_(__entry_append) {}
 
-  _LIBCPP_EXPORTED_FROM_ABI ostream& write_to(ostream& __os) const;
+  _LIBCPP_EXPORTED_FROM_ABI ostream& __write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 
-  _LIBCPP_EXPORTED_FROM_ABI size_t hash() const;
-  _LIBCPP_HIDE_FROM_ABI static _Trace& base(auto& __trace);
-  _LIBCPP_HIDE_FROM_ABI static _Trace const& base(auto const& __trace);
+  _LIBCPP_EXPORTED_FROM_ABI size_t hash_code() const;
+  _LIBCPP_HIDE_FROM_ABI static _Trace& __base(auto& __trace);
+  _LIBCPP_HIDE_FROM_ABI static _Trace const& __base(auto const& __trace);
 
 #  ifdef _WIN32
   // Windows impl uses dbghelp and psapi DLLs to do the full stacktrace operation.
-  _LIBCPP_EXPORTED_FROM_ABI void windows_impl(size_t skip, size_t max_depth);
+  _LIBCPP_EXPORTED_FROM_ABI void __windows_impl(size_t skip, size_t max_depth);
 #  else
   // Non-windows: impl separated out into several smaller platform-dependent parts.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void populate_addrs(size_t __skip, size_t __depth);
-  _LIBCPP_EXPORTED_FROM_ABI void populate_images();
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void __populate_addrs(size_t __skip, size_t __depth);
+  _LIBCPP_EXPORTED_FROM_ABI void __populate_images();
 #  endif
 };
 
@@ -150,10 +150,10 @@ public:
 
     if (__max_depth) {
 #  if defined(_WIN32)
-      __ret.windows_impl(__skip, __max_depth);
+      __ret.__windows_impl(__skip, __max_depth);
 #  else
-      __ret.populate_addrs(__skip, __max_depth);
-      __ret.populate_images();
+      __ret.__populate_addrs(__skip, __max_depth);
+      __ret.__populate_images();
 #  endif
     }
 
@@ -198,12 +198,14 @@ public:
   // (19.6.4.3)
   // [stacktrace.basic.obs], observers
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __entries_.get_allocator(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept {
+    return __entries_.get_allocator();
+  }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __entries_.begin(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __entries_.end(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { return __entries_.rbegin(); }
- [[nodiscard]]  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const noexcept { return __entries_.rend(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const noexcept { return __entries_.rend(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept { return __entries_.cbegin(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept { return __entries_.cend(); }
@@ -287,18 +289,18 @@ _LIBCPP_HIDE_FROM_ABI string to_string(const basic_stacktrace<_Allocator>& __sta
 
 template <class _Allocator>
 _LIBCPP_HIDE_FROM_ABI ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
-  return ((__stacktrace::_Trace const&)__stacktrace).write_to(__os);
+  return ((__stacktrace::_Trace const&)__stacktrace).__write_to(__os);
 }
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
 // (19.6.6)
-// Hash support [stacktrace.basic.hash]
+// Hash support [stacktrace.basic.hash_code]
 
 template <class _Allocator>
-struct hash<basic_stacktrace<_Allocator>> {
+struct hash_code<basic_stacktrace<_Allocator>> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
-    return __stacktrace::_Trace::base(__trace).hash();
+    return __stacktrace::_Trace::__base(__trace).hash_code();
   }
 };
 
@@ -336,7 +338,7 @@ struct _Unwind_Wrapper {
   }
 };
 
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::populate_addrs(size_t __skip, size_t __depth) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::__populate_addrs(size_t __skip, size_t __depth) {
   if (!__depth) {
     return;
   }
@@ -346,9 +348,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::populate_addrs(s
 
 #  endif // _WIN32
 
-_Trace& _Trace::base(auto& __trace) { return *static_cast<_Trace*>(std::addressof(__trace)); }
+_Trace& _Trace::__base(auto& __trace) { return *static_cast<_Trace*>(std::addressof(__trace)); }
 
-_Trace const& _Trace::base(auto const& __trace) { return *static_cast<_Trace const*>(std::addressof(__trace)); }
+_Trace const& _Trace::__base(auto const& __trace) { return *static_cast<_Trace const*>(std::addressof(__trace)); }
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
