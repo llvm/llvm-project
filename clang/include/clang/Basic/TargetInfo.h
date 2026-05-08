@@ -332,6 +332,8 @@ public:
 
   std::unique_ptr<llvm::TextEncodingConverter> FromSystemEncodingConverter;
 
+  llvm::TextEncodingConverter *ExecStrConverter;
+
   /// Retrieve the target options.
   TargetOptions &getTargetOpts() const {
     assert(TargetOpts && "Missing target options");

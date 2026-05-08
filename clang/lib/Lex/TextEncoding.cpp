@@ -55,7 +55,8 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
   if (ErrorOrConverter)
     TE.ToSystemEncodingConverter =
         std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
-  else
+    TInfo.ExecStrConverter = TEC.ToLiteralEncodingConverter.get();
+  } else
     return ErrorOrConverter.getError();
 
   ErrorOrConverter = llvm::TextEncodingConverter::create(

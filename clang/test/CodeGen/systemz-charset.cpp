@@ -73,7 +73,6 @@ const char32_t *UnicodeUCNString32 = U"\u00E2\u00AC\U000000DF";
 //CHECK: [4 x i32] [i32 226, i32 172, i32 223, i32 0]
 //CHECK-UTF8: [4 x i32] [i32 226, i32 172, i32 223, i32 0]
 
-
 struct string_view {
     int S;
     const char* D;
@@ -96,3 +95,7 @@ void function()
 }
 // CHECK: asm{{.*}}|\86\96\96
 // CHECK-UTF8: asm{{.*}}|foo
+
+const char *file = __builtin_FILE();
+//CHECK: {{.*}}\A2\A8\A2\A3\85\94\A9`\83\88\81\99\A2\85\A3K\83\97\97\00"
+//CHECK-UTF8: {{.*}}systemz-charset.cpp\00"
