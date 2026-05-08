@@ -1256,7 +1256,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   }
   case NEON::BI__builtin_neon_vaddhn_v: {
     llvm::FixedVectorType *SrcTy =
-        llvm::FixedVectorType::getExtendedElementVectorType(VTy);
+        llvm::FixedVectorType::getDoubleWidthElementVectorType(VTy);
 
     // %sum = add <4 x i32> %lhs, %rhs
     Ops[0] = Builder.CreateBitCast(Ops[0], SrcTy);
@@ -1455,7 +1455,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, NameHint);
   }
   case NEON::BI__builtin_neon_vcvtx_f32_v: {
-    llvm::Type *Tys[2] = { VTy->getTruncatedElementVectorType(VTy), Ty};
+    llvm::Type *Tys[2] = {VTy->getHalfWidthElementVectorType(VTy), Ty};
     return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, NameHint);
 
   }
@@ -1541,7 +1541,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   }
   case NEON::BI__builtin_neon_vmovl_v: {
     llvm::FixedVectorType *DTy =
-        llvm::FixedVectorType::getTruncatedElementVectorType(VTy);
+        llvm::FixedVectorType::getHalfWidthElementVectorType(VTy);
     Ops[0] = Builder.CreateBitCast(Ops[0], DTy);
     if (Usgn)
       return Builder.CreateZExt(Ops[0], Ty, "vmovl");
@@ -1549,7 +1549,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   }
   case NEON::BI__builtin_neon_vmovn_v: {
     llvm::FixedVectorType *QTy =
-        llvm::FixedVectorType::getExtendedElementVectorType(VTy);
+        llvm::FixedVectorType::getDoubleWidthElementVectorType(VTy);
     Ops[0] = Builder.CreateBitCast(Ops[0], QTy);
     return Builder.CreateTrunc(Ops[0], Ty, "vmovn");
   }
@@ -1652,7 +1652,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
                              "vshl_n");
   case NEON::BI__builtin_neon_vshll_n_v: {
     llvm::FixedVectorType *SrcTy =
-        llvm::FixedVectorType::getTruncatedElementVectorType(VTy);
+        llvm::FixedVectorType::getHalfWidthElementVectorType(VTy);
     Ops[0] = Builder.CreateBitCast(Ops[0], SrcTy);
     if (Usgn)
       Ops[0] = Builder.CreateZExt(Ops[0], VTy);
@@ -1663,7 +1663,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   }
   case NEON::BI__builtin_neon_vshrn_n_v: {
     llvm::FixedVectorType *SrcTy =
-        llvm::FixedVectorType::getExtendedElementVectorType(VTy);
+        llvm::FixedVectorType::getDoubleWidthElementVectorType(VTy);
     Ops[0] = Builder.CreateBitCast(Ops[0], SrcTy);
     Ops[1] = EmitNeonShiftVector(Ops[1], SrcTy, false);
     if (Usgn)
@@ -1728,7 +1728,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   }
   case NEON::BI__builtin_neon_vsubhn_v: {
     llvm::FixedVectorType *SrcTy =
-        llvm::FixedVectorType::getExtendedElementVectorType(VTy);
+        llvm::FixedVectorType::getDoubleWidthElementVectorType(VTy);
 
     // %sum = add <4 x i32> %lhs, %rhs
     Ops[0] = Builder.CreateBitCast(Ops[0], SrcTy);

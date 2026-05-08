@@ -555,9 +555,9 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::VecOfAnyPtrsToElt:
     return OverloadTys[D.getOverloadIndex()];
   case IITDescriptor::Extend:
-    return OverloadTys[D.getOverloadIndex()]->getExtendedType();
+    return OverloadTys[D.getOverloadIndex()]->getDoubleWidthType();
   case IITDescriptor::Trunc:
-    return OverloadTys[D.getOverloadIndex()]->getTruncatedType();
+    return OverloadTys[D.getOverloadIndex()]->getHalfWidthType();
   case IITDescriptor::Subdivide2:
   case IITDescriptor::Subdivide4: {
     Type *Ty = OverloadTys[D.getOverloadIndex()];
@@ -948,7 +948,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getExtendedType();
+    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getDoubleWidthType();
     return Ty != NewTy;
   }
   case IITDescriptor::Trunc: {
@@ -956,7 +956,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getTruncatedType();
+    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getHalfWidthType();
     return Ty != NewTy;
   }
   case IITDescriptor::OneNthEltsVec: {

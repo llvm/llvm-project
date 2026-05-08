@@ -294,12 +294,13 @@ define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
   EXPECT_TRUE(IVecTy->getElementType()->isIntegerTy(32));
   EXPECT_EQ(IVecTy->getElementCount(), FVecTy->getElementCount());
   // getExtendedElementCountVectorType
-  auto *ExtVecTy = sandboxir::VectorType::getExtendedElementVectorType(IVecTy);
+  auto *ExtVecTy =
+      sandboxir::VectorType::getDoubleWidthElementVectorType(IVecTy);
   EXPECT_TRUE(ExtVecTy->getElementType()->isIntegerTy(64));
   EXPECT_EQ(ExtVecTy->getElementCount(), VecTy->getElementCount());
-  // getTruncatedElementVectorType
+  // getHalfWidthElementVectorType
   auto *TruncVecTy =
-      sandboxir::VectorType::getTruncatedElementVectorType(IVecTy);
+      sandboxir::VectorType::getHalfWidthElementVectorType(IVecTy);
   EXPECT_TRUE(TruncVecTy->getElementType()->isIntegerTy(16));
   EXPECT_EQ(TruncVecTy->getElementCount(), VecTy->getElementCount());
   // getSubdividedVectorType
@@ -352,12 +353,12 @@ define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
   EXPECT_EQ(Vec4i32Ty->getElementCount(), Vec4FTy->getElementCount());
   // getExtendedElementCountVectorType
   auto *Vec4i64Ty =
-      sandboxir::FixedVectorType::getExtendedElementVectorType(Vec4i16Ty);
+      sandboxir::FixedVectorType::getDoubleWidthElementVectorType(Vec4i16Ty);
   EXPECT_TRUE(Vec4i64Ty->getElementType()->isIntegerTy(32));
   EXPECT_EQ(Vec4i64Ty->getElementCount(), Vec4i16Ty->getElementCount());
-  // getTruncatedElementVectorType
+  // getHalfWidthElementVectorType
   auto *Vec4i8Ty =
-      sandboxir::FixedVectorType::getTruncatedElementVectorType(Vec4i16Ty);
+      sandboxir::FixedVectorType::getHalfWidthElementVectorType(Vec4i16Ty);
   EXPECT_TRUE(Vec4i8Ty->getElementType()->isIntegerTy(8));
   EXPECT_EQ(Vec4i8Ty->getElementCount(), Vec4i8Ty->getElementCount());
   // getSubdividedVectorType
@@ -411,12 +412,12 @@ define void @foo(<vscale x 4 x i16> %vi0, <vscale x 4 x float> %vf1, i8 %i0) {
   EXPECT_EQ(Vec4i32Ty->getMinNumElements(), Vec4FTy->getMinNumElements());
   // getExtendedElementCountVectorType
   auto *Vec4i64Ty =
-      sandboxir::ScalableVectorType::getExtendedElementVectorType(Vec4i16Ty);
+      sandboxir::ScalableVectorType::getDoubleWidthElementVectorType(Vec4i16Ty);
   EXPECT_TRUE(Vec4i64Ty->getElementType()->isIntegerTy(32));
   EXPECT_EQ(Vec4i64Ty->getMinNumElements(), Vec4i16Ty->getMinNumElements());
-  // getTruncatedElementVectorType
+  // getHalfWidthElementVectorType
   auto *Vec4i8Ty =
-      sandboxir::ScalableVectorType::getTruncatedElementVectorType(Vec4i16Ty);
+      sandboxir::ScalableVectorType::getHalfWidthElementVectorType(Vec4i16Ty);
   EXPECT_TRUE(Vec4i8Ty->getElementType()->isIntegerTy(8));
   EXPECT_EQ(Vec4i8Ty->getMinNumElements(), Vec4i8Ty->getMinNumElements());
   // getSubdividedVectorType

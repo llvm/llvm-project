@@ -18232,7 +18232,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
       return false;
 
     auto *TruncDstType =
-        cast<FixedVectorType>(VectorType::getTruncatedElementVectorType(DstTy));
+        cast<FixedVectorType>(VectorType::getHalfWidthElementVectorType(DstTy));
     // If the ZExt can be lowered to a single ZExt to the next power-of-2 and
     // the remaining ZExt folded into the user, don't use tbl lowering.
     auto SrcWidth = SrcTy->getElementType()->getScalarSizeInBits();

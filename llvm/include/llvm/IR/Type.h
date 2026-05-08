@@ -442,11 +442,11 @@ public:
 
   /// Given scalar/vector integer type, returns a type with elements twice as
   /// wide as in the original type. For vectors, preserves element count.
-  LLVM_ABI inline Type *getExtendedType() const;
+  LLVM_ABI inline Type *getDoubleWidthType() const;
 
   /// Given scalar/vector integer type, returns a type with elements half as
   /// wide as in the original type. For vectors, preserves element count.
-  LLVM_ABI inline Type *getTruncatedType() const;
+  LLVM_ABI inline Type *getHalfWidthType() const;
 
   /// Get the address space of this pointer or pointer vector type.
   LLVM_ABI inline unsigned getPointerAddressSpace() const;

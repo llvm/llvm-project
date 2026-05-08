@@ -80,14 +80,14 @@ VectorType *VectorType::getInteger(VectorType *VTy) {
   return cast<VectorType>(VTy->getContext().getType(
       llvm::VectorType::getInteger(cast<llvm::VectorType>(VTy->LLVMTy))));
 }
-VectorType *VectorType::getExtendedElementVectorType(VectorType *VTy) {
-  return cast<VectorType>(
-      VTy->getContext().getType(llvm::VectorType::getExtendedElementVectorType(
+VectorType *VectorType::getDoubleWidthElementVectorType(VectorType *VTy) {
+  return cast<VectorType>(VTy->getContext().getType(
+      llvm::VectorType::getDoubleWidthElementVectorType(
           cast<llvm::VectorType>(VTy->LLVMTy))));
 }
-VectorType *VectorType::getTruncatedElementVectorType(VectorType *VTy) {
+VectorType *VectorType::getHalfWidthElementVectorType(VectorType *VTy) {
   return cast<VectorType>(
-      VTy->getContext().getType(llvm::VectorType::getTruncatedElementVectorType(
+      VTy->getContext().getType(llvm::VectorType::getHalfWidthElementVectorType(
           cast<llvm::VectorType>(VTy->LLVMTy))));
 }
 VectorType *VectorType::getSubdividedVectorType(VectorType *VTy,

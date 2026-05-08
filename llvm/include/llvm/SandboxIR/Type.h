@@ -346,8 +346,8 @@ public:
     return cast<llvm::VectorType>(LLVMTy)->getElementCount();
   }
   LLVM_ABI static VectorType *getInteger(VectorType *VTy);
-  LLVM_ABI static VectorType *getExtendedElementVectorType(VectorType *VTy);
-  LLVM_ABI static VectorType *getTruncatedElementVectorType(VectorType *VTy);
+  LLVM_ABI static VectorType *getDoubleWidthElementVectorType(VectorType *VTy);
+  LLVM_ABI static VectorType *getHalfWidthElementVectorType(VectorType *VTy);
   LLVM_ABI static VectorType *getSubdividedVectorType(VectorType *VTy,
                                                       int NumSubdivs);
   LLVM_ABI static VectorType *getHalfElementsVectorType(VectorType *VTy);
@@ -371,13 +371,15 @@ public:
     return cast<FixedVectorType>(VectorType::getInteger(VTy));
   }
 
-  static FixedVectorType *getExtendedElementVectorType(FixedVectorType *VTy) {
-    return cast<FixedVectorType>(VectorType::getExtendedElementVectorType(VTy));
+  static FixedVectorType *
+  getDoubleWidthElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(
+        VectorType::getDoubleWidthElementVectorType(VTy));
   }
 
-  static FixedVectorType *getTruncatedElementVectorType(FixedVectorType *VTy) {
+  static FixedVectorType *getHalfWidthElementVectorType(FixedVectorType *VTy) {
     return cast<FixedVectorType>(
-        VectorType::getTruncatedElementVectorType(VTy));
+        VectorType::getHalfWidthElementVectorType(VTy));
   }
 
   static FixedVectorType *getSubdividedVectorType(FixedVectorType *VTy,
@@ -418,15 +420,15 @@ public:
   }
 
   static ScalableVectorType *
-  getExtendedElementVectorType(ScalableVectorType *VTy) {
+  getDoubleWidthElementVectorType(ScalableVectorType *VTy) {
     return cast<ScalableVectorType>(
-        VectorType::getExtendedElementVectorType(VTy));
+        VectorType::getDoubleWidthElementVectorType(VTy));
   }
 
   static ScalableVectorType *
-  getTruncatedElementVectorType(ScalableVectorType *VTy) {
+  getHalfWidthElementVectorType(ScalableVectorType *VTy) {
     return cast<ScalableVectorType>(
-        VectorType::getTruncatedElementVectorType(VTy));
+        VectorType::getHalfWidthElementVectorType(VTy));
   }
 
   static ScalableVectorType *getSubdividedVectorType(ScalableVectorType *VTy,

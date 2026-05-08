@@ -94,13 +94,13 @@ TEST(VectorTypesTest, FixedLength) {
   EXPECT_EQ(V4Float64Ty->getElementType()->getScalarSizeInBits(), 64U);
 
   auto *ExtTy = dyn_cast<FixedVectorType>(
-      VectorType::getExtendedElementVectorType(V8Int16Ty));
+      VectorType::getDoubleWidthElementVectorType(V8Int16Ty));
   EXPECT_VTY_EQ(ExtTy, V8Int32Ty);
   EXPECT_EQ(ExtTy->getNumElements(), 8U);
   EXPECT_EQ(ExtTy->getElementType()->getScalarSizeInBits(), 32U);
 
   auto *TruncTy = dyn_cast<FixedVectorType>(
-      VectorType::getTruncatedElementVectorType(V8Int32Ty));
+      VectorType::getHalfWidthElementVectorType(V8Int32Ty));
   EXPECT_VTY_EQ(TruncTy, V8Int16Ty);
   EXPECT_EQ(TruncTy->getNumElements(), 8U);
   EXPECT_EQ(TruncTy->getElementType()->getScalarSizeInBits(), 16U);
@@ -193,13 +193,13 @@ TEST(VectorTypesTest, Scalable) {
   EXPECT_EQ(ScV4Float64Ty->getElementType()->getScalarSizeInBits(), 64U);
 
   auto *ExtTy = dyn_cast<ScalableVectorType>(
-      VectorType::getExtendedElementVectorType(ScV8Int16Ty));
+      VectorType::getDoubleWidthElementVectorType(ScV8Int16Ty));
   EXPECT_VTY_EQ(ExtTy, ScV8Int32Ty);
   EXPECT_EQ(ExtTy->getMinNumElements(), 8U);
   EXPECT_EQ(ExtTy->getElementType()->getScalarSizeInBits(), 32U);
 
   auto *TruncTy = dyn_cast<ScalableVectorType>(
-      VectorType::getTruncatedElementVectorType(ScV8Int32Ty));
+      VectorType::getHalfWidthElementVectorType(ScV8Int32Ty));
   EXPECT_VTY_EQ(TruncTy, ScV8Int16Ty);
   EXPECT_EQ(TruncTy->getMinNumElements(), 8U);
   EXPECT_EQ(TruncTy->getElementType()->getScalarSizeInBits(), 16U);

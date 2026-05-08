@@ -532,7 +532,7 @@ static Value *simplifyX86pmulh(IntrinsicInst &II,
   // Extend to twice the width and multiply.
   auto Cast =
       IsSigned ? Instruction::CastOps::SExt : Instruction::CastOps::ZExt;
-  auto *ExtTy = FixedVectorType::getExtendedElementVectorType(ArgTy);
+  auto *ExtTy = FixedVectorType::getDoubleWidthElementVectorType(ArgTy);
   Value *LHS = Builder.CreateCast(Cast, Arg0, ExtTy);
   Value *RHS = Builder.CreateCast(Cast, Arg1, ExtTy);
   Value *Mul = Builder.CreateMul(LHS, RHS);

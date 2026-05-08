@@ -5512,7 +5512,7 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 
   auto *VTy =
       cast<VectorType>(cast<IntrinsicInst>(I).getArgOperand(0)->getType());
-  auto *ExtVTy = VectorType::getExtendedElementVectorType(VTy);
+  auto *ExtVTy = VectorType::getDoubleWidthElementVectorType(VTy);
   unsigned Width = VTy->getElementType()->getIntegerBitWidth();
 
   // Just in case the cost of interleave2 intrinsic and bitcast are both

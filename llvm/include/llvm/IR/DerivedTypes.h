@@ -66,12 +66,12 @@ public:
   LLVM_ABI static IntegerType *get(LLVMContext &C, unsigned NumBits);
 
   /// Returns type twice as wide the input type.
-  IntegerType *getExtendedType() const {
+  IntegerType *getDoubleWidthType() const {
     return Type::getIntNTy(getContext(), 2 * getBitWidth());
   }
 
   /// Returns type half as wide the input type.
-  IntegerType *getTruncatedType() const {
+  IntegerType *getHalfWidthType() const {
     unsigned BitWidth = getBitWidth();
     assert((BitWidth & 1) == 0 &&
            "Cannot truncate integer type with odd bit-width");
@@ -540,16 +540,16 @@ public:
 
   /// This static method is like getInteger except that the element types are
   /// twice as wide as the elements in the input type.
-  static VectorType *getExtendedElementVectorType(VectorType *VTy) {
+  static VectorType *getDoubleWidthElementVectorType(VectorType *VTy) {
     assert(VTy->isIntOrIntVectorTy() && "VTy expected to be a vector of ints.");
     auto *EltTy = cast<IntegerType>(VTy->getElementType());
-    return VectorType::get(EltTy->getExtendedType(), VTy->getElementCount());
+    return VectorType::get(EltTy->getDoubleWidthType(), VTy->getElementCount());
   }
 
   // This static method gets a VectorType with the same number of elements as
   // the input type, and the element type is an integer or float type which
   // is half as wide as the elements in the input type.
-  static VectorType *getTruncatedElementVectorType(VectorType *VTy) {
+  static VectorType *getHalfWidthElementVectorType(VectorType *VTy) {
     Type *EltTy = VTy->getElementType();
     if (EltTy->isFloatingPointTy()) {
       switch (EltTy->getTypeID()) {
@@ -563,7 +563,7 @@ public:
         llvm_unreachable("Cannot create narrower fp vector element type");
       }
     } else {
-      EltTy = cast<IntegerType>(EltTy)->getTruncatedType();
+      EltTy = cast<IntegerType>(EltTy)->getHalfWidthType();
     }
     return VectorType::get(EltTy, VTy->getElementCount());
   }
@@ -574,7 +574,7 @@ public:
   static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs) {
     for (int i = 0; i < NumSubdivs; ++i) {
       VTy = VectorType::getDoubleElementsVectorType(VTy);
-      VTy = VectorType::getTruncatedElementVectorType(VTy);
+      VTy = VectorType::getHalfWidthElementVectorType(VTy);
     }
     return VTy;
   }
@@ -655,13 +655,15 @@ public:
     return cast<FixedVectorType>(VectorType::getInteger(VTy));
   }
 
-  static FixedVectorType *getExtendedElementVectorType(FixedVectorType *VTy) {
-    return cast<FixedVectorType>(VectorType::getExtendedElementVectorType(VTy));
+  static FixedVectorType *
+  getDoubleWidthElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(
+        VectorType::getDoubleWidthElementVectorType(VTy));
   }
 
-  static FixedVectorType *getTruncatedElementVectorType(FixedVectorType *VTy) {
+  static FixedVectorType *getHalfWidthElementVectorType(FixedVectorType *VTy) {
     return cast<FixedVectorType>(
-        VectorType::getTruncatedElementVectorType(VTy));
+        VectorType::getHalfWidthElementVectorType(VTy));
   }
 
   static FixedVectorType *getSubdividedVectorType(FixedVectorType *VTy,
@@ -705,15 +707,15 @@ public:
   }
 
   static ScalableVectorType *
-  getExtendedElementVectorType(ScalableVectorType *VTy) {
+  getDoubleWidthElementVectorType(ScalableVectorType *VTy) {
     return cast<ScalableVectorType>(
-        VectorType::getExtendedElementVectorType(VTy));
+        VectorType::getDoubleWidthElementVectorType(VTy));
   }
 
   static ScalableVectorType *
-  getTruncatedElementVectorType(ScalableVectorType *VTy) {
+  getHalfWidthElementVectorType(ScalableVectorType *VTy) {
     return cast<ScalableVectorType>(
-        VectorType::getTruncatedElementVectorType(VTy));
+        VectorType::getHalfWidthElementVectorType(VTy));
   }
 
   static ScalableVectorType *getSubdividedVectorType(ScalableVectorType *VTy,
@@ -795,24 +797,24 @@ public:
   }
 };
 
-Type *Type::getExtendedType() const {
+Type *Type::getDoubleWidthType() const {
   assert(
       isIntOrIntVectorTy() &&
       "Original type expected to be a vector of integers or a scalar integer.");
   if (auto *VTy = dyn_cast<VectorType>(this))
-    return VectorType::getExtendedElementVectorType(
+    return VectorType::getDoubleWidthElementVectorType(
         const_cast<VectorType *>(VTy));
-  return cast<IntegerType>(this)->getExtendedType();
+  return cast<IntegerType>(this)->getDoubleWidthType();
 }
 
-Type *Type::getTruncatedType() const {
+Type *Type::getHalfWidthType() const {
   assert(
       isIntOrIntVectorTy() &&
       "Original type expected to be a vector of integers or a scalar integer.");
   if (auto *VTy = dyn_cast<VectorType>(this))
-    return VectorType::getTruncatedElementVectorType(
+    return VectorType::getHalfWidthElementVectorType(
         const_cast<VectorType *>(VTy));
-  return cast<IntegerType>(this)->getTruncatedType();
+  return cast<IntegerType>(this)->getHalfWidthType();
 }
 
 Type *Type::getWithNewType(Type *EltTy) const {

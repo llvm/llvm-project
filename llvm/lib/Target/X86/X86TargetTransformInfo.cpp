@@ -260,7 +260,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (Opcode == Instruction::Mul && Ty->isVectorTy() &&
       Ty->getPrimitiveSizeInBits() <= 64 && Ty->getScalarSizeInBits() == 8) {
     Type *WideVecTy =
-        VectorType::getExtendedElementVectorType(cast<VectorType>(Ty));
+        VectorType::getDoubleWidthElementVectorType(cast<VectorType>(Ty));
     return getCastInstrCost(Instruction::ZExt, WideVecTy, Ty,
                             TargetTransformInfo::CastContextHint::None,
                             CostKind) +

@@ -1008,7 +1008,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // vectorization factors.
   if (auto *DestITy = dyn_cast<IntegerType>(DestTy)) {
     if (DestWidth * 2 < SrcWidth) {
-      auto *NewDestTy = DestITy->getExtendedType();
+      auto *NewDestTy = DestITy->getDoubleWidthType();
       if (shouldChangeType(SrcTy, NewDestTy) &&
           TypeEvaluationHelper::canEvaluateTruncated(Src, NewDestTy, *this,
                                                      &Trunc)) {

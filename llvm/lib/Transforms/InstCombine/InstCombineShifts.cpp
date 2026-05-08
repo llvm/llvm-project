@@ -213,7 +213,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
 
   // The mask must be computed in a type twice as wide to ensure
   // that no bits are lost if the sum-of-shifts is wider than the base type.
-  Type *ExtendedTy = WidestTy->getExtendedType();
+  Type *ExtendedTy = WidestTy->getDoubleWidthType();
 
   Value *MaskShAmt;
 
