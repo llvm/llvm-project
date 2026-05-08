@@ -1049,9 +1049,17 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
                                    InstrProfSymtab *ValueMap) {
   // Remap values.
   std::vector<InstrProfValueData> RemappedVD;
+  std::optional<size_t> ZeroIndex = std::nullopt;
   RemappedVD.reserve(VData.size());
   for (const auto &V : VData) {
     uint64_t NewValue = remapValue(V.Value, ValueKind, ValueMap);
+    if (NewValue == 0) {
+      if (ZeroIndex.has_value()) {
+        RemappedVD[*ZeroIndex].Count += V.Count;
+        continue;
+      }
+      ZeroIndex = RemappedVD.size();
+    }
     RemappedVD.push_back({NewValue, V.Count});
   }
 
