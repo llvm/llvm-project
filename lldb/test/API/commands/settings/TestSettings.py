@@ -287,6 +287,61 @@ class SettingsCommandTestCase(TestBase):
             substrs=["%s (unsigned) = 42 (default: 24)" % setting],
         )
 
+    def test_settings_show_changed_per_target(self):
+        """Test that `settings show --changed` reflects per-target values: a
+        per-target setting changed in target A should show as changed when A is
+        selected, and as unchanged when target B is selected."""
+        setting = "target.max-children-count"
+
+        def cleanup():
+            self.runCmd("settings clear %s" % setting, check=False)
+
+        self.addTearDownHook(cleanup)
+        self.runCmd("settings clear %s" % setting)
+
+        target_a = self.dbg.CreateTarget("")
+        self.assertTrue(target_a.IsValid(), "Created target A")
+        target_b = self.dbg.CreateTarget("")
+        self.assertTrue(target_b.IsValid(), "Created target B")
+
+        index_a = self.dbg.GetIndexOfTarget(target_a)
+        index_b = self.dbg.GetIndexOfTarget(target_b)
+
+        # Select target A and override the per-target setting there.
+        self.runCmd("target select %d" % index_a)
+        self.runCmd("settings set %s 42" % setting)
+
+        # With A selected, the changed listing should include the override.
+        self.expect(
+            "settings show --changed",
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+        self.expect(
+            "settings show --changed %s" % setting,
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+
+        # Switch to target B: the same setting is still at its default for B,
+        # so it must not appear in either form of the changed listing.
+        self.runCmd("target select %d" % index_b)
+        self.expect(
+            "settings show --changed",
+            matching=False,
+            substrs=[setting],
+        )
+        self.expect(
+            "settings show --changed %s" % setting,
+            matching=False,
+            substrs=[setting],
+        )
+
+        # Sanity check: switching back to A still shows the override.
+        self.runCmd("target select %d" % index_a)
+        self.expect(
+            "settings show --changed %s" % setting,
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+
     @skipIf(archs=no_match(["x86_64", "i386", "i686"]))
     def test_disassembler_settings(self):
         """Test that user options for the disassembler take effect."""
