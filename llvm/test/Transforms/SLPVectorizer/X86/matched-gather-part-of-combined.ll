@@ -21,12 +21,8 @@ define void @test(ptr %0, i32 %.sroa.31.0.copyload4033) {
 ; CHECK:       [[_CRITEDGE1844_LOOPEXIT2813:.*:]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -24
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -36
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = call <7 x i32> @llvm.masked.load.v7i32.p0(ptr align 4 [[TMP3]], <7 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <7 x i32> poison)
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <7 x i32> [[TMP6]], <7 x i32> poison, <2 x i32> <i32 6, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <7 x i32> @llvm.masked.load.v7i32.p0(ptr align 4 [[TMP3]], <7 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <7 x i32> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <7 x i32> [[TMP5]], <7 x i32> poison, <4 x i32> <i32 0, i32 1, i32 6, i32 0>
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i32> [[TMP10]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP11]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP4]], align 4

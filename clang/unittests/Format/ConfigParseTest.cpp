@@ -433,6 +433,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("Standard: c++14", Standard, FormatStyle::LS_Cpp14);
   CHECK_PARSE("Standard: c++17", Standard, FormatStyle::LS_Cpp17);
   CHECK_PARSE("Standard: c++20", Standard, FormatStyle::LS_Cpp20);
+  CHECK_PARSE("Standard: c++23", Standard, FormatStyle::LS_Cpp23);
+  CHECK_PARSE("Standard: c++26", Standard, FormatStyle::LS_Cpp26);
   CHECK_PARSE("Standard: Auto", Standard, FormatStyle::LS_Auto);
   CHECK_PARSE("Standard: Latest", Standard, FormatStyle::LS_Latest);
   // Legacy aliases:
@@ -1710,7 +1712,8 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   // Test 9.8: use inheritance from a file without BasedOnStyle
   ASSERT_TRUE(FS.addFile(
       "/e/withoutbase/.clang-format", 0,
-      llvm::MemoryBuffer::getMemBuffer("BracedInitializerIndentWidth: 2\n"
+      llvm::MemoryBuffer::getMemBuffer("AlignAfterOpenBracket: false\n"
+                                       "BracedInitializerIndentWidth: 2\n"
                                        "ColumnLimit: 123")));
   ASSERT_TRUE(
       FS.addFile("/e/withoutbase/sub/.clang-format", 0,
@@ -1721,6 +1724,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.AlignAfterOpenBracket = false;
     Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     return Style;
@@ -1730,6 +1734,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.AlignAfterOpenBracket = false;
     Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     Style.IndentWidth = 7;

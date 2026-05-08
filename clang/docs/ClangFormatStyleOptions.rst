@@ -1912,8 +1912,7 @@ the configuration (without a prefix: ``Auto``).
   * ``InlineOnly``
     Only merge functions defined inside a class. Same as ``inline``,
     except it does not implies ``empty``: i.e. top level empty functions
-    are not merged either. This option is **deprecated** and is retained
-    for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+    are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1927,9 +1926,7 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Empty``
-    Only merge empty functions. This option is **deprecated** and is
-    retained for backwards compatibility. See ``Empty`` of
-    ``ShortFunctionStyle``.
+    Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1939,9 +1936,8 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Inline``
-    Only merge functions defined inside a class. Implies ``empty``. This
-    option is **deprecated** and is retained for backwards compatibility.
-    See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+    Only merge functions defined inside a class. Implies ``empty``. See
+    ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -7543,6 +7539,12 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LS_Cpp20`` (in configuration: ``c++20``)
     Parse and format as C++20.
+
+  * ``LS_Cpp23`` (in configuration: ``c++23``)
+    Parse and format as C++23.
+
+  * ``LS_Cpp26`` (in configuration: ``c++26``)
+    Parse and format as C++26.
 
   * ``LS_Latest`` (in configuration: ``Latest``)
     Parse and format using the latest supported language version.
