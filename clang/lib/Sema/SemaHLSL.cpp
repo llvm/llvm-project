@@ -3234,7 +3234,7 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            clang::QualType PassedType) {
   clang::QualType BaseType = PassedType;
   if (const auto *VT = PassedType->getAs<clang::VectorType>()) {
-      BaseType = VT->getElementType();
+    BaseType = VT->getElementType();
   } else if (const auto *MT = PassedType->getAs<clang::MatrixType>()) {
     BaseType = MT->getElementType();
   }
