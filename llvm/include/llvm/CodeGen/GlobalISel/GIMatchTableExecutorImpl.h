@@ -135,6 +135,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
 
   const auto eraseImpl = [&](MachineInstr *MI) {
+    initializeBuilder();
     // If we're erasing the insertion point, ensure we don't leave a dangling
     // pointer in the builder.
     if (Builder.getInsertPt() == MI)
@@ -1506,7 +1507,6 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t InsnID = readULEB();
       MachineInstr *MI = State.MIs[InsnID];
       assert(MI && "Attempted to erase an undefined instruction");
-      initializeBuilder();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_EraseFromParent(MIs["
                              << InsnID << "])\n");
@@ -1514,7 +1514,6 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
     case GIR_EraseRootFromParent_Done: {
-      initializeBuilder();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs()
                           << CurrentIdx << ": GIR_EraseRootFromParent_Done\n");
