@@ -42,6 +42,7 @@ barrier ctime
 barrier limits
 barrier ratio
 barrier version
+bit climits
 bit cstdint
 bit limits
 bit version

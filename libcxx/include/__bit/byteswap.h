@@ -12,6 +12,8 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <climits>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -42,7 +44,16 @@ template <integral _Tp>
 #    endif // __has_builtin(__builtin_bswap128)
 #  endif   // _LIBCPP_HAS_INT128
   } else {
-    static_assert(sizeof(_Tp) == 0, "byteswap is unimplemented for integral types of this size");
+    // Generic byte-reversal for wide integer types (e.g. _BitInt(N) with
+    // N > 128). Reads the value 8 bits at a time and writes the bytes
+    // back in reverse order. Left-shift on signed integral types is
+    // well-defined modulo 2^width since C++20.
+    _Tp __result = 0;
+    for (size_t __i = 0; __i < sizeof(_Tp); ++__i) {
+      __result |= static_cast<_Tp>(static_cast<unsigned char>(__val >> (__i * CHAR_BIT)))
+               << ((sizeof(_Tp) - 1 - __i) * CHAR_BIT);
+    }
+    return __result;
   }
 }
 
