@@ -1856,20 +1856,8 @@ X86_64TargetInfo::getTargetBuiltins() const {
 unsigned
 MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
                                              bool HasNonWeakDef) const {
-  // XXX: copy-pasted. can we share the code?
   unsigned Align =
       WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
-  // MSVC does size based alignment for arm64 based on alignment section in
-  // below document, replicate that to keep alignment consistent with object
-  // files compiled by MSVC.
-  // https://docs.microsoft.com/en-us/cpp/build/arm64-windows-abi-conventions
-  if (TypeSize >= 512) {              // TypeSize >= 64 bytes
-    Align = std::max(Align, 128u);    // align type at least 16 bytes
-  } else if (TypeSize >= 64) {        // TypeSize >= 8 bytes
-    Align = std::max(Align, 64u);     // align type at least 8 butes
-  } else if (TypeSize >= 16) {        // TypeSize >= 2 bytes
-    Align = std::max(Align, 32u);     // align type at least 4 bytes
-  }
-  return Align;
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
 }
