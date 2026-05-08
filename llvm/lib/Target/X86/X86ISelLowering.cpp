@@ -29554,8 +29554,8 @@ static APInt getGFNIByteAffine(const APInt &ByteToAffine, const APInt &Matrix64,
   ByteSplat &= Matrix64.byteSwap();
 
   // Cumulative parity
-  for (unsigned i = 0; i < 3; ++i)
-    ByteSplat ^= ByteSplat.lshr(1 << i);
+  for (unsigned I = 0; I != 3; ++I)
+    ByteSplat ^= ByteSplat.lshr(1 << I);
   ByteSplat &= 0x0101010101010101ull;
 
   APInt Affined = APIntOps::ScaleBitMask(ByteSplat, 8);
@@ -62458,9 +62458,9 @@ static SDValue combineNestedGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
 
   APInt SubM(VecWidth, 0);
   APInt SupM(VecWidth, 0);
-  for (unsigned i = 0; i < NumElts; ++i) {
-    SubM.insertBits(YSubEltBits[i], i * EltWidth);
-    SupM.insertBits(YSupEltBits[i], i * EltWidth);
+  for (unsigned I = 0; I != NumElts; ++I) {
+    SubM.insertBits(YSubEltBits[I], I * EltWidth);
+    SupM.insertBits(YSupEltBits[I], I * EltWidth);
   }
 
   // Immediate is shared and needs to be permuted in the same manner
@@ -62476,7 +62476,7 @@ static SDValue combineNestedGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
   APInt LeastBitInByte = APInt::getSplat(VecWidth, APInt(8, 0x01));
   APInt RowSplatter = APInt(VecWidth, 0x0101010101010101ull);
 
-  for (unsigned Row = 0; Row < 8; ++Row) {
+  for (unsigned Row = 0; Row != 8; ++Row) {
     APInt RowSplat = (SubM & LeastRowMask) * RowSplatter;
     SubM = SubM.lshr(EltWidth);
 
@@ -62487,8 +62487,8 @@ static SDValue combineNestedGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
   }
 
   SmallVector<SDValue> FoldedVector;
-  for (unsigned i = 0; i < NumElts; ++i) {
-    APInt FoldedElt = FoldedMatrix.extractBits(EltWidth, i * EltWidth);
+  for (unsigned I = 0; I < NumElts; ++I) {
+    APInt FoldedElt = FoldedMatrix.extractBits(EltWidth, I * EltWidth);
     FoldedVector.push_back(DAG.getConstant(FoldedElt, DL, MVT::i8));
   }
   SDValue NewMatrix = DAG.getBuildVector(VT, DL, FoldedVector);
