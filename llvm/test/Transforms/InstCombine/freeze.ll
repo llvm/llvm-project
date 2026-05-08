@@ -1440,7 +1440,9 @@ define i32 @freeze_ctpop(i32 %x) {
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 2047, [[X]]
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y_FR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y_FR]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i16 0, 17) i16 @llvm.ctpop.i16(i16 [[TMP1]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = zext nneg i16 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[CTPOP]]
 ;
   %y = lshr i32 2047, %x
