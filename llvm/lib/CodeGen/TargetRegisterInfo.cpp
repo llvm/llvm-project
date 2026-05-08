@@ -530,9 +530,10 @@ void TargetRegisterInfo::applyRegAllocationAntiHints(
     size_t NonAntiHintedCount =
         std::distance(OrderStorage.begin(), PartionPoint);
     size_t AntiHintedCount = std::distance(PartionPoint, OrderStorage.end());
-    dbgs() << "Addded " << NonAntiHintedCount
-           << "non-anti-hinted registers first\n"
-           << "Added " << AntiHintedCount << "anti-hinted at the end!\n";
+    dbgs() << "Added " << NonAntiHintedCount
+           << " non-anti-hinted registers first\n"
+           << "Added " << AntiHintedCount
+           << " anti-hinted registers at the end\n";
   });
 
   return;
