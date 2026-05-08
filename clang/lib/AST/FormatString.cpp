@@ -44,10 +44,10 @@ OptionalAmount FormatStringParser::parseAmount(const char *&Beg,
   bool hasDigits = false;
 
   for (; I != E; ++I) {
-    char c = *I;
-    if (c >= '0' && c <= '9') {
+    char c = FormatStrConverter.convertBasicChar(*I);
+    if (c >= u8'0' && c <= u8'9') {
       hasDigits = true;
-      accumulator = (accumulator * 10) + (c - '0');
+      accumulator = (accumulator * 10) + (c - u8'0');
       continue;
     }
 
@@ -80,7 +80,7 @@ bool FormatStringParser::parseWidthModifier(const char *&I, const char *E,
 OptionalAmount
 FormatStringParser::parseNonPositionAmount(const char *&Beg, const char *E,
                                            unsigned &argIndex) const {
-  if (*Beg == '*') {
+  if (FormatStrConverter.convertBasicChar(*Beg) == u8'*') {
     ++Beg;
     return OptionalAmount(OptionalAmount::Arg, argIndex++, Beg, 0, false);
   }
@@ -92,7 +92,7 @@ OptionalAmount
 FormatStringParser::parsePositionAmount(const char *Start, const char *&Beg,
                                         const char *E,
                                         PositionContext p) const {
-  if (*Beg == '*') {
+  if (FormatStrConverter.convertBasicChar(*Beg) == u8'*') {
     const char *I = Beg + 1;
     const OptionalAmount &Amt = parseAmount(I, E);
 
@@ -109,7 +109,7 @@ FormatStringParser::parsePositionAmount(const char *Start, const char *&Beg,
 
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
 
-    if (*I == '$') {
+    if (FormatStrConverter.convertBasicChar(*I) == u8'$') {
       // Handle positional arguments
 
       // Special case: '*0$', since this is an easy mistake.
@@ -162,7 +162,8 @@ bool FormatStringParser::parseArgPosition(FormatSpecifier &FS,
     return true;
   }
 
-  if (Amt.getHowSpecified() == OptionalAmount::Constant && *(I++) == '$') {
+  if (Amt.getHowSpecified() == OptionalAmount::Constant &&
+      FormatStrConverter.convertBasicChar(*(I++)) == u8'$') {
     // Warn that positional arguments are non-standard.
     H.HandlePosition(Start, I - Start);
 
@@ -190,7 +191,7 @@ bool FormatStringParser::parseVectorModifier(FormatSpecifier &FS,
     return false;
 
   const char *Start = I;
-  if (*I == 'v') {
+  if (FormatStrConverter.convertBasicChar(*I) == u8'v') {
     ++I;
 
     if (I == E) {
@@ -215,64 +216,67 @@ bool FormatStringParser::parseLengthModifier(FormatSpecifier &FS,
                                              const char *E) const {
   LengthModifier::Kind lmKind = LengthModifier::None;
   const char *lmPosition = I;
-  switch (*I) {
+  switch (FormatStrConverter.convertBasicChar(*I)) {
   default:
     return false;
-  case 'h':
+  case u8'h':
     ++I;
-    if (I != E && *I == 'h') {
+    if (I != E && FormatStrConverter.convertBasicChar(*I) == u8'h') {
       ++I;
       lmKind = LengthModifier::AsChar;
-    } else if (I != E && *I == 'l' && LO.OpenCL) {
+    } else if (I != E && FormatStrConverter.convertBasicChar(*I) == u8'l' &&
+               LO.OpenCL) {
       ++I;
       lmKind = LengthModifier::AsShortLong;
     } else {
       lmKind = LengthModifier::AsShort;
     }
     break;
-  case 'l':
+  case u8'l':
     ++I;
-    if (I != E && *I == 'l') {
+    if (I != E && FormatStrConverter.convertBasicChar(*I) == u8'l') {
       ++I;
       lmKind = LengthModifier::AsLongLong;
     } else {
       lmKind = LengthModifier::AsLong;
     }
     break;
-  case 'j':
+  case u8'j':
     lmKind = LengthModifier::AsIntMax;
     ++I;
     break;
-  case 'z':
+  case u8'z':
     lmKind = LengthModifier::AsSizeT;
     ++I;
     break;
-  case 't':
+  case u8't':
     lmKind = LengthModifier::AsPtrDiff;
     ++I;
     break;
-  case 'L':
+  case u8'L':
     lmKind = LengthModifier::AsLongDouble;
     ++I;
     break;
-  case 'q':
+  case u8'q':
     lmKind = LengthModifier::AsQuad;
     ++I;
     break;
-  case 'a':
+  case u8'a':
     if (IsScanf && !LO.C99 && !LO.CPlusPlus11) {
       // For scanf in C90, look at the next character to see if this should
       // be parsed as the GNU extension 'a' length modifier. If not, this
       // will be parsed as a conversion specifier.
       ++I;
-      if (I != E && (*I == 's' || *I == 'S' || *I == '[')) {
+      if (I != E && (FormatStrConverter.convertBasicChar(*I) == u8's' ||
+                     FormatStrConverter.convertBasicChar(*I) == u8'S' ||
+                     FormatStrConverter.convertBasicChar(*I) == u8'[')) {
         lmKind = LengthModifier::AsAllocate;
         break;
       }
       --I;
     }
     return false;
-  case 'm':
+  case u8'm':
     if (IsScanf) {
       lmKind = LengthModifier::AsMAllocate;
       ++I;
@@ -281,9 +285,10 @@ bool FormatStringParser::parseLengthModifier(FormatSpecifier &FS,
     return false;
   // printf: AsInt64, AsInt32, AsInt3264
   // scanf:  AsInt64
-  case 'I':
+  case u8'I':
     if (I + 1 != E && I + 2 != E) {
-      if (I[1] == '6' && I[2] == '4') {
+      if (FormatStrConverter.convertBasicChar(I[1]) == u8'6' &&
+          FormatStrConverter.convertBasicChar(I[2]) == u8'4') {
         I += 3;
         lmKind = LengthModifier::AsInt64;
         break;
@@ -291,7 +296,8 @@ bool FormatStringParser::parseLengthModifier(FormatSpecifier &FS,
       if (IsScanf)
         return false;
 
-      if (I[1] == '3' && I[2] == '2') {
+      if (FormatStrConverter.convertBasicChar(I[1]) == u8'3' &&
+          FormatStrConverter.convertBasicChar(I[2]) == u8'2') {
         I += 3;
         lmKind = LengthModifier::AsInt32;
         break;
