@@ -1629,6 +1629,14 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
+  // User-specified or default resource dir
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_resource_dir))
+    invoc.resourceDir = a->getValue();
+  else
+    invoc.resourceDir = clang::GetResourcesPath(
+        llvm::sys::fs::getMainExecutable(argv0, nullptr));
+
   // -flang-experimental-hlfir
   if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
       args.hasArg(clang::options::OPT_emit_hlfir)) {
@@ -1909,6 +1917,12 @@ void CompilerInvocation::setFortranOpts() {
   // Add the ordered list of -intrinsic-modules-path
   fortranOptions.searchDirectories.insert(
       fortranOptions.searchDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+
+  // Add the ordered list of -fintrinsic-modules-path
+  fortranOptions.intrinsicModuleDirectories.insert(
+      fortranOptions.intrinsicModuleDirectories.end(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
