@@ -4,7 +4,8 @@ llvm-formatv-string
 ===================
 
 Validates ``llvm::formatv`` format strings against the provided arguments,
-diagnosing mismatched argument counts, unused arguments, and mixed index styles.
+diagnosing mismatched argument counts, unused arguments, and mixed index
+styles.
 
 This check diagnoses the following issues:
 
