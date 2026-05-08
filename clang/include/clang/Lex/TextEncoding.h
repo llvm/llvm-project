@@ -29,9 +29,6 @@ class TextEncoding {
   std::unique_ptr<llvm::TextEncodingConverter> ToLiteralEncodingConverter;
 
   // Only non-null on z/OS, where the system default encoding is IBM-1047.
-  // This converts UTF-8 to IBM-1047 for asm string literals so that
-  // octal/hex escape sequences are interpreted as IBM-1047 code points,
-  // regardless of -fexec-charset.
   std::unique_ptr<llvm::TextEncodingConverter> ToIBM1047Converter;
   std::unique_ptr<llvm::TextEncodingConverter> FromIBM1047Converter;
 

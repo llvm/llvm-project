@@ -50,13 +50,11 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
   if (TInfo.getDefaultOrdinaryLiteralEncoding() == UTF8)
     return std::error_code();
 
-  // The IBM-1047 converters are only needed on z/OS, where the system
-  // (assembler/linker) default encoding is IBM-1047 rather than UTF-8.
-  assert((TInfo.getTriple().getOS() == llvm::Triple::ZOS) &&
+  // z/OS: system default encoding is IBM-1047 rather than UTF-8.
+  assert(TInfo.getTriple().getOS() == llvm::Triple::ZOS &&
          "Non-UTF-8 system encoding is only expected on z/OS");
 
-  // Create a converter from UTF-8 to IBM-1047 for use when parsing asm string
-  // literals on z/OS, where escape sequences are IBM-1047 code points.
+  // Create a converter from UTF-8 to IBM-1047 for asm string literals on z/OS.
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
       llvm::TextEncodingConverter::create(
           UTF8, TInfo.getDefaultOrdinaryLiteralEncoding());
