@@ -285,7 +285,7 @@ private:
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
-    GlobalValue *DataVar = nullptr;
+    GlobalVariable *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
 
@@ -1102,7 +1102,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   assert(It != ProfileDataMap.end() && It->second.DataVar &&
          "value profiling detected in function with no counter increment");
 
-  GlobalValue *DataVar = It->second.DataVar;
+  GlobalVariable *DataVar = It->second.DataVar;
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
   uint64_t Index = Ind->getIndex()->getZExtValue();
   for (uint32_t Kind = IPVK_First; Kind < ValueKind; ++Kind)
@@ -1114,7 +1114,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
   auto *NormalizedDataVarPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      cast<Constant>(DataVar), PointerType::get(M.getContext(), 0));
+      DataVar, PointerType::get(M.getContext(), 0));
 
   // To support value profiling calls within Windows exception handlers, funclet
   // information contained within operand bundles needs to be copied over to
@@ -1164,8 +1164,6 @@ GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
 }
 
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
-  // Note: For AMDGPU targets, lowerIncrementAMDGPU handles counter addressing
-  // directly. This function is called for non-AMDGPU targets.
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
 
@@ -1952,8 +1950,6 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Visibility = GlobalValue::ProtectedVisibility;
   auto *Data =
       new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
-  GlobalValue *DataVar = Data;
-  Constant *DataAddr = Data;
 
   Constant *RelativeCounterPtr;
   GlobalVariable *BitmapPtr = PD.RegionBitmaps;
@@ -1967,6 +1963,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr = ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy);
   } else if (TT.isNVPTX()) {
+    // The NVPTX target cannot handle self-referencing constant expressions in
+    // global initializers at all. Use absolute pointers and have the runtime
+    // registration convert them to relative offsets.
     DataSectionKind = IPSK_data;
     RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
   } else {
@@ -1975,36 +1974,34 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     DataSectionKind = IPSK_data;
     RelativeCounterPtr =
         ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
-                             ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
+                             ConstantExpr::getPtrToInt(Data, IntPtrTy));
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr =
           ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
-                               ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
+                               ConstantExpr::getPtrToInt(Data, IntPtrTy));
   }
 
   Constant *DataVals[] = {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *DataInit = ConstantStruct::get(DataTy, DataVals);
+  Data->setInitializer(ConstantStruct::get(DataTy, DataVals));
 
-  auto *DataGV = cast<GlobalVariable>(DataVar);
-  DataGV->setInitializer(DataInit);
-  DataGV->setVisibility(Visibility);
-  DataGV->setSection(
+  Data->setVisibility(Visibility);
+  Data->setSection(
       getInstrProfSectionName(DataSectionKind, TT.getObjectFormat()));
-  DataGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
-  if (isGPUProfTarget(M) && !DataGV->hasComdat()) {
-    DataGV->setComdat(M.getOrInsertComdat(CntsVarName));
-    DataGV->setLinkage(GlobalValue::LinkOnceODRLinkage);
+  Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+  if (isGPUProfTarget(M) && !Data->hasComdat()) {
+    Data->setComdat(M.getOrInsertComdat(CntsVarName));
+    Data->setLinkage(GlobalValue::LinkOnceODRLinkage);
   } else {
-    maybeSetComdat(DataGV, Fn, CntsVarName);
+    maybeSetComdat(Data, Fn, CntsVarName);
   }
 
-  PD.DataVar = DataVar;
+  PD.DataVar = Data;
 
   // Mark the data variable as used so that it isn't stripped out.
-  CompilerUsedVars.push_back(DataVar);
+  CompilerUsedVars.push_back(Data);
   // Now that the linkage set by the FE has been passed to the data and counter
   // variables, reset Name variable's linkage and visibility to private so that
   // it can be removed later by the compiler.

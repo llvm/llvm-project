@@ -472,7 +472,7 @@ createIRLevelProfileFlagVar(Module &M,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
   IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
 
-  const Triple &TT = M.getTargetTriple();
+  Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
     IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
@@ -1961,7 +1961,7 @@ static bool InstrumentAllFunctions(
   if (InstrumentationType == PGOInstrumentationType::FDO)
     createIRLevelProfileFlagVar(M, InstrumentationType);
 
-  const Triple &TT = M.getTargetTriple();
+  Triple TT(M.getTargetTriple());
   LLVMContext &Ctx = M.getContext();
   if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
     Ctx.diagnose(DiagnosticInfoPGOProfile(
