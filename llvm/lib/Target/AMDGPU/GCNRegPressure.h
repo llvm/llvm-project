@@ -331,6 +331,22 @@ protected:
   // Physical register liveness: Units provides O(1) unit-level alias checks,
   // Regs tracks which register names contributed to pressure for cheap
   // reconstruction. Both must be kept in sync.
+  //
+  // Known limitations:
+  // 1. Aliasing can cause physical register pressure to be over-counted.
+  //    Regs tracks exact register names, so overlapping tuples are not
+  //    recognized as related. This can manifest in three ways:
+  //    a) A def of a super-register fails to kill a live sub-register in
+  //       Regs, leaving over-counted pressure above the def.
+  //    b) Two overlapping registers both added to Regs cause shared units
+  //       to be over-counted in pressure.
+  //    c) A def of a sub-register cannot partially kill a live
+  //       super-register in Regs, leaving over-counted pressure when only part
+  //       of it should remain.
+  // 2. Physical register live-in/live-out is not modeled. reset()
+  //    initializes CurPressure from virtual registers only and clears
+  //    PhysLiveRegs. Physical registers that are live through a region
+  //    without being used are invisible, leading to under-counted pressure.
   struct PhysicalRegLiveness {
     LiveRegUnits Units;
     SmallDenseSet<MCRegister, 16> Regs;

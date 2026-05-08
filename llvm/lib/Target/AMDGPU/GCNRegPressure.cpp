@@ -515,11 +515,14 @@ bool GCNRPTracker::checkRegKilled(MCRegister Reg, SlotIndex SI) const {
   });
 }
 
+// Known aliasing limitations (see also PhysicalRegLiveness limitations):
+// 1. If Reg is not in Regs, the early return skips any killed units and
+//    no pressure decrement occurs (over-counting).
+// 2. If Reg is in Regs but only some of its units are killed, the entire
+//    register is removed from Regs and the caller decrements pressure for
+//    the full register, not just the killed portion (under-counting).
 bool GCNRPTracker::eraseKilledUnits(MCRegister Reg, SlotIndex SI) {
   assert(SRI && "SRI not initialized");
-  // Due to aliasing, a physical register may not be present in
-  // PhysLiveRegs.Regs, but one of its regunits may show up as killed. Return
-  // early in this case.
   if (!PhysLiveRegs.Regs.contains(Reg))
     return false;
   BitVector KilledUnits(PhysLiveRegs.getBitVector().size(), false);
@@ -534,6 +537,9 @@ bool GCNRPTracker::eraseKilledUnits(MCRegister Reg, SlotIndex SI) {
   return true;
 }
 
+// Only matches Reg by exact name in Regs. If an overlapping register is live
+// (e.g., a sub-register is in Regs when a super-register is defined, or vice
+// versa), this will not find or remove it. See PhysicalRegLiveness limitations.
 bool GCNRPTracker::eraseAllLiveUnits(MCRegister Reg) {
   assert(SRI && "SRI not initialized");
   if (!PhysLiveRegs.Regs.contains(Reg))
@@ -542,6 +548,10 @@ bool GCNRPTracker::eraseAllLiveUnits(MCRegister Reg) {
   return true;
 }
 
+// Checks liveness at the unit level, but adds the full register to Regs if any
+// unit is new. When an overlapping register is already in Regs, the shared
+// units are already live but the full register is still added, leading to
+// over-counted pressure. See PhysicalRegLiveness limitations.
 bool GCNRPTracker::insertIfNotLive(MCRegister Reg) {
   assert(SRI && "SRI not initialized");
   const BitVector &Units = PhysLiveRegs.getBitVector();
