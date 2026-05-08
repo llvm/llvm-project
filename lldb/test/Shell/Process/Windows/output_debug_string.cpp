@@ -19,13 +19,14 @@ int main() {
   maxW.push_back(L'\n');
   OutputDebugStringW(maxW.c_str());
 
-  Sleep(100);
-
   std::string maxA((1 << 20) - 4, 'C');
   maxA.push_back(L'D');
   maxA.push_back(L'\n');
   OutputDebugStringA(maxA.c_str());
 
+  // Give LLDB time to print out the previous debug strings.
+  // The following ones should generate a log.
+  // This makes sure we see the log after the previous line, not before.
   Sleep(100);
 
   std::wstring tooBigW((1 << 19) - 3, L'E');
