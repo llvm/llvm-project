@@ -6,6 +6,30 @@ adrp     x0, #6553600
 ldr      x0, [x0, #4096]
 # LLVM-MCA-END
 
+# LLVM-MCA-BEGIN simd_mac_mla
+mla      v0.4s, v1.4s, v2.4s
+mla      v0.4s, v3.4s, v4.4s
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN simd_mac_dot
+udot     v0.4s, v1.16b, v2.16b
+udot     v0.4s, v3.16b, v4.16b
+sdot     v0.4s, v5.16b, v6.16b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN simd_mac_long
+umlal    v0.4s, v1.4h, v2.4h
+smlal    v0.4s, v3.4h, v4.4h
+umlsl    v0.4s, v5.4h, v6.4h
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN simd_mac_mixed
+mla      v0.4s, v1.4s, v2.4s
+mls      v0.4s, v3.4s, v4.4s
+udot     v0.4s, v5.16b, v6.16b
+umlal    v0.4s, v7.4h, v8.4h
+# LLVM-MCA-END
+
 # CHECK:      [0] Code Region - adrp
 
 # CHECK:      Iterations:        100
@@ -35,4 +59,144 @@ ldr      x0, [x0, #4096]
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    0.0       adrp	x0, #6553600
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       ldr	x0, [x0, #4096]
+# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+
+# CHECK:      [1] Code Region - simd_mac_mla
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      801
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    3
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: Block RThroughput: 1.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT:                     0123456
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeeE.    .    ..   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,1]     .   DeeeE .    ..   mla	v0.4s, v3.4s, v4.4s
+# CHECK-NEXT: [1,0]     .    .  DeeeE  ..   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,1]     .    .    . DeeeE   mla	v0.4s, v3.4s, v4.4s
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     0.0    0.0    0.0       mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: 1.     2     0.0    0.0    0.0       mla	v0.4s, v3.4s, v4.4s
+# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+
+# CHECK:      [2] Code Region - simd_mac_dot
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      1201
+# CHECK-NEXT: Total uOps:        300
+
+# CHECK:      Dispatch Width:    3
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: Block RThroughput: 1.5
+
+# CHECK:      Timeline view:
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234
+
+# CHECK:      [0,0]     DeeeE.    .    .    .   .   udot	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [0,1]     .   DeeeE .    .    .   .   udot	v0.4s, v3.16b, v4.16b
+# CHECK-NEXT: [0,2]     .    .  DeeeE  .    .   .   sdot	v0.4s, v5.16b, v6.16b
+# CHECK-NEXT: [1,0]     .    .    . DeeeE   .   .   udot	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [1,1]     .    .    .    .DeeeE   .   udot	v0.4s, v3.16b, v4.16b
+# CHECK-NEXT: [1,2]     .    .    .    .    DeeeE   sdot	v0.4s, v5.16b, v6.16b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     0.0    0.0    0.0       udot	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: 1.     2     0.0    0.0    0.0       udot	v0.4s, v3.16b, v4.16b
+# CHECK-NEXT: 2.     2     0.0    0.0    0.0       sdot	v0.4s, v5.16b, v6.16b
+# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+
+# CHECK:      [3] Code Region - simd_mac_long
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      1201
+# CHECK-NEXT: Total uOps:        300
+
+# CHECK:      Dispatch Width:    3
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: Block RThroughput: 1.5
+
+# CHECK:      Timeline view:
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234
+
+# CHECK:      [0,0]     DeeeE.    .    .    .   .   umlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [0,1]     .   DeeeE .    .    .   .   smlal	v0.4s, v3.4h, v4.4h
+# CHECK-NEXT: [0,2]     .    .  DeeeE  .    .   .   umlsl	v0.4s, v5.4h, v6.4h
+# CHECK-NEXT: [1,0]     .    .    . DeeeE   .   .   umlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [1,1]     .    .    .    .DeeeE   .   smlal	v0.4s, v3.4h, v4.4h
+# CHECK-NEXT: [1,2]     .    .    .    .    DeeeE   umlsl	v0.4s, v5.4h, v6.4h
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     0.0    0.0    0.0       umlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: 1.     2     0.0    0.0    0.0       smlal	v0.4s, v3.4h, v4.4h
+# CHECK-NEXT: 2.     2     0.0    0.0    0.0       umlsl	v0.4s, v5.4h, v6.4h
+# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+
+# CHECK:      [4] Code Region - simd_mac_mixed
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      400
+# CHECK-NEXT: Total Cycles:      1601
+# CHECK-NEXT: Total uOps:        400
+
+# CHECK:      Dispatch Width:    3
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: Block RThroughput: 2.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: Index     0123456789          0123456789
+
+# CHECK:      [0,0]     DeeeE.    .    .    .    .    . .   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,1]     .   DeeeE .    .    .    .    . .   mls	v0.4s, v3.4s, v4.4s
+# CHECK-NEXT: [0,2]     .    .  DeeeE  .    .    .    . .   udot	v0.4s, v5.16b, v6.16b
+# CHECK-NEXT: [0,3]     .    .    . DeeeE   .    .    . .   umlal	v0.4s, v7.4h, v8.4h
+# CHECK-NEXT: [1,0]     .    .    .    .DeeeE    .    . .   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,1]     .    .    .    .    DeeeE.    . .   mls	v0.4s, v3.4s, v4.4s
+# CHECK-NEXT: [1,2]     .    .    .    .    .   DeeeE . .   udot	v0.4s, v5.16b, v6.16b
+# CHECK-NEXT: [1,3]     .    .    .    .    .    .  DeeeE   umlal	v0.4s, v7.4h, v8.4h
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     0.0    0.0    0.0       mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: 1.     2     0.0    0.0    0.0       mls	v0.4s, v3.4s, v4.4s
+# CHECK-NEXT: 2.     2     0.0    0.0    0.0       udot	v0.4s, v5.16b, v6.16b
+# CHECK-NEXT: 3.     2     0.0    0.0    0.0       umlal	v0.4s, v7.4h, v8.4h
 # CHECK-NEXT:        2     0.0    0.0    0.0       <total>
