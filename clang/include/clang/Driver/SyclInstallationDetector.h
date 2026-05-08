@@ -25,6 +25,9 @@ public:
   // Return the filesystem path to the detected SYCL runtime library.
   StringRef getSYCLRTLibPath() const { return SYCLRTLibPath; }
 
+  // Get candidate paths where SYCL device libraries may be located.
+  void getSYCLDeviceLibPath(SmallVectorImpl<SmallString<128>> &LibPaths) const;
+
 private:
   const Driver &D;
   SmallString<0> SYCLRTLibPath;

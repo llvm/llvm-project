@@ -55,6 +55,16 @@ public:
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1Args) const override;
 
+  // Get the list of SYCL device library names for the given triple.
+  SmallVector<ToolChain::BitCodeLibraryInfo, 8>
+  getDeviceLibNames(const Driver &D, const llvm::opt::ArgList &Args,
+                    const llvm::Triple &TargetTriple) const;
+
+  // Override to provide SYCL device libraries.
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
+  getDeviceLibs(const llvm::opt::ArgList &Args,
+                const Action::OffloadKind DeviceOffloadingKind) const override;
+
 private:
   const ToolChain &HostTC;
   SYCLInstallationDetector SYCLInstallation;

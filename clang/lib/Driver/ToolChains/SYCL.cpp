@@ -58,6 +58,25 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
   CC1Args.push_back(DriverArgs.MakeArgString(IncludePath));
 }
 
+void SYCLInstallationDetector::getSYCLDeviceLibPath(
+    SmallVectorImpl<SmallString<128>> &LibPaths) const {
+  // Device libraries can be located in:
+  // 1. Sysroot lib/ directory (for testing with --sysroot)
+  // 2. Driver lib/ directory (for normal installation)
+
+  // If a sysroot is specified, check there first
+  if (!D.SysRoot.empty()) {
+    SmallString<128> SysRootLibPath(D.SysRoot);
+    llvm::sys::path::append(SysRootLibPath, "lib");
+    LibPaths.push_back(SysRootLibPath);
+  }
+
+  // Also check relative to the driver directory
+  SmallString<128> DriverLibPath(D.Dir);
+  llvm::sys::path::append(DriverLibPath, "..", "lib");
+  LibPaths.push_back(DriverLibPath);
+}
+
 // Unsupported options for SYCL device compilation.
 static ArrayRef<options::ID> getUnsupportedOpts() {
   static constexpr options::ID UnsupportedOpts[] = {
@@ -106,6 +125,36 @@ void SYCLToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+
+  // Link SYCL device libraries at compile time for SPIR/SPIRV targets.
+  // The new offloading driver is the default in upstream LLVM, so we always
+  // perform compile-time linking for SPIR/SPIRV targets.
+  // Other targets (like NVPTX, AMD) would link at link time.
+  if (getTriple().isSPIROrSPIRV()) {
+    // Get the device libraries for this offloading kind.
+    llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs =
+        getDeviceLibs(DriverArgs, DeviceOffloadingKind);
+
+    // Add each device library with the appropriate linking flag.
+    for (const auto &BCFile : BCLibs) {
+      // Use -mlink-builtin-bitcode for internalized libraries (standard libs)
+      // Use -mlink-bitcode-file for non-internalized libraries (e.g.,
+      // sanitizers)
+      CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
+                                                 : "-mlink-bitcode-file");
+      CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
+    }
+
+    // If we linked any device libraries, add the flag to link them after
+    // the middle-end optimization passes. This ensures that device library
+    // functions are available after user code has been instrumented.
+    if (!BCLibs.empty()) {
+      CC1Args.push_back("-mlink-builtin-bitcode-postopt");
+      // Suppress linker warnings that may occur due to library/target
+      // mismatches
+      CC1Args.push_back("-Wno-linker-warnings");
+    }
+  }
 }
 
 llvm::opt::DerivedArgList *
@@ -179,4 +228,74 @@ void SYCLToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                                  ArgStringList &CC1Args) const {
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+}
+
+SmallVector<ToolChain::BitCodeLibraryInfo, 8>
+SYCLToolChain::getDeviceLibNames(const Driver &D,
+                                 const llvm::opt::ArgList &Args,
+                                 const llvm::Triple &TargetTriple) const {
+  SmallVector<ToolChain::BitCodeLibraryInfo, 8> LibraryList;
+
+  // Check if device libraries should be linked.
+  bool NoOffloadLib =
+      !Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true);
+
+  if (NoOffloadLib)
+    return LibraryList;
+
+  // Helper to add libraries with internalization flag.
+  // By default, standard libraries are internalized (linked with only-needed).
+  auto addLibToList = [&LibraryList](StringRef LibName,
+                                     bool Internalize = true) {
+    BitCodeLibraryInfo BitCodeLibrary(LibName, Internalize);
+    LibraryList.emplace_back(BitCodeLibrary);
+  };
+
+  // For now, support only SPIR/SPIRV targets with a minimal set of libraries.
+  // This is a starting point that can be expanded later.
+  if (TargetTriple.isSPIROrSPIRV()) {
+    // Core SYCL device libraries - start with the essential ones
+    addLibToList("libsycl-crt.bc");
+    addLibToList("libsycl-complex.bc");
+    addLibToList("libsycl-cmath.bc");
+  }
+
+  return LibraryList;
+}
+
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+SYCLToolChain::getDeviceLibs(
+    const llvm::opt::ArgList &DriverArgs,
+    const Action::OffloadKind DeviceOffloadingKind) const {
+  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
+
+  // Get candidate paths where device libraries may be located.
+  SmallVector<SmallString<128>, 4> LibraryPaths;
+  SYCLInstallation.getSYCLDeviceLibPath(LibraryPaths);
+
+  // Get the list of device library names for this target.
+  SmallVector<BitCodeLibraryInfo, 8> DeviceLibs =
+      getDeviceLibNames(getDriver(), DriverArgs, getTriple());
+
+  // Resolve full paths and validate that each library exists.
+  for (const auto &DeviceLib : DeviceLibs) {
+    bool DeviceLibFound = false;
+    for (const auto &LibraryPath : LibraryPaths) {
+      SmallString<128> FullLibName(LibraryPath);
+      llvm::sys::path::append(FullLibName, DeviceLib.Path);
+      if (llvm::sys::fs::exists(FullLibName)) {
+        BitCodeLibraryInfo BitCodeLibrary(FullLibName,
+                                          DeviceLib.ShouldInternalize);
+        BCLibs.emplace_back(BitCodeLibrary);
+        DeviceLibFound = true;
+        break;
+      }
+    }
+    // If a device library is not found, emit an error with a helpful message.
+    // The user can pass --no-offloadlib to build without device libraries.
+    if (!DeviceLibFound)
+      getDriver().Diag(diag::err_drv_no_sycl_device_lib) << DeviceLib.Path;
+  }
+
+  return BCLibs;
 }

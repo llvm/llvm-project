@@ -93,6 +93,10 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+def err_drv_no_sycl_device_lib : Error<
+  "cannot find expected SYCL device library '%0'; pass '--no-offloadlib' to "
+  "build without the SYCL device libraries">;
+
 def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
                                  "is required for SPIR-V compilation. "
                                  "It can be obtained from your system package "
