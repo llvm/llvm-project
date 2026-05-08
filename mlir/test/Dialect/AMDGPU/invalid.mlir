@@ -317,6 +317,16 @@ func.func @transpose_load_vector_size_i8(%idx1 : index, %idx2 : index, %mem : me
 
 // -----
 
+func.func @global_transpose_load_wrong_addrspace(%i : index, %j : index,
+    %src : memref<128x256xf16, 3>) -> vector<8xf16> {
+  // expected-error@+1 {{'amdgpu.global_transpose_load' op source memory address space must be Global}}
+  %0 = amdgpu.global_transpose_load %src[%i, %j]
+         : memref<128x256xf16, 3> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// -----
+
 func.func @gather_to_lds_non_lds(%idx1 : index, %mem1 : memref<32xf16>, %mem2 : memref<32xf16>) {
   // expected-error@+1 {{'amdgpu.gather_to_lds' op destination memory address space must be Workgroup}}
   amdgpu.gather_to_lds %mem1[%idx1], %mem2[%idx1] : vector<2xf16>, memref<32xf16>, memref<32xf16>

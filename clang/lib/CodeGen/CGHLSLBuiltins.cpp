@@ -571,14 +571,27 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_resource_getpointer:
   case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    bool IsIndexed =
+        BuiltinID == Builtin::BI__builtin_hlsl_resource_getpointer_typed ||
+        E->getNumArgs() > 1;
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+    llvm::Function *IntrFn = nullptr;
+    llvm::CallInst *CI = nullptr;
+    if (IsIndexed) {
+      Value *IndexOp = EmitScalarExpr(E->getArg(1));
+      IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(),
         CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         {RetTy, HandleOp->getType(), IndexOp->getType()});
-    llvm::CallInst *CI = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
+      CI = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
+    } else { 
+      IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+        &CGM.getModule(),
+        CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+        {RetTy, HandleOp->getType()});
+      CI = EmitRuntimeCall(IntrFn, {HandleOp});
+    }
     CI->setCallingConv(IntrFn->getCallingConv());
     return CI;
   }

@@ -3487,10 +3487,10 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const IntegerRangeState &State);
 ///}
 
-struct AttributorPass : public PassInfoMixin<AttributorPass> {
+struct AttributorPass : public OptionalPassInfoMixin<AttributorPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
+struct AttributorCGSCCPass : public OptionalPassInfoMixin<AttributorCGSCCPass> {
   LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
                                  CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                  CGSCCUpdateResult &UR);
@@ -3498,14 +3498,14 @@ struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
 
 /// A more lightweight version of the Attributor which only runs attribute
 /// inference but no simplifications.
-struct AttributorLightPass : public PassInfoMixin<AttributorLightPass> {
+struct AttributorLightPass : public OptionalPassInfoMixin<AttributorLightPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// A more lightweight version of the Attributor which only runs attribute
 /// inference but no simplifications.
 struct AttributorLightCGSCCPass
-    : public PassInfoMixin<AttributorLightCGSCCPass> {
+    : public OptionalPassInfoMixin<AttributorLightCGSCCPass> {
   LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
                                  CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                  CGSCCUpdateResult &UR);
@@ -3611,9 +3611,6 @@ struct AANoSync
   /// atomic. In other words, if an atomic instruction does not have unordered
   /// or monotonic ordering
   LLVM_ABI static bool isNonRelaxedAtomic(const Instruction *I);
-
-  /// Helper function specific for intrinsics which are potentially volatile.
-  LLVM_ABI static bool isNoSyncIntrinsic(const Instruction *I);
 
   /// Helper function to determine if \p CB is an aligned (GPU) barrier. Aligned
   /// barriers have to be executed by all threads. The flag \p ExecutedAligned
