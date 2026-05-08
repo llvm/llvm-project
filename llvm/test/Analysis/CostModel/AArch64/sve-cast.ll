@@ -1783,18 +1783,18 @@ define i32 @bitcasts() {
 
 define i32 @load_extends() #0 {
 ; CHECK-SVE-LABEL: 'load_extends'
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 0 for: %r0 = sext i8 %loadi8 to i16
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 0 for: %r1 = zext i8 %loadi8 to i16
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 0 for: %r2 = sext i8 %loadi8 to i32
@@ -1828,18 +1828,18 @@ define i32 @load_extends() #0 {
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SVE128-NO-NEON-LABEL: 'load_extends'
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
-; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
+; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of 0 for: %r0 = sext i8 %loadi8 to i16
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of 0 for: %r1 = zext i8 %loadi8 to i16
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of 0 for: %r2 = sext i8 %loadi8 to i32
@@ -1873,18 +1873,18 @@ define i32 @load_extends() #0 {
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; FIXED-MIN-256-LABEL: 'load_extends'
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 0 for: %r0 = sext i8 %loadi8 to i16
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 0 for: %r1 = zext i8 %loadi8 to i16
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 0 for: %r2 = sext i8 %loadi8 to i32
@@ -1918,18 +1918,18 @@ define i32 @load_extends() #0 {
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; FIXED-MIN-2048-LABEL: 'load_extends'
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i16 = load <2 x i16>, ptr undef, align 4
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 0 for: %r0 = sext i8 %loadi8 to i16
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 0 for: %r1 = zext i8 %loadi8 to i16
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 0 for: %r2 = sext i8 %loadi8 to i32

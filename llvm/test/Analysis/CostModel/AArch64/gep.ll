@@ -7,7 +7,7 @@ target triple = "aarch64-linux-gnu"
 define i8 @test1(ptr %p) {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i8, ptr %p, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 1
@@ -18,7 +18,7 @@ define i8 @test1(ptr %p) {
 define i16 @test2(ptr %p) {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i16, ptr %p, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 1
@@ -29,7 +29,7 @@ define i16 @test2(ptr %p) {
 define i32 @test3(ptr %p) {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i32, ptr %p, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 1
@@ -40,7 +40,7 @@ define i32 @test3(ptr %p) {
 define i64 @test4(ptr %p) {
 ; CHECK-LABEL: 'test4'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i64, ptr %p, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 1
@@ -51,7 +51,7 @@ define i64 @test4(ptr %p) {
 define i8 @test5(ptr %p) {
 ; CHECK-LABEL: 'test5'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i8, ptr %p, i32 1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 1024
@@ -62,7 +62,7 @@ define i8 @test5(ptr %p) {
 define i16 @test6(ptr %p) {
 ; CHECK-LABEL: 'test6'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i16, ptr %p, i32 1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 1024
@@ -73,7 +73,7 @@ define i16 @test6(ptr %p) {
 define i32 @test7(ptr %p) {
 ; CHECK-LABEL: 'test7'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i32, ptr %p, i32 1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 1024
@@ -84,7 +84,7 @@ define i32 @test7(ptr %p) {
 define i64 @test8(ptr %p) {
 ; CHECK-LABEL: 'test8'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i64, ptr %p, i32 1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 1024
@@ -95,7 +95,7 @@ define i64 @test8(ptr %p) {
 define i8 @test9(ptr %p) {
 ; CHECK-LABEL: 'test9'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i8, ptr %p, i32 4096
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 4096
@@ -106,7 +106,7 @@ define i8 @test9(ptr %p) {
 define i16 @test10(ptr %p) {
 ; CHECK-LABEL: 'test10'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i16, ptr %p, i32 4096
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 4096
@@ -117,7 +117,7 @@ define i16 @test10(ptr %p) {
 define i32 @test11(ptr %p) {
 ; CHECK-LABEL: 'test11'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i32, ptr %p, i32 4096
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 4096
@@ -128,7 +128,7 @@ define i32 @test11(ptr %p) {
 define i64 @test12(ptr %p) {
 ; CHECK-LABEL: 'test12'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i64, ptr %p, i32 4096
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 4096
@@ -139,7 +139,7 @@ define i64 @test12(ptr %p) {
 define i8 @test13(ptr %p) {
 ; CHECK-LABEL: 'test13'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i8, ptr %p, i32 -64
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 -64
@@ -150,7 +150,7 @@ define i8 @test13(ptr %p) {
 define i16 @test14(ptr %p) {
 ; CHECK-LABEL: 'test14'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i16, ptr %p, i32 -64
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 -64
@@ -161,7 +161,7 @@ define i16 @test14(ptr %p) {
 define i32 @test15(ptr %p) {
 ; CHECK-LABEL: 'test15'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i32, ptr %p, i32 -64
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 -64
@@ -172,7 +172,7 @@ define i32 @test15(ptr %p) {
 define i64 @test16(ptr %p) {
 ; CHECK-LABEL: 'test16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i64, ptr %p, i32 -64
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 -64
@@ -183,7 +183,7 @@ define i64 @test16(ptr %p) {
 define i8 @test17(ptr %p) {
 ; CHECK-LABEL: 'test17'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i8, ptr %p, i32 -1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 -1024
@@ -194,7 +194,7 @@ define i8 @test17(ptr %p) {
 define i16 @test18(ptr %p) {
 ; CHECK-LABEL: 'test18'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i16, ptr %p, i32 -1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 -1024
@@ -205,7 +205,7 @@ define i16 @test18(ptr %p) {
 define i32 @test19(ptr %p) {
 ; CHECK-LABEL: 'test19'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i32, ptr %p, i32 -1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 -1024
@@ -216,7 +216,7 @@ define i32 @test19(ptr %p) {
 define i64 @test20(ptr %p) {
 ; CHECK-LABEL: 'test20'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i64, ptr %p, i32 -1024
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 -1024
@@ -227,7 +227,7 @@ define i64 @test20(ptr %p) {
 define i8 @test21(ptr %p, i32 %i) {
 ; CHECK-LABEL: 'test21'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i8, ptr %p, i32 %i
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 %i
@@ -238,7 +238,7 @@ define i8 @test21(ptr %p, i32 %i) {
 define i16 @test22(ptr %p, i32 %i) {
 ; CHECK-LABEL: 'test22'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i16, ptr %p, i32 %i
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 %i
@@ -249,7 +249,7 @@ define i16 @test22(ptr %p, i32 %i) {
 define i32 @test23(ptr %p, i32 %i) {
 ; CHECK-LABEL: 'test23'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i32, ptr %p, i32 %i
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 %i
@@ -260,7 +260,7 @@ define i32 @test23(ptr %p, i32 %i) {
 define i64 @test24(ptr %p, i32 %i) {
 ; CHECK-LABEL: 'test24'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i64, ptr %p, i32 %i
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 %i
@@ -271,7 +271,7 @@ define i64 @test24(ptr %p, i32 %i) {
 define i8 @test25(ptr %p) {
 ; CHECK-LABEL: 'test25'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i8, ptr %p, i32 -128
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 -128
@@ -282,7 +282,7 @@ define i8 @test25(ptr %p) {
 define i16 @test26(ptr %p) {
 ; CHECK-LABEL: 'test26'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i16, ptr %p, i32 -128
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 -128
@@ -293,7 +293,7 @@ define i16 @test26(ptr %p) {
 define i32 @test27(ptr %p) {
 ; CHECK-LABEL: 'test27'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i32, ptr %p, i32 -128
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 -128
@@ -304,7 +304,7 @@ define i32 @test27(ptr %p) {
 define i64 @test28(ptr %p) {
 ; CHECK-LABEL: 'test28'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i64, ptr %p, i32 -128
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 -128
@@ -315,7 +315,7 @@ define i64 @test28(ptr %p) {
 define i8 @test29(ptr %p) {
 ; CHECK-LABEL: 'test29'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = getelementptr inbounds i8, ptr %p, i32 -256
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 -256
@@ -326,7 +326,7 @@ define i8 @test29(ptr %p) {
 define i16 @test30(ptr %p) {
 ; CHECK-LABEL: 'test30'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i16, ptr %p, i32 -256
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 -256
@@ -337,7 +337,7 @@ define i16 @test30(ptr %p) {
 define i32 @test31(ptr %p) {
 ; CHECK-LABEL: 'test31'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i32, ptr %p, i32 -256
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 -256
@@ -348,7 +348,7 @@ define i32 @test31(ptr %p) {
 define i64 @test32(ptr %p) {
 ; CHECK-LABEL: 'test32'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i64, ptr %p, i32 -256
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 -256
@@ -359,7 +359,7 @@ define i64 @test32(ptr %p) {
 define i8 @test33(ptr %p) {
 ; CHECK-LABEL: 'test33'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i8, ptr %p, i32 -512
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i8, ptr %a, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i8, ptr %a, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %v
 ;
   %a = getelementptr inbounds i8, ptr %p, i32 -512
@@ -370,7 +370,7 @@ define i8 @test33(ptr %p) {
 define i16 @test34(ptr %p) {
 ; CHECK-LABEL: 'test34'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i16, ptr %p, i32 -512
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i16, ptr %a, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i16, ptr %a, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %v
 ;
   %a = getelementptr inbounds i16, ptr %p, i32 -512
@@ -381,7 +381,7 @@ define i16 @test34(ptr %p) {
 define i32 @test35(ptr %p) {
 ; CHECK-LABEL: 'test35'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i32, ptr %p, i32 -512
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i32, ptr %a, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i32, ptr %a, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %v
 ;
   %a = getelementptr inbounds i32, ptr %p, i32 -512
@@ -392,7 +392,7 @@ define i32 @test35(ptr %p) {
 define i64 @test36(ptr %p) {
 ; CHECK-LABEL: 'test36'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a = getelementptr inbounds i64, ptr %p, i32 -512
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v = load i64, ptr %a, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %v = load i64, ptr %a, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %v
 ;
   %a = getelementptr inbounds i64, ptr %p, i32 -512

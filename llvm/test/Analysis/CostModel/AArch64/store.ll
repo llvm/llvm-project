@@ -26,8 +26,8 @@ define void @getMemoryOpCost() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <8 x half> undef, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x i8> undef, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <4 x i8> undef, ptr undef, align 4
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %1 = load <2 x i8>, ptr undef, align 2
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %2 = load <4 x i8>, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:2 SizeLat:1 for: %1 = load <2 x i8>, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %2 = load <4 x i8>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLOW_MISALIGNED_128_STORE-LABEL: 'getMemoryOpCost'
@@ -47,8 +47,8 @@ define void @getMemoryOpCost() {
 ; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: store <8 x half> undef, ptr undef, align 4
 ; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x i8> undef, ptr undef, align 2
 ; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <4 x i8> undef, ptr undef, align 4
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %1 = load <2 x i8>, ptr undef, align 2
-; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %2 = load <4 x i8>, ptr undef, align 4
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:2 SizeLat:1 for: %1 = load <2 x i8>, ptr undef, align 2
+; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %2 = load <4 x i8>, ptr undef, align 4
 ; SLOW_MISALIGNED_128_STORE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   store <4 x i64> undef, ptr undef
