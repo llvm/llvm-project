@@ -60,6 +60,7 @@ ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx) {
   if (!gEJIT)
     return EJIT_ERR_NOT_ACTIVE;
   gEJIT->deactivate(periodName, cellIdx);
+  gEJIT->invalidateByPeriod(periodName, cellIdx);
   return EJIT_OK;
 }
 

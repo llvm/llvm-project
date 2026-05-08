@@ -49,6 +49,12 @@ EJitOrcEngine::Create(const Config &config,
   auto JTMB = orc::JITTargetMachineBuilder::detectHost();
   if (!JTMB)
     return JTMB.takeError();
+
+  // Use Large code model so JITLink can generate 64-bit absolute relocations.
+  // With the default Small model, Delta32 fixups fail when JIT code (mmap'd
+  // at a random high address) references host globals (in the data segment
+  // at a distant address), because the offset exceeds ±2 GB.
+  JTMB->setCodeModel(CodeModel::Large);
 #endif
 
   orc::LLJITBuilder Builder;
@@ -60,6 +66,21 @@ EJitOrcEngine::Create(const Config &config,
     return J.takeError();
 
   engine->P->J = std::move(*J);
+
+  // Register all known global variable addresses from the PeriodArrayRegistry
+  // so that external global references in any loaded bitcode module resolve
+  // to the AOT process's memory. This must happen before any module is loaded.
+  {
+    auto &JD = engine->P->J->getMainJITDylib();
+    // Period arrays: iterate all periods and their arrays
+    for (auto &kv : periodReg.getStaticVars()) {
+      orc::SymbolMap symMap;
+      symMap[engine->P->J->mangleAndIntern(kv.varName)] =
+          orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(kv.varAddr),
+                                 JITSymbolFlags::Exported);
+      (void)JD.define(orc::absoluteSymbols(std::move(symMap)));
+    }
+  }
 
   // Set up IR transform layer: runs the specialization pipeline during
   // JIT compilation (parameter substitution → InstCombine → Inline →
@@ -130,27 +151,22 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   if (!ModuleOrErr)
     return ModuleOrErr.takeError();
 
-  // Define global variable addresses from the PeriodArrayRegistry so that
-  // external global references in the bitcode resolve to AOT process memory.
-  {
-    auto &JD = P->J->getMainJITDylib();
-    for (GlobalVariable &GV : (*ModuleOrErr)->globals()) {
-      if (!GV.isDeclaration() || GV.getName().empty())
-        continue;
-      void *addr = nullptr;
-      // Try period array lookup by var name
-      if (const auto *info = P->periodReg->getArrayInfo(GV.getName().str()))
-        addr = info->baseAddr;
-      else
-        addr = P->periodReg->getStaticVarAddr(GV.getName().str());
-      if (!addr)
-        continue;
-      orc::SymbolMap symMap;
-      symMap[P->J->mangleAndIntern(GV.getName())] =
-          orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(addr),
-                                 JITSymbolFlags::Exported);
-      (void)JD.define(orc::absoluteSymbols(std::move(symMap)));
-    }
+  // Collect global variable addresses from the registry for symbols
+  // that appear as external declarations in the bitcode module.
+  orc::SymbolMap globalSymbols;
+  for (GlobalVariable &GV : (*ModuleOrErr)->globals()) {
+    if (!GV.isDeclaration() || GV.getName().empty())
+      continue;
+    void *addr = nullptr;
+    if (const auto *info = P->periodReg->getArrayInfo(GV.getName().str()))
+      addr = info->baseAddr;
+    else
+      addr = P->periodReg->getStaticVarAddr(GV.getName().str());
+    if (!addr)
+      continue;
+    globalSymbols[P->J->mangleAndIntern(GV.getName())] =
+        orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(addr),
+                               JITSymbolFlags::Exported);
   }
 
   // Each specialization gets its own JITDylib so that symbols from
@@ -159,6 +175,11 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   auto JDOrErr = P->J->createJITDylib("spec_" + cacheKey);
   if (!JDOrErr)
     return JDOrErr.takeError();
+
+  // Define global symbols directly in the spec JITDylib so the linker
+  // can resolve external global references.
+  if (!globalSymbols.empty())
+    (void)JDOrErr->define(orc::absoluteSymbols(std::move(globalSymbols)));
 
   if (auto Err = P->J->addIRModule(*JDOrErr,
       orc::ThreadSafeModule(std::move(*ModuleOrErr), std::move(Ctx))))
