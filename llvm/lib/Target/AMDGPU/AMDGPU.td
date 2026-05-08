@@ -1318,7 +1318,7 @@ defm MadU32Inst : AMDGPUSubtargetFeature<"mad-u32-inst",
 >;
 
 defm MadNC64_32Insts : AMDGPUSubtargetFeature<"mad-nc-64-32-insts",
-  "Has  v_mad_nc_{u64_u32|i64_i32} instructions"
+  "Has v_mad_nc_{u64_u32|i64_i32} instructions"
 >;
 
 defm AddMinMaxInsts : AMDGPUSubtargetFeature<"add-min-max-insts",
