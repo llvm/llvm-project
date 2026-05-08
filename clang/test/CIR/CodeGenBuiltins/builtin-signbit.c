@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s --check-prefix=LLVM --input-file %t-cir.ll
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck %s --check-prefix=OGCG --input-file %t.ll
+// RUN: FileCheck %s --check-prefix=LLVM --input-file %t.ll
 
 void test_signbit_positive_zero(){
   double positiveZero = +0.0;
@@ -17,11 +17,6 @@ void test_signbit_positive_zero(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double 0.000000e+00, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }
 
 void test_signbit_negative_zero(){
@@ -36,11 +31,6 @@ void test_signbit_negative_zero(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double -0.000000e+00, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }
 
 void test_signbit_positive_number(){
@@ -55,11 +45,6 @@ void test_signbit_positive_number(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double 1.000000e+00, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }
 
 void test_signbit_negative_number(){
@@ -74,11 +59,6 @@ void test_signbit_negative_number(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double -1.000000e+00, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }
 
 void test_signbit_positive_nan(){
@@ -93,11 +73,6 @@ void test_signbit_positive_nan(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double +qnan, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }
 
 void test_signbit_negative_nan(){
@@ -112,11 +87,6 @@ void test_signbit_negative_nan(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double -qnan, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }
 
 void test_signbit_positive_infinity(){
@@ -131,11 +101,6 @@ void test_signbit_positive_infinity(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double +inf, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }
 
 void test_signbit_negative_infinity(){
@@ -150,9 +115,4 @@ void test_signbit_negative_infinity(){
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
-
-// OGCG: store double -inf, ptr %{{.*}}
-// OGCG: bitcast double %{{.*}} to i64
-// OGCG: icmp slt i64 %{{.*}}, 0
-// OGCG: zext i1 %{{.*}} to i32
 }

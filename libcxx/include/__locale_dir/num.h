@@ -42,6 +42,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 struct _LIBCPP_EXPORTED_FROM_ABI __num_get_base {
   static const int __num_get_buf_sz = 40;
@@ -1008,6 +1009,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

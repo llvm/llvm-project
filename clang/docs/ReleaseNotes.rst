@@ -481,6 +481,9 @@ Improvements to Clang's diagnostics
 
 - Removed the body of lambdas from some diagnostic messages.
 
+- Fixed false positive host-device mismatch errors in discarded `if constexpr` branches for CUDA/HIP;
+  such calls are now correctly skipped.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

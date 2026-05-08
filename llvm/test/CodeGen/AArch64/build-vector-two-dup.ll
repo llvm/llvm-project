@@ -22,10 +22,9 @@ entry:
 define <16 x i8> @test2(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1r { v0.8b }, [x0]
 ; CHECK-NEXT:    ld1r { v1.8b }, [x1]
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    dup v0.8b, w8
-; CHECK-NEXT:    mov v1.b[7], w8
+; CHECK-NEXT:    ext v1.8b, v1.8b, v0.8b, #1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:

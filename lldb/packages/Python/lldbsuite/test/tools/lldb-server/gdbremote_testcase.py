@@ -116,6 +116,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         self.setUpBaseLogging()
         self.debug_monitor_extra_args = []
+        self.start_new_session = True
 
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
@@ -364,7 +365,10 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         # Start the server.
         server = self.spawnSubprocess(
-            self.debug_monitor_exe, commandline_args, install_remote=False
+            self.debug_monitor_exe,
+            commandline_args,
+            install_remote=False,
+            start_new_session=self.start_new_session,
         )
         self.assertIsNotNone(server)
 
