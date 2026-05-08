@@ -968,6 +968,8 @@ public:
       : WindowsX86_64TargetInfo(Triple, Opts) {
     LongDoubleWidth = LongDoubleAlign = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    LargeArrayMinWidth = 0;
+    LargeArrayAlign = 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
