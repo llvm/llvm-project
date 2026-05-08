@@ -116,6 +116,41 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     NameForUniquing = StringPool.internString(FullName ? *FullName : Name);
   }
 
+  // For typedefs, include the referenced type chain in the uniquing key. Two
+  // typedefs with the same name (e.g. from preferred_name) but different
+  // DW_AT_type targets must get different DeclContexts, otherwise ODR
+  // deduplication can create self-referencing typedef cycles in the output
+  // DWARF. Walk through unnamed wrapper types (pointers, references, const,
+  // etc.) to find a named type for disambiguation. This mirrors the parallel
+  // linker's behavior in SyntheticTypeNameBuilder::addTypeName.
+  if (Tag == dwarf::DW_TAG_typedef && !NameForUniquing.empty()) {
+    SmallString<128> Combined(NameForUniquing);
+    DWARFDie CurDie = DIE;
+    // Guard against malformed input DWARF with cycles in DW_AT_type references;
+    // the parallel linker uses a similar guard in addReferencedODRDies.
+    for (unsigned Depth = 0; Depth < 256; ++Depth) {
+      auto TypeAttr = CurDie.find(dwarf::DW_AT_type);
+      if (!TypeAttr)
+        break;
+      auto RefDie = CurDie.getAttributeValueAsReferencedDie(*TypeAttr);
+      if (!RefDie)
+        break;
+      // Use null bytes as separators since they cannot appear in type names
+      // or tag strings, preventing accidental collisions.
+      Combined.push_back('\0');
+      Combined.append(dwarf::TagString(RefDie.getTag()));
+      StringRef RefName = RefDie.getShortName();
+      if (!RefName.empty()) {
+        Combined.push_back('\0');
+        Combined.append(RefName);
+        break;
+      }
+      CurDie = RefDie;
+    }
+    if (Combined.size() != NameForUniquing.size())
+      NameForUniquing = StringPool.internString(Combined);
+  }
+
   bool IsAnonymousNamespace =
       NameForUniquing.empty() && Tag == dwarf::DW_TAG_namespace;
   if (IsAnonymousNamespace) {

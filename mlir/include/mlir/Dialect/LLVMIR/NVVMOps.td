@@ -1155,24 +1155,6 @@ def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait"> {
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
-  let summary = "CTA Barrier Synchronization Op (Barrier ID 0)";
-  let description = [{
-    The `nvvm.barrier0` operation is a convenience operation that performs barrier 
-    synchronization and communication within a CTA (Cooperative Thread Array) using 
-    barrier ID 0. It is functionally equivalent to `nvvm.barrier` or `nvvm.barrier id=0`. 
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
-  }];
-
-  let assemblyFormat = "attr-dict";
-  string llvmBuilder = [{
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all,
-          {builder.getInt32(0)});
-  }];
-}
-
 // Attrs describing the reduction operations for the barrier operation.
 def BarrierReductionPopc : I32EnumAttrCase<"POPC", 0, "popc">;
 def BarrierReductionAnd : I32EnumAttrCase<"AND", 1, "and">;

@@ -13947,9 +13947,10 @@ protected:
   /// Smart shuffle instruction emission, walks through shuffles trees and
   /// tries to find the best matching vector for the actual shuffle
   /// instruction.
-  template <typename T, typename ShuffleBuilderTy>
+  template <typename T, typename ShuffleBuilderTy, typename... Args>
   static T createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
-                         ShuffleBuilderTy &Builder, Type *ScalarTy) {
+                         ShuffleBuilderTy &Builder, Type *ScalarTy,
+                         Args... Arguments) {
     assert(V1 && "Expected at least one vector value.");
     unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewMask(Mask);
@@ -14064,7 +14065,7 @@ protected:
     assert(V1 && "Expected non-null value after looking through shuffles.");
 
     if (!IsIdentity)
-      return Builder.createShuffleVector(V1, NewMask);
+      return Builder.createShuffleVector(V1, NewMask, Arguments...);
     return Builder.createIdentity(V1);
   }
 
@@ -15335,6 +15336,19 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   bool IsFinalized = false;
   SmallVector<int> CommonMask;
   SmallVector<PointerUnion<Value *, const TreeEntry *>, 2> InVectors;
+  /// Captures the original scalar VL of a single, "clean" gather() call so
+  /// the values can be forwarded as the Args operand to getShuffleCost() for
+  /// the final permutation in finalize(). This lets the target cost model
+  /// recognize patterns such as broadcast-of-load (e.g. on X86,
+  /// vbroadcast{ss,sd} folds the broadcast and the load into one instruction
+  /// under AVX/AVX2 and is reported as TCC_Free by getShuffleCost). The
+  /// state machine is:
+  ///   * engaged + empty: tracking active, no qualifying gather seen yet.
+  ///   * engaged + non-empty: exactly one qualifying gather observed and its
+  ///     VL still corresponds to InVectors.front().
+  ///   * disengaged: the cached VL is no longer trustworthy (multiple
+  ///     gather() calls, or a state-mutating add() happened).
+  std::optional<SmallVector<Value *>> BVValues = SmallVector<Value *>();
   const TargetTransformInfo &TTI;
   InstructionCost Cost = 0;
   SmallDenseSet<Value *> VectorizedVals;
@@ -15629,14 +15643,16 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       return ::getShuffleCost(TTI, TTI::SK_PermuteTwoSrc,
                               cast<VectorType>(V1->getType()), Mask);
     }
-    InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask) const {
+    InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask,
+                                        ArrayRef<Value *> VL) const {
       // Empty mask or identity mask are free.
       unsigned VF =
           cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
       if (isEmptyOrIdentity(Mask, VF))
         return TTI::TCC_Free;
-      return ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
-                              cast<VectorType>(V1->getType()), Mask);
+      return ::getShuffleCost(
+          TTI, TTI::SK_PermuteSingleSrc, cast<VectorType>(V1->getType()), Mask,
+          TTI::TCK_RecipThroughput, /*Index=*/0, /*SubTp=*/nullptr, VL);
     }
     InstructionCost createIdentity(Value *) const { return TTI::TCC_Free; }
     InstructionCost createPoison(Type *Ty, unsigned VF) const {
@@ -15651,7 +15667,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   InstructionCost
   createShuffle(const PointerUnion<Value *, const TreeEntry *> &P1,
                 const PointerUnion<Value *, const TreeEntry *> &P2,
-                ArrayRef<int> Mask) {
+                ArrayRef<int> Mask, ArrayRef<Value *> VL = {}) {
     ShuffleCostBuilder Builder(TTI);
     SmallVector<int> CommonMask(Mask);
     Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
@@ -15859,7 +15875,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     if (InVectors.size() == 2)
       InVectors.pop_back();
     return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
-                           V1, V2, CommonMask, Builder, ScalarTy);
+                           V1, V2, CommonMask, Builder, ScalarTy, VL);
   }
 
 public:
@@ -16009,6 +16025,7 @@ public:
     SameNodesEstimated = true;
   }
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
+    BVValues.reset();
     if (&E1 == &E2) {
       assert(all_of(Mask,
                     [&](int Idx) {
@@ -16033,6 +16050,7 @@ public:
     estimateNodesPermuteCost(E1, &E2, Mask, Part, SliceSize);
   }
   void add(const TreeEntry &E1, ArrayRef<int> Mask) {
+    BVValues.reset();
     if (InVectors.empty()) {
       CommonMask.assign(Mask.begin(), Mask.end());
       InVectors.assign(1, &E1);
@@ -16068,6 +16086,8 @@ public:
   }
   /// Adds another one input vector and the mask for the shuffling.
   void add(Value *V1, ArrayRef<int> Mask, bool ForExtracts = false) {
+    if (BVValues && !isa<Constant>(V1))
+      BVValues.reset();
     if (InVectors.empty()) {
       assert(CommonMask.empty() && !ForExtracts &&
              "Expected empty input mask/vectors.");
@@ -16117,6 +16137,12 @@ public:
   Value *gather(ArrayRef<Value *> VL, unsigned MaskVF = 0,
                 Value *Root = nullptr) {
     Cost += getBuildVectorCost(VL, Root);
+    if (BVValues) {
+      if (BVValues->empty() && InVectors.empty())
+        BVValues->assign(VL.begin(), VL.end());
+      else
+        BVValues.reset();
+    }
     if (!Root) {
       // FIXME: Need to find a way to avoid use of getNullValue here.
       SmallVector<Constant *> Vals;
@@ -16248,10 +16274,13 @@ public:
       assert(InVectors.size() == 1 && "Expected only one vector with no mask");
       return Cost;
     }
+    ArrayRef<Value *> VL;
+    if (BVValues)
+      VL = *BVValues;
     return Cost +
            createShuffle(InVectors.front(),
                          InVectors.size() == 2 ? InVectors.back() : nullptr,
-                         CommonMask);
+                         CommonMask, VL);
   }
 
   ~ShuffleCostEstimator() {
@@ -19328,9 +19357,32 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // On AArch64, this helps in fusing a mov instruction, associated with
   // extractelement, with fmul in the backend so that extractelement is free.
   SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
+  bool AllUsersGEPSWithStoresLoads = true;
+  SmallBitVector UsedLanes(VectorizableTree.front()->getVectorFactor());
+  SmallVector<const Value *> Pointers;
+  Type *UserScalarTy = nullptr;
   for (ExternalUser &EU : ExternalUses) {
     ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
+    if (EU.E.Idx == 0) {
+      UsedLanes.set(EU.Lane);
+      auto *User = dyn_cast_if_present<GetElementPtrInst>(EU.User);
+      if (User && User->hasOneUse() &&
+          isa<LoadInst, StoreInst>(User->user_back())) {
+        Type *LocalTy = getValueType(User->user_back());
+        if (!UserScalarTy) {
+          UserScalarTy = LocalTy;
+        } else if (UserScalarTy != LocalTy) {
+          AllUsersGEPSWithStoresLoads = false;
+          break;
+        }
+        Pointers.push_back(User);
+      } else {
+        AllUsersGEPSWithStoresLoads = false;
+        break;
+      }
+    }
   }
+  AllUsersGEPSWithStoresLoads &= UsedLanes.all();
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
   for (ExternalUser &EU : ExternalUses) {
     LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
@@ -19615,6 +19667,41 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
 
     ExtractCost += ExtraCost;
   }
+  // Charge the pointer-chain cost difference once for the root entry when
+  // every external use of its scalars is a GEP feeding a single load/store
+  // (see the detection loop above). Vectorizing the root in this pattern
+  // forces lane extracts (or a vector GEP with unknown stride) to drive the
+  // address computation, which is typically more expensive than keeping the
+  // indices scalar in a unit-stride address chain. Add the delta once rather
+  // than per external use.
+  if (AllUsersGEPSWithStoresLoads && !Pointers.empty()) {
+    const TreeEntry &RootEntry = *VectorizableTree.front();
+    const bool AnyRootKeptAsScalar = any_of(RootEntry.Scalars, [&](Value *V) {
+      return ExternalUsesAsOriginalScalar.contains(V);
+    });
+    const Value *CommonBase = nullptr;
+    bool HaveCommonBase = true;
+    for (const Value *P : Pointers) {
+      const Value *Op = getUnderlyingObject(P);
+      if (!CommonBase)
+        CommonBase = Op;
+      else if (CommonBase != Op) {
+        HaveCommonBase = false;
+        break;
+      }
+    }
+    if (!AnyRootKeptAsScalar && HaveCommonBase) {
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+      auto *VecTy = getWidenedType(UserScalarTy, RootEntry.Scalars.size());
+      InstructionCost ScalarGEPCost = TTI->getPointersChainCost(
+          Pointers, CommonBase, TTI::PointersChainInfo::getUnitStride(),
+          UserScalarTy, CostKind);
+      InstructionCost VectorGEPCost = TTI->getPointersChainCost(
+          Pointers, CommonBase, TTI::PointersChainInfo::getUnknownStride(),
+          VecTy, CostKind);
+      ExtractCost += ScaleCost(VectorGEPCost - ScalarGEPCost, RootEntry);
+    }
+  }
   // Insert externals for extract of operands of casts to be emitted as scalars
   // instead of extractelement.
   for (Value *V : ScalarOpsFromCasts) {
@@ -19898,7 +19985,9 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
     }
     SmallBitVector ExtractMask(VecTy->getNumElements(), true);
     ExtractMask.reset(*Idx);
-    if (isUndefVector(EI->getVectorOperand(), ExtractMask).all()) {
+    if (isUndefVector</*IsPoisonOnly=*/true>(EI->getVectorOperand(),
+                                             ExtractMask)
+            .all()) {
       UndefVectorExtracts.push_back(I);
       continue;
     }
@@ -24059,7 +24148,16 @@ Value *BoUpSLP::vectorizeTree(
               }
               Vec = FieldVec;
             }
-            Ex = Builder.CreateExtractElement(Vec, Lane);
+            if (SLPReVec && isVectorizedTy(Scalar->getType())) {
+              unsigned VecTyNumElements = getNumElements(Scalar->getType());
+              // When REVEC is enabled, we need to extract a vector.
+              // Note: The element size of Scalar may be different from the
+              // element size of Vec.
+              Ex = createExtractVector(Builder, Vec, VecTyNumElements,
+                                       ExternalUse.Lane * VecTyNumElements);
+            } else {
+              Ex = Builder.CreateExtractElement(Vec, Lane);
+            }
           }
           // If necessary, sign-extend or zero-extend ScalarRoot
           // to the larger type.
@@ -24860,16 +24958,22 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       // dependency count of the duplicated operand. This non-schedulable
       // path does not clear operand ScheduleData dependencies the way the
       // regular scheduling path does (see CheckIfNeedToClearDeps below), so
-      // when that operand has more uses than this bundle member, the
-      // schedule's decrement count exceeds calculateDependencies' increment
-      // count and UnscheduledDeps goes negative. Bail out instead of
-      // producing an inconsistent schedule.
+      // when that operand has more uses than this bundle member, or its
+      // ScheduleData already has computed dependencies that did not see
+      // the expanded duplicate use, the schedule's decrement count exceeds
+      // calculateDependencies' increment count and UnscheduledDeps goes
+      // negative. Bail out instead of producing an inconsistent schedule.
       if (S.isExpandedBinOp(I) &&
           any_of(enumerate(I->operands()), [&](const auto &P) {
             if (S.isExpandedOperand(I, P.index()))
               return false;
             auto *OpI = dyn_cast<Instruction>(P.value());
-            return OpI && !OpI->hasOneUse();
+            if (!OpI)
+              return false;
+            if (!OpI->hasOneUse())
+              return true;
+            ScheduleData *SD = getScheduleData(OpI);
+            return SD && SD->hasValidDependencies();
           }))
         return std::nullopt;
       if (EI && EI.UserTE->State == TreeEntry::Vectorize &&
@@ -31397,11 +31501,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       Type *ScalarTy = getValueType(PostProcessStores.front());
       if (!::isValidElementType(ScalarTy))
         return Changed;
+      auto *IF =
+          dyn_cast<Instruction>(PostProcessStores.front()->getValueOperand());
+      auto *IB =
+          dyn_cast<Instruction>(PostProcessStores.back()->getValueOperand());
       if (!NonVectReductions && PostProcessStores.size() == 2 &&
-          cast<Instruction>(PostProcessStores.front()->getValueOperand())
-                  ->getOpcode() !=
-              cast<Instruction>(PostProcessStores.back()->getValueOperand())
-                  ->getOpcode())
+          (!IF || !IB || IF->getOpcode() != IB->getOpcode()))
         return Changed;
       ScalarTy =
           IntegerType::get(ScalarTy->getContext(),

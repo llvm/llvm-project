@@ -39,12 +39,6 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
-/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
-/// OpResult of of the given operation. If the operation contains regions, it is
-/// also applied recursively to the contained operations operation.
-/// TODO: To be replaced by recoverTemporaryLayouts()
-void recoverTemporaryLayoutsDeprecated(Operation *op);
-
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.
@@ -103,6 +97,16 @@ DistributeLayoutAttr inferBitCastSourceLayout(DistributeLayoutAttr resLayout,
                                               int resElemTyBitWidth,
                                               int srcElemTyBitWidth);
 
+/// Infers the source layout attribute for an interleave operation given the
+/// result layout attribute. Interleave doubles the innermost dimension size.
+DistributeLayoutAttr
+inferInterleaveSourceLayout(DistributeLayoutAttr resLayout);
+
+/// Infers the source layout attribute for a deinterleave operation given the
+/// result layout attribute. Deinterleave halves the innermost dimension size.
+DistributeLayoutAttr
+inferDeinterleaveSourceLayout(DistributeLayoutAttr resLayout);
+
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
 DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
@@ -116,6 +120,18 @@ DistributeLayoutAttr
 inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
                                     ArrayRef<int64_t> resShape,
                                     ArrayRef<int64_t> srcShape);
+
+/// Infers the source layout attribute for an insert operation.
+/// using same logic as inferInsertStridedSliceSourceLayout
+DistributeLayoutAttr inferInsertSourceLayout(DistributeLayoutAttr resLayout,
+                                             ArrayRef<int64_t> resShape,
+                                             ArrayRef<int64_t> srcShape);
+
+/// Infers the source layout attribute for an extract operation. Adds
+/// leading dimensions to the source layout to match the source shape size.
+DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
+                                              ArrayRef<int64_t> resShape,
+                                              ArrayRef<int64_t> srcShape);
 
 /// Infers the layout attribute for mask and offset operand for Chunked load
 /// and store, given the anchor layout attribute for the value being load/store.
@@ -158,6 +174,14 @@ SliceAttr setupReductionResultLayout(LayoutKind layoutKind,
 /// the invariant that the source layout can be recovered by adjusting the
 /// result layout based on bitwidth ratio of input vs output.
 DistributeLayoutAttr setupBitCastResultLayout(
+    LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+
+/// Sets up the result layout for an interleave operation to ensure the source
+/// layout can be safely derived. Interleave doubles the innermost dimension,
+/// so the result layout must ensure that laneData is at least 2 (or a multiple
+/// of 2), and instData must be divisible by innermostDimLaneLayout * 2.
+DistributeLayoutAttr setupInterleaveResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 

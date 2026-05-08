@@ -389,9 +389,11 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
 
   if (HasUserDefinedGroups) {
     KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
-    GroupSizes[0] = NumThreads[0];
-    GroupSizes[1] = NumThreads[1];
-    GroupSizes[2] = NumThreads[2];
+    // Respect max group size attribute in the kernel.
+    uint32_t MaxGroupSize = KEnv.KernelPR.MaxThreadGroupSize;
+    GroupSizes[0] = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
+    GroupSizes[1] = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
+    GroupSizes[2] = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
   } else {
     int32_t NumTeams = NumBlocks[0];
     int32_t ThreadLimit = NumThreads[0];

@@ -13,6 +13,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -941,12 +942,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                          FMFSource FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-
-  SmallVector<Type *> ArgTys;
-  ArgTys.reserve(Args.size());
-  for (auto &I : Args)
-    ArgTys.push_back(I->getType());
-
+  SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, RetTy, ArgTys);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
@@ -1390,11 +1386,18 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
 CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
                                                          Value *SizeValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
-         "trying to create an deferenceable assumption on a non-pointer?");
+         "trying to create a deferenceable assumption on a non-pointer?");
   SmallVector<Value *, 4> Vals({PtrValue, SizeValue});
   OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
   return CreateAssumption(ConstantInt::getTrue(getContext()),
                           {DereferenceableOpB});
+}
+
+CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create a nonnull assumption on a non-pointer?");
+  return CreateAssumption(ConstantInt::getTrue(getContext()),
+                          OperandBundleDef("nonnull", PtrValue));
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;
