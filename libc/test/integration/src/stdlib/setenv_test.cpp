@@ -99,7 +99,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_ERRNO_SUCCESS();
 
     char *value = LIBC_NAMESPACE::getenv("EMPTY_VALUE_VAR");
-    ASSERT_TRUE(value != nullptr);
+    ASSERT_NE(value, nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, ""), 0);
   }
 
