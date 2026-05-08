@@ -323,3 +323,16 @@ TEST_F(TestSwiftASTContext, IVFS) {
   // Check that all ignored arguments got removed.
   EXPECT_EQ(args, expected);
 }
+
+TEST_F(TestSwiftASTContext, GetTypeNameNullType) {
+  auto context = std::make_shared<SwiftASTContextTester>();
+  EXPECT_EQ(context->GetTypeName(nullptr, false),
+            ConstString("<invalid type>"));
+}
+
+TEST_F(TestSwiftASTContext, GetTypeNameFatalError) {
+  auto context = std::make_shared<SwiftASTContextTester>();
+  context->RaiseFatalError("unit test error");
+  EXPECT_EQ(context->GetTypeName(nullptr, false),
+            ConstString("<invalid Swift context>"));
+}
