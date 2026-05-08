@@ -2028,6 +2028,9 @@ public:
   operand_range args() { return drop_end(operands()); }
   const_operand_range args() const { return drop_end(operands()); }
 
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
+
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

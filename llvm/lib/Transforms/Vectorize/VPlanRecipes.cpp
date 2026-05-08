@@ -1891,6 +1891,16 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                   Ctx.CostKind);
 }
 
+bool VPWidenCallRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  assert(Variant && "Variant not set");
+  FunctionType *VFTy = Variant->getFunctionType();
+  return all_of(enumerate(args()), [VFTy, &Op](const auto &Arg) {
+    auto [Idx, V] = Arg;
+    return V != Op || !VFTy->getParamType(Idx)->isVectorTy();
+  });
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
