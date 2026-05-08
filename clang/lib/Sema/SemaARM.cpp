@@ -94,7 +94,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (!SecArgType->isIntegerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
              << "second" << SecArgType << Arg1->getSourceRange();
-    TheCall->setType(Context.IntTy);
+    TheCall->setType(Context.LongLongTy);
     return false;
   }
 
