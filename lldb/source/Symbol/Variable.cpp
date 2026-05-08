@@ -476,10 +476,11 @@ static void PrivateAutoComplete(
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type, CompletionRequest &request);
 
-/// Get the CompilerType of the instance variable (this/self) for direct ivar
-/// completion. Returns an invalid CompilerType if not in a method context.
-static CompilerType GetInstanceVariableType(StackFrame &frame,
-                                            VariableList &variable_list) {
+/// Get the CompilerType of the current instance (this/self) for direct ivar
+/// completion. Returns an invalid CompilerType if the frame is not for an
+/// instance method.
+static CompilerType GetInstanceType(StackFrame &frame,
+                                    VariableList &variable_list) {
   SymbolContext sc =
       frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
   llvm::StringRef instance_name = sc.GetInstanceVariableName();
@@ -623,8 +624,7 @@ static void PrivateAutoComplete(
 
           // Offer members of this/self so that direct ivar access can be
           // completed (eg "frame variable member" for "this->member").
-          CompilerType instance_type =
-              GetInstanceVariableType(*frame, *variable_list);
+          CompilerType instance_type = GetInstanceType(*frame, *variable_list);
           if (instance_type.IsValid())
             PrivateAutoCompleteMembers(frame, "", "", "", instance_type,
                                        request);
@@ -753,8 +753,7 @@ static void PrivateAutoComplete(
 
           // Try also completing the token as a member of this/self (direct ivar
           // access).
-          CompilerType instance_type =
-              GetInstanceVariableType(*frame, *variable_list);
+          CompilerType instance_type = GetInstanceType(*frame, *variable_list);
           if (instance_type.IsValid())
             PrivateAutoCompleteMembers(frame, token, remaining_partial_path,
                                        prefix_path, instance_type, request);
