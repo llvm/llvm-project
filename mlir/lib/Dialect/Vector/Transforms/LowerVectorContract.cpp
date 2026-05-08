@@ -301,10 +301,9 @@ class ContractionOpGenericLowering
 public:
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  ContractionOpGenericLowering(
-      MLIRContext *context,
-      FilterConstraintType constraint = defaultFilter,
-      PatternBenefit benefit = 1)
+  ContractionOpGenericLowering(MLIRContext *context,
+                               FilterConstraintType constraint = defaultFilter,
+                               PatternBenefit benefit = 1)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         filter(std::move(constraint)) {}
 
@@ -751,10 +750,9 @@ struct ContractOpToElementwise
     : public MaskableOpRewritePattern<vector::ContractionOp> {
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  ContractOpToElementwise(
-      vector::VectorContractLowering vectorContractLowering,
-      MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = defaultFilter)
+  ContractOpToElementwise(vector::VectorContractLowering vectorContractLowering,
+                          MLIRContext *context, PatternBenefit benefit = 1,
+                          FilterConstraintType constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorContractLowering(vectorContractLowering),
         filter(std::move(constraint)) {}
@@ -1251,10 +1249,7 @@ public:
 
 } // namespace
 
-LogicalResult
-mlir::vector::defaultFilter(ContractionOp) {
-  return success();
-}
+LogicalResult mlir::vector::defaultFilter(ContractionOp) { return success(); }
 
 void mlir::vector::populateVectorContractToDotPatterns(
     RewritePatternSet &patterns, FilterConstraintType filter,
