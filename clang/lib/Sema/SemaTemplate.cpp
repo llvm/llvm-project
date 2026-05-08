@@ -7139,6 +7139,90 @@ static bool CheckTemplateArgumentPointerToMember(
   return true;
 }
 
+// P2308R1  C++26 [temp.arg.nontype]p4:
+//   ... If, for the initialization from any candidate initializer,
+//     - ...
+//     - the initialization would cause P to not be
+//       template-argument-equivalent ([temp.type]) to v,
+//   the program is ill-formed.
+static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
+                                                 QualType ParamType,
+                                                 const APValue &Value,
+                                                 SourceLocation ArgLoc) {
+  assert(ParamType->isRecordType() && "no need to check copy equivalence");
+
+  // Fast path. Try to find the copy constructor which will be selected by
+  // overload resolution. Trivial copy constructor performs per-element copy.
+  if (auto *CXXRecord = ParamType->castAsCXXRecordDecl();
+      !CXXRecord->hasUserDeclaredConstructor()) {
+
+    if (CXXRecord->hasTrivialCopyConstructor() &&
+        CXXRecord->implicitCopyConstructorHasConstParam() &&
+        !CXXRecord->needsOverloadResolutionForCopyConstructor())
+      return false;
+
+  } else {
+
+    // A template parameter with this type has been initialized,
+    // so implicitly-declared functions should be declared,
+    // and explicit(bool) should be resolved.
+    if (llvm::any_of(CXXRecord->ctors(), [](CXXConstructorDecl *Ctor) {
+          unsigned Quals;
+          // TODO: After correctly marking deleted methods as ineligible,
+          // `!Ctor->isDeleted()` is redundant and can be dropped.
+          // See comment in `SetEligibleMethods` in SemaDecl.cpp.
+          return Ctor->isCopyConstructor(Quals) && Quals == Qualifiers::Const &&
+                 !Ctor->isIneligibleOrNotSelected() && Ctor->isTrivial() &&
+                 !Ctor->isDeleted() && !Ctor->isExplicit();
+        }))
+      return false;
+  }
+
+  SourceLocation ParamLoc = Param->getLocation();
+
+  // Instead of creating a variable (C++26 [temp.arg.nontype]p3),
+  // create a template parameter object to represent the candidate initializer.
+  // They are equivalent when creating a copy.
+  auto *CandidateInitializer =
+      S.BuildDeclRefExpr(S.Context.getTemplateParamObjectDecl(ParamType, Value),
+                         ParamType.withConst(), VK_LValue, ArgLoc);
+  InitializationKind Kind = InitializationKind::CreateForInit(
+      ArgLoc, /*DirectInit=*/false, CandidateInitializer);
+  Expr *Inits[1] = {CandidateInitializer};
+  InitializedEntity Entity =
+      InitializedEntity::InitializeTemplateParameter(ParamType, Param);
+  InitializationSequence InitSeq(S, Entity, Kind, Inits);
+  ExprResult Result = InitSeq.Perform(S, Entity, Kind, Inits);
+  if (Result.isInvalid())
+    return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
+
+  Result = S.ActOnConstantExpression(Result);
+  Result = S.ActOnFinishFullExpr(AssertSuccess(Result), ArgLoc,
+                                 /*DiscardedValue=*/false,
+                                 /*IsConstexpr=*/true,
+                                 /*IsTemplateArgument=*/true);
+
+  APValue ValueAfterCopy, PreNarrowingValue;
+  Result = S.EvaluateConvertedConstantExpression(
+      AssertSuccess(Result), ParamType, ValueAfterCopy, CCEKind::TemplateArg,
+      /*RequireInt=*/false, PreNarrowingValue);
+  if (Result.isInvalid())
+    return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
+
+  llvm::FoldingSetNodeID VID, CID;
+  Value.Profile(VID);
+  ValueAfterCopy.Profile(CID);
+  if (VID == CID)
+    return false;
+
+  S.Diag(ArgLoc, diag::err_template_arg_not_equivalent_to_its_copy);
+  if (Param->getDeclName())
+    S.Diag(ParamLoc, diag::note_parameter_named_here) << Param->getDeclName();
+  else
+    S.Diag(ParamLoc, diag::note_parameter_here);
+  return true;
+}
+
 /// Check a template argument against its corresponding
 /// non-type template parameter.
 ///
@@ -7281,14 +7365,9 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     return Arg;
   }
 
-  // Avoid making a copy when initializing a template parameter of class type
-  // from a template parameter object of the same type. This is going beyond
-  // the standard, but is required for soundness: in
-  //   template<A a> struct X { X *p; X<a> *q; };
-  // ... we need p and q to have the same type.
-  //
-  // Similarly, don't inject a call to a copy constructor when initializing
-  // from a template parameter of the same type.
+  // Fast path. A valid template parameter object is equivalent to its copy. No
+  // need to make a copy to check again when initializing a template parameter
+  // of class type from a template parameter object of the same type.
   Expr *InnerArg = DeductionArg->IgnoreParenImpCasts();
   if (ParamType->isRecordType() && isa<DeclRefExpr>(InnerArg) &&
       Context.hasSameUnqualifiedType(ParamType, InnerArg->getType())) {
@@ -7426,6 +7505,12 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     if (Value.isAddrLabelDiff())
       return Diag(StartLoc, diag::err_non_type_template_arg_addr_label_diff);
 
+    if (ParamType->isRecordType() &&
+        !ParamType->isInstantiationDependentType() &&
+        CheckTemplateArgumentCopyEquivalence(*this, Param, ParamType, Value,
+                                             StartLoc))
+      return ExprError();
+
     if (ArgPE) {
       SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
@@ -7439,7 +7524,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
   }
 
   // These should have all been handled above using the C++17 rules.
-  assert(!ArgPE && !StrictCheck);
+  assert(!ArgPE && !StrictCheck && !ParamType->isRecordType());
 
   // C++ [temp.arg.nontype]p5:
   //   The following conversions are performed on each expression used

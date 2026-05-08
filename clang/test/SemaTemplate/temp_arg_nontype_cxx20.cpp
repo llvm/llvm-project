@@ -106,30 +106,126 @@ namespace ConvertedConstant {
 }
 
 namespace CopyCounting {
-  // Make sure we don't use the copy constructor when transferring the "same"
-  // template parameter object around.
   struct A { int n; constexpr A(int n = 0) : n(n) {} constexpr A(const A &a) : n(a.n+1) {} };
-  template<A a> struct X {};
+  template<A a> struct X {}; // #CopyCounting-X
   template<A a> constexpr int f(X<a> x) { return a.n; }
 
   static_assert(f(X<A{}>()) == 0);
+  // expected-error@-1 {{non-type template argument is not equivalent to its copy}}
+  //   expected-note@#CopyCounting-X {{passing argument to parameter 'a' here}}
 
-  template<A a> struct Y { void f(); };
+  template<A a> struct Y { void f(); }; // #CopyCounting-Y
   template<A a> void g(Y<a> y) { y.Y<a>::f(); }
   void h() { constexpr A a; g<a>(Y<a>{}); }
+  // expected-error@-1 {{non-type template argument is not equivalent to its copy}}
+  //   expected-note@#CopyCounting-Y {{passing argument to parameter 'a' here}}
 
-  template<A a> struct Z {
+  template<A a> struct Z { // #CopyCounting-Z
     constexpr int f() {
       constexpr A v = a; // this is {a.n+1}
       return Z<v>().f() + 1; // this is Z<{a.n+2}>
     }
   };
   template<> struct Z<A{20}> {
+  // expected-error@-1 {{non-type template argument is not equivalent to its copy}}
+  //   expected-note@#CopyCounting-Z {{passing argument to parameter 'a' here}}
     constexpr int f() {
       return 32;
     }
   };
   static_assert(Z<A{}>().f() == 42);
+  // expected-error@-1 {{non-type template argument is not equivalent to its copy}}
+  //   expected-note@#CopyCounting-Z {{passing argument to parameter 'a' here}}
+}
+
+namespace ConditionallyModify {
+struct A {
+  int x;
+  constexpr A(int x) : x(x) {}
+  constexpr A(const A& a) : x(a.x + (a.x > 1)) {}
+};
+template <A a> // #ConditionallyModify-a
+struct X {};
+template struct X<1>;
+template struct X<2>;
+// expected-error@-1 {{non-type template argument is not equivalent to its copy}}
+//   expected-note@#ConditionallyModify-a {{passing argument to parameter 'a' here}}
+}
+
+namespace CannotCopy {
+template <typename T, template <T> typename TEMPLATE>
+concept C = (TEMPLATE<{}>{}, true);
+
+struct S1 {
+  S1() = default; // #CannotCopy-S1-default-ctor
+  S1(S1&) = default; // #CannotCopy-S1-copy-ctor
+};
+template <S1> // #CannotCopy-T1-S1
+struct T1 {};
+template struct T1<{}>;
+// expected-error@-1 {{no matching constructor for initialization of 'S1'}}
+//   expected-note@#CannotCopy-S1-copy-ctor {{candidate constructor not viable: 1st argument ('const S1') would lose const qualifier}}
+//   expected-note@#CannotCopy-S1-default-ctor {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+//   expected-note@#CannotCopy-T1-S1 {{passing argument to parameter here}}
+//   expected-note@#CannotCopy-T1-S1 {{non-type template argument is required to be copyable}}
+static_assert(!C<S1, T1>);
+
+struct S2 {
+  S2() = default; // #CannotCopy-S2-default-ctor
+  explicit S2(const S2&) = default; // #CannotCopy-S2-copy-ctor
+};
+template <S2> // #CannotCopy-T2-S2
+struct T2 {};
+template struct T2<{}>;
+// expected-error@-1 {{no matching constructor for initialization of 'S2'}}
+//   expected-note@#CannotCopy-S2-copy-ctor {{explicit constructor is not a candidate}}
+//   expected-note@#CannotCopy-S2-default-ctor {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+//   expected-note@#CannotCopy-T2-S2 {{passing argument to parameter here}}
+//   expected-note@#CannotCopy-T2-S2 {{non-type template argument is required to be copyable}}
+static_assert(!C<S2, T2>);
+
+struct S3 {
+  S3() = default;
+  S3(const S3&) {} // #CannotCopy-S3-copy-ctor
+};
+template <S3> // #CannotCopy-T3-S3
+struct T3 {};
+template struct T3<{}>;
+// expected-error@-1 {{non-type template argument is not a constant expression}}
+//   expected-note@-2 {{non-constexpr constructor 'S3' cannot be used in a constant expression}}
+//   expected-note@#CannotCopy-S3-copy-ctor {{declared here}}
+//   expected-note@#CannotCopy-T3-S3 {{non-type template argument is required to be copyable}}
+static_assert(!C<S3, T3>);
+
+struct Base4 {
+  Base4() = default;
+  Base4(const Base4&) = delete; // #CannotCopy-Base4-copy-ctor
+};
+struct S4 : Base4 {}; // #CannotCopy-S4
+template <S4> // #CannotCopy-T4-S4
+struct T4 {};
+template struct T4<{}>;
+// expected-error@-1 {{call to implicitly-deleted copy constructor of 'S4'}}
+//   expected-note@#CannotCopy-S4 {{copy constructor of 'S4' is implicitly deleted because base class 'Base4' has a deleted copy constructor}}
+//   expected-note@#CannotCopy-Base4-copy-ctor {{'Base4' has been explicitly marked deleted here}}
+//   expected-note@#CannotCopy-T4-S4 {{passing argument to parameter here}}
+//   expected-note@#CannotCopy-T4-S4 {{non-type template argument is required to be copyable}}
+static_assert(!C<S4, T4>);
+
+template <typename = void>
+struct S5 {
+  S5() = default;
+  S5(const S5&) = default;
+  S5(const S5&) requires true = delete; // #CannotCopy-S5-copy-ctor
+};
+template <S5<>> // #CannotCopy-T5-S5
+struct T5 {};
+template struct T5<{}>;
+// expected-error@-1 {{call to deleted constructor of 'S5<>'}}
+//   expected-note@#CannotCopy-S5-copy-ctor {{'S5' has been explicitly marked deleted here}}
+//   expected-note@#CannotCopy-T5-S5 {{passing argument to parameter here}}
+//   expected-note@#CannotCopy-T5-S5 {{non-type template argument is required to be copyable}}
+static_assert(!C<S5<>, T5>);
 }
 
 namespace StableAddress {
