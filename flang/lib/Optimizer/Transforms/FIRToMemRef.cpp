@@ -150,7 +150,8 @@ private:
     SmallVector<Value> shiftVec;
     SmallVector<Value> sliceVec;
     bool hasProjectedSlice = false;
-    std::optional<bool> projectionIsImaginary; // set when hasProjectedSlice
+    // Constant value of the first projected-slice field, if any.
+    std::optional<std::int64_t> projectedSliceStart;
   };
 
   template <typename OpTy>
@@ -172,15 +173,13 @@ private:
     return sliceOp && !sliceOp.getFields().empty();
   }
 
-  // Returns true for imaginary, false for real, nullopt if not a constant.
-  static std::optional<bool> sliceProjectionIsImaginary(fir::SliceOp sliceOp) {
+  // Returns the constant first projected-slice field, if available.
+  static std::optional<std::int64_t>
+  getProjectedSliceStartIfConstant(fir::SliceOp sliceOp) {
     auto fields = sliceOp.getFields();
     if (fields.empty())
       return std::nullopt;
-    if (auto cst = fields[0].getDefiningOp<arith::ConstantOp>())
-      if (auto attr = mlir::dyn_cast<IntegerAttr>(cst.getValueAttr()))
-        return attr.getInt() != 0;
-    return std::nullopt;
+    return fir::getIntIfConstant(fields.front());
   }
 
   unsigned getRankFromEmbox(fir::EmboxOp embox) const {
@@ -327,7 +326,7 @@ void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
     if (auto sliceOp = getSliceOp(op.getSlice())) {
       if (hasProjectedSlice(sliceOp)) {
         info.hasProjectedSlice = true;
-        info.projectionIsImaginary = sliceProjectionIsImaginary(sliceOp);
+        info.projectedSliceStart = getProjectedSliceStartIfConstant(sliceOp);
       }
       auto triples = sliceOp.getTriples();
       info.sliceVec.append(triples.begin(), triples.end());
@@ -641,19 +640,30 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     collectSliceInfoFrom(embox, sliceInfo);
   else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
     collectSliceInfoFrom(rebox, sliceInfo);
-  if (sliceInfo.projectionIsImaginary) {
-    auto srcTy = cast<MemRefType>((*converted).getType());
-    auto complexTy = cast<mlir::ComplexType>(srcTy.getElementType());
-    SmallVector<int64_t> shape(srcTy.getShape());
-    shape.push_back(2);
-    Value compMemref =
-        fir::ConvertOp::create(
-            rewriter, loc, MemRefType::get(shape, complexTy.getElementType()),
-            *converted)
-            .getResult();
-    indices.push_back(arith::ConstantIndexOp::create(
-        rewriter, loc, *sliceInfo.projectionIsImaginary ? 1 : 0));
-    return std::pair{compMemref, indices};
+  auto srcTy = cast<MemRefType>((*converted).getType());
+  if (sliceInfo.hasProjectedSlice) {
+    if (auto complexTy = dyn_cast<mlir::ComplexType>(srcTy.getElementType())) {
+      if (!sliceInfo.projectedSliceStart ||
+          (*sliceInfo.projectedSliceStart != 0 &&
+           *sliceInfo.projectedSliceStart != 1)) {
+        LLVM_DEBUG(
+            llvm::dbgs()
+            << "FIRToMemRef: projected complex slice selector must be constant "
+               "0 (real) or 1 (imaginary), bailing out of conversion\n");
+        return failure();
+      }
+      auto projection = *sliceInfo.projectedSliceStart;
+      SmallVector<int64_t> shape(srcTy.getShape());
+      shape.push_back(2);
+      Value compMemref =
+          fir::ConvertOp::create(
+              rewriter, loc, MemRefType::get(shape, complexTy.getElementType()),
+              *converted)
+              .getResult();
+      indices.push_back(
+          arith::ConstantIndexOp::create(rewriter, loc, projection));
+      return std::pair{compMemref, indices};
+    }
   }
 
   // Static shape does not imply contiguous layout for descriptor-backed
