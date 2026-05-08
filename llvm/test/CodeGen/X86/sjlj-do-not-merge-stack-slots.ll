@@ -4,19 +4,20 @@
 define void @sjlj_do_not_merge_stack_slots() nounwind {
 ; CHECK-LABEL: sjlj_do_not_merge_stack_slots:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    callq setjmp@PLT
-; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %else
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    callq opaque@PLT
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %then
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    callq escape@PLT
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
 entry:
   %obj = alloca [8 x i8], align 4
