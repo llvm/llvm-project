@@ -21,22 +21,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
-
-static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
-  if (!Node)
-    return false;
-  for (const MDOperand &Op : Node->operands()) {
-    auto *Sub = dyn_cast<MDNode>(Op.get());
-    if (Sub && Sub->getNumOperands() > 0)
-      if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
-        if (S->getString() == Name)
-          return true;
-  }
-  return false;
-}
 
 static void collectEntryFunctions(Module &M,
                                   SmallVectorImpl<Function *> &EntryFuncs) {
@@ -178,35 +166,7 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
     });
   }
 
-  // Add to global_ctors
-  bool HasEntry = false;
-  if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL))
-    if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer()))
-      for (auto &Op : Arr->operands())
-        if (auto *CS = dyn_cast<ConstantStruct>(Op))
-          if (auto *F = dyn_cast<Function>(CS->getOperand(1)))
-            if (F == AutoReg) { HasEntry = true; break; }
-
-  if (!HasEntry) {
-    auto *Ty = StructType::get(Ctx, {Type::getInt32Ty(Ctx),
-                                      AutoReg->getType(), PtrTy});
-    auto *Entry = ConstantStruct::get(Ty,
-        {ConstantInt::get(Type::getInt32Ty(Ctx), EJIT_CTOR_PRIORITY), AutoReg,
-         ConstantPointerNull::get(PtrTy)});
-    if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL)) {
-      if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer())) {
-        SmallVector<Constant *, 8> E;
-        for (auto &Op : Arr->operands()) E.push_back(cast<Constant>(Op));
-        E.push_back(Entry);
-        Ctors->setInitializer(ConstantArray::get(
-            ArrayType::get(Ty, E.size()), E));
-      }
-    } else {
-      auto *ATy = ArrayType::get(Ty, 1);
-      new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, {Entry}), CTORS_GLOBAL);
-    }
-  }
+  appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 }
 
 PreservedAnalyses

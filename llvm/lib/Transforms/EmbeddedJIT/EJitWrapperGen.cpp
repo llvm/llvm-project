@@ -34,20 +34,6 @@ static cl::opt<bool> EJitNoInlineEntry(
 
 namespace {
 
-static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
-  if (!Node)
-    return false;
-  for (const MDOperand &Op : Node->operands()) {
-    auto *Sub = dyn_cast<MDNode>(Op.get());
-    if (!Sub || Sub->getNumOperands() == 0)
-      continue;
-    if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
-      if (S->getString() == Name)
-        return true;
-  }
-  return false;
-}
-
 struct PeriodArrIndInfo {
   std::string PeriodName;
   unsigned ArgIndex;
@@ -207,14 +193,11 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     for (auto &Arg : F->args())
       Args.push_back(&Arg);
 
-    Value *Pfn = Builder.CreatePointerCast(
-        JitResult, PointerType::get(F->getFunctionType(), 0));
-
     if (F->getReturnType()->isVoidTy()) {
-      Builder.CreateCall(F->getFunctionType(), Pfn, Args);
+      Builder.CreateCall(F->getFunctionType(), JitResult, Args);
       Builder.CreateRetVoid();
     } else {
-      Value *RetVal = Builder.CreateCall(F->getFunctionType(), Pfn, Args);
+      Value *RetVal = Builder.CreateCall(F->getFunctionType(), JitResult, Args);
       Builder.CreateRet(RetVal);
     }
 

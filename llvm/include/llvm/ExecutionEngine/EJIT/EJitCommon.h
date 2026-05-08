@@ -14,6 +14,9 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITCOMMON_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITCOMMON_H
 
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
+
 namespace llvm {
 namespace ejit {
 
@@ -60,6 +63,55 @@ constexpr unsigned EJIT_CTOR_PRIORITY = 65535;
 //===----------------------------------------------------------------------===//
 constexpr unsigned MAX_PERIOD_ARR_IND_PARAMS = 4;
 constexpr unsigned MAX_PERIOD_ARR_SIZE = 100;
+
+//===----------------------------------------------------------------------===//
+// Metadata utility functions (shared across AOT passes)
+//===----------------------------------------------------------------------===//
+
+inline bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
+  if (!Node)
+    return false;
+  for (const MDOperand &Op : Node->operands()) {
+    auto *Sub = dyn_cast<MDNode>(Op.get());
+    if (!Sub || Sub->getNumOperands() == 0)
+      continue;
+    if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
+      if (S->getString() == Name)
+        return true;
+  }
+  return false;
+}
+
+inline StringRef getMDStringValue(const MDNode *Node, StringRef Tag) {
+  if (!Node)
+    return {};
+  for (const MDOperand &Op : Node->operands()) {
+    auto *Sub = dyn_cast<MDNode>(Op.get());
+    if (Sub && Sub->getNumOperands() >= 2) {
+      if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
+        if (S->getString() == Tag)
+          if (auto *V = dyn_cast<MDString>(Sub->getOperand(1)))
+            return V->getString();
+    }
+  }
+  return {};
+}
+
+inline uint32_t getMDIntValue(const MDNode *Node, StringRef Tag) {
+  if (!Node)
+    return 0;
+  for (const MDOperand &Op : Node->operands()) {
+    auto *Sub = dyn_cast<MDNode>(Op.get());
+    if (Sub && Sub->getNumOperands() >= 3) {
+      if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
+        if (S->getString() == Tag)
+          if (auto *C = dyn_cast<ConstantAsMetadata>(Sub->getOperand(2)))
+            if (auto *CI = dyn_cast<ConstantInt>(C->getValue()))
+              return static_cast<uint32_t>(CI->getZExtValue());
+    }
+  }
+  return 0;
+}
 
 } // namespace ejit
 } // namespace llvm

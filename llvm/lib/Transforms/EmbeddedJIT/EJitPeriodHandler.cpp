@@ -28,20 +28,6 @@ using namespace llvm::ejit;
 
 namespace {
 
-static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
-  if (!Node)
-    return false;
-  for (const MDOperand &Op : Node->operands()) {
-    auto *Sub = dyn_cast<MDNode>(Op.get());
-    if (!Sub || Sub->getNumOperands() == 0)
-      continue;
-    if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
-      if (S->getString() == Name)
-        return true;
-  }
-  return false;
-}
-
 struct LifecycleInfo {
   std::string PeriodName;
   unsigned ArgIndex;
@@ -162,22 +148,20 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
       Builder.CreateCall(DeactivateFn, {PN, AP, Idx});
     }
 
-    // Insert activate before each return (reverse order for RAII pairing)
+    // Insert activate before each return (same order as deactivate)
     SmallVector<ReturnInst *, 4> Returns;
     for (BasicBlock &BB : *F)
       if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
         Returns.push_back(RI);
 
     for (ReturnInst *RI : Returns) {
-      // Reverse iterate over LcInfos
-      for (auto It = LcInfos.rbegin(); It != LcInfos.rend(); ++It) {
+      for (auto &LC : LcInfos) {
         IRBuilder<> Builder(RI);
-        Value *PN = Builder.CreateGlobalString(It->PeriodName);
-        Value *AP = It->ArrayGV
-            ? Builder.CreateBitCast(It->ArrayGV, PtrTy)
+        Value *PN = Builder.CreateGlobalString(LC.PeriodName);
+        Value *AP = LC.ArrayGV
+            ? Builder.CreateBitCast(LC.ArrayGV, PtrTy)
             : ConstantPointerNull::get(PtrTy);
-        // Use the actual argument value, not the argument index.
-        Value *Idx = Builder.CreateZExtOrTrunc(F->getArg(It->ArgIndex), I32Ty);
+        Value *Idx = Builder.CreateZExtOrTrunc(F->getArg(LC.ArgIndex), I32Ty);
         Builder.CreateCall(ActivateFn, {PN, AP, Idx});
       }
     }

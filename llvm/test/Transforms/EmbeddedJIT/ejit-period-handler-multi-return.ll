@@ -1,7 +1,7 @@
 ; RUN: opt -passes=ejit-period-handler -S %s | FileCheck %s
 
 ; Test: Period handler with multiple return statements.
-; Verify deactivate at entry, activate before EVERY return (in reverse order for multi-lc).
+; Verify deactivate at entry, activate before EVERY return (same order for multi-lc).
 
 ; --- Single lifecycle, multiple returns ---
 ; CHECK: define i32 @lc_multi_return(i32 %cell_idx)
@@ -34,17 +34,17 @@ normal_ret:
   ret i32 30
 }
 
-; --- Multi-lifecycle, multiple returns with reverse-order activate ---
+; --- Multi-lifecycle, multiple returns with same-order activate ---
 ; CHECK: define void @lc_multi_multi_ret(i32 %cell_idx, i32 %trp_idx)
 ; CHECK: entry:
 ; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @cells, i32 %cell_idx)
 ; CHECK: call void @ejit_deactivate_array(ptr {{.*}}, ptr @trps, i32 %trp_idx)
 ; CHECK: icmp eq i32 %cell_idx, 0
-; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @trps, i32 %trp_idx)
 ; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cells, i32 %cell_idx)
+; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @trps, i32 %trp_idx)
 ; CHECK: ret void
-; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @trps, i32 %trp_idx)
 ; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @cells, i32 %cell_idx)
+; CHECK: call void @ejit_activate_array(ptr {{.*}}, ptr @trps, i32 %trp_idx)
 ; CHECK: ret void
 
 define void @lc_multi_multi_ret(i32 %cell_idx, i32 %trp_idx) !ejit.metadata !40 {

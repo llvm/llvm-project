@@ -25,20 +25,6 @@ using namespace llvm::ejit;
 
 namespace {
 
-static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
-  if (!Node)
-    return false;
-  for (const MDOperand &Op : Node->operands()) {
-    auto *Sub = dyn_cast<MDNode>(Op.get());
-    if (!Sub || Sub->getNumOperands() == 0)
-      continue;
-    if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
-      if (S->getString() == Name)
-        return true;
-  }
-  return false;
-}
-
 static bool hasAnyEjitMetadata(Module &M) {
   for (Function &F : M.functions())
     if (F.hasMetadata(MD_EJIT_METADATA))

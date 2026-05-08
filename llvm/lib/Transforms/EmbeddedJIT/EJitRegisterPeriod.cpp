@@ -23,58 +23,10 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
-
-namespace {
-
-static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
-  if (!Node)
-    return false;
-  for (const MDOperand &Op : Node->operands()) {
-    auto *Sub = dyn_cast<MDNode>(Op.get());
-    if (!Sub || Sub->getNumOperands() == 0)
-      continue;
-    if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
-      if (S->getString() == Name)
-        return true;
-  }
-  return false;
-}
-
-static StringRef getMDStringValue(const MDNode *Node, StringRef Tag) {
-  if (!Node)
-    return {};
-  for (const MDOperand &Op : Node->operands()) {
-    auto *Sub = dyn_cast<MDNode>(Op.get());
-    if (Sub && Sub->getNumOperands() >= 2) {
-      if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
-        if (S->getString() == Tag)
-          if (auto *V = dyn_cast<MDString>(Sub->getOperand(1)))
-            return V->getString();
-    }
-  }
-  return {};
-}
-
-static uint32_t getMDIntValue(const MDNode *Node, StringRef Tag) {
-  if (!Node)
-    return 0;
-  for (const MDOperand &Op : Node->operands()) {
-    auto *Sub = dyn_cast<MDNode>(Op.get());
-    if (Sub && Sub->getNumOperands() >= 3) {
-      if (auto *S = dyn_cast<MDString>(Sub->getOperand(0)))
-        if (S->getString() == Tag)
-          if (auto *C = dyn_cast<ConstantAsMetadata>(Sub->getOperand(2)))
-            if (auto *CI = dyn_cast<ConstantInt>(C->getValue()))
-              return static_cast<uint32_t>(CI->getZExtValue());
-    }
-  }
-  return 0;
-}
-
-} // anonymous namespace
 
 PreservedAnalyses
 EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
@@ -146,37 +98,7 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
     Builder.CreateCall(FnRegSV, {VN, VA});
   }
 
-  // Register in global_ctors
-  bool HasEntry = false;
-  if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL)) {
-    if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer()))
-      for (auto &Op : Arr->operands())
-        if (auto *CS = dyn_cast<ConstantStruct>(Op))
-          if (auto *F = dyn_cast<Function>(CS->getOperand(1)))
-            if (F == AutoReg) { HasEntry = true; break; }
-  }
-
-  if (!HasEntry) {
-    auto *Ty = StructType::get(Ctx, {Type::getInt32Ty(Ctx),
-                                      AutoReg->getType(), PtrTy});
-    auto *Entry = ConstantStruct::get(Ty,
-        {ConstantInt::get(Type::getInt32Ty(Ctx), EJIT_CTOR_PRIORITY),
-         AutoReg, ConstantPointerNull::get(PtrTy)});
-
-    if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL)) {
-      if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer())) {
-        SmallVector<Constant *, 8> E;
-        for (auto &Op : Arr->operands()) E.push_back(cast<Constant>(Op));
-        E.push_back(Entry);
-        Ctors->setInitializer(ConstantArray::get(
-            ArrayType::get(Ty, E.size()), E));
-      }
-    } else {
-      auto *ATy = ArrayType::get(Ty, 1);
-      new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, {Entry}), CTORS_GLOBAL);
-    }
-  }
+  appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 
   return PreservedAnalyses::none();
 }
