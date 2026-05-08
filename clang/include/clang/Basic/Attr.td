@@ -2126,14 +2126,14 @@ def ExplicitInit : InheritableAttr {
   let SimpleHandler = 1;
 }
 
-def LifetimeBound : DeclOrTypeAttr {
+def LifetimeBound : InheritableAttr {
   let Spellings = [Clang<"lifetimebound", 0>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
   let SimpleHandler = 1;
 }
 
-def LifetimeCaptureBy : DeclOrTypeAttr {
+def LifetimeCaptureBy : InheritableAttr {
   let Spellings = [Clang<"lifetime_capture_by", 0>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Args = [VariadicParamOrParamIdxArgument<"Params">];

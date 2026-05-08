@@ -2008,8 +2008,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::CountedByOrNull:
   case attr::SizedBy:
   case attr::SizedByOrNull:
-  case attr::LifetimeBound:
-  case attr::LifetimeCaptureBy:
   case attr::TypeNonNull:
   case attr::TypeNullable:
   case attr::TypeNullableResult:
