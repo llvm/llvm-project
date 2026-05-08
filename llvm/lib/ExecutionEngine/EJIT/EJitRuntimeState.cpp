@@ -65,16 +65,27 @@ void EJitRuntimeState::deactivate(const std::string &periodName,
 
 void EJitRuntimeState::activateAll(const std::string &periodName) {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto &cells = states_[periodName];
-  for (auto &[idx, state] : cells)
-    state = PeriodState::Active;
+  // Activate all cells of all arrays registered under this period name.
+  const auto *arrs = registry_.getArrays(periodName);
+  if (arrs) {
+    for (const auto &info : *arrs) {
+      for (size_t i = 0; i < info.arraySize; i++) {
+        states_[periodName][static_cast<uint8_t>(i)] = PeriodState::Active;
+      }
+    }
+  }
 }
 
 void EJitRuntimeState::deactivateAll(const std::string &periodName) {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto &cells = states_[periodName];
-  for (auto &[idx, state] : cells)
-    state = PeriodState::Inactive;
+  const auto *arrs = registry_.getArrays(periodName);
+  if (arrs) {
+    for (const auto &info : *arrs) {
+      for (size_t i = 0; i < info.arraySize; i++) {
+        states_[periodName][static_cast<uint8_t>(i)] = PeriodState::Inactive;
+      }
+    }
+  }
 }
 
 bool EJitRuntimeState::isActive(const std::string &periodName,

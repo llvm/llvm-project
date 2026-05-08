@@ -44,6 +44,7 @@ public:
   // Cache management
   void clearCache();
   void invalidateByPeriod(const std::string &periodName, uint8_t cellIdx);
+  void invalidateAllByPeriod(const std::string &periodName);
 
   // Configuration
   void setCompileMode(CompileMode mode);

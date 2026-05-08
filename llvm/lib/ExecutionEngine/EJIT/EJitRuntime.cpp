@@ -103,6 +103,7 @@ ejit_status_t ejit_deactivate_all(const char *periodName) {
   if (!gEJIT)
     return EJIT_ERR_NOT_ACTIVE;
   gEJIT->deactivateAll(periodName);
+  gEJIT->invalidateAllByPeriod(periodName);
   return EJIT_OK;
 }
 

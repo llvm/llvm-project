@@ -100,6 +100,18 @@ void EJit::invalidateByPeriod(const std::string &periodName,
   cache_->invalidateByPeriod(periodName, cellIdx);
 }
 
+void EJit::invalidateAllByPeriod(const std::string &periodName) {
+  // Invalidate all known cellIdx entries for this period.
+  // Iterate over registered arrays and invalidate each cell index.
+  const auto *arrs = getRegistry().getArrays(periodName);
+  if (!arrs)
+    return;
+  for (const auto &info : *arrs) {
+    for (size_t i = 0; i < info.arraySize; i++)
+      cache_->invalidateByPeriod(periodName, static_cast<uint8_t>(i));
+  }
+}
+
 void EJit::setCompileMode(CompileMode mode) {
   config_.compileMode = mode;
 }
