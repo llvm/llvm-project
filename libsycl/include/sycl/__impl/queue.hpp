@@ -331,6 +331,36 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  ///
+  /// \param dest is the pointer to copy to.
+  /// \param src is the pointer to copy from.
+  /// \param numBytes is the number of bytes to copy.
+  /// \return an event that represents the status of the operation.
+  event memcpy(void *dest, const void *src, std::size_t numBytes);
+
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  ///
+  /// \param dest is the pointer to copy to.
+  /// \param src is the pointer to copy from.
+  /// \param numBytes is the number of bytes to copy.
+  /// \param depEvent is an event that represents a dependency for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  event memcpy(void *dest, const void *src, std::size_t numBytes,
+               event depEvent);
+
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  ///
+  /// \param dest is the pointer to copy to.
+  /// \param src is the pointer to copy from.
+  /// \param numBytes is the number of bytes to copy.
+  /// \param depEvents is a vector of events that represent dependencies for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  event memcpy(void *dest, const void *src, std::size_t numBytes,
+               const std::vector<event> &depEvents);
+
 private:
   template <typename KernelName, int Dims, typename... Rest>
   event parallelForImpl(range<Dims> numWorkItems,
