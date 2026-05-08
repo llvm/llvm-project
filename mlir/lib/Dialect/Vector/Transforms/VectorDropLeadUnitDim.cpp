@@ -446,7 +446,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   for (const auto &it : llvm::enumerate(oldIndexingMaps)) {
     // Check if the dim to be dropped exists as a leading dim in the operand
     // if it does then we use vector.shape_cast to drop it.
-    bool needsDrop = false;
+    bool needsCast = false;
     SmallVector<AffineExpr> results;
     auto map = it.value();
     int64_t originalZeroDim = it.value().getDimPosition(0);
@@ -511,8 +511,8 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     // the leading dim. If its still not leading that means it
     // does not exist in this operand and hence we do not need a shape_cast.
     if (map.getDimPosition(0) == dimToDrop)
-      needsDrop = true;
-    if (needsDrop && originalZeroDim == dimToDrop &&
+      needsCast = true;
+    if (needsCast && originalZeroDim == dimToDrop &&
         !leadingDimsAreUnit(cast<VectorType>(operands[it.index()].getType()),
                             dropDim))
       return failure();
@@ -529,7 +529,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     newIndexingMaps.push_back(AffineMap::get(map.getNumDims() - 1, 0, results,
                                              contractOp.getContext()));
     newOperands.push_back(
-        needsDrop ? dropLeadingUnitDims0DIsScalar(rewriter, loc,
+        needsCast ? dropLeadingUnitDims0DIsScalar(rewriter, loc,
                                                   operands[it.index()], dropDim)
                   : operands[it.index()]);
   }
