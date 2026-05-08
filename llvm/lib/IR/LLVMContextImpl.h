@@ -340,7 +340,7 @@ template <> struct MDNodeKeyImpl<DILocation> {
 
   unsigned getHashValue() const {
     uint64_t LineColumnAndImplicitCode =
-        (uint64_t(Line) << 17) | (uint64_t(Column) << 1) | ImplicitCode;
+        Line | (uint64_t(Column) << 32) | (uint64_t(ImplicitCode) << 48);
     // Hashing AtomGroup and AtomRank substantially impacts performance whether
     // Key Instructions is enabled or not. We can't detect whether it's enabled
     // here cheaply; avoiding hashing zero values is a good approximation. This
@@ -350,7 +350,7 @@ template <> struct MDNodeKeyImpl<DILocation> {
     // * (hash_combine(x) != hash_combine(x, 0))
     if (AtomGroup || AtomRank)
       return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
-                          (AtomGroup << 3) | AtomRank);
+                          AtomGroup | (uint64_t(AtomRank) << 61));
     return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt);
   }
 };
