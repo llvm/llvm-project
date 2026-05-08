@@ -592,7 +592,7 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
       return {written, write_res.error};
     if (write_res.value < char_size) {
       err = true;
-      return {written, 0};
+      return {written, EIO};
     }
     ++written;
   }
