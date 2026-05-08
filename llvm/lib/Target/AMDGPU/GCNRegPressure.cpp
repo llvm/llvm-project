@@ -622,7 +622,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
                                  MachineBasicBlock::const_iterator End,
-                                 const LiveRegSet *LiveRegsCopy) {                                 
+                                 const LiveRegSet *LiveRegsCopy) {
   MRI = &MI.getMF()->getRegInfo();
   LastTrackedMI = nullptr;
   MBBEnd = MI.getParent()->end();
