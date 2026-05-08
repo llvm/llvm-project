@@ -22,7 +22,8 @@ class TextEncoding {
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
   static std::error_code
-  setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts);
+  setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts,
+                           clang::TargetInfo &TInfo);
 
   llvm::StringRef getLiteralEncoding() { return LiteralEncoding; }
 };
