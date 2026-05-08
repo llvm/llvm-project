@@ -1343,7 +1343,6 @@ bool VPInstruction::isSingleScalar() const {
 
 void VPInstruction::execute(VPTransformState &State) {
   assert(!isMasked() && "cannot execute masked VPInstruction");
-  assert(!State.Lane && "VPInstruction executing an Lane");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
@@ -2620,7 +2619,6 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Compute the scalar steps and save the results in State.
 
   unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
-  assert(!State.Lane && "replicate regions must be dissolved before ::execute");
   Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
                                      : Constant::getNullValue(BaseIVTy);
 
@@ -2840,7 +2838,6 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPReductionRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "Reduction being replicated.");
   RecurKind Kind = getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          "In-loop AnyOf reductions aren't currently supported");
@@ -2901,7 +2898,6 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 }
 
 void VPReductionEVLRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "Reduction being replicated.");
 
   auto &Builder = State.Builder;
   // Propagate the fast-math flags carried by the underlying instruction.
@@ -3333,7 +3329,6 @@ static void scalarizeInstruction(const Instruction *Instr,
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "replicate regions must be dissolved before ::execute");
   assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions "
                            "must have already been unrolled");
   Instruction *UI = getUnderlyingInstr();
@@ -3992,7 +3987,6 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void VPInterleaveRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "Interleave group being replicated.");
   assert((!needsMaskForGaps() || !State.VF.isScalable()) &&
          "Masking gaps for scalable vectors is not yet supported.");
   const InterleaveGroup<Instruction> *Group = getInterleaveGroup();
@@ -4193,7 +4187,6 @@ void VPInterleaveRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "Interleave group being replicated.");
   assert(State.VF.isScalable() &&
          "Only support scalable VF for EVL tail-folding.");
   assert(!needsMaskForGaps() &&
