@@ -2092,11 +2092,12 @@ SDValue VectorLegalizer::ExpandFABS(SDNode *Node) {
   // here we assume 1 instruction for now.
   if (VT.isFixedLengthVector()) {
     EVT EltVT = VT.getVectorElementType();
-    if ((VT.getVectorNumElements() == 1 &&
+    unsigned NumElts = VT.getVectorNumElements();
+    if ((NumElts == 1 &&
          TLI.isOperationLegalOrCustomOrPromote(ISD::FABS, EltVT)) ||
-        (VT.getVectorNumElements() < 3 &&
-         TLI.isOperationLegal(ISD::FABS, EltVT) &&
-         TLI.isExtractVecEltCheap(VT, 0) && TLI.isExtractVecEltCheap(VT, 1)))
+        (NumElts < 3 && TLI.isOperationLegal(ISD::FABS, EltVT) &&
+         TLI.isExtractVecEltCheap(VT, 0) &&
+         (NumElts == 1 || TLI.isExtractVecEltCheap(VT, 1))))
       return SDValue();
   }
 
