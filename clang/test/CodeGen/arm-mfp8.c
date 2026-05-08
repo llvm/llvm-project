@@ -65,15 +65,15 @@ __mfp8 func1n(__mfp8 mfp8) {
 // CHECK-C-SAME: <16 x i8> [[X:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-C-NEXT:  [[ENTRY:.*:]]
 // CHECK-C-NEXT:    [[VECEXT:%.*]] = extractelement <16 x i8> [[X]], i32 [[I]]
-// CHECK-C-NEXT:    [[MFP8EXT:%.*]] = bitcast i8 [[VECEXT]] to <1 x i8>
-// CHECK-C-NEXT:    ret <1 x i8> [[MFP8EXT]]
+// CHECK-C-NEXT:    [[MFP8CAST:%.*]] = insertelement <1 x i8> poison, i8 [[VECEXT]], i64 0
+// CHECK-C-NEXT:    ret <1 x i8> [[MFP8CAST]]
 //
 // CHECK-CXX-LABEL: define dso_local <1 x i8> @_Z20test_extract_element14__Mfloat8x16_ti(
 // CHECK-CXX-SAME: <16 x i8> [[X:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[VECEXT:%.*]] = extractelement <16 x i8> [[X]], i32 [[I]]
-// CHECK-CXX-NEXT:    [[MFP8EXT:%.*]] = bitcast i8 [[VECEXT]] to <1 x i8>
-// CHECK-CXX-NEXT:    ret <1 x i8> [[MFP8EXT]]
+// CHECK-CXX-NEXT:    [[MFP8CAST:%.*]] = insertelement <1 x i8> poison, i8 [[VECEXT]], i64 0
+// CHECK-CXX-NEXT:    ret <1 x i8> [[MFP8CAST]]
 //
 mfloat8_t test_extract_element(mfloat8x16_t x, int i) {
   return x[i];

@@ -2216,10 +2216,11 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
 
   // Even being a scalar the `__mfp8` type corresponds to `<1 x i8>` in LLVM IR.
-  // Cast the extracted element to the vector type to keep it consistent in
-  // Clang.
   if (E->getType()->isMFloat8Type())
-    Ret = Builder.CreateBitCast(Ret, ConvertType(E->getType()), "mfp8ext");
+    Ret = Builder.CreateInsertElement(
+        llvm::PoisonValue::get(llvm::FixedVectorType::get(CGF.Int8Ty, 1)), Ret,
+        uint64_t(0), "mfp8ext");
+
   return Ret;
 }
 
