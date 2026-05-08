@@ -377,6 +377,16 @@ func.func @gather_to_lds_wrong_num_indices(%idx : index,
 
 // -----
 
+func.func @gather_to_lds_bad_integer_address_space(%idx : index,
+    %src : memref<32xf16, 8>,
+    %dst : memref<32xf16, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.gather_to_lds' op source memory address space must be global or fat raw buffer}}
+  amdgpu.gather_to_lds %src[%idx], %dst[%idx] : vector<2xf16>, memref<32xf16, 8>, memref<32xf16, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
 func.func @global_load_async_to_lds_non_lds(%idx1 : index,
     %mem1 : memref<32xf32, #gpu.address_space<global>>,
     %mem2 : memref<32xf32>) {

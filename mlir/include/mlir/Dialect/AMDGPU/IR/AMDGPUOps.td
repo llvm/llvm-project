@@ -1318,6 +1318,7 @@ def AMDGPU_SparseWMMAOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedMemCopyOpInterface.
 def AMDGPU_GatherToLDSOp :
     AMDGPU_Op<"gather_to_lds", [AttrSizedOperandSegments]>,
     Arguments<(ins
@@ -1336,8 +1337,12 @@ def AMDGPU_GatherToLDSOp :
     Operands:
     * `$src`: global memory (including fat buffer) memref to read from.
     * `$srcIndices`: indices into `$src` to read from for this thread.
+      These indices must be non-negative and in-bounds when `$src` is not a
+      fat raw buffer. Fat raw buffer sources permit out-of-bounds indices with
+      raw buffer semantics.
     * `$dst`: LDS memory memref to write to.
     * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
+      These indices must be non-negative and in-bounds.
       The elements gathered by the subgroup will be written contiguously in order of lane ID
       starting at `$dst[$dstIndices]`. Byte-sized (ex. i8) or short-sized (ex. i16)
       types will be zero-padded/extended to 32 bits before being written. 96-bit types
@@ -1366,6 +1371,7 @@ def AMDGPU_GatherToLDSOp :
   let hasCanonicalizer = 1;
 }
 
+// Promises IndexedMemCopyOpInterface.
 def AMDGPU_GlobalLoadAsyncToLDSOp :
     AMDGPU_Op<"global_load_async_to_lds", [AttrSizedOperandSegments]>,
     Arguments<(ins
@@ -1384,8 +1390,13 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
 
     * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
     * `$srcIndices`: indices into `$src` for this thread's global read location.
+      These indices must be non-negative and in-bounds.
     * `$dst`: LDS memref to write to (workgroup addrspace).
     * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
+      These indices must be non-negative and in-bounds when `$mask` is not
+      provided. When `$mask` is provided, the destination indices are not
+      guaranteed to be in-bounds because masked-off lanes may carry invalid
+      destination indices.
     * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
      or vector type.
     * `$mask`: optional per-thread mask. When false, the thread's LDS write
@@ -1416,6 +1427,7 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
   let hasCanonicalizer = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
@@ -1439,7 +1451,9 @@ def AMDGPU_TransposeLoadOp :
     ```
     Operands:
     * `$src`: LDS memref to read from.
-    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$srcIndices`: indices into `$src` to read from for this thread. Indices
+      must be non-negative and in-bounds for the corresponding dimension of
+      `$src`, matching the constraints of `memref.load`.
     * `$result`: target register this transpose load instruction will write to.
 
     Note: Lowering is only supported on gfx950 and up.
@@ -1450,6 +1464,7 @@ def AMDGPU_TransposeLoadOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def AMDGPU_GlobalTransposeLoadOp :
     AMDGPU_Op<"global_transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src,
@@ -1643,12 +1658,16 @@ class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
   }];
 }
 
+// Promises IndexedMemCopyOpInterface.
 def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU_TDMGatherBaseType> {
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
 
   let description = [{
     This operation creates a pair of addresses that will be used by `tensor_load_to_lds`
     and `tensor_store_from_lds`.
+
+    The global and LDS indices must be non-negative and in-bounds for the
+    corresponding dimensions of their memrefs.
 
     This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
@@ -1674,13 +1693,16 @@ def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU
   }];
 }
 
-
+// Promises IndexedMemCopyOpInterface.
 def AMDGPU_MakeDmaBaseOp : AMDGPU_DmaBaseOp<"make_dma_base", AMDGPU_TDMBaseType> {
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
   let description = [{
     This operation creates a pair of addresses that will be used by tensor_load_to_lds
     and tensor_store_from_lds.
+
+    The global and LDS indices must be non-negative and in-bounds for the
+    corresponding dimensions of their memrefs.
 
     This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
@@ -1771,12 +1793,20 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
 
 }
 
+// Promises IndexedAccessOpInterface for the optional atomic barrier address.
 def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_descriptor"> {
   dag args = (ins AMDGPU_TDMGatherBaseType: $base,
                   AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
                              VectorOfMinMaxLengthAndType<1, 16, [I16]>]>: $indices);
   let arguments = !con(args, baseArgs);
   let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
+  let description = [{
+    Make all descriptor groups needed by tensor memory operations in gather
+    mode.
+
+    If an atomic barrier is provided, its indices must be non-negative and
+    in-bounds for the corresponding dimensions of the barrier memref.
+  }];
 
   let assemblyFormat = [{
     $base `[` $indices `]`
@@ -1801,6 +1831,7 @@ def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_
   }];
 }
 
+// Promises IndexedAccessOpInterface for the optional atomic barrier address.
 def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> {
   dag args = (ins AMDGPU_TDMBaseType: $base);
   let arguments = !con(args, baseArgs);
@@ -1829,6 +1860,8 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
 
      If an atomic barrier is provided, it will be arrived at **once** after
      each load/store using this descriptor is completed.
+     Its indices must be non-negative and in-bounds for the corresponding
+     dimensions of the barrier memref.
 
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
@@ -1911,6 +1944,7 @@ def AMDGPU_TensorStoreFromLDSOp :
 // being hoisted out of loops.
 //===----------------------------------------------------------------------===//
 
+// Promises IndexedAccessOpInterface.
 def AMDGPU_DsBarrierInitOp :
     AMDGPU_Op<"ds_barrier_init">,
     Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
@@ -1922,6 +1956,9 @@ def AMDGPU_DsBarrierInitOp :
     Given the location `!amdgpu.ds_barrier_state` in LDS (as specified by `base` and `indices`),
     initialize the barrier structure so that the pending and init counts are equal to
     `participants - 1`, which will have its high bits masked off, and its phase is equal to 0.
+
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
 
     Note that we subtract 1 from `participants` when constructing the barrier state
     to provide clearer high-level semantics.
@@ -1948,6 +1985,7 @@ def AMDGPU_DsBarrierInitOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def AMDGPU_DsBarrierPollStateOp :
     AMDGPU_Op<"ds_barrier_poll_state">,
     Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
@@ -1960,6 +1998,8 @@ def AMDGPU_DsBarrierPollStateOp :
 
     This will ultimately act like a `memref.load`, but this operation will ensure
     that appropriate atomic orderings and syncscopes are set.
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
 
     Example:
     ```mlir
@@ -1976,6 +2016,7 @@ def AMDGPU_DsBarrierPollStateOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def AMDGPU_DsAsyncBarrierArriveOp :
     AMDGPU_Op<"ds_async_barrier_arrive">,
     Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
@@ -1985,6 +2026,9 @@ def AMDGPU_DsAsyncBarrierArriveOp :
   let description = [{
     Add a arrival to the LDS barrier at `base[indices]` to the sequence of pending
     asynchronous memory operations.
+
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
 
     This will add an "asynchronous memory operation" to the in-order list of pending
     asynchronous loads from global memory to LDS. When the queue of such operations
@@ -2009,6 +2053,7 @@ def AMDGPU_DsAsyncBarrierArriveOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def AMDGPU_DsBarrierArriveOp :
     AMDGPU_Op<"ds_barrier_arrive">,
     Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
@@ -2020,6 +2065,9 @@ def AMDGPU_DsBarrierArriveOp :
   let description = [{
     Atomically arrive at the LDS barrier at `base[indices]` and decrement it by `count`,
     rolling over the phase if needed and returning the old barrier state.
+
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
 
     `count` is the number of participants that should be subtracted from the barrier's
     pending count **per lane that executes the operation**.

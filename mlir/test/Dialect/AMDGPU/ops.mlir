@@ -700,6 +700,15 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
   func.return
 }
 
+// CHECK-LABEL: func @gather_to_lds_integer_fat_raw_buffer_address_space
+func.func @gather_to_lds_integer_fat_raw_buffer_address_space(%idx : index,
+    %mem : memref<32xf16, 7>,
+    %smem : memref<32xf16, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.gather_to_lds
+  amdgpu.gather_to_lds %mem[%idx], %smem[%idx] : vector<2xf16>, memref<32xf16, 7>, memref<32xf16, #gpu.address_space<workgroup>>
+  func.return
+}
+
 // CHECK-LABEL: func @gather_to_lds_0d
 func.func @gather_to_lds_0d(%mem1 : memref<f16>, %smem1 : memref<f16, #gpu.address_space<workgroup>>) {
   // CHECK: amdgpu.gather_to_lds async %{{.*}}[], %{{.*}}[]
