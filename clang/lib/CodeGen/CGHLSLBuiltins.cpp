@@ -581,15 +581,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (IsIndexed) {
       Value *IndexOp = EmitScalarExpr(E->getArg(1));
       IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(),
-        CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-        {RetTy, HandleOp->getType(), IndexOp->getType()});
+          &CGM.getModule(),
+          CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+          {RetTy, HandleOp->getType(), IndexOp->getType()});
       CI = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
-    } else { 
+    } else {
       IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(),
-        CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-        {RetTy, HandleOp->getType()});
+          &CGM.getModule(),
+          CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+          {RetTy, HandleOp->getType()});
       CI = EmitRuntimeCall(IntrFn, {HandleOp});
     }
     CI->setCallingConv(IntrFn->getCallingConv());
