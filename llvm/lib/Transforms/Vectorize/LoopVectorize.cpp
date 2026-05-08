@@ -8184,6 +8184,11 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
     Loop *L, LoadInst *BoundLoad, const DataLayout &DL, DominatorTree &DT,
     LoopInfo &LI, AAResults &AA, PredicatedScalarEvolution &PSE,
     AssumptionCache *AC) {
+
+  assert(
+      L->getUniqueExitBlock() &&
+      "Only loop with single exit block valid for bound ptr specultive hoist!");
+
   LoadInst *InnerLoad = BoundLoad;
   if (!InnerLoad)
     return nullptr;
@@ -8202,6 +8207,7 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
                                       nullptr, AC);
   const LoopAccessInfo &PreLAI = PreFlightLAIs.getInfo(*L);
   const auto &RtPtrChecking = *PreLAI.getRuntimePointerChecking();
+  auto &SE = *PSE.getSE();
 
   for (const auto &Check : RtPtrChecking.getChecks()) {
     for (const RuntimeCheckingPtrGroup *Group : {Check.first, Check.second}) {
@@ -8209,15 +8215,30 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
         Value *Ptr = RtPtrChecking.Pointers[Idx].PointerValue;
         Value *Base = getUnderlyingObject(Ptr);
         if (auto *BaseI = dyn_cast<Instruction>(Base))
-          if (!DT.properlyDominates(BaseI->getParent(), PreHeader)) {
+          if (!DT.properlyDominates(BaseI->getParent(), PreHeader))
             return nullptr;
-          }
+        const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+        if (isa<SCEVCouldNotCompute>(PtrSCEV))
+          return nullptr;
+        if (SCEVExprContains(PtrSCEV, [&](const SCEV *S) {
+              const auto *SU = dyn_cast<SCEVUnknown>(S);
+              if (!SU)
+                return false;
+              auto *I = dyn_cast<Instruction>(SU->getValue());
+              if (!I)
+                return false;
+              if (!SE.isLoopInvariant(S, L))
+                return false;
+              return !DT.properlyDominates(I->getParent(), PreHeader);
+            }))
+          return nullptr;
       }
     }
   }
 
   Function *ParentF = PreHeader->getParent();
   LLVMContext &Ctx = ParentF->getContext();
+  BasicBlock *OrigExitBlock = L->getUniqueExitBlock();
 
   BasicBlock *RtCheckBB =
       BasicBlock::Create(Ctx, "ivbound.rtcheck", ParentF, PreHeader);
@@ -8294,8 +8315,39 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
   formDedicatedExitBlocks(L, &DT, &LI, nullptr, true);
   formDedicatedExitBlocks(VerLoop, &DT, &LI, nullptr, true);
 
+  // Fix any preheader defns that are used in exit block. We don't work with
+  // multi-exit loops for now.
+  BasicBlock *NewExitBlock = L->getUniqueExitBlock(),
+             *VerNewExitBlock = VerLoop->getUniqueExitBlock();
+  if (NewExitBlock && VerNewExitBlock) {
+    for (Instruction &I : *PreHeader) {
+      if (I.isTerminator())
+        continue;
+      Value *CloneI = VMap.count(&I) ? VMap[&I] : nullptr;
+      if (!CloneI)
+        continue;
+      SmallVector<Use *, 4> ExitUses;
+      for (Use &U : I.uses()) {
+        auto *UI = dyn_cast<Instruction>(U.getUser());
+        BasicBlock *UserBlock = UI->getParent();
+        // This user is outside both loops and it's phi node should be inserted
+        // in original exit block, which will dominate all it's downstream uses.
+        if (UI && UserBlock != PreHeader && !L->contains(UserBlock) &&
+            !VerLoop->contains(UserBlock))
+          ExitUses.push_back(&U);
+      }
+      if (ExitUses.empty())
+        continue;
+      PHINode *MergePhi = PHINode::Create(
+          I.getType(), 2, I.getName() + ".merge", OrigExitBlock->begin());
+      MergePhi->addIncoming(&I, NewExitBlock);
+      MergePhi->addIncoming(CloneI, VerNewExitBlock);
+      for (Use *U : ExitUses)
+        U->set(MergePhi);
+    }
+  }
+
   // RTC condition generation using SCEV.
-  auto &SE = *PSE.getSE();
   LoopAccessInfoManager NewLAIs(SE, AA, DT, LI, nullptr, nullptr, AC);
   const LoopAccessInfo &VerLAI = NewLAIs.getInfo(*VerLoop);
 
@@ -8439,6 +8491,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           if (Loop *Cand = tryToVersionLoopForInvariantBoundLoad(
                   L, BoundLoad, DL, *DT, *LI, *AA, PSE, AC)) {
             SE->forgetLoop(L);
+            SE->forgetLoop(Cand);
             return processLoop(Cand);
           }
       }

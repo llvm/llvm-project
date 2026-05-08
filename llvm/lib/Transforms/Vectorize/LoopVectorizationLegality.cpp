@@ -590,6 +590,10 @@ static LoadInst *getLoopBoundLoadCandidate(Loop *L) {
   if (!Icmp)
     return nullptr;
 
+  // Only handle loops with a single exiting block (the latch).
+  if (!L->getExitingBlock())
+    return nullptr;
+
   Value *Op0 = stripSimpleCasts(Icmp->getOperand(0));
   Value *Op1 = stripSimpleCasts(Icmp->getOperand(1));
 
@@ -598,6 +602,11 @@ static LoadInst *getLoopBoundLoadCandidate(Loop *L) {
 
   LoadInst *BoundLoad =
       isa<LoadInst>(Op0) ? dyn_cast<LoadInst>(Op0) : dyn_cast<LoadInst>(Op1);
+
+  // The other operand must be loop variant.
+  Value *OtherOp = isa<LoadInst>(Op0) ? Op1 : Op0;
+  if (L->isLoopInvariant(OtherOp))
+    return nullptr;
 
   // Reject non int load types.
   if (!BoundLoad->getType()->isIntegerTy())
@@ -643,6 +652,25 @@ static bool isLoadSpeculativelyHoistable(Loop *L, LoadInst *LoadCandidate,
       return false;
   }
 
+  // Reject cases where the BaseObjects are the same for any store with the
+  // loadCandiate.
+  SmallVector<const Value *, 4> BoundBases;
+  getUnderlyingObjects(Ptr, BoundBases);
+
+  for (BasicBlock *BB : L->getBlocks()) {
+    for (Instruction &I : *BB) {
+      auto *SI = dyn_cast<StoreInst>(&I);
+      if (!SI)
+        continue;
+      SmallVector<const Value *, 4> StrBases;
+      getUnderlyingObjects(SI->getPointerOperand(), StrBases);
+
+      for (const Value *SB : StrBases)
+        if ((is_contained(BoundBases, SB)))
+          return false;
+    }
+  }
+
   MemoryLocation LoadLoc = MemoryLocation::get(LoadCandidate);
   // No call in loop may write to Ptr via aliasing.
   for (BasicBlock *BB : L->blocks()) {
@@ -678,6 +706,17 @@ LoadInst *
 LoopVectorizationLegality::tryToFindDyanmicBoundLoadCandidate(Loop *L,
                                                               AAResults &AA) {
   if (!L->isInnermost())
+    return nullptr;
+
+  // Reject if the preheader is a loop header, this means the inner loop
+  // exits back into an outer loop body, which breaks SCEV's loop hierarchy
+  // after cloning.
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader || LI->isLoopHeader(Preheader))
+    return nullptr;
+
+  // Reject loop with multi-exit blocks.
+  if (!L->getUniqueExitBlock())
     return nullptr;
 
   LoadInst *LoadCandidate = getLoopBoundLoadCandidate(L);
