@@ -4,6 +4,20 @@
 ; RUN: llc -O3 -mtriple=riscv64 -mattr=+m -verify-machineinstrs -global-isel < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
+define i32 @smulfix_i32_scale_0(i32 %1, i32 %2) {
+; RV32I-LABEL: smulfix_i32_scale_0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: smulfix_i32_scale_0:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+  %m = call i32 @llvm.smul.fix.i32(i32 %1, i32 %2, i32 0)
+  ret i32 %m
+}
+
 define i32 @smulfix_i32(i32 %1, i32 %2) {
 ; RV32I-LABEL: smulfix_i32:
 ; RV32I:       # %bb.0:
