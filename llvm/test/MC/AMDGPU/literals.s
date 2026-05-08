@@ -494,7 +494,7 @@ v_pk_add_u16 v5, exec_lo, lit(1.0)
 // GFX11: v_pk_add_u16 v5, exec_lo, lit(0x3f800000) ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x00,0x00,0x80,0x3f]
 // GFX12XX: v_pk_add_u16 v5, exec_lo, lit(0x3f800000) ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x00,0x00,0x80,0x3f]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_u16
-// NOGFX9: :[[@LINE-4]]:31: error: invalid operand (violates constant bus restrictions)
+// NOGFX9: :[[@LINE-4]]:31: error: literal operands are not supported
 // NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_u16
 // NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_u16
 
@@ -980,7 +980,7 @@ v_pk_add_u16 v5, exec_lo, lit(1)
 // GFX11: v_pk_add_u16 v5, exec_lo, lit(0x1)      ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x01,0x00,0x00,0x00]
 // GFX12XX: v_pk_add_u16 v5, exec_lo, lit(0x1)      ; encoding: [0x05,0x40,0x0a,0xcc,0x7e,0xfe,0x01,0x1a,0x01,0x00,0x00,0x00]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_pk_add_u16
-// NOGFX9: :[[@LINE-4]]:31: error: invalid operand (violates constant bus restrictions)
+// NOGFX9: :[[@LINE-4]]:31: error: literal operands are not supported
 // NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_pk_add_u16
 // NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_pk_add_u16
 
@@ -1979,12 +1979,11 @@ v_add_nc_u64 v[0:1], v[0:1], lit64(1)
 // NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
 v_add_f64 v[0:1], v[0:1], lit(1)
-// GFX11: v_add_f64 v[0:1], v[0:1], lit(0x1)      ; encoding: [0x00,0x00,0x27,0xd7,0x00,0xff,0x01,0x02,0x01,0x00,0x00,0x00]
-// GFX12: v_add_f64_e64 v[0:1], v[0:1], lit(0x1)  ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xff,0x01,0x02,0x01,0x00,0x00,0x00]
-// GFX1250-ASM: v_add_f64_e64 v[0:1], v[0:1], lit(0x1)  ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xff,0x01,0x02,0x01,0x00,0x00,0x00]
-// GFX1250-DIS: v_add_f64_e64 v[0:1], v[0:1], 0x1       ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xff,0x01,0x02,0x01,0x00,0x00,0x00]
-// GFX89: v_add_f64 v[0:1], v[0:1], lit(0x1)      ; encoding: [0x00,0x00,0x80,0xd2,0x00,0xff,0x01,0x00]
-// SICI: v_add_f64 v[0:1], v[0:1], lit(0x1)      ; encoding: [0x00,0x00,0xc8,0xd2,0x00,0xff,0x01,0x00]
+// NOGFX11: :[[@LINE-1]]:31: error: invalid operand for instruction
+// NOGFX12: :[[@LINE-2]]:31: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-3]]:31: error: invalid operand for instruction
+// NOGFX89: :[[@LINE-4]]:31: error: invalid operand for instruction
+// NOSICI: :[[@LINE-5]]:31: error: invalid operand for instruction
 
 v_add_f64 v[0:1], v[0:1], lit(1.0)
 // NOGFX11: :[[@LINE-1]]:31: error: invalid operand for instruction
