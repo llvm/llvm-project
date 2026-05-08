@@ -3,8 +3,8 @@
 llvm-formatv-string
 ===================
 
-Validates ``llvm::formatv`` format strings against the arguments provided,
-similar to how the compiler validates ``printf`` format strings.
+Validates ``llvm::formatv`` format strings against the provided arguments,
+diagnosing mismatched argument counts, unused arguments, and mixed index styles.
 
 This check diagnoses the following issues:
 
@@ -44,6 +44,6 @@ Options
   the pack.
 
   For example, to check ``mylib::log(Level, const char *Fmt, Ts&&...)`` set
-  this option to ``mylib::log``.
+  this option to `mylib::log`.
 
   Default is the empty string.
