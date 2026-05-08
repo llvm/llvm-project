@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple aarch64-windows -ffreestanding -emit-llvm -O0 \
 // RUN: -x c++ -o - %s | FileCheck %s
 
+// FIXME: add tests here.
+
 struct size1 { char str[1]; };
 struct size2 { char str[2]; };
 struct size7 { char str[4]; };
