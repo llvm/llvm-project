@@ -296,6 +296,21 @@ func.func @do_not_cast_away_contraction_with_scalable_rank1_acc(%arg0: vector<64
 }
 
 // -----
+
+// CHECK-LABEL: do_not_cast_away_contraction_with_scalable_operand_dim
+//  CHECK-NOT: vector.shape_cast
+//  CHECK-NOT: vector.extract
+//  CHECK-NOT: vector.broadcast
+//  CHECK-NEXT: vector.contract
+//  CHECK-NEXT: return
+
+func.func @do_not_cast_away_contraction_with_scalable_operand_dim(%arg0: vector<64xf32>, %arg1: vector<[1]x64xf32>, %arg2: vector<1xf32>) -> vector<1xf32> {
+  %0 = vector.contract {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d1, d0)>, affine_map<(d0, d1) -> (d1)>], iterator_types = ["reduction", "parallel"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<64xf32>, vector<[1]x64xf32> into vector<1xf32>
+  return %0 : vector<1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @cast_away_extract_strided_slice_leading_one_dims
 func.func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>) -> vector<1x1x8xf16> {
   // CHECK:     %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x8x8xf16> to vector<8x8xf16>
