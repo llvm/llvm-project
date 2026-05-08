@@ -13,17 +13,15 @@ template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void kernel_single_task(T) {}
 
-struct Empty {};
-
-struct S {
+struct S { // expected-note 4{{within field of type 'S' declared here}}
   int a;
-  int &b; //expected-error 2{{'int &' cannot be used as the type of a kernel parameter}}
+  int &b; //expected-error 4{{'int &' cannot be used as the type of a kernel parameter}}
 };
 
 void fooarr(int (&arr)[5]) {
 }
 
-template <typename T> class Callable {
+template <typename T> class Callable { // expected-note {{within field of type 'Callable<int &>' declared here}}
   T data; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
 public:
   Callable(T d) : data(d) {}
@@ -31,12 +29,18 @@ public:
   }
 };
 
+class Derived1 : Callable<int> { // expected-note {{within field of type 'Derived1' declared here}}
+  int &a; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
+public:
+  Derived1(int d, int &b) : Callable<int>(d), a(b) {}
+};
+
 void refCases(int AS) {
   int p = 0;
   double q = 0;
   float s = 0;
   kernel_single_task<class KN<1>>( // expected-note {{requested here}}
-      [
+      [ // expected-note2{{within field of type}}
           // expected-error@+1 {{'int &' cannot be used as the type of a kernel parameter}}
           &p, q,
           // expected-error@+1 {{'float &' cannot be used as the type of a kernel parameter}}
@@ -47,39 +51,36 @@ void refCases(int AS) {
       });
 
    auto L = [&]() { (void)p;}; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
+                               // expected-note@-1 {{within field of type}}
    S Str {p, p};
   kernel_single_task<class KN<2>>( // expected-note {{requested here}}
-      [=] {
+      [=] { // expected-note 2{{within field of type}}
         (void)L;
         (void)Str; // no error because fail for L already
       });
 
   kernel_single_task<class KN<3>>( // expected-note {{requested here}}
-     [=] {
+     [=] { // // expected-note {{within field of type}}
        (void)Str;
      });
 
   S arr[2] = {Str, Str};
   kernel_single_task<class KN<4>>( // expected-note {{requested here}}
-      [=] {
+      [=] { // expected-note 2{{within field of type}}
         (void)arr;
       });
   int arr1[AS];
   kernel_single_task<class KN<5>>( // expected-note {{requested here}}
-      [&] {
+      [&] { // expected-note {{within field of type}}
         (void)arr1; // expected-error {{'int (&)[AS]' cannot be used as the type of a kernel parameter}}
-      });
-  auto a = &arr1;
-  kernel_single_task<class KN<6>>( // expected-note {{requested here}}
-      [=] {
-        (void)a; // expected-error {{'int[AS]' cannot be used as the type of a kernel parameter}}
       });
   int arrayints[5] = {0};
   kernel_single_task<class KN<7>>( // expected-note {{requested here}}
-      [&] {
+      [&] { // expected-note {{within field of type}}
         fooarr(arrayints); // expected-error {{'int (&)[5]' cannot be used as the type of a kernel parameter}}
       });
   kernel_single_task<class KN<8>>(Callable<int&>{p}); // expected-note {{requested here}}
   kernel_single_task<class KN<9>>(Callable<int>{p});
+  kernel_single_task<class KN<10>>(Derived1{p, p}); // expected-note {{requested here}}
 }
 

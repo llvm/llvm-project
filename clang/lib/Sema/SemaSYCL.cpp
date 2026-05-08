@@ -11,6 +11,8 @@
 #include "clang/Sema/SemaSYCL.h"
 #include "TreeTransform.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/SubobjectVisitor.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TypeOrdering.h"
@@ -293,268 +295,6 @@ void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
         << SEAttr;
   }
 }
-
-namespace {
-/// A special visitor to visit subobjects within a type, i.e. fields of a
-/// class or elements of an array. Useful for SYCl because in SYCL kernels are
-/// defined via lambda expressions or named callable objects and kernel
-/// parameters are fields of these. These visitors will be used for diagnosing
-/// invalid kernel arugments as well as for functional transformations.
-class SubobjectVisitor {
-  ASTContext &Ctx;
-
-  // These enable handler execution only when previous Handlers succeed.
-  template <typename... Tn>
-  bool handleField(FieldDecl *FD, QualType FDTy, Tn &&...tn) {
-    bool result = true;
-    (void)std::initializer_list<int>{(result = result && tn(FD, FDTy), 0)...};
-    return result;
-  }
-  template <typename... Tn>
-  bool handleField(const CXXBaseSpecifier &BD, QualType BDTy, Tn &&...tn) {
-    bool result = true;
-    std::initializer_list<int>{(result = result && tn(BD, BDTy), 0)...};
-    return result;
-  }
-
-#define KF_FOR_EACH(FUNC, Item, Qt)                                            \
-  handleField(Item, Qt, ([&](FieldDecl *FD, QualType FDTy) {                   \
-                return Handlers.FUNC(FD, FDTy);                                \
-              })...)
-
-  // Parent contains the FieldDecl or CXXBaseSpecifier that was used to enter
-  // the Wrapper structure that we're currently visiting. Owner is the parent
-  // type (which doesn't exist in cases where it is a FieldDecl in the
-  // 'root'), and Wrapper is the current struct being unwrapped.
-  template <typename ParentTy, typename... HandlerTys>
-  void visitComplexRecord(const CXXRecordDecl *Owner, ParentTy &Parent,
-                          const CXXRecordDecl *Wrapper, QualType RecordTy,
-                          HandlerTys &...Handlers) {
-    (void)std::initializer_list<int>{
-        (Handlers.enterStruct(Owner, Parent, RecordTy), 0)...};
-    visitRecordHelper(Wrapper, Wrapper->bases(), Handlers...);
-    visitRecordHelper(Wrapper, Wrapper->fields(), Handlers...);
-    (void)std::initializer_list<int>{
-        (Handlers.leaveStruct(Owner, Parent, RecordTy), 0)...};
-  }
-
-  template <typename... HandlerTys>
-  void visitArray(const CXXRecordDecl *Owner, FieldDecl *Field,
-                  QualType ArrayTy, HandlerTys &...Handlers) {
-    // TODO add support for simple array visiting, i.e. without entering array
-    // elements.
-    visitComplexArray(Owner, Field, ArrayTy, Handlers...);
-  }
-
-  template <typename ParentTy, typename... HandlerTys>
-  void visitRecord(const CXXRecordDecl *Owner, ParentTy &Parent,
-                   const CXXRecordDecl *Wrapper, QualType RecordTy,
-                   HandlerTys &...Handlers) {
-    // TODO add support for simple record visiting, i.e. without entering record
-    // fields.
-    visitComplexRecord(Owner, Parent, Wrapper, RecordTy, Handlers...);
-  }
-
-  template <typename... HandlerTys>
-  void visitRecordHelper(const CXXRecordDecl *Owner,
-                         clang::CXXRecordDecl::base_class_const_range Range,
-                         HandlerTys &...Handlers) {
-    for (const auto &Base : Range) {
-      QualType BaseTy = Base.getType();
-      visitRecord(Owner, Base, BaseTy->getAsCXXRecordDecl(), BaseTy,
-                  Handlers...);
-    }
-  }
-
-  template <typename... HandlerTys>
-  void visitRecordHelper(const CXXRecordDecl *Owner, RecordDecl::field_range,
-                         HandlerTys &...Handlers) {
-    visitRecordFields(Owner, Handlers...);
-  }
-
-  template <typename... HandlerTys>
-  void visitArrayElementImpl(const CXXRecordDecl *Owner, FieldDecl *ArrayField,
-                             QualType ElementTy, uint64_t Index,
-                             HandlerTys &...Handlers) {
-    visitField(Owner, ArrayField, ElementTy, Handlers...);
-  }
-
-  template <typename... HandlerTys>
-  void visitNthArrayElement(const CXXRecordDecl *Owner, FieldDecl *ArrayField,
-                            QualType ElementTy, uint64_t Index,
-                            HandlerTys &...Handlers) {
-    visitArrayElementImpl(Owner, ArrayField, ElementTy, Index, Handlers...);
-  }
-
-  template <typename... HandlerTys>
-  void visitComplexArray(const CXXRecordDecl *Owner, FieldDecl *Field,
-                         QualType ArrayTy, HandlerTys &...Handlers) {
-    // Array workflow is:
-    // handleArrayType
-    // enterArray
-    // visitField (same as before, note that The FieldDecl is the of array
-    // itself, not the element)
-    // ... repeat per element, opt-out for duplicates.
-    // leaveArray
-
-    if (!KF_FOR_EACH(handleArrayType, Field, ArrayTy))
-      return;
-
-    const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(ArrayTy);
-    assert(CAT && "Should only be called on constant-size array.");
-    QualType ET = CAT->getElementType();
-    uint64_t ElemCount = CAT->getSize().getZExtValue();
-
-    (void)std::initializer_list<int>{
-        (Handlers.enterArray(Field, ArrayTy, ET), 0)...};
-
-    for (uint64_t Index = 0; Index < ElemCount; ++Index)
-      visitNthArrayElement(Owner, Field, ET, Index, Handlers...);
-
-    (void)std::initializer_list<int>{
-        (Handlers.leaveArray(Field, ArrayTy, ET), 0)...};
-  }
-
-  template <typename... HandlerTys>
-  void visitField(const CXXRecordDecl *Owner, FieldDecl *Field,
-                  QualType FieldTy, HandlerTys &...Handlers) {
-    if (FieldTy->isStructureOrClassType()) {
-      if (KF_FOR_EACH(handleStructType, Field, FieldTy)) {
-        CXXRecordDecl *RD = FieldTy->getAsCXXRecordDecl();
-        visitRecord(Owner, Field, RD, FieldTy, Handlers...);
-      }
-    } else if (FieldTy->isUnionType())
-      KF_FOR_EACH(handleUnionType, Field, FieldTy);
-    else if (FieldTy->isReferenceType())
-      KF_FOR_EACH(handleReferenceType, Field, FieldTy);
-    else if (FieldTy->isPointerType())
-      KF_FOR_EACH(handlePointerType, Field, FieldTy);
-    else if (FieldTy->isArrayType())
-      visitArray(Owner, Field, FieldTy, Handlers...);
-    else if (FieldTy->isScalarType() || FieldTy->isVectorType())
-      KF_FOR_EACH(handleScalarType, Field, FieldTy);
-    else
-      KF_FOR_EACH(handleOtherType, Field, FieldTy);
-  }
-
-public:
-  SubobjectVisitor(ASTContext &C) : Ctx(C) {}
-
-  template <typename... HandlerTys>
-  void visitRecordBases(const CXXRecordDecl *KernelFunctor,
-                        HandlerTys &...Handlers) {
-    visitRecordHelper(KernelFunctor, KernelFunctor->bases(), Handlers...);
-  }
-
-  template <typename... HandlerTys>
-  void visitRecordFields(const CXXRecordDecl *Owner, HandlerTys &...Handlers) {
-    for (const auto Field : Owner->fields())
-      visitField(Owner, Field, Field->getType(), Handlers...);
-  }
-
-#undef KF_FOR_EACH
-};
-
-class SyclKernelFieldHandlerBase {
-public:
-  virtual bool handleStructType(FieldDecl *, QualType) { return true; }
-  virtual bool handleUnionType(FieldDecl *, QualType) { return true; }
-  virtual bool handleReferenceType(FieldDecl *, QualType) { return true; }
-  virtual bool handlePointerType(FieldDecl *, QualType) { return true; }
-  virtual bool handleArrayType(FieldDecl *, QualType) { return true; }
-  virtual bool handleScalarType(FieldDecl *, QualType) { return true; }
-  // Most handlers shouldn't be handling this, just the field checker.
-  virtual bool handleOtherType(FieldDecl *, QualType) { return true; }
-
-  virtual bool enterStruct(const CXXRecordDecl *, FieldDecl *, QualType) {
-    return true;
-  }
-  virtual bool leaveStruct(const CXXRecordDecl *, FieldDecl *, QualType) {
-    return true;
-  }
-  virtual bool enterStruct(const CXXRecordDecl *, const CXXBaseSpecifier &,
-                           QualType) {
-    return true;
-  }
-  virtual bool leaveStruct(const CXXRecordDecl *, const CXXBaseSpecifier &,
-                           QualType) {
-    return true;
-  }
-  // The following are used for stepping through array elements.
-  virtual bool enterArray(FieldDecl *, QualType, QualType) { return true; }
-  virtual bool leaveArray(FieldDecl *, QualType, QualType) { return true; }
-
-  virtual ~SyclKernelFieldHandlerBase() = default;
-};
-
-// A class to act as the direct base for all the SYCL Kernel related
-// tasks that contains a reference to Sema (and potentially any other
-// universally required data).
-class SyclKernelFieldHandler : public SyclKernelFieldHandlerBase {
-protected:
-  SemaSYCL &SemaSYCLRef;
-  SyclKernelFieldHandler(SemaSYCL &S) : SemaSYCLRef(S) {}
-};
-
-// A type to check the validity of all of the argument types.
-class SyclKernelFieldChecker : public SyclKernelFieldHandler {
-  bool IsInvalid = false;
-
-  bool checkArrayType(QualType Ty, SourceLocation Loc) {
-    if (Ty->isArrayType()) {
-      if (const auto *CAT =
-              SemaSYCLRef.getASTContext().getAsConstantArrayType(Ty)) {
-        QualType ET = CAT->getElementType();
-        return checkArrayType(ET, Loc);
-      }
-      return SemaSYCLRef.Diag(Loc, diag::err_bad_kernel_param_type) << Ty;
-    }
-    return false;
-  }
-
-public:
-  /// Constructor for the SyclKernelFieldChecker
-  /// \param S The SemaSYCL reference used for diagnostics and context.
-  explicit SyclKernelFieldChecker(SemaSYCL &S) : SyclKernelFieldHandler(S) {}
-  bool isValid() { return !IsInvalid; }
-
-  bool handleReferenceType(FieldDecl *FD, QualType FieldTy) final {
-    SemaSYCLRef.Diag(FD->getLocation(), diag::err_bad_kernel_param_type)
-        << FieldTy;
-    IsInvalid = true;
-    return isValid();
-  }
-
-  bool handlePointerType(FieldDecl *FD, QualType FieldTy) final {
-    while (FieldTy->isAnyPointerType()) {
-      FieldTy = QualType{FieldTy->getPointeeOrArrayElementType(), 0};
-      if (FieldTy->isVariableArrayType()) {
-        SemaSYCLRef.Diag(FD->getLocation(), diag::err_bad_kernel_param_type)
-          << FieldTy;
-        IsInvalid = true;
-        break;
-      }
-    }
-    return isValid();
-  }
-
-  bool handleOtherType(FieldDecl *FD, QualType FieldTy) final {
-    SemaSYCLRef.Diag(FD->getLocation(), diag::err_bad_kernel_param_type)
-        << FieldTy;
-    IsInvalid = true;
-    return isValid();
-  }
-
-  bool handleStructType(FieldDecl *, QualType FieldTy) final {
-    return isValid();
-  }
-
-  bool handleArrayType(FieldDecl *FD, QualType FieldTy) final {
-    IsInvalid |= checkArrayType(FieldTy, FD->getLocation());
-    return isValid();
-  }
-};
-} // namespace
 
 void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   // Ensure that all attributes present on the declaration are consistent
@@ -927,18 +667,49 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   return OFD;
 }
 
+class KernelArgsChecker : public SubobjectVisitor<KernelArgsChecker> {
+  SemaSYCL &SemaSYCLRef;
+  bool IsValid = true;
+  SmallVector<const CXXRecordDecl *, 4> History;
+
+public:
+  KernelArgsChecker(SemaSYCL &SR, SourceLocation Loc)
+      : SubobjectVisitor<KernelArgsChecker>(SR.getASTContext()),
+        SemaSYCLRef(SR) {}
+  bool enterRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
+    History.push_back(Record);
+    return getDerived().visitRecord(Record, Parent);
+  }
+
+  bool visitReferenceType(QualType Ty, FieldDecl *Parent) {
+    SemaSYCLRef.Diag(Parent->getLocation(), diag::err_bad_kernel_param_type)
+        << Ty;
+    for (auto &ParentRecord : History)
+      SemaSYCLRef.Diag(ParentRecord->getLocation(),
+                       diag::note_within_field_of_type)
+          << ParentRecord;
+    IsValid = false;
+    return true;
+  }
+
+  bool leaveRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
+    History.pop_back();
+    return true;
+  }
+
+  bool isInvalid() { return !IsValid; }
+};
+
 bool verifyKernelArguments(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {
-  SyclKernelFieldChecker FieldChecker(SemaSYCLRef);
-  SubobjectVisitor Visitor{SemaSYCLRef.getASTContext()};
+  KernelArgsChecker KAC(SemaSYCLRef, FD->getLocation());
   for (auto Param : FD->parameters()) {
     if (Param->getType()->isRecordType()) {
-      const CXXRecordDecl *ObjRecord = Param->getType()->getAsCXXRecordDecl();
+      CXXRecordDecl *ObjRecord = Param->getType()->getAsCXXRecordDecl();
       assert(ObjRecord && "object is expected");
-      Visitor.visitRecordBases(ObjRecord, FieldChecker);
-      Visitor.visitRecordFields(ObjRecord, FieldChecker);
+      KAC.traverseRecord(ObjRecord);
     }
   }
-  return !FieldChecker.isValid();
+  return KAC.isInvalid();
 }
 
 } // unnamed namespace
