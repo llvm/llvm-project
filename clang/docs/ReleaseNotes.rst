@@ -479,6 +479,9 @@ Improvements to Clang's diagnostics
 
 - Removed the body of lambdas from some diagnostic messages.
 
+- Clang now rejects inline asm constraints and clobbers that contain an
+  embedded null character, instead of silently truncating them. (#GH173900)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
