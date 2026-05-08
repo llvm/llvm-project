@@ -1,5 +1,6 @@
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/line-table-mixed-path-styles.out
-# RUN: %lldb %T/line-table-mixed-path-styles.out \
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %t.dir/line-table-mixed-path-styles.out
+# RUN: %lldb %t.dir/line-table-mixed-path-styles.out \
 # RUN:   -o "target symbols add -s line-table-mixed-path-styles.out %S/Inputs/line-table-mixed-path-styles.syms" \
 # RUN:   -s %s -o exit | FileCheck %s
 

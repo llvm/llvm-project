@@ -27,6 +27,8 @@ namespace llvm {
 class MCExpr;
 
 class LLVM_ABI MCSectionGOFF final : public MCSection {
+  StringRef ExternalName; // Alternate external name.
+
   // Parent of this section. Implies that the parent is emitted first.
   MCSectionGOFF *Parent;
 
@@ -52,36 +54,28 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   mutable unsigned Emitted : 1;
 
   friend class MCContext;
+  friend class MCAsmInfoGOFF;
   friend class MCSymbolGOFF;
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::SDAttr SDAttributes, MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
-        Parent(Parent), SDAttributes(SDAttributes),
-        SymbolType(GOFF::ESD_ST_SectionDefinition), IsBSS(K.isBSS()),
-        RequiresNonZeroLength(0), Emitted(0) {}
+      : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
+        SDAttributes(SDAttributes), SymbolType(GOFF::ESD_ST_SectionDefinition),
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::EDAttr EDAttributes, MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
-        Parent(Parent), EDAttributes(EDAttributes),
-        SymbolType(GOFF::ESD_ST_ElementDefinition), IsBSS(K.isBSS()),
-        RequiresNonZeroLength(0), Emitted(0) {}
+      : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
+        EDAttributes(EDAttributes), SymbolType(GOFF::ESD_ST_ElementDefinition),
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
-        Parent(Parent), PRAttributes(PRAttributes),
-        SymbolType(GOFF::ESD_ST_PartReference), IsBSS(K.isBSS()),
-        RequiresNonZeroLength(0), Emitted(0) {}
+      : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
+        PRAttributes(PRAttributes), SymbolType(GOFF::ESD_ST_PartReference),
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
 public:
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
-
-  bool useCodeAlign() const override { return false; }
-
   // Return the parent section.
   MCSectionGOFF *getParent() const { return Parent; }
 
@@ -111,7 +105,7 @@ public:
 
   // Returns the text style for a section. Only defined for ED and PR sections.
   GOFF::ESDTextStyle getTextStyle() const {
-    assert((isED() || isPR() || isVirtualSection()) && "Expect ED or PR section");
+    assert((isED() || isPR() || isBssSection()) && "Expect ED or PR section");
     if (isED())
       return EDAttributes.TextStyle;
     if (isPR())
@@ -124,7 +118,11 @@ public:
 
   void setName(StringRef SectionName) { Name = SectionName; }
 
-  static bool classof(const MCSection *S) { return S->getVariant() == SV_GOFF; }
+  bool hasExternalName() const { return !ExternalName.empty(); }
+  void setExternalName(StringRef Name) { ExternalName = Name; }
+  StringRef getExternalName() const {
+    return hasExternalName() ? ExternalName : getName();
+  }
 };
 } // end namespace llvm
 

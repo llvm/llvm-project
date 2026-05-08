@@ -36,9 +36,11 @@ def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                  ["getEntrySuccessorOperands",
+                                                  "getSuccessorInputs",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
-                       AutomaticAllocationScope]> {
+                       AutomaticAllocationScope,
+                       RecursiveMemoryEffects]> {
   let summary = "Asynchronous execute operation";
   let description = [{
     The `body` region attached to the `async.execute` operation semantically

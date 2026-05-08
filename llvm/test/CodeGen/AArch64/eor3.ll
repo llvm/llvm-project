@@ -277,3 +277,154 @@ define <2 x i64> @eor3_vnot(<2 x i64> %0, <2 x i64> %1) {
   ret <2 x i64> %4
 }
 
+define <1 x i64> @eor3_1x64(<1 x i64> %0, <1 x i64> %1, <1 x i64> %2) {
+; SHA3-LABEL: eor3_1x64:
+; SHA3:       // %bb.0:
+; SHA3-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: eor3_1x64:
+; NOSHA3:       // %bb.0:
+; NOSHA3-NEXT:    eor v1.8b, v1.8b, v2.8b
+; NOSHA3-NEXT:    eor v0.8b, v1.8b, v0.8b
+; NOSHA3-NEXT:    ret
+;
+; SVE2-LABEL: eor3_1x64:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    fmov d0, d1
+; SVE2-NEXT:    ret
+;
+; SHA3-SVE2-LABEL: eor3_1x64:
+; SHA3-SVE2:       // %bb.0:
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-SVE2-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-SVE2-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-SVE2-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-SVE2-NEXT:    ret
+  %4 = xor <1 x i64> %1, %2
+  %5 = xor <1 x i64> %4, %0
+  ret <1 x i64> %5
+}
+
+define <2 x i32> @eor3_2x32(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2) {
+; SHA3-LABEL: eor3_2x32:
+; SHA3:       // %bb.0:
+; SHA3-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: eor3_2x32:
+; NOSHA3:       // %bb.0:
+; NOSHA3-NEXT:    eor v1.8b, v1.8b, v2.8b
+; NOSHA3-NEXT:    eor v0.8b, v1.8b, v0.8b
+; NOSHA3-NEXT:    ret
+;
+; SVE2-LABEL: eor3_2x32:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    fmov d0, d1
+; SVE2-NEXT:    ret
+;
+; SHA3-SVE2-LABEL: eor3_2x32:
+; SHA3-SVE2:       // %bb.0:
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-SVE2-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-SVE2-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-SVE2-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-SVE2-NEXT:    ret
+  %4 = xor <2 x i32> %1, %2
+  %5 = xor <2 x i32> %4, %0
+  ret <2 x i32> %5
+}
+
+define <4 x i16> @eor3_4x16(<4 x i16> %0, <4 x i16> %1, <4 x i16> %2) {
+; SHA3-LABEL: eor3_4x16:
+; SHA3:       // %bb.0:
+; SHA3-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: eor3_4x16:
+; NOSHA3:       // %bb.0:
+; NOSHA3-NEXT:    eor v1.8b, v1.8b, v2.8b
+; NOSHA3-NEXT:    eor v0.8b, v1.8b, v0.8b
+; NOSHA3-NEXT:    ret
+;
+; SVE2-LABEL: eor3_4x16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    fmov d0, d1
+; SVE2-NEXT:    ret
+;
+; SHA3-SVE2-LABEL: eor3_4x16:
+; SHA3-SVE2:       // %bb.0:
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-SVE2-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-SVE2-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-SVE2-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-SVE2-NEXT:    ret
+  %4 = xor <4 x i16> %1, %2
+  %5 = xor <4 x i16> %4, %0
+  ret <4 x i16> %5
+}
+
+define <8 x i8> @eor3_8x8(<8 x i8> %0, <8 x i8> %1, <8 x i8> %2) {
+; SHA3-LABEL: eor3_8x8:
+; SHA3:       // %bb.0:
+; SHA3-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: eor3_8x8:
+; NOSHA3:       // %bb.0:
+; NOSHA3-NEXT:    eor v1.8b, v1.8b, v2.8b
+; NOSHA3-NEXT:    eor v0.8b, v1.8b, v0.8b
+; NOSHA3-NEXT:    ret
+;
+; SVE2-LABEL: eor3_8x8:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    fmov d0, d1
+; SVE2-NEXT:    ret
+;
+; SHA3-SVE2-LABEL: eor3_8x8:
+; SHA3-SVE2:       // %bb.0:
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SHA3-SVE2-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SHA3-SVE2-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SHA3-SVE2-NEXT:    eor3 v0.16b, v1.16b, v2.16b, v0.16b
+; SHA3-SVE2-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SHA3-SVE2-NEXT:    ret
+  %4 = xor <8 x i8> %1, %2
+  %5 = xor <8 x i8> %4, %0
+  ret <8 x i8> %5
+}

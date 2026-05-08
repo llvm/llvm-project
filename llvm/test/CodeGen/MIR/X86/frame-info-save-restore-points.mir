@@ -30,14 +30,18 @@ liveins:
   - { reg: '$edi' }
   - { reg: '$esi' }
 # CHECK: frameInfo:
-# CHECK:      savePoint: '%bb.2'
-# CHECK-NEXT: restorePoint: '%bb.2'
+# CHECK:      savePoint:
+# CHECK-NEXT:   - point:           '%bb.2'
+# CHECK:      restorePoint:
+# CHECK-NEXT:   - point:           '%bb.2'
 # CHECK: stack
 frameInfo:
   maxAlignment:  4
   hasCalls:      true
-  savePoint:     '%bb.2'
-  restorePoint:  '%bb.2'
+  savePoint:
+   - point:           '%bb.2'
+  restorePoint:
+    - point:           '%bb.2'
 stack:
   - { id: 0, name: tmp, offset: 0, size: 4, alignment: 4 }
 body: |

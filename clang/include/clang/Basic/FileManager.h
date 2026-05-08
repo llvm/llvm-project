@@ -237,11 +237,6 @@ public:
   FileEntryRef getVirtualFileRef(StringRef Filename, off_t Size,
                                  time_t ModificationTime);
 
-  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
-                  "getVirtualFileRef()")
-  const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
-                                  time_t ModificationTime);
-
   /// Retrieve a FileEntry that bypasses VFE, which is expected to be a virtual
   /// file entry, to access the real file.  The returned FileEntry will have
   /// the same filename as FE but a different identity and its own stat.
@@ -292,13 +287,20 @@ public:
   /// If path is not absolute and FileSystemOptions set the working
   /// directory, the path is modified to be relative to the given
   /// working directory.
-  /// \returns true if \c path changed.
-  bool FixupRelativePath(SmallVectorImpl<char> &path) const;
+  /// \returns true if \c Path changed.
+  bool FixupRelativePath(SmallVectorImpl<char> &Path) const {
+    return fixupRelativePath(FileSystemOpts, Path);
+  }
+  static bool fixupRelativePath(const FileSystemOptions &FileSystemOpts,
+                                SmallVectorImpl<char> &Path);
 
   /// Makes \c Path absolute taking into account FileSystemOptions and the
-  /// working directory option.
-  /// \returns true if \c Path changed to absolute.
-  bool makeAbsolutePath(SmallVectorImpl<char> &Path) const;
+  /// working directory option, and canonicalizes through
+  /// `llvm::path::remove_dots` if \c Canonicalize is true.
+  ///
+  /// \returns true if \c Path was changed.
+  bool makeAbsolutePath(SmallVectorImpl<char> &Path,
+                        bool Canonicalize = false) const;
 
   /// Produce an array mapping from the unique IDs assigned to each
   /// file to the corresponding FileEntryRef.

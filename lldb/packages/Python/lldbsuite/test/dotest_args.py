@@ -58,6 +58,14 @@ def create_parser():
             """Specify the path to sysroot. This overrides apple_sdk sysroot."""
         ),
     )
+    group.add_argument(
+        "--triple",
+        metavar="triple",
+        dest="triple",
+        help=textwrap.dedent(
+            """Specify the target triple. Used for cross compilation."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",
@@ -270,6 +278,18 @@ def create_parser():
         type=str,
         metavar="A plugin whose tests will be enabled",
         help="A plugin whose tests will be enabled. The only currently supported plugin is intel-pt.",
+    )
+    group.add_argument(
+        "--enable-mte",
+        dest="enable_mte",
+        action="store_true",
+        help="Indicate that the test suite is running with MTE (Memory Tagging Extension) enabled.",
+    )
+    group.add_argument(
+        "--arm64e-debugserver",
+        dest="arm64e_debugserver",
+        action="store_true",
+        help="Indicate that debugserver is built with arm64e support.",
     )
 
     # Configuration options

@@ -100,3 +100,22 @@ int use_base_via_pointer(Derived *d) {
 
 // OGCG: define{{.*}} i32 @_Z20use_base_via_pointerP7Derived
 // OGCG:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %{{.*}}, i32 0, i32 0
+
+struct EmptyDerived : Base {};
+struct EmptyDerived2 : EmptyDerived {};
+
+void use_empty_derived2() {
+  EmptyDerived2 d2;
+}
+
+// CIR: cir.func{{.*}} @_Z18use_empty_derived2v()
+// CIR:   %0 = cir.alloca !rec_EmptyDerived2, !cir.ptr<!rec_EmptyDerived2>, ["d2"]
+// CIR:   cir.return
+
+// LLVM: define{{.*}} void @_Z18use_empty_derived2v
+// LLVM:   alloca %struct.EmptyDerived2
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z18use_empty_derived2v
+// OGCG:   alloca %struct.EmptyDerived2
+// OGCG:   ret void

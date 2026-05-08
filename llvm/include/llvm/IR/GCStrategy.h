@@ -47,6 +47,7 @@
 #ifndef LLVM_IR_GCSTRATEGY_H
 #define LLVM_IR_GCSTRATEGY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Registry.h"
 #include <optional>
 #include <string>
@@ -81,7 +82,7 @@ protected:
   bool UsesMetadata = false;     ///< If set, backend must emit metadata tables.
 
 public:
-  GCStrategy();
+  LLVM_ABI GCStrategy();
   virtual ~GCStrategy() = default;
 
   /// Return the name of the GC strategy.  This is the value of the collector
@@ -145,7 +146,7 @@ using GCRegistry = Registry<GCStrategy>;
 extern template class LLVM_TEMPLATE_ABI Registry<GCStrategy>;
 
 /// Lookup the GCStrategy object associated with the given gc name.
-std::unique_ptr<GCStrategy> getGCStrategy(const StringRef Name);
+LLVM_ABI std::unique_ptr<GCStrategy> getGCStrategy(const StringRef Name);
 
 } // end namespace llvm
 

@@ -47,6 +47,7 @@ SKIPPED = ResultCode("SKIPPED", "Skipped", False)
 UNSUPPORTED = ResultCode("UNSUPPORTED", "Unsupported", False)
 PASS = ResultCode("PASS", "Passed", False)
 FLAKYPASS = ResultCode("FLAKYPASS", "Passed With Retry", False)
+FIXED = ResultCode("FIXED", "Passed After Update", False)
 XFAIL = ResultCode("XFAIL", "Expectedly Failed", False)
 # Failures
 UNRESOLVED = ResultCode("UNRESOLVED", "Unresolved", True)
@@ -152,7 +153,13 @@ class Result(object):
     """Wrapper for the results of executing an individual test."""
 
     def __init__(
-        self, code, output="", elapsed=None, attempts=1, max_allowed_attempts=None
+        self,
+        code,
+        output="",
+        elapsed=None,
+        attempts=1,
+        max_allowed_attempts=None,
+        test_updater_outputs=[],
     ):
         # The result code.
         self.code = code
@@ -170,6 +177,8 @@ class Result(object):
         self.attempts = attempts
         # How many attempts were allowed for this test
         self.max_allowed_attempts = max_allowed_attempts
+        # Outputs from test updaters. One entry per attempt, or empty if disabled.
+        self.test_updater_outputs = test_updater_outputs
 
     def addMetric(self, name, value):
         """
@@ -247,6 +256,9 @@ class Test:
         # and will be honored when the test result is supplied.
         self.xfails = []
 
+        # Exclude this test if it's xfail.
+        self.exclude_xfail = False
+
         # If true, ignore all items in self.xfails.
         self.xfail_not = False
 
@@ -303,6 +315,11 @@ class Test:
 
     def getFullName(self):
         return self.suite.config.name + " :: " + "/".join(self.path_in_suite)
+
+    def getSummaryName(self, printPathRelativeCWD):
+        if printPathRelativeCWD:
+            return os.path.relpath(self.getFilePath())
+        return self.getFullName()
 
     def getFilePath(self):
         if self.file_path:

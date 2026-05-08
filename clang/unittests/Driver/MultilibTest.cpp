@@ -131,7 +131,7 @@ TEST(MultilibTest, Construction3) {
                                             E = M.flags().end();
        I != E; ++I) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(*I)
-                    .Cases("+f1", "+f2", "-f3", true)
+                    .Cases({"+f1", "+f2", "-f3"}, true)
                     .Default(false));
   }
 }
@@ -144,7 +144,7 @@ TEST(MultilibTest, SetPushback) {
   ASSERT_TRUE(MS.size() == 2);
   for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
-                    .Cases("/one", "/two", true)
+                    .Cases({"/one", "/two"}, true)
                     .Default(false));
   }
 }

@@ -1,6 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 program p
-  !PORTABILITY: Name 'p' declared in a main program should not have the same name as the main program [-Wbenign-name-clash]
   integer :: p
 end
 module m
@@ -33,7 +32,7 @@ end
 function f() result(res)
   integer :: res
   !ERROR: 'f' is already declared in this scoping unit
-  !ERROR: The type of 'f' has already been declared
+  !ERROR: The type of 'f' has already been declared as INTEGER(4)
   real :: f
   res = 1
 end

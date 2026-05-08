@@ -32,6 +32,8 @@
 #  elif SANITIZER_GLIBC || SANITIZER_ANDROID
 #    define SANITIZER_HAS_STAT64 1
 #    define SANITIZER_HAS_STATFS64 1
+#  elif SANITIZER_HAIKU
+#    include <stdint.h>
 #  endif
 
 #  if defined(__sparc__)
@@ -102,6 +104,8 @@ const unsigned struct_kernel_stat_sz = SANITIZER_ANDROID
                                            ? FIRST_32_SECOND_64(104, 128)
 #      if defined(_ABIN32) && _MIPS_SIM == _ABIN32
                                            : FIRST_32_SECOND_64(176, 216);
+#      elif SANITIZER_MUSL
+                                           : FIRST_32_SECOND_64(160, 208);
 #      else
                                            : FIRST_32_SECOND_64(160, 216);
 #      endif
@@ -476,6 +480,30 @@ struct __sanitizer_cmsghdr {
   int cmsg_level;
   int cmsg_type;
 };
+#  elif SANITIZER_MUSL
+struct __sanitizer_msghdr {
+  void *msg_name;
+  unsigned msg_namelen;
+  struct __sanitizer_iovec *msg_iov;
+  int msg_iovlen;
+#    if SANITIZER_WORDSIZE == 64
+  int __pad1;
+#    endif
+  void *msg_control;
+  unsigned msg_controllen;
+#    if SANITIZER_WORDSIZE == 64
+  int __pad2;
+#    endif
+  int msg_flags;
+};
+struct __sanitizer_cmsghdr {
+  unsigned cmsg_len;
+#    if SANITIZER_WORDSIZE == 64
+  int __pad1;
+#    endif
+  int cmsg_level;
+  int cmsg_type;
+};
 #  else
 // In POSIX, int msg_iovlen; socklen_t msg_controllen; socklen_t cmsg_len; but
 // many implementations don't conform to the standard.
@@ -603,7 +631,7 @@ typedef unsigned long __sanitizer_sigset_t;
 #  elif SANITIZER_APPLE
 typedef unsigned __sanitizer_sigset_t;
 #  elif SANITIZER_HAIKU
-typedef unsigned long __sanitizer_sigset_t;
+typedef uint64_t __sanitizer_sigset_t;
 #  elif SANITIZER_LINUX
 struct __sanitizer_sigset_t {
   // The size is determined by looking at sizeof of real sigset_t on linux.
@@ -1312,16 +1340,14 @@ extern unsigned IOCTL_SNDCTL_COPR_SENDMSG;
 extern unsigned IOCTL_SNDCTL_COPR_WCODE;
 extern unsigned IOCTL_SNDCTL_COPR_WDATA;
 extern unsigned IOCTL_TCFLSH;
-extern unsigned IOCTL_TCGETA;
-extern unsigned IOCTL_TCGETS;
 extern unsigned IOCTL_TCSBRK;
 extern unsigned IOCTL_TCSBRKP;
-extern unsigned IOCTL_TCSETA;
-extern unsigned IOCTL_TCSETAF;
-extern unsigned IOCTL_TCSETAW;
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
+extern unsigned IOCTL_TCGETS;
 extern unsigned IOCTL_TCSETS;
 extern unsigned IOCTL_TCSETSF;
 extern unsigned IOCTL_TCSETSW;
+#    endif
 extern unsigned IOCTL_TCXONC;
 extern unsigned IOCTL_TIOCGLCKTRMIOS;
 extern unsigned IOCTL_TIOCGSOFTCAR;

@@ -192,7 +192,6 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   SupportsDebugInformation = true;
 
   DollarIsPC = true;
-  AllowDollarAtStartOfIdentifier = false;
 
   // Set up DWARF directives
   MinInstAlignment = 4;
@@ -220,8 +219,6 @@ bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
   return evaluateAsRelocatable(Expr, Res, Asm);
 }
 
-void PPCXCOFFMCAsmInfo::anchor() {}
-
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
     report_fatal_error("XCOFF is not supported for little-endian targets");
@@ -238,7 +235,6 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
 
   // Support $ as PC in inline asm
   DollarIsPC = true;
-  AllowDollarAtStartOfIdentifier = false;
 
   UsesSetToEquateSymbol = true;
 

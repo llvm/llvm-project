@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/mbstate_t.h"
 #include "hdr/types/wchar_t.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/string/memset.h"
 #include "src/wchar/wcrtomb.h"

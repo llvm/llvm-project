@@ -1,4 +1,5 @@
-; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat=false 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CV
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CI
 ; RUN: llc -O3 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=O3
 
 ; This file checks that the translation from llvm IR to generic MachineInstr
@@ -599,10 +600,10 @@ define ptr @test_constant_null() {
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK: [[VAL1:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr, align 4)
 ; CHECK: [[CST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST1]](s64)
+; CHECK: [[GEP1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST1]](s64)
 ; CHECK: [[VAL2:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p0) :: (load (s32) from %ir.addr + 4)
 ; CHECK: G_STORE [[VAL1]](s8), [[ADDR]](p0) :: (store (s8) into %ir.addr, align 4)
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST1]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST1]](s64)
 ; CHECK: G_STORE [[VAL2]](s32), [[GEP2]](p0) :: (store (s32) into %ir.addr + 4)
 define void @test_struct_memops(ptr %addr) {
   %val = load { i8, i32 }, ptr %addr
@@ -706,7 +707,7 @@ define float @test_frem(float %arg1, float %arg2) {
 ; CHECK: [[VAL:%[0-9]+]]:_(s32), [[OVERFLOW:%[0-9]+]]:_(s1) = G_SADDO [[LHS]], [[RHS]]
 ; CHECK: G_STORE [[VAL]](s32), [[ADDR]](p0) :: (store (s32) into %ir.addr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST]](s64)
 ; CHECK: G_STORE [[OVERFLOW]](s1), [[GEP]](p0) :: (store (s1) into %ir.addr + 4, align 4)
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
 define void @test_sadd_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
@@ -722,7 +723,7 @@ define void @test_sadd_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
 ; CHECK: [[VAL:%[0-9]+]]:_(s32), [[OVERFLOW:%[0-9]+]]:_(s1) = G_UADDO [[LHS]], [[RHS]]
 ; CHECK: G_STORE [[VAL]](s32), [[ADDR]](p0) :: (store (s32) into %ir.addr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST]](s64)
 ; CHECK: G_STORE [[OVERFLOW]](s1), [[GEP]](p0) :: (store (s1) into %ir.addr + 4, align 4)
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
 define void @test_uadd_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
@@ -738,7 +739,7 @@ define void @test_uadd_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
 ; CHECK: [[VAL:%[0-9]+]]:_(s32), [[OVERFLOW:%[0-9]+]]:_(s1) = G_SSUBO [[LHS]], [[RHS]]
 ; CHECK: G_STORE [[VAL]](s32), [[ADDR]](p0) :: (store (s32) into %ir.subr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST]](s64)
 ; CHECK: G_STORE [[OVERFLOW]](s1), [[GEP]](p0) :: (store (s1) into %ir.subr + 4, align 4)
 declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
 define void @test_ssub_overflow(i32 %lhs, i32 %rhs, ptr %subr) {
@@ -754,7 +755,7 @@ define void @test_ssub_overflow(i32 %lhs, i32 %rhs, ptr %subr) {
 ; CHECK: [[VAL:%[0-9]+]]:_(s32), [[OVERFLOW:%[0-9]+]]:_(s1) = G_USUBO [[LHS]], [[RHS]]
 ; CHECK: G_STORE [[VAL]](s32), [[ADDR]](p0) :: (store (s32) into %ir.subr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST]](s64)
 ; CHECK: G_STORE [[OVERFLOW]](s1), [[GEP]](p0) :: (store (s1) into %ir.subr + 4, align 4)
 declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
 define void @test_usub_overflow(i32 %lhs, i32 %rhs, ptr %subr) {
@@ -770,7 +771,7 @@ define void @test_usub_overflow(i32 %lhs, i32 %rhs, ptr %subr) {
 ; CHECK: [[VAL:%[0-9]+]]:_(s32), [[OVERFLOW:%[0-9]+]]:_(s1) = G_SMULO [[LHS]], [[RHS]]
 ; CHECK: G_STORE [[VAL]](s32), [[ADDR]](p0) :: (store (s32) into %ir.addr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST]](s64)
 ; CHECK: G_STORE [[OVERFLOW]](s1), [[GEP]](p0) :: (store (s1) into %ir.addr + 4, align 4)
 declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32)
 define void @test_smul_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
@@ -786,7 +787,7 @@ define void @test_smul_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
 ; CHECK: [[VAL:%[0-9]+]]:_(s32), [[OVERFLOW:%[0-9]+]]:_(s1) = G_UMULO [[LHS]], [[RHS]]
 ; CHECK: G_STORE [[VAL]](s32), [[ADDR]](p0) :: (store (s32) into %ir.addr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST]](s64)
 ; CHECK: G_STORE [[OVERFLOW]](s1), [[GEP]](p0) :: (store (s1) into %ir.addr + 4, align 4)
 declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 define void @test_umul_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
@@ -799,13 +800,13 @@ define void @test_umul_overflow(i32 %lhs, i32 %rhs, ptr %addr) {
 ; CHECK: %0:_(p0) = COPY $x0
 ; CHECK: [[LD1:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr, align 4)
 ; CHECK: [[CST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST1]](s64)
+; CHECK: [[GEP1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST1]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p0) :: (load (s8) from %ir.addr + 4, align 4)
 ; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST2]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST2]](s64)
 ; CHECK: [[LD3:%[0-9]+]]:_(s32) = G_LOAD [[GEP2]](p0) :: (load (s32) from %ir.addr + 8)
 ; CHECK: [[CST3:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST3]](s64)
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST3]](s64)
 ; CHECK: [[LD4:%[0-9]+]]:_(s32) = G_LOAD [[GEP3]](p0) :: (load (s32) from %ir.addr + 12)
 ; CHECK: $w0 = COPY [[LD3]](s32)
 %struct.nested = type {i8, { i8, i32 }, i32}
@@ -820,16 +821,16 @@ define i32 @test_extractvalue(ptr %addr) {
 ; CHECK: %1:_(p0) = COPY $x1
 ; CHECK: [[LD1:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr, align 4)
 ; CHECK: [[CST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST1]](s64)
+; CHECK: [[GEP1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST1]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p0) :: (load (s8) from %ir.addr + 4, align 4)
 ; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST2]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST2]](s64)
 ; CHECK: [[LD3:%[0-9]+]]:_(s32) = G_LOAD [[GEP2]](p0) :: (load (s32) from %ir.addr + 8)
 ; CHECK: [[CST3:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST3]](s64)
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST3]](s64)
 ; CHECK: [[LD4:%[0-9]+]]:_(s32) = G_LOAD [[GEP3]](p0) :: (load (s32) from %ir.addr + 12)
 ; CHECK: G_STORE [[LD2]](s8), %1(p0) :: (store (s8) into %ir.addr2, align 4)
-; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD %1, [[CST1]](s64)
+; CHECK: [[GEP4:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %1, [[CST1]](s64)
 ; CHECK: G_STORE [[LD3]](s32), [[GEP4]](p0) :: (store (s32) into %ir.addr2 + 4)
 define void @test_extractvalue_agg(ptr %addr, ptr %addr2) {
   %struct = load %struct.nested, ptr %addr
@@ -854,20 +855,20 @@ define void @test_trivial_extract_ptr([1 x ptr] %s, i8 %val) {
 ; CHECK: %1:_(s32) = COPY $w1
 ; CHECK: [[LD1:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr, align 4)
 ; CHECK: [[CST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST1]](s64)
+; CHECK: [[GEP1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST1]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p0) :: (load (s8) from %ir.addr + 4, align 4)
 ; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST2]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST2]](s64)
 ; CHECK: [[LD3:%[0-9]+]]:_(s32) = G_LOAD [[GEP2]](p0) :: (load (s32) from %ir.addr + 8)
 ; CHECK: [[CST3:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST3]](s64)
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST3]](s64)
 ; CHECK: [[LD4:%[0-9]+]]:_(s32) = G_LOAD [[GEP3]](p0) :: (load (s32) from %ir.addr + 12)
 ; CHECK: G_STORE [[LD1]](s8), %0(p0) :: (store (s8) into %ir.addr, align 4)
-; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST1]](s64)
+; CHECK: [[GEP4:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST1]](s64)
 ; CHECK: G_STORE [[LD2]](s8), [[GEP4]](p0) :: (store (s8) into %ir.addr + 4, align 4)
-; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST2]](s64)
+; CHECK: [[GEP5:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST2]](s64)
 ; CHECK: G_STORE %1(s32), [[GEP5]](p0) :: (store (s32) into %ir.addr + 8)
-; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST3]](s64)
+; CHECK: [[GEP6:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST3]](s64)
 ; CHECK: G_STORE [[LD4]](s32), [[GEP6]](p0) :: (store (s32) into %ir.addr + 12)
 define void @test_insertvalue(ptr %addr, i32 %val) {
   %struct = load %struct.nested, ptr %addr
@@ -899,23 +900,23 @@ define [1 x ptr] @test_trivial_insert_ptr([1 x ptr] %s, ptr %val) {
 ; CHECK: %1:_(p0) = COPY $x1
 ; CHECK: [[LD1:%[0-9]+]]:_(s8) = G_LOAD %1(p0) :: (load (s8) from %ir.addr2, align 4)
 ; CHECK: [[CST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD %1, [[CST1]](s64)
+; CHECK: [[GEP1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %1, [[CST1]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p0) :: (load (s32) from %ir.addr2 + 4)
 ; CHECK: [[LD3:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr, align 4)
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST1]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST1]](s64)
 ; CHECK: [[LD4:%[0-9]+]]:_(s8) = G_LOAD [[GEP2]](p0) :: (load (s8) from %ir.addr + 4, align 4)
 ; CHECK: [[CST3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST3]](s64)
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST3]](s64)
 ; CHECK: [[LD5:%[0-9]+]]:_(s32) = G_LOAD [[GEP3]](p0) :: (load (s32) from %ir.addr + 8)
 ; CHECK: [[CST4:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST4]](s64)
+; CHECK: [[GEP4:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST4]](s64)
 ; CHECK: [[LD6:%[0-9]+]]:_(s32) = G_LOAD [[GEP4]](p0) :: (load (s32) from %ir.addr + 12)
 ; CHECK: G_STORE [[LD3]](s8), %0(p0) :: (store (s8) into %ir.addr, align 4)
-; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST1]](s64)
+; CHECK: [[GEP5:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST1]](s64)
 ; CHECK: G_STORE [[LD1]](s8), [[GEP5]](p0) :: (store (s8) into %ir.addr + 4, align 4)
-; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST3]](s64)
+; CHECK: [[GEP6:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST3]](s64)
 ; CHECK: G_STORE [[LD2]](s32), [[GEP6]](p0) :: (store (s32) into %ir.addr + 8)
-; CHECK: [[GEP7:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST4]](s64)
+; CHECK: [[GEP7:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST4]](s64)
 ; CHECK: G_STORE [[LD6]](s32), [[GEP7]](p0) :: (store (s32) into %ir.addr + 12)
 define void @test_insertvalue_agg(ptr %addr, ptr %addr2) {
   %smallstruct = load {i8, i32}, ptr %addr2
@@ -1701,13 +1702,19 @@ define i32 @test_constantaggzerovector_v1s32(i32 %arg){
 }
 
 define i32 @test_constantdatavector_v1s32(i32 %arg){
-; CHECK-LABEL: name: test_constantdatavector_v1s32
-; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK-NOT: G_MERGE_VALUES
-; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C0]]
-; CHECK-NOT: G_MERGE_VALUES
-; CHECK: G_ADD [[ARG]], [[COPY]]
+; CHECK-CV-LABEL: name: test_constantdatavector_v1s32
+; CHECK-CV: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK-CV: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+; CHECK-CV-NOT: G_MERGE_VALUES
+; CHECK-CV: [[COPY:%[0-9]+]]:_(s32) = COPY [[C0]]
+; CHECK-CV-NOT: G_MERGE_VALUES
+; CHECK-CV: G_ADD [[ARG]], [[COPY]]
+;
+; CHECK-CI-LABEL: name: test_constantdatavector_v1s32
+; CHECK-CI: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK-CI: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+; CHECK-CI-NOT: G_MERGE_VALUES
+; CHECK-CI: G_ADD [[ARG]], [[C0]]
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %add = add <1 x i32> %vec, <i32 1>
   %res = extractelement <1 x i32> %add, i32 0
@@ -1727,8 +1734,7 @@ define float @test_different_call_conv_target(float %x) {
 define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], shufflemask(0, 0)
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ARG]](s32), [[ARG]](s32)
 ; CHECK: $d0 = COPY [[VEC]](<2 x s32>)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %res = shufflevector <1 x i32> %vec, <1 x i32> undef, <2 x i32> zeroinitializer
@@ -1738,7 +1744,8 @@ define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 define i32 @test_shufflevector_v2s32_s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_s32
 ; CHECK: [[ARG:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], shufflemask(1)
+; CHECK: [[IDX:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[ARG]](<2 x s32>), [[IDX]](s64)
 ; CHECK: $w0 = COPY [[RES]](s32)
   %vec = shufflevector <2 x i32> %arg, <2 x i32> undef, <1 x i32> <i32 1>
   %res = extractelement <1 x i32> %vec, i32 0
@@ -1905,19 +1912,19 @@ define void @test_phi_diamond(ptr %a.ptr, ptr %b.ptr, i1 %selector, ptr %dst) {
 
 ; CHECK: [[LD1:%[0-9]+]]:_(s8) = G_LOAD [[ARG1]](p0) :: (load (s8) from %ir.a.ptr, align 4)
 ; CHECK: [[CST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[ARG1]], [[CST1]](s64)
+; CHECK: [[GEP1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ARG1]], [[CST1]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s16) = G_LOAD [[GEP1]](p0) :: (load (s16) from %ir.a.ptr + 2)
 ; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ARG1]], [[CST2]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ARG1]], [[CST2]](s64)
 ; CHECK: [[LD3:%[0-9]+]]:_(s32) = G_LOAD [[GEP2]](p0) :: (load (s32) from %ir.a.ptr + 4)
 ; CHECK: G_BR %bb.4
 
 ; CHECK: [[LD4:%[0-9]+]]:_(s8) = G_LOAD [[ARG2]](p0) :: (load (s8) from %ir.b.ptr, align 4)
 ; CHECK: [[CST3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[ARG2]], [[CST3]](s64)
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ARG2]], [[CST3]](s64)
 ; CHECK: [[LD5:%[0-9]+]]:_(s16) = G_LOAD [[GEP3]](p0) :: (load (s16) from %ir.b.ptr + 2)
 ; CHECK: [[CST4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD [[ARG2]], [[CST4]](s64)
+; CHECK: [[GEP4:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ARG2]], [[CST4]](s64)
 ; CHECK: [[LD6:%[0-9]+]]:_(s32) = G_LOAD [[GEP4]](p0) :: (load (s32) from %ir.b.ptr + 4)
 
 ; CHECK: [[PN1:%[0-9]+]]:_(s8) = G_PHI [[LD1]](s8), %bb.2, [[LD4]](s8), %bb.3
@@ -1925,10 +1932,10 @@ define void @test_phi_diamond(ptr %a.ptr, ptr %b.ptr, i1 %selector, ptr %dst) {
 ; CHECK: [[PN3:%[0-9]+]]:_(s32) = G_PHI [[LD3]](s32), %bb.2, [[LD6]](s32), %bb.3
 ; CHECK: G_STORE [[PN1]](s8), [[ARG4]](p0) :: (store (s8) into %ir.dst, align 4)
 ; CHECK: [[CST5:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_PTR_ADD [[ARG4]], [[CST5]](s64)
+; CHECK: [[GEP5:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ARG4]], [[CST5]](s64)
 ; CHECK: G_STORE [[PN2]](s16), [[GEP5]](p0) :: (store (s16) into %ir.dst + 2)
 ; CHECK: [[CST6:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_PTR_ADD [[ARG4]], [[CST6]](s64)
+; CHECK: [[GEP6:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ARG4]], [[CST6]](s64)
 ; CHECK: G_STORE [[PN3]](s32), [[GEP6]](p0) :: (store (s32) into %ir.dst + 4)
 ; CHECK: RET_ReallyLR
 
@@ -1964,22 +1971,22 @@ define void @test_nested_aggregate_const(ptr %ptr) {
 ; CHECK: [[CST6:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
 ; CHECK: G_STORE [[CST1]](s32), [[BASE]](p0) :: (store (s32) into %ir.ptr, align 8)
 ; CHECK: [[CST7:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[BASE]], [[CST7]](s64)
+; CHECK: [[GEP1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[BASE]], [[CST7]](s64)
 ; CHECK: G_STORE [[CST1]](s32), [[GEP1]](p0) :: (store (s32) into %ir.ptr + 4)
 ; CHECK: [[CST8:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[BASE]], [[CST8]](s64)
+; CHECK: [[GEP2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[BASE]], [[CST8]](s64)
 ; CHECK: G_STORE [[CST2]](s16), [[GEP2]](p0) :: (store (s16) into %ir.ptr + 8, align 8)
 ; CHECK: [[CST9:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[BASE]], [[CST9]](s64)
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[BASE]], [[CST9]](s64)
 ; CHECK: G_STORE [[CST3]](s8), [[GEP3]](p0) :: (store (s8) into %ir.ptr + 10, align 2)
 ; CHECK: [[CST10:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD [[BASE]], [[CST10]](s64)
+; CHECK: [[GEP4:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[BASE]], [[CST10]](s64)
 ; CHECK: G_STORE [[CST4]](s64), [[GEP4]](p0) :: (store (s64) into %ir.ptr + 16)
 ; CHECK: [[CST11:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_PTR_ADD [[BASE]], [[CST11]](s64)
+; CHECK: [[GEP5:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[BASE]], [[CST11]](s64)
 ; CHECK: G_STORE [[CST5]](s64), [[GEP5]](p0) :: (store (s64) into %ir.ptr + 24)
 ; CHECK: [[CST12:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_PTR_ADD [[BASE]], [[CST12]](s64)
+; CHECK: [[GEP6:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[BASE]], [[CST12]](s64)
 ; CHECK: G_STORE [[CST6]](s32), [[GEP6]](p0) :: (store (s32) into %ir.ptr + 32, align 8)
   store %agg.nested { i32 1, i32 1, %agg.inner { i16 2, i8 3, %agg.inner.inner {i64 5, i64 8} }, i32 13}, ptr %ptr
   ret void
@@ -2519,7 +2526,7 @@ define {i8, i32} @test_freeze_struct(ptr %addr) {
   ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0)
   ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]]
+  ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]]
   ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0)
   ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s8) = G_FREEZE [[LOAD]]
   ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(s32) = G_FREEZE [[LOAD1]]

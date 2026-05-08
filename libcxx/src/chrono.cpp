@@ -31,7 +31,7 @@
 #  include <sys/time.h> // for gettimeofday and timeval
 #endif
 
-#if defined(__LLVM_LIBC__)
+#if _LIBCPP_LIBC_LLVM_LIBC
 #  define _LIBCPP_HAS_TIMESPEC_GET
 #endif
 

@@ -8,9 +8,10 @@
 
 # Test that we can include each header in two TU's and link them together.
 
-# RUN: %{python} %s %{libcxx-dir}/utils
+# We're using compiler-specific flags in this test
+# REQUIRES: (gcc || clang)
 
-# Block Lit from interpreting a RUN/XFAIL/etc inside the generation script.
+# RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 
 import sys
@@ -27,9 +28,6 @@ for header in public_headers:
 //--- {header}.sh.cpp
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
-
-// We're using compiler-specific flags in this test
-// REQUIRES: (gcc || clang)
 
 // RUN: %{{cxx}} -c %s -o %t.first.o %{{flags}} %{{compile_flags}}
 // RUN: %{{cxx}} -c %s -o %t.second.o -DWITH_MAIN %{{flags}} %{{compile_flags}}

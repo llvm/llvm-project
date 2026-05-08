@@ -2,7 +2,7 @@
 
 // vftable shouldn't have RTTI data in it.
 // CHECK-NOT: @"??_R4S@@6B@"
-// CHECK: @"??_7S@@6B@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"??_GS@@UAEPAXI@Z"] }, comdat
+// CHECK: @"??_7S@@6B@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"??_ES@@UAEPAXI@Z"] }, comdat
 
 struct type_info;
 namespace std { using ::type_info; }

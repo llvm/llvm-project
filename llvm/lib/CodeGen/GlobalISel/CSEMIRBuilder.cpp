@@ -95,7 +95,7 @@ void CSEMIRBuilder::profileSrcOp(const SrcOp &Op,
                                  GISelInstProfileBuilder &B) const {
   switch (Op.getSrcOpKind()) {
   case SrcOp::SrcType::Ty_Imm:
-    B.addNodeIDImmediate(static_cast<int64_t>(Op.getImm()));
+    B.addNodeIDImmediate(Op.getImm());
     break;
   case SrcOp::SrcType::Ty_Predicate:
     B.addNodeIDImmediate(static_cast<int64_t>(Op.getPredicate()));
@@ -339,8 +339,10 @@ MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
 
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
-  if (Ty.isVector())
+  if (Ty.isFixedVector())
     return buildSplatBuildVector(Res, buildConstant(Ty.getElementType(), Val));
+  if (Ty.isScalableVector())
+    return buildSplatVector(Res, buildConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());

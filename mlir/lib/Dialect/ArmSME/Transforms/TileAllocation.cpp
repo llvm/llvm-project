@@ -53,6 +53,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir::arm_sme {
@@ -210,14 +211,14 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
 
   auto insertJump = [&](Location loc, Block *source, Block *dest, auto args) {
     rewriter.setInsertionPointToEnd(source);
-    rewriter.create<cf::BranchOp>(loc, dest, args);
+    cf::BranchOp::create(rewriter, loc, dest, args);
   };
 
   for (auto condBranch : worklist) {
     auto loc = condBranch.getLoc();
     Block *block = condBranch->getBlock();
-    auto newTrueBranch = rewriter.splitBlock(block, block->end());
-    auto newFalseBranch = rewriter.splitBlock(block, block->end());
+    auto *newTrueBranch = rewriter.splitBlock(block, block->end());
+    auto *newFalseBranch = rewriter.splitBlock(block, block->end());
     insertJump(loc, newTrueBranch, condBranch.getTrueDest(),
                condBranch.getTrueDestOperands());
     insertJump(loc, newFalseBranch, condBranch.getFalseDest(),
@@ -253,7 +254,7 @@ void insertCopiesAtBranches(IRRewriter &rewriter,
     for (OpOperand &operand : terminator->getOpOperands()) {
       if (isValidSMETileVectorType(operand.get().getType())) {
         auto copy =
-            rewriter.create<CopyTileOp>(terminator->getLoc(), operand.get());
+            CopyTileOp::create(rewriter, terminator->getLoc(), operand.get());
         rewriter.modifyOpInPlace(terminator, [&] { operand.assign(copy); });
       }
     }
@@ -342,7 +343,7 @@ struct LiveRange {
 /// Operations are numbered consecutively wihin blocks, and the blocks are
 /// topologically sorted (using forward edges). This function is only correct if
 /// all ArmSME have been converted to CF (which is asserted).
-DenseMap<Operation *, unsigned>
+FailureOr<DenseMap<Operation *, unsigned>>
 generateOperationNumbering(FunctionOpInterface function) {
   unsigned index = 0;
   SetVector<Block *> blocks =
@@ -351,15 +352,21 @@ generateOperationNumbering(FunctionOpInterface function) {
   for (Block *block : blocks) {
     index++; // We want block args to have their own number.
     for (Operation &op : block->getOperations()) {
-#ifndef NDEBUG
-      op.walk([&](ArmSMETileOpInterface nestedOp) {
-        assert(&op == nestedOp.getOperation() &&
-               "ArmSME tile allocation does not support nested regions");
-      });
-#endif
+      WalkResult walkResult =
+          op.walk([&](ArmSMETileOpInterface nestedOp) -> WalkResult {
+            if (&op != nestedOp.getOperation())
+              return WalkResult::interrupt();
+            return WalkResult::advance();
+          });
+      if (walkResult.wasInterrupted()) {
+        return op.emitError("ArmSME tile allocation requires flattened control "
+                            "flow; run -convert-scf-to-cf before this pass "
+                            "(e.g. via convert-arm-sme-to-llvm pipeline)");
+      }
       operationToIndexMap.try_emplace(&op, index++);
     }
   }
+
   return operationToIndexMap;
 }
 
@@ -382,7 +389,7 @@ gatherTileLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
     // Find or create a live range for `value`.
     auto [it, _] = liveRanges.try_emplace(value, liveRangeAllocator);
     LiveRange &valueLiveRange = it->second;
-    auto lastUseInBlock = livenessInfo.getEndOperation(value, firstUseOrDef);
+    auto *lastUseInBlock = livenessInfo.getEndOperation(value, firstUseOrDef);
     // Add the interval [firstUseOrDef, lastUseInBlock) to the live range.
     unsigned startOpIdx =
         operationToIndexMap.at(firstUseOrDef) + (liveAtBlockEntry ? -1 : 0);
@@ -417,11 +424,11 @@ static void forEachPredecessorTileValue(BlockArgument blockArg,
   unsigned argNumber = blockArg.getArgNumber();
   for (Block *pred : block->getPredecessors()) {
     TypeSwitch<Operation *>(pred->getTerminator())
-        .Case<cf::BranchOp>([&](auto branch) {
+        .Case([&](cf::BranchOp branch) {
           Value predecessorOperand = branch.getDestOperands()[argNumber];
           callback(predecessorOperand);
         })
-        .Case<cf::CondBranchOp>([&](auto condBranch) {
+        .Case([&](cf::CondBranchOp condBranch) {
           if (condBranch.getFalseDest() == block) {
             Value predecessorOperand =
                 condBranch.getFalseDestOperands()[argNumber];
@@ -808,7 +815,10 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
 
   // 2. Gather live ranges for each ArmSME tile within the function.
   Liveness liveness(function);
-  auto operationToIndexMap = generateOperationNumbering(function);
+  auto maybeOperationToIndexMap = generateOperationNumbering(function);
+  if (failed(maybeOperationToIndexMap))
+    return failure();
+  auto &operationToIndexMap = *maybeOperationToIndexMap;
   auto initialLiveRanges = gatherTileLiveRanges(
       operationToIndexMap, liveRangeAllocator, liveness, function);
   if (initialLiveRanges.empty())
@@ -819,8 +829,8 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
     auto nonEmpty = llvm::make_filter_range(
         llvm::make_second_range(initialLiveRanges),
         [&](LiveRange const &liveRange) { return !liveRange.empty(); });
-    auto initialRanges = llvm::to_vector(llvm::map_range(
-        nonEmpty, [](LiveRange const &liveRange) { return &liveRange; }));
+    auto initialRanges = llvm::map_to_vector(
+        nonEmpty, [](LiveRange const &liveRange) { return &liveRange; });
     llvm::sort(initialRanges,
                [](LiveRange const *a, LiveRange const *b) { return *a < *b; });
     llvm::errs() << "\n========== Initial Live Ranges:\n";

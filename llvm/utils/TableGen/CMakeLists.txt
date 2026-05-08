@@ -39,10 +39,13 @@ add_tablegen(llvm-tblgen LLVM
   CompressInstEmitter.cpp
   CTagsEmitter.cpp
   DAGISelEmitter.cpp
+  DAGISelMatcher.cpp
   DAGISelMatcherEmitter.cpp
   DAGISelMatcherGen.cpp
   DAGISelMatcherOpt.cpp
   DecoderEmitter.cpp
+  DecoderTableEmitter.cpp
+  DecoderTree.cpp
   DFAEmitter.cpp
   DFAPacketizerEmitter.cpp
   DisassemblerEmitter.cpp

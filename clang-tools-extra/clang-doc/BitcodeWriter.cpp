@@ -174,6 +174,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {NAMESPACE_USR, {"USR", &genSymbolIdAbbrev}},
           {NAMESPACE_NAME, {"Name", &genStringAbbrev}},
           {NAMESPACE_PATH, {"Path", &genStringAbbrev}},
+          {NAMESPACE_PARENT_USR, {"ParentUSR", &genSymbolIdAbbrev}},
           {ENUM_USR, {"USR", &genSymbolIdAbbrev}},
           {ENUM_NAME, {"Name", &genStringAbbrev}},
           {ENUM_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
@@ -190,6 +191,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {RECORD_TAG_TYPE, {"TagType", &genIntAbbrev}},
           {RECORD_IS_TYPE_DEF, {"IsTypeDef", &genBoolAbbrev}},
           {RECORD_MANGLED_NAME, {"MangledName", &genStringAbbrev}},
+          {RECORD_PARENT_USR, {"ParentUSR", &genSymbolIdAbbrev}},
           {BASE_RECORD_USR, {"USR", &genSymbolIdAbbrev}},
           {BASE_RECORD_NAME, {"Name", &genStringAbbrev}},
           {BASE_RECORD_PATH, {"Path", &genStringAbbrev}},
@@ -210,6 +212,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {REFERENCE_TYPE, {"RefType", &genIntAbbrev}},
           {REFERENCE_PATH, {"Path", &genStringAbbrev}},
           {REFERENCE_FIELD, {"Field", &genIntAbbrev}},
+          {REFERENCE_FILE, {"File", &genStringAbbrev}},
           {TEMPLATE_PARAM_CONTENTS, {"Contents", &genStringAbbrev}},
           {TEMPLATE_SPECIALIZATION_OF,
            {"SpecializationOf", &genSymbolIdAbbrev}},
@@ -222,6 +225,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {CONCEPT_IS_TYPE, {"IsType", &genBoolAbbrev}},
           {CONCEPT_CONSTRAINT_EXPRESSION,
            {"ConstraintExpression", &genStringAbbrev}},
+          {CONCEPT_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
           {CONSTRAINT_EXPRESSION, {"Expression", &genStringAbbrev}},
           {VAR_USR, {"USR", &genSymbolIdAbbrev}},
           {VAR_NAME, {"Name", &genStringAbbrev}},
@@ -268,12 +272,12 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
          {TYPEDEF_USR, TYPEDEF_NAME, TYPEDEF_DEFLOCATION, TYPEDEF_IS_USING}},
         // Namespace Block
         {BI_NAMESPACE_BLOCK_ID,
-         {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_PATH}},
+         {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_PATH, NAMESPACE_PARENT_USR}},
         // Record Block
         {BI_RECORD_BLOCK_ID,
          {RECORD_USR, RECORD_NAME, RECORD_PATH, RECORD_DEFLOCATION,
           RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF,
-          RECORD_MANGLED_NAME}},
+          RECORD_MANGLED_NAME, RECORD_PARENT_USR}},
         // BaseRecord Block
         {BI_BASE_RECORD_BLOCK_ID,
          {BASE_RECORD_USR, BASE_RECORD_NAME, BASE_RECORD_PATH,
@@ -286,7 +290,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
          {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE,
-          REFERENCE_PATH, REFERENCE_FIELD}},
+          REFERENCE_PATH, REFERENCE_FIELD, REFERENCE_FILE}},
         // Template Blocks.
         {BI_TEMPLATE_BLOCK_ID, {}},
         {BI_TEMPLATE_PARAM_BLOCK_ID, {TEMPLATE_PARAM_CONTENTS}},
@@ -294,15 +298,13 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Concept Block
         {BI_CONCEPT_BLOCK_ID,
          {CONCEPT_USR, CONCEPT_NAME, CONCEPT_IS_TYPE,
-          CONCEPT_CONSTRAINT_EXPRESSION}},
+          CONCEPT_CONSTRAINT_EXPRESSION, CONCEPT_DEFLOCATION}},
         // Constraint Block
         {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}},
         {BI_VAR_BLOCK_ID, {VAR_NAME, VAR_USR, VAR_DEFLOCATION, VAR_IS_STATIC}},
         {BI_FRIEND_BLOCK_ID, {FRIEND_IS_CLASS}}};
 
 // AbbreviationMap
-
-constexpr unsigned char BitCodeConstants::Signature[];
 
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
@@ -479,6 +481,7 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   emitRecord((unsigned)R.RefType, REFERENCE_TYPE);
   emitRecord(R.Path, REFERENCE_PATH);
   emitRecord((unsigned)Field, REFERENCE_FIELD);
+  emitRecord(R.DocumentationFileName, REFERENCE_FILE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {
@@ -487,11 +490,12 @@ void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {
   emitRecord(R.IsClass, FRIEND_IS_CLASS);
   if (R.Template)
     emitBlock(*R.Template);
-  if (R.Params)
-    for (const auto &P : *R.Params)
-      emitBlock(P);
+  for (const auto &P : R.Params)
+    emitBlock(P);
   if (R.ReturnType)
     emitBlock(*R.ReturnType);
+  for (const auto &CI : R.Description)
+    emitBlock(CI);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
@@ -511,6 +515,8 @@ void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
     emitBlock(CI);
   if (T.DefLoc)
     emitRecord(*T.DefLoc, TYPEDEF_DEFLOCATION);
+  if (T.Template)
+    emitBlock(*T.Template);
   emitRecord(T.IsUsing, TYPEDEF_IS_USING);
   emitBlock(T.Underlying);
 }
@@ -557,7 +563,7 @@ void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   for (const auto &A : I.Args)
     emitRecord(A, COMMENT_ARG);
   for (const auto &C : I.Children)
-    emitBlock(*C);
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
@@ -565,6 +571,7 @@ void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
   emitRecord(I.USR, NAMESPACE_USR);
   emitRecord(I.Name, NAMESPACE_NAME);
   emitRecord(I.Path, NAMESPACE_PATH);
+  emitRecord(I.ParentUSR, NAMESPACE_PARENT_USR);
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
@@ -619,6 +626,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   emitRecord(I.Name, RECORD_NAME);
   emitRecord(I.Path, RECORD_PATH);
   emitRecord(I.MangledName, RECORD_MANGLED_NAME);
+  emitRecord(I.ParentUSR, RECORD_PARENT_USR);
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
@@ -698,6 +706,8 @@ void ClangDocBitcodeWriter::emitBlock(const ConceptInfo &I) {
   emitRecord(I.IsType, CONCEPT_IS_TYPE);
   emitRecord(I.ConstraintExpression, CONCEPT_CONSTRAINT_EXPRESSION);
   emitBlock(I.Template);
+  if (I.DefLoc)
+    emitRecord(*I.DefLoc, CONCEPT_DEFLOCATION);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TemplateInfo &T) {
@@ -769,7 +779,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     emitBlock(*static_cast<FriendInfo *>(I));
     break;
   case InfoType::IT_default:
-    llvm::errs() << "Unexpected info, unable to write.\n";
+    unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                        "Unexpected info, unable to write.");
+    Diags.Report(ID);
     return true;
   }
   return false;

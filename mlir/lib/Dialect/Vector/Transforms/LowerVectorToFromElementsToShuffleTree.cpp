@@ -629,8 +629,8 @@ Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
                                                     nextLevelVectorSize);
       }
 
-      Value shuffleVal = rewriter.create<vector::ShuffleOp>(
-          loc, lhsVector, rhsVector, shuffleMask);
+      Value shuffleVal = vector::ShuffleOp::create(rewriter, loc, lhsVector,
+                                                   rhsVector, shuffleMask);
       levelOutputs.push_back(shuffleVal);
     }
 
@@ -667,7 +667,7 @@ getToElementsDefiningOps(FromElementsOp fromElemsOp,
 struct ToFromElementsToShuffleTreeRewrite final
     : OpRewritePattern<vector::FromElementsOp> {
 
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::FromElementsOp fromElemsOp,
                                 PatternRewriter &rewriter) const override {

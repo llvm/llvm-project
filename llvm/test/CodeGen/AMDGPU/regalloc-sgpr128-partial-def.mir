@@ -1,0 +1,65 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs --stress-regalloc=2 -start-before=greedy -stop-after=virtregrewriter \
+# RUN:   %s -o - | FileCheck %s
+
+# Test that S_MOV_B64 rematerialization is shrunk to S_MOV_B32 when only a
+# single 32-bit subreg of the defined value is used at the remat point.
+
+# CHECK-LABEL: name: remat_shrink_s_mov_b64
+---
+name: remat_shrink_s_mov_b64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr8_sgpr9
+    %0:sreg_64_xexec = COPY $sgpr8_sgpr9
+
+    ; 0x0000002A_00000539: Lo_32 = 1337, Hi_32 = 42
+    undef %1.sub0_sub1:sgpr_128 = S_MOV_B64 180388627769
+    ; 0x00000007_00000065: Lo_32 = 101, Hi_32 = 7
+    undef %2.sub0_sub1:sgpr_128 = S_MOV_B64 30064771173
+    %2.sub2_sub3:sgpr_128 = S_MOV_B64 2
+    undef %3.sub2_sub3:sgpr_128 = S_MOV_B64 30064771173
+    undef %4.sub2_sub3:sgpr_128 = S_MOV_B64 180388627769
+    undef %5.sub0_sub1:sgpr_128 = S_MOV_B64 180388627769
+    %6:sreg_64 = S_MOV_B64_IMM_PSEUDO 65536
+    S_NOP 0, implicit %1.sub0
+    S_NOP 0, implicit %1.sub1
+
+    ; CHECK: S_NOP 0, implicit-def $sgpr0_sgpr1
+    S_NOP 0, implicit-def $sgpr0_sgpr1, implicit-def $sgpr2_sgpr3, implicit-def $sgpr4_sgpr5, implicit-def $sgpr6_sgpr7
+
+    ; %2: uses both sub0 and sub1 - no shrink expected.
+    S_NOP 0, implicit %2.sub0
+    S_NOP 0, implicit %2.sub1
+
+    ; %1: both lanes used after barrier, rematerialized as S_MOV_B64, not shrunk.
+    ; CHECK: renamable $[[REG1LO:sgpr[0-9]+]]_[[REG1HI:sgpr[0-9]+]] = S_MOV_B64 180388627769
+    ; CHECK-NEXT: S_NOP 0, implicit renamable $[[REG1HI]]
+    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG1LO]]
+    S_NOP 0, implicit %1.sub1
+    S_NOP 0, implicit %1.sub0
+
+    ; %3: only sub3 used - shrink to S_MOV_B32 with Hi_32(0x0000000700000065) = 7.
+    ; CHECK: renamable $[[REG3:sgpr[0-9]+]] = S_MOV_B32 7
+    ; CHECK-NEXT: S_NOP 0, implicit renamable $[[REG3]]
+    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG3]]
+    S_NOP 0, implicit %3.sub3
+    S_NOP 0, implicit %3.sub3
+
+    ; %4: only sub2 used - shrink to S_MOV_B32 with Lo_32(0x0000002A00000539) = 1337.
+    ; CHECK: renamable $[[REG4:sgpr[0-9]+]] = S_MOV_B32 1337
+    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG4]]
+    S_NOP 0, implicit %4.sub2
+
+    ; %5: sub0_sub1 def, only sub1 used - shrink to S_MOV_B32 with Hi_32(0x0000002A00000539) = 42.
+    ; CHECK: renamable $[[REG5:sgpr[0-9]+]] = S_MOV_B32 42
+    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG5]]
+    S_NOP 0, implicit %5.sub1
+
+    ; CHECK: renamable $[[REG6:sgpr[0-9]+]] = S_MOV_B32 65536
+    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG6]]
+    S_NOP 0, implicit %6.sub0
+
+    ; CHECK: S_ENDPGM 0
+    S_ENDPGM 0, implicit %0, implicit %1.sub0
+...

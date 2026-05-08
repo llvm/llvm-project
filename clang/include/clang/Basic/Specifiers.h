@@ -120,7 +120,7 @@ namespace clang {
 
   /// A C++ access specifier (public, private, protected), plus the
   /// special value "none" which means different things in different contexts.
-  enum AccessSpecifier {
+  enum AccessSpecifier : uint8_t {
     AS_public,
     AS_protected,
     AS_private,
@@ -153,7 +153,7 @@ namespace clang {
     /// A bitfield object is a bitfield on a C or C++ record.
     OK_BitField,
 
-    /// A vector component is an element or range of elements on a vector.
+    /// A vector component is an element or range of elements of a vector.
     OK_VectorComponent,
 
     /// An Objective-C property is a logical field of an Objective-C
@@ -165,7 +165,7 @@ namespace clang {
     /// Objective-C method calls.
     OK_ObjCSubscript,
 
-    /// A matrix component is a single element of a matrix.
+    /// A matrix component is a single element or range of elements of a matrix.
     OK_MatrixComponent
   };
 

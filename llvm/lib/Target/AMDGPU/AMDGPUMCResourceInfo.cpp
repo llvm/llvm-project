@@ -25,10 +25,9 @@
 using namespace llvm;
 
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
-                                    MCContext &OutContext, bool IsLocal) {
-  auto GOCS = [FuncName, &OutContext, IsLocal](StringRef Suffix) {
-    StringRef Prefix =
-        IsLocal ? OutContext.getAsmInfo()->getPrivateGlobalPrefix() : "";
+                                    MCContext &OutContext) {
+  auto GOCS = [FuncName, &OutContext](StringRef Suffix) {
+    StringRef Prefix = OutContext.getAsmInfo()->getInternalSymbolPrefix();
     return OutContext.getOrCreateSymbol(Twine(Prefix) + FuncName +
                                         Twine(Suffix));
   };
@@ -39,6 +38,8 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
     return GOCS(".num_agpr");
   case RIK_NumSGPR:
     return GOCS(".numbered_sgpr");
+  case RIK_NumNamedBarrier:
+    return GOCS(".num_named_barrier");
   case RIK_PrivateSegSize:
     return GOCS(".private_seg_size");
   case RIK_UsesVCC:
@@ -57,8 +58,8 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
 
 const MCExpr *MCResourceInfo::getSymRefExpr(StringRef FuncName,
                                             ResourceInfoKind RIK,
-                                            MCContext &Ctx, bool IsLocal) {
-  return MCSymbolRefExpr::create(getSymbol(FuncName, RIK, Ctx, IsLocal), Ctx);
+                                            MCContext &Ctx) {
+  return MCSymbolRefExpr::create(getSymbol(FuncName, RIK, Ctx), Ctx);
 }
 
 void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
@@ -66,6 +67,7 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
+  MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
   auto assignMaxRegSym = [&OutContext](MCSymbol *Sym, int32_t RegCount) {
     const MCExpr *MaxExpr = MCConstantExpr::create(RegCount, OutContext);
@@ -75,6 +77,7 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   assignMaxRegSym(MaxVGPRSym, MaxVGPR);
   assignMaxRegSym(MaxAGPRSym, MaxAGPR);
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
+  assignMaxRegSym(MaxNamedBarrierSym, MaxNamedBarrier);
 }
 
 void MCResourceInfo::reset() { *this = MCResourceInfo(); }
@@ -95,6 +98,10 @@ MCSymbol *MCResourceInfo::getMaxAGPRSymbol(MCContext &OutContext) {
 
 MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
+}
+
+MCSymbol *MCResourceInfo::getMaxNamedBarrierSymbol(MCContext &OutContext) {
+  return OutContext.getOrCreateSymbol("amdgpu.max_num_named_barrier");
 }
 
 // Tries to flatten recursive call register resource gathering. Simple cycle
@@ -182,12 +189,11 @@ void MCResourceInfo::assignResourceInfoExpr(
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
     MCContext &OutContext) {
   const TargetMachine &TM = MF.getTarget();
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   const MCConstantExpr *LocalConstExpr =
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
-  MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+  MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
   LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                     << LocalValue << " as function local usage\n");
   if (!Callees.empty()) {
@@ -199,10 +205,9 @@ void MCResourceInfo::assignResourceInfoExpr(
       if (!Seen.insert(Callee).second)
         continue;
 
-      bool IsCalleeLocal = Callee->hasLocalLinkage();
       MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
       MCSymbol *CalleeValSym =
-          getSymbol(CalleeFnSym->getName(), RIK, OutContext, IsCalleeLocal);
+          getSymbol(CalleeFnSym->getName(), RIK, OutContext);
 
       // Avoid constructing recursive definitions by detecting whether `Sym` is
       // found transitively within any of its `CalleeValSym`.
@@ -227,6 +232,10 @@ void MCResourceInfo::assignResourceInfoExpr(
         case RIK_NumAGPR:
           ArgExprs.push_back(flattenedCycleMax(CalleeValSym, RIK, OutContext));
           break;
+        case RIK_NumNamedBarrier:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxNamedBarrierSymbol(OutContext), OutContext));
+          break;
         }
       }
     }
@@ -244,12 +253,13 @@ void MCResourceInfo::gatherResourceInfo(
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
+  MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
   if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
     addMaxVGPRCandidate(FRI.NumVGPR);
     addMaxAGPRCandidate(FRI.NumAGPR);
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
+    addMaxNamedBarrierCandidate(FRI.NumNamedBarrier);
   }
 
   const TargetMachine &TM = MF.getTarget();
@@ -274,8 +284,7 @@ void MCResourceInfo::gatherResourceInfo(
                              FRI.Callees, OutContext);
     } else {
       const MCExpr *SymRef = MCSymbolRefExpr::create(MaxSym, OutContext);
-      MCSymbol *LocalNumSym =
-          getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+      MCSymbol *LocalNumSym = getSymbol(FnSym->getName(), RIK, OutContext);
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
@@ -288,13 +297,13 @@ void MCResourceInfo::gatherResourceInfo(
   SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
   SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
+  SetMaxReg(MaxNamedBarrierSym, FRI.NumNamedBarrier, RIK_NumNamedBarrier);
 
   {
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
     SmallVector<const MCExpr *, 8> ArgExprs;
-    MCSymbol *Sym =
-        getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext, IsLocal);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext);
     if (FRI.CalleeSegmentSize) {
       LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                         << FRI.CalleeSegmentSize
@@ -309,11 +318,9 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
       if (!Callee->isDeclaration()) {
-        bool IsCalleeLocal = Callee->hasLocalLinkage();
         MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
         MCSymbol *CalleeValSym =
-            getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext,
-                      IsCalleeLocal);
+            getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext);
 
         // Avoid constructing recursive definitions by detecting whether `Sym`
         // is found transitively within any of its `CalleeValSym`.
@@ -341,7 +348,7 @@ void MCResourceInfo::gatherResourceInfo(
   }
 
   auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
-    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
     LLVM_DEBUG(
         dbgs() << "MCResUse:   " << Sym->getName() << ": Adding " << LocalValue
                << ", no further propagation as indirect callee found within\n");
@@ -376,10 +383,9 @@ const MCExpr *MCResourceInfo::createTotalNumVGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   return AMDGPUMCExpr::createTotalNumVGPR(
-      getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx, IsLocal),
-      getSymRefExpr(FnSym->getName(), RIK_NumVGPR, Ctx, IsLocal), Ctx);
+      getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx),
+      getSymRefExpr(FnSym->getName(), RIK_NumVGPR, Ctx), Ctx);
 }
 
 const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
@@ -387,12 +393,11 @@ const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   return MCBinaryExpr::createAdd(
-      getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx, IsLocal),
+      getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx),
       AMDGPUMCExpr::createExtraSGPRs(
-          getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx, IsLocal),
-          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx, IsLocal),
-          hasXnack, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx), hasXnack,
+          Ctx),
       Ctx);
 }

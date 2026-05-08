@@ -17,7 +17,6 @@
 #include "XtensaISelLowering.h"
 #include "XtensaInstrInfo.h"
 #include "XtensaRegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
@@ -38,7 +37,7 @@ private:
   const Triple &TargetTriple;
   XtensaInstrInfo InstrInfo;
   XtensaTargetLowering TLInfo;
-  SelectionDAGTargetInfo TSInfo;
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   XtensaFrameLowering FrameLowering;
 
   XtensaSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
@@ -46,6 +45,8 @@ private:
 public:
   XtensaSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                   const TargetMachine &TM);
+
+  ~XtensaSubtarget() override;
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
@@ -60,9 +61,8 @@ public:
   const XtensaTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
-  }
+
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
   bool hasDensity() const { return HasDensity; }
   bool hasMAC16() const { return HasMAC16; }
@@ -77,6 +77,8 @@ public:
   bool hasMul32() const { return HasMul32; }
   bool hasMul32High() const { return HasMul32High; }
   bool hasDiv32() const { return HasDiv32; }
+  bool hasS32C1I() const { return HasS32C1I; }
+  bool hasForcedAtomics() const { return HasForcedAtomics; }
   bool hasSingleFloat() const { return HasSingleFloat; }
   bool hasRegionProtection() const { return HasRegionProtection; }
   bool hasRelocatableVector() const { return HasRelocatableVector; }

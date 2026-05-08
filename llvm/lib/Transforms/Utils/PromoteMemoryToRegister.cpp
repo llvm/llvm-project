@@ -65,19 +65,30 @@ STATISTIC(NumPHIInsert,     "Number of PHI nodes inserted");
 
 bool llvm::isAllocaPromotable(const AllocaInst *AI) {
   // Only allow direct and non-volatile loads and stores...
+  // All loads and stores must use the same type (determined by the first one
+  // seen). We don't require the type to match the alloca's declared type.
+  Type *ExpectedType = nullptr;
   for (const User *U : AI->users()) {
     if (const LoadInst *LI = dyn_cast<LoadInst>(U)) {
       // Note that atomic loads can be transformed; atomic semantics do
       // not have any meaning for a local alloca.
-      if (LI->isVolatile() || LI->getType() != AI->getAllocatedType())
+      if (LI->isVolatile())
+        return false;
+      if (!ExpectedType)
+        ExpectedType = LI->getType();
+      else if (LI->getType() != ExpectedType)
         return false;
     } else if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
-      if (SI->getValueOperand() == AI ||
-          SI->getValueOperand()->getType() != AI->getAllocatedType())
+      if (SI->getValueOperand() == AI)
         return false; // Don't allow a store OF the AI, only INTO the AI.
       // Note that atomic stores can be transformed; atomic semantics do
       // not have any meaning for a local alloca.
       if (SI->isVolatile())
+        return false;
+      Type *StoreType = SI->getValueOperand()->getType();
+      if (!ExpectedType)
+        ExpectedType = StoreType;
+      else if (StoreType != ExpectedType)
         return false;
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
       if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
@@ -136,7 +147,7 @@ public:
   /// \p ToDelete that stores to this alloca.
   void updateForDeletedStore(
       StoreInst *ToDelete, DIBuilder &DIB,
-      SmallSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) const {
+      SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) const {
     // There's nothing to do if the alloca doesn't have any variables using
     // assignment tracking.
     if (DVRAssigns.empty())
@@ -190,7 +201,6 @@ public:
 };
 
 struct AllocaInfo {
-  using DbgUserVec = SmallVector<DbgVariableIntrinsic *, 1>;
   using DPUserVec = SmallVector<DbgVariableRecord *, 1>;
 
   SmallVector<BasicBlock *, 32> DefiningBlocks;
@@ -200,8 +210,11 @@ struct AllocaInfo {
   BasicBlock *OnlyBlock;
   bool OnlyUsedInOneBlock;
 
+  /// The type used by all loads/stores of this alloca. This may differ from
+  /// the alloca's declared type if all accesses use a different type.
+  Type *ValueType;
+
   /// Debug users of the alloca - does not include dbg.assign intrinsics.
-  DbgUserVec DbgUsers;
   DPUserVec DPUsers;
   /// Helper to update assignment tracking debug info.
   AssignmentTrackingInfo AssignmentTracking;
@@ -212,7 +225,7 @@ struct AllocaInfo {
     OnlyStore = nullptr;
     OnlyBlock = nullptr;
     OnlyUsedInOneBlock = true;
-    DbgUsers.clear();
+    ValueType = nullptr;
     DPUsers.clear();
     AssignmentTracking.clear();
   }
@@ -232,11 +245,21 @@ struct AllocaInfo {
         // Remember the basic blocks which define new values for the alloca
         DefiningBlocks.push_back(SI->getParent());
         OnlyStore = SI;
+        if (!ValueType)
+          ValueType = SI->getValueOperand()->getType();
+        else
+          assert(ValueType == SI->getValueOperand()->getType() &&
+                 "All stores were checked to have used the same type");
       } else {
         LoadInst *LI = cast<LoadInst>(User);
         // Otherwise it must be a load instruction, keep track of variable
         // reads.
         UsingBlocks.push_back(LI->getParent());
+        if (!ValueType)
+          ValueType = LI->getType();
+        else
+          assert(ValueType == LI->getType() &&
+                 "All loads where checked to have used the same type");
       }
 
       if (OnlyUsedInOneBlock) {
@@ -246,13 +269,8 @@ struct AllocaInfo {
           OnlyUsedInOneBlock = false;
       }
     }
-    DbgUserVec AllDbgUsers;
     SmallVector<DbgVariableRecord *> AllDPUsers;
-    findDbgUsers(AllDbgUsers, AI, &AllDPUsers);
-    std::copy_if(AllDbgUsers.begin(), AllDbgUsers.end(),
-                 std::back_inserter(DbgUsers), [](DbgVariableIntrinsic *DII) {
-                   return !isa<DbgAssignIntrinsic>(DII);
-                 });
+    findDbgUsers(AI, AllDPUsers);
     std::copy_if(AllDPUsers.begin(), AllDPUsers.end(),
                  std::back_inserter(DPUsers),
                  [](DbgVariableRecord *DVR) { return !DVR->isDbgAssign(); });
@@ -380,18 +398,19 @@ struct PromoteMem2Reg {
   /// to.
   DenseMap<PHINode *, unsigned> PhiToAllocaMap;
 
-  /// For each alloca, we keep track of the dbg.declare intrinsic that
+  /// For each alloca, we keep track of the dbg.declare record that
   /// describes it, if any, so that we can convert it to a dbg.value
-  /// intrinsic if the alloca gets promoted.
-  SmallVector<AllocaInfo::DbgUserVec, 8> AllocaDbgUsers;
+  /// record if the alloca gets promoted.
   SmallVector<AllocaInfo::DPUserVec, 8> AllocaDPUsers;
 
   /// For each alloca, keep an instance of a helper class that gives us an easy
   /// way to update assignment tracking debug info if the alloca is promoted.
   SmallVector<AssignmentTrackingInfo, 8> AllocaATInfo;
+  /// For each alloca, the type used by all loads/stores of this alloca.
+  SmallVector<Type *, 8> AllocaValueTypes;
   /// A set of dbg.assigns to delete because they've been demoted to
   /// dbg.values. Call cleanUpDbgAssigns to delete them.
-  SmallSet<DbgVariableRecord *, 8> DVRAssignsToDelete;
+  SmallPtrSet<DbgVariableRecord *, 8> DVRAssignsToDelete;
 
   /// The set of basic blocks the renamer has already visited.
   BitVector Visited;
@@ -542,11 +561,10 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
 /// false there were some loads which were not dominated by the single store
 /// and thus must be phi-ed with undef. We fall back to the standard alloca
 /// promotion algorithm in that case.
-static bool
-rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
-                         const DataLayout &DL, DominatorTree &DT,
-                         AssumptionCache *AC,
-                         SmallSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
+static bool rewriteSingleStoreAlloca(
+    AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI, const DataLayout &DL,
+    DominatorTree &DT, AssumptionCache *AC,
+    SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
   StoreInst *OnlyStore = Info.OnlyStore;
   Value *ReplVal = OnlyStore->getOperand(0);
   // Loads may either load the stored value or uninitialized memory (undef).
@@ -656,11 +674,10 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
 ///      use(t);
 ///    *A = 42;
 ///  }
-static bool
-promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
-                         LargeBlockInfo &LBI, const DataLayout &DL,
-                         DominatorTree &DT, AssumptionCache *AC,
-                         SmallSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
+static bool promoteSingleBlockAlloca(
+    AllocaInst *AI, const AllocaInfo &Info, LargeBlockInfo &LBI,
+    const DataLayout &DL, DominatorTree &DT, AssumptionCache *AC,
+    SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
   // The trickiest case to handle is when we have large blocks. Because of this,
   // this code is optimized assuming that large blocks happen.  This does not
   // significantly pessimize the small block case.  This uses LargeBlockInfo to
@@ -741,14 +758,11 @@ promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
   AI->eraseFromParent();
 
   // The alloca's debuginfo can be removed as well.
-  auto DbgUpdateForAlloca = [&](auto &Container) {
-    for (auto *DbgItem : Container)
-      if (DbgItem->isAddressOfVariable() ||
-          DbgItem->getExpression()->startsWithDeref())
-        DbgItem->eraseFromParent();
-  };
-  DbgUpdateForAlloca(Info.DbgUsers);
-  DbgUpdateForAlloca(Info.DPUsers);
+  for (DbgVariableRecord *DbgItem : Info.DPUsers) {
+    if (DbgItem->isAddressOfVariable() ||
+        DbgItem->getExpression()->startsWithDeref())
+      DbgItem->eraseFromParent();
+  }
 
   ++NumLocalPromoted;
   return true;
@@ -757,9 +771,9 @@ promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
 void PromoteMem2Reg::run() {
   Function &F = *DT.getRoot()->getParent();
 
-  AllocaDbgUsers.resize(Allocas.size());
   AllocaATInfo.resize(Allocas.size());
   AllocaDPUsers.resize(Allocas.size());
+  AllocaValueTypes.resize(Allocas.size());
 
   AllocaInfo Info;
   LargeBlockInfo LBI;
@@ -816,13 +830,12 @@ void PromoteMem2Reg::run() {
     if (BBNumPreds.empty())
       BBNumPreds.resize(F.getMaxBlockNumber());
 
-    // Remember the dbg.declare intrinsic describing this alloca, if any.
-    if (!Info.DbgUsers.empty())
-      AllocaDbgUsers[AllocaNum] = Info.DbgUsers;
+    // Remember the dbg.declare record describing this alloca, if any.
     if (!Info.AssignmentTracking.empty())
       AllocaATInfo[AllocaNum] = Info.AssignmentTracking;
     if (!Info.DPUsers.empty())
       AllocaDPUsers[AllocaNum] = Info.DPUsers;
+    AllocaValueTypes[AllocaNum] = Info.ValueType;
 
     // Keep the reverse mapping of the 'Allocas' array for the rename pass.
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
@@ -864,11 +877,14 @@ void PromoteMem2Reg::run() {
   // been stored yet.  In this case, it will get this null value.
   IncomingVals.resize(Allocas.size());
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
-    IncomingVals.init(i, UndefValue::get(Allocas[i]->getAllocatedType()));
+    IncomingVals.init(i, UndefValue::get(AllocaValueTypes[i]));
 
-  // When handling debug info, treat all incoming values as if they have unknown
-  // locations until proven otherwise.
+  // When handling debug info, treat all incoming values as if they have
+  // compiler-generated (empty) locations, representing the uninitialized
+  // alloca, until proven otherwise.
   IncomingLocs.resize(Allocas.size());
+  for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
+    IncomingLocs.init(i, DebugLoc::getCompilerGenerated());
 
   // The renamer uses the Visited set to avoid infinite loops.
   Visited.resize(F.getMaxBlockNumber(), false);
@@ -894,16 +910,12 @@ void PromoteMem2Reg::run() {
   }
 
   // Remove alloca's dbg.declare intrinsics from the function.
-  auto RemoveDbgDeclares = [&](auto &Container) {
-    for (auto &DbgUsers : Container) {
-      for (auto *DbgItem : DbgUsers)
-        if (DbgItem->isAddressOfVariable() ||
-            DbgItem->getExpression()->startsWithDeref())
-          DbgItem->eraseFromParent();
-    }
-  };
-  RemoveDbgDeclares(AllocaDbgUsers);
-  RemoveDbgDeclares(AllocaDPUsers);
+  for (auto &DbgUsers : AllocaDPUsers) {
+    for (DbgVariableRecord *DbgItem : DbgUsers)
+      if (DbgItem->isAddressOfVariable() ||
+          DbgItem->getExpression()->startsWithDeref())
+        DbgItem->eraseFromParent();
+  }
 
   // Loop over all of the PHI nodes and see if there are any that we can get
   // rid of because they merge all of the same incoming values.  This can
@@ -1079,9 +1091,9 @@ bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
   if (PN)
     return false;
 
-  // Create a PhiNode using the dereferenced type... and add the phi-node to the
-  // BasicBlock.
-  PN = PHINode::Create(Allocas[AllocaNo]->getAllocatedType(), getNumPreds(BB),
+  // Create a PhiNode using the type from loads/stores... and add the phi-node
+  // to the BasicBlock.
+  PN = PHINode::Create(AllocaValueTypes[AllocaNo], getNumPreds(BB),
                        Allocas[AllocaNo]->getName() + "." + Twine(Version++));
   PN->insertBefore(BB->begin());
   ++NumPHIInsert;

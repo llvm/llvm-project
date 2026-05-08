@@ -17,11 +17,10 @@
 #include "llvm/Support/TimeProfiler.h"
 
 namespace cir {
-mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
-                                      mlir::MLIRContext &mlirContext,
-                                      clang::ASTContext &astContext,
-                                      bool enableVerifier,
-                                      bool enableCIRSimplify) {
+mlir::LogicalResult
+runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
+                  clang::ASTContext &astContext, bool enableVerifier,
+                  bool enableIdiomRecognizer, bool enableCIRSimplify) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -31,7 +30,12 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
 
-  pm.addPass(mlir::createLoweringPreparePass());
+  if (enableIdiomRecognizer)
+    pm.addPass(mlir::createIdiomRecognizerPass(&astContext));
+
+  pm.addPass(mlir::createTargetLoweringPass());
+  pm.addPass(mlir::createCXXABILoweringPass());
+  pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   pm.enableVerifier(enableVerifier);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -45,6 +49,8 @@ namespace mlir {
 void populateCIRPreLoweringPasses(OpPassManager &pm) {
   pm.addPass(createHoistAllocasPass());
   pm.addPass(createCIRFlattenCFGPass());
+  pm.addPass(createCIREHABILoweringPass());
+  pm.addPass(createGotoSolverPass());
 }
 
 } // namespace mlir

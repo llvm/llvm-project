@@ -43,6 +43,7 @@ class APInt;
 class AssemblerConstantPools;
 class MCAsmBackend;
 class MCAssembler;
+class MCLFIRewriter;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -61,6 +62,7 @@ struct DefRangeRegisterRelHeader;
 struct DefRangeSubfieldRegisterHeader;
 struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
+struct DefRangeRegisterRelIndirHeader;
 }
 
 using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
@@ -221,7 +223,6 @@ class LLVM_ABI MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
-  std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
   // This is a pair of index into DwarfFrameInfos and the MCSection associated
   // with the frame. Note, we use an index instead of an iterator because they
   // can be invalidated in std::vector.
@@ -259,16 +260,22 @@ class LLVM_ABI MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
+  bool IsObj = false;
+
   // Symbol of the current epilog for which we are processing SEH directives.
   WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
 
   MCFragment *CurFrag = nullptr;
+
+  SmallVector<MCDwarfFrameInfo, 0> DwarfFrameInfos;
 
   MCStreamer(MCContext &Ctx);
 
   /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(MCSection *, uint32_t);
+
+  void addFragment(MCFragment *F);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
@@ -285,6 +292,8 @@ protected:
 
   /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
+
+  std::unique_ptr<MCLFIRewriter> LFIRewriter;
 
 public:
   MCStreamer(const MCStreamer &) = delete;
@@ -303,11 +312,16 @@ public:
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
   }
 
+  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter);
+
+  MCLFIRewriter *getLFIRewriter() { return LFIRewriter.get(); }
+
   /// State management
   ///
   virtual void reset();
 
   MCContext &getContext() const { return Context; }
+  bool isObj() const { return IsObj; }
 
   // MCObjectStreamer has an MCAssembler and allows more expression folding at
   // parse time.
@@ -348,8 +362,6 @@ public:
   }
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
-
-  void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
   /// \name Assembly File Formatting.
   /// @{
@@ -425,11 +437,15 @@ public:
   }
 
   MCFragment *getCurrentFragment() const {
+    // Ensure consistency with the section stack.
     assert(!getCurrentSection().first ||
            CurFrag->getParent() == getCurrentSection().first);
+    // Ensure we eagerly allocate an empty fragment after adding fragment with a
+    // variable-size tail.
+    assert(!CurFrag || CurFrag->getKind() == MCFragment::FT_Data);
     return CurFrag;
   }
-
+  size_t getCurFragSize() const { return getCurrentFragment()->getFixedSize(); }
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -450,10 +466,10 @@ public:
   bool switchSection(MCSection *Section, const MCExpr *);
 
   /// Similar to switchSection, but does not print the section directive.
-  virtual void switchSectionNoPrint(MCSection *Section);
+  void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
-  virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
+  virtual void initSections(const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
 
@@ -830,6 +846,9 @@ public:
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
+  virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
+                             uint8_t Fill, const MCSubtargetInfo &STI);
+
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
   ///
@@ -893,6 +912,14 @@ public:
                                      StringRef FileName,
                                      StringRef Comment = {});
 
+  /// This is same as emitDwarfLocDirective, except it has the capability to
+  /// add inlined_at information.
+  virtual void emitDwarfLocDirectiveWithInlinedAt(
+      unsigned FileNo, unsigned Line, unsigned Column, unsigned FileIA,
+      unsigned LineIA, unsigned ColumnIA, const MCSymbol *Sym, unsigned Flags,
+      unsigned Isa, unsigned Discriminator, StringRef FileName,
+      StringRef Comment = {}) {}
+
   /// This implements the '.loc_label Name' directive.
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
 
@@ -953,6 +980,10 @@ public:
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr);
 
+  virtual void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr);
+
   /// This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void emitCVStringTableDirective() {}
 
@@ -977,7 +1008,7 @@ public:
                                                const MCSymbol *Lo);
 
   virtual MCSymbol *getDwarfLineTableSymbol(unsigned CUID);
-  virtual void emitCFISections(bool EH, bool Debug);
+  virtual void emitCFISections(bool EH, bool Debug, bool SFrame);
   void emitCFIStartProc(bool IsSimple, SMLoc Loc = SMLoc());
   void emitCFIEndProc();
   virtual void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc = {});
@@ -1015,8 +1046,7 @@ public:
   /// for the frame.  We cannot use the End marker, as it is not set at the
   /// point of emitting .xdata, in order to indicate that the frame is active.
   virtual void emitWinCFIFuncletOrFuncEnd(SMLoc Loc = SMLoc());
-  virtual void emitWinCFIStartChained(SMLoc Loc = SMLoc());
-  virtual void emitWinCFIEndChained(SMLoc Loc = SMLoc());
+  virtual void emitWinCFISplitChained(SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushReg(MCRegister Register, SMLoc Loc = SMLoc());
   virtual void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                   SMLoc Loc = SMLoc());
@@ -1046,15 +1076,11 @@ public:
   /// Get the .xdata section used for the given section.
   MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
-  virtual void emitSyntaxDirective();
+  virtual void emitSyntaxDirective(StringRef Syntax, StringRef Options);
 
-  /// Record a relocation described by the .reloc directive. Return std::nullopt
-  /// if succeeded. Otherwise, return a pair (Name is invalid, error message).
-  virtual std::optional<std::pair<bool, std::string>>
-  emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
-                     SMLoc Loc, const MCSubtargetInfo &STI) {
-    return std::nullopt;
-  }
+  /// Record a relocation described by the .reloc directive.
+  virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                  const MCExpr *Expr, SMLoc Loc = {}) {}
 
   virtual void emitAddrsig() {}
   virtual void emitAddrsigSym(const MCSymbol *Sym) {}

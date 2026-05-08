@@ -18,7 +18,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ;   }
 ; }
 
-; Function Attrs: nounwind uwtable
 define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
@@ -74,8 +73,7 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[ADD_US]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP17]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP18]], ptr [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access [[META0]]
@@ -97,7 +95,7 @@ entry:
   %cmp27 = icmp sgt i32 %m, 0
   br i1 %cmp27, label %for.body3.lr.ph.us, label %for.end15
 
-for.end.us:                                       ; preds = %for.body3.us
+for.end.us:
   %arrayidx9.us = getelementptr inbounds i32, ptr %b, i64 %indvars.iv33
   %0 = load i32, ptr %arrayidx9.us, align 4, !llvm.mem.parallel_loop_access !3
   %add10.us = add nsw i32 %0, 3
@@ -107,7 +105,7 @@ for.end.us:                                       ; preds = %for.body3.us
   %exitcond36 = icmp eq i32 %lftr.wideiv35, %m
   br i1 %exitcond36, label %for.end15, label %for.body3.lr.ph.us, !llvm.loop !5
 
-for.body3.us:                                     ; preds = %for.body3.us, %for.body3.lr.ph.us
+for.body3.us:
   %indvars.iv29 = phi i64 [ 0, %for.body3.lr.ph.us ], [ %indvars.iv.next30, %for.body3.us ]
   %1 = trunc i64 %indvars.iv29 to i32
   %add4.us = add i32 %add.us, %1
@@ -121,14 +119,14 @@ for.body3.us:                                     ; preds = %for.body3.us, %for.
   %exitcond32 = icmp eq i32 %lftr.wideiv31, %m
   br i1 %exitcond32, label %for.end.us, label %for.body3.us, !llvm.loop !4
 
-for.body3.lr.ph.us:                               ; preds = %for.end.us, %entry
+for.body3.lr.ph.us:
   %indvars.iv33 = phi i64 [ %indvars.iv.next34, %for.end.us ], [ 0, %entry ]
   %3 = trunc i64 %indvars.iv33 to i32
   %add.us = add i32 %3, %k
   %arrayidx7.us = getelementptr inbounds i32, ptr %a, i64 %indvars.iv33
   br label %for.body3.us
 
-for.end15:                                        ; preds = %for.end.us, %entry
+for.end15:
   ret void
 }
 
@@ -180,7 +178,7 @@ entry:
   %cmp27 = icmp sgt i32 %m, 0
   br i1 %cmp27, label %for.body3.lr.ph.us, label %for.end15
 
-for.end.us:                                       ; preds = %for.body3.us
+for.end.us:
   %arrayidx9.us = getelementptr inbounds i32, ptr %b, i64 %indvars.iv33
   %0 = load i32, ptr %arrayidx9.us, align 4
   %add10.us = add nsw i32 %0, 3
@@ -190,7 +188,7 @@ for.end.us:                                       ; preds = %for.body3.us
   %exitcond36 = icmp eq i32 %lftr.wideiv35, %m
   br i1 %exitcond36, label %for.end15, label %for.body3.lr.ph.us, !llvm.loop !5
 
-for.body3.us:                                     ; preds = %for.body3.us, %for.body3.lr.ph.us
+for.body3.us:
   %indvars.iv29 = phi i64 [ 0, %for.body3.lr.ph.us ], [ %indvars.iv.next30, %for.body3.us ]
   %1 = trunc i64 %indvars.iv29 to i32
   %add4.us = add i32 %add.us, %1
@@ -204,18 +202,18 @@ for.body3.us:                                     ; preds = %for.body3.us, %for.
   %exitcond32 = icmp eq i32 %lftr.wideiv31, %m
   br i1 %exitcond32, label %for.end.us, label %for.body3.us, !llvm.loop !4
 
-for.body3.lr.ph.us:                               ; preds = %for.end.us, %entry
+for.body3.lr.ph.us:
   %indvars.iv33 = phi i64 [ %indvars.iv.next34, %for.end.us ], [ 0, %entry ]
   %3 = trunc i64 %indvars.iv33 to i32
   %add.us = add i32 %3, %k
   %arrayidx7.us = getelementptr inbounds i32, ptr %a, i64 %indvars.iv33
   br label %for.body3.us
 
-for.end15:                                        ; preds = %for.end.us, %entry
+for.end15:
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 
 !3 = !{!4, !5}
 !4 = !{!4}

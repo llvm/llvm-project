@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -10,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class NSDictionarySyntheticTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -120,6 +121,8 @@ class NSDictionarySyntheticTestCase(TestBase):
                 '@"2 elements"',
             ],
         )
+
+        self.runCmd("settings set target.max-children-depth 6")
         self.expect(
             "frame variable mutabledict --ptr-depth 3",
             substrs=[

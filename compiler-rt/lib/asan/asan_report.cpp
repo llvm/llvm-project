@@ -263,6 +263,14 @@ void ReportNewDeleteTypeMismatch(uptr addr, uptr delete_size,
   in_report.ReportError(error);
 }
 
+void ReportFreeSizeMismatch(uptr addr, uptr delete_size, uptr delete_alignment,
+                            BufferedStackTrace* free_stack) {
+  ScopedInErrorReport in_report;
+  ErrorFreeSizeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
+                              delete_size, delete_alignment);
+  in_report.ReportError(error);
+}
+
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
   ErrorFreeNotMalloced error(GetCurrentTidOrInvalid(), free_stack, addr);

@@ -395,7 +395,7 @@ public:
     }
     if (bx) {
       // Error recovery situations must also produce messages.
-      CHECK(state.anyDeferredMessages() || state.messages().AnyFatalError());
+      CHECK(hadDeferredMessages || state.messages().AnyFatalError());
       state.set_anyErrorRecovery();
     }
     return bx;
@@ -828,7 +828,7 @@ struct NextCh {
     if (std::optional<const char *> result{state.GetNextChar()}) {
       return result;
     }
-    state.Say("end of file"_err_en_US);
+    state.Say(MessageFixedText::endOfFileMessage);
     return std::nullopt;
   }
 };

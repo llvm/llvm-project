@@ -23,10 +23,10 @@
 #endif
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/stdint_proxy.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
 #include <linux/sched.h> // For CLONE_* flags.
-#include <stdint.h>
 #include <sys/mman.h>    // For PROT_* and MAP_* definitions.
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -100,7 +100,7 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
       -1,                          // Not backed by any file
       0                            // No offset
   );
-  if (mmap_result < 0 && (uintptr_t(mmap_result) >= UINTPTR_MAX - size))
+  if (!linux_utils::is_valid_mmap(mmap_result))
     return Error{int(-mmap_result)};
 
   if (guardsize) {

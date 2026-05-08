@@ -9,6 +9,7 @@ void (*checked_ptr)(void) = unchecked;  // expected-warning{{implicit conversion
 void (CFI_UNCHECKED_CALLEE *unchecked_ptr)(void) = unchecked;
 void (CFI_UNCHECKED_CALLEE *from_normal)(void) = checked;
 void (CFI_UNCHECKED_CALLEE *c_no_function_decay)(void) = &unchecked;
+void (CFI_UNCHECKED_CALLEE __attribute__((noreturn)) *other_conflict)(void) = &checked; // expected-error{{cannot initialize a variable of type 'void (*)() __attribute__((noreturn)) __attribute__((cfi_unchecked_callee))' with an rvalue of type 'void (*)()'}}
 void (CFI_UNCHECKED_CALLEE *arr[10])(void);
 void (*cfi_elem)(void) = arr[1];  // expected-warning{{implicit conversion from 'void (*)() __attribute__((cfi_unchecked_callee))' to 'void (*)()' discards 'cfi_unchecked_callee' attribute}}
 void (CFI_UNCHECKED_CALLEE *cfi_unchecked_elem)(void) = arr[1];
@@ -233,3 +234,7 @@ void lambdas() {
     checked_func = checked_lambda;
   };
 }
+
+CFI_UNCHECKED_CALLEE
+void func(void);
+void func(void) {}  // No warning expected.

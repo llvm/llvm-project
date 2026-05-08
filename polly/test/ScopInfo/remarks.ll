@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN: -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: remark: test/ScopInfo/remarks.c:4:7: SCoP begins here.
 ; CHECK: remark: test/ScopInfo/remarks.c:9:15: Inbounds assumption:    [N, M, Debug] -> {  : M <= 100 }
@@ -41,7 +40,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @.str = private unnamed_addr constant [8 x i8] c"Printf!\00", align 1
 
-define void @valid(ptr %A, ptr %B, i32 %N, i32 %M, ptr %C, i32 %Debug) #0 !dbg !4 {
+define void @valid(ptr %A, ptr %B, i32 %N, i32 %M, ptr %C, i32 %Debug) !dbg !4 {
 entry:
   call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !23, metadata !24), !dbg !25
   call void @llvm.dbg.value(metadata ptr %B, i64 0, metadata !26, metadata !24), !dbg !27
@@ -105,7 +104,7 @@ for.end:                                          ; preds = %for.cond.3
   br i1 %tobool, label %if.end.18, label %if.then.17, !dbg !72
 
 if.then.17:                                       ; preds = %for.end
-  %call = call i32 (ptr, ...) @printf(ptr nonnull @.str) #3, !dbg !73
+  %call = call i32 (ptr, ...) @printf(ptr nonnull @.str), !dbg !73
   br label %if.end.18, !dbg !73
 
 if.end.18:                                        ; preds = %for.end, %if.then.17
@@ -120,11 +119,11 @@ for.end.21:                                       ; preds = %for.cond
   ret void, !dbg !76
 }
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare i32 @printf(ptr, ...) #2
+declare i32 @printf(ptr, ...)
 
-define void @invalid0(ptr %A) #0 !dbg !13 {
+define void @invalid0(ptr %A) !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !77, metadata !24), !dbg !78
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !79, metadata !24), !dbg !81
@@ -173,12 +172,7 @@ for.end.7:                                        ; preds = %for.cond
   ret void, !dbg !105
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!20, !21}

@@ -115,6 +115,11 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DEF: return new (allocator.allocate<CompoundAAttrStorage>())
 // DEF-SAME: CompoundAAttrStorage(std::move(widthOfSomething), std::move(exampleTdType), std::move(apFloat), std::move(dims), std::move(inner));
 
+// DEF: CompoundAAttr CompoundAAttr::getChecked(
+// DEF-SAME:   int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner
+// DEF-SAME: )
+// DEF-NEXT: return Base::getChecked(emitError, context, std::move(widthOfSomething), std::move(exampleTdType), std::move(apFloat), std::move(dims), std::move(inner));
+
 // DEF: ::mlir::Type CompoundAAttr::getInner() const {
 // DEF-NEXT: return getImpl()->inner;
 }

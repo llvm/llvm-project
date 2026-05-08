@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
+#include "llvm/Support/Compiler.h"
 
 #include <mutex>
 
@@ -33,7 +34,7 @@ class EPCIndirectionUtils {
 public:
   /// ABI support base class. Used to write resolver, stub, and trampoline
   /// blocks.
-  class ABISupport {
+  class LLVM_ABI ABISupport {
   protected:
     ABISupport(unsigned PointerSize, unsigned TrampolineSize, unsigned StubSize,
                unsigned StubToPointerMaxDisplacement, unsigned ResolverCodeSize)
@@ -81,7 +82,7 @@ public:
   CreateWithABI(ExecutorProcessControl &EPC);
 
   /// Create based on the ExecutorProcessControl triple.
-  static Expected<std::unique_ptr<EPCIndirectionUtils>>
+  LLVM_ABI static Expected<std::unique_ptr<EPCIndirectionUtils>>
   Create(ExecutorProcessControl &EPC);
 
   /// Create based on the ExecutorProcessControl triple.
@@ -98,27 +99,27 @@ public:
 
   /// Release memory for resources held by this instance. This *must* be called
   /// prior to destruction of the class.
-  Error cleanup();
+  LLVM_ABI Error cleanup();
 
   /// Write resolver code to the executor process and return its address.
   /// This must be called before any call to createTrampolinePool or
   /// createLazyCallThroughManager.
-  Expected<ExecutorAddr> writeResolverBlock(ExecutorAddr ReentryFnAddr,
-                                            ExecutorAddr ReentryCtxAddr);
+  LLVM_ABI Expected<ExecutorAddr>
+  writeResolverBlock(ExecutorAddr ReentryFnAddr, ExecutorAddr ReentryCtxAddr);
 
   /// Returns the address of the Resolver block. Returns zero if the
   /// writeResolverBlock method has not previously been called.
   ExecutorAddr getResolverBlockAddress() const { return ResolverBlockAddr; }
 
   /// Create an IndirectStubsManager for the executor process.
-  std::unique_ptr<IndirectStubsManager> createIndirectStubsManager();
+  LLVM_ABI std::unique_ptr<IndirectStubsManager> createIndirectStubsManager();
 
   /// Create a TrampolinePool for the executor process.
-  TrampolinePool &getTrampolinePool();
+  LLVM_ABI TrampolinePool &getTrampolinePool();
 
   /// Create a LazyCallThroughManager.
   /// This function should only be called once.
-  LazyCallThroughManager &
+  LLVM_ABI LazyCallThroughManager &
   createLazyCallThroughManager(ExecutionSession &ES,
                                ExecutorAddr ErrorHandlerAddr);
 
@@ -170,7 +171,7 @@ private:
 /// called.
 ///
 /// This function is experimental and likely subject to revision.
-Error setUpInProcessLCTMReentryViaEPCIU(EPCIndirectionUtils &EPCIU);
+LLVM_ABI Error setUpInProcessLCTMReentryViaEPCIU(EPCIndirectionUtils &EPCIU);
 
 namespace detail {
 

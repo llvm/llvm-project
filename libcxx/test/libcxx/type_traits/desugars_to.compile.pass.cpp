@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 // This test requires variable templates
 // UNSUPPORTED: gcc && c++11
 

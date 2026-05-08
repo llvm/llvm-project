@@ -1155,16 +1155,16 @@ define i32 @test_mul_by_66(i32 %x) {
 ; X64-HSW:       # %bb.0:
 ; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-HSW-NEXT:    movl %edi, %eax
-; X64-HSW-NEXT:    shll $6, %eax
-; X64-HSW-NEXT:    leal (%rax,%rdi,2), %eax
+; X64-HSW-NEXT:    shll $6, %edi
+; X64-HSW-NEXT:    leal (%rdi,%rax,2), %eax
 ; X64-HSW-NEXT:    retq
 ;
 ; X64-JAG-LABEL: test_mul_by_66:
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-JAG-NEXT:    movl %edi, %eax
-; X64-JAG-NEXT:    shll $6, %eax
-; X64-JAG-NEXT:    leal (%rax,%rdi,2), %eax
+; X64-JAG-NEXT:    shll $6, %edi
+; X64-JAG-NEXT:    leal (%rdi,%rax,2), %eax
 ; X64-JAG-NEXT:    retq
 ;
 ; X86-NOOPT-LABEL: test_mul_by_66:
@@ -1241,16 +1241,16 @@ define i32 @test_mul_by_520(i32 %x) {
 ; X64-HSW:       # %bb.0:
 ; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-HSW-NEXT:    movl %edi, %eax
-; X64-HSW-NEXT:    shll $9, %eax
-; X64-HSW-NEXT:    leal (%rax,%rdi,8), %eax
+; X64-HSW-NEXT:    shll $9, %edi
+; X64-HSW-NEXT:    leal (%rdi,%rax,8), %eax
 ; X64-HSW-NEXT:    retq
 ;
 ; X64-JAG-LABEL: test_mul_by_520:
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-JAG-NEXT:    movl %edi, %eax
-; X64-JAG-NEXT:    shll $9, %eax
-; X64-JAG-NEXT:    leal (%rax,%rdi,8), %eax
+; X64-JAG-NEXT:    shll $9, %edi
+; X64-JAG-NEXT:    leal (%rdi,%rax,8), %eax
 ; X64-JAG-NEXT:    retq
 ;
 ; X86-NOOPT-LABEL: test_mul_by_520:

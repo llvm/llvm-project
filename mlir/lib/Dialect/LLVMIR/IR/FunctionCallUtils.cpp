@@ -30,6 +30,7 @@ static constexpr llvm::StringRef kPrintF16 = "printF16";
 static constexpr llvm::StringRef kPrintBF16 = "printBF16";
 static constexpr llvm::StringRef kPrintF32 = "printF32";
 static constexpr llvm::StringRef kPrintF64 = "printF64";
+static constexpr llvm::StringRef kPrintApFloat = "printApFloat";
 static constexpr llvm::StringRef kPrintString = "printString";
 static constexpr llvm::StringRef kPrintOpen = "printOpen";
 static constexpr llvm::StringRef kPrintClose = "printClose";
@@ -89,8 +90,8 @@ mlir::LLVM::lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
   OpBuilder::InsertionGuard g(b);
   assert(!moduleOp->getRegion(0).empty() && "expected non-empty region");
   b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
-  auto funcOp = b.create<LLVM::LLVMFuncOp>(
-      moduleOp->getLoc(), name,
+  auto funcOp = LLVM::LLVMFuncOp::create(
+      b, moduleOp->getLoc(), name,
       LLVM::LLVMFunctionType::get(resultType, paramTypes, isVarArg));
 
   if (symbolTables) {
@@ -157,6 +158,16 @@ mlir::LLVM::lookupOrCreatePrintF64Fn(OpBuilder &b, Operation *moduleOp,
                                      SymbolTableCollection *symbolTables) {
   return lookupOrCreateReservedFn(
       b, moduleOp, kPrintF64, Float64Type::get(moduleOp->getContext()),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()), symbolTables);
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateApFloatPrintFn(OpBuilder &b, Operation *moduleOp,
+                                         SymbolTableCollection *symbolTables) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintApFloat,
+      {IntegerType::get(moduleOp->getContext(), 32),
+       IntegerType::get(moduleOp->getContext(), 64)},
       LLVM::LLVMVoidType::get(moduleOp->getContext()), symbolTables);
 }
 

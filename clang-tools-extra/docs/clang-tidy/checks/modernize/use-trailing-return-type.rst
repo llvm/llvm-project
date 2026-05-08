@@ -27,8 +27,9 @@ transforms to:
   virtual auto f3() const && -> float = delete;
   auto lambda = []() -> void {};
 
-Known Limitations
------------------
+
+Limitations
+-----------
 
 The following categories of return types cannot be rewritten currently:
 
@@ -36,9 +37,12 @@ The following categories of return types cannot be rewritten currently:
 * member function pointers
 * member pointers
 
-Unqualified names in the return type might erroneously refer to different entities after the rewrite.
-Preventing such errors requires a full lookup of all unqualified names present in the return type in the scope of the trailing return type location.
-This location includes e.g. function parameter names and members of the enclosing class (including all inherited classes).
+Unqualified names in the return type might erroneously refer to different
+entities after the rewrite.
+Preventing such errors requires a full lookup of all unqualified names
+present in the return type in the scope of the trailing return type location.
+This location includes e.g. function parameter names and members of the
+enclosing class (including all inherited classes).
 Such a lookup is currently not implemented.
 
 Given the following piece of code
@@ -65,7 +69,8 @@ a careless rewrite would produce the following output:
   };
   auto CC::m() -> S { return {0}; } // error
 
-This code fails to compile because the S in the context of f refers to the equally named function parameter.
+This code fails to compile because the S in the context of f refers to the
+equally named function parameter.
 Similarly, the S in the context of m refers to the equally named class member.
 The check can currently only detect and avoid a clash with a function parameter name.
 

@@ -35,7 +35,7 @@ void f1() {
   (matrix_4_4<char>)v; // expected-error {{C-style cast from 'vec' (vector of 1 'int' value) to 'matrix_4_4<char>' (aka 'char __attribute__((matrix_type(4, 4)))') is not allowed}}
 
   (test_struct *)m1;    // expected-error {{cannot cast from type 'matrix_4_4<char>' (aka 'char __attribute__((matrix_type(4, 4)))') to pointer type 'test_struct *'}}
-  (matrix_5_5<float>)s; // expected-error {{C-style cast from 'test_struct *' to 'matrix_5_5<float>' (aka 'float __attribute__((matrix_type(5, 5)))') is not allowed}}
+  (matrix_5_5<float>)s; // expected-error {{C-style cast from 'test_struct *' (aka 'struct test_struct *') to 'matrix_5_5<float>' (aka 'float __attribute__((matrix_type(5, 5)))') is not allowed}}
 }
 
 void f2() {
@@ -59,7 +59,7 @@ void f2() {
   static_cast<matrix_4_4<char>>(v); // expected-error {{static_cast from 'vec' (vector of 1 'int' value) to 'matrix_4_4<char>' (aka 'char __attribute__((matrix_type(4, 4)))') is not allowed}}
 
   static_cast<test_struct *>(m1);    // expected-error {{cannot cast from type 'matrix_4_4<char>' (aka 'char __attribute__((matrix_type(4, 4)))') to pointer type 'test_struct *'}}
-  static_cast<matrix_5_5<float>>(s); // expected-error {{static_cast from 'test_struct *' to 'matrix_5_5<float>' (aka 'float __attribute__((matrix_type(5, 5)))') is not allowed}}
+  static_cast<matrix_5_5<float>>(s); // expected-error {{static_cast from 'test_struct *' (aka 'struct test_struct *') to 'matrix_5_5<float>' (aka 'float __attribute__((matrix_type(5, 5)))') is not allowed}}
 }
 
 void f3() {

@@ -38,8 +38,8 @@ static llvm::StringRef GetName(XcodeSDK::Type type) {
     return "XRSimulator";
   case XcodeSDK::XROS:
     return "XROS";
-  case XcodeSDK::bridgeOS:
-    return "bridgeOS";
+  case XcodeSDK::BridgeOS:
+    return "BridgeOS";
   case XcodeSDK::Linux:
     return "Linux";
   case XcodeSDK::unknown:
@@ -83,8 +83,8 @@ static XcodeSDK::Type ParseSDKName(llvm::StringRef &name) {
     return XcodeSDK::XRSimulator;
   if (name.consume_front("XROS"))
     return XcodeSDK::XROS;
-  if (name.consume_front("bridgeOS"))
-    return XcodeSDK::bridgeOS;
+  if (name.consume_front("BridgeOS"))
+    return XcodeSDK::BridgeOS;
   if (name.consume_front("Linux"))
     return XcodeSDK::Linux;
   static_assert(XcodeSDK::Linux == XcodeSDK::numSDKTypes - 1,
@@ -204,7 +204,7 @@ std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
   case XROS:
     name = "xros";
     break;
-  case bridgeOS:
+  case BridgeOS:
     name = "bridgeos";
     break;
   case Linux:
@@ -241,50 +241,6 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
   }
 
   return false;
-}
-
-bool XcodeSDK::SupportsSwift() const {
-  XcodeSDK::Info info = Parse();
-  switch (info.type) {
-  case Type::MacOSX:
-    return info.version.empty() || info.version >= llvm::VersionTuple(10, 10);
-  case Type::iPhoneOS:
-  case Type::iPhoneSimulator:
-    return info.version.empty() || info.version >= llvm::VersionTuple(8);
-  case Type::AppleTVSimulator:
-  case Type::AppleTVOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(9);
-  case Type::WatchSimulator:
-  case Type::watchOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(2);
-  case Type::XROS:
-  case Type::XRSimulator:
-  case Type::Linux:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool XcodeSDK::SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
-                                         llvm::VersionTuple sdk_version) {
-  using namespace llvm;
-
-  switch (target_triple.getOS()) {
-  case Triple::OSType::MacOSX:
-    return sdk_version >= VersionTuple(15U);
-  case Triple::OSType::IOS:
-    return sdk_version >= VersionTuple(18U);
-  case Triple::OSType::TvOS:
-    return sdk_version >= VersionTuple(18U);
-  case Triple::OSType::WatchOS:
-    return sdk_version >= VersionTuple(11U);
-  case Triple::OSType::XROS:
-    return sdk_version >= VersionTuple(2U);
-  default:
-    // New SDKs support builtin modules from the start.
-    return true;
-  }
 }
 
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,

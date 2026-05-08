@@ -15,16 +15,16 @@ target triple = "dxil-pc-shadermodel6.7-library"
 
 define void @lifetimes() #0 {
   %a = alloca [4 x i32], align 8
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %a)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret void
 }
 
 ; Function Attrs: nounwind memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64, ptr) #1
+declare void @llvm.lifetime.start.p0(ptr) #1
 
 ; Function Attrs: nounwind memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64, ptr) #1
+declare void @llvm.lifetime.end.p0(ptr) #1
 
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 attributes #1 = { nounwind memory(argmem: readwrite) }

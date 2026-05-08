@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   LoopPipelining.cpp
   LoopRangeFolding.cpp
   LoopSpecialization.cpp
+  ParallelForToNestedFors.cpp
   ParallelLoopCollapsing.cpp
   ParallelLoopFusion.cpp
   ParallelLoopTiling.cpp
@@ -31,6 +32,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRBufferizationTransforms
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
+  MLIRIndexDialect
   MLIRIR
   MLIRMemRefDialect
   MLIRPass

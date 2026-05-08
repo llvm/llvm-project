@@ -9,7 +9,6 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/DenseSet.h"
 
 using namespace mlir;
 

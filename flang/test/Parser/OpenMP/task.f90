@@ -2,7 +2,7 @@
 ! RUN: %flang_fc1 %openmp_flags -fdebug-dump-parse-tree -fopenmp -fopenmp-version=50  %s | FileCheck --ignore-case %s
 ! RUN: %flang_fc1 %openmp_flags -fdebug-unparse -fopenmp -fopenmp-version=50  %s | FileCheck --ignore-case --check-prefix="CHECK-UNPARSE" %s
 
-!CHECK: OmpBlockDirective -> llvm::omp::Directive = task
+!CHECK: OmpDirectiveName -> llvm::omp::Directive = task
 !CHECK: OmpClauseList -> OmpClause -> Detach -> OmpDetachClause -> OmpObject -> Designator -> DataRef -> Name = 'event'
 
 !CHECK-UNPARSE: INTEGER(KIND=8_4) event

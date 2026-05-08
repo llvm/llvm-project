@@ -177,8 +177,9 @@ def Q15 : ARMReg<15, "q15", [D30, D31]>;
 }
 
 // Current Program Status Register.
-// We model fpscr with two registers: FPSCR models the control bits and will be
-// reserved. FPSCR_NZCV models the flag bits and will be unreserved. APSR_NZCV
+// We model fpscr with three registers. FPSCR models the control bits and will be
+// reserved. FPSCR_RM models rounding mode control bits and will be reserved.
+// FPSCR_NZCV models the flag bits and will be unreserved. APSR_NZCV
 // models the APSR when it's accessed by some special instructions. In such cases
 // it has the same encoding as PC.
 def CPSR       : ARMReg<0,  "cpsr">;
@@ -187,6 +188,9 @@ def APSR_NZCV  : ARMReg<15, "apsr_nzcv">;
 def SPSR       : ARMReg<2,  "spsr">;
 def FPSCR      : ARMReg<3,  "fpscr">;
 def FPSCR_NZCV : ARMReg<3,  "fpscr_nzcv"> {
+  let Aliases = [FPSCR];
+}
+def FPSCR_RM : ARMReg<3,  "fpscr_rm"> {
   let Aliases = [FPSCR];
 }
 def ITSTATE    : ARMReg<4, "itstate">;

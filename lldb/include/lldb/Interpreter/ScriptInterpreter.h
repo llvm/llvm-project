@@ -11,13 +11,17 @@
 
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBSymbolContext.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -25,10 +29,13 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -257,26 +264,6 @@ public:
     return false;
   }
 
-  virtual StructuredData::GenericSP
-  CreateScriptedBreakpointResolver(const char *class_name,
-                                   const StructuredDataImpl &args_data,
-                                   lldb::BreakpointSP &bkpt_sp) {
-    return StructuredData::GenericSP();
-  }
-
-  virtual bool
-  ScriptedBreakpointResolverSearchCallback(StructuredData::GenericSP implementor_sp,
-                                           SymbolContext *sym_ctx)
-  {
-    return false;
-  }
-
-  virtual lldb::SearchDepth
-  ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP implementor_sp)
-  {
-    return lldb::eSearchDepthModule;
-  }
-
   virtual StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec, lldb_private::Status &error) {
     return StructuredData::ObjectSP();
@@ -368,7 +355,7 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<int>
+  virtual llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
     return llvm::createStringError("Type has no child named '%s'", child_name);
@@ -549,6 +536,15 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedFrameProviderInterfaceSP
+  CreateScriptedFrameProviderInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() {
     return {};
@@ -566,10 +562,60 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedBreakpointInterfaceSP
+  CreateScriptedBreakpointInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
   }
+
+  /// Holds an lldb_private::Module name and a "sanitized" version
+  /// of it for the purposes of loading a script of that name by
+  /// the relevant ScriptInterpreter.
+  ///
+  /// E.g., for Python the sanitized name can't include:
+  /// * Special characters: '-', ' ', '.'
+  /// * Python keywords
+  class SanitizedScriptingModuleName {
+  public:
+    SanitizedScriptingModuleName(std::string name, std::string sanitized_name,
+                                 std::string conflicting_keyword)
+        : m_original_name(std::move(name)),
+          m_sanitized_name(std::move(sanitized_name)),
+          m_conflicting_keyword(std::move(conflicting_keyword)) {}
+
+    /// Returns \c true if this name is a keyword in the associated scripting
+    /// language.
+    bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
+
+    /// Returns \c true if the original name has been sanitized (i.e., required
+    /// changes).
+    bool RequiredSanitization() const {
+      return m_sanitized_name != m_original_name;
+    }
+
+    llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
+    llvm::StringRef GetOriginalName() const { return m_original_name; }
+    llvm::StringRef GetConflictingKeyword() const {
+      return m_conflicting_keyword;
+    }
+
+  private:
+    std::string m_original_name;
+    std::string m_sanitized_name;
+
+    /// If the m_sanitized_name conflicts with a keyword for the
+    /// ScriptInterpreter language associated with this
+    /// SanitizedScriptingModuleName, is set to the conflicting keyword. Empty
+    /// otherwise.
+    std::string m_conflicting_keyword;
+  };
+
+  virtual SanitizedScriptingModuleName
+  GetSanitizedScriptingModuleName(llvm::StringRef name);
 
   lldb::DataExtractorSP
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
@@ -580,8 +626,18 @@ public:
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
 
+  lldb::ThreadSP GetOpaqueTypeFromSBThread(const lldb::SBThread &exe_ctx) const;
+
+  lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
+
+  SymbolContext
+  GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
+
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
+
+  lldb::BreakpointLocationSP GetOpaqueTypeFromSBBreakpointLocation(
+      const lldb::SBBreakpointLocation &break_loc) const;
 
   lldb::ProcessAttachInfoSP
   GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;
@@ -594,6 +650,12 @@ public:
 
   lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
       const lldb::SBExecutionContext &exe_ctx) const;
+
+  lldb::StackFrameListSP
+  GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
+
+  lldb::ValueObjectSP
+  GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
 
 protected:
   Debugger &m_debugger;

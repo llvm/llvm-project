@@ -3,11 +3,11 @@
 
 define void @test_vXf16(<2 x half> %src32, <4 x half> %src64, <8 x half> %src128, <16 x half> %src256, <32 x half> %src512) {
 ; CHECK-LABEL: 'test_vXf16'
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V32 = shufflevector <2 x half> %src32, <2 x half> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V64 = shufflevector <4 x half> %src64, <4 x half> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V128 = shufflevector <8 x half> %src128, <8 x half> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V256 = shufflevector <16 x half> %src256, <16 x half> undef, <16 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V512 = shufflevector <32 x half> %src512, <32 x half> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V32 = shufflevector <2 x half> %src32, <2 x half> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V64 = shufflevector <4 x half> %src64, <4 x half> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V128 = shufflevector <8 x half> %src128, <8 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V256 = shufflevector <16 x half> %src256, <16 x half> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V512 = shufflevector <32 x half> %src512, <32 x half> undef, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V32  = shufflevector <2 x half> %src32, <2 x half> undef, <2 x i32> zeroinitializer

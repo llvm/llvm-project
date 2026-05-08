@@ -43,3 +43,6 @@ set(CLANG_BOOTSTRAP_CMAKE_ARGS
   ${EXTRA_ARGS}
   -C ${CMAKE_CURRENT_LIST_DIR}/Fuchsia-stage2.cmake
   CACHE STRING "")
+
+# Do not use LLVM build for generating PGO data.
+set(CLANG_PGO_TRAINING_USE_LLVM_BUILD OFF CACHE BOOL "")

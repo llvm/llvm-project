@@ -19,21 +19,35 @@
 #ifdef OMPT_SUPPORT
 extern void llvm::omp::target::ompt::connectLibrary();
 #endif
+using namespace llvm::omp::target::debug;
 
 static std::mutex PluginMtx;
 static uint32_t RefCount = 0;
+std::atomic<bool> RTLAlive{false};
+std::atomic<int> RTLOngoingSyncs{0};
+
+/// Check deleted and deprecated features, such as environment variables.
+static void checkRuntimeEnvironment() {
+  const char *ShmemEnvarName = "LIBOMPTARGET_SHARED_MEMORY_SIZE";
+  if (std::getenv(ShmemEnvarName))
+    MESSAGE("Warning: %s is no longer valid. Please use OpenMP clause "
+            "'dyn_groupprivate' instead.\n",
+            ShmemEnvarName);
+}
 
 void initRuntime() {
   std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
   Profiler::get();
   TIMESCOPE();
 
+  checkRuntimeEnvironment();
+
   if (PM == nullptr)
     PM = new PluginManager();
 
   RefCount++;
   if (RefCount == 1) {
-    DP("Init offload library!\n");
+    ODBG(ODT_Init) << "Init offload library!";
 #ifdef OMPT_SUPPORT
     // Initialize OMPT first
     llvm::omp::target::ompt::connectLibrary();
@@ -41,6 +55,9 @@ void initRuntime() {
 
     PM->init();
     PM->registerDelayedLibraries();
+
+    // RTL initialization is complete
+    RTLAlive = true;
   }
 }
 
@@ -49,7 +66,14 @@ void deinitRuntime() {
   assert(PM && "Runtime not initialized");
 
   if (RefCount == 1) {
-    DP("Deinit offload library!\n");
+    ODBG(ODT_Deinit) << "Deinit offload library!";
+    // RTL deinitialization has started
+    RTLAlive = false;
+    while (RTLOngoingSyncs > 0) {
+      ODBG(ODT_Sync) << "Waiting for ongoing syncs to finish, count:"
+                     << RTLOngoingSyncs.load();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
     PM->deinit();
     delete PM;
     PM = nullptr;

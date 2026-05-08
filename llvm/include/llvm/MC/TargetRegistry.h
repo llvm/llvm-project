@@ -21,6 +21,7 @@
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -46,6 +47,7 @@ class MCDisassembler;
 class MCInstPrinter;
 class MCInstrAnalysis;
 class MCInstrInfo;
+class MCLFIRewriter;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCRelocationInfo;
@@ -237,6 +239,11 @@ public:
       mca::InstrumentManager *(*)(const MCSubtargetInfo &STI,
                                   const MCInstrInfo &MCII);
 
+  using MCLFIRewriterCtorTy =
+      MCLFIRewriter *(*)(MCContext & Ctx,
+                         std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                         std::unique_ptr<MCInstrInfo> &&InstInfo);
+
 private:
   /// Next - The next registered target in the linked list, maintained by the
   /// TargetRegistry.
@@ -351,6 +358,10 @@ private:
   /// InstrumentManager, if registered (default = nullptr).
   InstrumentManagerCtorTy InstrumentManagerCtorFn = nullptr;
 
+  // MCLFIRewriterCtorFn - Construction function for this target's
+  // MCLFIRewriter, if registered (default = nullptr).
+  MCLFIRewriterCtorTy MCLFIRewriterCtorFn = nullptr;
+
 public:
   Target() = default;
 
@@ -389,18 +400,21 @@ public:
   /// @name Feature Constructors
   /// @{
 
-  /// createMCAsmInfo - Create a MCAsmInfo implementation for the specified
+  /// Create a MCAsmInfo implementation for the specified
   /// target triple.
   ///
   /// \param TheTriple This argument is used to determine the target machine
   /// feature set; it should always be provided. Generally this should be
   /// either the target triple from the module, or the target triple of the
   /// host if that does not exist.
-  MCAsmInfo *createMCAsmInfo(const MCRegisterInfo &MRI, StringRef TheTriple,
+  MCAsmInfo *createMCAsmInfo(const MCRegisterInfo &MRI, const Triple &TheTriple,
                              const MCTargetOptions &Options) const {
     if (!MCAsmInfoCtorFn)
       return nullptr;
-    return MCAsmInfoCtorFn(MRI, Triple(TheTriple), Options);
+    auto *MAI = MCAsmInfoCtorFn(MRI, TheTriple, Options);
+    if (MAI)
+      MAI->setTargetOptions(Options);
+    return MAI;
   }
 
   /// Create a MCObjectFileInfo implementation for the specified target
@@ -432,12 +446,11 @@ public:
     return MCInstrAnalysisCtorFn(Info);
   }
 
-  /// createMCRegInfo - Create a MCRegisterInfo implementation.
-  ///
-  MCRegisterInfo *createMCRegInfo(StringRef TT) const {
+  /// Create a MCRegisterInfo implementation.
+  MCRegisterInfo *createMCRegInfo(const Triple &TT) const {
     if (!MCRegInfoCtorFn)
       return nullptr;
-    return MCRegInfoCtorFn(Triple(TT));
+    return MCRegInfoCtorFn(TT);
   }
 
   /// createMCSubtargetInfo - Create a MCSubtargetInfo implementation.
@@ -449,11 +462,11 @@ public:
   /// \param CPU This specifies the name of the target CPU.
   /// \param Features This specifies the string representation of the
   /// additional target features.
-  MCSubtargetInfo *createMCSubtargetInfo(StringRef TheTriple, StringRef CPU,
+  MCSubtargetInfo *createMCSubtargetInfo(const Triple &TheTriple, StringRef CPU,
                                          StringRef Features) const {
     if (!MCSubtargetInfoCtorFn)
       return nullptr;
-    return MCSubtargetInfoCtorFn(Triple(TheTriple), CPU, Features);
+    return MCSubtargetInfoCtorFn(TheTriple, CPU, Features);
   }
 
   /// createTargetMachine - Create a target specific machine implementation
@@ -471,16 +484,6 @@ public:
     if (!TargetMachineCtorFn)
       return nullptr;
     return TargetMachineCtorFn(*this, TT, CPU, Features, Options, RM, CM, OL,
-                               JIT);
-  }
-
-  [[deprecated("Use overload accepting Triple instead")]]
-  TargetMachine *createTargetMachine(
-      StringRef TT, StringRef CPU, StringRef Features,
-      const TargetOptions &Options, std::optional<Reloc::Model> RM,
-      std::optional<CodeModel::Model> CM = std::nullopt,
-      CodeGenOptLevel OL = CodeGenOptLevel::Default, bool JIT = false) const {
-    return createTargetMachine(Triple(TT), CPU, Features, Options, RM, CM, OL,
                                JIT);
   }
 
@@ -577,15 +580,24 @@ public:
     return nullptr;
   }
 
+  MCLFIRewriter *
+  createMCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                      std::unique_ptr<MCInstrInfo> &&InstInfo) const {
+    if (MCLFIRewriterCtorFn)
+      return MCLFIRewriterCtorFn(Ctx, std::move(RegInfo), std::move(InstInfo));
+    return nullptr;
+  }
+
   /// createMCRelocationInfo - Create a target specific MCRelocationInfo.
   ///
   /// \param TT The target triple.
   /// \param Ctx The target context.
-  MCRelocationInfo *createMCRelocationInfo(StringRef TT, MCContext &Ctx) const {
+  MCRelocationInfo *createMCRelocationInfo(const Triple &TT,
+                                           MCContext &Ctx) const {
     MCRelocationInfoCtorTy Fn = MCRelocationInfoCtorFn
                                     ? MCRelocationInfoCtorFn
                                     : llvm::createMCRelocationInfo;
-    return Fn(Triple(TT), Ctx);
+    return Fn(TT, Ctx);
   }
 
   /// createMCSymbolizer - Create a target specific MCSymbolizer.
@@ -601,14 +613,13 @@ public:
   /// \param RelInfo The relocation information for this target. Takes
   /// ownership.
   MCSymbolizer *
-  createMCSymbolizer(StringRef TT, LLVMOpInfoCallback GetOpInfo,
+  createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                      LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                      MCContext *Ctx,
                      std::unique_ptr<MCRelocationInfo> &&RelInfo) const {
     MCSymbolizerCtorTy Fn =
         MCSymbolizerCtorFn ? MCSymbolizerCtorFn : llvm::createMCSymbolizer;
-    return Fn(Triple(TT), GetOpInfo, SymbolLookUp, DisInfo, Ctx,
-              std::move(RelInfo));
+    return Fn(TT, GetOpInfo, SymbolLookUp, DisInfo, Ctx, std::move(RelInfo));
   }
 
   /// createCustomBehaviour - Create a target specific CustomBehaviour.
@@ -705,7 +716,8 @@ struct TargetRegistry {
   /// \param TripleStr - The triple to use for finding a target.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  // TODO: Drop this in favor of the method accepting Triple.
+  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
+  [[deprecated("Use overload accepting Triple instead")]]
   static const Target *lookupTarget(StringRef TripleStr, std::string &Error) {
     return lookupTarget(Triple(TripleStr), Error);
   }
@@ -1029,6 +1041,10 @@ struct TargetRegistry {
   static void RegisterInstrumentManager(Target &T,
                                         Target::InstrumentManagerCtorTy Fn) {
     T.InstrumentManagerCtorFn = Fn;
+  }
+
+  static void RegisterMCLFIRewriter(Target &T, Target::MCLFIRewriterCtorTy Fn) {
+    T.MCLFIRewriterCtorFn = Fn;
   }
 
   /// @}

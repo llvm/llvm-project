@@ -2,8 +2,8 @@
 # RUN:     -target-abi=o32 -filetype=obj -o /dev/null 2>&1 | FileCheck %s
 .text
 nop
-.reloc foo, R_MIPS_32, .text  # CHECK: :[[@LINE]]:24: error: unresolved relocation offset
+.reloc foo, R_MIPS_32, .text  # CHECK: :[[@LINE]]:8: error: .reloc offset is not relative to a section
 nop
 nop
-.reloc bar, R_MIPS_32, .text  # CHECK: :[[@LINE]]:24: error: unresolved relocation offset
+.reloc bar, R_MIPS_32, .text  # CHECK: :[[@LINE]]:8: error: .reloc offset is not relative to a section
 nop

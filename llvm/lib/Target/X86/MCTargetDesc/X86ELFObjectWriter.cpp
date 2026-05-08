@@ -349,8 +349,8 @@ unsigned X86ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case X86::S_TLSLDM:
   case X86::S_TPOFF:
   case X86::S_DTPOFF:
-    if (auto *S = Target.getAddSym())
-      cast<MCSymbolELF>(S)->setType(ELF::STT_TLS);
+    if (auto *S = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(S)->setType(ELF::STT_TLS);
     break;
   default:
     break;

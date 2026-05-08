@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/math/acosf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,7 +15,6 @@
 using LlvmLibcAcosf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAcosf16Test, SpecialNumbers) {
-  libc_errno = 0;
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acosf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 

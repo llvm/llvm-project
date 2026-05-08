@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=mips-elf -O0 -mcpu=mips32r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSR6
 ; RUN: llc -mtriple=mips-elf -O0 -mcpu=mips32r2 -mattr=+micromips -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MM
 ; RUN: llc -mtriple=mips-elf -O0 -mcpu=mips32r6 -mattr=+micromips -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MMR6
+; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS2
 ; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips32 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS32
 ; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips32r2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSEL
 ; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips32r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSELR6
@@ -30,6 +31,33 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_max_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB0_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    slt $3, $2, $5
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:    beqz $3, $BB0_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS2-NEXT:    j $BB0_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB0_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:  $BB0_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB0_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_max_32:
 ; MIPSR6:       # %bb.0: # %entry
@@ -251,6 +279,33 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_min_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB1_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    slt $3, $2, $5
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:    beqz $3, $BB1_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS2-NEXT:    j $BB1_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB1_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:  $BB1_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB1_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_min_32:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    sync
@@ -471,6 +526,33 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_umax_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB2_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    sltu $3, $2, $5
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:    beqz $3, $BB2_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS2-NEXT:    j $BB2_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB2_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:  $BB2_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB2_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_umax_32:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    sync
@@ -690,6 +772,33 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_umin_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB3_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    sltu $3, $2, $5
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:    beqz $3, $BB3_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS2-NEXT:    j $BB3_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB3_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:  $BB3_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB3_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_umin_32:
 ; MIPSR6:       # %bb.0: # %entry
@@ -935,6 +1044,58 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_max_16:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 65535
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB4_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    sll $4, $4, 16
+; MIPS2-NEXT:    sra $4, $4, 16
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    slt $5, $4, $7
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:    beqz $5, $BB4_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB4_1 Depth=1
+; MIPS2-NEXT:    j $BB4_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB4_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB4_1 Depth=1
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:  $BB4_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB4_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB4_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_max_16:
 ; MIPSR6:       # %bb.0: # %entry
@@ -1476,6 +1637,58 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_min_16:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 65535
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB5_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    sll $4, $4, 16
+; MIPS2-NEXT:    sra $4, $4, 16
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    slt $5, $4, $7
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:    beqz $5, $BB5_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB5_1 Depth=1
+; MIPS2-NEXT:    j $BB5_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB5_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB5_1 Depth=1
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:  $BB5_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB5_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB5_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_min_16:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
@@ -2015,6 +2228,57 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_umax_16:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 65535
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB6_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    andi $4, $4, 65535
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    sltu $5, $4, $7
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:    beqz $5, $BB6_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB6_1 Depth=1
+; MIPS2-NEXT:    j $BB6_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB6_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB6_1 Depth=1
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:  $BB6_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB6_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB6_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_umax_16:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
@@ -2552,6 +2816,57 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_umin_16:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 65535
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB7_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    andi $4, $4, 65535
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    sltu $5, $4, $7
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:    beqz $5, $BB7_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB7_1 Depth=1
+; MIPS2-NEXT:    j $BB7_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB7_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB7_1 Depth=1
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:  $BB7_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB7_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB7_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_umin_16:
 ; MIPSR6:       # %bb.0: # %entry
@@ -3092,6 +3407,58 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_max_8:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 255
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB8_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    sll $4, $4, 24
+; MIPS2-NEXT:    sra $4, $4, 24
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    slt $5, $4, $7
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:    beqz $5, $BB8_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB8_1 Depth=1
+; MIPS2-NEXT:    j $BB8_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB8_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB8_1 Depth=1
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:  $BB8_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB8_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB8_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_max_8:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
@@ -3630,6 +3997,58 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_min_8:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 255
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB9_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    sll $4, $4, 24
+; MIPS2-NEXT:    sra $4, $4, 24
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    slt $5, $4, $7
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:    beqz $5, $BB9_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB9_1 Depth=1
+; MIPS2-NEXT:    j $BB9_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB9_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB9_1 Depth=1
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:  $BB9_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB9_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB9_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_min_8:
 ; MIPSR6:       # %bb.0: # %entry
@@ -4170,6 +4589,57 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_umax_8:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 255
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB10_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    andi $4, $4, 255
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    sltu $5, $4, $7
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:    beqz $5, $BB10_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB10_1 Depth=1
+; MIPS2-NEXT:    j $BB10_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB10_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB10_1 Depth=1
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:  $BB10_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB10_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB10_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_umax_8:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
@@ -4707,6 +5177,57 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_umin_8:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -8
+; MIPS2-NEXT:    .cfi_def_cfa_offset 8
+; MIPS2-NEXT:    # kill: def $at killed $a1
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $1, $zero, -4
+; MIPS2-NEXT:    and $6, $4, $1
+; MIPS2-NEXT:    andi $1, $4, 3
+; MIPS2-NEXT:    sll $10, $1, 3
+; MIPS2-NEXT:    ori $1, $zero, 255
+; MIPS2-NEXT:    sllv $8, $1, $10
+; MIPS2-NEXT:    nor $9, $zero, $8
+; MIPS2-NEXT:    sllv $7, $5, $10
+; MIPS2-NEXT:  $BB11_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($6)
+; MIPS2-NEXT:    srav $4, $2, $10
+; MIPS2-NEXT:    andi $4, $4, 255
+; MIPS2-NEXT:    or $1, $zero, $4
+; MIPS2-NEXT:    sllv $4, $4, $10
+; MIPS2-NEXT:    sltu $5, $4, $7
+; MIPS2-NEXT:    move $3, $4
+; MIPS2-NEXT:    beqz $5, $BB11_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB11_1 Depth=1
+; MIPS2-NEXT:    j $BB11_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB11_3: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB11_1 Depth=1
+; MIPS2-NEXT:    move $3, $7
+; MIPS2-NEXT:  $BB11_4: # %entry
+; MIPS2-NEXT:    #   in Loop: Header=BB11_1 Depth=1
+; MIPS2-NEXT:    and $3, $3, $8
+; MIPS2-NEXT:    and $4, $2, $9
+; MIPS2-NEXT:    or $4, $4, $3
+; MIPS2-NEXT:    sc $4, 0($6)
+; MIPS2-NEXT:    beqz $4, $BB11_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    .insn
+; MIPS2-NEXT:  # %bb.6: # %entry
+; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:  # %bb.7: # %entry
+; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    addiu $sp, $sp, 8
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_umin_8:
 ; MIPSR6:       # %bb.0: # %entry

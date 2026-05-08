@@ -1,3 +1,5 @@
+// REQUIRES: symlinks
+
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/abc/def/ijk/qwe
 // RUN: echo "[{\"directory\":\".\",\"command\":\"clang++ -c %t/abc/def/ijk/qwe/test.cpp\",\"file\":\"%t/abc/def/ijk/qwe/test.cpp\"}]" | sed -e 's/\\/\\\\/g' > %t/compile_commands.json
@@ -9,5 +11,3 @@
 // CHECK: a type specifier is required
 // CHECK: /abc/def/ijk/qwe/test.cpp
 invalid;
-
-// REQUIRES: shell

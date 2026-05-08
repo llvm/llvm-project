@@ -11,9 +11,8 @@
 
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/sanitizer.h"
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 #define LIBC_CRASH_ON_NULLPTR(ptr)                                             \
   do {                                                                         \
     if (LIBC_UNLIKELY((ptr) == nullptr))                                       \

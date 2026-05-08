@@ -203,7 +203,7 @@ public:
   void encodeInlineLineTable(const MCAssembler &Asm,
                              MCCVInlineLineTableFragment &F);
 
-  MCFragment *
+  void
   emitDefRange(MCObjectStreamer &OS,
                ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
                StringRef FixedSizePortion);

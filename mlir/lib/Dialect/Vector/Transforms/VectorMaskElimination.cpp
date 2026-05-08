@@ -82,8 +82,8 @@ LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
   // Replace createMaskOp with an all-true constant. This should result in the
   // mask being removed in most cases (as xfer ops + vector.mask have folds to
   // remove all-true masks).
-  auto allTrue = rewriter.create<vector::ConstantMaskOp>(
-      createMaskOp.getLoc(), maskType, ConstantMaskKind::AllTrue);
+  auto allTrue = vector::ConstantMaskOp::create(
+      rewriter, createMaskOp.getLoc(), maskType, ConstantMaskKind::AllTrue);
   rewriter.replaceAllUsesWith(createMaskOp, allTrue);
   return success();
 }
@@ -97,6 +97,10 @@ void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
   // TODO: Support fixed-size case. This is less likely to be useful as for
   // fixed-size code dimensions are all static so masks tend to fold away.
   if (!vscaleRange)
+    return;
+
+  // Early exit for functions without a body.
+  if (function.isExternal())
     return;
 
   OpBuilder::InsertionGuard g(rewriter);

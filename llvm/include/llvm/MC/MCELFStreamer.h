@@ -47,7 +47,7 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void initSections(const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
@@ -141,7 +141,8 @@ public:
   }
 
 private:
-  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
+  void finalizeCGProfileEntry(const MCSymbolRefExpr *Sym, uint64_t Offset,
+                              const MCSymbolRefExpr *&S);
   void finalizeCGProfile();
 
   bool SeenIdent = false;

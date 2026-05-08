@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=aarch64 < %s | FileCheck %s
 ; RUN: llc -mtriple=arm64-apple-darwin < %s | FileCheck %s --check-prefix=MACHO
-; RUN: llc -filetype=obj -mtriple=aarch64 %s -o %t
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix=DBG
 
 ; MACHO:         bl      ___xray_CustomEvent
 ; MACHO:         bl      ___xray_CustomEvent
@@ -91,18 +89,6 @@ entry:
 ; CHECK-NEXT:    .byte   0x01
 ; CHECK-NEXT:    .byte   0x02
 ; CHECK-NEXT:    .zero   13
-
-;; Construct call site entries for PATCHABLE_EVENT_CALL.
-; DBG:      DW_TAG_subprogram
-; DBG:      DW_AT_name
-; DBG-SAME:            ("customevent")
-; DBG:        DW_TAG_call_site
-; DBG-NEXT:     DW_AT_call_target (DW_OP_reg0 {{.*}})
-; DBG-NEXT:     DW_AT_call_return_pc
-; DBG-EMPTY:
-; DBG:        DW_TAG_call_site
-; DBG-NEXT:     DW_AT_call_target (DW_OP_reg2 {{.*}})
-; DBG-NEXT:     DW_AT_call_return_pc
 
 declare void @llvm.xray.customevent(ptr, i64)
 declare void @llvm.xray.typedevent(i64, ptr, i64)

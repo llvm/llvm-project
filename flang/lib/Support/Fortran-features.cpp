@@ -70,6 +70,13 @@ LanguageFeatureControl::LanguageFeatureControl() {
         std::move(cliOption);
   });
 
+  // Fix CLI spellings where the auto-generated hyphenation is wrong.
+  // TODO: -Wopen-mp-* should be fixed in a central place.  See
+  // see Discourse at
+  // https://discourse.llvm.org/t/openmp-misspelling-of-wopen-mp/90196.
+  ReplaceCliCanonicalSpelling(LanguageFeature::OpenMPThreadprivateEquivalence,
+      "openmp-threadprivate-equivalence");
+
   // These features must be explicitly enabled by command line options.
   disable_.set(LanguageFeature::OldDebugLines);
   disable_.set(LanguageFeature::OpenACC);
@@ -90,6 +97,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::OldStyleParameter);
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
+  disable_.set(LanguageFeature::Coarray);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
@@ -102,8 +110,8 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
   warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
-  warnLanguage_.set(LanguageFeature::AmbiguousStructureConstructor);
   warnLanguage_.set(LanguageFeature::TransferBOZ);
+  warnLanguage_.set(LanguageFeature::AllocatedForAssociated);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
   warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
@@ -147,9 +155,14 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::UseAssociationIntoSameNameSubprogram);
   warnUsage_.set(UsageWarning::HostAssociatedIntentOutInSpecExpr);
   warnUsage_.set(UsageWarning::NonVolatilePointerToVolatile);
+  warnUsage_.set(UsageWarning::RealConstantWidening);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
+  warnUsage_.set(UsageWarning::BadValueInDeadCode);
+  warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
+  warnUsage_.set(UsageWarning::ImpureFinalInPure);
+  warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(

@@ -634,17 +634,25 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
   auto FortyTwo = B.buildConstant(LLT::scalar(64), 42);
   EXPECT_TRUE(mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICst(42)));
   EXPECT_FALSE(mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICst(123)));
+  EXPECT_TRUE(
+      mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICst(APInt(64, 42))));
+  EXPECT_FALSE(
+      mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICst(APInt(64, 123))));
 
   // Test that this works inside of a more complex pattern.
   LLT s64 = LLT::scalar(64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], FortyTwo);
   EXPECT_TRUE(mi_match(MIBAdd.getReg(2), *MRI, m_SpecificICst(42)));
+  EXPECT_TRUE(mi_match(MIBAdd.getReg(2), *MRI, m_SpecificICst(APInt(64, 42))));
 
   // Wrong constant.
   EXPECT_FALSE(mi_match(MIBAdd.getReg(2), *MRI, m_SpecificICst(123)));
+  EXPECT_FALSE(
+      mi_match(MIBAdd.getReg(2), *MRI, m_SpecificICst(APInt(64, 123))));
 
   // No constant on the LHS.
   EXPECT_FALSE(mi_match(MIBAdd.getReg(1), *MRI, m_SpecificICst(42)));
+  EXPECT_FALSE(mi_match(MIBAdd.getReg(1), *MRI, m_SpecificICst(APInt(64, 42))));
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
@@ -664,6 +672,13 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
       mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstSplat(43)));
   EXPECT_FALSE(mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICstSplat(42)));
 
+  EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI,
+                       m_SpecificICstSplat(APInt(64, 42))));
+  EXPECT_FALSE(mi_match(FortyTwoSplat.getReg(0), *MRI,
+                        m_SpecificICstSplat(APInt(64, 43))));
+  EXPECT_FALSE(
+      mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICstSplat(APInt(64, 42))));
+
   MachineInstrBuilder NonConstantSplat =
       B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
 
@@ -673,8 +688,17 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
   EXPECT_FALSE(mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstSplat(43)));
   EXPECT_FALSE(mi_match(AddSplat.getReg(1), *MRI, m_SpecificICstSplat(42)));
 
+  EXPECT_TRUE(
+      mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstSplat(APInt(64, 42))));
+  EXPECT_FALSE(
+      mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstSplat(APInt(64, 43))));
+  EXPECT_FALSE(
+      mi_match(AddSplat.getReg(1), *MRI, m_SpecificICstSplat(APInt(64, 42))));
+
   MachineInstrBuilder Add = B.buildAdd(s64, Copies[0], FortyTwo);
   EXPECT_FALSE(mi_match(Add.getReg(2), *MRI, m_SpecificICstSplat(42)));
+  EXPECT_FALSE(
+      mi_match(Add.getReg(2), *MRI, m_SpecificICstSplat(APInt(64, 42))));
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
@@ -695,6 +719,13 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
       mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstOrSplat(43)));
   EXPECT_TRUE(mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICstOrSplat(42)));
 
+  EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI,
+                       m_SpecificICstOrSplat(APInt(64, 42))));
+  EXPECT_FALSE(mi_match(FortyTwoSplat.getReg(0), *MRI,
+                        m_SpecificICstOrSplat(APInt(64, 43))));
+  EXPECT_TRUE(
+      mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICstOrSplat(APInt(64, 42))));
+
   MachineInstrBuilder NonConstantSplat =
       B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
 
@@ -704,8 +735,17 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
   EXPECT_FALSE(mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstOrSplat(43)));
   EXPECT_FALSE(mi_match(AddSplat.getReg(1), *MRI, m_SpecificICstOrSplat(42)));
 
+  EXPECT_TRUE(
+      mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstOrSplat(APInt(64, 42))));
+  EXPECT_FALSE(
+      mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstOrSplat(APInt(64, 43))));
+  EXPECT_FALSE(
+      mi_match(AddSplat.getReg(1), *MRI, m_SpecificICstOrSplat(APInt(64, 42))));
+
   MachineInstrBuilder Add = B.buildAdd(s64, Copies[0], FortyTwo);
   EXPECT_TRUE(mi_match(Add.getReg(2), *MRI, m_SpecificICstOrSplat(42)));
+  EXPECT_TRUE(
+      mi_match(Add.getReg(2), *MRI, m_SpecificICstOrSplat(APInt(64, 42))));
 }
 
 TEST_F(AArch64GISelMITest, MatchZeroInt) {

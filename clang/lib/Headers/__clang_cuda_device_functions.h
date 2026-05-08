@@ -528,7 +528,7 @@ __DEVICE__ float __tanf(float __a) { return __nv_fast_tanf(__a); }
 __DEVICE__ void __threadfence(void) { __nvvm_membar_gl(); }
 __DEVICE__ void __threadfence_block(void) { __nvvm_membar_cta(); };
 __DEVICE__ void __threadfence_system(void) { __nvvm_membar_sys(); };
-__DEVICE__ void __trap(void) { __asm__ __volatile__("trap;"); }
+__DEVICE__ __attribute__((noreturn)) void __trap(void) { __builtin_trap(); }
 __DEVICE__ unsigned short
 __usAtomicCAS(unsigned short *__p, unsigned short __cmp, unsigned short __v) {
   return __nvvm_atom_cas_gen_us(__p, __cmp, __v);

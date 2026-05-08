@@ -11,7 +11,7 @@ class TestSharedPtr(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
-    @skipUnlessDarwin
+    @skipIf(macos_version=["<", "15.0"])
     def test(self):
         self.build()
 

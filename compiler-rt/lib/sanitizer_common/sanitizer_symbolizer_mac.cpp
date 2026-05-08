@@ -78,13 +78,25 @@ class AtosSymbolizerProcess final : public SymbolizerProcess {
   }
 
   bool ReachedEndOfOutput(const char *buffer, uptr length) const override {
-    return (length >= 1 && buffer[length - 1] == '\n');
+    if (common_flags()->symbolize_inline_frames) {
+      // When running with -i, atos sends two newlines at the end of each
+      // address it symbolizes. This indicates the end of the set of frames
+      // for a particular address.
+      return length >= 2 && buffer[length - 1] == '\n' &&
+             buffer[length - 2] == '\n';
+    } else {
+      // When running without -i, atos only sends a single newline at
+      // the end of each address it symbolizes.
+      return length >= 1 && buffer[length - 1] == '\n';
+    }
   }
 
   void GetArgV(const char *path_to_binary,
                const char *(&argv)[kArgVMax]) const override {
     int i = 0;
     argv[i++] = path_to_binary;
+    if (common_flags()->symbolize_inline_frames)
+      argv[i++] = "-i";
     argv[i++] = "-p";
     argv[i++] = &pid_str_[0];
     if (GetMacosAlignedVersion() == MacosVersion(10, 9)) {
@@ -102,12 +114,16 @@ class AtosSymbolizerProcess final : public SymbolizerProcess {
 
 #undef K_ATOS_ENV_VAR
 
-static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
-                               char **out_module, char **out_file, uptr *line,
-                               uptr *start_address) {
+// Parses a single frame (one line) from str, and returns the pointer to the
+// next character to parse (i.e. after the newline) if successful. If
+// it fails, returns NULL.
+static const char* ParseCommandOutput(const char* str, uptr addr,
+                                      char** out_name, char** out_module,
+                                      char** out_file, uptr* line,
+                                      uptr* start_address) {
   // Trim ending newlines.
   char *trim;
-  ExtractTokenUpToDelimiter(str, "\n", &trim);
+  str = ExtractTokenUpToDelimiter(str, "\n", &trim);
 
   // The line from `atos` is in one of these formats:
   //   myfunction (in library.dylib) (sourcefile.c:17)
@@ -124,7 +140,7 @@ static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
   if (rest[0] == '\0') {
     InternalFree(symbol_name);
     InternalFree(trim);
-    return false;
+    return NULL;
   }
 
   if (internal_strncmp(symbol_name, "0x", 2) != 0)
@@ -149,7 +165,7 @@ static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
   }
 
   InternalFree(trim);
-  return true;
+  return str;
 }
 
 AtosSymbolizer::AtosSymbolizer(const char *path, LowLevelAllocator *allocator)
@@ -161,31 +177,72 @@ bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   char command[32];
   internal_snprintf(command, sizeof(command), "0x%zx\n", addr);
   const char *buf = process_->SendCommand(command);
-  if (!buf) return false;
-  uptr line;
-  uptr start_address = AddressInfo::kUnknown;
-  if (!ParseCommandOutput(buf, addr, &stack->info.function, &stack->info.module,
-                          &stack->info.file, &line, &start_address)) {
-    Report("WARNING: atos failed to symbolize address \"0x%zx\"\n", addr);
+  if (!buf)
     return false;
-  }
-  stack->info.line = (int)line;
 
-  if (start_address == AddressInfo::kUnknown) {
-    // Fallback to dladdr() to get function start address if atos doesn't report
-    // it.
-    Dl_info info;
-    int result = dladdr((const void *)addr, &info);
-    if (result)
-      start_address = reinterpret_cast<uptr>(info.dli_saddr);
+  SymbolizedStack* last = stack;
+  bool top_frame = true;
+
+  // Parse one line of input (i.e. one frame).
+  //
+  // When symbolize_inline_frames=true, an empty line
+  // (i.e. \n at the beginning of a line) indicates that the last
+  // frame has been sent.
+  //
+  // When symbolize_inline_frames=false, the symbolizer will send only
+  // one frame (without a empty line), so loop runs exactly once
+  // and hits an early `break`.
+  while (*buf != '\n') {
+    uptr line;
+    uptr start_address = AddressInfo::kUnknown;
+
+    SymbolizedStack* cur;
+    if (top_frame) {
+      cur = stack;
+    } else {
+      cur = SymbolizedStack::New(stack->info.address);
+      cur->info.FillModuleInfo(stack->info.module, stack->info.module_offset,
+                               stack->info.module_arch);
+      last->next = cur;
+      last = cur;
+    }
+
+    // Parse one line of input (i.e. one frame)
+    // If this succeeds, buf will be updated to point to the first character
+    // after the newline.
+    buf = ParseCommandOutput(buf, addr, &cur->info.function, &cur->info.module,
+                             &cur->info.file, &line, &start_address);
+
+    // Upon failure, ParseCommandOutput returns NULL.
+    if (!buf) {
+      Report("WARNING: atos failed to symbolize address \"0x%zx\"\n", addr);
+      return false;
+    }
+    cur->info.line = (int)line;
+
+    if (top_frame && start_address == AddressInfo::kUnknown) {
+      // Fallback to dladdr() to get function start address if atos doesn't
+      // report it.
+      Dl_info info;
+      int result = dladdr((const void*)addr, &info);
+      if (result)
+        start_address = reinterpret_cast<uptr>(info.dli_saddr);
+    }
+
+    // Only assign to `function_offset` if we were able to get the function's
+    // start address and we got a sensible `start_address` (dladdr doesn't
+    // always ensure that `addr >= sym_addr`).
+    if (start_address != AddressInfo::kUnknown && addr >= start_address) {
+      cur->info.function_offset = addr - start_address;
+    }
+
+    // atos only sends one line when inline frames are off
+    if (!common_flags()->symbolize_inline_frames)
+      break;
+
+    top_frame = false;
   }
 
-  // Only assign to `function_offset` if we were able to get the function's
-  // start address and we got a sensible `start_address` (dladdr doesn't always
-  // ensure that `addr >= sym_addr`).
-  if (start_address != AddressInfo::kUnknown && addr >= start_address) {
-    stack->info.function_offset = addr - start_address;
-  }
   return true;
 }
 

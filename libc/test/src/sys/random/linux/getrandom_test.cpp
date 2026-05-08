@@ -19,11 +19,12 @@ using LlvmLibcGetRandomTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcGetRandomTest, InvalidFlag) {
   LIBC_NAMESPACE::cpp::array<char, 10> buffer;
   ASSERT_THAT(LIBC_NAMESPACE::getrandom(buffer.data(), buffer.size(), -1),
-              Fails(EINVAL));
+              Fails<ssize_t>(EINVAL));
 }
 
 TEST_F(LlvmLibcGetRandomTest, InvalidBuffer) {
-  ASSERT_THAT(LIBC_NAMESPACE::getrandom(nullptr, 65536, 0), Fails(EFAULT));
+  ASSERT_THAT(LIBC_NAMESPACE::getrandom(nullptr, 65536, 0),
+              Fails<ssize_t>(EFAULT));
 }
 
 TEST_F(LlvmLibcGetRandomTest, ReturnsSize) {

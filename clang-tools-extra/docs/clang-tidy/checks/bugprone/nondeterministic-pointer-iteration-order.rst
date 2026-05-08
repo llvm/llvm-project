@@ -35,7 +35,9 @@ This check only detects range-based for loops over unordered sets and maps. It
 also detects calls sorting-like algorithms on containers holding pointers.
 Other similar usages will not be found and are false negatives.
 
-Limitations:
+
+Limitations
+-----------
 
 * This check currently does not check if a nondeterministic iteration order is
   likely to be a mistake, and instead marks all such iterations as bugprone.

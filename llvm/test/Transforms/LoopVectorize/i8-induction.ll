@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @a = common global i8 0, align 1
 @b = common global i8 0, align 1
 
-define void @f() nounwind uwtable ssp {
+define void @f() {
 ; Check that the induction phis and adds have debug location.
 ;
 ; DEBUGLOC-LABEL: vector.body:
@@ -20,7 +20,7 @@ scalar.ph:
 
 for.body:
   %mul16 = phi i8 [ 0, %scalar.ph ], [ %mul, %for.body ]              ; <------- i8 induction var.
-  %c.015 = phi i8 [ undef, %scalar.ph ], [ %conv8, %for.body ]
+  %c.015 = phi i8 [ 0, %scalar.ph ], [ %conv8, %for.body ]
   %conv2 = sext i8 %c.015 to i32
   %tobool = icmp ne i8 %c.015, 0
   %.sink = select i1 %tobool, i8 %c.015, i8 %0
@@ -31,7 +31,7 @@ for.body:
   %phitmp14 = icmp slt i32 %sext, 268435456
   br i1 %phitmp14, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   store i8 %mul, ptr @b, align 1
   ret void
 }

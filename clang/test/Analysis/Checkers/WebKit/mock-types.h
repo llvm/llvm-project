@@ -1,3 +1,28 @@
+#ifndef std_move
+#define std_move
+
+namespace std {
+
+template <typename T> struct remove_reference {
+typedef T type;
+};
+
+template <typename T> struct remove_reference<T&> {
+typedef T type;
+};
+
+template<typename T> typename remove_reference<T>::type&& move(T&& t);
+
+}
+
+#endif
+
+namespace WTF {
+
+template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
+
+}
+
 #ifndef mock_types_1103988513531
 #define mock_types_1103988513531
 
@@ -6,23 +31,23 @@ namespace std {
 template <typename T>
 class unique_ptr {
 private:
-  T *t;
+  void *t;
 
 public:
   unique_ptr() : t(nullptr) { }
   unique_ptr(T *t) : t(t) { }
   ~unique_ptr() {
     if (t)
-      delete t;
+      delete static_cast<T*>(t);
   }
   template <typename U> unique_ptr(unique_ptr<U>&& u)
     : t(u.t)
   {
     u.t = nullptr;
   }
-  T *get() const { return t; }
-  T *operator->() const { return t; }
-  T &operator*() const { return *t; }
+  T *get() const { return static_cast<T*>(t); }
+  T *operator->() const { return get(); }
+  T &operator*() const { return *get(); }
   unique_ptr &operator=(T *) { return *this; }
   explicit operator bool() const { return !!t; }
 };
@@ -202,12 +227,20 @@ template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 struct RefCountable {
   static Ref<RefCountable> create();
   static std::unique_ptr<RefCountable> makeUnique();
-  void ref() {}
-  void deref() {}
+  void ref() { ++m_refCount; }
+  void deref() {
+    --m_refCount;
+    if (!--m_refCount)
+      delete this;
+  }
+  ~RefCountable();
   void method();
   void constMethod() const;
   int trivial() { return 123; }
   RefCountable* next();
+  
+private:
+  unsigned m_refCount { 0 };
 };
 
 template <typename T> T *downcast(T *t) { return t; }
@@ -255,11 +288,14 @@ public:
 
 class CheckedObj {
 public:
-  void incrementCheckedPtrCount();
-  void decrementCheckedPtrCount();
+  void incrementCheckedPtrCount() { ++m_ptrCount; }
+  void decrementCheckedPtrCount() { --m_ptrCount; }
   void method();
   int trivial() { return 123; }
   CheckedObj* next();
+
+private:
+  unsigned m_ptrCount { 0 };
 };
 
 class RefCountableAndCheckable {
@@ -292,6 +328,97 @@ public:
   operator T&() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
+};
+
+class WeakPtrImpl {
+private:
+  void* ptr { nullptr };
+  mutable unsigned m_refCount { 0 };
+
+  template <typename U> friend class CanMakeWeakPtr;
+  template <typename U> friend class WeakPtr;
+
+public:
+  template <typename T>
+  static Ref<WeakPtrImpl> create(T& t)
+  {
+    return adoptRef(*new WeakPtrImpl(t));
+  }
+
+  void ref() const { m_refCount++; }
+  void deref() const {
+    m_refCount--;
+    if (!m_refCount)
+      delete const_cast<WeakPtrImpl*>(this);
+  }
+
+  template <typename T>
+  T* get() { return static_cast<T*>(ptr); }
+  operator bool() const { return !!ptr; }
+  void clear() { ptr = nullptr; }
+
+private:
+  template <typename T>
+  WeakPtrImpl(T& t)
+    : ptr(static_cast<void*>(&t))
+  { }
+};
+
+template <typename T>
+class CanMakeWeakPtr {
+private:
+  RefPtr<WeakPtrImpl> impl;
+
+  template <typename U> friend class CanMakeWeakPtr;
+  template <typename U> friend class WeakPtr;
+
+  WeakPtrImpl& createWeakPtrImpl() {
+    if (!impl)
+      impl = WeakPtrImpl::create(static_cast<T&>(*this));
+    return *impl;
+  }
+
+public:
+  ~CanMakeWeakPtr() {
+    if (!impl)
+      return;
+    impl->clear();
+    impl = nullptr;
+  }
+};
+
+template <typename T>
+class WeakPtr {
+private:
+  RefPtr<WeakPtrImpl> impl;
+
+public:
+  WeakPtr(T& t)
+    : impl(t.createWeakPtrImpl()) {
+  }
+  WeakPtr(T* t)
+    : impl(t ? &t->createWeakPtrImpl() : nullptr) {
+  }
+
+  template <typename U>
+  WeakPtr<T> operator=(U& obj) {
+    impl = obj.createWeakPtrImpl();
+    return *this;
+  }
+
+  template <typename U>
+  WeakPtr<T> operator=(U* obj) {
+    if (obj)
+      impl = obj->createWeakPtrImpl();
+    else
+      impl = nullptr;
+    return *this;
+  }
+
+  T* get() {
+    return impl ? impl->get<T>() : nullptr;
+  }
+
 };
 
 #endif

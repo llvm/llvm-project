@@ -26,7 +26,7 @@ class ModuleSummaryIndex;
 
 class FatLtoCleanup : public PassInfoMixin<FatLtoCleanup> {
 public:
-  FatLtoCleanup() {}
+  FatLtoCleanup() = default;
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };

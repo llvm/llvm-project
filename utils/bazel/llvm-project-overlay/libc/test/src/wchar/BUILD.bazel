@@ -83,7 +83,6 @@ libc_test(
     ],
 )
 
-
 libc_test(
     name = "wcslcat_test",
     srcs = ["wcslcat_test.cpp"],

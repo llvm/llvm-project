@@ -1098,7 +1098,7 @@ void AtomicCaptureTemplateCompound(T LHS, T RHS) {
   {
     LHS--;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used in unary expression('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used in unary expression('LHS') from the first statement}}
     LHS = RHS;
   }
 
@@ -1128,7 +1128,7 @@ void AtomicCaptureTemplateCompound(T LHS, T RHS) {
   {
     LHS *= 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of compound assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of compound assignment('LHS') from the first statement}}
     LHS = RHS;
   }
 #pragma acc atomic capture
@@ -1157,7 +1157,7 @@ void AtomicCaptureTemplateCompound(T LHS, T RHS) {
   {
     LHS = LHS * 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of assignment('LHS') from the first statement}}
     RHS = RHS;
   }
 #pragma acc atomic capture
@@ -1186,7 +1186,7 @@ void AtomicCaptureTemplateCompound(T LHS, T RHS) {
   {
     LHS = LHS | 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of assignment('LHS') from the first statement}}
     RHS = RHS;
   }
 #pragma acc atomic capture
@@ -1255,7 +1255,7 @@ void AtomicCaptureTemplateCompound(T LHS, T RHS) {
   {
     LHS = RHS;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on left hand side of assignment('LHS') must match variable used on right hand side of assignment('RHS') from the first statement}}
+    // expected-note@+1{{sub-expression on left hand side of assignment('LHS') must match sub-expression used on right hand side of assignment('RHS') from the first statement}}
     LHS = 1;
   }
 
@@ -1294,7 +1294,7 @@ void AtomicCaptureTemplateCompound(T LHS, T RHS) {
   {
     LHS = RHS;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable in unary expression('LHS') must match variable used on right hand side of assignment('RHS') from the first statement}}
+    // expected-note@+1{{sub-expression in unary expression('LHS') must match sub-expression used on right hand side of assignment('RHS') from the first statement}}
     LHS++;
   }
 }
@@ -1352,7 +1352,7 @@ void AtomicCaptureTemplateCompound2(T LHS, T RHS) {
   {
     LHS--;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used in unary expression('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used in unary expression('LHS') from the first statement}}
     LHS = RHS;
   }
 
@@ -1384,7 +1384,7 @@ void AtomicCaptureTemplateCompound2(T LHS, T RHS) {
   {
     LHS *= 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of compound assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of compound assignment('LHS') from the first statement}}
     LHS = RHS;
   }
 #pragma acc atomic capture
@@ -1415,7 +1415,7 @@ void AtomicCaptureTemplateCompound2(T LHS, T RHS) {
   {
     LHS = LHS * 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of assignment('LHS') from the first statement}}
     RHS = RHS;
   }
 #pragma acc atomic capture
@@ -1446,7 +1446,7 @@ void AtomicCaptureTemplateCompound2(T LHS, T RHS) {
   {
     LHS = LHS | 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of assignment('LHS') from the first statement}}
     RHS = RHS;
   }
 #pragma acc atomic capture
@@ -1523,7 +1523,7 @@ void AtomicCaptureTemplateCompound2(T LHS, T RHS) {
   {
     LHS = RHS;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on left hand side of assignment('LHS') must match variable used on right hand side of assignment('RHS') from the first statement}}
+    // expected-note@+1{{sub-expression on left hand side of assignment('LHS') must match sub-expression used on right hand side of assignment('RHS') from the first statement}}
     LHS = 1;
   }
 
@@ -1570,7 +1570,7 @@ void AtomicCaptureTemplateCompound2(T LHS, T RHS) {
   {
     LHS = RHS;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable in unary expression('LHS') must match variable used on right hand side of assignment('RHS') from the first statement}}
+    // expected-note@+1{{sub-expression in unary expression('LHS') must match sub-expression used on right hand side of assignment('RHS') from the first statement}}
     LHS++;
   }
 }
@@ -1629,7 +1629,7 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   {
     LHS--;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used in unary expression('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used in unary expression('LHS') from the first statement}}
     LHS = RHS;
   }
 
@@ -1666,7 +1666,7 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   {
     LHS *= 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of compound assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of compound assignment('LHS') from the first statement}}
     LHS = RHS;
   }
 #pragma acc atomic capture
@@ -1702,7 +1702,7 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   {
     LHS = LHS * 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of assignment('LHS') from the first statement}}
     RHS = RHS;
   }
 #pragma acc atomic capture
@@ -1738,7 +1738,7 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   {
     LHS = LHS | 1;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on right hand side of assignment('RHS') must match variable used on left hand side of assignment('LHS') from the first statement}}
+    // expected-note@+1{{sub-expression on right hand side of assignment('RHS') must match sub-expression used on left hand side of assignment('LHS') from the first statement}}
     RHS = RHS;
   }
 #pragma acc atomic capture
@@ -1815,7 +1815,7 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   {
     LHS = RHS;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable on left hand side of assignment('LHS') must match variable used on right hand side of assignment('RHS') from the first statement}}
+    // expected-note@+1{{sub-expression on left hand side of assignment('LHS') must match sub-expression used on right hand side of assignment('RHS') from the first statement}}
     LHS = 1;
   }
 
@@ -1861,7 +1861,23 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   {
     LHS = RHS;
     // expected-error@-3{{statement associated with OpenACC 'atomic capture' directive is invalid}}
-    // expected-note@+1{{variable in unary expression('LHS') must match variable used on right hand side of assignment('RHS') from the first statement}}
+    // expected-note@+1{{sub-expression in unary expression('LHS') must match sub-expression used on right hand side of assignment('RHS') from the first statement}}
     LHS++;
   }
+
+  // Example from UDel test suite, which wasn't working because of irrelevant
+  // parens, make sure we work with these. This should not diagnose.
+  typedef double real_t;
+  int * distribution;
+  real_t *a;
+  real_t *b;
+  int *c;
+  for (int x = 0; x < 5; ++x) {
+#pragma acc atomic capture
+    {
+      c[x] = distribution[(int) (a[x]*b[x]/10)];
+      (distribution[(int)(a[x]*b[x]/10)])--;
+    }
+  }
+
 }

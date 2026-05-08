@@ -347,50 +347,82 @@ bool SelectInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Select;
 }
 
-BranchInst *BranchInst::create(BasicBlock *IfTrue, InsertPosition Pos,
-                               Context &Ctx) {
-  auto &Builder = setInsertPos(Pos);
-  llvm::BranchInst *NewBr =
-      Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
-  return Ctx.createBranchInst(NewBr);
-}
-
-BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                               Value *Cond, InsertPosition Pos, Context &Ctx) {
-  auto &Builder = setInsertPos(Pos);
-  llvm::BranchInst *NewBr =
-      Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
-                           cast<llvm::BasicBlock>(IfFalse->Val));
-  return Ctx.createBranchInst(NewBr);
-}
-
-bool BranchInst::classof(const Value *From) {
-  return From->getSubclassID() == ClassID::Br;
-}
-
-Value *BranchInst::getCondition() const {
-  assert(isConditional() && "Cannot get condition of an uncond branch!");
-  return Ctx.getValue(cast<llvm::BranchInst>(Val)->getCondition());
-}
-
-BasicBlock *BranchInst::getSuccessor(unsigned SuccIdx) const {
-  assert(SuccIdx < getNumSuccessors() &&
-         "Successor # out of range for Branch!");
-  return cast_or_null<BasicBlock>(
-      Ctx.getValue(cast<llvm::BranchInst>(Val)->getSuccessor(SuccIdx)));
-}
-
-void BranchInst::setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
-  assert((Idx == 0 || Idx == 1) && "Out of bounds!");
-  setOperand(2u - Idx, NewSucc);
-}
-
-BasicBlock *BranchInst::LLVMBBToSBBB::operator()(llvm::BasicBlock *BB) const {
+BasicBlock *BrInstCommon::LLVMBBToSBBB::operator()(llvm::BasicBlock *BB) const {
   return cast<BasicBlock>(Ctx.getValue(BB));
 }
 const BasicBlock *
-BranchInst::ConstLLVMBBToSBBB::operator()(const llvm::BasicBlock *BB) const {
+BrInstCommon::ConstLLVMBBToSBBB::operator()(const llvm::BasicBlock *BB) const {
   return cast<BasicBlock>(Ctx.getValue(BB));
+}
+
+UncondBrInst *UncondBrInst::create(BasicBlock *Target,
+                                   InsertPosition InsertBefore, Context &Ctx) {
+  auto &Builder = setInsertPos(InsertBefore);
+  llvm::UncondBrInst *NewUBr =
+      Builder.CreateBr(cast<llvm::BasicBlock>(Target->Val));
+  return Ctx.createUncondBrInst(NewUBr);
+}
+
+BasicBlock *UncondBrInst::getSuccessor() const {
+  return cast_or_null<BasicBlock>(
+      Ctx.getValue(cast<llvm::UncondBrInst>(Val)->getSuccessor()));
+}
+
+void UncondBrInst::setSuccessor(BasicBlock *NewSucc) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&UncondBrInst::getSuccessor,
+                                       &UncondBrInst::setSuccessor>>(this);
+  cast<llvm::UncondBrInst>(Val)->setSuccessor(
+      0, cast<llvm::BasicBlock>(NewSucc->Val));
+}
+
+bool UncondBrInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::UncondBr;
+}
+
+CondBrInst *CondBrInst::create(Value *Cond, BasicBlock *IfTrue,
+                               BasicBlock *IfFalse, InsertPosition InsertBefore,
+                               Context &Ctx) {
+  auto &Builder = setInsertPos(InsertBefore);
+  llvm::CondBrInst *NewCBr = Builder.CreateCondBr(
+      cast<llvm::Value>(Cond->Val), cast<llvm::BasicBlock>(IfTrue->Val),
+      cast<llvm::BasicBlock>(IfFalse->Val));
+  return Ctx.createCondBrInst(NewCBr);
+}
+
+Value *CondBrInst::getCondition() const {
+  assert(isa<llvm::CondBrInst>(Val) &&
+         "Cannot get condition of an uncond branch!");
+  return Ctx.getValue(cast<llvm::CondBrInst>(Val)->getCondition());
+}
+void CondBrInst::setCondition(Value *V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&CondBrInst::getCondition, &CondBrInst::setCondition>>(
+          this);
+  llvm::Value *LLVMV = V->Val;
+  cast<llvm::CondBrInst>(Val)->setCondition(LLVMV);
+}
+
+BasicBlock *CondBrInst::getSuccessor(unsigned SuccIdx) const {
+  assert(SuccIdx < getNumSuccessors() &&
+         "Successor # out of range for Branch!");
+  return cast_or_null<BasicBlock>(
+      Ctx.getValue(cast<llvm::CondBrInst>(Val)->getSuccessor(SuccIdx)));
+}
+
+void CondBrInst::setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
+  assert(Idx < getNumSuccessors() && "Out of bounds!");
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetterWithIdx<&CondBrInst::getSuccessor,
+                                              &CondBrInst::setSuccessor>>(this,
+                                                                          Idx);
+  cast<llvm::CondBrInst>(Val)->setSuccessor(
+      Idx, cast<llvm::BasicBlock>(NewSucc->Val));
+}
+
+bool CondBrInst::classof(const Value *From) {
+  return From->getSubclassID() == ClassID::CondBr;
 }
 
 void LoadInst::setVolatile(bool V) {
@@ -1007,6 +1039,9 @@ static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
     return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPToSI);
   case Instruction::Opcode::FPExt:
     return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPExt);
+  case Instruction::Opcode::PtrToAddr:
+    return static_cast<llvm::Instruction::CastOps>(
+        llvm::Instruction::PtrToAddr);
   case Instruction::Opcode::PtrToInt:
     return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::PtrToInt);
   case Instruction::Opcode::IntToPtr:
@@ -1122,6 +1157,33 @@ void SwitchInst::setDefaultDest(BasicBlock *DefaultCase) {
   cast<llvm::SwitchInst>(Val)->setDefaultDest(
       cast<llvm::BasicBlock>(DefaultCase->Val));
 }
+
+template <typename LLVMCaseItT, typename BlockT, typename ConstT>
+ConstT *
+SwitchInst::CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>::getCaseValue() const {
+  const auto &LLVMCaseHandle = *LLVMCaseIt;
+  auto *LLVMC = Ctx.getValue(LLVMCaseHandle.getCaseValue());
+  return cast<ConstT>(LLVMC);
+}
+
+template <typename LLVMCaseItT, typename BlockT, typename ConstT>
+BlockT *
+SwitchInst::CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>::getCaseSuccessor()
+    const {
+  const auto &LLVMCaseHandle = *LLVMCaseIt;
+  auto *LLVMBB = LLVMCaseHandle.getCaseSuccessor();
+  return cast<BlockT>(Ctx.getValue(LLVMBB));
+}
+
+template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::CaseIt, BasicBlock,
+                                          ConstantInt>;
+template class SwitchInst::CaseItImpl<llvm::SwitchInst::CaseIt, BasicBlock,
+                                      ConstantInt>;
+template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::ConstCaseIt,
+                                          const BasicBlock, const ConstantInt>;
+template class SwitchInst::CaseItImpl<llvm::SwitchInst::ConstCaseIt,
+                                      const BasicBlock, const ConstantInt>;
+
 ConstantInt *SwitchInst::findCaseDest(BasicBlock *BB) {
   auto *LLVMC = cast<llvm::SwitchInst>(Val)->findCaseDest(
       cast<llvm::BasicBlock>(BB->Val));

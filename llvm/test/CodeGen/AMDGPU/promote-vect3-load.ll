@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN %s
 
 ; The type promotion for the vector loads v3i32/v3f32 into v4i32/v4f32 is enabled
 ; only when the alignment is 8-byte or higher.

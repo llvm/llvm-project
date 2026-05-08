@@ -68,6 +68,7 @@ target(liblldb_type, "liblldb") {
     "SBFileSpecList.cpp",
     "SBFormat.cpp",
     "SBFrame.cpp",
+    "SBFrameList.cpp",
     "SBFunction.cpp",
     "SBHostOS.cpp",
     "SBInstruction.cpp",

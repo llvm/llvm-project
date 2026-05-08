@@ -216,7 +216,7 @@ static int on_cds_ompt_callback_control_tool(uint64_t command,
   while (ompt_get_task_info(task_level, NULL, (ompt_data_t **)&task_data, NULL,
                             NULL, NULL)) {
     task_data = get_own_ompt_data(task_data);
-    printf("%" PRIu64 ": _first_tool: task level %d: task_id=%" PRIu64 "\n",
+    printf("%" PRIu64 ": _first_tool: task level %d: task_id=%" PRIx64 "\n",
            ompt_get_thread_data()->value, task_level, task_data->value);
     task_level++;
   }
@@ -227,7 +227,7 @@ static int on_cds_ompt_callback_control_tool(uint64_t command,
   while (ompt_get_parallel_info(parallel_level, (ompt_data_t **)&parallel_data,
                                 NULL)) {
     parallel_data = get_own_ompt_data(parallel_data);
-    printf("%" PRIu64 ": _first_tool: parallel level %d: parallel_id=%" PRIu64
+    printf("%" PRIu64 ": _first_tool: parallel level %d: parallel_id=%" PRIx64
            "\n",
            ompt_get_thread_data()->value, parallel_level, parallel_data->value);
     parallel_level++;
@@ -240,7 +240,7 @@ ompt_data_t *ompt_get_own_thread_data() {
   return get_own_ompt_data(ompt_cds_get_thread_data());
 }
 
-#define register_ompt_callback2_t(name, type)                                       \
+#define register_ompt_callback2_t(name, type)                                  \
   do {                                                                         \
     type f_##name = &on_cds_##name;                                            \
     if (ompt_set_callback(name, (ompt_callback_t)f_##name) == ompt_set_never)  \
@@ -261,12 +261,13 @@ int ompt_cds_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   register_ompt_callback(ompt_callback_nest_lock);
   register_ompt_callback2(ompt_callback_sync_region);
   register_ompt_callback2_t(ompt_callback_sync_region_wait,
-                       ompt_callback_sync_region_t);
+                            ompt_callback_sync_region_t);
   register_ompt_callback2(ompt_callback_control_tool);
   register_ompt_callback2(ompt_callback_flush);
   register_ompt_callback2(ompt_callback_cancel);
   register_ompt_callback2(ompt_callback_implicit_task);
-  register_ompt_callback_t(ompt_callback_lock_init, ompt_callback_mutex_acquire_t);
+  register_ompt_callback_t(ompt_callback_lock_init,
+                           ompt_callback_mutex_acquire_t);
   register_ompt_callback_t(ompt_callback_lock_destroy, ompt_callback_mutex_t);
   register_ompt_callback2(ompt_callback_work);
   register_ompt_callback2(ompt_callback_master);

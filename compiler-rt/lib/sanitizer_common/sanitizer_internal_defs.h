@@ -29,20 +29,21 @@
 
 // Only use SANITIZER_*ATTRIBUTE* before the function return type!
 #if SANITIZER_WINDOWS
-#if SANITIZER_IMPORT_INTERFACE
-# define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllimport)
-#else
-# define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
-#endif
-# define SANITIZER_WEAK_ATTRIBUTE
-#  define SANITIZER_WEAK_IMPORT
-#elif SANITIZER_GO
-# define SANITIZER_INTERFACE_ATTRIBUTE
-# define SANITIZER_WEAK_ATTRIBUTE
+#  if SANITIZER_IMPORT_INTERFACE
+#    define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllimport)
+#  else
+#    define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
+#  endif
+#  define SANITIZER_WEAK_ATTRIBUTE
 #  define SANITIZER_WEAK_IMPORT
 #else
-# define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
-# define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
+#  if SANITIZER_GO
+#    define SANITIZER_INTERFACE_ATTRIBUTE
+#    define SANITIZER_WEAK_ATTRIBUTE
+#  else
+#    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
+#    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))
+#  endif  // SANITIZER_GO
 #  if SANITIZER_APPLE
 #    define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
 #  else
@@ -209,7 +210,7 @@ typedef long ssize;
 typedef sptr ssize;
 #endif
 
-typedef u64 tid_t;
+typedef u64 ThreadID;
 
 // ----------- ATTENTION -------------
 // This header should NOT include any other headers to avoid portability issues.

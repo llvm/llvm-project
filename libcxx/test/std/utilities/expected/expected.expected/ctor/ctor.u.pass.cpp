@@ -14,6 +14,7 @@
 // Constraints:
 // - is_same_v<remove_cvref_t<U>, in_place_t> is false; and
 // - is_same_v<expected, remove_cvref_t<U>> is false; and
+// - is_same_v<remove_cvref_t<U>, unexpect_t> is false; and
 // - remove_cvref_t<U> is not a specialization of unexpected; and
 // - is_constructible_v<T, U> is true.
 //
@@ -46,6 +47,16 @@ static_assert(!std::is_constructible_v<std::expected<FromJustInplace, int>, std:
 // Note that result is true because it is covered by the constructors that take expected
 static_assert(std::is_constructible_v<std::expected<int, int>, std::expected<int, int>&>);
 
+struct T {
+  explicit T(auto) {}
+};
+struct E {
+  E(int) {}
+};
+
+// is_same_v<remove_cvref_t<U>, unexpect_t> is false;
+static_assert(!std::is_constructible_v<std::expected<T, E>, std::unexpect_t>);
+
 // remove_cvref_t<U> is a specialization of unexpected
 // Note that result is true because it is covered by the constructors that take unexpected
 static_assert(std::is_constructible_v<std::expected<int, int>, std::unexpected<int>&>);
@@ -67,6 +78,17 @@ struct CopyOnly {
   CopyOnly(const CopyOnly&) = default;
   CopyOnly(CopyOnly&&)      = delete;
   friend constexpr bool operator==(const CopyOnly& mi, int ii) { return mi.i == ii; }
+};
+
+struct MoveOnly2 {
+  int j;
+  bool used_move1 = false;
+  bool used_move2 = false;
+
+  constexpr explicit MoveOnly2(int jj) : j(jj) {}
+  constexpr MoveOnly2(const MoveOnly2&) = delete;
+  constexpr MoveOnly2(MoveOnly2&& m) : j(m.j), used_move1(true) {}
+  constexpr MoveOnly2(const MoveOnly2&& m) : j(m.j), used_move2(true) {}
 };
 
 struct BaseError {};
@@ -152,6 +174,22 @@ constexpr bool test() {
     std::expected<bool, BaseError> e2(std::move(e1));
     assert(e2.has_value());
     assert(!e2.value()); // yes, e2 holds "false" since LWG3836
+  }
+
+  // Check move constructor selection
+  {
+    MoveOnly2 t{1};
+    std::expected<MoveOnly2, BaseError> e1(std::move(t));
+    assert(e1.has_value());
+    assert(e1.value().used_move1 == true);
+    assert(e1.value().j == 1);
+  }
+  {
+    const MoveOnly2 t2{2};
+    std::expected<MoveOnly2, BaseError> e1(std::move(t2));
+    assert(e1.has_value());
+    assert(e1.value().used_move2 == true);
+    assert(e1.value().j == 2);
   }
   return true;
 }

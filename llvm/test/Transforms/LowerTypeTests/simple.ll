@@ -56,7 +56,7 @@ define i1 @foo(ptr %p) {
 
   ; CHECK: [[R8:%[^ ]*]] = getelementptr i8, ptr @bits_use.{{[0-9]*}}, i32 [[R5]]
   ; CHECK: [[R9:%[^ ]*]] = load i8, ptr [[R8]]
-  ; CHECK: [[R10:%[^ ]*]] = and i8 [[R9]], 1
+  ; CHECK: [[R10:%[^ ]*]] = and i8 [[R9]], ptrtoint (ptr inttoptr (i8 1 to ptr) to i8)
   ; CHECK: [[R11:%[^ ]*]] = icmp ne i8 [[R10]], 0
 
   ; CHECK: [[R16:%[^ ]*]] = phi i1 [ false, {{%[^ ]*}} ], [ [[R11]], {{%[^ ]*}} ]
@@ -91,7 +91,7 @@ define i1 @baz(ptr %p) {
 
   ; CHECK: [[T8:%[^ ]*]] = getelementptr i8, ptr @bits_use{{(\.[0-9]*)?}}, i32 [[T5]]
   ; CHECK: [[T9:%[^ ]*]] = load i8, ptr [[T8]]
-  ; CHECK: [[T10:%[^ ]*]] = and i8 [[T9]], 2
+  ; CHECK: [[T10:%[^ ]*]] = and i8 [[T9]], ptrtoint (ptr inttoptr (i8 2 to ptr) to i8)
   ; CHECK: [[T11:%[^ ]*]] = icmp ne i8 [[T10]], 0
 
   ; CHECK: [[T16:%[^ ]*]] = phi i1 [ false, {{%[^ ]*}} ], [ [[T11]], {{%[^ ]*}} ]

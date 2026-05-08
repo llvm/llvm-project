@@ -63,7 +63,11 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
 
 std::optional<DataRef> ExtractDataRef(
     const ActualArgument &arg, bool intoSubstring, bool intoComplexPart) {
-  return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  if (const Symbol *assumedType{arg.GetAssumedTypeDummy()}) {
+    return DataRef{*assumedType};
+  } else {
+    return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  }
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -495,7 +499,7 @@ Expr<SomeComplex> PromoteMixedComplexReal(
 // N.B. When a "typeless" BOZ literal constant appears as one (not both!) of
 // the operands to a dyadic operation where one is permitted, it assumes the
 // type and kind of the other operand.
-template <template <typename> class OPR, bool CAN_BE_UNSIGNED>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -510,13 +514,8 @@ std::optional<Expr<SomeType>> NumericOperation(
                 std::move(rx), std::move(ry)));
           },
           [&](Expr<SomeUnsigned> &&ix, Expr<SomeUnsigned> &&iy) {
-            if constexpr (CAN_BE_UNSIGNED) {
-              return Package(PromoteAndCombine<OPR, TypeCategory::Unsigned>(
-                  std::move(ix), std::move(iy)));
-            } else {
-              messages.Say("Operands must not be UNSIGNED"_err_en_US);
-              return NoExpr();
-            }
+            return Package(PromoteAndCombine<OPR, TypeCategory::Unsigned>(
+                std::move(ix), std::move(iy)));
           },
           // Mixed REAL/INTEGER operations
           [](Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
@@ -575,34 +574,31 @@ std::optional<Expr<SomeType>> NumericOperation(
           },
           // Operations with one typeless operand
           [&](BOZLiteralConstant &&bx, Expr<SomeInteger> &&iy) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+            return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](BOZLiteralConstant &&bx, Expr<SomeUnsigned> &&iy) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+            return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](BOZLiteralConstant &&bx, Expr<SomeReal> &&ry) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+            return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(ry, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](Expr<SomeInteger> &&ix, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
-                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
-                defaultRealKind);
+            return NumericOperation<OPR>(messages, std::move(x),
+                AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
           },
           [&](Expr<SomeUnsigned> &&ix, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
-                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
-                defaultRealKind);
+            return NumericOperation<OPR>(messages, std::move(x),
+                AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
           },
           [&](Expr<SomeReal> &&rx, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
-                std::move(x), AsGenericExpr(ConvertTo(rx, std::move(by))),
-                defaultRealKind);
+            return NumericOperation<OPR>(messages, std::move(x),
+                AsGenericExpr(ConvertTo(rx, std::move(by))), defaultRealKind);
           },
           // Error cases
           [&](Expr<SomeUnsigned> &&, auto &&) {
@@ -621,7 +617,7 @@ std::optional<Expr<SomeType>> NumericOperation(
       std::move(x.u), std::move(y.u));
 }
 
-template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
+template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -890,29 +886,6 @@ std::optional<Expr<SomeType>> ConvertToType(
   }
 }
 
-bool IsAssumedRank(const Symbol &original) {
-  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (assoc->rank()) {
-      return false; // in RANK(n) or RANK(*)
-    } else if (assoc->IsAssumedRank()) {
-      return true; // RANK DEFAULT
-    }
-  }
-  const Symbol &symbol{semantics::ResolveAssociations(original)};
-  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
-  return object && object->IsAssumedRank();
-}
-
-bool IsAssumedRank(const ActualArgument &arg) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
-    return IsAssumedRank(*expr);
-  } else {
-    const Symbol *assumedTypeDummy{arg.GetAssumedTypeDummy()};
-    CHECK(assumedTypeDummy);
-    return IsAssumedRank(*assumedTypeDummy);
-  }
-}
-
 int GetCorank(const ActualArgument &arg) {
   const auto *expr{arg.UnwrapExpr()};
   return GetCorank(*expr);
@@ -1121,6 +1094,9 @@ template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
+template semantics::UnorderedSymbolSet CollectSymbols(
+    const ProcedureDesignator &);
+template semantics::UnorderedSymbolSet CollectSymbols(const Assignment &);
 
 struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
                                       semantics::UnorderedSymbolSet> {
@@ -1129,7 +1105,7 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   CollectCudaSymbolsHelper() : Base{*this} {}
   using Base::operator();
   semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
-    return {symbol};
+    return {symbol.GetUltimate()};
   }
   // Overload some of the operator() to filter out the symbols that are not
   // of interest for CUDA data transfer logic.
@@ -1167,7 +1143,7 @@ bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
       bool isComponent{sym.owner().IsDerivedType()};
       bool skipComponent{false};
       if (!skipNext) {
-        if (IsCUDADeviceSymbol(sym)) {
+        if (IsCUDADeviceOnlySymbol(sym)) {
           deviceSymbols.insert(sym);
         } else if (isComponent) {
           skipComponent = true; // Component is not device. Look on the base.
@@ -1184,6 +1160,28 @@ bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
 }
 
+bool IsCUDADeviceSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() != common::CUDADataAttr::Pinned;
+  } else if (const auto *details =
+                 sym.GetUltimate().detailsIf<semantics::AssocEntityDetails>()) {
+    return GetNbOfCUDADeviceSymbols(details->expr()) > 0;
+  }
+  return false;
+}
+
+bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Constant);
+  }
+  return false;
+}
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -1197,10 +1195,22 @@ struct HasVectorSubscriptHelper
   bool operator()(const ProcedureRef &) const {
     return false; // don't descend into function call arguments
   }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    return false; // not a variable designator
+  }
 };
 
 bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
+}
+
+bool HasVectorSubscript(const ActualArgument &actual) {
+  auto expr{actual.UnwrapExpr()};
+  return expr && HasVectorSubscript(*expr);
+}
+
+bool IsArraySection(const Expr<SomeType> &expr) {
+  return expr.Rank() > 0 && IsVariable(expr) && !UnwrapWholeSymbolDataRef(expr);
 }
 
 // HasConstant()
@@ -1220,6 +1230,20 @@ bool HasConstant(const Expr<SomeType> &expr) {
   return HasConstantHelper{}(expr);
 }
 
+// HasStructureComponent()
+struct HasStructureComponentHelper
+    : public AnyTraverse<HasStructureComponentHelper, bool, false> {
+  using Base = AnyTraverse<HasStructureComponentHelper, bool, false>;
+  HasStructureComponentHelper() : Base(*this) {}
+  using Base::operator();
+
+  bool operator()(const Component &) const { return true; }
+};
+
+bool HasStructureComponent(const Expr<SomeType> &expr) {
+  return HasStructureComponentHelper{}(expr);
+}
+
 parser::Message *AttachDeclaration(
     parser::Message &message, const Symbol &symbol) {
   const Symbol *unhosted{&symbol};
@@ -1231,6 +1255,15 @@ parser::Message *AttachDeclaration(
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
         unhosted->name(), GetUsedModule(*use).name());
+  } else if (const auto *common{
+                 unhosted->detailsIf<semantics::CommonBlockDetails>()}) {
+    parser::CharBlock at{unhosted->name()};
+    if (at.empty()) { // blank COMMON, with or without //
+      at = common->sourceLocation();
+    }
+    if (!at.empty()) {
+      message.Attach(at, "Declaration of /%s/"_en_US, unhosted->name());
+    }
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
@@ -1693,17 +1726,25 @@ struct ArgumentExtractor
       // to int(kind=4) for example.
       return (*this)(x.template operand<0>());
     } else {
-      return std::make_pair(operation::OperationCode(x),
+      return std::make_pair(operation::OperationCode(x.derived()),
           OperationArgs(x, std::index_sequence_for<Os...>{}));
     }
   }
 
   template <typename T> Result operator()(const Designator<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
   template <typename T> Result operator()(const Constant<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // Return the condition and then/else branches as immediate operands;
+    // nested conditionals are not permitted in an OpenMP atomic context.
+    return {Operator::Conditional,
+        {AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue()),
+            AsSomeExpr(x.elseValue())}};
   }
 
   template <typename... Rs>
@@ -1743,6 +1784,8 @@ std::string operation::ToString(operation::Operator op) {
     return "ASSOCIATED";
   case Operator::Call:
     return "function-call";
+  case Operator::Conditional:
+    return "conditional";
   case Operator::Constant:
     return "constant";
   case Operator::Convert:
@@ -1793,6 +1836,10 @@ std::string operation::ToString(operation::Operator op) {
   llvm_unreachable("Unhandler operator");
 }
 
+operation::Operator operation::OperationCode(const Relational<SomeType> &op) {
+  return common::visit([](auto &&s) { return OperationCode(s); }, op.u);
+}
+
 operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
   Operator code{llvm::StringSwitch<Operator>(proc.GetName())
           .Case("associated", Operator::Associated)
@@ -1809,8 +1856,13 @@ operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
 }
 
 std::pair<operation::Operator, std::vector<Expr<SomeType>>>
-GetTopLevelOperation(const Expr<SomeType> &expr) {
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr) {
   return operation::ArgumentExtractor<true>{}(expr);
+}
+
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperation(const Expr<SomeType> &expr) {
+  return operation::ArgumentExtractor<false>{}(expr);
 }
 
 namespace operation {
@@ -1860,6 +1912,13 @@ struct ConvertCollector
     } else {
       return {AsSomeExpr(x.derived()), {}};
     }
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // ConvertCollector tracks the typed-value conversion chain (for OMP ATOMIC
+    // validation); the condition is a LOGICAL(4) selector, not a value output,
+    // so only the value branches are collected.
+    return Combine((*this)(x.thenValue()), (*this)(x.elseValue()));
   }
 
   template <typename... Rs>
@@ -1936,6 +1995,60 @@ bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x) {
     return false;
   }
 }
+
+struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
+  using Base = evaluate::AnyTraverse<VariableFinder>;
+  using SomeExpr = Expr<SomeType>;
+  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
+
+  using Base::operator();
+
+  template <typename T>
+  bool operator()(const evaluate::Designator<T> &x) const {
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
+  }
+
+  template <typename T>
+  bool operator()(const evaluate::FunctionRef<T> &x) const {
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
+  }
+
+private:
+  const SomeExpr &var;
+};
+
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &sub, const Expr<SomeType> &super) {
+  return VariableFinder{sub}(super);
+}
+
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &scope) {
+  if (scope.IsDerivedType()) {
+    for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
+      const Symbol &symbol{*iter->second};
+      if (symbol.test(Symbol::Flag::ParentComp)) {
+        if (const semantics::DeclTypeSpec *type{symbol.GetType()}) {
+          if (const semantics::DerivedTypeSpec *derived{type->AsDerived()}) {
+            const semantics::Scope *parent{derived->scope()};
+            if (!parent) {
+              parent = derived->typeSymbol().scope();
+            }
+            if (parent) {
+              if (auto parentDepth{CountDerivedTypeAncestors(*parent)}) {
+                return 1 + *parentDepth;
+              }
+            }
+          }
+        }
+        return std::nullopt; // error recovery
+      }
+    }
+    return 0;
+  } else {
+    return std::nullopt; // error recovery
+  }
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -2276,9 +2389,22 @@ bool IsDummy(const Symbol &symbol) {
       ResolveAssociations(symbol).details());
 }
 
+bool IsAssumedRank(const Symbol &original) {
+  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (assoc->rank()) {
+      return false; // in RANK(n) or RANK(*)
+    } else if (assoc->IsAssumedRank()) {
+      return true; // RANK DEFAULT
+    }
+  }
+  const Symbol &symbol{semantics::ResolveAssociations(original)};
+  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+  return object && object->IsAssumedRank();
+}
+
 bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
-  const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
+  const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
   return object && object->IsAssumedShape() &&
       !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
@@ -2547,6 +2673,18 @@ const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
     }
   }
   return nullptr;
+}
+
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
 }
 
 } // namespace Fortran::semantics

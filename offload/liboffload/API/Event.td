@@ -10,8 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Function {
-    let name = "olDestroyEvent";
+def olCreateEvent : Function {
+    let desc = "Enqueue an event to `Queue` and return it.";
+    let details = [
+      "This event can be used with `olSyncEvent`, `olWaitEvents`, and `olGetEventElapsedTime`.",
+      "It will be complete once all enqueued work prior to the `olCreateEvent` call is complete.",
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "queue to create the event for", PARAM_IN>,
+        Param<"ol_event_handle_t*", "Event", "output pointer for the created event", PARAM_OUT>
+    ];
+    let returns = [];
+}
+
+def olDestroyEvent : Function {
     let desc = "Destroy the event and free all underlying resources.";
     let details = [];
     let params = [
@@ -20,9 +32,8 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olWaitEvent";
-    let desc = "Wait for the event to be complete.";
+def olSyncEvent : Function {
+    let desc = "Block the calling thread until the event is complete.";
     let details = [];
     let params = [
         Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>
@@ -30,17 +41,30 @@ def : Function {
     let returns = [];
 }
 
-def : Enum {
-  let name = "ol_event_info_t";
+def olGetEventElapsedTime : Function {
+    let desc = "Get the elapsed time in milliseconds between two events.";
+    let details = [
+        "The elapsed time is returned in milliseconds.",
+        "The queues associated with `StartEvent` and `EndEvent` must belong to the same device."
+    ];
+    let params = [
+        Param<"ol_event_handle_t", "StartEvent", "handle of the start event", PARAM_IN>,
+        Param<"ol_event_handle_t", "EndEvent", "handle of the end event", PARAM_IN>,
+        Param<"float*", "ElapsedTime", "output pointer for the elapsed time in milliseconds", PARAM_OUT>
+    ];
+    let returns = [];
+}
+
+def ol_event_info_t : Enum {
   let desc = "Supported event info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"QUEUE", "ol_queue_handle_t", "The handle of the queue associated with the device.">
+    TaggedEtor<"QUEUE", "ol_queue_handle_t", "The handle of the queue associated with the device.">,
+    TaggedEtor<"IS_COMPLETE", "bool", "True if and only if the event is complete.">,
   ];
 }
 
-def : Function {
-  let name = "olGetEventInfo";
+def olGetEventInfo : Function {
   let desc = "Queries the given property of the event.";
   let details = [
     "`olGetEventInfoSize` can be used to query the storage size "
@@ -64,8 +88,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetEventInfoSize";
+def olGetEventInfoSize : Function {
   let desc = "Returns the storage size of the given event query.";
   let details = [];
   let params = [

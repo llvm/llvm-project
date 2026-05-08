@@ -47,3 +47,16 @@ constexpr void *s1 = __builtin_assume_aligned(x, 32);
 constexpr void *s2 = __builtin_assume_aligned(x, 32, 5);
 constexpr void *s3 = __builtin_assume_aligned(x, 32, -1);
 
+
+constexpr int add(int a, int b) {
+  return a+b;
+}
+constexpr void *c1 = __builtin_assume_aligned(p, add(1,1));
+constexpr void *c2 = __builtin_assume_aligned(p, add(2,1)); // expected-error {{not a power of 2}}
+
+constexpr long kAlignment = 128;
+long AllocateAlignedBytes_payload;
+void AllocateAlignedBytes() {
+  void *m = __builtin_assume_aligned(
+      reinterpret_cast<void *>(AllocateAlignedBytes_payload), kAlignment);
+}

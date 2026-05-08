@@ -44,12 +44,29 @@ typedef void (*LLVMMemoryManagerNotifyTerminatingCallback)(void *CtxCtx);
  */
 
 /**
+ * Create a ObjectLinkingLayer instance using the standard JITLink
+ * InProcessMemoryManager for memory management.
+ */
+LLVM_C_ABI LLVMErrorRef
+LLVMOrcCreateObjectLinkingLayerWithInProcessMemoryManager(
+    LLVMOrcObjectLayerRef *Result, LLVMOrcExecutionSessionRef ES);
+
+/**
  * Create a RTDyldObjectLinkingLayer instance using the standard
  * SectionMemoryManager for memory management.
  */
 LLVM_C_ABI LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
     LLVMOrcExecutionSessionRef ES);
+
+/**
+ * Create a RTDyldObjectLinkingLayer instance using the standard
+ * SectionMemoryManager for memory management. If ReserveAlloc is true then
+ * a contiguous range of memory will be reserved for each object file.
+ */
+LLVM_C_ABI LLVMOrcObjectLayerRef
+LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManagerReserveAlloc(
+    LLVMOrcExecutionSessionRef ES, LLVMBool ReserveAlloc);
 
 /**
  * Create a RTDyldObjectLinkingLayer instance using MCJIT-memory-manager-like

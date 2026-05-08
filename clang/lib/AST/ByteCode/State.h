@@ -13,8 +13,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_STATE_H
 #define LLVM_CLANG_AST_INTERP_STATE_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/OptionalDiagnostic.h"
 
 namespace clang {
 class OptionalDiagnostic;
@@ -50,6 +52,27 @@ enum CheckSubobjectKind {
   CSK_VectorElement
 };
 
+enum class EvaluationMode {
+  /// Evaluate as a constant expression. Stop if we find that the expression
+  /// is not a constant expression.
+  ConstantExpression,
+
+  /// Evaluate as a constant expression. Stop if we find that the expression
+  /// is not a constant expression. Some expressions can be retried in the
+  /// optimizer if we don't constant fold them here, but in an unevaluated
+  /// context we try to fold them immediately since the optimizer never
+  /// gets a chance to look at it.
+  ConstantExpressionUnevaluated,
+
+  /// Fold the expression to a constant. Stop if we hit a side-effect that
+  /// we can't model.
+  ConstantFold,
+
+  /// Evaluate in any way we know how. Don't worry about side-effects that
+  /// can't be modeled.
+  IgnoreSideEffects,
+};
+
 namespace interp {
 class Frame;
 class SourceInfo;
@@ -57,26 +80,51 @@ class SourceInfo;
 /// Interface for the VM to interact with the AST walker's context.
 class State {
 public:
+  State(ASTContext &ASTCtx, Expr::EvalStatus &EvalStatus)
+      : Ctx(ASTCtx), EvalStatus(EvalStatus) {}
   virtual ~State();
 
-  virtual bool checkingForUndefinedBehavior() const = 0;
-  virtual bool checkingPotentialConstantExpression() const = 0;
-  virtual bool noteUndefinedBehavior() = 0;
-  virtual bool keepEvaluatingAfterFailure() const = 0;
-  virtual bool keepEvaluatingAfterSideEffect() const = 0;
-  virtual Frame *getCurrentFrame() = 0;
+  virtual const Frame *getCurrentFrame() = 0;
   virtual const Frame *getBottomFrame() const = 0;
-  virtual bool hasActiveDiagnostic() = 0;
-  virtual void setActiveDiagnostic(bool Flag) = 0;
-  virtual void setFoldFailureDiagnostic(bool Flag) = 0;
-  virtual Expr::EvalStatus &getEvalStatus() const = 0;
-  virtual ASTContext &getASTContext() const = 0;
-  virtual bool hasPriorDiagnostic() = 0;
   virtual unsigned getCallStackDepth() = 0;
-  virtual bool noteSideEffect() = 0;
+  virtual bool stepsLeft() const = 0;
 
-public:
-  State() = default;
+  Expr::EvalStatus &getEvalStatus() const { return EvalStatus; }
+  ASTContext &getASTContext() const { return Ctx; }
+  const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
+
+  /// Note that we have had a side-effect, and determine whether we should
+  /// keep evaluating.
+  bool noteSideEffect() const {
+    EvalStatus.HasSideEffects = true;
+    return keepEvaluatingAfterSideEffect();
+  }
+
+  /// Should we continue evaluation as much as possible after encountering a
+  /// construct which can't be reduced to a value?
+  bool keepEvaluatingAfterFailure() const;
+  /// Should we continue evaluation after encountering a side-effect that we
+  /// couldn't model?
+  bool keepEvaluatingAfterSideEffect() const;
+
+  /// Note that we hit something that was technically undefined behavior, but
+  /// that we can evaluate past it (such as signed overflow or floating-point
+  /// division by zero.)
+  bool noteUndefinedBehavior() const {
+    EvalStatus.HasUndefinedBehavior = true;
+    return keepEvaluatingAfterUndefinedBehavior();
+  }
+
+  /// Are we checking whether the expression is a potential constant
+  /// expression?
+  bool checkingPotentialConstantExpression() const {
+    return CheckingPotentialConstantExpression;
+  }
+  /// Are we checking an expression for overflow?
+  bool checkingForUndefinedBehavior() const {
+    return CheckingForUndefinedBehavior;
+  }
+
   /// Diagnose that the evaluation could not be folded (FF => FoldFailure)
   OptionalDiagnostic
   FFDiag(SourceLocation Loc,
@@ -89,7 +137,7 @@ public:
          unsigned ExtraNotes = 0);
 
   OptionalDiagnostic
-  FFDiag(const SourceInfo &SI,
+  FFDiag(SourceInfo SI,
          diag::kind DiagId = diag::note_invalid_subexpr_in_const_expr,
          unsigned ExtraNotes = 0);
 
@@ -109,7 +157,7 @@ public:
           unsigned ExtraNotes = 0);
 
   OptionalDiagnostic
-  CCEDiag(const SourceInfo &SI,
+  CCEDiag(SourceInfo SI,
           diag::kind DiagId = diag::note_invalid_subexpr_in_const_expr,
           unsigned ExtraNotes = 0);
 
@@ -122,19 +170,57 @@ public:
   /// Directly reports a diagnostic message.
   DiagnosticBuilder report(SourceLocation Loc, diag::kind DiagId);
 
-  const LangOptions &getLangOpts() const;
-
   /// Whether or not we're in a context where the front end requires a
   /// constant value.
   bool InConstantContext = false;
 
+  /// Whether we're checking that an expression is a potential constant
+  /// expression. If so, do not fail on constructs that could become constant
+  /// later on (such as a use of an undefined global).
+  bool CheckingPotentialConstantExpression = false;
+
+  /// Whether we're checking for an expression that has undefined behavior.
+  /// If so, we will produce warnings if we encounter an operation that is
+  /// always undefined.
+  ///
+  /// Note that we still need to evaluate the expression normally when this
+  /// is set; this is used when evaluating ICEs in C.
+  bool CheckingForUndefinedBehavior = false;
+
+  EvaluationMode EvalMode;
+  ASTContext &Ctx;
+  Expr::EvalStatus &EvalStatus;
+
 private:
+  /// HasActiveDiagnostic - Was the previous diagnostic stored? If so, further
+  /// notes attached to it will also be stored, otherwise they will not be.
+  bool HasActiveDiagnostic = false;
+
+  /// Have we emitted a diagnostic explaining why we couldn't constant
+  /// fold (not just why it's not strictly a constant expression)?
+  bool HasFoldFailureDiagnostic = false;
+
   void addCallStack(unsigned Limit);
 
   PartialDiagnostic &addDiag(SourceLocation Loc, diag::kind DiagId);
 
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
                           unsigned ExtraNotes, bool IsCCEDiag);
+
+  /// Should we continue evaluation after encountering undefined behavior?
+  bool keepEvaluatingAfterUndefinedBehavior() const;
+
+  // If we have a prior diagnostic, it will be noting that the expression
+  // isn't a constant expression. This diagnostic is more important,
+  // unless we require this evaluation to produce a constant expression.
+  //
+  // FIXME: We might want to show both diagnostics to the user in
+  // EvaluationMode::ConstantFold mode.
+  bool hasPriorDiagnostic();
+
+  void setFoldFailureDiagnostic(bool Flag) { HasFoldFailureDiagnostic = Flag; };
+  void setActiveDiagnostic(bool Flag) { HasActiveDiagnostic = Flag; };
+  bool hasActiveDiagnostic() const { return HasActiveDiagnostic; }
 };
 
 } // namespace interp

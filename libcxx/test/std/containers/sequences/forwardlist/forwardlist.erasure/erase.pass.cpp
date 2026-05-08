@@ -69,6 +69,25 @@ TEST_CONSTEXPR_CXX26 bool test() {
   test<std::forward_list<long>>();
   test<std::forward_list<double>>();
 
+  { // Ensure that the result of operator== is converted to bool
+    // See LWG4135.
+    struct Bool {
+      Bool()            = default;
+      Bool(const Bool&) = delete;
+      operator bool() const { return true; }
+    };
+
+    struct Int {
+      Bool& operator==(Int) const {
+        static Bool b;
+        return b;
+      }
+    };
+
+    std::forward_list<Int> l;
+    std::erase(l, Int{});
+  }
+
   return true;
 }
 

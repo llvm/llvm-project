@@ -8,6 +8,17 @@
 // RUN:     -shared-libs=%tlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
+// RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN:     -buffer-deallocation-pipeline=private-function-dynamic-ownership \
+// RUN:     -test-cf-assert \
+// RUN:     -convert-scf-to-cf \
+// RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
+// RUN:     -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:     -shared-libs=%tlir_runner_utils 2>&1 | \
+// RUN: FileCheck %s
+
 func.func @extract(%tensor: tensor<1xf32>, %index: index) {
     tensor.extract %tensor[%index] :  tensor<1xf32>
     return
@@ -33,19 +44,19 @@ func.func @main() {
   %alloc_2x2x2 = tensor.empty(%2, %2, %2) : tensor<?x?x?xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract"(%{{.*}}, %{{.*}}) : (tensor<1xf32>, index) -> f32
+  // CHECK-NEXT: tensor.extract %{{.*}}[%{{.*}}] : tensor<1xf32>
   // CHECK-NEXT: ^ out-of-bounds access
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract(%alloca_1, %1) : (tensor<1xf32>, index) -> ()
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract"(%{{.*}}, %{{.*}}) : (tensor<?xf32>, index) -> f32
+  // CHECK-NEXT: tensor.extract %{{.*}}[%{{.*}}] : tensor<?xf32>
   // CHECK-NEXT: ^ out-of-bounds access
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract_dynamic(%alloc_1, %1) : (tensor<?xf32>, index) -> ()
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.extract"(%{{.*}}, %{{.*}}) : (tensor<?x?x?xf32>, index, index, index) -> f32
+  // CHECK-NEXT: tensor.extract %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : tensor<?x?x?xf32>
   // CHECK-NEXT: ^ out-of-bounds access
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @extract_nd_dynamic(%alloc_2x2x2, %1, %n1, %0) : (tensor<?x?x?xf32>, index, index, index) -> ()

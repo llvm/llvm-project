@@ -16,9 +16,9 @@
 ;; resolved via tail call fixup. That happens in between the initial
 ;; stack update and the end of graph building.
 ; RUN:  cat %t.ccg.poststackupdate.dot | FileCheck %s --check-prefix=DOTPOSTSTACKUPDATE
-; DOTPOSTSTACKUPDATE: {OrigId: 15025054523792398438\nmain -\> xyz}
+; DOTPOSTSTACKUPDATE: {OrigId: 15025054523792398438{{.*}}\nmain -\> xyz}
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOSTBUILD
-; DOTPOSTBUILD: {OrigId: 15025054523792398438\nnull call (external)}
+; DOTPOSTBUILD: {OrigId: 15025054523792398438{{.*}}\nnull call (external)}
 
 ;; Check that all calls in the IR are to the original functions, leading to a
 ;; non-cold operator new call.

@@ -458,7 +458,7 @@ define <16 x i1> @buildvec_mask_v16i1_undefs() {
 ; ZVE32F-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; ZVE32F-NEXT:    vmv.s.x v0, a0
 ; ZVE32F-NEXT:    ret
-  ret <16 x i1> <i1 undef, i1 1, i1 undef, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef>
+  ret <16 x i1> <i1 poison, i1 1, i1 poison, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 poison, i1 poison, i1 poison, i1 poison, i1 poison>
 }
 
 define <32 x i1> @buildvec_mask_v32i1() {

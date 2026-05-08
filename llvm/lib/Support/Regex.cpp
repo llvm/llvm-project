@@ -154,7 +154,7 @@ std::string Regex::sub(StringRef Repl, StringRef String,
     // Add the skipped substring.
     Res += Split.first;
 
-    // Check for terminimation and trailing backslash.
+    // Check for termination and trailing backslash.
     if (Split.second.empty()) {
       if (Repl.size() != Split.first.size() &&
           Error && Error->empty())

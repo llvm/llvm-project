@@ -6,11 +6,11 @@
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
-define i32 @fred(ptr %a0) #0 {
+define i32 @fred(ptr %a0, i32 %cond) #0 {
 ; CHECK-LABEL: fred:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) jump:nt .LBB0_2
+; CHECK-NEXT:     p0 = cmp.eq(r1,#5); if (!p0.new) jump:t .LBB0_2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:  // %bb.1: // %b2
 ; CHECK-NEXT:    {
@@ -40,7 +40,7 @@ define i32 @fred(ptr %a0) #0 {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 b0:
-  switch i32 undef, label %b14 [
+  switch i32 %cond, label %b14 [
     i32 5, label %b2
     i32 3, label %b1
   ]

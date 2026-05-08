@@ -1146,6 +1146,21 @@ define i8 @fshl_range_trunc(i1 %x) {
   ret i8 %tr
 }
 
+define <2 x i8> @fshl_range_vec(<2 x i1> %x) {
+; CHECK-LABEL: @fshl_range_vec(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[ZEXT]], splat (i32 126)
+; CHECK-NEXT:    [[FSHL:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[OR]], <2 x i32> splat (i32 -2), <2 x i32> splat (i32 1))
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw <2 x i32> [[FSHL]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TR]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %or = or disjoint <2 x i32> %zext, <i32 -2, i32 -2>
+  %fshl = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %or, <2 x i32> <i32 -2, i32 -2>, <2 x i32> <i32 1, i32 1>), !range !{i32 -4, i32 2}
+  %tr = trunc <2 x i32> %fshl to <2 x i8>
+  ret <2 x i8> %tr
+}
+
 ;; Issue #138334 negative rotate amounts can be folded into the opposite direction
 define i32 @fshl_neg_amount(i32 %x, i32 %y) {
 ; CHECK-LABEL: @fshl_neg_amount(
@@ -1214,3 +1229,75 @@ define i31 @fshr_neg_amount_non_power_two(i31 %x, i31 %y) {
   %r = call i31 @llvm.fshr.i31(i31 %x, i31 %x, i31 %n)
   ret i31 %r
 }
+
+define i32 @rot_const_consecutive(i32 %x) {
+; CHECK-LABEL: @rot_const_consecutive(
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 8)
+; CHECK-NEXT:    ret i32 [[R2]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 13)
+  %r2 = call i32 @llvm.fshl.i32(i32 %r, i32 %r, i32 27)
+  ret i32 %r2
+}
+
+define i32 @rot_const_consecutive_multi_use(i32 %x) {
+; CHECK-LABEL: @rot_const_consecutive_multi_use(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 7)
+; CHECK-NEXT:    [[R3:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[X]], i32 11)
+; CHECK-NEXT:    [[R2:%.*]] = and i32 [[R]], [[R3]]
+; CHECK-NEXT:    ret i32 [[R2]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 7)
+  %r2 = call i32 @llvm.fshl.i32(i32 %r, i32 %r, i32 4)
+  %and = and i32 %r, %r2
+  ret i32 %and
+}
+
+define i32 @rot_const_consecutive_cancel_out(i32 %x) {
+; CHECK-LABEL: @rot_const_consecutive_cancel_out(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 7)
+  %r2 = call i32 @llvm.fshl.i32(i32 %r, i32 %r, i32 25)
+  ret i32 %r2
+}
+
+;; negative test, consecutive rotates only fold if shift amounts are const
+
+define i32 @rot_nonconst_shift(i32 %x, i32 %amt) {
+; CHECK-LABEL: @rot_nonconst_shift(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 7)
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.fshl.i32(i32 [[R]], i32 [[R]], i32 [[AMT:%.*]])
+; CHECK-NEXT:    ret i32 [[R2]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 7)
+  %r2 = call i32 @llvm.fshl.i32(i32 %r, i32 %r, i32 %amt)
+  ret i32 %r2
+}
+
+;; negative test, 1st funnel shift isn't a rotate.
+
+define i32 @fsh_rot(i32 %x, i32 %y) {
+; CHECK-LABEL: @fsh_rot(
+; CHECK-NEXT:    [[FSH:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 7)
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[FSH]], i32 [[FSH]], i32 4)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %fsh = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
+  %r = call i32 @llvm.fshl.i32(i32 %fsh, i32 %fsh, i32 4)
+  ret i32 %r
+}
+
+;; negative test, 2nd funnel shift isn't a rotate.
+
+define i32 @rot_fsh(i32 %x, i32 %y) {
+; CHECK-LABEL: @rot_fsh(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 7)
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.fshl.i32(i32 [[Y]], i32 [[R:%.*]], i32 4)
+; CHECK-NEXT:    ret i32 [[R2]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 7)
+  %r2 = call i32 @llvm.fshl.i32(i32 %r, i32 %y, i32 4)
+  ret i32 %r2
+}
+

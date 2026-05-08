@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/math/cospif.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/src/math/sdcomp26094.h"
@@ -19,8 +19,6 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcCospifTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospif(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -100,7 +98,7 @@ TEST_F(LlvmLibcCospifTest, SmallValues) {
                                  LIBC_NAMESPACE::cospif(x), 0.5);
 }
 
-// SDCOMP-26094: check sinfpi in the cases for which the range reducer
+// SDCOMP-26094: check cospif in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST_F(LlvmLibcCospifTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {

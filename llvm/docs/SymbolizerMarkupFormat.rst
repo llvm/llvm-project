@@ -315,7 +315,7 @@ Trigger elements
 ================
 
 These elements cause an external action and will be presented to the user in a
-human readable form. Generally they trigger an external action to occur that
+human-readable form. Generally they trigger an external action to occur that
 results in a linkable page. The link or some other informative information about
 the external action can then be presented to the user.
 

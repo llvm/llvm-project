@@ -1,5 +1,5 @@
 ;; Test to make sure a symbol name that starts with an 'L' could be succesfully
-;; consumed. Note that this could fail if PrivateGlobalPrefix returns
+;; consumed. Note that this could fail if InternalSymbolPrefix returns
 ;; 'L'/'.L' instead of 'L..' because the resulting symbol gets created as
 ;; a temporary symbol.
 

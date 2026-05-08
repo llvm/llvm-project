@@ -35,7 +35,7 @@ int foo() { return 1; }
 
 // CHECK-DAG: define{{.*}} @{{"_Z[0-9]+foo\$ompvariant\$.*"}}()
 
-// CHECK-DAG: call spir_func noundef i32 @{{"_Z[0-9]+foo\$ompvariant\$.*"}}()
+// CHECK-DAG: call spir_func noundef addrspace(9) i32 @{{"_Z[0-9]+foo\$ompvariant\$.*"}}()
 
 int main() {
   int res;

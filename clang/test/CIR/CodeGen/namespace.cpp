@@ -46,10 +46,10 @@ int f4(void) {
 // CHECK:   %[[G1_VAL:.*]] = cir.load{{.*}} %[[G1_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:   %[[G2_ADDR:.*]] = cir.get_global @_ZN4test2g2E : !cir.ptr<!s32i>
 // CHECK:   %[[G2_VAL:.*]] = cir.load{{.*}} %[[G2_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CHECK:   %[[SUM:.*]] = cir.binop(add, %[[G1_VAL]], %[[G2_VAL]]) nsw : !s32i
+// CHECK:   %[[SUM:.*]] = cir.add nsw %[[G1_VAL]], %[[G2_VAL]] : !s32i
 // CHECK:   %[[G3_ADDR:.*]] = cir.get_global @_ZN4test5test22g3E : !cir.ptr<!s32i>
 // CHECK:   %[[G3_VAL:.*]] = cir.load{{.*}} %[[G3_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CHECK:   %[[SUM2:.*]] = cir.binop(add, %[[SUM]], %[[G3_VAL]]) nsw : !s32i
+// CHECK:   %[[SUM2:.*]] = cir.add nsw %[[SUM]], %[[G3_VAL]] : !s32i
 
 using test2::f3;
 using test2::g3;

@@ -261,10 +261,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     for (size_t I = Range.first; I < Range.second; ++I, JI += JIAdj) {
       MCSymbol *Entry = JT->Entries[I];
       const BinaryBasicBlock *ToBB = BF.getBasicBlockForLabel(Entry);
-      assert(ToBB || Entry == BF.getFunctionEndLabel() ||
-             Entry == BF.getFunctionEndLabel(FragmentNum::cold()));
-      if (Entry == BF.getFunctionEndLabel() ||
-          Entry == BF.getFunctionEndLabel(FragmentNum::cold()))
+      if (!ToBB)
         continue;
       const Location To(Entry);
       const BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(*ToBB);
@@ -778,8 +775,7 @@ IndirectCallPromotion::rewriteCall(
   InstructionListType TailInsts;
   const MCInst *TailInst = &CallInst;
   if (IsTailCallOrJT)
-    while (TailInst + 1 < &(*IndCallBlock.end()) &&
-           MIB->isPseudo(*(TailInst + 1)))
+    while (TailInst != &IndCallBlock.back() && MIB->isPseudo(*(TailInst + 1)))
       TailInsts.push_back(*++TailInst);
 
   InstructionListType MovedInst = IndCallBlock.splitInstructions(&CallInst);

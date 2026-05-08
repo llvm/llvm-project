@@ -13,6 +13,7 @@ add_lldb_library(lldbPluginProcessUtility
   MemoryTagManagerAArch64MTE.cpp
   NativeProcessSoftwareSingleStep.cpp
   NativeRegisterContextDBReg.cpp
+  NativeRegisterContextDBReg_arm.cpp
   NativeRegisterContextDBReg_arm64.cpp
   NativeRegisterContextDBReg_loongarch.cpp
   NativeRegisterContextDBReg_x86.cpp
@@ -26,7 +27,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextDarwin_x86_64.cpp
   RegisterContextDummy.cpp
   RegisterContextFreeBSD_i386.cpp
-  RegisterContextFreeBSD_mips64.cpp
   RegisterContextFreeBSD_powerpc.cpp
   RegisterContextFreeBSD_x86_64.cpp
   RegisterContextHistory.cpp
@@ -43,7 +43,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextPOSIX_arm.cpp
   RegisterContextPOSIX_arm64.cpp
   RegisterContextPOSIX_loongarch64.cpp
-  RegisterContextPOSIX_mips64.cpp
   RegisterContextPOSIX_riscv32.cpp
   RegisterContextPOSIX_powerpc.cpp
   RegisterContextPOSIX_ppc64le.cpp
@@ -59,6 +58,7 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterInfoPOSIX_arm64.cpp
   RegisterInfoPOSIX_loongarch64.cpp
   RegisterInfoPOSIX_ppc64le.cpp
+  RegisterInfoPOSIX_ppc64.cpp
   RegisterInfoPOSIX_riscv32.cpp
   RegisterInfoPOSIX_riscv64.cpp
   StopInfoMachException.cpp

@@ -13,16 +13,11 @@
 #ifndef POLLY_TRANSFORM_SIMPLIFY_H
 #define POLLY_TRANSFORM_SIMPLIFY_H
 
-#include "polly/ScopPass.h"
 #include "llvm/ADT/SmallVector.h"
-
-namespace llvm {
-class PassRegistry;
-class Pass;
-} // namespace llvm
 
 namespace polly {
 class MemoryAccess;
+class Scop;
 class ScopStmt;
 
 /// Return a vector that contains MemoryAccesses in the order in
@@ -41,43 +36,7 @@ class ScopStmt;
 ///   undefined.
 llvm::SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt);
 
-/// Create a Simplify pass
-///
-/// @param CallNo Disambiguates this instance for when there are multiple
-///               instances of this pass in the pass manager. It is used only to
-///               keep the statistics apart and has no influence on the
-///               simplification itself.
-///
-/// @return The Simplify pass.
-llvm::Pass *createSimplifyWrapperPass(int CallNo = 0);
-llvm::Pass *createSimplifyPrinterLegacyPass(llvm::raw_ostream &OS);
-
-struct SimplifyPass final : PassInfoMixin<SimplifyPass> {
-  SimplifyPass(int CallNo = 0) : CallNo(CallNo) {}
-
-  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
-                              ScopStandardAnalysisResults &AR, SPMUpdater &U);
-
-private:
-  int CallNo;
-};
-
-struct SimplifyPrinterPass final : PassInfoMixin<SimplifyPrinterPass> {
-  SimplifyPrinterPass(raw_ostream &OS, int CallNo = 0)
-      : OS(OS), CallNo(CallNo) {}
-
-  PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
-                        ScopStandardAnalysisResults &, SPMUpdater &);
-
-private:
-  raw_ostream &OS;
-  int CallNo;
-};
+bool runSimplify(Scop &S, int CallNo);
 } // namespace polly
-
-namespace llvm {
-void initializeSimplifyWrapperPassPass(llvm::PassRegistry &);
-void initializeSimplifyPrinterLegacyPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif /* POLLY_TRANSFORM_SIMPLIFY_H */

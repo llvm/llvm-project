@@ -4,6 +4,9 @@
 // RUN: %libomptarget-run-generic
 
 // REQUIRES: gpu
+//
+// FIXME: https://github.com/llvm/llvm-project/issues/161265
+// UNSUPPORTED: gpu
 
 #include <omp.h>
 #include <stdio.h>

@@ -18,13 +18,21 @@
 namespace clang {
 class ASTContext;
 }
+
 namespace mlir {
 
 std::unique_ptr<Pass> createCIRCanonicalizePass();
 std::unique_ptr<Pass> createCIRFlattenCFGPass();
 std::unique_ptr<Pass> createCIRSimplifyPass();
+std::unique_ptr<Pass> createCIREHABILoweringPass();
+std::unique_ptr<Pass> createCXXABILoweringPass();
+std::unique_ptr<Pass> createTargetLoweringPass();
 std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
+std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
+std::unique_ptr<Pass> createGotoSolverPass();
+std::unique_ptr<Pass> createIdiomRecognizerPass();
+std::unique_ptr<Pass> createIdiomRecognizerPass(clang::ASTContext *astCtx);
 
 void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
 

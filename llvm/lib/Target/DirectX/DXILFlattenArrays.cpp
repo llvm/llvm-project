@@ -263,8 +263,13 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // merge the byte offsets. Otherwise, this GEP is itself the root of a GEP
   // chain and we need to deterine the root array type
   if (auto *PtrOpGEP = dyn_cast<GEPOperator>(PtrOperand)) {
-    assert(GEPChainInfoMap.contains(PtrOpGEP) &&
-           "Expected parent GEP to be visited before this GEP");
+
+    // If the parent GEP was not processed, then we do not want to process its
+    // descendants. This can happen if the GEP chain is for an unsupported type
+    // such as a struct -- we do not flatten structs nor GEP chains for structs
+    if (!GEPChainInfoMap.contains(PtrOpGEP))
+      return false;
+
     GEPInfo &PGEPInfo = GEPChainInfoMap[PtrOpGEP];
     Info.RootFlattenedArrayType = PGEPInfo.RootFlattenedArrayType;
     Info.RootPointerOperand = PGEPInfo.RootPointerOperand;
@@ -342,6 +347,16 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *NewGEP = Builder.CreateGEP(
         Info.RootFlattenedArrayType, Info.RootPointerOperand,
         {ZeroIndex, FlattenedIndex}, GEP.getName(), GEP.getNoWrapFlags());
+
+    // If the pointer operand is a global variable and all indices are 0,
+    // IRBuilder::CreateGEP will return the global variable instead of creating
+    // a GEP instruction or GEP ConstantExpr. In this case we have to create and
+    // insert our own GEP instruction.
+    if (!isa<GEPOperator>(NewGEP))
+      NewGEP = GetElementPtrInst::Create(
+          Info.RootFlattenedArrayType, Info.RootPointerOperand,
+          {ZeroIndex, FlattenedIndex}, GEP.getNoWrapFlags(), GEP.getName(),
+          Builder.GetInsertPoint());
 
     // Replace the current GEP with the new GEP. Store GEPInfo into the map
     // for later use in case this GEP was not the end of the chain

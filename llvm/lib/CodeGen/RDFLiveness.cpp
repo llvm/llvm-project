@@ -511,7 +511,7 @@ void Liveness::computePhiInfo() {
         uint16_t F = A.Addr->getFlags();
         if ((F & (NodeAttrs::Undef | NodeAttrs::PhiRef)) == 0) {
           RegisterRef R = A.Addr->getRegRef(DFG);
-          RealUses[R.Reg].insert({A.Id, R.Mask});
+          RealUses[R.Id].insert({A.Id, R.Mask});
         }
         UN = A.Addr->getSibling();
       }
@@ -652,8 +652,9 @@ void Liveness::computePhiInfo() {
   // defs, cache the result of subtracting these defs from a given register
   // ref.
   using RefHash = std::hash<RegisterRef>;
-  using RefEqual = std::equal_to<RegisterRef>;
-  using SubMap = std::unordered_map<RegisterRef, RegisterRef>;
+  using RefEqual = RegisterRefEqualTo;
+  using SubMap =
+      std::unordered_map<RegisterRef, RegisterRef, RefHash, RefEqual>;
   std::unordered_map<RegisterAggr, SubMap> Subs;
   auto ClearIn = [](RegisterRef RR, const RegisterAggr &Mid, SubMap &SM) {
     if (Mid.empty())
@@ -670,7 +671,11 @@ void Liveness::computePhiInfo() {
   for (unsigned i = 0; i < PhiUQ.size(); ++i) {
     auto PA = DFG.addr<PhiNode *>(PhiUQ[i]);
     NodeList PUs = PA.Addr->members_if(DFG.IsRef<NodeAttrs::Use>, DFG);
-    RefMap &RUM = RealUseMap[PA.Id];
+    // Make a copy of RealUseMap[PA.Id] to avoid iterator invalidation.
+    // The inner loop may insert new entries into RealUseMap (via operator[]
+    // on line "RealUseMap[P.first]"), which can trigger a DenseMap rehash
+    // and invalidate any references/iterators into the map.
+    RefMap RUM = RealUseMap[PA.Id];
 
     for (NodeAddr<UseNode *> UA : PUs) {
       std::map<NodeId, RegisterAggr> &PUM = PhiUp[UA.Id];
@@ -705,8 +710,8 @@ void Liveness::computePhiInfo() {
             LaneBitmask M = R.Mask & V.second;
             if (M.none())
               continue;
-            if (RegisterRef SS = ClearIn(RegisterRef(R.Reg, M), MidDefs, SM)) {
-              NodeRefSet &RS = RealUseMap[P.first][SS.Reg];
+            if (RegisterRef SS = ClearIn(RegisterRef(R.Id, M), MidDefs, SM)) {
+              NodeRefSet &RS = RealUseMap[P.first][SS.Id];
               Changed |= RS.insert({V.first, SS.Mask}).second;
             }
           }
@@ -838,7 +843,7 @@ void Liveness::computeLiveIns() {
               RegisterAggr TA(PRI);
               TA.insert(D.Addr->getRegRef(DFG)).intersect(S);
               LaneBitmask TM = TA.makeRegRef().Mask;
-              LOX[S.Reg].insert({D.Id, TM});
+              LOX[S.Id].insert({D.Id, TM});
             }
           }
         }
@@ -868,7 +873,7 @@ void Liveness::computeLiveIns() {
       std::vector<RegisterRef> LV;
       for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
         LV.push_back(RegisterRef(LI.PhysReg, LI.LaneMask));
-      llvm::sort(LV, std::less<RegisterRef>(PRI));
+      llvm::sort(LV, RegisterRefLess(PRI));
       dbgs() << printMBBReference(B) << "\t rec = {";
       for (auto I : LV)
         dbgs() << ' ' << Print(I, DFG);
@@ -878,7 +883,7 @@ void Liveness::computeLiveIns() {
       LV.clear();
       for (RegisterRef RR : LiveMap[&B].refs())
         LV.push_back(RR);
-      llvm::sort(LV, std::less<RegisterRef>(PRI));
+      llvm::sort(LV, RegisterRefLess(PRI));
       dbgs() << "\tcomp = {";
       for (auto I : LV)
         dbgs() << ' ' << Print(I, DFG);
@@ -898,7 +903,7 @@ void Liveness::resetLiveIns() {
     // Add the newly computed live-ins.
     const RegisterAggr &LiveIns = LiveMap[&B];
     for (RegisterRef R : LiveIns.refs())
-      B.addLiveIn({MCPhysReg(R.Reg), R.Mask});
+      B.addLiveIn({R.asMCReg(), R.Mask});
   }
 }
 
@@ -1045,7 +1050,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
 
   for (const std::pair<const RegisterId, NodeRefSet> &LE : LiveInCopy) {
     RegisterRef LRef(LE.first);
-    NodeRefSet &NewDefs = LiveIn[LRef.Reg]; // To be filled.
+    NodeRefSet &NewDefs = LiveIn[LRef.Id]; // To be filled.
     const NodeRefSet &OldDefs = LE.second;
     for (NodeRef OR : OldDefs) {
       // R is a def node that was live-on-exit
@@ -1128,7 +1133,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
       RegisterRef RR = UA.Addr->getRegRef(DFG);
       for (NodeAddr<DefNode *> D : getAllReachingDefs(UA))
         if (getBlockWithRef(D.Id) != B)
-          LiveIn[RR.Reg].insert({D.Id, RR.Mask});
+          LiveIn[RR.Id].insert({D.Id, RR.Mask});
     }
   }
 

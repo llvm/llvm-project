@@ -13,11 +13,11 @@ target triple = "x86_64-unknown-linux"
 ;CHECK-LABEL: func1x6(
 ;CHECK: <4 x i32>
 ;CHECK: ret
-define i32 @func1x6(ptr nocapture %out, ptr nocapture %A, ptr nocapture %B, ptr nocapture %C, ptr nocapture %D, ptr nocapture %E, ptr nocapture %F) {
+define void @func1x6(ptr nocapture %out, ptr nocapture %A, ptr nocapture %B, ptr nocapture %C, ptr nocapture %D, ptr nocapture %E, ptr nocapture %F) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.016 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.016
   %0 = load i32, ptr %arrayidx, align 4
@@ -39,19 +39,19 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %inc, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
-  ret i32 undef
+for.end:
+  ret void
 }
 
 ; We are vectorizing with 12 runtime checks.
 ;CHECK-LABEL: func2x6(
 ;CHECK: <4 x i32>
 ;CHECK: ret
-define i32 @func2x6(ptr nocapture %out, ptr nocapture %out2, ptr nocapture %A, ptr nocapture %B, ptr nocapture %C, ptr nocapture %D, ptr nocapture %E, ptr nocapture %F) {
+define void @func2x6(ptr nocapture %out, ptr nocapture %out2, ptr nocapture %A, ptr nocapture %B, ptr nocapture %C, ptr nocapture %D, ptr nocapture %E, ptr nocapture %F) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.037 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.037
   %0 = load i32, ptr %arrayidx, align 4
@@ -84,6 +84,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %inc, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
-  ret i32 undef
+for.end:
+  ret void
 }

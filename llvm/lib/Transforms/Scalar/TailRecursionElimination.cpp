@@ -192,7 +192,7 @@ struct AllocaDerivedValueTracker {
   SmallPtrSet<Instruction *, 32> AllocaUsers;
   SmallPtrSet<Instruction *, 32> EscapePoints;
 };
-}
+} // namespace
 
 static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
   if (F.callsFunctionThatReturnsTwice())
@@ -343,8 +343,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 ///
 static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::lifetime_end &&
-        llvm::findAllocaForValue(II->getArgOperand(1)))
+    if (II->getIntrinsicID() == Intrinsic::lifetime_end)
       return true;
 
   // FIXME: We can move load/store/call/free instructions above the call if the
@@ -526,7 +525,7 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "", &F, HeaderBB);
   NewEntry->takeName(HeaderBB);
   HeaderBB->setName("tailrecurse");
-  auto *BI = BranchInst::Create(HeaderBB, NewEntry);
+  auto *BI = UncondBrInst::Create(HeaderBB, NewEntry);
   BI->setDebugLoc(DebugLoc::getCompilerGenerated());
   // If the new branch preserves the debug location of CI, it could result in
   // misleading stepping, if CI is located in a conditional branch.
@@ -750,7 +749,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
 
   // Now that all of the PHI nodes are in place, remove the call and
   // ret instructions, replacing them with an unconditional branch.
-  BranchInst *NewBI = BranchInst::Create(HeaderBB, Ret->getIterator());
+  UncondBrInst *NewBI = UncondBrInst::Create(HeaderBB, Ret->getIterator());
   NewBI->setDebugLoc(CI->getDebugLoc());
 
   Ret->eraseFromParent();  // Remove return.
@@ -861,11 +860,8 @@ void TailRecursionEliminator::cleanupAndFinalize() {
 bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
   Instruction *TI = BB.getTerminator();
 
-  if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-    if (BI->isConditional())
-      return false;
-
-    BasicBlock *Succ = BI->getSuccessor(0);
+  if (UncondBrInst *BI = dyn_cast<UncondBrInst>(TI)) {
+    BasicBlock *Succ = BI->getSuccessor();
     ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrDbg(true));
 
     if (!Ret)
@@ -968,7 +964,7 @@ struct TailCallElim : public FunctionPass {
         /*BFI=*/nullptr);
   }
 };
-}
+} // namespace
 
 char TailCallElim::ID = 0;
 INITIALIZE_PASS_BEGIN(TailCallElim, "tailcallelim", "Tail Call Elimination",

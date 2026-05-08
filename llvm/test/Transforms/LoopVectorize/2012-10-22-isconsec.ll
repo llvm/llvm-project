@@ -8,16 +8,16 @@ module asm "\09.ident\09\22GCC: (GNU) 4.6.3 LLVM: 3.2svn\22"
 
 @b = common global [32000 x float] zeroinitializer, align 16
 
-define i32 @set1ds(i32 %_n, ptr nocapture %arr, float %value, i32 %stride) nounwind uwtable {
+define i32 @set1ds(i32 %_n, ptr nocapture %arr, float %value, i32 %stride) {
 entry:
   %0 = icmp sgt i32 %_n, 0
   br i1 %0, label %"3.lr.ph", label %"5"
 
-"3.lr.ph":                                        ; preds = %entry
+"3.lr.ph":
   %1 = sext i32 %stride to i64
   br label %"3"
 
-"3":                                              ; preds = %"3.lr.ph", %"3"
+"3":
   %indvars.iv = phi i64 [ 0, %"3.lr.ph" ], [ %indvars.iv.next, %"3" ]
   %2 = shl nsw i64 %indvars.iv, 2
   %3 = getelementptr inbounds i8, ptr %arr, i64 %2
@@ -27,15 +27,15 @@ entry:
   %5 = icmp slt i32 %4, %_n
   br i1 %5, label %"3", label %"5"
 
-"5":                                              ; preds = %"3", %entry
+"5":
   ret i32 0
 }
 
-define i32 @init(ptr nocapture %name) unnamed_addr nounwind uwtable {
+define i32 @init(ptr nocapture %name) {
 entry:
   br label %"3"
 
-"3":                                              ; preds = %"3", %entry
+"3":
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %"3" ]
   %0 = shl nsw i64 %indvars.iv, 2
   %1 = getelementptr inbounds i8, ptr getelementptr inbounds ([32000 x float], ptr @b, i64 0, i64 16000), i64 %0
@@ -45,6 +45,6 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 16000
   br i1 %exitcond, label %"5", label %"3"
 
-"5":                                              ; preds = %"3"
+"5":
   ret i32 0
 }

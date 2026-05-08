@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining=data-layout-str='#dlti.dl_spec<#dlti.dl_entry<index,32:i32>>' -split-input-file %s | FileCheck --check-prefix CHECK-DL %s
+// RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining=data-layout-str='#dlti.dl_spec<#dlti.dl_entry<index,32:i32>>' -split-input-file -verify-diagnostics %s | FileCheck --check-prefix CHECK-DL %s
 
 // CHECK: module attributes {gpu.container_module}
 
@@ -485,6 +485,7 @@ func.func @launch_cluster() {
 // CHECK-NEXT: gpu.func @launch_cluster_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
 // CHECK-SAME: known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: known_cluster_size = array<i32: 1, 2, 1>
 // CHECK-SAME: known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y
@@ -509,7 +510,7 @@ func.func @launch_cluster() {
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
 
 // -----
-// This test tests the two optional attributes kernelModule and kernelFunc for gpu.launch
+// This test tests the two optional attributes `module` and `function` for gpu.launch
 // CHECK-LABEL: func.func @testKernelAttributes()
 // CHECK: gpu.launch_func  @test_module::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 // CHECK: gpu.module @test_module
@@ -523,15 +524,16 @@ func.func @testKernelAttributes() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@test_module) function(@test_kernel_func) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelModule = @test_module, kernelFunc = @test_kernel_func}
+  }
   return
 }
 
 // -----
-// This test tests the two optional attributes kernelModule and kernelFunc for gpu.launch, when kernelModule already exists.
+// This test tests the two optional attributes `module` and `function` for gpu.launch, when kernelModule already exists.
 
 // CHECK-LABEL: gpu.module @existing_module
 // CHECK: gpu.func @test_kernel_func()
@@ -556,15 +558,16 @@ func.func @testExistingModule() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@existing_module) function(@test_kernel_func) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelModule = @existing_module, kernelFunc = @test_kernel_func}
+  }
   return
 }
 
 // -----
-// This test tests the optional attribute kernelModule for gpu.launch.
+// This test tests the optional attribute `module` for gpu.launch.
 // CHECK-LABEL: func.func @testKernelModuleOnly()
 // CHECK: gpu.launch_func  @test_module::@testKernelModuleOnly_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 // CHECK: gpu.module @test_module
@@ -578,15 +581,16 @@ func.func @testKernelModuleOnly() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@test_module) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelModule = @test_module}
+  }
   return
 }
 
 // -----
-// This test tests the optional attribute kernelFunc for gpu.launch.
+// This test tests the optional attribute `function` for gpu.launch.
 // CHECK-LABEL: func.func @testKernelFuncOnly()
 // CHECK: gpu.launch_func  @test_kernel_func::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 
@@ -601,15 +605,16 @@ func.func @testKernelFuncOnly() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             function(@test_kernel_func) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelFunc = @test_kernel_func}
+  }
   return
 }
 
 // -----
-// This test tests gpu.launch when optional attributes kernelModule and kernelFunc are not specified.
+// This test tests gpu.launch when optional attributes `module` and `function` are not specified.
 // CHECK-LABEL: func.func @testNoAttributes()
 // CHECK: gpu.launch_func  @testNoAttributes_kernel::@testNoAttributes_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 
@@ -629,4 +634,74 @@ func.func @testNoAttributes() {
     gpu.terminator
   }
   return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/185357.
+// A gpu.launch whose body contains a gpu.launch_func referencing a symbol in a
+// nested gpu.module must not crash when the leaf reference cannot be found in
+// the parent symbol table.
+
+// CHECK-LABEL: func.func @launch_with_launch_func_body(
+module attributes {gpu.container_module} {
+  gpu.module @some_kernels {
+    gpu.func @some_kernel() kernel {
+      gpu.return
+    }
+  }
+  func.func @launch_with_launch_func_body(%sz : index) {
+    gpu.launch blocks(%bx, %by, %bz) in (%gx = %sz, %gy = %sz, %gz = %sz)
+               threads(%tx, %ty, %tz) in (%bsx = %sz, %bsy = %sz, %bsz = %sz) {
+      "test.use_nested"()  {uses = [@public_module::@nested_function]} : () -> ()
+      gpu.terminator
+    }
+    return
+  }
+}
+
+// -----
+
+// Nested gpu.launch ops are not supported: the inner gpu.launch is outlined
+// first, producing a gpu.launch_func with a nested symbol reference inside the
+// outer launch body. That nested reference cannot be resolved in the outlined
+// outer kernel module.
+
+func.func @nested_launch(%sz : index) {
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
+             threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
+    // expected-error @below {{nested symbol reference '@nested_launch_kernel::@nested_launch_kernel' cannot be resolved inside the outlined kernel module}}
+    gpu.launch blocks(%bx1, %by1, %bz1) in (%grid_x1 = %sz, %grid_y1 = %sz, %grid_z1 = %sz)
+               threads(%tx1, %ty1, %tz1) in (%block_x1 = %sz, %block_y1 = %sz, %block_z1 = %sz) {
+      "some_op"(%bx1, %tx1) : (index, index) -> ()
+      gpu.terminator
+    }
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+// Nested cross-module symbol references inside gpu.launch bodies are rejected.
+// (https://github.com/llvm/llvm-project/issues/187942)
+
+module attributes {gpu.container_module} {
+  gpu.module @km {
+    gpu.func @k() kernel {
+      gpu.return
+    }
+  }
+
+  func.func @cross_module_nested_ref(%sz: index) {
+    gpu.launch blocks(%bx, %by, %bz) in (%gx = %sz, %gy = %sz, %gz = %sz)
+               threads(%tx, %ty, %tz) in (%bxs = %sz, %bys = %sz, %bzs = %sz) {
+      // expected-error @below {{nested symbol reference '@km::@k' cannot be resolved inside the outlined kernel module}}
+      gpu.launch_func @km::@k
+        blocks in (%sz, %sz, %sz)
+        threads in (%sz, %sz, %sz)
+      gpu.terminator
+    }
+    return
+  }
 }

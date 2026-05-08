@@ -1,10 +1,7 @@
 ; RUN: opt -passes=debugify --debugify-atoms -S -o - < %s \
 ; RUN: | FileCheck %s
 
-;; Mirrors llvm/test/DebugInfo/debugify.ll. Split out here because the
-;; test is only supported if LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS is enabled
-;; (which is a condition for running this test directory). Once the conditional
-;; compilation of the feature is removed this can be merged into the original.
+;; Mirrors llvm/test/DebugInfo/debugify.ll
 
 ; CHECK-LABEL: define void @foo
 define void @foo() {

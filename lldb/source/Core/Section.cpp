@@ -13,8 +13,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/VMRange.h"
-
 #include <cinttypes>
 #include <limits>
 #include <utility>
@@ -153,6 +151,8 @@ const char *Section::GetTypeAsCString() const {
     return "lldb-formatters";
   case eSectionTypeSwiftModules:
     return "swift-modules";
+  case eSectionTypeWasmName:
+    return "wasm-name";
   case eSectionTypeOther:
     return "regular";
   }
@@ -162,31 +162,27 @@ const char *Section::GetTypeAsCString() const {
 Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
                  user_id_t sect_id, ConstString name, SectionType sect_type,
                  addr_t file_addr, addr_t byte_size, lldb::offset_t file_offset,
-                 lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-                 uint32_t target_byte_size /*=1*/)
+                 lldb::offset_t file_size, uint32_t log2align, uint32_t flags)
     : ModuleChild(module_sp), UserID(sect_id), Flags(flags),
       m_obj_file(obj_file), m_type(sect_type), m_parent_wp(), m_name(name),
       m_file_addr(file_addr), m_byte_size(byte_size),
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_relocated(false),
-      m_target_byte_size(target_byte_size) {}
+      m_executable(false), m_relocated(false) {}
 
 Section::Section(const lldb::SectionSP &parent_section_sp,
                  const ModuleSP &module_sp, ObjectFile *obj_file,
                  user_id_t sect_id, ConstString name, SectionType sect_type,
                  addr_t file_addr, addr_t byte_size, lldb::offset_t file_offset,
-                 lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-                 uint32_t target_byte_size /*=1*/)
+                 lldb::offset_t file_size, uint32_t log2align, uint32_t flags)
     : ModuleChild(module_sp), UserID(sect_id), Flags(flags),
       m_obj_file(obj_file), m_type(sect_type), m_parent_wp(), m_name(name),
       m_file_addr(file_addr), m_byte_size(byte_size),
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_relocated(false),
-      m_target_byte_size(target_byte_size) {
+      m_executable(false), m_relocated(false) {
   if (parent_section_sp)
     m_parent_wp = parent_section_sp;
 }
@@ -256,8 +252,7 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
       return child_section->ResolveContainedAddress(offset - child_offset,
                                                     so_addr, allow_section_end);
   }
-  so_addr.SetOffset(offset);
-  so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());
+  so_addr = Address(const_cast<Section *>(this)->shared_from_this(), offset);
 
   // Ensure that there are no orphaned (i.e., moduleless) sections.
   assert(GetModule().get());
@@ -268,7 +263,7 @@ bool Section::ContainsFileAddress(addr_t vm_addr) const {
   const addr_t file_addr = GetFileAddress();
   if (file_addr != LLDB_INVALID_ADDRESS && !IsThreadSpecific()) {
     if (file_addr <= vm_addr) {
-      const addr_t offset = (vm_addr - file_addr) * m_target_byte_size;
+      const addr_t offset = vm_addr - file_addr;
       return offset < GetByteSize();
     }
   }
@@ -294,8 +289,7 @@ void Section::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
       addr = GetFileAddress();
     }
 
-    VMRange range(addr, addr + m_byte_size);
-    range.Dump(s, 0);
+    DumpAddressRange(s, addr, addr + m_byte_size, 8);
   }
 
   s << llvm::format("%c %c%c%c  0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ",
@@ -323,10 +317,10 @@ void Section::DumpName(llvm::raw_ostream &s) const {
 
     if (m_obj_file) {
       const FileSpec &file_spec = m_obj_file->GetFileSpec();
-      name = file_spec.GetFilename().AsCString();
+      name = file_spec.GetFilename().AsCString(nullptr);
     }
     if ((!name || !name[0]) && module_sp)
-      name = module_sp->GetFileSpec().GetFilename().AsCString();
+      name = module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
     if (name && name[0])
       s << name << '.';
   }
@@ -415,6 +409,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeCompactUnwind:
   case eSectionTypeGoSymtab:
   case eSectionTypeAbsoluteAddress:
+  case eSectionTypeWasmName:
   case eSectionTypeOther:
   // Used for "__dof_cache" in mach-o or ".debug" for COFF which isn't debug
   // information that we parse at all. This was causing system files with no
@@ -468,7 +463,13 @@ bool Section::ContainsOnlyDebugInfo() const {
   return false;
 }
 
+bool Section::IsGOTSection() const {
+  return GetObjectFile()->IsGOTSection(*this);
+}
+
 #pragma mark SectionList
+
+SectionList::SectionList(const SectionList &rhs) : m_sections(rhs.m_sections) {}
 
 SectionList &SectionList::operator=(const SectionList &rhs) {
   if (this != &rhs)
@@ -678,6 +679,33 @@ uint64_t SectionList::GetDebugInfoSize() const {
       debug_info_size += section->GetFileSize();
   }
   return debug_info_size;
+}
+
+SectionList SectionList::Merge(SectionList &lhs, SectionList &rhs,
+                               MergeCallback filter) {
+  SectionList output_list;
+
+  // Iterate through all the sections in lhs and see if we have matches in
+  // the rhs list.
+  for (const auto &lhs_section : lhs) {
+    auto rhs_section = rhs.FindSectionByName(lhs_section->GetName());
+    if (rhs_section)
+      output_list.AddSection(filter(lhs_section, rhs_section));
+    else
+      output_list.AddSection(lhs_section);
+  }
+
+  // Now that we've visited all possible duplicates, we can iterate over
+  // the rhs and take any values not in lhs.
+  for (const auto &rhs_section : rhs) {
+    auto lhs_section = lhs.FindSectionByName(rhs_section->GetName());
+    // Because we already visited everything overlapping between rhs
+    // and lhs, any section not in lhs is unique and can be output.
+    if (!lhs_section)
+      output_list.AddSection(rhs_section);
+  }
+
+  return output_list;
 }
 
 namespace llvm {
