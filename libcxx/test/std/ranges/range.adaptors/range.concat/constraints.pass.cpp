@@ -191,7 +191,7 @@ struct MoveOnlyView : std::ranges::view_base {
   int* b;
   int* e;
   constexpr MoveOnlyView() = default;
-  constexpr MoveOnlyView(int* b, int* e) : b(b), e(e) {}
+  constexpr MoveOnlyView(int* b_, int* e_) : b(b_), e(e_) {}
   MoveOnlyView(const MoveOnlyView&) = delete;
   constexpr MoveOnlyView(MoveOnlyView&& other) : b(other.b), e(other.e) {}
   MoveOnlyView& operator=(const MoveOnlyView&) = delete;

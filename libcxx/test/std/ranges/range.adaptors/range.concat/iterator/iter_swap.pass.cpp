@@ -79,6 +79,35 @@ struct SwapIterNoCustom {
   friend constexpr bool operator==(SwapIterNoCustom, SwapIterNoCustom) = default;
 };
 
+template <typename T>
+struct SwapIterTracked {
+  using iterator_concept  = std::forward_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using value_type        = T;
+
+  T* p                       = nullptr;
+  int* iter_swap_called_times = nullptr;
+
+  constexpr T& operator*() const noexcept { return *p; }
+  constexpr SwapIterTracked& operator++() noexcept {
+    ++p;
+    return *this;
+  }
+  constexpr SwapIterTracked operator++(int) noexcept {
+    SwapIterTracked tmp = *this;
+    ++*this;
+    return tmp;
+  }
+  friend constexpr bool operator==(const SwapIterTracked& x, const SwapIterTracked& y) { return x.p == y.p; }
+
+  friend constexpr void iter_swap(const SwapIterTracked& x, const SwapIterTracked& y) {
+    if (x.iter_swap_called_times)
+      ++*x.iter_swap_called_times;
+    std::ranges::swap(*x, *y);
+  }
+};
+
 template <typename Iter, class Sentinel>
 struct MiniView : std::ranges::view_base {
   Iter b{};
@@ -117,6 +146,37 @@ constexpr bool test() {
 
     // iter_swap
     assert(a1[0].v == 3 && a2[0].v == 1);
+  }
+
+  // Test that the underlying iterator's iter_swap specialization is called
+  // when both iterators point to the same underlying range
+  {
+    int iter_swap_call_count = 0;
+    Elem a1[3]{{10}, {20}, {30}};
+    Elem a2[2]{{40}, {50}};
+
+    using TrackedIter     = SwapIterTracked<Elem>;
+    using TrackedSentinel = sentinel_wrapper<TrackedIter>;
+    using TrackedView     = MiniView<TrackedIter, TrackedSentinel>;
+
+    TrackedView tv{TrackedIter{a1, &iter_swap_call_count}, TrackedSentinel{TrackedIter{a1 + 3, &iter_swap_call_count}}};
+    ViewB vb{IteratorB{a2}, SentinelB{IteratorB{a2 + 2}}};
+
+    std::ranges::concat_view cv(tv, vb);
+
+    auto it1 = cv.begin();
+    auto it2 = ++cv.begin();
+
+    assert(iter_swap_call_count == 0);
+    std::ranges::iter_swap(it1, it2);
+    // The underlying iter_swap specialization should have been called
+    assert(iter_swap_call_count == 1);
+    assert(a1[0].v == 20 && a1[1].v == 10);
+
+    // Call again to verify the count keeps incrementing
+    std::ranges::iter_swap(it1, it2);
+    assert(iter_swap_call_count == 2);
+    assert(a1[0].v == 10 && a1[1].v == 20);
   }
 
   // Test that iter_swap requires the underlying iterator to be iter_swappable
