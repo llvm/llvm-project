@@ -237,48 +237,44 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv8i16:
 ; CHECK-SME-STREAMING:       // %bb.0:
-; CHECK-SME-STREAMING-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SME-STREAMING-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SME-STREAMING-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SME-STREAMING-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SME-STREAMING-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SME-STREAMING-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SME-STREAMING-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SME-STREAMING-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SME-STREAMING-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SME-STREAMING-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SME-STREAMING-NEXT:    ret
 ;
 ; CHECK-SME-STREAMING-SSVE-AES-LABEL: clmul_nxv8i16:
 ; CHECK-SME-STREAMING-SSVE-AES:       // %bb.0:
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    ret
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv8i16:
 ; CHECK-SVE2:       // %bb.0:
-; CHECK-SVE2-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SVE2-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SVE2-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SVE2-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SVE2-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SVE2-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SVE2-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SVE2-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SVE2-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SVE2-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SVE2-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv8i16:
 ; CHECK-SVE2-AES:       // %bb.0:
-; CHECK-SVE2-AES-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SVE2-AES-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SVE2-AES-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SVE2-AES-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SVE2-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-AES-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SVE2-AES-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SVE2-AES-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SVE2-AES-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SVE2-AES-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SVE2-AES-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SVE2-AES-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SVE2-AES-NEXT:    ret
@@ -1505,12 +1501,11 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 ; CHECK-SME-STREAMING:       // %bb.0:
 ; CHECK-SME-STREAMING-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-SME-STREAMING-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SME-STREAMING-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SME-STREAMING-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SME-STREAMING-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SME-STREAMING-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SME-STREAMING-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SME-STREAMING-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SME-STREAMING-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SME-STREAMING-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SME-STREAMING-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SME-STREAMING-NEXT:    ret
@@ -1519,12 +1514,11 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 ; CHECK-SME-STREAMING-SSVE-AES:       // %bb.0:
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    ret
@@ -1533,12 +1527,11 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 ; CHECK-SVE2:       // %bb.0:
 ; CHECK-SVE2-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-SVE2-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SVE2-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SVE2-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SVE2-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SVE2-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SVE2-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SVE2-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SVE2-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SVE2-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SVE2-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SVE2-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SVE2-NEXT:    ret
@@ -1547,12 +1540,11 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 ; CHECK-SVE2-AES:       // %bb.0:
 ; CHECK-SVE2-AES-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-SVE2-AES-NEXT:    lsr z2.h, z0.h, #8
-; CHECK-SVE2-AES-NEXT:    lsr z3.h, z1.h, #8
-; CHECK-SVE2-AES-NEXT:    pmul z2.b, z2.b, z1.b
-; CHECK-SVE2-AES-NEXT:    pmul z3.b, z0.b, z3.b
+; CHECK-SVE2-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-AES-NEXT:    trn2 z3.b, z0.b, z1.b
 ; CHECK-SVE2-AES-NEXT:    pmullb z0.h, z0.b, z1.b
-; CHECK-SVE2-AES-NEXT:    eor z1.d, z3.d, z2.d
+; CHECK-SVE2-AES-NEXT:    pmul z2.b, z3.b, z2.b
+; CHECK-SVE2-AES-NEXT:    eorbt z1.b, z2.b, z2.b
 ; CHECK-SVE2-AES-NEXT:    lsl z1.h, z1.h, #8
 ; CHECK-SVE2-AES-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-SVE2-AES-NEXT:    ret

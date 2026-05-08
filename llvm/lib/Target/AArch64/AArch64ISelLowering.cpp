@@ -8097,41 +8097,37 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
 
   if (VT == MVT::nxv8i16) {
     // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
-    //                       lsl(xor(pmul(a_hi, b_lo),
-    //                               pmul(a_lo, b_hi)),
+    //                       lsl(eorbt(pmul(trn2(a, b),
+    //                                      trn1(b, a))),
     //                           8))
-
     SDValue OpA = Op.getOperand(0);
     SDValue OpB = Op.getOperand(1);
-    SDValue SplatEight =
-        DAG.getSplatVector(VT, DL, DAG.getConstant(8, DL, MVT::i16));
+    // Bitcast to i8 for byte-wise PMUL and PMULLB.
+    OpA = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpA);
+    OpB = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpB);
 
-    // Shift >> 8 and bitcast to i8 for pmul
-    SDValue OpAHi = DAG.getNode(ISD::SRL, DL, VT, OpA, SplatEight);
-    OpAHi = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i8, OpAHi);
-    SDValue OpBHi = DAG.getNode(ISD::SRL, DL, VT, OpB, SplatEight);
-    OpBHi = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i8, OpBHi);
+    // Form adjacent byte pairs {a_hi, b_hi} and {b_lo, a_lo}. PMUL then
+    // computes {a_hi * b_lo, b_hi * a_lo}, and EORTB xors those pairs into
+    // the low byte of each half-word.
+    SDValue LoBytes = DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv16i8, OpB, OpA);
+    SDValue HiBytes = DAG.getNode(AArch64ISD::TRN2, DL, MVT::nxv16i8, OpA, OpB);
+    SDValue PMUL = DAG.getNode(ISD::CLMUL, DL, MVT::nxv16i8, HiBytes, LoBytes);
 
-    // Bitcast to i8 for pmullb
-    OpA = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i8, OpA);
-    OpB = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i8, OpB);
+    SDValue EORBT =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_eorbt, DL, MVT::i64);
+    EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, OpB,
+                        PMUL, PMUL);
+    SDValue SHL = DAG.getNode(ISD::SHL, DL, VT,
+                              DAG.getNode(AArch64ISD::NVCAST, DL, VT, EORBT),
+                              DAG.getConstant(8, DL, VT));
 
     SDValue PMULLB =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
     PMULLB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, PMULLB, OpA,
                          OpB);
-    PMULLB = DAG.getNode(ISD::BITCAST, DL, VT, PMULLB);
+    PMULLB = DAG.getNode(AArch64ISD::NVCAST, DL, VT, PMULLB);
 
-    SDValue PMUL_OpALo_OpBHi =
-        DAG.getNode(ISD::CLMUL, DL, MVT::nxv16i8, OpA, OpBHi);
-    SDValue PMUL_OpAHi_OpBLo =
-        DAG.getNode(ISD::CLMUL, DL, MVT::nxv16i8, OpAHi, OpB);
-    SDValue Cross = DAG.getNode(ISD::XOR, DL, MVT::nxv16i8, PMUL_OpALo_OpBHi,
-                                PMUL_OpAHi_OpBLo);
-    Cross = DAG.getNode(ISD::SHL, DL, VT,
-                        DAG.getNode(ISD::BITCAST, DL, VT, Cross), SplatEight);
-
-    return DAG.getNode(ISD::XOR, DL, VT, PMULLB, Cross);
+    return DAG.getNode(ISD::XOR, DL, VT, PMULLB, SHL);
   }
 
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), VT, 64 / VT.getSizeInBits());
