@@ -7,15 +7,12 @@ define void @v2i8(ptr %p1) {
 ; CHECK-SD-LABEL: v2i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr h0, [x0]
-; CHECK-SD-NEXT:    movi v1.2s, #1
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    orr v0.2s, #1, lsl #8
-; CHECK-SD-NEXT:    sub v1.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    movi v1.2s, #32
+; CHECK-SD-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-SD-NEXT:    clz v0.2s, v0.2s
-; CHECK-SD-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    stur b1, [x0, #1]
@@ -49,14 +46,11 @@ define void @v3i8(ptr %p1) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    movi v1.4h, #1
 ; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    orr v0.4h, #1, lsl #8
-; CHECK-SD-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    movi v1.4h, #16
+; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-SD-NEXT:    clz v0.4h, v0.4h
-; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
@@ -67,23 +61,20 @@ define void @v3i8(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr w9, [x0]
-; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    fmov s0, w9
-; CHECK-GI-NEXT:    mov v2.h[1], w8
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.h[2], w8
-; CHECK-GI-NEXT:    add x8, x0, #1
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    mov b1, v0.b[2]
-; CHECK-GI-NEXT:    mov v0.h[1], w9
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    mov v0.h[2], w9
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    add x9, x0, #2
-; CHECK-GI-NEXT:    eor v1.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    add v0.4h, v0.4h, v2.4h
-; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov b2, v1.b[1]
+; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    mov b2, v1.b[2]
+; CHECK-GI-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    mov v1.h[2], w8
+; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    add v0.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x0]
@@ -101,14 +92,11 @@ define void @v4i8(ptr %p1) {
 ; CHECK-SD-LABEL: v4i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    movi v1.4h, #1
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-SD-NEXT:    orr v0.4h, #1, lsl #8
-; CHECK-SD-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    movi v1.4h, #16
+; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-SD-NEXT:    clz v0.4h, v0.4h
-; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    ret
@@ -136,8 +124,7 @@ define void @v4i8(ptr %p1) {
 ; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
+; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
@@ -149,10 +136,8 @@ entry:
 define <8 x i8> @v8i8(<8 x i8> %d) {
 ; CHECK-SD-LABEL: v8i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.8b, #1
-; CHECK-SD-NEXT:    sub v1.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
+; CHECK-SD-NEXT:    clz v0.8b, v0.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v8i8:
@@ -170,10 +155,8 @@ entry:
 define <16 x i8> @v16i8(<16 x i8> %d) {
 ; CHECK-SD-LABEL: v16i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.16b, #1
-; CHECK-SD-NEXT:    sub v1.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
+; CHECK-SD-NEXT:    rbit v0.16b, v0.16b
+; CHECK-SD-NEXT:    clz v0.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v16i8:
@@ -191,13 +174,10 @@ entry:
 define <32 x i8> @v32i8(<32 x i8> %d) {
 ; CHECK-SD-LABEL: v32i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.16b, #1
-; CHECK-SD-NEXT:    sub v3.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    sub v2.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    bic v0.16b, v3.16b, v0.16b
-; CHECK-SD-NEXT:    bic v1.16b, v2.16b, v1.16b
-; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
-; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
+; CHECK-SD-NEXT:    rbit v0.16b, v0.16b
+; CHECK-SD-NEXT:    rbit v1.16b, v1.16b
+; CHECK-SD-NEXT:    clz v0.16b, v0.16b
+; CHECK-SD-NEXT:    clz v1.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v32i8:
@@ -219,14 +199,11 @@ define void @v2i16(ptr %p1) {
 ; CHECK-SD-LABEL: v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    movi v1.2s, #1
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    orr v0.2s, #1, lsl #16
-; CHECK-SD-NEXT:    sub v1.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    movi v1.2s, #32
+; CHECK-SD-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-SD-NEXT:    clz v0.2s, v0.2s
-; CHECK-SD-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]
 ; CHECK-SD-NEXT:    str h1, [x0, #2]
@@ -260,13 +237,10 @@ entry:
 define void @v3i16(ptr %p1) {
 ; CHECK-SD-LABEL: v3i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v0.4h, #1
-; CHECK-SD-NEXT:    ldr d1, [x0]
-; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    bic v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    movi v1.4h, #16
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-SD-NEXT:    clz v0.4h, v0.4h
-; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    mov h1, v0.h[2]
 ; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    str h1, [x0, #4]
@@ -274,13 +248,10 @@ define void @v3i16(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
+; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    ldr d1, [x0]
-; CHECK-GI-NEXT:    add x9, x0, #4
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v0.h[2], w8
 ; CHECK-GI-NEXT:    add x8, x0, #2
+; CHECK-GI-NEXT:    add x9, x0, #4
 ; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
@@ -300,12 +271,9 @@ entry:
 define <4 x i16> @v4i16(<4 x i16> %d) {
 ; CHECK-SD-LABEL: v4i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.4h, #1
-; CHECK-SD-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    movi v1.4h, #16
+; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-SD-NEXT:    clz v0.4h, v0.4h
-; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v4i16:
@@ -324,12 +292,9 @@ entry:
 define <8 x i16> @v8i16(<8 x i16> %d) {
 ; CHECK-SD-LABEL: v8i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.8h, #1
-; CHECK-SD-NEXT:    sub v1.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    movi v1.8h, #16
+; CHECK-SD-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-SD-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-SD-NEXT:    clz v0.8h, v0.8h
-; CHECK-SD-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v8i16:
@@ -348,16 +313,12 @@ entry:
 define <16 x i16> @v16i16(<16 x i16> %d) {
 ; CHECK-SD-LABEL: v16i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.8h, #1
-; CHECK-SD-NEXT:    sub v3.8h, v0.8h, v2.8h
-; CHECK-SD-NEXT:    sub v2.8h, v1.8h, v2.8h
-; CHECK-SD-NEXT:    bic v0.16b, v3.16b, v0.16b
-; CHECK-SD-NEXT:    bic v1.16b, v2.16b, v1.16b
-; CHECK-SD-NEXT:    movi v2.8h, #16
+; CHECK-SD-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-SD-NEXT:    rev16 v1.16b, v1.16b
+; CHECK-SD-NEXT:    rbit v0.16b, v0.16b
+; CHECK-SD-NEXT:    rbit v1.16b, v1.16b
 ; CHECK-SD-NEXT:    clz v0.8h, v0.8h
 ; CHECK-SD-NEXT:    clz v1.8h, v1.8h
-; CHECK-SD-NEXT:    sub v0.8h, v2.8h, v0.8h
-; CHECK-SD-NEXT:    sub v1.8h, v2.8h, v1.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v16i16:
@@ -380,12 +341,9 @@ entry:
 define <2 x i32> @v2i32(<2 x i32> %d) {
 ; CHECK-SD-LABEL: v2i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2s, #1
-; CHECK-SD-NEXT:    sub v1.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    movi v1.2s, #32
+; CHECK-SD-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-SD-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-SD-NEXT:    clz v0.2s, v0.2s
-; CHECK-SD-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i32:
@@ -405,20 +363,14 @@ entry:
 define <3 x i32> @v3i32(<3 x i32> %d) {
 ; CHECK-SD-LABEL: v3i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.4s, #1
-; CHECK-SD-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    movi v1.4s, #32
+; CHECK-SD-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-SD-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-SD-NEXT:    clz v0.4s, v0.4s
-; CHECK-SD-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w8
-; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    movi v1.2d, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    eor v2.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
@@ -434,12 +386,9 @@ entry:
 define <4 x i32> @v4i32(<4 x i32> %d) {
 ; CHECK-SD-LABEL: v4i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.4s, #1
-; CHECK-SD-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    movi v1.4s, #32
+; CHECK-SD-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-SD-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-SD-NEXT:    clz v0.4s, v0.4s
-; CHECK-SD-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v4i32:
@@ -459,16 +408,12 @@ entry:
 define <8 x i32> @v8i32(<8 x i32> %d) {
 ; CHECK-SD-LABEL: v8i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.4s, #1
-; CHECK-SD-NEXT:    sub v3.4s, v0.4s, v2.4s
-; CHECK-SD-NEXT:    sub v2.4s, v1.4s, v2.4s
-; CHECK-SD-NEXT:    bic v0.16b, v3.16b, v0.16b
-; CHECK-SD-NEXT:    bic v1.16b, v2.16b, v1.16b
-; CHECK-SD-NEXT:    movi v2.4s, #32
+; CHECK-SD-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-SD-NEXT:    rev32 v1.16b, v1.16b
+; CHECK-SD-NEXT:    rbit v0.16b, v0.16b
+; CHECK-SD-NEXT:    rbit v1.16b, v1.16b
 ; CHECK-SD-NEXT:    clz v0.4s, v0.4s
 ; CHECK-SD-NEXT:    clz v1.4s, v1.4s
-; CHECK-SD-NEXT:    sub v0.4s, v2.4s, v0.4s
-; CHECK-SD-NEXT:    sub v1.4s, v2.4s, v1.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v8i32:

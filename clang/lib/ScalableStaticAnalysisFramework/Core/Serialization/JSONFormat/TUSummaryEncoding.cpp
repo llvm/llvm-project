@@ -68,7 +68,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
           .build();
     }
 
-    auto ExpectedIdTable = entityIdTableFromJSON(*IdTableArray);
+    auto ExpectedIdTable = tuEntityIdTableFromJSON(*IdTableArray);
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
@@ -143,7 +143,7 @@ JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
   RootObject["tu_namespace"] =
       buildNamespaceToJSON(getTUNamespace(SummaryEncoding));
 
-  RootObject["id_table"] = entityIdTableToJSON(getIdTable(SummaryEncoding));
+  RootObject["id_table"] = tuEntityIdTableToJSON(getIdTable(SummaryEncoding));
 
   RootObject["linkage_table"] =
       linkageTableToJSON(getLinkageTable(SummaryEncoding));

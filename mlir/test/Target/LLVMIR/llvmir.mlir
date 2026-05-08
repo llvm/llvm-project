@@ -33,6 +33,30 @@ llvm.mlir.global internal @float_global(0.0: f32) : f32
 // CHECK: @float_global_array = internal global [1 x float] [float -5.000000e+00]
 llvm.mlir.global internal @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm.array<1 x f32>
 
+// CHECK: @splat_float_global_array = internal global [4 x float] [float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01]
+llvm.mlir.global internal @splat_float_global_array(dense<42.0> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_double_global_array = internal global [3 x double] [double 4.200000e+01, double 4.200000e+01, double 4.200000e+01]
+llvm.mlir.global internal @splat_double_global_array(dense<42.0> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_neg_float_global_array = internal global [4 x float] [float -1.350000e+01, float -1.350000e+01, float -1.350000e+01, float -1.350000e+01]
+llvm.mlir.global internal @splat_neg_float_global_array(dense<-13.5> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_neg_double_global_array = internal global [3 x double] [double -1.350000e+01, double -1.350000e+01, double -1.350000e+01]
+llvm.mlir.global internal @splat_neg_double_global_array(dense<-13.5> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_half_global_array = internal global [4 x half] [half 4.200000e+01, half 4.200000e+01, half 4.200000e+01, half 4.200000e+01]
+llvm.mlir.global internal @splat_half_global_array(dense<42.0> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_bfloat_global_array = internal global [3 x bfloat] [bfloat 4.200000e+01, bfloat 4.200000e+01, bfloat 4.200000e+01]
+llvm.mlir.global internal @splat_bfloat_global_array(dense<42.0> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
+// CHECK: @splat_neg_half_global_array = internal global [4 x half] [half -1.350000e+01, half -1.350000e+01, half -1.350000e+01, half -1.350000e+01]
+llvm.mlir.global internal @splat_neg_half_global_array(dense<-13.5> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_neg_bfloat_global_array = internal global [3 x bfloat] [bfloat -1.350000e+01, bfloat -1.350000e+01, bfloat -1.350000e+01]
+llvm.mlir.global internal @splat_neg_bfloat_global_array(dense<-13.5> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
 // CHECK: @string_const = internal constant [6 x i8] c"foobar"
 llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 
@@ -1506,7 +1530,7 @@ llvm.func @alloca(%size : i64) {
 
 // CHECK-LABEL: @constants
 llvm.func @constants() -> vector<4xf32> {
-  // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.{{0*}}e+00, float 0.{{0*}}e+00, float 0.{{0*}}e+00>
+  // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.0{{0*}}e+00, float 0.0{{0*}}e+00, float 0.0{{0*}}e+00>
   %0 = llvm.mlir.constant(sparse<[0], [4.2e+01]> : vector<4xf32>) : vector<4xf32>
   llvm.return %0 : vector<4xf32>
 }
@@ -1884,7 +1908,7 @@ llvm.func @constant_bf16() -> bf16 {
   llvm.return %0 : bf16
 }
 
-// CHECK: ret bfloat 0xR4120
+// CHECK: ret bfloat 1.000000e+01
 
 // -----
 
@@ -2208,6 +2232,11 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
   %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+
+// CHECK: {{.*}} = fpext nnan float {{.*}} to double
+// CHECK: {{.*}} = fptrunc fast float {{.*}} to half
+  %27 = llvm.fpext %arg0 fastmath<nnan> : f32 to f64
+  %28 = llvm.fptrunc %arg0 fastmath<fast> : f32 to f16
   llvm.return
 }
 

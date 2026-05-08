@@ -13,7 +13,7 @@ define <3 x bfloat> @v3bf16(<3 x bfloat> %arg0) {
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16)
-  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0xR0000
+  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0.000000e+00
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16)
   ; GFX9-NEXT:   [[SHUF:%[0-9]+]]:_(<3 x s16>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR]](<3 x s16>), [[BUILD_VECTOR1]], shufflemask(3, 1, 2)
   ; GFX9-NEXT:   [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[SHUF]](<3 x s16>)
@@ -35,7 +35,7 @@ define <4 x bfloat> @v4bf16(<4 x bfloat> %arg0) {
   ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
-  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0xR0000
+  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0.000000e+00
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
   ; GFX9-NEXT:   [[SHUF:%[0-9]+]]:_(<4 x s16>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<4 x s16>), [[BUILD_VECTOR]], shufflemask(3, 1, 2, 0)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[SHUF]](<4 x s16>)
@@ -57,7 +57,7 @@ define <5 x bfloat> @v5bf16(<5 x bfloat> %arg0) {
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16)
-  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0xR0000
+  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0.000000e+00
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<5 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
   ; GFX9-NEXT:   [[SHUF:%[0-9]+]]:_(<5 x s16>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR]](<5 x s16>), [[BUILD_VECTOR1]], shufflemask(3, 1, 2, 0, 4)
   ; GFX9-NEXT:   [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16), [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16), [[UV10:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[SHUF]](<5 x s16>)
@@ -81,7 +81,7 @@ define <6 x bfloat> @v6bf16(<6 x bfloat> %arg0) {
   ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>)
-  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0xR0000
+  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0.000000e+00
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
   ; GFX9-NEXT:   [[SHUF:%[0-9]+]]:_(<6 x s16>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<6 x s16>), [[BUILD_VECTOR]], shufflemask(3, 1, 2, 0, 4, 5)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[SHUF]](<6 x s16>)
@@ -105,7 +105,7 @@ define <7 x bfloat> @v7bf16(<7 x bfloat> %arg0) {
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s16>)
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[UV6]](s16)
-  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0xR0000
+  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0.000000e+00
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<7 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
   ; GFX9-NEXT:   [[SHUF:%[0-9]+]]:_(<7 x s16>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR]](<7 x s16>), [[BUILD_VECTOR1]], shufflemask(3, 1, 2, 0, 4, 5, 6)
   ; GFX9-NEXT:   [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16), [[UV10:%[0-9]+]]:_(s16), [[UV11:%[0-9]+]]:_(s16), [[UV12:%[0-9]+]]:_(s16), [[UV13:%[0-9]+]]:_(s16), [[UV14:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[SHUF]](<7 x s16>)
@@ -131,7 +131,7 @@ define <8 x bfloat> @v8bf16(<8 x bfloat> %arg0) {
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>)
-  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0xR0000
+  ; GFX9-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT bfloat 0.000000e+00
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
   ; GFX9-NEXT:   [[SHUF:%[0-9]+]]:_(<8 x s16>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<8 x s16>), [[BUILD_VECTOR]], shufflemask(3, 1, 2, 0, 4, 5, 6, 7)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[SHUF]](<8 x s16>)

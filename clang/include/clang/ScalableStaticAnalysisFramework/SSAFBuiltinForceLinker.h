@@ -32,9 +32,38 @@ extern volatile int SSAFAnalysisRegistryAnchorSource;
 [[maybe_unused]] static int SSAFAnalysisRegistryAnchorDestination =
     SSAFAnalysisRegistryAnchorSource;
 
+// This anchor is used to force the linker to link the UnsafeBufferUsage
+// JSON format.
 extern volatile int UnsafeBufferUsageSSAFJSONFormatAnchorSource;
 [[maybe_unused]] static int UnsafeBufferUsageSSAFJSONFormatAnchorDestination =
     UnsafeBufferUsageSSAFJSONFormatAnchorSource;
+
+// This anchor is used to force the linker to link the
+// UnsafeBufferUsageTUSummaryExtractor.
+extern volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource;
+[[maybe_unused]] static int
+    UnsafeBufferUsageTUSummaryExtractorAnchorDestination =
+        UnsafeBufferUsageTUSummaryExtractorAnchorSource;
+
+extern volatile int UnsafeBufferUsageAnalysisAnchorSource;
+[[maybe_unused]] static int UnsafeBufferUsageAnalysisAnchorDestination =
+    UnsafeBufferUsageAnalysisAnchorSource;
+
+// This anchor is used to force the linker to link the PointerFlow
+// JSONFormat registration:
+extern volatile int PointerFlowSSAFJSONFormatAnchorSource;
+[[maybe_unused]] static int PointerFlowSSAFJSONFormatAnchorDestination =
+    PointerFlowSSAFJSONFormatAnchorSource;
+
+// This anchor is used to force the linker to link the PointerFlow
+// TUSummaryExtractor registration.
+extern volatile int PointerFlowTUSummaryExtractorAnchorSource;
+[[maybe_unused]] static int PointerFlowTUSummaryExtractorAnchorDestination =
+    PointerFlowTUSummaryExtractorAnchorSource;
+
+extern volatile int PointerFlowAnalysisAnchorSource;
+[[maybe_unused]] static int PointerFlowAnalysisAnchorDestination =
+    PointerFlowAnalysisAnchorSource;
 
 // This anchor is used to force the linker to link the CallGraphExtractor.
 extern volatile int CallGraphExtractorAnchorSource;

@@ -61,9 +61,9 @@ cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release
 #### Configure for SPIR-V targets
 ```
 cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
-  -DRUNTIMES_spirv-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
-  -DRUNTIMES_spirv64-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
-  -DLLVM_RUNTIME_TARGETS="spirv-mesa3d-;spirv64-mesa3d-"
+  -DRUNTIMES_spirv-mesa-mesa3d_LLVM_ENABLE_RUNTIMES=libclc \
+  -DRUNTIMES_spirv64-mesa-mesa3d_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="spirv-mesa-mesa3d;spirv64-mesa-mesa3d"
 ```
 
 To build multiple targets, pass them as a semicolon-separated list in
@@ -85,11 +85,22 @@ Note you can use the `DESTDIR` Makefile variable to do staged installs.
 DESTDIR=/path/for/staged/install ninja install
 ```
 
-## Run tests
+## Testing
+libclc utilizes the LLVM testing infrastructure.
+#### Run all tests
+To execute all per-target tests for libclc.
+```
+ninja check-libclc
+```
+`check-libclc` is a top-level target that aggregates all per-target tests.
+
+#### Run target-specific tests
+If you are working on a specific target, you can run tests for just that target triple:
 ```
 ninja check-libclc-<target-triple>
 ```
-or
+Alternatively, you can run target-specific tests via the runtimes build by
+pointing to the target-specific build directory:
 ```
 ninja -C runtimes/runtimes-<target-triple>-bins check-libclc
 ```

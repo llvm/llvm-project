@@ -94,6 +94,14 @@ static const Loan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan(Path, MTE);
 }
 
+/// Creates a loan for an allocation through 'new'
+/// \param NE The CXXNewExpr that represents the allocation
+/// \return The new Loan on success, nullptr otherwise
+static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
+  AccessPath Path(NE);
+  return FactMgr.getLoanMgr().createLoan(Path, NE);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -279,17 +287,16 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
   getOriginsList(*N);
 }
 
-void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
-  OriginList *Dest = getOriginsList(*ICE);
+void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
+  OriginList *Dest = getOriginsList(*CE);
   if (!Dest)
     return;
-  const Expr *SubExpr = ICE->getSubExpr();
+  const Expr *SubExpr = CE->getSubExpr();
   OriginList *Src = getOriginsList(*SubExpr);
 
-  switch (ICE->getCastKind()) {
+  switch (CE->getCastKind()) {
   case CK_LValueToRValue:
-    // TODO: Decide what to do for x-values here.
-    if (!SubExpr->isLValue())
+    if (!SubExpr->isGLValue())
       return;
 
     assert(Src && "LValue being cast to RValue has no origin list");
@@ -297,11 +304,11 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     // `int *p, *q; p = q;`) should propagate the inner origin (what the pointer
     // points to), not the outer origin (the pointer's storage location). Strip
     // the outer lvalue origin.
-    flow(getOriginsList(*ICE), getRValueOrigins(SubExpr, Src),
+    flow(getOriginsList(*CE), getRValueOrigins(SubExpr, Src),
          /*Kill=*/true);
     return;
   case CK_NullToPointer:
-    getOriginsList(*ICE);
+    getOriginsList(*CE);
     // TODO: Flow into them a null origin.
     return;
   case CK_NoOp:
@@ -324,6 +331,12 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
     // Ignore function-to-pointer decays.
+    return;
+  case CK_BitCast:
+    // OriginLists for Src and Dst may differ here. For example when casting
+    // from int** to void*
+    if (Src && Dest && Dest->getLength() == Src->getLength())
+      flow(Dest, Src, /*Kill=*/true);
     return;
   default:
     return;
@@ -507,7 +520,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
       hasOrigins(OCE->getArg(0)->getType())) {
     // Pointer-like types: assignment inherently propagates origins.
     QualType LHSTy = OCE->getArg(0)->getType();
-    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy)) {
+    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
+        isGslOwnerType(LHSTy)) {
       handleAssignment(OCE->getArg(0), OCE->getArg(1));
       return;
     }
@@ -542,8 +556,7 @@ void FactsGenerator::VisitCXXFunctionalCastExpr(
   // expression.
   if (handleTestPoint(FCE))
     return;
-  if (isGslPointerType(FCE->getType()))
-    killAndFlowOrigin(*FCE, *FCE->getSubExpr());
+  VisitCastExpr(FCE);
 }
 
 void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
@@ -614,6 +627,61 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
   assert(Src && "Base of array subscript should have origins");
   CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+}
+
+void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
+  OriginList *NewList = getOriginsList(*NE);
+  const Expr *Init = NE->getInitializer();
+
+  // Check if we have a placement new where the second argument is void*, to
+  // avoid flowing from non-pointer parameters, such as std::nothrow.
+  // And that the placement parameter num is 1,
+  // that is to mostly limit to standard library placement new.
+  if (NE->getNumPlacementArgs() == 1) {
+    if (const auto *Arg = NE->getOperatorNew()
+                              ->getParamDecl(1)
+                              ->getType()
+                              ->getAs<PointerType>();
+        Arg && Arg->isVoidPointerType()) {
+      // Use the placement argument before the implicit conversion to void*, so
+      // inner origins are still available.
+      const Expr *PlacementArg = NE->getPlacementArg(0);
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PlacementArg);
+          ICE && ICE->getCastKind() == CK_BitCast &&
+          PlacementArg->getType()->isVoidPointerType())
+        PlacementArg = ICE->getSubExpr();
+      OriginList *PlacementList = getOriginsList(*PlacementArg);
+      // FIXME: General placement arguments need separate handling to overwrite
+      // the right origins.
+
+      // The pointer returned by placement new comes from the placement
+      // argument.
+      if (PlacementList)
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
+            true));
+    }
+  } else {
+    const Loan *L = createLoan(FactMgr, NE);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
+  }
+
+  NewList = NewList->peelOuterOrigin();
+
+  if (!NewList || !Init)
+    return;
+
+  // FIXME: OriginList is null for `new[]` initializers. Remove this `Init`
+  // check once array origins are supported.
+  if (OriginList *InitList = getOriginsList(*Init); InitList)
+    flow(NewList, InitList, true);
+}
+
+void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
+  OriginList *List = getOriginsList(*DE->getArgument());
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<InvalidateOriginFact>(List->getOuterOriginID(), DE));
 }
 
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {
@@ -740,7 +808,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (!MD || !MD->isInstance())
     return;
 
-  if (!isContainerInvalidationMethod(*MD))
+  if (!isInvalidationMethod(*MD))
     return;
   // Heuristics to turn-down false positives.
   auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
@@ -751,6 +819,17 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (ThisList)
     CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
         ThisList->getOuterOriginID(), Call));
+}
+
+void FactsGenerator::handleDestructiveCall(const Expr *Call,
+                                           const FunctionDecl *FD,
+                                           ArrayRef<const Expr *> Args) {
+  if (!destructsFirstArg(*FD))
+    return;
+  OriginList *ArgList = getOriginsList(*Args[0]);
+  if (ArgList)
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ArgList->getOuterOriginID(), Call));
 }
 
 void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
@@ -798,6 +877,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   for (const Expr *Arg : Args)
     handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
+  handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)
@@ -816,6 +896,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // declaration.
         PVD = Method->getParamDecl(I - 1);
     } else if (I == 0 && shouldTrackFirstArgument(FD)) {
+      return true;
+    } else if (I == 1 && shouldTrackSecondArgument(FD)) {
       return true;
     } else if (I < FD->getNumParams()) {
       // For free functions or static methods.

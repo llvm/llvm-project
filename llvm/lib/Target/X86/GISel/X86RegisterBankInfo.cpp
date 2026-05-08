@@ -201,7 +201,7 @@ void X86RegisterBankInfo::getInstrPartialMappingIdxs(
   unsigned NumOperands = MI.getNumOperands();
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     auto &MO = MI.getOperand(Idx);
-    if (!MO.isReg() || !MO.getReg())
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       OpRegBankIdx[Idx] = PMI_None;
     else
       OpRegBankIdx[Idx] =
@@ -218,7 +218,7 @@ bool X86RegisterBankInfo::getInstrValueMapping(
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     if (!MI.getOperand(Idx).isReg())
       continue;
-    if (!MI.getOperand(Idx).getReg())
+    if (!MI.getOperand(Idx).getReg().isVirtual())
       continue;
 
     auto Mapping = getValueMapping(OpRegBankIdx[Idx], 1);
@@ -292,8 +292,11 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FPEXTLOAD:
+  case TargetOpcode::G_FPTRUNCSTORE:
     // Instruction having only floating-point operands (all scalars in
     // VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);

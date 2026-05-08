@@ -4,12 +4,29 @@
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
 // RUN:   -analyzer-config \
 // RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true
+// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config \
+// RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true -DHEAP_ALLOCATION
 
 // RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config \
 // RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true
+// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config \
+// RUN:     optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 //===----------------------------------------------------------------------===//
 // Default constructor test.
@@ -23,7 +40,7 @@ public:
 };
 
 void fCompilerGeneratedConstructorTest() {
-  CompilerGeneratedConstructorTest();
+  INIT(CompilerGeneratedConstructorTest, ());
 }
 
 #ifdef PEDANTIC
@@ -37,7 +54,7 @@ public:
 DefaultConstructorTest::DefaultConstructorTest() = default;
 
 void fDefaultConstructorTest() {
-  DefaultConstructorTest(); // expected-warning{{1 uninitialized field}}
+  INIT(DefaultConstructorTest, ()); // expected-warning{{1 uninitialized field}}
 }
 #else
 class DefaultConstructorTest {
@@ -50,7 +67,7 @@ public:
 DefaultConstructorTest::DefaultConstructorTest() = default;
 
 void fDefaultConstructorTest() {
-  DefaultConstructorTest();
+  INIT(DefaultConstructorTest, ());
 }
 #endif // PEDANTIC
 
@@ -71,7 +88,7 @@ public:
 };
 
 void fInitListTest1() {
-  InitListTest1();
+  INIT(InitListTest1, ());
 }
 
 class InitListTest2 {
@@ -84,7 +101,7 @@ public:
 };
 
 void fInitListTest2() {
-  InitListTest2();
+  INIT(InitListTest2, ());
 }
 
 class InitListTest3 {
@@ -97,7 +114,7 @@ public:
 };
 
 void fInitListTest3() {
-  InitListTest3();
+  INIT(InitListTest3, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -116,7 +133,7 @@ public:
 };
 
 void fCtorBodyTest1() {
-  CtorBodyTest1();
+  INIT(CtorBodyTest1, ());
 }
 
 class CtorBodyTest2 {
@@ -130,7 +147,7 @@ public:
 };
 
 void fCtorBodyTest2() {
-  CtorBodyTest2();
+  INIT(CtorBodyTest2, ());
 }
 
 class CtorBodyTest3 {
@@ -144,7 +161,7 @@ public:
 };
 
 void fCtorBodyTest3() {
-  CtorBodyTest3();
+  INIT(CtorBodyTest3, ());
 }
 
 #ifdef PEDANTIC
@@ -157,7 +174,7 @@ public:
 };
 
 void fCtorBodyTest4() {
-  CtorBodyTest4(); // expected-warning{{2 uninitialized fields}}
+  INIT(CtorBodyTest4, ()); // expected-warning{{2 uninitialized fields}}
 }
 #else
 class CtorBodyTest4 {
@@ -169,7 +186,7 @@ public:
 };
 
 void fCtorBodyTest4() {
-  CtorBodyTest4();
+  INIT(CtorBodyTest4, ());
 }
 #endif
 
@@ -195,7 +212,7 @@ public:
 };
 
 void fCtorDelegationTest1() {
-  CtorDelegationTest1();
+  INIT(CtorDelegationTest1, ());
 }
 
 class CtorDelegationTest2 {
@@ -214,7 +231,7 @@ public:
 };
 
 void fCtorDelegationTest2() {
-  CtorDelegationTest2();
+  INIT(CtorDelegationTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -238,7 +255,7 @@ public:
 };
 
 void fContainsRecordTest1() {
-  ContainsRecordTest1();
+  INIT(ContainsRecordTest1, ());
 }
 
 class ContainsRecordTest2 {
@@ -257,7 +274,7 @@ public:
 };
 
 void fContainsRecordTest2() {
-  ContainsRecordTest2();
+  INIT(ContainsRecordTest2, ());
 }
 
 class ContainsRecordTest3 {
@@ -275,7 +292,7 @@ public:
 };
 
 void fContainsRecordTest3() {
-  ContainsRecordTest3();
+  INIT(ContainsRecordTest3, ());
 }
 
 class ContainsRecordTest4 {
@@ -292,7 +309,7 @@ public:
 };
 
 void fContainsRecordTest4() {
-  ContainsRecordTest4();
+  INIT(ContainsRecordTest4, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -313,7 +330,7 @@ public:
 };
 
 void fIntTemplateClassTest1() {
-  IntTemplateClassTest1<int>(22);
+  INIT(IntTemplateClassTest1<int>, (22));
 }
 
 template <class T>
@@ -328,7 +345,7 @@ public:
 };
 
 void fIntTemplateClassTest2() {
-  IntTemplateClassTest2<int>();
+  INIT(IntTemplateClassTest2<int>, ());
 }
 
 struct Record {
@@ -348,7 +365,7 @@ public:
 };
 
 void fRecordTemplateClassTest() {
-  RecordTemplateClassTest<Record>();
+  INIT(RecordTemplateClassTest<Record>, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -383,9 +400,9 @@ public:
 };
 
 void fPassingToUnknownFunctionTest1() {
-  PassingToUnknownFunctionTest1();
-  PassingToUnknownFunctionTest1(int());
-  PassingToUnknownFunctionTest1(int(), int());
+  INIT(PassingToUnknownFunctionTest1, ());
+  INIT(PassingToUnknownFunctionTest1, (int()));
+  INIT(PassingToUnknownFunctionTest1, (int(), int()));
 }
 
 class PassingToUnknownFunctionTest2 {
@@ -400,7 +417,7 @@ public:
 };
 
 void fPassingToUnknownFunctionTest2() {
-  PassingToUnknownFunctionTest2();
+  INIT(PassingToUnknownFunctionTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -427,7 +444,7 @@ public:
 };
 
 void fContainsSimpleUnionTest1() {
-  ContainsSimpleUnionTest1();
+  INIT(ContainsSimpleUnionTest1, ());
 }
 
 class ContainsSimpleUnionTest2 {
@@ -444,7 +461,7 @@ public:
 
 void fContainsSimpleUnionTest2() {
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  ContainsSimpleUnionTest2(); // no-warning
+  INIT(ContainsSimpleUnionTest2, ()); // no-warning
 }
 
 class UnionPointerTest1 {
@@ -467,7 +484,7 @@ public:
 void fUnionPointerTest1() {
   UnionPointerTest1::SimpleUnion u;
   u.uf = 41;
-  UnionPointerTest1(&u, int());
+  INIT(UnionPointerTest1, (&u, int()));
 }
 
 class UnionPointerTest2 {
@@ -489,7 +506,7 @@ public:
 void fUnionPointerTest2() {
   UnionPointerTest2::SimpleUnion u;
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  UnionPointerTest2(&u, int()); // no-warning
+  INIT(UnionPointerTest2, (&u, int())); // no-warning
 }
 
 class ContainsUnionWithRecordTest1 {
@@ -512,7 +529,7 @@ public:
 };
 
 void fContainsUnionWithRecordTest1() {
-  ContainsUnionWithRecordTest1();
+  INIT(ContainsUnionWithRecordTest1, ());
 }
 
 class ContainsUnionWithRecordTest2 {
@@ -535,7 +552,7 @@ public:
 };
 
 void fContainsUnionWithRecordTest2() {
-  ContainsUnionWithRecordTest1();
+  INIT(ContainsUnionWithRecordTest1, ());
 }
 
 class ContainsUnionWithRecordTest3 {
@@ -561,7 +578,7 @@ public:
 };
 
 void fContainsUnionWithRecordTest3() {
-  ContainsUnionWithRecordTest3();
+  INIT(ContainsUnionWithRecordTest3, ());
 }
 
 class ContainsUnionWithSimpleUnionTest1 {
@@ -583,7 +600,7 @@ public:
 };
 
 void fContainsUnionWithSimpleUnionTest1() {
-  ContainsUnionWithSimpleUnionTest1();
+  INIT(ContainsUnionWithSimpleUnionTest1, ());
 }
 
 class ContainsUnionWithSimpleUnionTest2 {
@@ -604,7 +621,7 @@ public:
 
 void fContainsUnionWithSimpleUnionTest2() {
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  ContainsUnionWithSimpleUnionTest2(); // no-warning
+  INIT(ContainsUnionWithSimpleUnionTest2, ()); // no-warning
 }
 
 //===----------------------------------------------------------------------===//
@@ -636,8 +653,7 @@ struct CopyConstructorTest {
 
 void fCopyConstructorTest() {
   CopyConstructorTest cct;
-  CopyConstructorTest copy = cct; // expected-warning{{1 uninitialized field}}
-  funcToSquelchCompilerWarnings(copy);
+  INIT(CopyConstructorTest, (cct)); // expected-warning{{1 uninitialized field}}
 }
 #else
 struct CopyConstructorTest {
@@ -649,8 +665,7 @@ struct CopyConstructorTest {
 
 void fCopyConstructorTest() {
   CopyConstructorTest cct;
-  CopyConstructorTest copy = cct;
-  funcToSquelchCompilerWarnings(copy);
+  INIT(CopyConstructorTest, (cct));
 }
 #endif // PEDANTIC
 
@@ -666,8 +681,7 @@ struct MoveConstructorTest {
 void fMoveConstructorTest() {
   MoveConstructorTest cct;
   // TODO: we'd expect the warning: {{1 uninitialized field}}
-  MoveConstructorTest copy(static_cast<MoveConstructorTest &&>(cct)); // no-warning
-  funcToSquelchCompilerWarnings(copy);
+  INIT(MoveConstructorTest, (static_cast<MoveConstructorTest &&>(cct))); // no-warning
 }
 
 //===----------------------------------------------------------------------===//
@@ -683,7 +697,7 @@ struct IntArrayTest {
 };
 
 void fIntArrayTest() {
-  IntArrayTest();
+  INIT(IntArrayTest, ());
 }
 
 struct RecordTypeArrayTest {
@@ -697,7 +711,7 @@ struct RecordTypeArrayTest {
 };
 
 void fRecordTypeArrayTest() {
-  RecordTypeArrayTest();
+  INIT(RecordTypeArrayTest, ());
 }
 
 template <class T>
@@ -726,7 +740,7 @@ struct MemsetTest1 {
 };
 
 void fMemsetTest1() {
-  MemsetTest1();
+  INIT(MemsetTest1, ());
 }
 
 struct MemsetTest2 {
@@ -738,7 +752,7 @@ struct MemsetTest2 {
 };
 
 void fMemsetTest2() {
-  MemsetTest2();
+  INIT(MemsetTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -772,7 +786,7 @@ struct LambdaTest1 {
 
 void fLambdaTest1() {
   auto isEven = [](int a) { return a % 2 == 0; };
-  LambdaTest1<decltype(isEven)>(isEven, int());
+  INIT(LambdaTest1<decltype(isEven)>, (isEven, int()));
 }
 
 #ifdef PEDANTIC
@@ -786,7 +800,7 @@ struct LambdaTest2 {
 void fLambdaTest2() {
   int b;
   auto equals = [&b](int a) { return a == b; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b'}}
-  LambdaTest2<decltype(equals)>(equals, int());
+  INIT(LambdaTest2<decltype(equals)>, (equals, int()));
 }
 #else
 template <class Callable>
@@ -799,7 +813,7 @@ struct LambdaTest2 {
 void fLambdaTest2() {
   int b;
   auto equals = [&b](int a) { return a == b; };
-  LambdaTest2<decltype(equals)>(equals, int());
+  INIT(LambdaTest2<decltype(equals)>, (equals, int()));
 }
 #endif //PEDANTIC
 
@@ -824,7 +838,7 @@ void fLambdaTest3() {
   auto equals = [&rec1](LT3Detail::RecordType rec2) {
     return rec1.x == rec2.x;
   };
-  LambdaTest3<decltype(equals)>(equals, int());
+  INIT(LambdaTest3<decltype(equals)>, (equals, int()));
 }
 #else
 namespace LT3Detail {
@@ -847,7 +861,7 @@ void fLambdaTest3() {
   auto equals = [&rec1](LT3Detail::RecordType rec2) {
     return rec1.x == rec2.x;
   };
-  LambdaTest3<decltype(equals)>(equals, int());
+  INIT(LambdaTest3<decltype(equals)>, (equals, int()));
 }
 #endif //PEDANTIC
 
@@ -863,7 +877,7 @@ void fMultipleLambdaCapturesTest1() {
   int b1, b2 = 3, b3;
   auto equals = [&b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b1'}}
   // expected-note@-1{{uninitialized pointee 'this->functor./*captured variable*/b3'}}
-  MultipleLambdaCapturesTest1<decltype(equals)>(equals, int());
+  INIT(MultipleLambdaCapturesTest1<decltype(equals)>, (equals, int()));
 }
 
 template <class Callable>
@@ -877,7 +891,7 @@ struct MultipleLambdaCapturesTest2 {
 void fMultipleLambdaCapturesTest2() {
   int b1, b2 = 3, b3;
   auto equals = [b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized pointee 'this->functor./*captured variable*/b3'}}
-  MultipleLambdaCapturesTest2<decltype(equals)>(equals, int());
+  INIT(MultipleLambdaCapturesTest2<decltype(equals)>, (equals, int()));
 }
 
 struct LambdaWrapper {
@@ -920,7 +934,7 @@ struct SystemHeaderTest1 {
 };
 
 void fSystemHeaderTest1() {
-  SystemHeaderTest1();
+  INIT(SystemHeaderTest1, ());
 }
 
 #ifdef PEDANTIC
@@ -936,7 +950,7 @@ struct SystemHeaderTest2 {
 
 void fSystemHeaderTest2() {
   SystemHeaderTest2::RecordType rec;
-  SystemHeaderTest2(rec, int());
+  INIT(SystemHeaderTest2, (rec, int()));
 }
 #else
 struct SystemHeaderTest2 {
@@ -951,7 +965,7 @@ struct SystemHeaderTest2 {
 
 void fSystemHeaderTest2() {
   SystemHeaderTest2::RecordType rec;
-  SystemHeaderTest2(rec, int());
+  INIT(SystemHeaderTest2, (rec, int()));
 }
 #endif //PEDANTIC
 
@@ -969,7 +983,7 @@ struct IncompleteTypeTest1 {
 };
 
 void fIncompleteTypeTest1() {
-  IncompleteTypeTest1();
+  INIT(IncompleteTypeTest1, ());
 }
 
 struct IncompleteTypeTest2 {
@@ -983,7 +997,7 @@ struct IncompleteTypeTest2 {
 };
 
 void fIncompleteTypeTest2() {
-  IncompleteTypeTest2();
+  INIT(IncompleteTypeTest2, ());
 }
 
 struct IncompleteTypeTest3 {
@@ -997,7 +1011,7 @@ struct IncompleteTypeTest3 {
 };
 
 void fIncompleteTypeTest3() {
-  IncompleteTypeTest3();
+  INIT(IncompleteTypeTest3, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1012,7 +1026,7 @@ struct IntegralTypeTest {
 };
 
 void fIntegralTypeTest() {
-  IntegralTypeTest();
+  INIT(IntegralTypeTest, ());
 }
 
 struct FloatingTypeTest {
@@ -1023,7 +1037,7 @@ struct FloatingTypeTest {
 };
 
 void fFloatingTypeTest() {
-  FloatingTypeTest();
+  INIT(FloatingTypeTest, ());
 }
 
 struct NullptrTypeTypeTest {
@@ -1034,7 +1048,7 @@ struct NullptrTypeTypeTest {
 };
 
 void fNullptrTypeTypeTest() {
-  NullptrTypeTypeTest();
+  INIT(NullptrTypeTypeTest, ());
 }
 
 struct EnumTest {
@@ -1052,7 +1066,7 @@ struct EnumTest {
 };
 
 void fEnumTest() {
-  EnumTest();
+  INIT(EnumTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1090,7 +1104,7 @@ struct SingletonTest {
   int dontGetFilteredByNonPedanticMode = 0;
 
   SingletonTest() {
-    Singleton();
+    INIT(Singleton, ());
   }
 };
 
@@ -1111,7 +1125,7 @@ struct CXX11MemberInitTest1 {
 };
 
 void fCXX11MemberInitTest1() {
-  CXX11MemberInitTest1();
+  INIT(CXX11MemberInitTest1, ());
 }
 
 struct CXX11MemberInitTest2 {
@@ -1132,7 +1146,7 @@ struct CXX11MemberInitTest2 {
 
 void fCXX11MemberInitTest2() {
   // TODO: we'd expect the warning: {{2 uninitializeds field}}
-  CXX11MemberInitTest2(); // no-warning
+  INIT(CXX11MemberInitTest2, ()); // no-warning
 }
 
 //===----------------------------------------------------------------------===//
@@ -1147,7 +1161,7 @@ struct MyAtomicInt {
 };
 
 void _AtomicTest() {
-  MyAtomicInt b;
+  INIT(MyAtomicInt, ());
 }
 
 struct VectorSizeLong {
@@ -1158,6 +1172,7 @@ struct VectorSizeLong {
 void __vector_size__LongTest() {
   // TODO: Warn for v.x.
   VectorSizeLong v;
+  new VectorSizeLong();
   v.x[0] = 0;
 }
 
@@ -1177,10 +1192,10 @@ struct ComplexInitTest {
 };
 
 void fComplexTest() {
-  ComplexInitTest x;
+  INIT(ComplexInitTest, ());
 
   // TODO: we should emit a warning for x2.x and x2.y.
-  ComplexUninitTest x2;
+  INIT(ComplexUninitTest, ());
 }
 
 struct PaddingBitfieldTest {

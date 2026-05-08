@@ -569,7 +569,8 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
     StringRef Sym = E->getSymbol();
     if (Sym != BPF_TRAP && Sym != "__multi3" && Sym != "__divti3" &&
-        Sym != "__modti3" && Sym != "__udivti3" && Sym != "__umodti3")
+        Sym != "__modti3" && Sym != "__udivti3" && Sym != "__umodti3" &&
+        Sym != "memcpy" && Sym != "memset" && Sym != "memmove")
       fail(
           CLI.DL, DAG,
           Twine("A call to built-in function '" + Sym + "' is not supported."));

@@ -46,7 +46,7 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
       bool IsADR = BC.MIB->isADR(Inst);
 
       // TODO: Handle other types of LDR (literal, PC-relative) instructions.
-      if (!IsADR && !BC.MIB->isLDRXl(Inst) && !BC.MIB->isLDRWl(Inst))
+      if (!IsADR && !BC.MIB->isLoadLiteralGPR(Inst))
         continue;
 
       const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, IsADR ? 0 : 1);
