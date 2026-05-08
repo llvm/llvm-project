@@ -2284,21 +2284,40 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   // That is, in the general case, we should assume that a call through an
   // unprototyped function type works like a *non-variadic* call. The way we
   // make this work is to cast to the exxact type fo the promoted arguments.
-  if (isa<FunctionNoProtoType>(fnType)) {
+  //
+  // We can also have a function type mismatch when the callee's stored
+  // signature differs from what this call site expects despite both being
+  // prototyped if the called function is redirected (such as with asm renaming)
+  // to a function with a different signature. This happens with the GNU
+  // __REDIRECT/__REDIRECT_NTH macros in older glibc headers. Because we use
+  // typed pointers in CIR, we need to update the call site to avoid a mismatch.
+  cir::FuncType calleeFnTy = getTypes().getFunctionType(funcInfo);
+  bool isNoProto = isa<FunctionNoProtoType>(fnType);
+  if (isNoProto) {
+    // Treat a no-prototype callee as non-variadic.
+    calleeFnTy = cir::FuncType::get(calleeFnTy.getInputs(),
+                                    calleeFnTy.getReturnType(), false);
+  }
+
+  mlir::Operation *fn = callee.getFunctionPointer();
+  auto calleeFuncOp = mlir::dyn_cast_or_null<cir::FuncOp>(fn);
+  // No-prototype FuncOps are handled by the call verifier (it skips operand
+  // type checking when the callee is marked no_proto), so a mismatch there
+  // doesn't actually require a bitcast.
+  bool prototypeMismatch = calleeFuncOp && !calleeFuncOp.getNoProto() &&
+                           calleeFuncOp.getFunctionType() != calleeFnTy;
+
+  if (isNoProto || prototypeMismatch) {
     assert(!cir::MissingFeatures::opCallChain());
     assert(!cir::MissingFeatures::addressSpace());
-    cir::FuncType calleeTy = getTypes().getFunctionType(funcInfo);
-    // get non-variadic function type
-    calleeTy = cir::FuncType::get(calleeTy.getInputs(),
-                                  calleeTy.getReturnType(), false);
-    auto calleePtrTy = cir::PointerType::get(calleeTy);
+    auto calleePtrTy = cir::PointerType::get(calleeFnTy);
 
-    mlir::Operation *fn = callee.getFunctionPointer();
     mlir::Value addr;
-    if (auto funcOp = mlir::dyn_cast<cir::FuncOp>(fn)) {
+    if (calleeFuncOp) {
       addr = cir::GetGlobalOp::create(
           builder, getLoc(e->getSourceRange()),
-          cir::PointerType::get(funcOp.getFunctionType()), funcOp.getSymName());
+          cir::PointerType::get(calleeFuncOp.getFunctionType()),
+          calleeFuncOp.getSymName());
     } else {
       addr = fn->getResult(0);
     }
