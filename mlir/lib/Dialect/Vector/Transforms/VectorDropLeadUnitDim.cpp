@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <numeric>
-#include <utility>
 
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -48,83 +46,89 @@ static VectorType trimLeadingOneDims(VectorType oldType) {
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
-/// Returns `value` if it already has `newType`, otherwise inserts a
-/// vector.shape_cast to `newType`.
-static Value shapeCastVector(OpBuilder &b, Location loc, Value value,
-                             VectorType newType) {
-  if (value.getType() == newType)
-    return value;
-  return vector::ShapeCastOp::create(b, loc, newType, value);
-}
-
-static bool hasNonScalableUnitLeadingDims(VectorType type, int64_t dropCount) {
-  assert(dropCount >= 0 && dropCount <= type.getRank() &&
-         "expected a valid leading dimension count");
-  ArrayRef<int64_t> leadingShape = type.getShape().take_front(dropCount);
-  ArrayRef<bool> leadingScalable = type.getScalableDims().take_front(dropCount);
-  return llvm::all_of(leadingShape, [](int64_t dim) { return dim == 1; }) &&
-         llvm::none_of(leadingScalable, [](bool scalable) { return scalable; });
-}
-
 static bool isNonScalableUnitDim(VectorType type, int64_t dim) {
+  assert(dim >= 0 && dim < type.getRank() &&
+         "expected a valid vector dimension");
   return type.getShape()[dim] == 1 && !type.getScalableDims()[dim];
 }
 
-static VectorType transposeVectorType(VectorType type,
-                                      ArrayRef<int64_t> permutation) {
-  return VectorType::get(applyPermutation(type.getShape(), permutation),
-                         type.getElementType(),
-                         applyPermutation(type.getScalableDims(), permutation));
+/// Returns true if the first `k` dimensions of `type` are non-scalable unit
+/// dimensions.
+static bool leadingDimsAreUnit(VectorType type, int64_t k) {
+  assert(k >= 0 && k <= type.getRank() &&
+         "expected a valid leading dimension count");
+  return llvm::all_of(llvm::seq<int64_t>(0, k), [&](int64_t dim) {
+    return isNonScalableUnitDim(type, dim);
+  });
 }
 
-/// Shape-casts `operand` to the vector type obtained by dropping the first
-/// `dropCount` dimensions. Callers must ensure at least one vector dimension
-/// remains after the drop.
-static Value shapeCastDroppingLeadingDims(OpBuilder &b, Location loc,
-                                          Value operand, int64_t dropCount) {
-  auto oldType = cast<VectorType>(operand.getType());
-  assert(dropCount < oldType.getRank() &&
-         "shape_cast cannot drop all vector dimensions");
-  VectorType newType = VectorType::get(
-      oldType.getShape().drop_front(dropCount), oldType.getElementType(),
-      oldType.getScalableDims().drop_front(dropCount));
-  return shapeCastVector(b, loc, operand, newType);
+static bool leadingDimsAreUnitAfterPermutation(VectorType type,
+                                               ArrayRef<int64_t> permutation,
+                                               int64_t k) {
+  assert(k >= 0 && k <= static_cast<int64_t>(permutation.size()) &&
+         "expected a valid leading dimension count");
+  return llvm::all_of(permutation.take_front(k), [&](int64_t dim) {
+    return isNonScalableUnitDim(type, dim);
+  });
 }
 
-static Value shapeCastDroppingDim(OpBuilder &b, Location loc, Value operand,
-                                  int64_t dim) {
+/// Shape-casts `operand` to the vector type obtained by dropping dimension
+/// `dim`, which must be non-scalable and unit-sized.
+static Value dropUnitDim(OpBuilder &b, Location loc, Value operand,
+                         int64_t dim) {
   auto oldType = cast<VectorType>(operand.getType());
   assert(isNonScalableUnitDim(oldType, dim) &&
          "expected a non-scalable unit dim to drop");
+  int64_t rank = oldType.getRank();
+  assert(rank > 1 && "cannot shape_cast to a 0-D vector");
 
   SmallVector<int64_t> newShape;
   SmallVector<bool> newScalableDims;
-  for (int64_t i = 0, e = oldType.getRank(); i < e; ++i) {
-    if (i == dim)
+  newShape.reserve(rank - 1);
+  newScalableDims.reserve(rank - 1);
+  for (auto [i, size, scalable] :
+       llvm::enumerate(oldType.getShape(), oldType.getScalableDims())) {
+    if (static_cast<int64_t>(i) == dim)
       continue;
-    newShape.push_back(oldType.getShape()[i]);
-    newScalableDims.push_back(oldType.getScalableDims()[i]);
+    newShape.push_back(size);
+    newScalableDims.push_back(scalable);
   }
 
-  return shapeCastVector(
-      b, loc, operand,
-      VectorType::get(newShape, oldType.getElementType(), newScalableDims));
+  return b.createOrFold<vector::ShapeCastOp>(
+      loc, VectorType::get(newShape, oldType.getElementType(), newScalableDims),
+      operand);
 }
 
-static Value dropLeadingDimsForContraction(OpBuilder &b, Location loc,
-                                           Value operand, int64_t dropCount) {
+/// Shape-casts `operand` to the vector type obtained by dropping the first
+/// `k` non-scalable unit dimensions. Callers must ensure at least one vector
+/// dimension remains after the drop.
+static Value dropLeadingUnitDims(OpBuilder &b, Location loc, Value operand,
+                                 int64_t k) {
   auto oldType = cast<VectorType>(operand.getType());
-  assert(hasNonScalableUnitLeadingDims(oldType, dropCount) &&
+  assert(leadingDimsAreUnit(oldType, k) &&
+         "expected non-scalable leading unit dims to drop");
+  assert(k < oldType.getRank() &&
+         "shape_cast cannot drop all vector dimensions");
+  VectorType newType = VectorType::get(oldType.getShape().drop_front(k),
+                                       oldType.getElementType(),
+                                       oldType.getScalableDims().drop_front(k));
+  return b.createOrFold<vector::ShapeCastOp>(loc, newType, operand);
+}
+
+/// Like `dropLeadingUnitDims` except that if all dimensions would be dropped,
+/// the single element inside that vector is extracted and returned.
+static Value dropLeadingUnitDims0DIsScalar(OpBuilder &b, Location loc,
+                                           Value operand, int64_t k) {
+  auto oldType = cast<VectorType>(operand.getType());
+  assert(leadingDimsAreUnit(oldType, k) &&
          "expected non-scalable leading unit dims to drop");
 
-  // vector.contract rejects 0-D vector accumulators/results. When every vector
-  // dimension is dropped, use the scalar path that vector.contract accepts.
-  if (dropCount == oldType.getRank()) {
-    llvm::Repeated<int64_t> zeros(static_cast<size_t>(dropCount), 0);
+  if (k == oldType.getRank()) {
+    llvm::Repeated<int64_t> zeros(static_cast<size_t>(k), 0);
     return vector::ExtractOp::create(b, loc, operand, llvm::to_vector(zeros));
   }
 
-  return shapeCastDroppingLeadingDims(b, loc, operand, dropCount);
+  return dropLeadingUnitDims(b, loc, operand, k);
 }
 
 namespace {
@@ -156,8 +160,8 @@ struct CastAwayExtractStridedSliceLeadingOneDim
 
     Location loc = extractOp.getLoc();
 
-    Value newSrcVector =
-        shapeCastVector(rewriter, loc, extractOp.getSource(), newSrcType);
+    Value newSrcVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newSrcType, extractOp.getSource());
 
     // The offsets/sizes/strides attribute can have a less number of elements
     // than the input vector's rank: it is meant for the leading dimensions.
@@ -200,10 +204,10 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector =
-        shapeCastVector(rewriter, loc, insertOp.getValueToStore(), newSrcType);
-    Value newDstVector =
-        shapeCastVector(rewriter, loc, insertOp.getDest(), newDstType);
+    Value newSrcVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newSrcType, insertOp.getValueToStore());
+    Value newDstVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newDstType, insertOp.getDest());
 
     auto newOffsets = rewriter.getArrayAttr(
         insertOp.getOffsets().getValue().take_back(newDstType.getRank()));
@@ -250,10 +254,10 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 
     Value newSrcVector = insertOp.getValueToStore();
     if (oldSrcRank != 0)
-      newSrcVector = shapeCastVector(rewriter, loc, insertOp.getValueToStore(),
-                                     cast<VectorType>(newSrcType));
-    Value newDstVector =
-        shapeCastVector(rewriter, loc, insertOp.getDest(), newDstType);
+      newSrcVector = rewriter.createOrFold<vector::ShapeCastOp>(
+          loc, cast<VectorType>(newSrcType), insertOp.getValueToStore());
+    Value newDstVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newDstType, insertOp.getDest());
 
     // New position rank needs to be computed in two steps: (1) if destination
     // type has leading unit dims, we also trim the position array accordingly,
@@ -281,7 +285,7 @@ static Value dropUnitDimsFromMask(OpBuilder &b, Location loc, Value mask,
                                   VectorType newType, AffineMap newMap) {
   // Infer the type of the new mask from the new map.
   VectorType newMaskType = inferTransferOpMaskType(newType, newMap);
-  return shapeCastVector(b, loc, mask, newMaskType);
+  return b.createOrFold<vector::ShapeCastOp>(loc, newMaskType, mask);
 }
 
 // Turns vector.transfer_read on vector with leading 1 dimensions into
@@ -372,8 +376,8 @@ struct CastAwayTransferWriteLeadingOneDim
       inBoundsAttr = rewriter.getArrayAttr(
           write.getInBoundsAttr().getValue().take_back(newType.getRank()));
 
-    auto newVector =
-        shapeCastVector(rewriter, write.getLoc(), write.getVector(), newType);
+    auto newVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        write.getLoc(), newType, write.getVector());
 
     if (write.getMask()) {
       Value newMask = dropUnitDimsFromMask(rewriter, write.getLoc(),
@@ -391,16 +395,6 @@ struct CastAwayTransferWriteLeadingOneDim
   }
 };
 
-} // namespace
-
-namespace {
-struct ContractionOperandDropInfo {
-  AffineMap map;
-  bool needsShapeCast = false;
-  bool transposeNeeded = false;
-  bool transposeNonOuterUnitDims = false;
-  SmallVector<int64_t> permutation;
-};
 } // namespace
 
 FailureOr<Value>
@@ -439,16 +433,22 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
 
   SmallVector<Value> operands = {contractOp.getLhs(), contractOp.getRhs(),
                                  contractOp.getAcc()};
-  SmallVector<ContractionOperandDropInfo> operandDropInfo;
   SmallVector<Value> newOperands;
   auto loc = contractOp.getLoc();
+
+  if (maskingOp) {
+    auto oldMaskType = cast<VectorType>(maskingOp.getMask().getType());
+    if (oldMaskType.getRank() <= 1 || dimToDrop >= oldMaskType.getRank() ||
+        !isNonScalableUnitDim(oldMaskType, dimToDrop))
+      return failure();
+  }
 
   for (const auto &it : llvm::enumerate(oldIndexingMaps)) {
     // Check if the dim to be dropped exists as a leading dim in the operand
     // if it does then we use vector.shape_cast to drop it.
-    ContractionOperandDropInfo dropInfo;
+    bool needsDrop = false;
     SmallVector<AffineExpr> results;
-    dropInfo.map = it.value();
+    auto map = it.value();
     int64_t originalZeroDim = it.value().getDimPosition(0);
     if (originalZeroDim != dimToDrop) {
       // There are two reasons to be in this path, 1. We need to
@@ -456,17 +456,19 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       // leading. 2. The dim to be dropped does not exist and in
       // that case we dont want to add a unit transpose but we must
       // check all the indices to make sure this is the case.
+      bool transposeNeeded = false;
+      SmallVector<int64_t> perm;
       SmallVector<AffineExpr> transposeResults;
 
-      for (int64_t i = 0, e = dropInfo.map.getNumResults(); i < e; ++i) {
-        int64_t currDim = dropInfo.map.getDimPosition(i);
+      for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+        int64_t currDim = map.getDimPosition(i);
         if (currDim == dimToDrop) {
-          dropInfo.transposeNeeded = true;
-          dropInfo.permutation.insert(dropInfo.permutation.begin(), i);
+          transposeNeeded = true;
+          perm.insert(perm.begin(), i);
           auto targetExpr = rewriter.getAffineDimExpr(currDim);
           transposeResults.insert(transposeResults.begin(), targetExpr);
         } else {
-          dropInfo.permutation.push_back(i);
+          perm.push_back(i);
           auto targetExpr = rewriter.getAffineDimExpr(currDim);
           transposeResults.push_back(targetExpr);
         }
@@ -475,31 +477,48 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       // Checks if only the outer, unit dimensions (of size 1) are permuted.
       // Such transposes do not materially effect the underlying vector and can
       // be omitted. EG: perm [1, 0, 2] applied to vector<1x1x8xi32>
-      auto operandShape = cast<ShapedType>(operands[it.index()].getType());
-      for (auto [index, dim] : llvm::enumerate(
-               ArrayRef<int64_t>(dropInfo.permutation).drop_back(1))) {
+      bool transposeNonOuterUnitDims = false;
+      auto operandType = cast<VectorType>(operands[it.index()].getType());
+      for (auto [index, dim] :
+           llvm::enumerate(ArrayRef<int64_t>(perm).drop_back(1))) {
         if (dim != static_cast<int64_t>(index) &&
-            operandShape.getDimSize(index) != 1) {
-          dropInfo.transposeNonOuterUnitDims = true;
+            !isNonScalableUnitDim(operandType, index)) {
+          transposeNonOuterUnitDims = true;
           break;
         }
       }
 
       // Do the transpose now if needed so that we can drop the correct dim
       // with shape_cast later.
-      if (dropInfo.transposeNeeded)
-        dropInfo.map =
-            AffineMap::get(dropInfo.map.getNumDims(), 0, transposeResults,
-                           contractOp.getContext());
+      if (transposeNeeded) {
+        map = AffineMap::get(map.getNumDims(), 0, transposeResults,
+                             contractOp.getContext());
+        if (map.getDimPosition(0) == dimToDrop) {
+          bool leadingDimsCanBeDropped =
+              transposeNonOuterUnitDims
+                  ? leadingDimsAreUnitAfterPermutation(operandType, perm,
+                                                       dropDim)
+                  : leadingDimsAreUnit(operandType, dropDim);
+          if (!leadingDimsCanBeDropped)
+            return failure();
+        }
+        if (transposeNonOuterUnitDims)
+          operands[it.index()] = rewriter.createOrFold<vector::TransposeOp>(
+              loc, operands[it.index()], perm);
+      }
     }
     // We have taken care to have the dim to be dropped be
     // the leading dim. If its still not leading that means it
     // does not exist in this operand and hence we do not need a shape_cast.
-    if (dropInfo.map.getDimPosition(0) == dimToDrop)
-      dropInfo.needsShapeCast = true;
+    if (map.getDimPosition(0) == dimToDrop)
+      needsDrop = true;
+    if (needsDrop && originalZeroDim == dimToDrop &&
+        !leadingDimsAreUnit(cast<VectorType>(operands[it.index()].getType()),
+                            dropDim))
+      return failure();
 
-    for (int64_t i = 0, e = dropInfo.map.getNumResults(); i < e; ++i) {
-      int64_t currDim = dropInfo.map.getDimPosition(i);
+    for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+      int64_t currDim = map.getDimPosition(i);
       if (currDim == dimToDrop)
         // This is the dim we are dropping.
         continue;
@@ -507,36 +526,12 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
           currDim < dimToDrop ? currDim : currDim - 1);
       results.push_back(targetExpr);
     }
-    newIndexingMaps.push_back(AffineMap::get(dropInfo.map.getNumDims() - 1, 0,
-                                             results, contractOp.getContext()));
-    if (dropInfo.needsShapeCast) {
-      auto operandType = cast<VectorType>(operands[it.index()].getType());
-      VectorType typeToDrop =
-          dropInfo.transposeNeeded && dropInfo.transposeNonOuterUnitDims
-              ? transposeVectorType(operandType, dropInfo.permutation)
-              : operandType;
-      if (!hasNonScalableUnitLeadingDims(typeToDrop, dropDim))
-        return failure();
-    }
-    operandDropInfo.push_back(std::move(dropInfo));
-  }
-
-  if (maskingOp) {
-    auto oldMaskType = cast<VectorType>(maskingOp.getMask().getType());
-    if (oldMaskType.getRank() <= 1 ||
-        !isNonScalableUnitDim(oldMaskType, dimToDrop))
-      return failure();
-  }
-
-  for (const auto &it : llvm::enumerate(operandDropInfo)) {
-    Value operand = operands[it.index()];
-    const ContractionOperandDropInfo &dropInfo = it.value();
-    if (dropInfo.transposeNeeded && dropInfo.transposeNonOuterUnitDims)
-      operand = rewriter.createOrFold<vector::TransposeOp>(
-          loc, operand, dropInfo.permutation);
-    if (dropInfo.needsShapeCast)
-      operand = dropLeadingDimsForContraction(rewriter, loc, operand, dropDim);
-    newOperands.push_back(operand);
+    newIndexingMaps.push_back(AffineMap::get(map.getNumDims() - 1, 0, results,
+                                             contractOp.getContext()));
+    newOperands.push_back(
+        needsDrop ? dropLeadingUnitDims0DIsScalar(rewriter, loc,
+                                                  operands[it.index()], dropDim)
+                  : operands[it.index()]);
   }
 
   // Depending on whether this vector.contract is masked, the replacing Op
@@ -547,8 +542,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
 
   if (maskingOp) {
-    Value newMask =
-        shapeCastDroppingDim(rewriter, loc, maskingOp.getMask(), dimToDrop);
+    Value newMask = dropUnitDim(rewriter, loc, maskingOp.getMask(), dimToDrop);
 
     newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
   }
@@ -615,8 +609,8 @@ public:
     SmallVector<Value, 4> newOperands;
     for (Value operand : op->getOperands()) {
       if (auto opVecType = dyn_cast<VectorType>(operand.getType()))
-        newOperands.push_back(shapeCastVector(rewriter, op->getLoc(), operand,
-                                              trimLeadingOneDims(opVecType)));
+        newOperands.push_back(rewriter.createOrFold<vector::ShapeCastOp>(
+            op->getLoc(), trimLeadingOneDims(opVecType), operand));
       else
         newOperands.push_back(operand);
     }
@@ -653,7 +647,7 @@ struct CastAwayLoadLikeLeadingOneDim : public OpRewritePattern<OpTy> {
     for (Value operand : op->getOperands()) {
       if (isa<VectorType>(operand.getType())) {
         newOperands.push_back(
-            shapeCastDroppingLeadingDims(rewriter, loc, operand, nDropped));
+            dropLeadingUnitDims(rewriter, loc, operand, nDropped));
       } else {
         newOperands.push_back(operand);
       }
@@ -688,7 +682,7 @@ struct CastAwayStoreLikeLeadingOneDim : public OpRewritePattern<OpTy> {
     for (Value operand : op->getOperands()) {
       if (isa<VectorType>(operand.getType())) {
         newOperands.push_back(
-            shapeCastDroppingLeadingDims(rewriter, loc, operand, nDropped));
+            dropLeadingUnitDims(rewriter, loc, operand, nDropped));
       } else {
         newOperands.push_back(operand);
       }

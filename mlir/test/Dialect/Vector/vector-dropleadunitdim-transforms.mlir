@@ -283,28 +283,28 @@ func.func @cast_away_masked_contraction_with_rank1_acc(%arg0: vector<64xf32>, %a
 
 // -----
 
-// CHECK-LABEL: do_not_cast_away_contraction_with_scalable_rank1_acc
+// CHECK-LABEL: negative_cast_away_contraction_with_scalable_rank1_acc
 //  CHECK-NOT: vector.shape_cast
 //  CHECK-NOT: vector.extract
 //  CHECK-NOT: vector.broadcast
 //  CHECK-NEXT: vector.contract
 //  CHECK-NEXT: return
 
-func.func @do_not_cast_away_contraction_with_scalable_rank1_acc(%arg0: vector<64xf32>, %arg1: vector<[1]x64xf32>, %arg2: vector<[1]xf32>) -> vector<[1]xf32> {
+func.func @negative_cast_away_contraction_with_scalable_rank1_acc(%arg0: vector<64xf32>, %arg1: vector<[1]x64xf32>, %arg2: vector<[1]xf32>) -> vector<[1]xf32> {
   %0 = vector.contract {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d1, d0)>, affine_map<(d0, d1) -> (d1)>], iterator_types = ["reduction", "parallel"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<64xf32>, vector<[1]x64xf32> into vector<[1]xf32>
   return %0 : vector<[1]xf32>
 }
 
 // -----
 
-// CHECK-LABEL: do_not_cast_away_contraction_with_scalable_operand_dim
+// CHECK-LABEL: negative_cast_away_contraction_with_scalable_operand_dim
 //  CHECK-NOT: vector.shape_cast
 //  CHECK-NOT: vector.extract
 //  CHECK-NOT: vector.broadcast
 //  CHECK-NEXT: vector.contract
 //  CHECK-NEXT: return
 
-func.func @do_not_cast_away_contraction_with_scalable_operand_dim(%arg0: vector<64xf32>, %arg1: vector<[1]x64xf32>, %arg2: vector<1xf32>) -> vector<1xf32> {
+func.func @negative_cast_away_contraction_with_scalable_operand_dim(%arg0: vector<64xf32>, %arg1: vector<[1]x64xf32>, %arg2: vector<1xf32>) -> vector<1xf32> {
   %0 = vector.contract {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d1, d0)>, affine_map<(d0, d1) -> (d1)>], iterator_types = ["reduction", "parallel"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<64xf32>, vector<[1]x64xf32> into vector<1xf32>
   return %0 : vector<1xf32>
 }
