@@ -196,6 +196,7 @@ union RuntimeValue {
     int32_t intVal;
     int64_t longVal;
     float floatVal;
+    double doubleVal;         // v1.6: 双精度浮点
     bool boolVal;
     void* ptrVal;             // v1.5: 指针类型 (如函数指针)
 };

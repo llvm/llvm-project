@@ -1022,7 +1022,9 @@ private:
 
     struct BitcodeEntry {
         std::string funcName;
-        const uint8_t* data;
+        const uint8_t* data;    // 生命周期: 指向 .ejit.bitcode ELF section，由 OS loader 加载，
+                                // 进程生命周期内有效，不可释放。若未来支持动态卸载共享库，
+                                // 需在 dlclose 前清空对应 entries 并确保无进行中的 JIT 编译。
         size_t size;
     };
     struct PeriodArrayEntry {
@@ -1330,7 +1332,7 @@ struct EmbeddedDefaults {
 class BitcodeTracker {
     struct Entry {
         std::string funcName;
-        const uint8_t* bitcodeData;   // 指向 .ejit.bitcode section
+        const uint8_t* bitcodeData;   // 指向 .ejit.bitcode section (进程生命周期有效，见 §2.7.1 BitcodeEntry)
         size_t bitcodeSize;
     };
 

@@ -316,7 +316,7 @@ static void addEmbeddedJITPasses(const PassBuilder &PB,
 
 4. **LTO 兼容性**: 在 LTO 模式下，Pass 可能在链接时运行。确保能处理多个编译单元合并后的 Module（其中不同单元的 metadata 共存）。
 
-5. **性能考量**: `hasAnyEjitMetadata()` 快速扫描可避免对无 EmbeddedJIT 代码的编译单元产生额外开销。对于大多数普通 C/C++ 代码此检查为常数时间。
+5. **性能考量**: `hasAnyEjitMetadata()` 扫描所有全局变量和函数的 metadata，复杂度 O(N)。对于无 EmbeddedJIT 代码的编译单元仍需遍历一次，但不存在 `hasMetadata("ejit.metadata")` 为真的实体时立即返回 `false`，实际开销很低。若未来需要真正的 O(1) 快速路径，可在 Clang CodeGen 中为含 ejit 属性的 Module 添加模块级 named metadata（如 `!ejit.present = !{}`），作为前置过滤。
 
 6. **调试支持**: 单个 Pass 可用 `-passes=ejit-register-bitcode` 等独立运行，方便调试。协调器 Pass 仅用于集成 Pipeline。
 

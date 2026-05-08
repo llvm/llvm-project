@@ -307,7 +307,7 @@ EJitPeriodHandlerPass    →  读取 ejit.metadata 生成生命周期调用
 
 ## 9. 实施注意事项
 
-1. **ejit_auto_register 函数生命周期**: 若 EJitRegisterBitcodePass 已创建该函数，本 Pass 只需追加指令；若不存在则自行创建。函数在 `@llvm.global_ctors` 中被引用（不可被 DCE 移除），且内部调用均为 `ExternalLinkage` 运行时函数（不可被内联），因此经过 O2/O3 优化后函数体结构（含 `entry` 块和 `ret void`）保持不变，本 Pass 可安全地在返回前插入新调用。
+1. **ejit_auto_register 函数生命周期**: 若 EJitRegisterBitcodePass 已创建该函数，本 Pass 只需追加指令；若不存在则自行创建。函数在 `@llvm.global_ctors` 中被引用（不可被 DCE 移除），且内部调用均为 `ExternalLinkage` 运行时函数（不可被内联），因此经过 O2/O3 优化后函数体结构（含 `entry` 块和 `ret void`）保持不变，本 Pass 可安全地在返回前插入新调用。**注意**: 代码中使用 `cast<ReturnInst>(entryBB.getTerminator())` 仅对 entry 块的 terminator 操作，假定函数为单块结构。此假设成立的原因：(1) `InternalLinkage` + `global_ctors` 引用保证不被优化删除；(2) 函数体仅为顺序调用序列 + `ret void`，无控制流分支，优化器不会将单块函数拆分为多块。
 
 2. **无 structName 参数**: v2.0 起 `ejit_register_period_array` 和 `ejit_register_static_var` 不再接收 `structName` 参数。运行时不需要结构体名（LayoutRegistry 已移除）。
 
