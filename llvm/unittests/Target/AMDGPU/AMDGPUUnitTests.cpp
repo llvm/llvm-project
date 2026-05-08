@@ -17,11 +17,15 @@
 
 using namespace llvm;
 
-void initializeAMDGPUTarget() {
+static void initializeAMDGPUTarget() {
   LLVMInitializeAMDGPUTargetInfo();
   LLVMInitializeAMDGPUTarget();
   LLVMInitializeAMDGPUTargetMC();
 }
+
+void AMDGPUTestBase::SetUpTestSuite() { initializeAMDGPUTarget(); }
+
+void AMDGPUCodeGenTestBase::SetUpTestSuite() { initializeAMDGPUTarget(); }
 
 std::unique_ptr<GCNTargetMachine>
 createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
@@ -81,10 +85,11 @@ static bool checkMinMax(std::stringstream &OS, unsigned Occ, unsigned MinOcc,
   return MinValid && MaxValid && RangeValid;
 }
 
-static const std::pair<StringRef, StringRef>
-  EmptyFS = {"", ""},
-  W32FS = {"+wavefrontsize32", "w32"},
-  W64FS = {"+wavefrontsize64", "w64"};
+static const std::pair<StringRef, StringRef> EmptyFS = {"", ""},
+                                             W32FS = {"+wavefrontsize32",
+                                                      "w32"},
+                                             W64FS = {"+wavefrontsize64",
+                                                      "w64"};
 
 using TestFuncTy = function_ref<bool(std::stringstream &, unsigned,
                                      const GCNSubtarget &, bool)>;

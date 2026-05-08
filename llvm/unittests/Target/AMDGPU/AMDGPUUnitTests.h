@@ -21,20 +21,18 @@ class GCNTargetMachine;
 class StringRef;
 } // end namespace llvm
 
-void initializeAMDGPUTarget();
-
 std::unique_ptr<llvm::GCNTargetMachine>
 createAMDGPUTargetMachine(std::string TStr, llvm::StringRef CPU,
                           llvm::StringRef FS);
 
 class AMDGPUTestBase : public testing::Test {
 public:
-  static void SetUpTestSuite() { initializeAMDGPUTarget(); }
+  static void SetUpTestSuite();
 };
 
 class AMDGPUCodeGenTestBase : public llvm::CodeGenTestBase {
 public:
-  static void SetUpTestSuite() { initializeAMDGPUTarget(); }
+  static void SetUpTestSuite();
 };
 
 #endif // LLVM_UNITTESTS_TARGET_AMDGPU_AMDGPUUNITTESTS_H
