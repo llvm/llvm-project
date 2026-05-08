@@ -22,6 +22,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -161,6 +162,16 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     if (!BinaryOrErr)
       return createFileError(Config.InputFilename, BinaryOrErr.takeError());
     BinaryHolder = std::move(*BinaryOrErr);
+
+    if (Config.Verbose) {
+      StringRef FormatName;
+      if (auto *OF =
+              dyn_cast<object::ObjectFile>(BinaryHolder.getBinary()))
+        FormatName = OF->getFileFormatName();
+      outs() << "copy from `" << Config.InputFilename << "' [" << FormatName
+             << "] to `" << Config.OutputFilename << "' [" << FormatName
+             << "]\n";
+    }
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
       // Handle Archive.

@@ -1,0 +1,42 @@
+## Test --verbose / -v option for llvm-objcopy and llvm-strip.
+## The output should match GNU strip's format:
+##   copy from `<input>' [<format>] to `<output>' [<format>]
+
+# RUN: yaml2obj %s -o %t.o
+
+## llvm-objcopy --verbose prints the message to stdout.
+# RUN: llvm-objcopy --verbose %t.o %t.out 2>/dev/null | FileCheck %s --check-prefix=OBJCOPY
+# OBJCOPY: copy from `{{.*}}.o' [elf64-x86-64] to `{{.*}}.out' [elf64-x86-64]
+
+## Short alias -v works for llvm-objcopy.
+# RUN: llvm-objcopy -v %t.o %t.out 2>/dev/null | FileCheck %s --check-prefix=OBJCOPY-V
+# OBJCOPY-V: copy from `{{.*}}.o' [elf64-x86-64] to `{{.*}}.out' [elf64-x86-64]
+
+## llvm-strip --verbose prints the message to stdout.
+# RUN: cp %t.o %t.strip.o
+# RUN: llvm-strip --verbose %t.strip.o 2>/dev/null | FileCheck %s --check-prefix=STRIP
+# STRIP: copy from `{{.*}}.strip.o' [elf64-x86-64] to `{{.*}}.strip.o' [elf64-x86-64]
+
+## Short alias -v works for llvm-strip.
+# RUN: cp %t.o %t.strip2.o
+# RUN: llvm-strip -v %t.strip2.o 2>/dev/null | FileCheck %s --check-prefix=STRIP-V
+# STRIP-V: copy from `{{.*}}.strip2.o' [elf64-x86-64] to `{{.*}}.strip2.o' [elf64-x86-64]
+
+## llvm-strip with -o uses the specified output filename.
+# RUN: llvm-strip --verbose %t.o -o %t.strip.out 2>/dev/null | FileCheck %s --check-prefix=STRIP-OUT
+# STRIP-OUT: copy from `{{.*}}.o' [elf64-x86-64] to `{{.*}}.strip.out' [elf64-x86-64]
+
+## No verbose output without the flag.
+# RUN: llvm-objcopy %t.o %t.out 2>/dev/null | count 0
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  4
