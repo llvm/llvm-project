@@ -24,7 +24,7 @@ float4 test_binary_double4(double4 p0) {
 }
 
 float4x4 test_binary_double4x4(double4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]' is deprecated: In 202x 64 bit API lowering for [[FUNC]] is deprecated. Explicitly cast parameters to 32 or 16 bit types.
+  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x 64 bit API lowering for [[FUNC]] is deprecated. Explicitly cast parameters to 32 or 16 bit types.
   return FUNC(p0, p0);
 }
 
@@ -51,21 +51,21 @@ float test_binary_int(uint64_t p0) {
 }
 
 float4x4 test_binary_uint4x4(uint4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
 
 float4x4 test_binary_int4x4(int4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
 
 float4x4 test_binary_int64_t4x4(int64_t4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
 
 float4x4 test_binary_uint64_t4x4(uint64_t4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
