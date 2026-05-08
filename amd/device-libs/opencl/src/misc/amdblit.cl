@@ -789,10 +789,6 @@ __amd_streamOpsDecrement(
     __global atomic_ulong* ptrUlong,
     ulong value) {
 
-    // Use __scoped_atomic_fetch_sub with specific attributes instead of
-    // atomic_fetch_*_explicit which makes different assumptions and attaches
-    // attributes that are not appropriate in this case. This is a consequence
-    // of known hardware limitations affecting `atomicrwm sub` over PCIe.
     [[clang::atomic(remote_memory, fine_grained_memory)]]
     {
       if (ptrUint) {
