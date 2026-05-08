@@ -2659,10 +2659,15 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
                                            MachineRegisterInfo &MRI) const {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
+  // This function legalizes f64 -> bf16 and f64 -> f16 truncations via f64 ->
+  // f32 G_FPTRUNC_ODD and f32 -> [b]f16 G_FPTRUNC, which apparently avoids the
+  // usual double-rounding issue that could be present from using twin
+  // G_FPTRUNC.
+
   if (DstTy.isBFloat16() && SrcTy.isFloat64()) {
     auto Mid =
         MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()}, {Src});
-    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid}).getReg(0);
+    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid});
     MI.eraseFromParent();
     return true;
   }
