@@ -6493,8 +6493,10 @@ getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
          llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
-// Defaults to FormatStyle::LK_Cpp.
-FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code);
+// Defaults to FormatStyle::LK_Cpp. The second return value is true when the
+// `.h` file can be either C or C++.
+std::pair<FormatStyle::LanguageKind, bool> guessLanguage(StringRef FileName,
+                                                         StringRef Code);
 
 // Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {

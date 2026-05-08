@@ -1482,16 +1482,20 @@ TEST(ConfigParseTest, HandleDotHFile) {
             ParseError::Success);
   EXPECT_EQ(Style.Language, FormatStyle::LK_C);
 
+  // Different styles are configured for C++ and C. The program should recognize
+  // C++ structures but use the C style for .h files.
   Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   EXPECT_EQ(parseConfiguration("Language: Cpp\n"
                                "...\n"
-                               "Language: C",
+                               "Language: C\n"
+                               "IndentWidth: 4",
                                &Style,
                                /*AllowUnknownOptions=*/false,
                                /*IsDotHFile=*/true),
             ParseError::Success);
   EXPECT_EQ(Style.Language, FormatStyle::LK_Cpp);
+  EXPECT_EQ(Style.IndentWidth, 4u);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {

@@ -2447,7 +2447,10 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
                                    void *DiagHandlerCtxt, bool IsDotHFile) {
   assert(Style);
-  FormatStyle::LanguageKind Language = Style->Language;
+  // Use the C style for .h files. If no C style is configured, the block down
+  // below will make the style fall back to the C++ one.
+  FormatStyle::LanguageKind Language =
+      IsDotHFile ? FormatStyle::LK_C : Style->Language;
   assert(Language != FormatStyle::LK_None);
   if (Config.getBuffer().trim().empty())
     return make_error_code(ParseError::Success);
@@ -2487,7 +2490,6 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
 
   int LanguagePos = -1; // Position of the style for Language.
   int CppPos = -1;      // Position of the style for C++.
-  int CPos = -1;        // Position of the style for C.
 
   // Search Styles for Language and store the positions of C++ and C styles in
   // case Language is not found.
@@ -2499,19 +2501,14 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
     }
     if (Lang == FormatStyle::LK_Cpp)
       CppPos = I;
-    else if (Lang == FormatStyle::LK_C)
-      CPos = I;
   }
 
   // If Language is not found, use the default style if there is one. Otherwise,
-  // use the C style for C++ .h files and for backward compatibility, the C++
-  // style for .c files.
+  // for backward compatibility, the C++ style for .c and .h files.
   if (LanguagePos < 0) {
     if (Styles[0].Language == FormatStyle::LK_None) // Default style.
       LanguagePos = 0;
-    else if (IsDotHFile && Language == FormatStyle::LK_Cpp)
-      LanguagePos = CPos;
-    else if (!IsDotHFile && Language == FormatStyle::LK_C)
+    else if (Language == FormatStyle::LK_C)
       LanguagePos = CppPos;
     if (LanguagePos < 0)
       return make_error_code(ParseError::Unsuitable);
@@ -2527,6 +2524,10 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
       Style->Language = Language;
     Style->StyleSet.Add(*Style);
   }
+  // When the styles for C and C++ are both configured, C++ structures in .h
+  // files should still be recognized.
+  if (IsDotHFile && CppPos >= 0)
+    Style->Language = FormatStyle::LK_Cpp;
 
   if (Style->InsertTrailingCommas != FormatStyle::TCS_None &&
       (Style->PackArguments.BinPack == FormatStyle::BPAS_BinPack ||
@@ -4573,26 +4574,29 @@ static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
   return FormatStyle::LK_None;
 }
 
-FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
+std::pair<FormatStyle::LanguageKind, bool> guessLanguage(StringRef FileName,
+                                                         StringRef Code) {
   const auto GuessedLanguage = getLanguageByFileName(FileName);
   if (GuessedLanguage == FormatStyle::LK_Cpp) {
     auto Extension = llvm::sys::path::extension(FileName);
+    const bool IsH = Extension == ".h";
     // If there's no file extension (or it's .h), we need to check the contents
     // of the code to see if it contains Objective-C.
-    if (!Code.empty() && (Extension.empty() || Extension == ".h")) {
+    if (!Code.empty() && (Extension.empty() || IsH)) {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
       Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
       if (const auto Language = getLanguageByComment(Env);
           Language != FormatStyle::LK_None) {
-        return Language;
+        return {Language, false};
       }
       ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());
       Guesser.process();
       if (Guesser.isObjC())
-        return FormatStyle::LK_ObjC;
+        return {FormatStyle::LK_ObjC, false};
     }
+    return {GuessedLanguage, IsH};
   }
-  return GuessedLanguage;
+  return {GuessedLanguage, false};
 }
 
 // Update StyleOptionHelpDescription above when changing this.
@@ -4622,7 +4626,9 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                llvm::vfs::FileSystem *FS,
                                bool AllowUnknownOptions,
                                llvm::SourceMgr::DiagHandlerTy DiagHandler) {
-  FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
+  // Only true for .h files that don't have the language line.
+  const auto [GuessedLanguage, IsDotHFile] = guessLanguage(FileName, Code);
+  FormatStyle Style = getLLVMStyle(GuessedLanguage);
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
     return make_string_error("Invalid fallback style: " + FallbackStyleName);
@@ -4648,8 +4654,6 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   if (!FS)
     FS = llvm::vfs::getRealFileSystem().get();
   assert(FS);
-
-  const bool IsDotHFile = FileName.ends_with(".h");
 
   // User provided clang-format file using -style=file:path/to/format/file.
   if (Style.InheritConfig.empty() &&
