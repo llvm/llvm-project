@@ -56,4 +56,14 @@ void test_designated_init() {
   // CHECK-FIXES-BOTH-INIT: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
   // CHECK-MESSAGES-ALL: [[@LINE-8]]:28: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-ALL: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
+
+  foo_designated(some_arg, Agg(1, 2));
+  // CHECK-MESSAGES-OFF-NOT: :[[@LINE-1]]:28: warning: argument comment missing for argument 'dims'
+  // CHECK-MESSAGES-ANON-NOT: :[[@LINE-2]]:28: warning: argument comment missing for argument 'dims'
+  // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-3]]:28: warning: argument comment missing for argument 'dims'
+  // CHECK-MESSAGES-TEMP: [[@LINE-4]]:28: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-TEMP: foo_designated(some_arg, /*dims=*/Agg(1, 2));
+  // CHECK-MESSAGES-BOTH-INIT-NOT: :[[@LINE-6]]:28: warning: argument comment missing for argument 'dims'
+  // CHECK-MESSAGES-ALL: [[@LINE-7]]:28: warning: argument comment missing for argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-ALL: foo_designated(some_arg, /*dims=*/Agg(1, 2));
 }

@@ -254,7 +254,11 @@ static bool isParenthesizedTemporary(const Expr *Arg) {
   Arg = Arg->IgnoreUnlessSpelledInSource();
   if (const auto *TempObject = dyn_cast<CXXTemporaryObjectExpr>(Arg))
     return !TempObject->isListInitialization();
-  return false;
+  // CXXFunctionalCastExpr with CXXParenListInitExpr corresponds to explicit
+  // Type(...) aggregate temporary initialization syntax.
+  const auto *FuncCast = dyn_cast<CXXFunctionalCastExpr>(Arg);
+  return FuncCast &&
+         isa<CXXParenListInitExpr>(FuncCast->getSubExpr()->IgnoreImplicit());
 }
 
 // Given the argument type and the options determine if we should be adding an
