@@ -430,7 +430,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
 Status PlatformWindows::UnloadImage(Process *process, uint32_t image_token) {
   const addr_t address = process->GetImagePtrFromToken(image_token);
-  if (address == LLDB_INVALID_IMAGE_TOKEN)
+  if (address == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("invalid image token");
 
   StreamString expression;

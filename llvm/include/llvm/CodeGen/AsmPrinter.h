@@ -94,7 +94,7 @@ public:
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// This is the context for the output file that we are streaming. This owns
   /// all of the global MC-related objects for the generated translation unit.
@@ -360,9 +360,6 @@ public:
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  /// Emits inital debug location directive.
-  void emitInitialRawDwarfLocDirective(const MachineFunction &MF);
-
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
 
@@ -570,9 +567,10 @@ public:
   /// Emit an alignment directive to the specified power of two boundary. If a
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
-  /// correctness.
-  void emitAlignment(Align Alignment, const GlobalObject *GV = nullptr,
-                     unsigned MaxBytesToEmit = 0) const;
+  /// correctness. Returns the effective alignment that was emitted (which may
+  /// exceed \p Alignment when \p GV has a stricter explicit alignment).
+  Align emitAlignment(Align Alignment, const GlobalObject *GV = nullptr,
+                      unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   /// When BaseCV is present, we are lowering the element at BaseCV plus Offset.

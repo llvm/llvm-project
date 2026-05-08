@@ -356,11 +356,11 @@ def : GCNPat <
 >;
 
 let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it does.
-  let SchedRW = [WriteFloatFMA, WriteSALU] in
+  let SchedRW = [WriteFloatFMA, WriteSALUDummy] in
   defm V_DIV_SCALE_F32 : VOP3Inst_Pseudo_Wrapper <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32> ;
 
   // Double precision division pre-scale.
-  let SchedRW = [WriteDouble, WriteSALU], FPDPRounding = 1, IsDPMACCInstruction = 1 in
+  let SchedRW = [WriteDouble, WriteSALUDummy], FPDPRounding = 1, IsDPMACCInstruction = 1 in
   defm V_DIV_SCALE_F64 : VOP3Inst <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64>;
 } // End mayRaiseFPException = 0
 

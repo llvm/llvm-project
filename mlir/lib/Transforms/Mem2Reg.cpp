@@ -338,7 +338,7 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
     return defaultValue;
 
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(slot.ptr.getParentBlock());
+  builder.setInsertionPointToStart(&slot.ptr.getParentRegion()->front());
   return defaultValue = allocator.getDefaultValue(slot, builder);
 }
 

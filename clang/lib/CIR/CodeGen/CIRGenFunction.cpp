@@ -20,6 +20,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
 #include <cassert>
@@ -317,10 +318,6 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
   assert(fn && "emitReturn from non-function");
 
-  // If we are on a coroutine, add the coro_end builtin call.
-  if (fn.getCoroutine())
-    cgf.emitCoroEndBuiltinCall(loc,
-                               builder.getNullPtr(builder.getVoidPtrTy(), loc));
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = cir::LoadOp::create(
@@ -517,6 +514,21 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
     emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+
+    // If this is an implicit-return-zero function, initialize the return
+    // value. This mirrors the implicit-return-zero handling in classic
+    // codegen's EmitFunctionProlog (CGCall.cpp). It is done here, after
+    // emitAndUpdateRetAlloca, because in CIR the return slot is created
+    // after the prolog (the opposite of classic codegen, where ReturnValue
+    // is set up before EmitFunctionProlog runs).
+    // TODO(cir): Align prolog handling with classic codegen.
+    if (fd && fd->hasImplicitReturnZero()) {
+      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
+      mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
+      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
+      builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
+                                            returnValue.getPointer());
+    }
   }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
@@ -566,6 +578,24 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
     assert(!cir::MissingFeatures::sanitizers());
     assert(!cir::MissingFeatures::emitTypeCheck());
+  }
+
+  // If any of the arguments have a variably modified type, make sure to
+  // emit the type size, but only if the function is not naked. Naked functions
+  // have no prolog to run this evaluation.
+  if (!fd || !fd->hasAttr<NakedAttr>()) {
+    for (const VarDecl *vd : args) {
+      // Dig out the type as written from ParmVarDecls; it's unclear whether
+      // the standard (C99 6.9.1p10) requires this, but we're following the
+      // precedent set by gcc.
+      QualType ty;
+      if (const auto *pvd = dyn_cast<ParmVarDecl>(vd))
+        ty = pvd->getOriginalType();
+      else
+        ty = vd->getType();
+      if (ty->isVariablyModifiedType())
+        emitVariablyModifiedType(ty);
+    }
   }
 }
 
@@ -622,6 +652,10 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
     popCleanupBlocks(prologueCleanupDepth);
   }
+
+  assert(deferredConditionalCleanupStack.empty() &&
+         "deferred conditional cleanups were not consumed by a "
+         "FullExprCleanupScope");
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
@@ -664,6 +698,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       builder.setInsertionPoint(fn);
       clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
                                   fn.getFunctionType());
+      cgm.insertGlobalSymbol(clone);
       clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
       clone.setInlineKind(cir::InlineKind::AlwaysInline);
@@ -688,6 +723,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                   .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
                   .failed())
             llvm_unreachable("Failed to replace inline builtin symbol uses");
+          cgm.eraseGlobalSymbol(inlineFn);
           inlineFn.erase();
         }
         break;
@@ -990,18 +1026,119 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
     cgm.getCXXABI().buildThisParam(*this, args);
   }
 
+  bool passedParams = true;
   if (const auto *cd = dyn_cast<CXXConstructorDecl>(fd))
-    if (cd->getInheritedConstructor())
-      cgm.errorNYI(fd->getSourceRange(),
-                   "buildFunctionArgList: inherited constructor");
+    if (auto inherited = cd->getInheritedConstructor())
+      passedParams =
+          getTypes().inheritingCtorHasParams(inherited, gd.getCtorType());
 
-  for (auto *param : fd->parameters())
-    args.push_back(param);
+  if (passedParams) {
+    for (auto *param : fd->parameters()) {
+      args.push_back(param);
+      if (!param->hasAttr<PassObjectSizeAttr>())
+        continue;
+
+      auto *implicit = ImplicitParamDecl::Create(
+          getContext(), param->getDeclContext(), param->getLocation(),
+          /*Id=*/nullptr, getContext().getSizeType(), ImplicitParamKind::Other);
+      sizeArguments[param] = implicit;
+      args.push_back(implicit);
+    }
+  }
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
     cgm.getCXXABI().addImplicitStructorParams(*this, retTy, args);
 
   return retTy;
+}
+
+LValue CIRGenFunction::emitInitListLValue(const InitListExpr *e) {
+  // Initializing an aggregate temporary in C++11: T{...}.
+  if (!e->isGLValue())
+    return emitAggExprToLValue(e);
+
+  // An lvalue initializer list must be initializing a reference.
+  assert(e->isTransparent() && "non-transparent glvalue init list");
+  return emitLValue(e->getInit(0));
+}
+
+static std::variant<LValue, RValue>
+emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
+                     bool forLValue, AggValueSlot slot) {
+  using OVMD = CIRGenFunction::OpaqueValueMappingData;
+  SmallVector<OVMD> opaques;
+  llvm::scope_exit opaque_cleanup{
+      [&]() { llvm::for_each(opaques, [&](OVMD &o) { o.unbind(cgf); }); }};
+
+  // Find the result expression, if any.
+  const Expr *resultExpr = e->getResultExpr();
+  std::variant<LValue, RValue> result;
+
+  for (const Expr *semantic : e->semantics()) {
+    // If this semantic expression is an opaque value, bind it
+    // to the result of its source expression.
+    if (const auto *ov = dyn_cast<OpaqueValueExpr>(semantic)) {
+
+      // Skip unique OVEs.
+      if (ov->isUnique()) {
+        assert(ov != resultExpr &&
+               "A unique OVE cannot be used as the result expression");
+        continue;
+      }
+
+      // If this is the result expression, we may need to evaluate
+      // directly into the slot.
+      OVMD opaqueData;
+      if (ov == resultExpr && ov->isPRValue() && !forLValue &&
+          CIRGenFunction::hasAggregateEvaluationKind(ov->getType())) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "emitPseudoObjectExpr for RValue & aggregate kind");
+      } else {
+        opaqueData = OVMD::bind(cgf, ov, ov->getSourceExpr());
+
+        // If this is the result, also evaluate the result now.
+        if (ov == resultExpr) {
+          // FIXME: This doesn't really affect anything, but I cannot find a
+          // test for this, so leave an ErrorNYI here until we can find one.
+          cgf.cgm.errorNYI(e->getSourceRange(),
+                           "emitPseudoObjectExpr as result");
+          if (forLValue)
+            result = cgf.emitLValue(ov);
+          else
+            cgf.cgm.errorNYI(e->getSourceRange(),
+                             "emitPseudoObjectExpr as an RValue");
+        }
+      }
+      opaques.push_back(opaqueData);
+    } else if (semantic == resultExpr) {
+      // Otherwise, if the expression is the result, evaluate it
+      // and remember the result.
+      if (forLValue)
+        result = cgf.emitLValue(semantic);
+      else
+        result = cgf.emitAnyExpr(semantic, slot);
+    } else {
+      // FIXME: best I can tell, this is only reachable as an r-value, so this
+      // isn't properly tested.
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "emitPseudoObjectExpr as an ignored value");
+      // Otherwise, evaluate the expression in an ignored context.
+      cgf.emitIgnoredExpr(semantic);
+    }
+  }
+
+  return result;
+}
+
+RValue CIRGenFunction::emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                              AggValueSlot slot) {
+  return std::get<RValue>(
+      emitPseudoObjectExpr(*this, e, /*forLValue=*/false, slot));
+}
+
+LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
+  return std::get<LValue>(emitPseudoObjectExpr(*this, e, /*forLValue=*/true,
+                                               AggValueSlot::ignored()));
 }
 
 /// Emit code to compute a designator that specifies the location
@@ -1078,7 +1215,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
-    // TODO(cir): The above list is missing CXXFunctionalCastExprClass,
+  case Expr::CXXFunctionalCastExprClass:
+    // TODO(cir): The above list is missing
     // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
@@ -1089,6 +1227,15 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   case Expr::SubstNonTypeTemplateParmExprClass:
     return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
+  case Expr::InitListExprClass:
+    return emitInitListLValue(cast<InitListExpr>(e));
+  case Expr::PseudoObjectExprClass:
+    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
+  case Expr::CXXDefaultInitExprClass: {
+    auto *die = cast<CXXDefaultInitExpr>(e);
+    CXXDefaultInitExprScope scope(*this, die);
+    return emitLValue(die->getExpr());
+  }
   }
 }
 

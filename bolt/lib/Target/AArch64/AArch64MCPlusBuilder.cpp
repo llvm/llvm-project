@@ -2846,10 +2846,10 @@ public:
         BF.getAddress() - BF.getOriginSection()->getAddress(), BF.getMaxSize());
 
     const BinaryContext &BC = BF.getBinaryContext();
-    DataExtractor DE(FunctionContents, BC.AsmInfo->isLittleEndian(),
-                     BC.AsmInfo->getCodePointerSize());
+    unsigned CodePointerSize = BC.AsmInfo->getCodePointerSize();
+    DataExtractor DE(FunctionContents, BC.AsmInfo->isLittleEndian());
     uint64_t Offset = 8;
-    TargetAddress = DE.getAddress(&Offset);
+    TargetAddress = DE.getUnsigned(&Offset, CodePointerSize);
 
     return true;
   }

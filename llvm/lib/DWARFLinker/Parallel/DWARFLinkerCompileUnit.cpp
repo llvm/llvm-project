@@ -51,13 +51,11 @@ CompileUnit::CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit,
   if (!CUDie)
     return;
 
-  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language)) {
-    uint16_t LangVal = dwarf::toUnsigned(Val, 0);
-    if (isODRLanguage(LangVal))
-      Language = LangVal;
-  }
+  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language))
+    Language = dwarf::toUnsigned(Val, 0);
 
-  if (!GlobalData.getOptions().NoODR && Language.has_value())
+  if (!GlobalData.getOptions().NoODR && Language.has_value() &&
+      isODRLanguage(*Language))
     NoODR = false;
 
   if (const char *CUName = CUDie.getName(DINameKind::ShortName))
@@ -100,6 +98,7 @@ void CompileUnit::maybeResetToLoadedStage() {
   Abbreviations.clear();
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
+  StmtSeqListAttributes.clear();
 
   llvm::fill(OutDieOffsetArray, 0);
   llvm::fill(TypeEntries, nullptr);
@@ -233,6 +232,18 @@ StringEntry *CompileUnit::getFileName(unsigned FileIdx,
   return nullptr;
 }
 
+llvm::Error CompileUnit::setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx) {
+  if (ObjFileIdx > std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "object files exceeds UINT32_MAX");
+  if (LocalIdx > std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "local index exceeds UINT32_MAX");
+
+  Priority = (ObjFileIdx << 32) | LocalIdx;
+  return llvm::Error::success();
+}
+
 void CompileUnit::cleanupDataAfterClonning() {
   AbbreviationsSet.clear();
   ResolvedFullPaths.shrink_and_clear();
@@ -242,6 +253,7 @@ void CompileUnit::cleanupDataAfterClonning() {
   OutDieOffsetArray = SmallVector<uint64_t>();
   TypeEntries = SmallVector<TypeEntry *>();
   Dependencies.reset(nullptr);
+  StmtSeqListAttributes.clear();
   getOrigUnit().clear();
 }
 
@@ -279,7 +291,6 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
       return;
     }
 
-    auto &Entry = (*GlobalData.getOptions().ParseableSwiftInterfaces)[*Name];
     // The prepend path is applied later when copying.
     SmallString<128> ResolvedPath;
     if (sys::path::is_relative(Path))
@@ -287,14 +298,25 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
           ResolvedPath,
           dwarf::toString(getUnitDIE().find(dwarf::DW_AT_comp_dir), ""));
     sys::path::append(ResolvedPath, Path);
-    if (!Entry.empty() && Entry != ResolvedPath) {
-      DWARFDie Die = getDIE(DieEntry);
-      warn(Twine("conflicting parseable interfaces for Swift Module ") + *Name +
-               ": " + Entry + " and " + Path + ".",
-           &Die);
-    }
-    Entry = std::string(ResolvedPath);
+
+    // Stage the entry. It will be merged into the shared
+    // ParseableSwiftInterfaces map after the parallel analysis phase so that
+    // the final contents and any conflict warnings are deterministic.
+    PendingSwiftInterfaces.emplace_back(*Name, ResolvedPath);
   }
+}
+
+void CompileUnit::mergeSwiftInterfaces(
+    DWARFLinkerBase::SwiftInterfacesMapTy &Map) {
+  for (auto &Pending : PendingSwiftInterfaces) {
+    auto &Entry = Map[Pending.ModuleName];
+    if (!Entry.empty() && Entry != Pending.ResolvedPath)
+      warn(Twine("conflicting parseable interfaces for Swift Module ") +
+           Pending.ModuleName + ": " + Entry + " and " + Pending.ResolvedPath +
+           ".");
+    Entry = Pending.ResolvedPath;
+  }
+  PendingSwiftInterfaces.clear();
 }
 
 Error CompileUnit::assignTypeNames(TypePool &TypePoolRef) {
@@ -392,8 +414,14 @@ std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
 
   if (RefCU == this) {
     // Referenced DIE is in current compile unit.
-    if (std::optional<uint32_t> RefDieIdx = getDIEIndexForOffset(RefDIEOffset))
-      return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
+    if (std::optional<uint32_t> RefDieIdx =
+            getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry = getDebugInfoEntry(*RefDieIdx);
+      // In a file with broken references, an attribute might point to a
+      // NULL DIE. Treat that as a resolution failure so callers can warn.
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{this, RefEntry};
+    }
   } else if (RefCU && CanResolveInterCUReferences) {
     // Referenced DIE is in other compile unit.
 
@@ -403,8 +431,12 @@ std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
       return UnitEntryPairTy{RefCU, nullptr};
 
     if (std::optional<uint32_t> RefDieIdx =
-            RefCU->getDIEIndexForOffset(RefDIEOffset))
-      return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
+            RefCU->getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry =
+          RefCU->getDebugInfoEntry(*RefDieIdx);
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{RefCU, RefEntry};
+    }
   } else {
     return UnitEntryPairTy{RefCU, nullptr};
   }
@@ -1419,46 +1451,53 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
                                   DIEGenerator &TypeDIEGenerator,
                                   dwarf::Tag DieTag, bool IsDeclaration,
                                   bool IsParentDeclaration) {
-  DIE *DefinitionDie = TypeDescriptor->Die;
-  // Do not allocate any new DIE if definition DIE is already met.
-  if (DefinitionDie)
-    return nullptr;
+  uint64_t Priority = getPriority();
 
-  DIE *DeclarationDie = TypeDescriptor->DeclarationDie;
-  bool OldParentIsDeclaration = TypeDescriptor->ParentIsDeclaration;
+  // Lock-free pre-checks: skip the lock (and downstream cloning) when this CU
+  // has no chance of winning the type slot.
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // DiePriority only ever decreases, so a relaxed read that is <= our
+    // priority means we definitely cannot win.
+    if (Priority >= TypeDescriptor->DiePriority.load(std::memory_order_relaxed))
+      return nullptr;
+  } else {
+    // Once a definition exists the declaration slot is dead.
+    if (TypeDescriptor->Die.load(std::memory_order_relaxed))
+      return nullptr;
+  }
 
-  if (IsDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
-                                                               NewDie))
-      return NewDie;
-  } else if (IsDeclaration && !IsParentDeclaration && OldParentIsDeclaration) {
-    // Overwrite existing declaration DIE if it's parent is also an declaration
-    // while parent of current declaration DIE is a definition.
-    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_strong(
-            OldParentIsDeclaration, false)) {
-      DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-      TypeDescriptor->DeclarationDie = NewDie;
-      return NewDie;
+  while (TypeDescriptor->Lock.test_and_set(std::memory_order_acquire))
+    ; // spin
+
+  DIE *Result = nullptr;
+
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // Definition: lowest priority wins.
+    if (Priority <
+        TypeDescriptor->DiePriority.load(std::memory_order_relaxed)) {
+      TypeDescriptor->DiePriority.store(Priority, std::memory_order_relaxed);
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->Die.store(Result, std::memory_order_relaxed);
     }
-  } else if (!IsDeclaration && IsParentDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE since parent of current DIE is marked as
-    // declaration.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
-                                                               NewDie))
-      return NewDie;
-  } else if (!IsDeclaration && !IsParentDeclaration) {
-    // Allocate definition DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->Die.compare_exchange_strong(DefinitionDie, NewDie)) {
-      TypeDescriptor->ParentIsDeclaration = false;
-      return NewDie;
+  } else if (!TypeDescriptor->Die.load(std::memory_order_relaxed)) {
+    // Declaration (no definition exists yet).
+    // Prefer declarations whose parent is a definition (better context);
+    // break ties by CU priority (lower wins).
+    bool WorseParent =
+        IsParentDeclaration && !TypeDescriptor->DeclarationParentIsDeclaration;
+    bool BetterParent =
+        !IsParentDeclaration && TypeDescriptor->DeclarationParentIsDeclaration;
+    if (!WorseParent &&
+        (BetterParent || Priority < TypeDescriptor->DeclarationDiePriority)) {
+      TypeDescriptor->DeclarationDiePriority = Priority;
+      TypeDescriptor->DeclarationParentIsDeclaration = IsParentDeclaration;
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->DeclarationDie.store(Result, std::memory_order_relaxed);
     }
   }
 
-  return nullptr;
+  TypeDescriptor->Lock.clear(std::memory_order_release);
+  return Result;
 }
 
 TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
@@ -1534,90 +1573,183 @@ Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
       OutLineTable.Rows.clear();
 
     OutLineTable.Sequences = InputLineTable->Sequences;
-  } else {
-    // This vector is the output line table.
-    std::vector<DWARFDebugLine::Row> NewRows;
-    NewRows.reserve(InputLineTable->Rows.size());
-
-    // Current sequence of rows being extracted, before being inserted
-    // in NewRows.
-    std::vector<DWARFDebugLine::Row> Seq;
-
-    const auto &FunctionRanges = getFunctionRanges();
-    std::optional<AddressRangeValuePair> CurrRange;
-
-    // FIXME: This logic is meant to generate exactly the same output as
-    // Darwin's classic dsymutil. There is a nicer way to implement this
-    // by simply putting all the relocated line info in NewRows and simply
-    // sorting NewRows before passing it to emitLineTableForUnit. This
-    // should be correct as sequences for a function should stay
-    // together in the sorted output. There are a few corner cases that
-    // look suspicious though, and that required to implement the logic
-    // this way. Revisit that once initial validation is finished.
-
-    // Iterate over the object file line info and extract the sequences
-    // that correspond to linked functions.
-    for (DWARFDebugLine::Row Row : InputLineTable->Rows) {
-      // Check whether we stepped out of the range. The range is
-      // half-open, but consider accept the end address of the range if
-      // it is marked as end_sequence in the input (because in that
-      // case, the relocation offset is accurate and that entry won't
-      // serve as the start of another function).
-      if (!CurrRange || !CurrRange->Range.contains(Row.Address.Address)) {
-        // We just stepped out of a known range. Insert a end_sequence
-        // corresponding to the end of the range.
-        uint64_t StopAddress =
-            CurrRange ? CurrRange->Range.end() + CurrRange->Value : -1ULL;
-        CurrRange = FunctionRanges.getRangeThatContains(Row.Address.Address);
-        if (StopAddress != -1ULL && !Seq.empty()) {
-          // Insert end sequence row with the computed end address, but
-          // the same line as the previous one.
-          auto NextLine = Seq.back();
-          NextLine.Address.Address = StopAddress;
-          NextLine.EndSequence = 1;
-          NextLine.PrologueEnd = 0;
-          NextLine.BasicBlock = 0;
-          NextLine.EpilogueBegin = 0;
-          Seq.push_back(NextLine);
-          insertLineSequence(Seq, NewRows);
-        }
-
-        if (!CurrRange)
-          continue;
-      }
-
-      // Ignore empty sequences.
-      if (Row.EndSequence && Seq.empty())
-        continue;
-
-      // Relocate row address and add it to the current sequence.
-      Row.Address.Address += CurrRange->Value;
-      Seq.emplace_back(Row);
-
-      if (Row.EndSequence)
-        insertLineSequence(Seq, NewRows);
-    }
-
-    OutLineTable.Rows = std::move(NewRows);
+    return emitDebugLine(TargetTriple, OutLineTable);
   }
 
-  return emitDebugLine(TargetTriple, OutLineTable);
+  SmallVector<uint64_t> OrigRowIndices;
+  filterLineTableRows(*InputLineTable, OutLineTable.Rows, OrigRowIndices);
+
+  if (StmtSeqListAttributes.empty())
+    return emitDebugLine(TargetTriple, OutLineTable);
+
+  // When DW_AT_LLVM_stmt_sequence attributes on this CU need their values
+  // rewritten to point at the correct output sequence, have the emitter
+  // record, for every row that originated from an input row, the byte
+  // offset of the DW_LNE_set_address that opens the sequence containing
+  // that row. Keying the map on the input row index (rather than on an
+  // output address) avoids collisions when two input sequences would
+  // relocate to the same output address — e.g. ICF folding two functions
+  // from the same CU to a single output range.
+  //
+  // The patching below MUST run before emitDebugInfo() serializes the
+  // DIE bytes and before OutputSections::applyPatches() runs for this
+  // unit's .debug_info — it writes a local offset into the DIEValue that
+  // the serializer then emits, and a DebugOffsetPatch (registered at DIE
+  // cloning time) later adds the CU's .debug_line start offset to reach
+  // the final absolute value.
+  DenseMap<uint64_t, uint64_t> RowIndexToSeqStartOffset;
+  if (Error Err = emitDebugLine(TargetTriple, OutLineTable, OrigRowIndices,
+                                &RowIndexToSeqStartOffset))
+    return Err;
+
+  DenseMap<uint64_t, uint64_t> SeqOffsetToFirstRowIndex =
+      buildStmtSeqOffsetToFirstRowIndex(*InputLineTable);
+  patchStmtSeqAttributes(SeqOffsetToFirstRowIndex, RowIndexToSeqStartOffset);
+  return Error::success();
+}
+
+void CompileUnit::filterLineTableRows(
+    const DWARFDebugLine::LineTable &InputLineTable,
+    std::vector<DWARFDebugLine::Row> &NewRows,
+    SmallVectorImpl<uint64_t> &NewRowIndices) {
+  NewRows.reserve(InputLineTable.Rows.size());
+  NewRowIndices.reserve(InputLineTable.Rows.size());
+
+  // Current sequence of rows being extracted, before being inserted
+  // in NewRows. Kept in lockstep with SeqIndices, which stores the
+  // originating input row index (or InvalidRowIndex for manufactured
+  // end-of-range rows).
+  std::vector<DWARFDebugLine::Row> Seq;
+  SmallVector<uint64_t> SeqIndices;
+  constexpr uint64_t InvalidRowIndex = std::numeric_limits<uint64_t>::max();
+
+  const auto &FunctionRanges = getFunctionRanges();
+  std::optional<AddressRangeValuePair> CurrRange;
+
+  // FIXME: This logic is meant to generate exactly the same output as
+  // Darwin's classic dsymutil. There is a nicer way to implement this
+  // by simply putting all the relocated line info in NewRows and simply
+  // sorting NewRows before passing it to emitLineTableForUnit. This
+  // should be correct as sequences for a function should stay
+  // together in the sorted output. There are a few corner cases that
+  // look suspicious though, and that required to implement the logic
+  // this way. Revisit that once initial validation is finished.
+
+  // Iterate over the object file line info and extract the sequences
+  // that correspond to linked functions.
+  for (auto [InputRowIdx, InputRow] : llvm::enumerate(InputLineTable.Rows)) {
+    DWARFDebugLine::Row Row = InputRow;
+    // Check whether we stepped out of the range. The range is
+    // half-open, but consider accept the end address of the range if
+    // it is marked as end_sequence in the input (because in that
+    // case, the relocation offset is accurate and that entry won't
+    // serve as the start of another function).
+    if (!CurrRange || !CurrRange->Range.contains(Row.Address.Address)) {
+      // We just stepped out of a known range. Insert a end_sequence
+      // corresponding to the end of the range.
+      uint64_t StopAddress =
+          CurrRange ? CurrRange->Range.end() + CurrRange->Value : -1ULL;
+      CurrRange = FunctionRanges.getRangeThatContains(Row.Address.Address);
+      if (StopAddress != -1ULL && !Seq.empty()) {
+        // Insert end sequence row with the computed end address, but
+        // the same line as the previous one. This row is synthesised
+        // and has no input counterpart, so tag it with
+        // InvalidRowIndex.
+        auto NextLine = Seq.back();
+        NextLine.Address.Address = StopAddress;
+        NextLine.EndSequence = 1;
+        NextLine.PrologueEnd = 0;
+        NextLine.BasicBlock = 0;
+        NextLine.EpilogueBegin = 0;
+        Seq.push_back(NextLine);
+        SeqIndices.push_back(InvalidRowIndex);
+        insertLineSequence(Seq, SeqIndices, NewRows, NewRowIndices);
+      }
+
+      if (!CurrRange)
+        continue;
+    }
+
+    // Ignore empty sequences.
+    if (Row.EndSequence && Seq.empty())
+      continue;
+
+    // Relocate row address and add it to the current sequence.
+    Row.Address.Address += CurrRange->Value;
+    Seq.emplace_back(Row);
+    SeqIndices.push_back(InputRowIdx);
+
+    if (Row.EndSequence)
+      insertLineSequence(Seq, SeqIndices, NewRows, NewRowIndices);
+  }
+}
+
+void CompileUnit::patchStmtSeqAttributes(
+    const DenseMap<uint64_t, uint64_t> &SeqOffsetToFirstRowIndex,
+    const DenseMap<uint64_t, uint64_t> &RowIndexToSeqStartOffset) {
+  const uint64_t InvalidOffset = getFormParams().getDwarfMaxOffset();
+
+  for (const CompileUnit::StmtSeqPatch &Patch : StmtSeqListAttributes) {
+    uint64_t NewStmtSeq = InvalidOffset;
+    auto RowIt = SeqOffsetToFirstRowIndex.find(Patch.InputStmtSeqOffset);
+    if (RowIt != SeqOffsetToFirstRowIndex.end()) {
+      auto OffIt = RowIndexToSeqStartOffset.find(RowIt->second);
+      if (OffIt != RowIndexToSeqStartOffset.end())
+        NewStmtSeq = OffIt->second;
+    }
+    // When resolution fails, the InvalidOffset sentinel must survive the
+    // combination-time section-offset fixup. The patch applier preserves
+    // InvalidOffset as-is so consumers see a clean invalid marker rather
+    // than StartOffset - 1.
+    *Patch.Value = DIEValue(Patch.Value->getAttribute(), Patch.Value->getForm(),
+                            DIEInteger(NewStmtSeq));
+  }
+}
+
+DenseMap<uint64_t, uint64_t> CompileUnit::buildStmtSeqOffsetToFirstRowIndex(
+    const DWARFDebugLine::LineTable &InputLineTable) const {
+  // Collect this CU's stmt-sequence attribute values (input offsets),
+  // sorted ascending and deduplicated.
+  SmallVector<uint64_t> StmtAttrs;
+  StmtAttrs.reserve(StmtSeqListAttributes.size());
+  for (const StmtSeqPatch &Patch : StmtSeqListAttributes)
+    StmtAttrs.push_back(Patch.InputStmtSeqOffset);
+  llvm::sort(StmtAttrs);
+  StmtAttrs.erase(llvm::unique(StmtAttrs), StmtAttrs.end());
+
+  DenseMap<uint64_t, uint64_t> Result;
+  dwarf_linker::buildStmtSeqOffsetToFirstRowIndex(InputLineTable, StmtAttrs,
+                                                  Result);
+  return Result;
 }
 
 void CompileUnit::insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
-                                     std::vector<DWARFDebugLine::Row> &Rows) {
+                                     SmallVectorImpl<uint64_t> &SeqIndices,
+                                     std::vector<DWARFDebugLine::Row> &Rows,
+                                     SmallVectorImpl<uint64_t> &RowIndices) {
+  assert(Seq.size() == SeqIndices.size() &&
+         "Seq and SeqIndices must be kept in lockstep");
+  assert(Rows.size() == RowIndices.size() &&
+         "Rows and RowIndices must be kept in lockstep");
   if (Seq.empty())
     return;
 
+  auto ClearSeq = [&] {
+    Seq.clear();
+    SeqIndices.clear();
+  };
+
   if (!Rows.empty() && Rows.back().Address < Seq.front().Address) {
     llvm::append_range(Rows, Seq);
-    Seq.clear();
+    llvm::append_range(RowIndices, SeqIndices);
+    ClearSeq();
     return;
   }
 
   object::SectionedAddress Front = Seq.front().Address;
   auto InsertPoint = partition_point(
       Rows, [=](const DWARFDebugLine::Row &O) { return O.Address < Front; });
+  size_t InsertIdx = std::distance(Rows.begin(), InsertPoint);
 
   // FIXME: this only removes the unneeded end_sequence if the
   // sequences have been inserted in order. Using a global sort like
@@ -1626,12 +1758,17 @@ void CompileUnit::insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
   if (InsertPoint != Rows.end() && InsertPoint->Address == Front &&
       InsertPoint->EndSequence) {
     *InsertPoint = Seq.front();
+    RowIndices[InsertIdx] = SeqIndices.front();
     Rows.insert(InsertPoint + 1, Seq.begin() + 1, Seq.end());
+    RowIndices.insert(RowIndices.begin() + InsertIdx + 1,
+                      SeqIndices.begin() + 1, SeqIndices.end());
   } else {
     Rows.insert(InsertPoint, Seq.begin(), Seq.end());
+    RowIndices.insert(RowIndices.begin() + InsertIdx, SeqIndices.begin(),
+                      SeqIndices.end());
   }
 
-  Seq.clear();
+  ClearSeq();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -103,6 +103,13 @@ func.func @unexpected_type() {
 
 // -----
 
+func.func @invalid_di_derived_type_extra_data() {
+  // expected-error @+1 {{extraData must be a DINodeAttr or an IntegerAttr}}
+  "some.op"() {attr = #llvm.di_derived_type<tag = DW_TAG_member, sizeInBits = 64, extraData = "not debug info">} : () -> ()
+}
+
+// -----
+
 func.func @explicitly_opaque_struct() {
   "some.op"() : () -> !llvm.struct<"a", opaque>
   // expected-error @+1 {{identified type already used with a different body}}

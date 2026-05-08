@@ -1734,6 +1734,16 @@ TEST(Support, NormalizePath) {
   }
 
   for (auto &T : Tests) {
+    std::string Win = path::native(std::get<0>(T), path::Style::windows);
+    std::string Posix = path::native(std::get<0>(T), path::Style::posix);
+    std::string WinSlash =
+        path::native(std::get<0>(T), path::Style::windows_slash);
+    EXPECT_EQ(std::get<1>(T), Win);
+    EXPECT_EQ(std::get<2>(T), Posix);
+    EXPECT_EQ(std::get<2>(T), WinSlash);
+  }
+
+  for (auto &T : Tests) {
     SmallString<64> WinBackslash(std::get<0>(T));
     SmallString<64> Posix(WinBackslash);
     SmallString<64> WinSlash(WinBackslash);

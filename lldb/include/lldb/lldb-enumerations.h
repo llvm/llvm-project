@@ -330,7 +330,7 @@ enum ErrorType {
   eErrorTypeWin32       ///< Standard Win32 error codes.
 };
 
-enum ValueType {
+enum ValueType : uint32_t {
   eValueTypeInvalid = 0,
   eValueTypeVariableGlobal = 1,   ///< globals variable
   eValueTypeVariableStatic = 2,   ///< static variable
@@ -343,6 +343,12 @@ enum ValueType {
   eValueTypeVTable = 9,              ///< virtual function table
   eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
 };
+
+/// A mask that we can use to check if the value type is synthetic or not.
+// NOTE: This limits the number of value types to 31, but that's 3x more than
+// what we currently have now. See lldb/Utility/ValueType.h for helpers for
+// working with synthetic value types.
+static constexpr unsigned ValueTypeSyntheticMask = 0x20;
 
 /// Token size/granularities for Input Readers.
 
@@ -550,6 +556,12 @@ enum InstrumentationRuntimeType {
   eNumInstrumentationRuntimeTypes
 };
 
+enum PluginDomainKind {
+  ePluginDomainKindGlobal = 0x1,
+  ePluginDomainKindDebugger = 0x2,
+  ePluginDomainKindTarget = 0x4,
+};
+
 enum DynamicValueType {
   eNoDynamicValues = 0,
   eDynamicCanRunTarget = 1,
@@ -678,6 +690,7 @@ enum CommandArgumentType {
   eArgTypeProtocol,
   eArgTypeExceptionStage,
   eArgTypeNameMatchStyle,
+  eArgTypePluginDomain,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1444,6 +1457,19 @@ enum DILMode {
   /// Allowed: everything supported by DIL.
   /// \see lldb/docs/dil-expr-lang.ebnf
   eDILModeFull
+};
+
+/// When the Process plugin can retrieve information
+/// about all binaries loaded in the target process,
+/// or given a list of binary load addresses, this
+/// enum specifies how much information needed from
+/// the Process plugin; there may be performance reasons
+/// to limit the amount of information returned.
+enum BinaryInformationLevel {
+  eBinaryInformationLevelAddrOnly,
+  eBinaryInformationLevelAddrName,
+  eBinaryInformationLevelAddrNameUUID,
+  eBinaryInformationLevelFull
 };
 
 } // namespace lldb

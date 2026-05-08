@@ -548,6 +548,12 @@ void native(const Twine &path, SmallVectorImpl<char> &result, Style style) {
   native(result, style);
 }
 
+std::string native(const Twine &path, Style style) {
+  SmallString<128> Result;
+  native(path, Result, style);
+  return std::string(Result);
+}
+
 void native(SmallVectorImpl<char> &Path, Style style) {
   if (Path.empty())
     return;

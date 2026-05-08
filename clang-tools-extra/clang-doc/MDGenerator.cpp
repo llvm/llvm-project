@@ -31,7 +31,8 @@ static std::string genEmphasis(const Twine &Text) {
   return "**" + Text.str() + "**";
 }
 
-static std::string genReferenceList(llvm::ArrayRef<Reference> Refs) {
+static std::string
+genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
   std::string Buffer;
   llvm::raw_string_ostream Stream(Buffer);
   for (const auto &R : Refs) {
@@ -81,7 +82,7 @@ class TableCommentWriter {
 public:
   explicit TableCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
 
-  void write(const OwningVec<CommentInfo> &Comments) {
+  void write(llvm::ArrayRef<CommentInfo> Comments) {
     for (const auto &C : Comments)
       writeTableSafeComment(C);
 
@@ -435,7 +436,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children)
     serializeReference(OS, *C, 0);
 
@@ -454,7 +455,7 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children) {
     if (!C->Children.empty()) {
       const char *Type;
