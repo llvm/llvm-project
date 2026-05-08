@@ -11871,59 +11871,66 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
                      DAG.getNode(ISD::BITREVERSE, DL, VST, REVB));
 }
 
-// Check whether the continuous comparison sequence.
-static bool hasLegalCmpImmediateOperand(SDValue V) {
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(V);
-  return !C || isLegalCmpImmed(C->getAPIntValue());
-}
-
-static bool hasLegalCmpImmediate(SDValue LHS, SDValue RHS) {
-  return hasLegalCmpImmediateOperand(LHS) && hasLegalCmpImmediateOperand(RHS);
-}
-
+// A CCMP folds in only a 5-bit unsigned immediate (or its negation, via CCMN);
+// any other constant must be materialized into a register first.
 static bool isLegalCondCmpImmediate(const APInt &Imm) {
   if (Imm.isNegative())
     return Imm.sgt(-32);
   return Imm.getLimitedValue(32) <= 31;
 }
 
-static bool hasLegalCondCmpImmediateOperand(SDValue V) {
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(V);
-  return !C || isLegalCondCmpImmediate(C->getAPIntValue());
+// True unless one of the operands is a constant that cannot be encoded as a
+// CMP/CMN immediate. A non-constant operand always lives in a register, so it
+// is fine.
+static bool hasLegalCmpImmediate(SDValue LHS, SDValue RHS) {
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(LHS);
+  if (C && !isLegalCmpImmed(C->getAPIntValue()))
+    return false;
+  C = dyn_cast<ConstantSDNode>(RHS);
+  if (C && !isLegalCmpImmed(C->getAPIntValue()))
+    return false;
+  return true;
 }
 
+// As hasLegalCmpImmediate, but for the tighter CCMP immediate form.
 static bool hasLegalCondCmpImmediate(SDValue LHS, SDValue RHS) {
-  return hasLegalCondCmpImmediateOperand(LHS) &&
-         hasLegalCondCmpImmediateOperand(RHS);
-}
-
-static bool isLegalXorImmediate(const APInt &Imm) {
-  unsigned BitWidth = Imm.getBitWidth() <= 32 ? 32 : 64;
-  if (Imm.getBitWidth() > BitWidth)
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(LHS);
+  if (C && !isLegalCondCmpImmediate(C->getAPIntValue()))
     return false;
-  return AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), BitWidth);
-}
-
-static bool hasCheapXorImmediateThatNeedsCondCmpRegOperand(SDValue V) {
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(V);
-  if (!C)
+  C = dyn_cast<ConstantSDNode>(RHS);
+  if (C && !isLegalCondCmpImmediate(C->getAPIntValue()))
     return false;
-
-  const APInt &Imm = C->getAPIntValue();
-  return !isLegalCondCmpImmediate(Imm) && isLegalXorImmediate(Imm);
+  return true;
 }
 
-static bool hasCheapXorImmediateThatNeedsCondCmpReg(
-    const std::pair<SDValue, SDValue> &Pair) {
-  return hasCheapXorImmediateThatNeedsCondCmpRegOperand(Pair.first) ||
-         hasCheapXorImmediateThatNeedsCondCmpRegOperand(Pair.second);
-}
-
+// Only the leading compare of the chain uses the wider CMP immediate; the rest
+// become CCMPs. So a compare whose immediate is a legal CMP operand but not a
+// legal CCMP operand is cheapest at the front.
 static bool preferAsFirstCmp(const std::pair<SDValue, SDValue> &Pair) {
   return hasLegalCmpImmediate(Pair.first, Pair.second) &&
          !hasLegalCondCmpImmediate(Pair.first, Pair.second);
 }
 
+// True if either operand is a constant that does not fit a CCMP immediate but
+// is a legal logical immediate: folding it into the xor is a single cheap
+// instruction, yet the result still needs a scratch register for the CCMP.
+// Chaining more than two such compares costs more than the CCMP form saves.
+static bool hasCheapXorImmediateThatNeedsCondCmpReg(
+    const std::pair<SDValue, SDValue> &Pair) {
+  for (SDValue V : {Pair.first, Pair.second}) {
+    auto *C = dyn_cast<ConstantSDNode>(V);
+    if (!C || isLegalCondCmpImmediate(C->getAPIntValue()))
+      continue;
+    const APInt &Imm = C->getAPIntValue();
+    unsigned BitWidth = Imm.getBitWidth() <= 32 ? 32 : 64;
+    if (Imm.getBitWidth() <= BitWidth &&
+        AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), BitWidth))
+      return true;
+  }
+  return false;
+}
+
+// Check whether the continuous comparison sequence.
 static bool
 isOrXorChain(SDValue N, SelectionDAG &DAG, unsigned &Num, bool &SawXor,
              bool RequireLegalCmpImmediates,
@@ -11984,11 +11991,10 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   // sub A0, A1; ccmp B0, B1, 0, eq; cmp inv(Cond) flag
   unsigned NumXors = 0;
   bool SawXor = false;
-  bool RequireLegalCmpImmediates =
-      any_of(N->users(), [](SDNode *User) {
-        return User->getOpcode() == ISD::BRCOND ||
-               User->getOpcode() == AArch64ISD::BRCOND;
-      });
+  bool RequireLegalCmpImmediates = any_of(N->users(), [](SDNode *User) {
+    return User->getOpcode() == ISD::BRCOND ||
+           User->getOpcode() == AArch64ISD::BRCOND;
+  });
   if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
       LHS->getOpcode() == ISD::OR && LHS->hasOneUse() &&
       isOrXorChain(LHS, DAG, NumXors, SawXor, RequireLegalCmpImmediates,
@@ -27654,42 +27660,6 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performSETCCCARRYCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::SETCCCARRY && "Unexpected opcode!");
-
-  // Rebuild narrow high/low compares from type-legalized wide unsigned compares
-  // so the existing CCMP conjunction/disjunction lowering can handle them.
-  SDValue HiLHS = N->getOperand(0);
-  SDValue HiRHS = N->getOperand(1);
-  SDValue Carry = N->getOperand(2);
-  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(3))->get();
-  if (Cond != ISD::SETULT || Carry.getOpcode() != ISD::USUBO ||
-      Carry.getResNo() != 1)
-    return SDValue();
-
-  if (!isNullConstant(HiLHS) && !isNullConstant(HiRHS))
-    return SDValue();
-
-  SDValue LoLHS = Carry.getOperand(0);
-  SDValue LoRHS = Carry.getOperand(1);
-  if (!isa<ConstantSDNode>(LoLHS) && !isa<ConstantSDNode>(LoRHS))
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
-
-  SDValue LoCmp = DAG.getSetCC(DL, VT, LoLHS, LoRHS, ISD::SETULT);
-  if (isNullConstant(HiRHS)) {
-    SDValue HiEq = DAG.getSetCC(DL, VT, HiLHS, HiRHS, ISD::SETEQ);
-    return DAG.getNode(ISD::AND, DL, VT, HiEq, LoCmp);
-  }
-
-  SDValue HiNe = DAG.getSetCC(DL, VT, HiRHS,
-                              DAG.getConstant(0, DL, HiRHS.getValueType()),
-                              ISD::SETNE);
-  return DAG.getNode(ISD::OR, DL, VT, HiNe, LoCmp);
-}
-
 static SDValue performSELECT_CCCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        SelectionDAG &DAG) {
@@ -29584,8 +29554,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performVSelectCombine(N, DCI, Subtarget);
   case ISD::SETCC:
     return performSETCCCombine(N, DCI, DAG);
-  case ISD::SETCCCARRY:
-    return performSETCCCARRYCombine(N, DAG);
   case ISD::LOAD:
     return performLOADCombine(N, DCI, DAG, Subtarget);
   case ISD::STORE:
