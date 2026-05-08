@@ -8702,7 +8702,7 @@ def ast_dump_filter_EQ : Joined<["-"], "ast-dump-filter=">,
   Alias<ast_dump_filter>;
 def ast_dump_filter_path : Separate<["-"], "ast-dump-filter-path">,
   MetaVarName<"<path_filter>">,
-  HelpText<"Use with -ast-dump or -ast-print to dump/print only AST declaration"
+  HelpText<"Use with '-ast-dump' or '-ast-print' to dump/print only AST declaration"
            " nodes whose source file path matches a glob pattern.">,
   MarshallingInfoString<FrontendOpts<"ASTDumpFilterPath">>;
 def ast_dump_filter_path_EQ : Joined<["-"], "ast-dump-filter-path=">,

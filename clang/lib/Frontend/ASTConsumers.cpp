@@ -95,17 +95,22 @@ namespace {
       if (!FilterPath.empty()) {
         const SourceManager &SM = D->getASTContext().getSourceManager();
 
-        SourceLocation Loc = SM.getSpellingLoc(D->getLocation());
+        SourceLocation Loc = D->getLocation();
         if (Loc.isInvalid())
           return false;
 
-        auto Pattern = llvm::GlobPattern::create(FilterPath);
+        PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+        if (PLoc.isInvalid())
+          return false;
+
+        llvm::Expected<llvm::GlobPattern> Pattern =
+            llvm::GlobPattern::create(FilterPath);
         if (!Pattern) {
           llvm::consumeError(Pattern.takeError());
           return false;
         }
 
-        if (!Pattern->match(SM.getFilename(Loc)))
+        if (!Pattern->match(PLoc.getFilename()))
           return false;
       }
 
