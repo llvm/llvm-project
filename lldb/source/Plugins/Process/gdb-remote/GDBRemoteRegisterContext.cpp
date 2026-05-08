@@ -54,10 +54,7 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
 GDBRemoteRegisterContext::~GDBRemoteRegisterContext() = default;
 
 void GDBRemoteRegisterContext::SetAllRegistersValidState(LazyBool valid) {
-  if (valid == eLazyBoolYes)
-    m_gpacket_cached = true;
-  else
-    m_gpacket_cached = false;
+    m_gpacket_cached = (valid == eLazyBoolYes);
   std::vector<LazyBool>::iterator pos, end = m_reg_valid.end();
   for (pos = m_reg_valid.begin(); pos != end; ++pos)
     *pos = valid;
