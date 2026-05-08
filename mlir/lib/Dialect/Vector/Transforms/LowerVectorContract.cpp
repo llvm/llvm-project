@@ -226,7 +226,7 @@ public:
   ContractionOpToOuterProductOpLowering(
       vector::VectorContractLowering vectorContractLowering,
       MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = acceptAllVectorContractLoweringFilter)
+      FilterConstraintType constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorContractLowering(vectorContractLowering),
         filter(std::move(constraint)) {}
@@ -267,7 +267,7 @@ public:
   ContractionOpToDotLowering(
       vector::VectorContractLowering vectorContractLowering,
       MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = acceptAllVectorContractLoweringFilter)
+      FilterConstraintType constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorContractLowering(vectorContractLowering),
         filter(std::move(constraint)) {}
@@ -303,7 +303,7 @@ public:
 
   ContractionOpGenericLowering(
       MLIRContext *context,
-      FilterConstraintType constraint = acceptAllVectorContractLoweringFilter,
+      FilterConstraintType constraint = defaultFilter,
       PatternBenefit benefit = 1)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         filter(std::move(constraint)) {}
@@ -338,7 +338,7 @@ public:
   ContractionOpLowering(
       vector::VectorContractLowering vectorContractLoweringOption,
       MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = acceptAllVectorContractLoweringFilter)
+      FilterConstraintType constraint = defaultFilter)
       : ContractionOpGenericLowering(context, std::move(constraint), benefit),
         vectorContractLoweringOption(vectorContractLoweringOption) {}
 
@@ -754,7 +754,7 @@ struct ContractOpToElementwise
   ContractOpToElementwise(
       vector::VectorContractLowering vectorContractLowering,
       MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = acceptAllVectorContractLoweringFilter)
+      FilterConstraintType constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorContractLowering(vectorContractLowering),
         filter(std::move(constraint)) {}
@@ -1252,7 +1252,7 @@ public:
 } // namespace
 
 LogicalResult
-mlir::vector::acceptAllVectorContractLoweringFilter(ContractionOp) {
+mlir::vector::defaultFilter(ContractionOp) {
   return success();
 }
 

@@ -179,9 +179,9 @@ struct TestVectorContractLoweringComposition final
           },
           PatternBenefit(3));
       populateVectorContractToOuterProductPatterns(
-          patterns, acceptAllVectorContractLoweringFilter, PatternBenefit(2));
+          patterns, defaultFilter, PatternBenefit(2));
       populateVectorContractGenericLoweringPatterns(
-          patterns, acceptAllVectorContractLoweringFilter, PatternBenefit(1));
+          patterns, defaultFilter, PatternBenefit(1));
     } else if (mode == "generic") {
       populateVectorContractGenericLoweringPatterns(patterns);
     } else if (mode == "parallel-arith") {

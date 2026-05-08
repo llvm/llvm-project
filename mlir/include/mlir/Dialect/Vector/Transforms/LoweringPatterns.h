@@ -56,26 +56,26 @@ namespace vector {
 /// still match the same op.
 using FilterConstraintType = std::function<LogicalResult(ContractionOp op)>;
 
-LogicalResult acceptAllVectorContractLoweringFilter(ContractionOp op);
+LogicalResult defaultFilter(ContractionOp op);
 
 void populateVectorContractToDotPatterns(
     RewritePatternSet &patterns,
-    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = defaultFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractToOuterProductPatterns(
     RewritePatternSet &patterns,
-    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = defaultFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractToParallelArithPatterns(
     RewritePatternSet &patterns,
-    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = defaultFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractGenericLoweringPatterns(
     RewritePatternSet &patterns,
-    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = defaultFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractLoweringPatterns(
