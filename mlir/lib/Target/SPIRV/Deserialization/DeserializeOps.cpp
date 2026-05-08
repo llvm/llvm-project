@@ -125,10 +125,44 @@ LogicalResult spirv::Deserializer::sliceInstruction(
   return success();
 }
 
+void spirv::Deserializer::mergeLongCompositeContinuations(
+    spirv::Opcode opcode, ArrayRef<uint32_t> &operands,
+    SmallVectorImpl<uint32_t> &mergedStorage) {
+  std::optional<spirv::Opcode> continuationOp = getContinuationOpcode(opcode);
+  if (!continuationOp)
+    return;
+
+  size_t binarySize = binary.size();
+  auto isNextContinuation = [&]() {
+    if (curOffset >= binarySize)
+      return false;
+    uint32_t wordCount = binary[curOffset] >> 16;
+    if (wordCount == 0 || curOffset + wordCount > binarySize)
+      return false;
+    return extractOpcode(binary[curOffset]) == *continuationOp;
+  };
+
+  if (!isNextContinuation())
+    return;
+
+  mergedStorage.assign(operands);
+  do {
+    spirv::Opcode contOpcode;
+    ArrayRef<uint32_t> contOperands;
+    if (failed(sliceInstruction(contOpcode, contOperands, *continuationOp)))
+      return;
+    llvm::append_range(mergedStorage, contOperands);
+  } while (isNextContinuation());
+  operands = mergedStorage;
+}
+
 LogicalResult spirv::Deserializer::processInstruction(
     spirv::Opcode opcode, ArrayRef<uint32_t> operands, bool deferInstructions) {
   LLVM_DEBUG(logger.startLine() << "[inst] processing instruction "
                                 << spirv::stringifyOpcode(opcode) << "\n");
+
+  SmallVector<uint32_t, 0> mergedStorage;
+  mergeLongCompositeContinuations(opcode, operands, mergedStorage);
 
   // First dispatch all the instructions whose opcode does not correspond to
   // those that have a direct mirror in the SPIR-V dialect

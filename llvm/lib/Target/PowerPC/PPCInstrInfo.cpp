@@ -5921,7 +5921,6 @@ bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
 
   BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X8)
       .addReg(ScratchReg)
-      .addImm(16)
       .addReg(PPC::X9, RegState::Implicit)
       .addReg(PPC::X10, RegState::Implicit);
 

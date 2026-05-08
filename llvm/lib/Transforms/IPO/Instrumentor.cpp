@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/InstrumentorConfigFile.h"
+#include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -265,6 +266,8 @@ PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
 
   writeConfigToJSON(IConf, WriteConfigFile, IIRB.Ctx);
 
+  printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
+
   bool Changed = Impl.instrument();
   if (!Changed)
     return PreservedAnalyses::all();
@@ -287,22 +290,26 @@ PreservedAnalyses InstrumentorPass::run(Module &M, ModuleAnalysisManager &MAM) {
   return PA;
 }
 
-BaseConfigurationOption *
+std::unique_ptr<BaseConfigurationOption>
 BaseConfigurationOption::createBoolOption(InstrumentationConfig &IConf,
                                           StringRef Name, StringRef Description,
                                           bool DefaultValue) {
-  auto *BCO = new BaseConfigurationOption(Name, Description, BOOLEAN);
+  auto BCO =
+      std::make_unique<BaseConfigurationOption>(Name, Description, BOOLEAN);
   BCO->setBool(DefaultValue);
-  IConf.addBaseChoice(BCO);
+  IConf.addBaseChoice(BCO.get());
   return BCO;
 }
 
-BaseConfigurationOption *BaseConfigurationOption::createStringOption(
-    InstrumentationConfig &IConf, StringRef Name, StringRef Description,
-    StringRef DefaultValue) {
-  auto *BCO = new BaseConfigurationOption(Name, Description, STRING);
+std::unique_ptr<BaseConfigurationOption>
+BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
+                                            StringRef Name,
+                                            StringRef Description,
+                                            StringRef DefaultValue) {
+  auto BCO =
+      std::make_unique<BaseConfigurationOption>(Name, Description, STRING);
   BCO->setString(DefaultValue);
-  IConf.addBaseChoice(BCO);
+  IConf.addBaseChoice(BCO.get());
   return BCO;
 }
 

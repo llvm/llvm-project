@@ -52,7 +52,7 @@ define <8 x half> @test_ret_v8f16() {
   ; NO-FP16-NEXT:   liveins: $arguments
   ; NO-FP16-NEXT: {{  $}}
   ; NO-FP16-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(p0) = ARGUMENT_i32 0, implicit $arguments
-  ; NO-FP16-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH0000
+  ; NO-FP16-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0.000000e+00
   ; NO-FP16-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16)
   ; NO-FP16-NEXT:   G_STORE [[BUILD_VECTOR]](<8 x f16>), [[ARGUMENT_i32_]](p0) :: (store (<8 x f16>))
   ; NO-FP16-NEXT:   RETURN implicit-def $arguments
@@ -61,7 +61,7 @@ define <8 x half> @test_ret_v8f16() {
   ; FP16: bb.1 (%ir-block.0):
   ; FP16-NEXT:   liveins: $arguments
   ; FP16-NEXT: {{  $}}
-  ; FP16-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH0000
+  ; FP16-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0.000000e+00
   ; FP16-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16), [[C]](f16)
   ; FP16-NEXT:   RETURN [[BUILD_VECTOR]](<8 x f16>), implicit-def $arguments
   ret <8 x half> zeroinitializer

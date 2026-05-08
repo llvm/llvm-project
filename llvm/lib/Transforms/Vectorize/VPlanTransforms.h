@@ -291,15 +291,8 @@ struct VPlanTransforms {
   ///  * Contribute to the address computation of a recipe generating a widen
   ///    memory load/store (VPWidenMemoryInstructionRecipe or
   ///    VPInterleaveRecipe).
-  ///  * Such a widen memory load/store has at least one underlying Instruction
-  ///    that is in a basic block that needs predication and after vectorization
-  ///    the generated instruction won't be predicated.
-  /// Uses \p BlockNeedsPredication to check if a block needs predicating.
-  /// TODO: Replace BlockNeedsPredication callback with retrieving info from
-  ///       VPlan directly.
-  static void dropPoisonGeneratingRecipes(
-      VPlan &Plan,
-      const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
+  ///  * Such a widen memory load/store is masked, but not with the header mask.
+  static void dropPoisonGeneratingRecipes(VPlan &Plan);
 
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses of the canonical IV except for the canonical IV
