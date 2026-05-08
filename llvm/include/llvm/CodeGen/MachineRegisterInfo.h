@@ -17,6 +17,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -866,51 +867,52 @@ public:
     return RegAllocHints.inBounds(VReg) ? &RegAllocHints[VReg] : nullptr;
   }
 
-  /// addRegAllocAntiHint - Add a register allocation anti-hint for the
-  /// specified virtual register. This tells the allocator to avoid allocating
-  /// VReg to the same physical register as AntiHintVReg (or overlapping ones).
+  /// Add a register allocation anti-hint for the specified virtual register.
+  /// This tells the allocator to avoid allocating VReg to the same physical
+  /// register as AntiHintVReg (or overlapping ones).
   void addRegAllocAntiHint(Register VReg, Register AntiHintVReg) {
-    assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
-    assert(AntiHintVReg.isVirtual() && "Anti-hint target must be virtual");
+    assert(VReg.isVirtual() && AntiHintVReg.isVirtual() &&
+           "Anti-hints and anti-hint targets are only for virtual registers");
     AntiHintRegs.grow(VReg);
     SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
     // Avoid duplicates
-    if (llvm::find(AntiHints, AntiHintVReg) == AntiHints.end())
+    if (!is_contained(AntiHints, AntiHintVReg))
       AntiHints.push_back(AntiHintVReg);
   }
 
-  /// addRegAllocationAntiHint - Add multiple anti-hints at once.
+  /// Add multiple anti-hints at once.
   void addRegAllocationAntiHints(Register VReg,
                                  ArrayRef<Register> AntiHintVRegs) {
     for (Register AntiHint : AntiHintVRegs)
       addRegAllocAntiHint(VReg, AntiHint);
   }
 
-  /// clearRegAllocationAntiHints - Clear all anti-hints for a register.
+  /// Clear all anti-hints for a register.
   void clearRegAllocationAntiHints(Register VReg) {
-    assert(VReg.isVirtual());
+    assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
     if (AntiHintRegs.inBounds(VReg))
       AntiHintRegs[VReg].clear();
   }
 
-  /// getRegAllocationAntiHints - Return the vector of anti-hints for VReg.
+  /// Return the vector of anti-hints for VReg.
   ArrayRef<Register> getRegAllocationAntiHints(Register VReg) const {
-    assert(VReg.isVirtual());
+    assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
     if (!AntiHintRegs.inBounds(VReg))
       return ArrayRef<Register>();
     return AntiHintRegs[VReg];
   }
 
-  /// hasRegAllocationAntiHint - Check if VReg has AntiHintVReg as an anti-hint.
+  /// Check if VReg has AntiHintVReg as an anti-hint.
   bool hasRegAllocationAntiHint(Register VReg, Register AntiHintVReg) const {
-    assert(VReg.isVirtual() && AntiHintVReg.isVirtual());
+    assert(VReg.isVirtual() && AntiHintVReg.isVirtual() &&
+           "Anti-hints and anti-hint targets are only for virtual registers");
     if (!AntiHintRegs.inBounds(VReg))
       return false;
     const SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
-    return llvm::find(AntiHints, AntiHintVReg) != AntiHints.end();
+    return is_contained(AntiHints, AntiHintVReg);
   }
 
-  /// getPhysRegAntiHints - Get the set of physical registers to avoid.
+  /// Get the set of physical registers to avoid.
   /// VRM is the current virtual register map showing allocations made so far.
   void getPhysRegAntiHints(Register VReg,
                            SmallVectorImpl<MCPhysReg> &PhysAntiHints,

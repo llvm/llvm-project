@@ -3903,7 +3903,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
 bool SIRegisterInfo::shouldApplyAntiHints(Register VirtReg,
                                           const MachineFunction &MF,
-                                          SmallVector<MCPhysReg, 16> &AntiHints,
+                                          SmallVectorImpl<MCPhysReg> &AntiHints,
                                           const VirtRegMap *VRM,
                                           unsigned NumAllocatedVGPRs) const {
 
@@ -3944,7 +3944,7 @@ bool SIRegisterInfo::shouldApplyAntiHints(Register VirtReg,
 void SIRegisterInfo::applyRegAllocationAntiHints(
     Register VirtReg, ArrayRef<MCPhysReg> &Order,
     SmallVectorImpl<MCPhysReg> &OrderStorage,
-    SmallVector<MCPhysReg, 16> &AntiHints, const MachineFunction &MF,
+    SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
 
   // Early exit to default order if we have no anti-hints or no VRM.
@@ -3979,16 +3979,16 @@ void SIRegisterInfo::applyRegAllocationAntiHints(
 
   // Returns true if Reg fits within the current occupancy VGPR budget.
   auto IsWithinBudget = [&](MCPhysReg Reg) -> bool {
-    unsigned HighestVGPR = 0;
-    bool IsVGPR = false;
-    for (MCPhysReg SubReg : subregs_inclusive(Reg)) {
-      if (AMDGPU::VGPR_32RegClass.contains(SubReg) ||
-          AMDGPU::AGPR_32RegClass.contains(SubReg)) {
-        HighestVGPR = std::max(HighestVGPR, getHWRegIndex(SubReg));
-        IsVGPR = true;
-      }
-    }
-    return !IsVGPR || HighestVGPR < MaxVGPRsForCurrentOccupancy;
+    const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
+
+    // No VGPR or AGPR usage.
+    if (!RC ||
+        (!isVGPRClass(RC) && !isAGPRClass(RC) && !isVectorSuperClass(RC)))
+      return true;
+
+    unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
+    unsigned Highest = getHWRegIndex(Reg) + NumRegs - 1;
+    return Highest < MaxVGPRsForCurrentOccupancy;
   };
 
   // Copy order.

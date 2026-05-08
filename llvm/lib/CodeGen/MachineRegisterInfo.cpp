@@ -681,7 +681,7 @@ bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
 void MachineRegisterInfo::getPhysRegAntiHints(
     Register VReg, SmallVectorImpl<MCPhysReg> &PhysAntiHints,
     const VirtRegMap &VRM) const {
-  assert(VReg.isVirtual());
+  assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
   if (!AntiHintRegs.inBounds(VReg))
     return;
 
@@ -691,12 +691,8 @@ void MachineRegisterInfo::getPhysRegAntiHints(
     // Check if the anti-hinted register has been allocated
     if (VRM.hasPhys(AntiHintVReg)) {
       MCPhysReg PhysReg = VRM.getPhys(AntiHintVReg);
-      // Add the physical register
-      PhysAntiHints.push_back(PhysReg);
+      if (!is_contained(PhysAntiHints, PhysReg))
+        PhysAntiHints.push_back(PhysReg);
     }
   }
-
-  // Remove duplicates
-  llvm::sort(PhysAntiHints);
-  PhysAntiHints.erase(llvm::unique(PhysAntiHints), PhysAntiHints.end());
 }

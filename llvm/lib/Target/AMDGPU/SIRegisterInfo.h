@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -360,14 +361,14 @@ public:
                              const LiveRegMatrix *Matrix) const override;
 
   bool shouldApplyAntiHints(Register VirtReg, const MachineFunction &MF,
-                            SmallVector<MCPhysReg, 16> &AntiHints,
+                            SmallVectorImpl<MCPhysReg> &AntiHints,
                             const VirtRegMap *VRM,
                             unsigned NumAllocatedVGPRs) const;
 
   void applyRegAllocationAntiHints(
       Register VirtReg, ArrayRef<MCPhysReg> &Order,
       SmallVectorImpl<MCPhysReg> &OrderStorage,
-      SmallVector<MCPhysReg, 16> &AntiHints, const MachineFunction &MF,
+      SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
       const VirtRegMap *VRM = nullptr,
       const LiveRegMatrix *Matrix = nullptr) const override;
 

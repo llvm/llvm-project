@@ -1036,7 +1036,7 @@ public:
   virtual void
   applyRegAllocationAntiHints(Register VirtReg, ArrayRef<MCPhysReg> &Order,
                               SmallVectorImpl<MCPhysReg> &OrderStorage,
-                              SmallVector<MCPhysReg, 16> &AntiHints,
+                              SmallVectorImpl<MCPhysReg> &AntiHints,
                               const MachineFunction &MF,
                               const VirtRegMap *VRM = nullptr,
                               const LiveRegMatrix *Matrix = nullptr) const;

@@ -274,7 +274,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       unsigned InstrCount = 0;
 
       for (const MachineInstr &MI : MBB) {
-        if (MI.isDebugInstr())
+        if (MI.isMetaInstruction())
           continue;
 
         ++InstrCount;
@@ -346,8 +346,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
           // Only process VGPR registers
           if (!TRI->isVGPRClass(CandidateRC))
             continue;
-          LLVM_DEBUG(dbgs() << "\nAdding antihints for instruction: ";
-                     MI.dump(); dbgs() << "\n");
+          LLVM_DEBUG(dbgs() << "\nAdding antihints for instruction: " << MI);
 
           for (MFMAInfo &MFMA : reverse(RecentMFMAs)) {
             // To minimize anti-hint pressure we only add anti-hints if the

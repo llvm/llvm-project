@@ -502,16 +502,16 @@ bool TargetRegisterInfo::getRegAllocationHints(
 void TargetRegisterInfo::applyRegAllocationAntiHints(
     Register VirtReg, ArrayRef<MCPhysReg> &Order,
     SmallVectorImpl<MCPhysReg> &OrderStorage,
-    SmallVector<MCPhysReg, 16> &AntiHints, const MachineFunction &MF,
+    SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
 
   if (AntiHints.empty() || !VRM)
     return;
 
   auto isAntiHinted = [&](MCPhysReg Reg) {
-    return std::any_of(
-        AntiHints.begin(), AntiHints.end(),
-        [&](MCPhysReg AntiHint) { return regsOverlap(Reg, AntiHint); });
+    return llvm::any_of(AntiHints, [&](MCPhysReg AntiHint) {
+      return regsOverlap(Reg, AntiHint);
+    });
   };
 
   // Copy order into storage
@@ -532,7 +532,7 @@ void TargetRegisterInfo::applyRegAllocationAntiHints(
     size_t AntiHintedCount = std::distance(PartionPoint, OrderStorage.end());
     dbgs() << "Addded " << NonAntiHintedCount
            << "non-anti-hinted registers first\n"
-           << "Added " << AntiHintedCount << "anit-hinted at the end!\n";
+           << "Added " << AntiHintedCount << "anti-hinted at the end!\n";
   });
 
   return;
