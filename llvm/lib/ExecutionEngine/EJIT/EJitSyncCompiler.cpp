@@ -30,6 +30,7 @@ EJitSyncCompiler::compile(EJitOrcEngine &engine,
     return result;
 
   result.funcPtr = *addrOrErr;
+  result.codeSize = bitcodeData.size();
 
   auto end = std::chrono::steady_clock::now();
   result.compileTimeMs =

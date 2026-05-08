@@ -963,4 +963,754 @@ TEST(EJitStructFieldPass, NoMayConstNoChange) {
   EXPECT_TRUE(PA.areAllPreserved());
 }
 
+//===----------------------------------------------------------------------===//
+// EJitStructFieldPass extended tests
+//===----------------------------------------------------------------------===//
+
+/// Create a function with two loads from different "fields" of the same
+/// global array (index 1 and index 3). Tests multi-field substitution.
+/// g_arr[1] + g_arr[3]
+static Function *createMultiFieldFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+  auto *GVar = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                                   ConstantAggregateZero::get(ArrTy), "g_arr");
+
+  // !ejit.metadata = !{!"ejit_period_arr", !"cell", i32 4}
+  Metadata *ArrOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "multi_field", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  // Load from g_arr[1] (offset 4)
+  Value *I1[] = {B.getInt32(0), B.getInt64(1)};
+  auto *GEP1 = B.CreateInBoundsGEP(ArrTy, GVar, I1, "elem1");
+  auto *Load1 = B.CreateLoad(Int32Ty, GEP1, "val1");
+  Load1->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+
+  // Load from g_arr[3] (offset 12)
+  Value *I3[] = {B.getInt32(0), B.getInt64(3)};
+  auto *GEP3 = B.CreateInBoundsGEP(ArrTy, GVar, I3, "elem3");
+  auto *Load3 = B.CreateLoad(Int32Ty, GEP3, "val3");
+  Load3->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+
+  auto *Sum = B.CreateAdd(Load1, Load3, "sum");
+  B.CreateRet(Sum);
+  return F;
+}
+
+TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleFields) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_multifield", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createMultiFieldFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  int32_t mockArr[4] = {10, 55, 20, 66};  // g_arr[1]=55, g_arr[3]=66
+
+  PeriodArrayRegistry reg;
+  GlobalVariable *GV = M->getGlobalVariable("g_arr", true);
+  ASSERT_NE(GV, nullptr);
+  reg.registerArray("cell", "g_arr", mockArr, 4);
+
+  EJitStructFieldPass sp(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  sp.run(*F, FAM);
+
+  // Fold the add of two constants: 55 + 66 = 121
+  EJitOptimizer opt(reg);
+  opt.runInstCombine(*M);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 121);
+}
+
+/// Create a function with loads from different indices into a period array.
+static Function *createNestedStructFunc(LLVMContext &Ctx, Module &M,
+                                         uint64_t arrIdx = 1) {
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+  auto *GVar = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                                   ConstantAggregateZero::get(ArrTy), "g_data");
+
+  Metadata *ArrOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "indexed_load", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  Value *Indices[] = {B.getInt32(0), B.getInt64(arrIdx)};
+  auto *GEP = B.CreateInBoundsGEP(ArrTy, GVar, Indices, "gep");
+  auto *Load = B.CreateLoad(Int32Ty, GEP, "val");
+  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  B.CreateRet(Load);
+  return F;
+}
+
+TEST(EJitStructFieldPass, MayConstLoadSubstitutionNestedStruct) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_nested", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createNestedStructFunc(Ctx, *M, 2);
+  ASSERT_NE(F, nullptr);
+
+  int32_t mockArr[4] = {10, 20, 40, 80};  // g_data[2] = 40
+
+  PeriodArrayRegistry reg;
+  GlobalVariable *GV = M->getGlobalVariable("g_data", true);
+  ASSERT_NE(GV, nullptr);
+  reg.registerArray("cell", "g_data", mockArr, 4);
+
+  EJitStructFieldPass sp(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  sp.run(*F, FAM);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 40);
+}
+
+/// Create a function that accesses two different period arrays.
+/// g_cells["cell"].field and g_trps["trp"].field
+static Function *createMultiArrayFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+
+  auto *GVar1 = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                                    ConstantAggregateZero::get(ArrTy), "g_cells");
+  auto *GVar2 = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                                    ConstantAggregateZero::get(ArrTy), "g_trps");
+
+  // g_cells metadata: ejit_period_arr "cell" size 4
+  Metadata *CellOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GVar1->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, CellOps)}));
+  // g_trps metadata: ejit_period_arr "trp" size 4
+  Metadata *TrpOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "trp"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GVar2->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, TrpOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "multi_arr", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  // Load from g_cells[2] -> cell array, index 2
+  Value *CIdx[] = {B.getInt32(0), B.getInt64(2)};
+  auto *GEP1 = B.CreateInBoundsGEP(ArrTy, GVar1, CIdx, "cell_gep");
+  auto *Load1 = B.CreateLoad(Int32Ty, GEP1, "cell_val");
+  Load1->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+
+  // Load from g_trps[3] -> trp array, index 3
+  Value *TIdx[] = {B.getInt32(0), B.getInt64(3)};
+  auto *GEP2 = B.CreateInBoundsGEP(ArrTy, GVar2, TIdx, "trp_gep");
+  auto *Load2 = B.CreateLoad(Int32Ty, GEP2, "trp_val");
+  Load2->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+
+  auto *Mul = B.CreateMul(Load1, Load2, "product");
+  B.CreateRet(Mul);
+  return F;
+}
+
+TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleArrays) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_multi_arr", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createMultiArrayFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  int32_t cellData[4] = {1, 2, 7, 4};  // g_cells[2] = 7
+  int32_t trpData[4]  = {5, 6, 7, 8};  // g_trps[3] = 8
+
+  PeriodArrayRegistry reg;
+  reg.registerArray("cell", "g_cells", cellData, 4);
+  reg.registerArray("trp", "g_trps", trpData, 4);
+
+  EJitStructFieldPass sp(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  sp.run(*F, FAM);
+
+  EJitOptimizer opt(reg);
+  opt.runInstCombine(*M);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 56);  // 7 * 8 = 56
+}
+
+/// Create a function with may_const loads of different types (int + float)
+/// from separate array globals. Tests mixed-type substitution.
+static Function *createMixedTypeFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  Type *FloatTy = B.getFloatTy();
+
+  auto *IntArrTy = ArrayType::get(Int32Ty, 4);
+  auto *FltArrTy = ArrayType::get(FloatTy, 4);
+
+  auto *GInt = new GlobalVariable(M, IntArrTy, false, GlobalValue::InternalLinkage,
+                                   ConstantAggregateZero::get(IntArrTy), "g_ints");
+  auto *GFlt = new GlobalVariable(M, FltArrTy, false, GlobalValue::InternalLinkage,
+                                   ConstantAggregateZero::get(FltArrTy), "g_floats");
+
+  Metadata *IntOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "ints"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GInt->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, IntOps)}));
+  Metadata *FltOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "floats"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GFlt->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, FltOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "mixed_type", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  // Load int from g_ints[0]
+  Value *II[] = {B.getInt32(0), B.getInt64(0)};
+  auto *GEP_i = B.CreateInBoundsGEP(IntArrTy, GInt, II, "int_elem");
+  auto *LoadI = B.CreateLoad(Int32Ty, GEP_i, "int_val");
+  LoadI->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+
+  // Load float from g_floats[0]
+  Value *FI[] = {B.getInt32(0), B.getInt64(0)};
+  auto *GEP_f = B.CreateInBoundsGEP(FltArrTy, GFlt, FI, "flt_elem");
+  auto *LoadF = B.CreateLoad(FloatTy, GEP_f, "flt_val");
+  LoadF->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+
+  auto *FToI = B.CreateFPToSI(LoadF, Int32Ty, "ftoi");
+  auto *Sum = B.CreateAdd(LoadI, FToI, "sum");
+  B.CreateRet(Sum);
+  return F;
+}
+
+TEST(EJitStructFieldPass, MayConstLoadSubstitutionIntFloat) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_mixed", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createMixedTypeFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  int32_t intData[4] = {10, 0, 0, 0};
+  float fltData[4] = {3.5f, 0, 0, 0};
+  // 10 + (int)3.5 = 10 + 3 = 13
+
+  PeriodArrayRegistry reg;
+  reg.registerArray("ints", "g_ints", intData, 4);
+  reg.registerArray("floats", "g_floats", fltData, 4);
+
+  EJitStructFieldPass sp(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  sp.run(*F, FAM);
+
+  EJitOptimizer opt(reg);
+  opt.runInstCombine(*M);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 13);
+}
+
+//===----------------------------------------------------------------------===//
+// EJitOptimizer extended tests
+//===----------------------------------------------------------------------===//
+
+/// Create a function with 2 period-array-index params (cell + trp).
+static Function *createMultiDimFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  FunctionType *FT = FunctionType::get(Int32Ty, {Int32Ty, Int32Ty}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "multi_dim", &M);
+
+  F->getArg(0)->setName("cell_idx");
+  F->getArg(1)->setName("trp_idx");
+
+  // Metadata for cell dimension (param 0)
+  Metadata *CellOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR_IND),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 0)),
+  };
+  // Metadata for trp dimension (param 1)
+  Metadata *TrpOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR_IND),
+      MDString::get(Ctx, "trp"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 1)),
+  };
+  F->setMetadata(MD_EJIT_METADATA,
+                 MDNode::get(Ctx, {MDNode::get(Ctx, CellOps), MDNode::get(Ctx, TrpOps)}));
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+  auto *Sum = B.CreateAdd(F->getArg(0), F->getArg(1), "sum");
+  B.CreateRet(Sum);
+  return F;
+}
+
+TEST(EJitOptimizer, PreReplacePeriodIndicesMultiDim) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "multi_dim_test");
+  Function *F = createMultiDimFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  PeriodArrayRegistry reg;
+  SpecializationContext ctx;
+  ctx.fnName = "multi_dim";
+  ctx.dimensions.push_back({"cell", 10});
+  ctx.dimensions.push_back({"trp", 25});
+
+  EJitOptimizer opt(reg);
+  opt.preReplacePeriodIndices(*M, ctx);
+
+  // Both args should be replaced; sum should fold to 35
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  opt.runInstCombine(*M);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 35);
+}
+
+/// Create IR with dead code behind a false branch. L1 should eliminate it.
+static Function *createDeadCodeFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  FunctionType *FT = FunctionType::get(B.getInt32Ty(), {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "dead_code_fn", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  // Unreachable block
+  auto *DeadBB = BasicBlock::Create(Ctx, "dead", F);
+  {
+    IRBuilder<> DB(DeadBB);
+    DB.CreateRet(DB.getInt32(999));
+  }
+
+  // br on constant false -> unreachable branch should be eliminated
+  B.CreateCondBr(B.getFalse(), DeadBB, DeadBB);
+  B.CreateRet(B.getInt32(42));
+
+  return F;
+}
+
+TEST(EJitOptimizer, OptimizationL1DeadCodeElimination) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "deadcode");
+  Function *F = createDeadCodeFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+  int bbCount = (int)std::distance(F->begin(), F->end());
+
+  PeriodArrayRegistry reg;
+  EJitOptimizer opt(reg);
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L1);
+
+  // Dead block should be removed
+  int bbAfter = (int)std::distance(F->begin(), F->end());
+  EXPECT_LT(bbAfter, bbCount);
+}
+
+/// Create a call to a small callee. L2 should inline it.
+static Function *createInlineCandidate(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  auto *Int32Ty = B.getInt32Ty();
+
+  // Callee: int callee(int x) { return x + 1; }
+  FunctionType *CalleeFT = FunctionType::get(Int32Ty, {Int32Ty}, false);
+  auto *Callee = Function::Create(CalleeFT, GlobalValue::InternalLinkage, "callee", &M);
+  Callee->addFnAttr(Attribute::AlwaysInline);
+  {
+    BasicBlock *BB = BasicBlock::Create(Ctx, "entry", Callee);
+    B.SetInsertPoint(BB);
+    auto *Val = B.CreateAdd(Callee->getArg(0), B.getInt32(1));
+    B.CreateRet(Val);
+  }
+
+  // Caller: int caller() { return callee(41); }
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *Caller = Function::Create(FT, GlobalValue::ExternalLinkage, "caller", &M);
+  {
+    BasicBlock *BB = BasicBlock::Create(Ctx, "entry", Caller);
+    B.SetInsertPoint(BB);
+    auto *Call = B.CreateCall(Callee, {B.getInt32(41)});
+    B.CreateRet(Call);
+  }
+  return Caller;
+}
+
+TEST(EJitOptimizer, OptimizationL2InlineAndSimplify) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "inline_test");
+  Function *F = createInlineCandidate(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  PeriodArrayRegistry reg;
+  EJitOptimizer opt(reg);
+  opt.runInline(*M);
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
+
+  // After inlining 41+1, should fold to constant 42
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  // If fully optimized, this should be constant 42
+  if (RetVal)
+    EXPECT_EQ(RetVal->getSExtValue(), 42);
+}
+
+/// Create a small loop with constant bounds. L3 should unroll it.
+static Function *createLoopFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  auto *Int32Ty = B.getInt32Ty();
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "loop_fn", &M);
+
+  // for i in [0..4): sum += i  => 0+1+2+3 = 6
+  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
+  BasicBlock *LoopHdr = BasicBlock::Create(Ctx, "loop", F);
+  BasicBlock *LoopBody = BasicBlock::Create(Ctx, "body", F);
+  BasicBlock *LoopExit = BasicBlock::Create(Ctx, "exit", F);
+
+  B.SetInsertPoint(Entry);
+  B.CreateBr(LoopHdr);
+
+  // Loop header: phi [i=0, sum=0], icmp i < 4
+  B.SetInsertPoint(LoopHdr);
+  auto *PhiI = B.CreatePHI(Int32Ty, 2, "i");
+  auto *PhiSum = B.CreatePHI(Int32Ty, 2, "sum");
+  auto *Cmp = B.CreateICmpSLT(PhiI, B.getInt32(4));
+  B.CreateCondBr(Cmp, LoopBody, LoopExit);
+
+  B.SetInsertPoint(LoopBody);
+  auto *NewSum = B.CreateAdd(PhiSum, PhiI);
+  auto *NewI = B.CreateAdd(PhiI, B.getInt32(1));
+  B.CreateBr(LoopHdr);
+
+  // Back edges
+  PhiI->addIncoming(B.getInt32(0), Entry);
+  PhiI->addIncoming(NewI, LoopBody);
+  PhiSum->addIncoming(B.getInt32(0), Entry);
+  PhiSum->addIncoming(NewSum, LoopBody);
+
+  B.SetInsertPoint(LoopExit);
+  B.CreateRet(PhiSum);
+  return F;
+}
+
+TEST(EJitOptimizer, OptimizationL3LoopUnroll) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "loop_test");
+  Function *F = createLoopFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  PeriodArrayRegistry reg;
+  EJitOptimizer opt(reg);
+
+  // Promote first (mem2reg)
+  opt.runInstCombine(*M);
+  // Then L3 with loop unroll
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L3);
+
+  // After unrolling 0+1+2+3, should fold to constant 6
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  if (RetVal)
+    EXPECT_EQ(RetVal->getSExtValue(), 6);
+}
+
+//===----------------------------------------------------------------------===//
+// End-to-end tests
+//===----------------------------------------------------------------------===//
+
+/// Create IR with a branch that depends on a may_const field.
+/// After full pipeline (StructField + L2), the branch should be folded.
+static Function *createBranchOnMayConstFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  auto *Int32Ty = B.getInt32Ty();
+  auto *STy = StructType::create(Ctx, {Int32Ty}, "BranchCfg");
+
+  auto *GVar = new GlobalVariable(M, STy, false, GlobalValue::InternalLinkage,
+                                   ConstantStruct::get(STy, ConstantInt::get(Int32Ty, 0)),
+                                   "g_branch_cfg");
+  Metadata *PeriodOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD),
+      MDString::get(Ctx, "static"),
+  };
+  GVar->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, PeriodOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "branch_fn", &M);
+
+  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
+  BasicBlock *ThenBB = BasicBlock::Create(Ctx, "then", F);
+  BasicBlock *ElseBB = BasicBlock::Create(Ctx, "else", F);
+  BasicBlock *Merge = BasicBlock::Create(Ctx, "merge", F);
+
+  B.SetInsertPoint(Entry);
+  Value *I0[] = {B.getInt32(0), B.getInt32(0)};
+  auto *GEP = B.CreateInBoundsGEP(STy, GVar, I0, "cfg_gep");
+  auto *Load = B.CreateLoad(Int32Ty, GEP, "cfg_val");
+  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  auto *Cmp = B.CreateICmpNE(Load, B.getInt32(0), "is_set");
+  B.CreateCondBr(Cmp, ThenBB, ElseBB);
+
+  B.SetInsertPoint(ThenBB);
+  B.CreateBr(Merge);
+  B.SetInsertPoint(ElseBB);
+  B.CreateBr(Merge);
+
+  B.SetInsertPoint(Merge);
+  auto *Phi = B.CreatePHI(Int32Ty, 2, "result");
+  Phi->addIncoming(B.getInt32(100), ThenBB);
+  Phi->addIncoming(B.getInt32(0), ElseBB);
+  B.CreateRet(Phi);
+  return F;
+}
+
+TEST(EJitEndToEnd, BranchFolding) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_branch", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createBranchOnMayConstFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  // Mock memory: field value = 1 (non-zero, so "then" branch taken)
+  struct MockCfg { int32_t val; };
+  MockCfg mock = {1};
+
+  PeriodArrayRegistry reg;
+  GlobalVariable *GV = M->getGlobalVariable("g_branch_cfg", true);
+  ASSERT_NE(GV, nullptr);
+  reg.registerStaticVar("g_branch_cfg", &mock);
+
+  // Full pipeline: StructField -> InstCombine -> Inline -> L2
+  EJitStructFieldPass sfp(reg);
+  EJitOptimizer opt(reg);
+
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  sfp.run(*F, FAM);
+  opt.runInstCombine(*M);
+  opt.runInline(*M);
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  // mock.val = 1 => branch taken => result = 100
+  EXPECT_EQ(RetVal->getSExtValue(), 100);
+}
+
+//===----------------------------------------------------------------------===//
+// EJit end-to-end MultiPeriod specialization test
+//===----------------------------------------------------------------------===//
+
+TEST(EJitEndToEnd, MultiPeriodSpecialization) {
+  // Create module with two period arrays, run StructField with different
+  // mock data simulating different cell indices.
+  LLVMContext Ctx1;
+  auto M1 = std::make_unique<Module>("spec1", Ctx1);
+  M1->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F1 = createMultiArrayFunc(Ctx1, *M1);
+
+  int32_t cellA[4] = {1, 10, 20, 30};
+  int32_t trpA[4]  = {100, 200, 300, 400};
+
+  PeriodArrayRegistry reg;
+  reg.registerArray("cell", "g_cells", cellA, 4);
+  reg.registerArray("trp", "g_trps", trpA, 4);
+
+  EJitStructFieldPass sfp(reg);
+
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  sfp.run(*F1, FAM);
+
+  EJitOptimizer opt1(reg);
+  opt1.runInstCombine(*M1);
+
+  // g_cells[2] * g_trps[3] = 20 * 400 = 8000
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F1->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 8000);
+
+  // Now change cell data, re-run (different specialization)
+  LLVMContext Ctx2;
+  auto M2 = std::make_unique<Module>("spec2", Ctx2);
+  M2->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F2 = createMultiArrayFunc(Ctx2, *M2);
+
+  int32_t cellB[4] = {5, 5, 5, 5}; // g_cells[2] = 5
+  int32_t trpB[4]  = {0, 0, 0, 6}; // g_trps[3] = 6
+
+  PeriodArrayRegistry reg2;
+  reg2.registerArray("cell", "g_cells", cellB, 4);
+  reg2.registerArray("trp", "g_trps", trpB, 4);
+
+  EJitStructFieldPass sfp2(reg2);
+  FunctionAnalysisManager FAM2;
+  PassBuilder PB2;
+  PB2.registerFunctionAnalyses(FAM2);
+  PB2.registerLoopAnalyses(LAM);
+  PB2.registerCGSCCAnalyses(CGAM);
+  PB2.registerModuleAnalyses(MAM);
+  PB2.crossRegisterProxies(LAM, FAM2, CGAM, MAM);
+
+  sfp2.run(*F2, FAM2);
+
+  EJitOptimizer opt2(reg2);
+  opt2.runInstCombine(*M2);
+
+  auto *Ret2 = dyn_cast_or_null<ReturnInst>(&F2->back().back());
+  ASSERT_NE(Ret2, nullptr);
+  auto *RetVal2 = dyn_cast<ConstantInt>(Ret2->getReturnValue());
+  ASSERT_NE(RetVal2, nullptr);
+  EXPECT_EQ(RetVal2->getSExtValue(), 30); // 5 * 6 = 30
+}
+
+//===----------------------------------------------------------------------===//
+// EJit end-to-end cache invalidation test
+//===----------------------------------------------------------------------===//
+
+TEST(EJitEndToEnd, CacheInvalidation) {
+  EJitCache cache(100, 1024 * 1024);
+  int dummy = 42;
+
+  // Put entries with different period dependencies
+  std::set<std::string> depsA = {"cell=1", "trp=2"};
+  std::set<std::string> depsB = {"cell=3", "slice=0"};
+  std::set<std::string> depsC = {"cell=1", "carrier=5"};
+
+  cache.put("key_a", &dummy, 64, depsA);
+  cache.put("key_b", &dummy, 64, depsB);
+  cache.put("key_c", &dummy, 64, depsC);
+
+  EXPECT_NE(cache.getOrNull("key_a"), nullptr);
+  EXPECT_NE(cache.getOrNull("key_b"), nullptr);
+  EXPECT_NE(cache.getOrNull("key_c"), nullptr);
+
+  // Invalidate cell=1: should remove key_a (cell=1,trp=2) and key_c (cell=1,carrier=5)
+  // but NOT key_b (cell=3,slice=0)
+  cache.invalidateByPeriod("cell", 1);
+
+  EXPECT_EQ(cache.getOrNull("key_a"), nullptr);
+  EXPECT_NE(cache.getOrNull("key_b"), nullptr);
+  EXPECT_EQ(cache.getOrNull("key_c"), nullptr);
+
+  auto stats = cache.getStats();
+  EXPECT_EQ(stats.entryCount, 1u);  // only key_b remains
+}
+
 

@@ -107,7 +107,7 @@ void *EJitCompileDriver::getOrCompile(
   for (unsigned i = 0; i < count; ++i)
     periodDeps.insert(dims[i].first + "=" + std::to_string(dims[i].second));
 
-  cache_.put(cacheKey, funcPtr, 0, periodDeps);
+  cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
 
   return funcPtr;
 }

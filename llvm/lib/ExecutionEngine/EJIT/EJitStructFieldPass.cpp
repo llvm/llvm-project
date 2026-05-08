@@ -216,8 +216,6 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
         void *base = resolveBase(GV, it->second);
         if (!base)
           continue;
-        if (!base)
-          continue;
 
         uint8_t *fieldAddr = static_cast<uint8_t *>(base) + *byteOffset;
         if (auto *C = createConstantFromMemory(fieldAddr, LI->getType(), DL))
