@@ -49,7 +49,7 @@ public:
   void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
   void handleModuleDependency(ModuleDeps MD) override {
     MD.forEachFileDep([this](StringRef File) {
-      ModuleDependencies.push_back(std::string(File));
+      DependenciesFromModules.push_back(std::string(File));
     });
   }
   void handleDirectModuleDependency(ModuleID ID) override {}
@@ -77,14 +77,14 @@ public:
       }
     };
 
-    DependencyPrinter Generator(*Opts, Dependencies, ModuleDependencies);
+    DependencyPrinter Generator(*Opts, Dependencies, DependenciesFromModules);
     Generator.printDependencies(S);
   }
 
 protected:
   std::unique_ptr<DependencyOutputOptions> Opts;
   std::vector<std::string> Dependencies;
-  std::vector<std::string> ModuleDependencies;
+  std::vector<std::string> DependenciesFromModules;
 };
 } // anonymous namespace
 
