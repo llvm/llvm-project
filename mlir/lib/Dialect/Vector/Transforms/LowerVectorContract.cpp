@@ -322,7 +322,6 @@ protected:
 
 private:
   FilterConstraintType filter;
-
   // Lower one parallel dimension.
   FailureOr<Value> lowerParallel(PatternRewriter &rewriter,
                                  vector::ContractionOp op, int64_t lhsIndex,

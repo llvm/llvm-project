@@ -12,8 +12,6 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
-#include <functional>
-
 namespace mlir {
 class RewritePatternSet;
 
