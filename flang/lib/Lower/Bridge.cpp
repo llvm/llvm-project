@@ -2086,16 +2086,15 @@ private:
           dir->u);
     }
 
-    {
-      std::optional<mlir::Type> resultType;
-      if (stmt.typedCall->hasAlternateReturns())
-        resultType = builder->getIndexType();
-      auto hlfirRes = Fortran::lower::convertCallToHLFIR(
-          toLocation(), *this, *stmt.typedCall, resultType, localSymbols,
-          stmtCtx);
-      if (hlfirRes)
-        res = *hlfirRes;
-    }
+    std::optional<mlir::Type> resultType;
+    if (stmt.typedCall->hasAlternateReturns())
+      resultType = builder->getIndexType();
+    auto hlfirRes = Fortran::lower::convertCallToHLFIR(
+        toLocation(), *this, *stmt.typedCall, resultType, localSymbols,
+        stmtCtx);
+    if (hlfirRes)
+      res = *hlfirRes;
+
     stmtCtx.finalizeAndReset();
     if (!res)
       return; // "Normal" subroutine call.
