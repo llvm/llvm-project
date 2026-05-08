@@ -29,7 +29,14 @@ int main(int, char**) noexcept {
 
   std::stacktrace trace = std::stacktrace::current();
   assert(trace[0].native_handle() != 0);
-  assert(trace[0].native_handle() > uintptr_t(&main));
+  // On AIX, the function pointer holds the address of a function descriptor, so it needs to be
+  // dereferenced to get the actual code address.
+#ifdef _AIX
+  uintptr_t _main = *reinterpret_cast<uintptr_t*>(&main);
+#else
+  uintptr_t _main = reinterpret_cast<uintptr_t>(&main);
+#endif
+  assert(trace[0].native_handle() > _main);
 
   return 0;
 }

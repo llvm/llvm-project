@@ -49,9 +49,17 @@ TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace c(size_t skip = 0, size_t max_d
 // We cannot guarantee that we can resolve symbols at runtime in the test environment,
 // so we can't simply check the stacktrace entries' descriptions.  But we can at least get
 // the lower bounds of these functions.
+#if defined(_AIX)
+// On AIX, the function pointer holds the address of a function descriptor, so it needs to be
+// dereferenced to get the actual code address.
+uintptr_t _a = *reinterpret_cast<uintptr_t*>(&a);
+uintptr_t _b = *reinterpret_cast<uintptr_t*>(&b);
+uintptr_t _c = *reinterpret_cast<uintptr_t*>(&c);
+#else
 uintptr_t _a = reinterpret_cast<uintptr_t>(&a);
 uintptr_t _b = reinterpret_cast<uintptr_t>(&b);
 uintptr_t _c = reinterpret_cast<uintptr_t>(&c);
+#endif
 
 void expect_trace(const std::stacktrace& st, std::vector<uintptr_t> const& expect_chain) {
   auto trace_it = st.begin();

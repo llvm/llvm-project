@@ -39,6 +39,7 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/aix_impl.cpp
   stacktrace/default_impl.cpp
   stacktrace/entry.cpp
   stacktrace/images.h

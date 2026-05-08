@@ -6,51 +6,54 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(_WIN32) && !defined(__APPLE__) && !defined(_AIX)
+#if defined(_AIX)
 
 #  include <__config>
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <algorithm>
-#  include <dlfcn.h>
-#  include <link.h>
-#  include <unistd.h>
+#  include <cstdlib>
+#  include <sys/ldr.h>
 
 #  include "stacktrace/images.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-namespace {
-int add_image(dl_phdr_info* info, size_t, void* images_v) {
-  auto& imgs = *(_Images*)images_v;
-  if (imgs.count_ == _Images::k_max_images) {
-    return 0;
-  }
-  auto is_first = (imgs.count_ == 0);
-  auto& image   = imgs.images_.at(imgs.count_++);
-  // Absolute address at which this ELF is loaded
-  image.loaded_at_ = info->dlpi_addr;
-  // This also happens to be the "slide" amount since ELF has zero-relative offsets
-  image.slide_ = info->dlpi_addr;
-  strncpy(image.name_, info->dlpi_name, sizeof(image.name_));
-  // `dl_iterate_phdr` gives us the main program image first
-  image.is_main_prog_ = is_first;
-  if (!image.name_[0] && is_first) {
-    char buf[_Entry::__max_file_len]{0};
-    if (readlink("/proc/self/exe", buf, sizeof(buf)) != -1) { // Ignores errno if error
-      strncpy(image.name_, buf, sizeof(image.name_));
-    }
-  }
-  // If we're at the limit, return nonzero to stop iterating
-  return imgs.count_ == _Images::k_max_images;
-}
-} // namespace
-
 _Images::_Images() {
-  dl_iterate_phdr(add_image, this);
+  std::vector<char> buf(512);
+  while(loadquery(L_GETINFO, buf.data(), buf.size()) == -1) {
+    if (errno == ENOMEM)
+      buf.resize(buf.size() * 2);
+    else
+      return;
+  }
+
+  struct ld_info* ldi = reinterpret_cast<struct ld_info*>(buf.data());
+  while (count_ < k_max_images - 2) {
+    auto& image         = images_[count_++];
+    image.slide_        = reinterpret_cast<uintptr_t>(ldi->ldinfo_textorg);
+    image.loaded_at_    = image.slide_;
+    image.is_main_prog_ = (count_ == 1);
+
+    const char* name = ldi->ldinfo_filename;
+    // ldinfo_filename may not return the full path
+    if (name[0] != '/') {
+      char resolved[_Entry::__max_file_len];
+      if (realpath(name, resolved) != nullptr)
+        name = resolved;
+    }
+    strncpy(image.name_, name, sizeof(image.name_));
+
+    if (ldi->ldinfo_next == 0)
+      break;
+    
+    ldi = reinterpret_cast<struct ld_info*>(reinterpret_cast<char*>(ldi) + ldi->ldinfo_next);
+  }
+
   images_[count_++] = {0uz, 0};  // sentinel at low end
   images_[count_++] = {~0uz, 0}; // sentinel at high end
+
   std::sort(images_.begin(), images_.begin() + count_);
 }
 
