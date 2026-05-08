@@ -825,8 +825,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (columns < 0) {
       diags.Report(clang::diag::err_drv_invalid_columns)
           << arg->getOption().getName() << arg->getValue();
-    } else if (columns == 0) {
-      columns = 10000;
+    } else if (columns == 0 && isFixedLineFlag) {
+      columns = 1000000;
     } else if (columns < 7 && isFixedLineFlag) {
       // Specific to the fixed form
       diags.Report(clang::diag::err_drv_small_columns)
