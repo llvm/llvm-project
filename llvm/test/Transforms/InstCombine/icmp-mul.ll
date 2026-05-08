@@ -93,8 +93,7 @@ define i1 @squared_nsw_sgt0(i5 %x) {
 
 define i1 @squared_nuw_ult_sqr(i8 %x) {
 ; CHECK-LABEL: @squared_nuw_ult_sqr(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[M]], 9
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = mul nuw i8 %x, %x
@@ -104,8 +103,7 @@ define i1 @squared_nuw_ult_sqr(i8 %x) {
 
 define i1 @squared_nuw_eq_sqr(i8 %x) {
 ; CHECK-LABEL: @squared_nuw_eq_sqr(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 9
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = mul nuw i8 %x, %x

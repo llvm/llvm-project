@@ -2195,6 +2195,15 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
       (Mul->hasNoUnsignedWrap() || Mul->hasNoSignedWrap()))
     return new ICmpInst(Pred, X, ConstantInt::getNullValue(MulTy));
 
+  // If unsigned compare or equality comparison of self multiply and square,
+  // compare square roots
+  if (!Cmp.isSigned() && X == Mul->getOperand(1) && Mul->hasNoUnsignedWrap() &&
+      !C.isNegative()) {
+    APInt R = C.sqrt();
+    if (C == R * R)
+      return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+  }
+
   const APInt *MulC;
   if (!match(Mul->getOperand(1), m_APInt(MulC)))
     return nullptr;
