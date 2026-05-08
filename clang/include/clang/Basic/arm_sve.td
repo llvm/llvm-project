@@ -1924,7 +1924,7 @@ def SVPMULLT_PAIR_U64   : SInst<"svpmullt_pair[_{d}]",   "ddd", "Ul", MergeNone,
 def SVPMULLT_PAIR_N_U64 : SInst<"svpmullt_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullt_pair", [VerifyRuntimeMode]>;
 }
 
-let SVETargetGuard = "sve-aes2", SMETargetGuard = "sve-aes2,ssve-aes" in {
+let SVETargetGuard = "(sve2p1|ssve-aes),sve-aes2", SMETargetGuard = "sve-aes2,ssve-aes" in {
 def SVAESD_X2   : SInst<"svaesd_lane[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aesd_lane_x2", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
 def SVAESDIMC_X2 : SInst<"svaesdimc_lane[_{d}_x2]", "22di",  "Uc", MergeNone, "aarch64_sve_aesdimc_lane_x2", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
 def SVAESE_X2   : SInst<"svaese_lane[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aese_lane_x2", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
