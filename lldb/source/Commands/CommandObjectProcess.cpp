@@ -952,6 +952,10 @@ public:
       return process->GetPluginCommandObject();
     return nullptr;
   }
+
+  llvm::StringRef GetUnsupportedError() override {
+    return "no process plugin commands are currently registered";
+  }
 };
 
 // CommandObjectProcessLoad
