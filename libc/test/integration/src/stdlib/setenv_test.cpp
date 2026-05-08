@@ -95,6 +95,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
   // Test: EmptyValue
   {
     // Empty value is valid - just means variable is set to empty string
+    errno = 0;
     ASSERT_EQ(LIBC_NAMESPACE::setenv("EMPTY_VALUE_VAR", "", 1), 0);
     ASSERT_ERRNO_SUCCESS();
 
@@ -106,6 +107,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
   // Test: MultipleVariables
   {
     // Set multiple different variables
+    errno = 0;
     ASSERT_EQ(LIBC_NAMESPACE::setenv("VAR1", "value1", 1), 0);
     ASSERT_ERRNO_SUCCESS();
     ASSERT_EQ(LIBC_NAMESPACE::setenv("VAR2", "value2", 1), 0);
