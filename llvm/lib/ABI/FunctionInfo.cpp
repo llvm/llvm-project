@@ -12,16 +12,17 @@
 using namespace llvm;
 using namespace llvm::abi;
 
-FunctionInfo *FunctionInfo::create(CallingConv::ID CC, const Type *ReturnType,
-                                   ArrayRef<const Type *> ArgTypes,
-                                   std::optional<unsigned> NumRequired) {
+std::unique_ptr<FunctionInfo>
+FunctionInfo::create(CallingConv::ID CC, const Type *ReturnType,
+                     ArrayRef<const Type *> ArgTypes,
+                     std::optional<unsigned> NumRequired) {
 
   assert(!NumRequired || *NumRequired <= ArgTypes.size());
 
   void *Buffer = operator new(totalSizeToAlloc<ArgEntry>(ArgTypes.size()));
 
-  FunctionInfo *FI =
-      new (Buffer) FunctionInfo(CC, ReturnType, ArgTypes.size(), NumRequired);
+  std::unique_ptr<FunctionInfo> FI(
+      new (Buffer) FunctionInfo(CC, ReturnType, ArgTypes.size(), NumRequired));
 
   ArgEntry *Args = FI->getTrailingObjects();
   for (unsigned I = 0; I < ArgTypes.size(); ++I)
