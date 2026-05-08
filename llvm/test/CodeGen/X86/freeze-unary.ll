@@ -461,3 +461,183 @@ define <16 x i8> @freeze_parity_vec(<16 x i8> %a0) nounwind {
   %w = and <16 x i8> %z, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <16 x i8> %z
 }
+
+define float @ftrunc_freeze_fnearbyint(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_fnearbyint:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll nearbyintf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_fnearbyint:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $12, %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.nearbyint.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_fround(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_fround:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll roundf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_fround:
+; X64:       # %bb.0:
+; X64-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    andps %xmm0, %xmm1
+; X64-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    addss %xmm0, %xmm1
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm1, %xmm0
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.round.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_froundeven(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_froundeven:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll roundevenf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_froundeven:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $8, %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.roundeven.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_frint(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_frint:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll rintf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_frint:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $4, %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.rint.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_ftrunc(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_ftrunc:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_ftrunc:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.trunc.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_ffloor(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_ffloor:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll floorf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_ffloor:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $9, %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.floor.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_fceil(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_fceil:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll ceilf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_fceil:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $10, %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.ceil.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}

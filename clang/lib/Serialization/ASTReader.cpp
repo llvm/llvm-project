@@ -3762,8 +3762,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         break;
 
       case SUBMODULE_BLOCK_ID:
-        if (llvm::Error Err = ReadSubmoduleBlock(F, ClientLoadCapabilities))
+        F.SubmodulesCursor = Stream;
+        if (llvm::Error Err = Stream.SkipBlock())
           return Err;
+        if (llvm::Error Err =
+                ReadBlockAbbrevs(F.SubmodulesCursor, SUBMODULE_BLOCK_ID))
+          return Err;
+        F.SubmodulesOffsetBase = F.SubmodulesCursor.GetCurrentBitNo();
         break;
 
       case COMMENTS_BLOCK_ID: {
@@ -3815,6 +3820,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       case HEADER_SEARCH_TABLE:
       case IMPORTED_MODULES:
       case MACRO_OFFSET:
+      case SUBMODULE_METADATA:
         break;
       default:
         continue;
@@ -3824,6 +3830,50 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     switch (RecordType) {
     default:  // Default behavior: ignore.
       break;
+
+    case SUBMODULE_METADATA: {
+      F.BaseSubmoduleID = getTotalNumSubmodules();
+      F.LocalNumSubmodules = Record[0];
+      F.LocalBaseSubmoduleID = Record[1];
+      F.LocalTopLevelSubmoduleID = Record[2];
+      F.SubmoduleOffsets =
+          (const llvm::support::unaligned_uint64_t *)Blob.data();
+      if (F.LocalNumSubmodules > 0) {
+        // Introduce the global -> local mapping for submodules within this
+        // module.
+        GlobalSubmoduleMap.insert(
+            std::make_pair(getTotalNumSubmodules() + 1, &F));
+
+        // Introduce the local -> global mapping for submodules within this
+        // module.
+        F.SubmoduleRemap.insertOrReplace(
+            std::make_pair(F.LocalBaseSubmoduleID,
+                           F.BaseSubmoduleID - F.LocalBaseSubmoduleID));
+
+        SubmodulesLoaded.resize(SubmodulesLoaded.size() + F.LocalNumSubmodules);
+      }
+
+      auto ReadSubmodule = [&](unsigned LocalID) -> Module * {
+        return getSubmodule(getGlobalSubmoduleID(F, LocalID));
+      };
+
+      if (PP.getHeaderSearchInfo().getModuleMap().findModule(F.ModuleName)) {
+        // If we already knew about this module, make sure to bring all
+        // submodules up to date.
+        for (unsigned Index = 0; Index != F.LocalNumSubmodules; ++Index) {
+          unsigned LocalID =
+              Index + F.LocalBaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS;
+          ReadSubmodule(LocalID);
+        }
+      } else {
+        // If we didn't know this module, we loaded it transitively. Deserialize
+        // just the top-level module to register it with ModuleMap, but load the
+        // rest lazily.
+        ReadSubmodule(F.LocalTopLevelSubmoduleID);
+      }
+
+      break;
+    }
 
     case TYPE_OFFSET: {
       if (F.LocalNumTypes != 0)
@@ -5103,41 +5153,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
       F.ImportLoc = TranslateSourceLocation(*M.ImportedBy, M.ImportLoc);
   }
 
-  // Resolve any unresolved module exports.
-  for (unsigned I = 0, N = UnresolvedModuleRefs.size(); I != N; ++I) {
-    UnresolvedModuleRef &Unresolved = UnresolvedModuleRefs[I];
-    SubmoduleID GlobalID = getGlobalSubmoduleID(*Unresolved.File,Unresolved.ID);
-    Module *ResolvedMod = getSubmodule(GlobalID);
-
-    switch (Unresolved.Kind) {
-    case UnresolvedModuleRef::Conflict:
-      if (ResolvedMod) {
-        Module::Conflict Conflict;
-        Conflict.Other = ResolvedMod;
-        Conflict.Message = Unresolved.String.str();
-        Unresolved.Mod->Conflicts.push_back(Conflict);
-      }
-      continue;
-
-    case UnresolvedModuleRef::Import:
-      if (ResolvedMod)
-        Unresolved.Mod->Imports.insert(ResolvedMod);
-      continue;
-
-    case UnresolvedModuleRef::Affecting:
-      if (ResolvedMod)
-        Unresolved.Mod->AffectingClangModules.insert(ResolvedMod);
-      continue;
-
-    case UnresolvedModuleRef::Export:
-      if (ResolvedMod || Unresolved.IsWildcard)
-        Unresolved.Mod->Exports.push_back(Module::ExportDecl(
-            ResolvedMod, static_cast<bool>(Unresolved.IsWildcard)));
-      continue;
-    }
-  }
-  UnresolvedModuleRefs.clear();
-
   // FIXME: How do we load the 'use'd modules? They may not be submodules.
   // Might be unnecessary as use declarations are only used to build the
   // module itself.
@@ -6293,11 +6308,34 @@ bool ASTReader::isAcceptableASTFile(
                                   /*ValidateDiagnosticOptions=*/true);
 }
 
-llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
-                                          unsigned ClientLoadCapabilities) {
-  // Enter the submodule block.
-  if (llvm::Error Err = F.Stream.EnterSubBlock(SUBMODULE_BLOCK_ID))
-    return Err;
+Module *ASTReader::getSubmodule(uint32_t GlobalID) {
+  if (GlobalID < NUM_PREDEF_SUBMODULE_IDS) {
+    assert(GlobalID == 0 && "Unhandled global submodule ID");
+    return nullptr;
+  }
+
+  SubmoduleID GlobalIndex = GlobalID - NUM_PREDEF_SUBMODULE_IDS;
+  if (GlobalIndex >= SubmodulesLoaded.size()) {
+    Error("submodule ID out of range in AST file");
+    return nullptr;
+  }
+
+  if (SubmodulesLoaded[GlobalIndex])
+    return SubmodulesLoaded[GlobalIndex];
+
+  GlobalSubmoduleMapType::iterator It = GlobalSubmoduleMap.find(GlobalID);
+  assert(It != GlobalSubmoduleMap.end());
+  ModuleFile &F = *It->second;
+  unsigned Index = GlobalID - F.BaseSubmoduleID - NUM_PREDEF_SUBMODULE_IDS;
+  unsigned LocalID = Index + F.LocalBaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS;
+
+  BitstreamCursor &Cursor = F.SubmodulesCursor;
+  SavedStreamPosition SavedPosition(Cursor);
+  unsigned Offset = F.SubmoduleOffsets[Index];
+  if (llvm::Error Err = Cursor.JumpToBit(F.SubmodulesOffsetBase + Offset)) {
+    Error(std::move(Err));
+    return nullptr;
+  }
 
   ModuleMap &ModMap = PP.getHeaderSearchInfo().getModuleMap();
   bool KnowsTopLevelModule = ModMap.findModule(F.ModuleName) != nullptr;
@@ -6308,23 +6346,24 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                           ? &ModuleMap::createModule
                           : &ModuleMap::findOrCreateModuleFirst;
 
-  bool First = true;
   Module *CurrentModule = nullptr;
   RecordData Record;
   while (true) {
-    Expected<llvm::BitstreamEntry> MaybeEntry =
-        F.Stream.advanceSkippingSubblocks();
-    if (!MaybeEntry)
-      return MaybeEntry.takeError();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return nullptr;
+    }
     llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
-    case llvm::BitstreamEntry::SubBlock: // Handled for us already.
+    case llvm::BitstreamEntry::SubBlock:
     case llvm::BitstreamEntry::Error:
-      return llvm::createStringError(std::errc::illegal_byte_sequence,
-                                     "malformed block record in AST file");
-    case llvm::BitstreamEntry::EndBlock:
-      return llvm::Error::success();
+    case llvm::BitstreamEntry::EndBlock: {
+      Error(llvm::createStringError(std::errc::illegal_byte_sequence,
+                                    "malformed block record in AST file"));
+      return nullptr;
+    }
     case llvm::BitstreamEntry::Record:
       // The interesting case.
       break;
@@ -6333,35 +6372,35 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     // Read a record.
     StringRef Blob;
     Record.clear();
-    Expected<unsigned> MaybeKind = F.Stream.readRecord(Entry.ID, Record, &Blob);
-    if (!MaybeKind)
-      return MaybeKind.takeError();
-    unsigned Kind = MaybeKind.get();
-
-    if ((Kind == SUBMODULE_METADATA) != First)
-      return llvm::createStringError(
-          std::errc::illegal_byte_sequence,
-          "submodule metadata record should be at beginning of block");
-    First = false;
-
-    // Submodule information is only valid if we have a current module.
-    // FIXME: Should we error on these cases?
-    if (!CurrentModule && Kind != SUBMODULE_METADATA &&
-        Kind != SUBMODULE_DEFINITION)
-      continue;
+    Expected<unsigned> MaybeKind = Cursor.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeKind) {
+      Error(MaybeKind.takeError());
+      return nullptr;
+    }
+    auto Kind = static_cast<SubmoduleRecordTypes>(MaybeKind.get());
 
     switch (Kind) {
-    default:  // Default behavior: ignore.
-      break;
+    case SUBMODULE_END:
+      if (!CurrentModule) {
+        Error(llvm::createStringError(std::errc::illegal_byte_sequence,
+                                      "malformed module definition"));
+        return nullptr;
+      }
+      return CurrentModule;
 
     case SUBMODULE_DEFINITION: {
-      if (Record.size() < 13)
-        return llvm::createStringError(std::errc::illegal_byte_sequence,
-                                       "malformed module definition");
+      if (Record.size() < 13) {
+        Error(llvm::createStringError(std::errc::illegal_byte_sequence,
+                                      "malformed module definition"));
+        return nullptr;
+      }
 
       StringRef Name = Blob;
       unsigned Idx = 0;
-      SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx++]);
+      unsigned ReadLocalID = Record[Idx++];
+      assert(LocalID == ReadLocalID);
+      SubmoduleID ReadGlobalID = getGlobalSubmoduleID(F, ReadLocalID);
+      assert(GlobalID == ReadGlobalID);
       SubmoduleID Parent = getGlobalSubmoduleID(F, Record[Idx++]);
       Module::ModuleKind Kind = (Module::ModuleKind)Record[Idx++];
       SourceLocation DefinitionLoc = ReadSourceLocation(F, Record[Idx++]);
@@ -6378,17 +6417,14 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       bool NamedModuleHasInit = Record[Idx++];
 
       Module *ParentModule = nullptr;
-      if (Parent)
+      if (Parent) {
         ParentModule = getSubmodule(Parent);
+        if (!ParentModule)
+          return nullptr;
+      }
 
       CurrentModule = std::invoke(CreateModule, &ModMap, Name, ParentModule,
                                   IsFramework, IsExplicit);
-
-      SubmoduleID GlobalIndex = GlobalID - NUM_PREDEF_SUBMODULE_IDS;
-      if (GlobalIndex >= SubmodulesLoaded.size() ||
-          SubmodulesLoaded[GlobalIndex])
-        return llvm::createStringError(std::errc::invalid_argument,
-                                       "too many submodules");
 
       if (!ParentModule) {
         if ([[maybe_unused]] const ModuleFileKey *CurFileKey =
@@ -6410,7 +6446,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
               Diag(diag::note_module_file_conflict)
                   << CurModMapFile->getName() << ModMapFile->getName();
 
-            return llvm::make_error<AlreadyReportedDiagnosticError>();
+            return nullptr;
           }
         }
 
@@ -6520,59 +6556,29 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       break;
     }
 
-    case SUBMODULE_METADATA: {
-      F.BaseSubmoduleID = getTotalNumSubmodules();
-      F.LocalNumSubmodules = Record[0];
-      unsigned LocalBaseSubmoduleID = Record[1];
-      if (F.LocalNumSubmodules > 0) {
-        // Introduce the global -> local mapping for submodules within this
-        // module.
-        GlobalSubmoduleMap.insert(std::make_pair(getTotalNumSubmodules()+1,&F));
-
-        // Introduce the local -> global mapping for submodules within this
-        // module.
-        F.SubmoduleRemap.insertOrReplace(
-          std::make_pair(LocalBaseSubmoduleID,
-                         F.BaseSubmoduleID - LocalBaseSubmoduleID));
-
-        SubmodulesLoaded.resize(SubmodulesLoaded.size() + F.LocalNumSubmodules);
-      }
-      break;
-    }
-
     case SUBMODULE_IMPORTS:
       for (unsigned Idx = 0; Idx != Record.size(); ++Idx) {
-        UnresolvedModuleRef Unresolved;
-        Unresolved.File = &F;
-        Unresolved.Mod = CurrentModule;
-        Unresolved.ID = Record[Idx];
-        Unresolved.Kind = UnresolvedModuleRef::Import;
-        Unresolved.IsWildcard = false;
-        UnresolvedModuleRefs.push_back(Unresolved);
+        SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx]);
+        CurrentModule->Imports.push_back(ModuleRef(this, GlobalID));
       }
       break;
 
     case SUBMODULE_AFFECTING_MODULES:
       for (unsigned Idx = 0; Idx != Record.size(); ++Idx) {
-        UnresolvedModuleRef Unresolved;
-        Unresolved.File = &F;
-        Unresolved.Mod = CurrentModule;
-        Unresolved.ID = Record[Idx];
-        Unresolved.Kind = UnresolvedModuleRef::Affecting;
-        Unresolved.IsWildcard = false;
-        UnresolvedModuleRefs.push_back(Unresolved);
+        SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx]);
+        CurrentModule->AffectingClangModules.push_back(
+            ModuleRef(this, GlobalID));
       }
       break;
 
     case SUBMODULE_EXPORTS:
       for (unsigned Idx = 0; Idx + 1 < Record.size(); Idx += 2) {
-        UnresolvedModuleRef Unresolved;
-        Unresolved.File = &F;
-        Unresolved.Mod = CurrentModule;
-        Unresolved.ID = Record[Idx];
-        Unresolved.Kind = UnresolvedModuleRef::Export;
-        Unresolved.IsWildcard = Record[Idx + 1];
-        UnresolvedModuleRefs.push_back(Unresolved);
+        SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx]);
+        bool IsWildcard = Record[Idx + 1];
+        ModuleRef ExportedMod =
+            GlobalID ? ModuleRef(this, GlobalID) : ModuleRef();
+        if (ExportedMod || IsWildcard)
+          CurrentModule->Exports.push_back({ExportedMod, IsWildcard});
       }
 
       // Once we've loaded the set of exports, there's no reason to keep
@@ -6596,14 +6602,11 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       break;
 
     case SUBMODULE_CONFLICT: {
-      UnresolvedModuleRef Unresolved;
-      Unresolved.File = &F;
-      Unresolved.Mod = CurrentModule;
-      Unresolved.ID = Record[0];
-      Unresolved.Kind = UnresolvedModuleRef::Conflict;
-      Unresolved.IsWildcard = false;
-      Unresolved.String = Blob;
-      UnresolvedModuleRefs.push_back(Unresolved);
+      SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[0]);
+      Module::Conflict Conflict;
+      Conflict.Other = ModuleRef(this, GlobalID);
+      Conflict.Message = Blob.str();
+      CurrentModule->Conflicts.push_back(Conflict);
       break;
     }
 
@@ -6624,6 +6627,13 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->ExportAsModule = Blob.str();
       ModMap.addLinkAsDependency(CurrentModule);
       break;
+
+    case SUBMODULE_CHILD: {
+      // Record a not-yet-loaded direct child for on-demand deserialization.
+      SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[0]);
+      CurrentModule->addSubmodule(Blob, this, GlobalID);
+      break;
+    }
     }
   }
 }
@@ -10059,20 +10069,6 @@ ASTReader::getGlobalSubmoduleID(ModuleFile &M, unsigned LocalID) const {
          && "Invalid index into submodule index remap");
 
   return LocalID + I->second;
-}
-
-Module *ASTReader::getSubmodule(SubmoduleID GlobalID) {
-  if (GlobalID < NUM_PREDEF_SUBMODULE_IDS) {
-    assert(GlobalID == 0 && "Unhandled global submodule ID");
-    return nullptr;
-  }
-
-  if (GlobalID > SubmodulesLoaded.size()) {
-    Error("submodule ID out of range in AST file");
-    return nullptr;
-  }
-
-  return SubmodulesLoaded[GlobalID - NUM_PREDEF_SUBMODULE_IDS];
 }
 
 Module *ASTReader::getModule(unsigned ID) {
