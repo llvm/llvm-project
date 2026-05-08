@@ -84,7 +84,7 @@ struct SpillPlacement::Node {
 
   /// Links - (BundleNo, Weight) for all transparent blocks connecting to other
   /// bundles. The weights are all positive block frequencies.
-  SmallMapVector<unsigned, BlockFrequency, 4> Links;
+  SmallMapVector<unsigned, BlockFrequency, 8> Links;
 
   /// SumLinkWeights - Cached sum of the weights of all links + ThresHold.
   BlockFrequency SumLinkWeights;
