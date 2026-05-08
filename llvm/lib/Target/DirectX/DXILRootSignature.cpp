@@ -45,7 +45,7 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
 
 static bool reportError(LLVMContext *Ctx, Twine Message,
                         DiagnosticSeverity Severity = DS_Error) {
-  reportFatalUsageError(DiagnosticInfoGeneric(Message, Severity).getMsgStr());
+  Ctx->diagnose(DiagnosticInfoGeneric(Message, Severity));
   return true;
 }
 
@@ -133,9 +133,9 @@ analyzeModule(Module &M) {
     llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
         MDParser.ParseRootSignature(V.value());
 
-    if (!RSDOrErr) {
-      handleAllErrors(RSDOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        reportFatalUsageError(EIB.message().c_str());
+    if (auto Err = RSDOrErr.takeError()) {
+      handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
+        Ctx->diagnose(DiagnosticInfoGeneric(EIB.message(), DS_Error));
       });
       continue;
     }
@@ -169,6 +169,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
 
   RootSignatureBindingInfo &RSDMap = AM.getResult<RootSignatureAnalysis>(M);
+  if (RSDMap.empty())
+    return PreservedAnalyses::all();
 
   OS << "Root Signature Definitions"
      << "\n";

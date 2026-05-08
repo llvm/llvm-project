@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: LLVM ERROR: Invalid value for Num32BitValues
+; CHECK: error: Invalid value for Num32BitValues
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() {

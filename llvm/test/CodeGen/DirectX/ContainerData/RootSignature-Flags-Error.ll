@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: LLVM ERROR: Invalid Root Signature Element
+; CHECK: error: Invalid Root Signature Element
 ; CHECK-NOT: Root Signature Definitions
 
 

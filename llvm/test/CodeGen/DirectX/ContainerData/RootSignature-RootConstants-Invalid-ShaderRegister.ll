@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: LLVM ERROR: Invalid value for ShaderRegister
+; CHECK: error: Invalid value for ShaderRegister
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: LLVM ERROR: Root Element mdnode is null.
+; CHECK: error: Root Element mdnode is null.
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

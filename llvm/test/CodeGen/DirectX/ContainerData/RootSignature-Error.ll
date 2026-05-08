@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: LLVM ERROR: Invalid Root Signature metadata - expected function, signature, and version.
+; CHECK: error: Invalid Root Signature metadata - expected function, signature, and version.
 ; CHECK-NOT: Root Signature Definitions
 
 

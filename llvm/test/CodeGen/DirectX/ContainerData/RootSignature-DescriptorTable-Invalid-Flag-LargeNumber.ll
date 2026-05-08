@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: LLVM ERROR: Invalid value for DescriptorFlag: 66666
+; CHECK: error: Invalid value for DescriptorFlag: 66666
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

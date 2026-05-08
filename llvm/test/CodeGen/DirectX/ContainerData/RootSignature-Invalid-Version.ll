@@ -3,8 +3,16 @@
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 
-; CHECK: LLVM ERROR: Invalid value for Version: 4
-; CHECK-NOT: Root Signature Definitions
+; CHECK: error: Invalid value for Version: 4
+; CHECK:      Root Signature Definitions
+; CHECK-NEXT:   Definition for 'main':
+; CHECK-NEXT:     Flags: 0x000000
+; CHECK-NEXT:     Version: 1
+; CHECK-NEXT:     RootParametersOffset: 24
+; CHECK-NEXT:     NumParameters: 0
+; CHECK-NEXT:     NumStaticSamplers: 0
+; CHECK-NEXT:     StaticSamplersOffset: 0
+
 define void @main() #0 {
 entry:
   ret void

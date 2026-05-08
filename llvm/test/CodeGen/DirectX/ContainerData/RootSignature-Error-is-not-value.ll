@@ -2,8 +2,15 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: LLVM ERROR: First element of root signature is not a Value
-; CHECK-NOT: Root Signature Definitions
+; CHECK: error: First element of root signature is not a Value
+; CHECK:      Root Signature Definitions
+; CHECK-NEXT:   Definition for 'main':
+; CHECK-NEXT:     Flags: 0x000001
+; CHECK-NEXT:     Version: 2
+; CHECK-NEXT:     RootParametersOffset: 24
+; CHECK-NEXT:     NumParameters: 0
+; CHECK-NEXT:     NumStaticSamplers: 0
+; CHECK-NEXT:     StaticSamplersOffset: 0
 
 define void @main() #0 {
 entry:
