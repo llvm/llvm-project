@@ -23,6 +23,7 @@
 template <int N>
 void test_signed_bitint() {
   using T = signed _BitInt(N);
+  ASSERT_SAME_TYPE(decltype(std::abs(T(0))), T);
   assert(std::abs(T(0)) == T(0));
   assert(std::abs(T(1)) == T(1));
   assert(std::abs(T(42)) == T(42));
@@ -75,6 +76,7 @@ int main(int, char**) {
 #endif // TEST_HAS_EXTENSION(bit_int)
 
 #if _LIBCPP_HAS_INT128
+  ASSERT_SAME_TYPE(decltype(std::abs(static_cast<__int128_t>(0))), __int128_t);
   assert(std::abs(static_cast<__int128_t>(0)) == 0);
   assert(std::abs(static_cast<__int128_t>(42)) == 42);
   assert(std::abs(static_cast<__int128_t>(-42)) == 42);
