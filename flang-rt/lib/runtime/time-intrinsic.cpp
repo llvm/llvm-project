@@ -302,7 +302,6 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
   }
 }
 
-#ifndef _WIN32
 #ifdef _AIX
 // Compute the time difference from GMT/UTC to get around the behavior of
 // strfname on AIX that requires setting an environment variable for numeric
@@ -376,7 +375,7 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   // return -HUGE to report that this information is not available.
   const auto negHuge{-std::numeric_limits<Fortran::runtime::CppTypeFor<
       Fortran::common::TypeCategory::Integer, KIND>>::max()};
-#ifdef _AIX
+#if defined _AIX
   bool err{false};
   auto diff{computeUTCDiff(tm, &err)};
   if (err) {
@@ -384,6 +383,18 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   } else {
     return diff;
   }
+#elif defined _WIN32
+  DYNAMIC_TIME_ZONE_INFORMATION tzi;
+  std::uint32_t tzid{GetDynamicTimeZoneInformation(&tzi)};
+  if (tzid == TIME_ZONE_ID_INVALID) {
+    return negHuge;
+  }
+
+  std::int32_t bias{tzi.Bias};
+  bias += (tzid == TIME_ZONE_ID_DAYLIGHT ? tzi.DaylightBias : tzi.StandardBias);
+
+  // Bias is minutes behind GMT, and we need minutes ahead.
+  return -bias;
 #else
   return negHuge;
 #endif
@@ -398,6 +409,44 @@ template <typename TM = struct tm> struct GmtOffsetHelper {
     }
   };
 };
+
+#ifdef _WIN32
+struct timeval {
+  std::int64_t tv_sec;
+  std::int64_t tv_usec;
+};
+
+// gettimeofday half-implementation for win32; ignore the timezone as we don't
+// use it anyway
+static int gettimeofday(timeval *tv, void *) {
+  constexpr std::uint64_t epoch_offset{116444736000000000ull};
+
+  FILETIME ftime;
+  GetSystemTimePreciseAsFileTime(&ftime);
+
+  // Convert ftime to a real 64-bit integer
+  std::uint64_t time{
+      ULARGE_INTEGER{{ftime.dwLowDateTime, ftime.dwHighDateTime}}.QuadPart};
+  // Convert to Unix epoch time
+  time -= epoch_offset;
+
+  auto [sec, usec] = std::lldiv(time, 10'000'000l);
+  tv->tv_sec = sec;
+  tv->tv_usec = usec;
+  return 0;
+}
+
+// localtime_s on Windows does the same thing as localtime_r but swaps the
+// arguments
+static struct tm *localtime_r(const time_t *timer, struct tm *buf) {
+  errno_t ec{_localtime64_s(buf, timer)};
+  if (ec != 0) {
+    return nullptr;
+  }
+  return buf;
+}
+
+#endif
 
 // Dispatch to posix implementation where gettimeofday and localtime_r are
 // available.
@@ -470,20 +519,6 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
     storeIntegerAt(7, ms);
   }
 }
-
-#else
-// Fallback implementation where gettimeofday or localtime_r are not both
-// available (e.g. windows).
-static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
-    std::size_t dateChars, char *time, std::size_t timeChars, char *zone,
-    std::size_t zoneChars, const Fortran::runtime::Descriptor *values) {
-  // TODO: An actual implementation for non Posix system should be added.
-  // So far, implement as if the date and time is not available on those
-  // platforms.
-  DateAndTimeUnavailable(
-      terminator, date, dateChars, time, timeChars, zone, zoneChars, values);
-}
-#endif
 } // namespace
 
 namespace Fortran::runtime {

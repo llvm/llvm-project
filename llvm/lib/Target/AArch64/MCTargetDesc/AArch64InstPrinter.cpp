@@ -922,18 +922,8 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
 
   if (CnVal == 7) {
     switch (CmVal) {
-    default: return false;
-    // MLBI aliases
-    case 0: {
-      const AArch64MLBI::MLBI *MLBI =
-          AArch64MLBI::lookupMLBIByEncoding(Encoding);
-      if (!MLBI || !MLBI->haveFeatures(STI.getFeatureBits()))
-        return false;
-
-      NeedsReg = MLBI->NeedsReg;
-      Ins = "mlbi\t";
-      Name = std::string(MLBI->Name);
-    } break;
+    default:
+      return false;
     // Maybe IC, maybe Prediction Restriction
     case 1:
       switch (Op1Val) {
@@ -1021,10 +1011,10 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
       return false;
 
-    NeedsReg = TLBI->NeedsReg;
+    NeedsReg = TLBI->RegUse == REG_REQUIRED;
     if (STI.hasFeature(AArch64::FeatureAll) ||
         STI.hasFeature(AArch64::FeatureTLBID))
-      OptionalReg = TLBI->OptionalReg;
+      OptionalReg = TLBI->RegUse == REG_OPTIONAL;
     Ins = "tlbi\t";
     Name = std::string(TLBI->Name);
   } else if (CnVal == 12) {
@@ -1053,10 +1043,10 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     if (!PLBI || !PLBI->haveFeatures(STI.getFeatureBits()))
       return false;
 
-    NeedsReg = PLBI->NeedsReg;
+    NeedsReg = PLBI->RegUse == REG_REQUIRED;
     if (STI.hasFeature(AArch64::FeatureAll) ||
         STI.hasFeature(AArch64::FeatureTLBID))
-      OptionalReg = PLBI->OptionalReg;
+      OptionalReg = PLBI->RegUse == REG_OPTIONAL;
     Ins = "plbi\t";
     Name = std::string(PLBI->Name);
   } else

@@ -23,15 +23,15 @@ void d(double*);
 // CHECK-TRAP-NEXT:    [[CALL:%.*]] = call i32 (...) @f(), !dbg [[DBG22:![0-9]+]]
 // CHECK-TRAP-NEXT:    [[TMP0:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG23:![0-9]+]], !nosanitize [[META10:![0-9]+]]
 // CHECK-TRAP-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 10, !dbg [[DBG23]], !nosanitize [[META10]]
-// CHECK-TRAP-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG23]], !prof [[PROF27:![0-9]+]], !nosanitize [[META10]]
+// CHECK-TRAP-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG23]], !prof [[PROF28:![0-9]+]], !nosanitize [[META10]]
 // CHECK-TRAP:       [[TRAP]]:
-// CHECK-TRAP-NEXT:    call void @llvm.ubsantrap(i8 18) #[[ATTR3:[0-9]+]], !dbg [[DBG28:![0-9]+]], !nosanitize [[META10]]
-// CHECK-TRAP-NEXT:    unreachable, !dbg [[DBG28]], !nosanitize [[META10]]
+// CHECK-TRAP-NEXT:    call void @llvm.ubsantrap(i8 18) #[[ATTR3:[0-9]+]], !dbg [[DBG29:![0-9]+]], !nosanitize [[META10]]
+// CHECK-TRAP-NEXT:    unreachable, !dbg [[DBG29]], !nosanitize [[META10]]
 // CHECK-TRAP:       [[CONT]]:
-// CHECK-TRAP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG26:![0-9]+]]
-// CHECK-TRAP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x double], ptr [[A]], i64 0, i64 [[IDXPROM]], !dbg [[DBG26]]
-// CHECK-TRAP-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !dbg [[DBG26]]
-// CHECK-TRAP-NEXT:    ret double [[TMP2]], !dbg [[DBG30:![0-9]+]]
+// CHECK-TRAP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG27:![0-9]+]]
+// CHECK-TRAP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x double], ptr [[A]], i64 0, i64 [[IDXPROM]], !dbg [[DBG27]]
+// CHECK-TRAP-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !dbg [[DBG27]]
+// CHECK-TRAP-NEXT:    ret double [[TMP2]], !dbg [[DBG31:![0-9]+]]
 //
 // CHECK-NOTRAP-LABEL: define dso_local double @f1(
 // CHECK-NOTRAP-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] {
@@ -49,15 +49,15 @@ void d(double*);
 // CHECK-NOTRAP-NEXT:    [[CALL:%.*]] = call i32 (...) @f(), !dbg [[DBG22:![0-9]+]]
 // CHECK-NOTRAP-NEXT:    [[TMP0:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG23:![0-9]+]], !nosanitize [[META10:![0-9]+]]
 // CHECK-NOTRAP-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 10, !dbg [[DBG23]], !nosanitize [[META10]]
-// CHECK-NOTRAP-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_OUT_OF_BOUNDS:.*]], !dbg [[DBG23]], !prof [[PROF27:![0-9]+]], !nosanitize [[META10]]
+// CHECK-NOTRAP-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_OUT_OF_BOUNDS:.*]], !dbg [[DBG23]], !prof [[PROF28:![0-9]+]], !nosanitize [[META10]]
 // CHECK-NOTRAP:       [[HANDLER_OUT_OF_BOUNDS]]:
 // CHECK-NOTRAP-NEXT:    call void @__ubsan_handle_out_of_bounds_abort(ptr @[[GLOB2:[0-9]+]], i64 [[TMP0]]) #[[ATTR3:[0-9]+]], !dbg [[DBG23]], !nosanitize [[META10]]
 // CHECK-NOTRAP-NEXT:    unreachable, !dbg [[DBG23]], !nosanitize [[META10]]
 // CHECK-NOTRAP:       [[CONT]]:
-// CHECK-NOTRAP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG26:![0-9]+]]
-// CHECK-NOTRAP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x double], ptr [[A]], i64 0, i64 [[IDXPROM]], !dbg [[DBG26]]
-// CHECK-NOTRAP-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !dbg [[DBG26]]
-// CHECK-NOTRAP-NEXT:    ret double [[TMP2]], !dbg [[DBG28:![0-9]+]]
+// CHECK-NOTRAP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG27:![0-9]+]]
+// CHECK-NOTRAP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x double], ptr [[A]], i64 0, i64 [[IDXPROM]], !dbg [[DBG27]]
+// CHECK-NOTRAP-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !dbg [[DBG27]]
+// CHECK-NOTRAP-NEXT:    ret double [[TMP2]], !dbg [[DBG29:![0-9]+]]
 //
 double f1(int b, int i) {
   double a[10];
@@ -69,7 +69,7 @@ double f1(int b, int i) {
 // CHECK-TRAP: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // CHECK-TRAP: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK-TRAP: [[DBG4]] = distinct !DISubprogram(name: "f1", scope: [[META5:![0-9]+]], file: [[META5]], line: 62, type: [[META6:![0-9]+]], scopeLine: 62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META10]])
-// CHECK-TRAP: [[META5]] = !DIFile(filename: "{{.*}}bounds-checking-debuginfo.c", directory: {{.*}})
+// CHECK-TRAP: [[META5]] = !DIFile(filename: "bounds-checking-debuginfo.c", directory: "")
 // CHECK-TRAP: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 // CHECK-TRAP: [[META7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], [[META9]]}
 // CHECK-TRAP: [[META8]] = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
@@ -87,19 +87,20 @@ double f1(int b, int i) {
 // CHECK-TRAP: [[DBG20]] = !DILocation(line: 64, column: 5, scope: [[DBG4]])
 // CHECK-TRAP: [[DBG21]] = !DILocation(line: 64, column: 3, scope: [[DBG4]])
 // CHECK-TRAP: [[DBG22]] = !DILocation(line: 65, column: 12, scope: [[DBG4]])
-// CHECK-TRAP: [[DBG23]] = !DILocation(line: 0, scope: [[META24:![0-9]+]], inlinedAt: [[DBG26]])
-// CHECK-TRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META5]], file: [[META5]], type: [[META25:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// CHECK-TRAP: [[META25]] = !DISubroutineType(types: null)
-// CHECK-TRAP: [[DBG26]] = !DILocation(line: 65, column: 10, scope: [[DBG4]])
-// CHECK-TRAP: [[PROF27]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK-TRAP: [[DBG28]] = !DILocation(line: 0, scope: [[META29:![0-9]+]], inlinedAt: [[DBG23]])
-// CHECK-TRAP: [[META29]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Array index out of bounds", scope: [[META5]], file: [[META5]], type: [[META25]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// CHECK-TRAP: [[DBG30]] = !DILocation(line: 65, column: 3, scope: [[DBG4]])
+// CHECK-TRAP: [[DBG23]] = !DILocation(line: 0, scope: [[META24:![0-9]+]], inlinedAt: [[DBG27]])
+// CHECK-TRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META25:![0-9]+]], file: [[META25]], type: [[META26:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-TRAP: [[META25]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// CHECK-TRAP: [[META26]] = !DISubroutineType(types: null)
+// CHECK-TRAP: [[DBG27]] = !DILocation(line: 65, column: 10, scope: [[DBG4]])
+// CHECK-TRAP: [[PROF28]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK-TRAP: [[DBG29]] = !DILocation(line: 0, scope: [[META30:![0-9]+]], inlinedAt: [[DBG23]])
+// CHECK-TRAP: [[META30]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Array index out of bounds", scope: [[META25]], file: [[META25]], type: [[META26]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-TRAP: [[DBG31]] = !DILocation(line: 65, column: 3, scope: [[DBG4]])
 //.
 // CHECK-NOTRAP: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // CHECK-NOTRAP: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK-NOTRAP: [[DBG4]] = distinct !DISubprogram(name: "f1", scope: [[META5:![0-9]+]], file: [[META5]], line: 62, type: [[META6:![0-9]+]], scopeLine: 62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META10]])
-// CHECK-NOTRAP: [[META5]] = !DIFile(filename: "{{.*}}bounds-checking-debuginfo.c", directory: {{.*}})
+// CHECK-NOTRAP: [[META5]] = !DIFile(filename: "bounds-checking-debuginfo.c", directory: "")
 // CHECK-NOTRAP: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 // CHECK-NOTRAP: [[META7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], [[META9]]}
 // CHECK-NOTRAP: [[META8]] = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
@@ -117,10 +118,11 @@ double f1(int b, int i) {
 // CHECK-NOTRAP: [[DBG20]] = !DILocation(line: 64, column: 5, scope: [[DBG4]])
 // CHECK-NOTRAP: [[DBG21]] = !DILocation(line: 64, column: 3, scope: [[DBG4]])
 // CHECK-NOTRAP: [[DBG22]] = !DILocation(line: 65, column: 12, scope: [[DBG4]])
-// CHECK-NOTRAP: [[DBG23]] = !DILocation(line: 0, scope: [[META24:![0-9]+]], inlinedAt: [[DBG26]])
-// CHECK-NOTRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META5]], file: [[META5]], type: [[META25:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// CHECK-NOTRAP: [[META25]] = !DISubroutineType(types: null)
-// CHECK-NOTRAP: [[DBG26]] = !DILocation(line: 65, column: 10, scope: [[DBG4]])
-// CHECK-NOTRAP: [[PROF27]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK-NOTRAP: [[DBG28]] = !DILocation(line: 65, column: 3, scope: [[DBG4]])
+// CHECK-NOTRAP: [[DBG23]] = !DILocation(line: 0, scope: [[META24:![0-9]+]], inlinedAt: [[DBG27]])
+// CHECK-NOTRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META25:![0-9]+]], file: [[META25]], type: [[META26:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-NOTRAP: [[META25]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// CHECK-NOTRAP: [[META26]] = !DISubroutineType(types: null)
+// CHECK-NOTRAP: [[DBG27]] = !DILocation(line: 65, column: 10, scope: [[DBG4]])
+// CHECK-NOTRAP: [[PROF28]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK-NOTRAP: [[DBG29]] = !DILocation(line: 65, column: 3, scope: [[DBG4]])
 //.

@@ -751,8 +751,10 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
           builder.getI32IntegerAttr(addressPoint.VTableIndex),
           builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
       });
+      auto vptrTy = cir::VPtrType::get(cgm.getBuilder().getContext());
+      auto symbol = mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr());
       cir::GlobalViewAttr vtableInit =
-          cgm.getBuilder().getGlobalViewAttr(vtable, indices);
+          cir::GlobalViewAttr::get(vptrTy, symbol, indices);
       if (!appendBytes(offset, vtableInit))
         return false;
     }
@@ -1383,8 +1385,15 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       cir::FuncOp fop = cgm.getAddrOfFunction(fd);
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
+      // Use the destination pointer type (e.g. struct field type), not
+      // fop.getFunctionType(), so initializers stay valid when a no-prototype
+      // FuncOp is later replaced by a prototyped definition with the same
+      // symbol. CIR allows the view type to differ from the symbol's type.
+      mlir::Type ptrTy = cgm.getTypes().convertTypeForMem(destType);
+      assert(mlir::isa<cir::PointerType>(ptrTy) &&
+             "function address in constant must be a pointer");
       return cir::GlobalViewAttr::get(
-          builder.getPointerTo(fop.getFunctionType()),
+          ptrTy,
           mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
     }
 
@@ -1395,19 +1404,24 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
           return cgm.getAddrOfGlobalVarAttr(vd);
 
         if (vd->isLocalVarDecl()) {
-          cgm.errorNYI(vd->getSourceRange(),
-                       "ConstantLValueEmitter: local var decl");
-          return {};
+          cir::GlobalLinkageKind linkage = cgm.getCIRLinkageVarDefinition(vd);
+          return cgm.getBuilder().getGlobalViewAttr(
+              cgm.getOrCreateStaticVarDecl(*vd, linkage));
         }
       }
     }
 
-    // Classic codegen handles MSGuidDecl,UnnamedGlobalConstantDecl, and
-    // TemplateParamObjectDecl, but it can also fall through from VarDecl,
-    // in which case it silently returns nullptr. For now, let's emit an
-    // error to see what cases we need to handle.
-    cgm.errorNYI(d->getSourceRange(),
-                 "ConstantLValueEmitter: unhandled value decl");
+    if (isa<MSGuidDecl>(d))
+      cgm.errorNYI(d->getSourceRange(), "ConstantLValueEmitter: MSGuidDecl");
+
+    if (const auto *gcd = dyn_cast<UnnamedGlobalConstantDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfUnnamedGlobalConstantDecl(gcd));
+
+    if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfTemplateParamObject(tpo));
+
     return {};
   }
 
@@ -1603,10 +1617,9 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
 
   // Now go through all other fields and zero them out.
   for (unsigned i = 0; i != numElements; ++i) {
-    if (!elements[i]) {
-      cgm.errorNYI(rd->getSourceRange(), "emitNullConstant: field not zeroed");
-      return {};
-    }
+    if (!elements[i])
+      elements[i] =
+          cgm.getBuilder().getZeroInitAttr(recordTy.getElementType(i));
   }
 
   mlir::MLIRContext *mlirContext = recordTy.getContext();
@@ -1638,21 +1651,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
     if (ty->isRecordType()) {
       if (const auto *e = dyn_cast_or_null<CXXConstructExpr>(d.getInit())) {
         const CXXConstructorDecl *cd = e->getConstructor();
-        // FIXME: we should probably model this more closely to C++ than
-        // just emitting a global with zero init (mimic what we do for trivial
-        // assignments and whatnots). Since this is for globals shouldn't
-        // be a problem for the near future.
-        if (cd->isTrivial() && cd->isDefaultConstructor()) {
-          const auto *cxxrd = ty->castAsCXXRecordDecl();
-          if (!cgm.getTypes().isZeroInitializable(cxxrd)) {
-            // To handle this case, we really need to go through
-            // emitNullConstant, but we need an attribute, not a value
-            cgm.errorNYI(
-                "tryEmitPrivateForVarInit: non-zero-initializable cxx record");
-            return {};
-          }
-          return cir::ZeroAttr::get(cgm.convertType(d.getType()));
-        }
+        if (cd->isTrivial() && cd->isDefaultConstructor())
+          return cgm.emitNullConstantAttr(d.getType());
       }
     }
   }
@@ -1744,21 +1744,34 @@ mlir::Attribute ConstantEmitter::emitNullForMemory(mlir::Location loc,
 
 mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
                                                QualType destType) {
-  // For an _Atomic-qualified constant, we may need to add tail padding.
-  if (destType->getAs<AtomicType>()) {
-    cgm.errorNYI("emitForMemory: atomic type");
-    return {};
-  }
-
-  return c;
+  return emitForMemory(cgm, c, destType);
 }
 
 mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
                                                mlir::Attribute c,
                                                QualType destType) {
   // For an _Atomic-qualified constant, we may need to add tail padding.
-  if (destType->getAs<AtomicType>()) {
-    cgm.errorNYI("atomic constants");
+  if (const auto *at = destType->getAs<AtomicType>()) {
+    QualType destValueType = at->getValueType();
+    c = emitForMemory(cgm, c, destValueType);
+
+    uint64_t innerSize = cgm.getASTContext().getTypeSize(destValueType);
+    uint64_t outerSize = cgm.getASTContext().getTypeSize(destType);
+    if (innerSize == outerSize)
+      return c;
+
+    assert(innerSize < outerSize && "emitted over-large constant for atomic");
+    cgm.errorNYI("emitForMemory: tail padding in atomic initializer");
+  }
+
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if (destType->isExtVectorBoolType() &&
+      !destType->isPackedVectorBoolType(cgm.getASTContext())) {
+    cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
+  }
+
+  if (destType->isBitIntType()) {
+    cgm.errorNYI("emitForMemory: _BitInt type");
   }
 
   return c;
@@ -1976,8 +1989,7 @@ mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
   assert(t->isMemberDataPointerType() &&
          "Should only see pointers to data members here!");
 
-  errorNYI("CIRGenModule::emitNullConstantAttr unsupported type");
-  return {};
+  return emitNullMemberAttr(t, t->castAs<MemberPointerType>());
 }
 
 mlir::TypedAttr

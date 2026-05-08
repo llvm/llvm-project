@@ -43,6 +43,11 @@ def note_fe_backend_resource_limit: Note<"%0 (%1) exceeds limit (%2) in '%3'">, 
 def remark_fe_backend_plugin: Remark<"%0">, BackendInfo, InGroup<RemarkBackendPlugin>;
 def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
+def err_target_spirv_requires_vulkan : Error<
+    "SPIR-V target requires a Vulkan environment">;
+def err_target_spirv_requires_shader_stage : Error<
+    "SPIR-V target requires a valid shader stage environment">;
+
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,
     InGroup<DiagGroup<"override-module">>;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
+#include "Char.h"
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"

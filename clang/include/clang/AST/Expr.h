@@ -595,11 +595,11 @@ public:
                                                  SmallVectorImpl<
                                                    PartialDiagnosticAt> &Diags);
 
-  /// isConstantInitializer - Returns true if this expression can be emitted to
+  /// Returns true if this expression can be emitted to
   /// IR as a constant, and thus can be used as a constant initializer in C.
   /// If this expression is not constant and Culprit is non-null,
   /// it is used to store the address of first non constant expr.
-  bool isConstantInitializer(ASTContext &Ctx, bool ForRef,
+  bool isConstantInitializer(ASTContext &Ctx, bool ForRef = false,
                              const Expr **Culprit = nullptr) const;
 
   /// If this expression is an unambiguous reference to a single declaration,
@@ -3214,7 +3214,7 @@ public:
   /// a CallExpr without going through the slower virtual child_iterator
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
-  ArrayRef<Stmt *> getRawSubExprs() {
+  ArrayRef<Stmt *> getRawSubExprs() const {
     return {getTrailingStmts(), PREARGS_START + getNumPreArgs() + getNumArgs()};
   }
 
@@ -5349,8 +5349,6 @@ public:
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
 
-  ArrayRef<Expr *> inits() { return {getInits(), getNumInits()}; }
-
   ArrayRef<Expr *> inits() const { return {getInits(), getNumInits()}; }
 
   const Expr *getInit(unsigned Init) const {
@@ -6123,7 +6121,11 @@ public:
 
   Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
 
-  ArrayRef<Expr *> exprs() { return {getExprs(), getNumExprs()}; }
+  Expr *const *getExprs() const {
+    return reinterpret_cast<Expr *const *>(getTrailingObjects());
+  }
+
+  ArrayRef<Expr *> exprs() const { return {getExprs(), getNumExprs()}; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }

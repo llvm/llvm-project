@@ -14,6 +14,10 @@
 
 namespace lldb_private {
 
+/// Represents a file descriptor action to be performed during process launch.
+///
+/// FileAction encapsulates operations like opening, closing, or duplicating
+/// file descriptors that should be applied when spawning a new process.
 class FileAction {
 public:
   enum Action {
@@ -25,30 +29,58 @@ public:
 
   FileAction();
 
+  /// Reset this FileAction to its default state.
   void Clear();
 
+  /// Configure this action to close a file descriptor.
   bool Close(int fd);
 
+  /// Configure this action to duplicate a file descriptor.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to duplicate.
+  /// \param[in] dup_fd
+  ///     The target file descriptor number.
   bool Duplicate(int fd, int dup_fd);
 
+  /// Configure this action to open a file.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to use for the opened file.
+  /// \param[in] file_spec
+  ///     The file to open.
+  /// \param[in] read
+  ///     Open for reading.
+  /// \param[in] write
+  ///     Open for writing.
   bool Open(int fd, const FileSpec &file_spec, bool read, bool write);
 
+  /// Get the file descriptor this action applies to.
   int GetFD() const { return m_fd; }
 
+  /// Get the type of action.
   Action GetAction() const { return m_action; }
 
+  /// Get the action-specific argument.
+  ///
+  /// For eFileActionOpen, returns the open flags (O_RDONLY, etc.).
+  /// For eFileActionDuplicate, returns the target fd to duplicate to.
   int GetActionArgument() const { return m_arg; }
 
+  /// Get the file specification for open actions.
   const FileSpec &GetFileSpec() const;
 
   void Dump(Stream &stream) const;
 
 protected:
-  Action m_action = eFileActionNone; // The action for this file
-  int m_fd = -1;                     // An existing file descriptor
-  int m_arg = -1; // oflag for eFileActionOpen*, dup_fd for eFileActionDuplicate
-  FileSpec
-      m_file_spec; // A file spec to use for opening after fork or posix_spawn
+  /// The action for this file.
+  Action m_action = eFileActionNone;
+  /// The file descriptor this action applies to.
+  int m_fd = -1;
+  /// oflag for eFileActionOpen, dup_fd for eFileActionDuplicate.
+  int m_arg = -1;
+  /// File spec to use for opening after fork or posix_spawn.
+  FileSpec m_file_spec;
 };
 
 } // namespace lldb_private

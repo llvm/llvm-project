@@ -133,14 +133,14 @@ void throw_complex_expr() {
 // CIR: cir.unreachable
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
-// LLVM: store { float, float } { float 0x3FF19999A0000000, float 0x40019999A0000000 }, ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: store { float, float } { float 1.100000e+00, float 2.200000e+00 }, ptr %[[EXCEPTION_ADDR]], align 16
 // LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTICf, ptr null)
 
 // OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
 // OGCG: %[[EXCEPTION_REAL:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[EXCEPTION_ADDR]], i32 0, i32 0
 // OGCG: %[[EXCEPTION_IMAG:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[EXCEPTION_ADDR]], i32 0, i32 1
-// OGCG: store float 0x3FF19999A0000000, ptr %[[EXCEPTION_REAL]], align 16
-// OGCG: store float 0x40019999A0000000, ptr %[[EXCEPTION_IMAG]], align 4
+// OGCG: store float 1.100000e+00, ptr %[[EXCEPTION_REAL]], align 16
+// OGCG: store float 2.200000e+00, ptr %[[EXCEPTION_IMAG]], align 4
 // OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTICf, ptr null)
 
 void throw_vector_type() {
@@ -271,3 +271,20 @@ void throw_pointer_type() {
 // OGCG: %[[TMP_PTR:.*]] = load ptr, ptr %[[PTR_ADDR]], align 8
 // OGCG: store ptr %[[TMP_PTR]], ptr %[[EXCEPTION_ADDR]], align 16
 // OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIPi, ptr null)
+// Throwing a class type with a non-trivial destructor exercises
+// CIRGenItaniumCXXABI::emitThrow (destructor symbol for __cxa_throw).
+
+struct ThrowNonTrivialDtor {
+  ~ThrowNonTrivialDtor() {}
+};
+void throw_class_with_nontrivial_dtor() { throw ThrowNonTrivialDtor(); }
+
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 1 -> !cir.ptr<!rec_ThrowNonTrivialDtor>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!rec_ThrowNonTrivialDtor>, @_ZTI19ThrowNonTrivialDtor, @_ZN19ThrowNonTrivialDtorD1Ev
+// CIR: cir.unreachable
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 1)
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTI19ThrowNonTrivialDtor, ptr @_ZN19ThrowNonTrivialDtorD1Ev)
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 1)
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTI19ThrowNonTrivialDtor, ptr @_ZN19ThrowNonTrivialDtorD1Ev)

@@ -854,8 +854,7 @@ define void @extract_v8bfloat_halves(ptr %in, ptr %out, ptr %out2) #0 {
 ; CHECK-LABEL: extract_v8bfloat_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    str d1, [x1]
+; CHECK-NEXT:    st1 { v0.d }[1], [x1]
 ; CHECK-NEXT:    str d0, [x2]
 ; CHECK-NEXT:    ret
 entry:

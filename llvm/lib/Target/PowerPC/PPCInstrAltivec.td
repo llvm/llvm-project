@@ -705,7 +705,8 @@ def VXOR : VXForm_1<1220, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
 
 def VRLB   : VX1_Int_Ty<   4, "vrlb", int_ppc_altivec_vrlb, v16i8>;
 def VRLH   : VX1_Int_Ty<  68, "vrlh", int_ppc_altivec_vrlh, v8i16>;
-def VRLW   : VX1_Int_Ty< 132, "vrlw", int_ppc_altivec_vrlw, v4i32>;
+def VRLW   : VXForm_1<132, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
+                      "vrlw $VD, $VA, $VB", IIC_VecFP, []>;
 
 def VSL    : VX1_Int_Ty< 452, "vsl" , int_ppc_altivec_vsl,  v4i32 >;
 def VSLO   : VX1_Int_Ty<1036, "vslo", int_ppc_altivec_vslo, v4i32>;
@@ -890,9 +891,12 @@ def : Pat<(v16i8 (rotl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VRLB v16i8:$vA, v16i8:$vB))>;
 def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VRLH v8i16:$vA, v8i16:$vB))>;
-let Predicates = [IsNotISAFuture] in
+let Predicates = [IsNotISAFuture] in {
 def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
+def : Pat<(v4i32 (int_ppc_altivec_vrlw v4i32:$vA, v4i32:$vB)),
+          (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
+}
 
 // Multiply
 def : Pat<(mul v8i16:$vA, v8i16:$vB), (VMLADDUHM $vA, $vB, (v8i16(V_SET0H)))>;

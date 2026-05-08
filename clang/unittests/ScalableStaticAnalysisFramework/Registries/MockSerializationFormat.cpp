@@ -30,7 +30,7 @@
 using namespace clang;
 using namespace ssaf;
 
-LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MockSerializationFormat::FormatInfo>)
+LLVM_DEFINE_REGISTRY(llvm::Registry<MockSerializationFormat::FormatInfo>)
 
 MockSerializationFormat::MockSerializationFormat() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
@@ -198,4 +198,14 @@ llvm::Error MockSerializationFormat::writeLUSummaryEncoding(
     const LUSummaryEncoding &SummaryEncoding, llvm::StringRef Path) {
   llvm_unreachable(
       "MockSerializationFormat does not support LUSummaryEncoding");
+}
+
+llvm::Expected<WPASuite>
+MockSerializationFormat::readWPASuite(llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support WPASuite");
+}
+
+llvm::Error MockSerializationFormat::writeWPASuite(const WPASuite &Suite,
+                                                   llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support WPASuite");
 }

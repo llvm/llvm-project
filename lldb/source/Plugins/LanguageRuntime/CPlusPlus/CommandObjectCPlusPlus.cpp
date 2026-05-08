@@ -47,7 +47,7 @@ void CommandObjectCPlusPlusDemangle::DoExecute(Args &command,
                                       demangled.GetCString());
     } else {
       error_any = true;
-      result.AppendErrorWithFormat("%s is not a valid C++ mangled name\n",
+      result.AppendErrorWithFormat("%s is not a valid C++ mangled name",
                                    entry.ref().str().c_str());
     }
   }

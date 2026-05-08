@@ -95,8 +95,7 @@ define amdgpu_ps float @atomic_pk_add_bf16_1d_v2(<8 x i32> inreg %rsrc, <2 x bfl
 ; GFX12-SDAG-LABEL: atomic_pk_add_bf16_1d_v2:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
 ; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -106,8 +105,7 @@ define amdgpu_ps float @atomic_pk_add_bf16_1d_v2(<8 x i32> inreg %rsrc, <2 x bfl
 ; GFX12-GISEL-LABEL: atomic_pk_add_bf16_1d_v2:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
 ; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -140,8 +138,7 @@ define amdgpu_ps float @atomic_pk_add_bf16_1d_v4(<8 x i32> inreg %rsrc, <4 x bfl
 ; GFX12-SDAG-LABEL: atomic_pk_add_bf16_1d_v4:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
 ; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, 0
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -151,8 +148,7 @@ define amdgpu_ps float @atomic_pk_add_bf16_1d_v4(<8 x i32> inreg %rsrc, <4 x bfl
 ; GFX12-GISEL-LABEL: atomic_pk_add_bf16_1d_v4:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
 ; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, 0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
