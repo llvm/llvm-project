@@ -144,6 +144,8 @@ static void enableDenseWidening(DataFlowSolver &solver) {
 class CounterSparseForwardAnalysis
     : public SparseForwardDataFlowAnalysis<CounterSparseLattice> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CounterSparseForwardAnalysis)
+
   explicit CounterSparseForwardAnalysis(DataFlowSolver &solver)
       : SparseForwardDataFlowAnalysis(solver) {
     enableSparseWidening(solver);
@@ -174,6 +176,8 @@ public:
 class CounterSparseBackwardAnalysis
     : public SparseBackwardDataFlowAnalysis<CounterSparseLattice> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CounterSparseBackwardAnalysis)
+
   CounterSparseBackwardAnalysis(DataFlowSolver &solver,
                                 SymbolTableCollection &symbols)
       : SparseBackwardDataFlowAnalysis(solver, symbols) {
@@ -216,6 +220,8 @@ public:
 class CounterDenseForwardAnalysis
     : public DenseForwardDataFlowAnalysis<CounterDenseLattice> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CounterDenseForwardAnalysis)
+
   explicit CounterDenseForwardAnalysis(DataFlowSolver &solver)
       : DenseForwardDataFlowAnalysis(solver) {
     enableDenseWidening(solver);
@@ -248,6 +254,8 @@ public:
 class CounterDenseBackwardAnalysis
     : public DenseBackwardDataFlowAnalysis<CounterDenseLattice> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CounterDenseBackwardAnalysis)
+
   CounterDenseBackwardAnalysis(DataFlowSolver &solver,
                                SymbolTableCollection &symbols)
       : DenseBackwardDataFlowAnalysis(solver, symbols) {
