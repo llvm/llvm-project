@@ -156,6 +156,7 @@ def warn_drv_unsupported_option_part_for_target : Warning<
   InGroup<OptionIgnored>;
 def err_drv_unsupported_option_part_for_target : Error<
   "'%0' in '%1' option is not currently supported for target '%2'">;
+def err_drv_unsupported_encoding : Error<"'%0' is not a supported encoding">;
 def warn_drv_invalid_argument_for_flang : Warning<
   "'%0' is not valid for Fortran">,
   InGroup<OptionIgnored>;
