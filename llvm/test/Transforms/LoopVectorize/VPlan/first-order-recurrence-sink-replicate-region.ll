@@ -27,13 +27,13 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP_CAN:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP_CAN]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.load: {
 ; CHECK-NEXT:      pred.load.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.if:
@@ -42,23 +42,23 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:      Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.continue:
-; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP7:%[0-9]+]]> = ir<%lv>
+; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP8:%[0-9]+]]> = ir<%lv>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.0:
-; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP7]]> to i32
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
+; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP8]]> to i32
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP8]]>, ir<%x>
+; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP9]]>, ir<%x>
 ; CHECK-NEXT:        REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK-NEXT:        REPLICATE ir<%add> = add ir<%conv>, ir<%rem>
 ; CHECK-NEXT:        REPLICATE store ir<%add>, ir<%gep.dst>
@@ -142,22 +142,23 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-order splice ir<%recur>, ir<%recur.next>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%recur>, ir<%recur.next>
 ; CHECK-NEXT:      WIDEN ir<%cond> = icmp eq ir<%iv>, ir<%z>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = logical-and vp<[[VP5]]>, ir<%cond>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%cond>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP8]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP6]]>, ir<%x>
-; CHECK-NEXT:        vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP8]]>
+; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP7]]>, ir<%x>
+; CHECK-NEXT:        vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP9]]>
 ; CHECK-NEXT:        REPLICATE ir<%add> = add ir<%rem>, ir<%recur.next>
 ; CHECK-NEXT:        REPLICATE store ir<%add>, ir<%gep>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
@@ -336,14 +337,14 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP_CAN:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP_CAN]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP5]]>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.load: {
 ; CHECK-NEXT:      pred.load.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.if:
@@ -351,42 +352,42 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:      Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.continue:
-; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP7:%[0-9]+]]> = ir<%lv>
+; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP8:%[0-9]+]]> = ir<%lv>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.0:
-; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP7]]> to i32
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
+; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP8]]> to i32
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.load: {
 ; CHECK-NEXT:      pred.load.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.if:
-; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP8]]>, ir<%x> (S->V)
+; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP9]]>, ir<%x> (S->V)
 ; CHECK-NEXT:        REPLICATE ir<%lv.2> = load ir<%gep> (S->V)
 ; CHECK-NEXT:      Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.continue:
-; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP9:%[0-9]+]]> = ir<%rem>
-; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP10:%[0-9]+]]> = ir<%lv.2>
+; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP10:%[0-9]+]]> = ir<%rem>
+; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP11:%[0-9]+]]> = ir<%lv.2>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Successor(s): loop.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.2:
-; CHECK-NEXT:      WIDEN ir<%add.1> = add ir<%conv>, vp<[[VP9]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%conv.lv.2> = sext vp<[[VP10]]> to i32
+; CHECK-NEXT:      WIDEN ir<%add.1> = add ir<%conv>, vp<[[VP10]]>
+; CHECK-NEXT:      WIDEN-CAST ir<%conv.lv.2> = sext vp<[[VP11]]> to i32
 ; CHECK-NEXT:      WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
@@ -480,23 +481,23 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:      EMIT vp<[[VP_CAN:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP_CAN]]>, vp<[[VP3]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%recur>, ir<%recur.next>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%recur>, ir<%recur.next>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP7]]>, ir<%x>
+; CHECK-NEXT:        vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP8]]>, ir<%x>
 ; CHECK-NEXT:        REPLICATE ir<%rem.div> = sdiv ir<20>, ir<%rem>
-; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP8]]>
+; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP9]]>
 ; CHECK-NEXT:        REPLICATE store ir<%rem.div>, ir<%gep>
-; CHECK-NEXT:        REPLICATE ir<%gep.2> = getelementptr ir<%dst.2>, vp<[[VP8]]>
+; CHECK-NEXT:        REPLICATE ir<%gep.2> = getelementptr ir<%dst.2>, vp<[[VP9]]>
 ; CHECK-NEXT:        REPLICATE store ir<%rem.div>, ir<%gep.2>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:

@@ -28,6 +28,7 @@ Basic Commands
    llvm-dis
    llvm-dwarfdump
    llvm-dwarfutil
+   llvm-extract-bundle-entry
    llvm-ir2vec
    llvm-lib
    llvm-libtool-darwin
