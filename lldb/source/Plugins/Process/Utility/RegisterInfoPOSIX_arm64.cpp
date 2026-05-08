@@ -102,7 +102,7 @@ static lldb_private::RegisterInfo g_register_infos_gcs[] = {
     DEFINE_EXTENSION_REG(gcs_features_locked), DEFINE_EXTENSION_REG(gcspr_el0)};
 
 static lldb_private::RegisterInfo g_register_infos_poe[] = {
-    DEFINE_EXTENSION_REG(por)};
+    DEFINE_EXTENSION_REG(por_el0)};
 
 // Number of register sets provided by this context.
 enum {

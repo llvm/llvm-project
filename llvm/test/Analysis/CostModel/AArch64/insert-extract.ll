@@ -44,8 +44,8 @@ define void @vectorInstrCost() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %t80 = insertelement <2 x i32> undef, i32 5, i32 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %t90 = insertelement <2 x i64> undef, i64 6, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %t100 = insertelement <2 x i64> undef, i64 7, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of 0 for: %t110 = insertelement <4 x half> zeroinitializer, half 0xH0000, i64 0
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %t120 = insertelement <4 x half> zeroinitializer, half 0xH0000, i64 1
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %t110 = insertelement <4 x half> zeroinitializer, half 0.000000e+00, i64 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %t120 = insertelement <4 x half> zeroinitializer, half 0.000000e+00, i64 1
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %t130 = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %t140 = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 1
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %t150 = insertelement <2 x double> zeroinitializer, double 0.000000e+00, i64 0

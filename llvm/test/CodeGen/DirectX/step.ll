@@ -16,7 +16,7 @@ declare <4 x float> @llvm.dx.step.v4f32(<4 x float>, <4 x float>)
 define noundef half @test_step_half(half noundef %p0, half noundef %p1) {
 entry:
   ; CHECK: %0 = fcmp olt half %p1, %p0
-  ; CHECK: %1 = select i1 %0, half 0xH0000, half 0xH3C00
+  ; CHECK: %1 = select i1 %0, half 0.000000e+00, half 1.000000e+00
   %hlsl.step = call half @llvm.dx.step.f16(half %p0, half %p1)
   ret half %hlsl.step
 }
@@ -24,7 +24,7 @@ entry:
 define noundef <2 x half> @test_step_half2(<2 x half> noundef %p0, <2 x half> noundef %p1) {
 entry:
   ; CHECK: %0 = fcmp olt <2 x half> %p1, %p0
-  ; CHECK: %1 = select <2 x i1> %0, <2 x half> zeroinitializer, <2 x half> splat (half 0xH3C00)
+  ; CHECK: %1 = select <2 x i1> %0, <2 x half> zeroinitializer, <2 x half> splat (half 1.000000e+00)
   %hlsl.step = call <2 x half> @llvm.dx.step.v2f16(<2 x half> %p0, <2 x half> %p1)
   ret <2 x half> %hlsl.step
 }
@@ -32,7 +32,7 @@ entry:
 define noundef <3 x half> @test_step_half3(<3 x half> noundef %p0, <3 x half> noundef %p1) {
 entry:
   ; CHECK: %0 = fcmp olt <3 x half> %p1, %p0
-  ; CHECK: %1 = select <3 x i1> %0, <3 x half> zeroinitializer, <3 x half> splat (half 0xH3C00)
+  ; CHECK: %1 = select <3 x i1> %0, <3 x half> zeroinitializer, <3 x half> splat (half 1.000000e+00)
   %hlsl.step = call <3 x half> @llvm.dx.step.v3f16(<3 x half> %p0, <3 x half> %p1)
   ret <3 x half> %hlsl.step
 }
@@ -40,7 +40,7 @@ entry:
 define noundef <4 x half> @test_step_half4(<4 x half> noundef %p0, <4 x half> noundef %p1) {
 entry:
   ; CHECK: %0 = fcmp olt <4 x half> %p1, %p0
-  ; CHECK: %1 = select <4 x i1> %0, <4 x half> zeroinitializer, <4 x half> splat (half 0xH3C00)
+  ; CHECK: %1 = select <4 x i1> %0, <4 x half> zeroinitializer, <4 x half> splat (half 1.000000e+00)
   %hlsl.step = call <4 x half> @llvm.dx.step.v4f16(<4 x half> %p0, <4 x half> %p1)
   ret <4 x half> %hlsl.step
 }

@@ -21,6 +21,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include <chrono>
+#include <optional>
 
 namespace llvm {
 
@@ -31,7 +32,10 @@ struct HTTPRequest {
   SmallString<128> Url;
   SmallVector<std::string, 0> Headers;
   HTTPMethod Method = HTTPMethod::GET;
+  // Follow redirects without security downgrades.
   bool FollowRedirects = true;
+  // Allow self-signed TLS certificates with this SHA-256 (WinHTTP only).
+  std::optional<std::string> PinnedCertFingerprint;
   HTTPRequest(StringRef Url);
 };
 

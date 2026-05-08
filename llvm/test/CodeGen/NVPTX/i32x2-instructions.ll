@@ -1632,7 +1632,7 @@ define void @test_sext_v2i1_to_v2i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .pred %p<3>;
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<14>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0: // %entry
 ; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [test_sext_v2i1_to_v2i32_param_2];
@@ -1653,9 +1653,8 @@ define void @test_sext_v2i1_to_v2i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-I32X2-NEXT:    selp.b32 %r5, -1, 0, %p2;
 ; CHECK-I32X2-NEXT:    selp.b32 %r6, -1, 0, %p1;
 ; CHECK-I32X2-NEXT:    mov.b64 %rd12, {%r6, %r5};
+; CHECK-I32X2-NEXT:    st.b32 [%rd3+4], %r5;
 ; CHECK-I32X2-NEXT:    st.b32 [%rd3], %rd12;
-; CHECK-I32X2-NEXT:    shr.u64 %rd13, %rd12, 32;
-; CHECK-I32X2-NEXT:    st.b32 [%rd3+4], %rd13;
 ; CHECK-I32X2-NEXT:    ret;
 entry:
   %t1 = load <2 x i32>, ptr %a, align 4

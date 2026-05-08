@@ -1284,16 +1284,20 @@ namespace TemporaryWithBadPointer {
 
 namespace UninitCompoundAssign {
 constexpr int scalar(int a) {
-  int sum; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
-  sum += a; // expected-note {{read of uninitialized object}};
+  int sum; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}} \
+           // #sum-decl
+  sum += a; // expected-note {{read of uninitialized object}} \
+            // expected-note@#sum-decl {{declared here}}
   return 0;
 }
 static_assert(scalar(3), ""); // expected-error {{constant expression}} \
                               // expected-note {{in call to 'scalar(3)'}}
 
 constexpr int array(int a) {
-  int arr[3]; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
-  arr[1] += a; // expected-note {{read of uninitialized object}};
+  int arr[3]; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}} \
+              // #arr-decl
+  arr[1] += a; // expected-note {{read of uninitialized object}} \
+               // expected-note@#arr-decl {{declared here}}
   return 0;
 }
 static_assert(array(3), ""); // expected-error {{constant expression}} \
@@ -1304,8 +1308,9 @@ struct Foo {
   constexpr Foo() {} // cxx14-warning {{constexpr constructor that does not initialize all members is a C++20 extension}}
 };
 constexpr int field(int a) {
-  Foo f;
-  f.val += a; // expected-note {{read of uninitialized object}};
+  Foo f; // #f-decl
+  f.val += a; // expected-note {{read of uninitialized object}} \
+              // expected-note@#f-decl {{declared here}}
   return 0;
 }
 static_assert(field(3), ""); // expected-error {{constant expression}} \
