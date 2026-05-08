@@ -5819,6 +5819,27 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   unsigned FrameID = MachineOutlinerDefault;
   unsigned NumBytesToCreateFrame = Costs.FrameDefault;
 
+  // We check to see if CFI Instructions are present, and if they are
+  // we find the number of CFI Instructions in the candidates.
+  unsigned CFICount = 0;
+  for (auto &I : RepeatedSequenceLocs[0]) {
+    if (I.isCFIInstruction())
+      CFICount++;
+  }
+
+  // We compare the number of found CFI Instructions to  the number of CFI
+  // instructions in the parent function for each candidate.  We must check this
+  // since if we outline one of the CFI instructions in a function, we have to
+  // outline them all for correctness. If we do not, the address offsets will be
+  // incorrect between the two sections of the program.
+  for (outliner::Candidate &C : RepeatedSequenceLocs) {
+    std::vector<MCCFIInstruction> CFIInstructions =
+        C.getMF()->getFrameInstructions();
+
+    if (CFICount > 0 && CFICount != CFIInstructions.size())
+      return std::nullopt;
+  }
+
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back().isTerminator()) {
@@ -5911,6 +5932,11 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
              FrameID != MachineOutlinerTailCall && FirstCand.back().isCall())
       NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
   }
+
+  // If we have CFI instructions, we can only outline if the outlined section
+  // can be a tail call
+  if (FrameID != MachineOutlinerTailCall && CFICount > 0)
+    return std::nullopt;
 
   return std::make_unique<outliner::OutlinedFunction>(
       RepeatedSequenceLocs, SequenceSize, NumBytesToCreateFrame, FrameID);
@@ -6136,6 +6162,15 @@ ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   if ((MIFlags & ARMII::DomainMask) == ARMII::DomainMVE)
     return outliner::InstrType::Illegal;
 
+  // We can only outline these if we will tail call the outlined function, or
+  // fix up the CFI offsets. Currently, CFI instructions are outlined only if
+  // in a tail call.
+  //
+  // FIXME: If the proper fixups for the offset are implemented, this should be
+  // possible.
+  if (MI.isCFIInstruction())
+    return outliner::InstrType::Legal;
+
   // Is this a terminator for a basic block?
   if (MI.isTerminator())
     // TargetInstrInfo::getOutliningType has already filtered out anything
@@ -6242,10 +6277,6 @@ ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   // Be conservative with IT blocks.
   if (MI.readsRegister(ARM::ITSTATE, TRI) ||
       MI.modifiesRegister(ARM::ITSTATE, TRI))
-    return outliner::InstrType::Illegal;
-
-  // Don't outline CFI instructions.
-  if (MI.isCFIInstruction())
     return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;

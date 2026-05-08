@@ -149,30 +149,30 @@ body:             |
 
     BX_RET 14, $noreg
 
-    ;CHECK: name:           OUTLINED_FUNCTION_[[I5]]
-    ;CHECK: liveins: $r10, $r9, $r8, $r7, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
-    ;CHECK: $d0 = VLDRD $sp, 0, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $d1 = VLDRD $sp, 8, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $d4 = VLDRD $sp, 253, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-LABEL: name:            OUTLINED_FUNCTION_0
+    ; CHECK:       liveins: $r10, $r9, $r8, $r7, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
+    ; CHECK:       $d0 = VLDRD $sp, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  $d1 = VLDRD $sp, 8, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  $d4 = VLDRD $sp, 253, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  BX_RET 14 /* CC::al */, $noreg
 
-    ;CHECK: name:           OUTLINED_FUNCTION_[[I5FP16]]
-    ;CHECK: liveins: $r10, $r9, $r8, $r7, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
-    ;CHECK: $s1 = VLDRH $sp, 0, 14, $noreg
-    ;CHECK-NEXT: $s2 = VLDRH $sp, 8, 14, $noreg
-    ;CHECK-NEXT: $s5 = VLDRH $sp, 240, 14, $noreg
-    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-LABEL: name:            OUTLINED_FUNCTION_1
+    ; CHECK:       liveins: $r10, $r9, $r8, $r7, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
+    ; CHECK:       $s1 = VLDRH $sp, 0, 14, $noreg
+    ; CHECK-NEXT:  $s2 = VLDRH $sp, 8, 14, $noreg
+    ; CHECK-NEXT:  $s5 = VLDRH $sp, 240, 14, $noreg
+    ; CHECK-NEXT:  BX_RET 14 /* CC::al */, $noreg
 
-    ;CHECK: name:           OUTLINED_FUNCTION_[[I12]]
-    ;CHECK: liveins: $r10, $r9, $r8, $r7, $d8, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9
-    ;CHECK: $r1 = LDRi12 $sp, 0, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $r2 = LDRi12 $sp, 8, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $r5 = LDRi12 $sp, 4086, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-LABEL: name:            OUTLINED_FUNCTION_2
+    ; CHECK:       liveins: $r10, $r9, $r8, $r7, $d8, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9
+    ; CHECK:       $r1 = LDRSH $sp, $noreg, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  $r2 = LDRSH $sp, $noreg, 8, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  $r5 = LDRSH $sp, $noreg, 247, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  BX_RET 14 /* CC::al */, $noreg
 
-    ;CHECK: name:           OUTLINED_FUNCTION_[[I3]]
-    ;CHECK: liveins: $r10, $r9, $r8, $r7, $d8, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9
-    ;CHECK: $r1 = LDRSH $sp, $noreg, 0, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $r2 = LDRSH $sp, $noreg, 8, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $r5 = LDRSH $sp, $noreg, 247, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-LABEL: name:            OUTLINED_FUNCTION_3
+    ; CHECK:       liveins: $r10, $r9, $r8, $r7, $d8, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9
+    ; CHECK:       $r1 = LDRi12 $sp, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  $r2 = LDRi12 $sp, 8, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  $r5 = LDRi12 $sp, 4086, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT:  BX_RET 14 /* CC::al */, $noreg
