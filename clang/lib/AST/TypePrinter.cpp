@@ -1992,13 +1992,13 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLResourceDimension:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
-  case attr::OpenCLPrivateAddressSpace:
-  case attr::OpenCLGlobalAddressSpace:
+  case attr::OffloadPrivateAddressSpace:
+  case attr::OffloadGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
   case attr::OpenCLGlobalHostAddressSpace:
-  case attr::OpenCLLocalAddressSpace:
-  case attr::OpenCLConstantAddressSpace:
-  case attr::OpenCLGenericAddressSpace:
+  case attr::OffloadLocalAddressSpace:
+  case attr::OffloadConstantAddressSpace:
+  case attr::OffloadGenericAddressSpace:
   case attr::HLSLGroupSharedAddressSpace:
     // FIXME: Update printAttributedBefore to print these once we generate
     // AttributedType nodes for them.
@@ -2667,24 +2667,31 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
   case LangAS::Default:
     return "";
   case LangAS::opencl_global:
-  case LangAS::sycl_global:
     return "__global";
   case LangAS::opencl_local:
-  case LangAS::sycl_local:
     return "__local";
   case LangAS::opencl_private:
-  case LangAS::sycl_private:
     return "__private";
   case LangAS::opencl_constant:
     return "__constant";
   case LangAS::opencl_generic:
     return "__generic";
+  // TODO: Remove *_global_device and *_global_host after corresponding
+  // attributes are deprecated for the required time.
   case LangAS::opencl_global_device:
   case LangAS::sycl_global_device:
     return "__global_device";
   case LangAS::opencl_global_host:
   case LangAS::sycl_global_host:
     return "__global_host";
+  case LangAS::sycl_global:
+    return "sycl_global";
+  case LangAS::sycl_local:
+    return "sycl_local";
+  case LangAS::sycl_private:
+    return "sycl_private";
+  case LangAS::sycl_generic:
+    return "sycl_generic";
   case LangAS::cuda_device:
     return "__device__";
   case LangAS::cuda_constant:

@@ -36,6 +36,8 @@ enum class LangAS : unsigned {
   opencl_constant,
   opencl_private,
   opencl_generic,
+  // TODO: Remove opencl_global_device and opencl_global_host after corresponding
+  // attributes are deprecated for the required time.
   opencl_global_device,
   opencl_global_host,
 
@@ -46,10 +48,13 @@ enum class LangAS : unsigned {
 
   // SYCL specific address spaces.
   sycl_global,
+  // TODO: Remove sycl_global_device and sycl_global_host after corresponding attributes
+  // are deprecated for the required time.
   sycl_global_device,
   sycl_global_host,
   sycl_local,
   sycl_private,
+  sycl_generic,
 
   // Pointer size and extension address spaces.
   ptr32_sptr,

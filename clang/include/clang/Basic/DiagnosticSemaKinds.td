@@ -3597,6 +3597,9 @@ def err_attribute_address_multiple_qualifiers : Error<
 def warn_attribute_address_multiple_identical_qualifiers : Warning<
   "multiple identical address spaces specified for type">,
   InGroup<DuplicateDeclSpecifier>;
+def warn_deprecated_sycl_constant : Warning<
+  "'sycl_constant' address space attribute is deprecated">,
+  InGroup<DeprecatedAttributes>;
 def err_attribute_not_clinkage : Error<
   "function type with %0 attribute must have C linkage">;
 def err_function_decl_cmse_ns_call : Error<

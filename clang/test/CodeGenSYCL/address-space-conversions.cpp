@@ -3,13 +3,13 @@ void bar(int &Data) {}
 // CHECK-DAG: define{{.*}} void @[[RAW_REF:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef align 4 dereferenceable(4) %
 void bar2(int &Data) {}
 // CHECK-DAG: define{{.*}} void @[[RAW_REF2:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef align 4 dereferenceable(4) %
-void bar(__attribute__((opencl_local)) int &Data) {}
+void bar(__attribute__((sycl_local)) int &Data) {}
 // CHECK-DAG: define{{.*}} void [[LOC_REF:@[a-zA-Z0-9_]+]](ptr addrspace(3) noundef align 4 dereferenceable(4) %
 void foo(int *Data) {}
 // CHECK-DAG: define{{.*}} void @[[RAW_PTR:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef %
 void foo2(int *Data) {}
 // CHECK-DAG: define{{.*}} void @[[RAW_PTR2:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef %
-void foo(__attribute__((opencl_local)) int *Data) {}
+void foo(__attribute__((sycl_local)) int *Data) {}
 // CHECK-DAG: define{{.*}} void [[LOC_PTR:@[a-zA-Z0-9_]+]](ptr addrspace(3) noundef %
 
 template <typename T>
@@ -19,11 +19,11 @@ void tmpl(T t) {}
 [[clang::sycl_external]] void usages() {
   int *NoAS;
   // CHECK-DAG: [[NoAS:%[a-zA-Z0-9]+]] = alloca ptr addrspace(4)
-  __attribute__((opencl_global)) int *GLOB;
+  __attribute__((sycl_global)) int *GLOB;
   // CHECK-DAG: [[GLOB:%[a-zA-Z0-9]+]] = alloca ptr addrspace(1)
-  __attribute__((opencl_local)) int *LOC;
+  __attribute__((sycl_local)) int *LOC;
   // CHECK-DAG: [[LOC:%[a-zA-Z0-9]+]] = alloca ptr addrspace(3)
-  __attribute__((opencl_private)) int *PRIV;
+  __attribute__((sycl_private)) int *PRIV;
   // CHECK-DAG: [[PRIV:%[a-zA-Z0-9]+]] = alloca ptr
   __attribute__((opencl_global_device)) int *GLOBDEVICE;
   // CHECK-DAG: [[GLOB_DEVICE:%[a-zA-Z0-9]+]] = alloca ptr addrspace(5)
@@ -57,24 +57,24 @@ void tmpl(T t) {}
   // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
   // CHECK-DAG: [[NoAS_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(4) [[NoAS_LOAD]] to ptr addrspace(1)
   // CHECK-DAG: store ptr addrspace(1) [[NoAS_CAST]], ptr addrspace(4) [[GLOB]].ascast
-  GLOB = (__attribute__((opencl_global)) int *)NoAS;
+  GLOB = (__attribute__((sycl_global)) int *)NoAS;
   // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
   // CHECK-DAG: [[NoAS_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(4) [[NoAS_LOAD]] to ptr addrspace(3)
   // CHECK-DAG: store ptr addrspace(3) [[NoAS_CAST]], ptr addrspace(4) [[LOC]].ascast
-  LOC = (__attribute__((opencl_local)) int *)NoAS;
+  LOC = (__attribute__((sycl_local)) int *)NoAS;
   // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
   // CHECK-DAG: [[NoAS_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(4) [[NoAS_LOAD]] to ptr
   // CHECK-DAG: store ptr [[NoAS_CAST]], ptr addrspace(4) [[PRIV]].ascast
-  PRIV = (__attribute__((opencl_private)) int *)NoAS;
-  // From opencl_global_[host/device] address spaces to opencl_global
+  PRIV = (__attribute__((sycl_private)) int *)NoAS;
+  // From opencl_global_[host/device] address spaces to sycl_global
   // CHECK-DAG: [[GLOBDEVICE_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(5), ptr addrspace(4) [[GLOB_DEVICE]].ascast
   // CHECK-DAG: [[GLOBDEVICE_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(5) [[GLOBDEVICE_LOAD]] to ptr addrspace(1)
   // CHECK-DAG: store ptr addrspace(1) [[GLOBDEVICE_CAST]], ptr addrspace(4) [[GLOB]].ascast
-  GLOB = (__attribute__((opencl_global)) int *)GLOBDEVICE;
+  GLOB = (__attribute__((sycl_global)) int *)GLOBDEVICE;
   // CHECK-DAG: [[GLOBHOST_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(6), ptr addrspace(4) [[GLOB_HOST]].ascast
   // CHECK-DAG: [[GLOBHOST_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(6) [[GLOBHOST_LOAD]] to ptr addrspace(1)
   // CHECK-DAG: store ptr addrspace(1) [[GLOBHOST_CAST]], ptr addrspace(4) [[GLOB]].ascast
-  GLOB = (__attribute__((opencl_global)) int *)GLOBHOST;
+  GLOB = (__attribute__((sycl_global)) int *)GLOBHOST;
 
   bar(*GLOB);
   // CHECK-DAG: [[GLOB_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr addrspace(4) [[GLOB]].ascast

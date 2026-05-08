@@ -26,13 +26,17 @@
 #define __SPIRV_convergent __attribute__((convergent))
 #define __SPIRV_inline __attribute__((always_inline))
 
+#ifdef __SYCL_DEVICE_ONLY__
+#define __global __attribute__((sycl_global))
+#define __local __attribute__((sycl_local))
+#define __private __attribute__((sycl_private))
+#define __constant __attribute__((sycl_constant))
+#define __generic  __attribute__((sycl_generic))
+#else
 #define __global __attribute__((opencl_global))
 #define __local __attribute__((opencl_local))
 #define __private __attribute__((opencl_private))
 #define __constant __attribute__((opencl_constant))
-#ifdef __SYCL_DEVICE_ONLY__
-#define __generic
-#else
 #define __generic __attribute__((opencl_generic))
 #endif
 

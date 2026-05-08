@@ -47,6 +47,7 @@ static const unsigned TCEOpenCLAddrSpaceMap[] = {
     0, // sycl_global_host
     0, // sycl_local
     0, // sycl_private
+    0, // sycl_generic
     0, // ptr32_sptr
     0, // ptr32_uptr
     0, // ptr64

@@ -553,44 +553,45 @@ public:
   /// a Spelling enumeration, the value UINT_MAX is returned.
   unsigned getSemanticSpelling() const;
 
-  /// If this is an OpenCL address space attribute, returns its representation
-  /// in LangAS, otherwise returns default address space.
+  /// If this is a named address space attribute for OpenCL compilation, returns its
+  /// representation in LangAS, otherwise returns default address space.
   LangAS asOpenCLLangAS() const {
     switch (getParsedKind()) {
-    case ParsedAttr::AT_OpenCLConstantAddressSpace:
+    case ParsedAttr::AT_OffloadConstantAddressSpace:
       return LangAS::opencl_constant;
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    case ParsedAttr::AT_OffloadGlobalAddressSpace:
       return LangAS::opencl_global;
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::opencl_global_device;
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
       return LangAS::opencl_global_host;
-    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_OffloadLocalAddressSpace:
       return LangAS::opencl_local;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OffloadPrivateAddressSpace:
       return LangAS::opencl_private;
-    case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_OffloadGenericAddressSpace:
       return LangAS::opencl_generic;
     default:
       return LangAS::Default;
     }
   }
 
-  /// If this is an OpenCL address space attribute, returns its SYCL
+  /// If this is a named address space attribute for SYCL compilation, returns its
   /// representation in LangAS, otherwise returns default address space.
   LangAS asSYCLLangAS() const {
     switch (getKind()) {
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    case ParsedAttr::AT_OffloadGlobalAddressSpace:
       return LangAS::sycl_global;
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::sycl_global_device;
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
       return LangAS::sycl_global_host;
-    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_OffloadLocalAddressSpace:
       return LangAS::sycl_local;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OffloadPrivateAddressSpace:
       return LangAS::sycl_private;
-    case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_OffloadGenericAddressSpace:
+      return LangAS::sycl_generic;
     default:
       return LangAS::Default;
     }

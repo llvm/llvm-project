@@ -228,13 +228,13 @@ bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
   // possible, we would like this list to go away entirely.
   switch (getParsedKind()) {
   case AT_AddressSpace:
-  case AT_OpenCLPrivateAddressSpace:
-  case AT_OpenCLGlobalAddressSpace:
+  case AT_OffloadPrivateAddressSpace:
+  case AT_OffloadGlobalAddressSpace:
   case AT_OpenCLGlobalDeviceAddressSpace:
   case AT_OpenCLGlobalHostAddressSpace:
-  case AT_OpenCLLocalAddressSpace:
-  case AT_OpenCLConstantAddressSpace:
-  case AT_OpenCLGenericAddressSpace:
+  case AT_OffloadLocalAddressSpace:
+  case AT_OffloadConstantAddressSpace:
+  case AT_OffloadGenericAddressSpace:
   case AT_NeonPolyVectorType:
   case AT_NeonVectorType:
   case AT_ArmMveStrictPolymorphism:
