@@ -1045,9 +1045,9 @@ static mlir::Value packArgsIntoNVPTXFormatBuffer(CIRGenFunction &cgf,
     // pass a nullptr to vprintf.
     return builder.getNullPtr(builder.getVoidPtrTy(), loc);
 
-  llvm::SmallVector<mlir::Type, 8> argTypes;
+  llvm::SmallVector<mlir::Type> argTypes;
   for (const auto &arg : llvm::drop_begin(args))
-    argTypes.push_back(arg.getRValue(cgf, loc).getValue().getType());
+    argTypes.push_back(arg.getKnownRValue().getValue().getType());
 
   // We can directly store the arguments into a struct, and the alignment
   // would automatically be correct. That's because vprintf does not
@@ -1065,8 +1065,8 @@ static mlir::Value packArgsIntoNVPTXFormatBuffer(CIRGenFunction &cgf,
         /*index=*/i);
     auto abiAlign = clang::CharUnits::fromQuantity(
         dataLayout.getABITypeAlign(argTypes[i]).value());
-    cir::StoreOp::create(builder, loc, arg.getRValue(cgf, loc).getValue(),
-                         member, /*is_volatile=*/false,
+    cir::StoreOp::create(builder, loc, arg.getKnownRValue().getValue(), member,
+                         /*is_volatile=*/false,
                          builder.getAlignmentAttr(abiAlign),
                          /*sync_scope=*/cir::SyncScopeKindAttr{},
                          /*mem_order=*/cir::MemOrderAttr{});
@@ -1078,6 +1078,9 @@ static mlir::Value packArgsIntoNVPTXFormatBuffer(CIRGenFunction &cgf,
 mlir::Value
 CIRGenFunction::emitNVPTXDevicePrintfCallExpr(const CallExpr *expr) {
   assert(cgm.getTriple().isNVPTX());
+  assert(expr->getBuiltinCallee() == Builtin::BIprintf ||
+         expr->getBuiltinCallee() == Builtin::BI__builtin_printf);
+  assert(expr->getNumArgs() >= 1); // printf always has at least one arg.
   CallArgList args;
   emitCallArgs(args,
                expr->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
@@ -1085,11 +1088,10 @@ CIRGenFunction::emitNVPTXDevicePrintfCallExpr(const CallExpr *expr) {
 
   mlir::Location loc = getLoc(expr->getBeginLoc());
 
-  // Except the format string, no non-scalar arguments are allowed for
-  // device-side printf.
+  // We don't know how to emit non-scalar varargs.
   bool hasNonScalar =
       llvm::any_of(llvm::drop_begin(args), [&](const CallArg &a) {
-        return !a.getRValue(*this, loc).isScalar();
+        return a.hasLValue() || !a.getKnownRValue().isScalar();
       });
   if (hasNonScalar) {
     cgm.errorUnsupported(expr, "non-scalar args to printf");
@@ -1104,7 +1106,8 @@ CIRGenFunction::emitNVPTXDevicePrintfCallExpr(const CallExpr *expr) {
           {cir::PointerType::get(builder.getSInt8Ty()), builder.getVoidPtrTy()},
           builder.getSInt32Ty()),
       "vprintf");
-  auto formatString = args[0].getRValue(*this, loc).getValue();
-  llvm::SmallVector<mlir::Value, 2> callArgs = {formatString, packedData};
-  return builder.createCallOp(loc, vprintf, callArgs).getResult();
+  auto formatString = args[0].getKnownRValue().getValue();
+  return builder
+      .createCallOp(loc, vprintf, mlir::ValueRange{formatString, packedData})
+      .getResult();
 }
