@@ -327,7 +327,7 @@ namespace bad7 {
   // expected-note@+2 {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
   template<int, typename... Ts>
   void sycl_kernel_launch(const char *, Ts...);
-  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}
+  // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}} expected-note@-1 {{template argument for non-type template parameter must be an expression}}
   // expected-note@+2 {{this indicates a problem with the SYCL runtime header files; please consider reporting this to your SYCL runtime provider}}
   // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<7>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<7>') required here}}
   [[clang::sycl_kernel_entry_point(BADKN<7>)]]
