@@ -21,9 +21,8 @@ FunctionInfo::create(CallingConv::ID CC, const Type *ReturnType,
 
   void *Buffer = operator new(totalSizeToAlloc<ArgEntry>(ArgTypes.size()));
 
-  // We can use standard std::unique_ptr here because FunctionInfo overloads
-  // the non-sized operator delete, which avoids sized deallocation issues
-  // when deallocating the custom-sized buffer containing trailing objects.
+  // FunctionInfo overloads operator delete, so we can use std::unique_ptr
+  // without worrying about sized deallocation of trailing objects.
   std::unique_ptr<FunctionInfo> FI(
       new (Buffer) FunctionInfo(CC, ReturnType, ArgTypes.size(), NumRequired));
 
