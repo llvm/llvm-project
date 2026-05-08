@@ -378,12 +378,11 @@ Expected<uint64_t> BigArchiveMemberHeader::getSize() const {
 }
 
 template <std::size_t N>
-StringRef ebcdicFieldToASCII(const char (&Field)[N],
-                             SmallVectorImpl<char> &Dst) {
-  Dst.clear();
+std::string ebcdicFieldToASCII(const char (&Field)[N]) {
+  SmallString<64> Dst;
   StringRef Src = StringRef(Field, N);
   ConverterEBCDIC::convertToUTF8(Src, Dst);
-  return StringRef(Dst.data(), Dst.size()).rtrim(" ");
+  return Dst.str().rtrim(" ").str();
 }
 
 ZOSArchiveMemberHeader::ZOSArchiveMemberHeader(const Archive *Parent,
@@ -395,17 +394,15 @@ ZOSArchiveMemberHeader::ZOSArchiveMemberHeader(const Archive *Parent,
 }
 
 Expected<uint64_t> ZOSArchiveMemberHeader::getSize() const {
-  SmallString<64> Dst;
-  return getArchiveMemberDecField(
-      "size", ebcdicFieldToASCII(ArMemHdr->Size, Dst), Parent, this);
+  return getArchiveMemberDecField("size", ebcdicFieldToASCII(ArMemHdr->Size),
+                                  Parent, this);
 }
 
 Expected<StringRef> ZOSArchiveMemberHeader::getRawName() const {
   return StringRef(RawMemberName);
 }
 
-Expected<StringRef> ZOSArchiveMemberHeader::getName(uint64_t Size) const {
-  (void)Size;
+Expected<StringRef> ZOSArchiveMemberHeader::getName(uint64_t /*Size*/) const {
   return StringRef(MemberName);
 }
 
@@ -422,12 +419,11 @@ StringRef ZOSArchiveMemberHeader::getRawUID() const { return StringRef(UID); }
 StringRef ZOSArchiveMemberHeader::getRawGID() const { return StringRef(GID); }
 
 void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
-  SmallString<64> Dst;
   uint64_t Offset =
       reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
 
   // Set RawMemberName
-  StringRef RawNameRef = ebcdicFieldToASCII(ArMemHdr->Name, Dst);
+  std::string RawNameRef = ebcdicFieldToASCII(ArMemHdr->Name);
   if (RawNameRef.empty() || RawNameRef[0] == ' ') {
     *Err = malformedError("name contains a leading space for archive member "
                           "header at offset " +
@@ -437,22 +433,22 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   RawMemberName.assign(RawNameRef);
 
   // Set MemberName.
-  if (RawNameRef.starts_with("#1/")) {
+  if (StringRef(RawNameRef).starts_with("#1/")) {
     Expected<StringRef> NameOrErr = ArchiveMemberHeader::getName(Size);
     if (!NameOrErr) {
       *Err = NameOrErr.takeError();
       return;
     }
     StringRef Name = NameOrErr.get();
-    Dst.clear();
-    ConverterEBCDIC::convertToUTF8(Name, Dst);
-    MemberName.append(Dst.str());
+    SmallString<64> ConvertedName;
+    ConverterEBCDIC::convertToUTF8(Name, ConvertedName);
+    MemberName.assign(ConvertedName.str());
   } else {
     MemberName = RawMemberName;
   }
 
   // LastModified
-  StringRef LastModifiedRef = ebcdicFieldToASCII(ArMemHdr->LastModified, Dst);
+  std::string LastModifiedRef = ebcdicFieldToASCII(ArMemHdr->LastModified);
   if (LastModifiedRef.empty()) {
     *Err =
         malformedError("LastModified field is empty or contains only spaces in "
@@ -463,7 +459,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   LastModified.assign(LastModifiedRef);
 
   // UID
-  StringRef UIDRef = ebcdicFieldToASCII(ArMemHdr->UID, Dst);
+  std::string UIDRef = ebcdicFieldToASCII(ArMemHdr->UID);
   if (UIDRef.empty()) {
     *Err = malformedError("UID field is empty or contains only spaces in "
                           "archive member header at offset " +
@@ -473,7 +469,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   UID.assign(UIDRef);
 
   // GID
-  StringRef GIDRef = ebcdicFieldToASCII(ArMemHdr->GID, Dst);
+  std::string GIDRef = ebcdicFieldToASCII(ArMemHdr->GID);
   if (GIDRef.empty()) {
     *Err = malformedError("GID field is empty or contains only spaces in "
                           "archive member header at offset " +
@@ -483,7 +479,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   GID.assign(GIDRef);
 
   // AccessMode
-  StringRef AccessModeRef = ebcdicFieldToASCII(ArMemHdr->AccessMode, Dst);
+  std::string AccessModeRef = ebcdicFieldToASCII(ArMemHdr->AccessMode);
   if (AccessModeRef.empty()) {
     *Err =
         malformedError("AccessMode field is empty or contains only spaces in "
