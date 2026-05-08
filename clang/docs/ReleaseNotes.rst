@@ -317,6 +317,10 @@ Attribute Changes in Clang
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
 
+- :doc:`ThreadSafetyAnalysis` attributes now correctly handle implicit member
+  accesses in C, and parameter attributes in C++. This improves diagnostic
+  precision and fixes false positives.
+
 - The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
   ``pt_guarded_by`` now accept multiple capability arguments with refined
   access semantics: *writing* requires all listed capabilities to be held
@@ -352,6 +356,7 @@ Attribute Changes in Clang
   usage.
 
 - Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
+- Clang now disallows use of the ``selectany`` attribute on non-global-variable declarations. (#GH189141)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -475,6 +480,9 @@ Improvements to Clang's diagnostics
   skipping subsequent valid declarations when their previous decl is missing semicolon.
 
 - Removed the body of lambdas from some diagnostic messages.
+
+- Fixed false positive host-device mismatch errors in discarded `if constexpr` branches for CUDA/HIP;
+  such calls are now correctly skipped.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -650,6 +658,8 @@ Windows Support
 
 - Clang now defines the ``_MSVC_TRADITIONAL`` macro as ``1`` when emulating MSVC
   19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
+- ``-fmacro-prefix-map=`` (``-ffile-prefix-map=``) now affects an anonymous namespace hash generation
+  for the MSVC targets and allows deterministic symbol mangling for reproducible builds.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -744,6 +754,12 @@ Code Completion
 
 Static Analyzer
 ---------------
+
+Crash and bug fixes
+^^^^^^^^^^^^^^^^^^^
+
+- Fixed ``security.VAList`` checker producing false positives when analyzing
+  C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
 .. comment:
   This is for the Static Analyzer.

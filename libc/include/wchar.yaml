@@ -369,3 +369,70 @@ functions:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
+  - name: fgetwc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: FILE *
+  - name: fgetws
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: int
+      - type: FILE *__restrict
+  - name: fputwc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wchar_t
+      - type: FILE *
+  - name: fputws
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: FILE *__restrict
+  - name: fwide
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: FILE *
+      - type: int
+  - name: getwc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: FILE *
+  - name: getwchar
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: void
+  - name: putwc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wchar_t
+      - type: FILE *
+  - name: putwchar
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wchar_t
+  - name: ungetwc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wint_t
+      - type: FILE *

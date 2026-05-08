@@ -1313,14 +1313,6 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
   return Status();
 }
 
-void NativeProcessLinux::DoStopIDBumped(uint32_t newBumpId) {
-  Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "newBumpId={0}", newBumpId);
-  LLDB_LOG(log, "clearing {0} entries from memory region cache",
-           m_mem_region_cache.size());
-  m_mem_region_cache.clear();
-}
-
 llvm::Expected<uint64_t>
 NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   PopulateMemoryRegionCache();
