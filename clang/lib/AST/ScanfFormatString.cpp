@@ -14,6 +14,7 @@
 #include "FormatStringParsing.h"
 #include "clang/AST/FormatString.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/TextEncoding.h"
 
 using clang::UpdateOnReturn;
 using clang::analyze_format_string::ArgType;
@@ -71,17 +72,15 @@ static bool ParseScanList(FormatStringHandler &H, ScanfConversionSpecifier &CS,
 
 // FIXME: Much of this is copy-paste from ParsePrintfSpecifier.
 // We can possibly refactor.
-static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
-                                                const char *&Beg, const char *E,
-                                                unsigned &argIndex,
-                                                const LangOptions &LO,
-                                                const TargetInfo &Target) {
+static ScanfSpecifierResult ParseScanfSpecifier(
+    FormatStringHandler &H, const char *&Beg, const char *E, unsigned &argIndex,
+    const LangOptions &LO, const TargetInfo &Target,
+    const llvm::TextEncodingConverter &FormatStrConverter) {
   using namespace clang::analyze_format_string;
   using namespace clang::analyze_scanf;
   const char *I = Beg;
   const char *Start = nullptr;
   UpdateOnReturn<const char *> UpdateBeg(Beg, I);
-
   // Look for a '%' character that indicates the start of a format specifier.
   for (; I != E; ++I) {
     char c = *I;
@@ -90,7 +89,9 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       H.HandleNullChar(I);
       return true;
     }
-    if (c == '%') {
+    SmallString<1> ConvertedChar;
+    FormatStrConverter.convert(StringRef(&c, 1), ConvertedChar);
+    if (ConvertedChar[0] == '%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -107,7 +108,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   ScanfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E))
+  if (ParseArgPosition(H, FS, Start, I, E, FormatStrConverter))
     return true;
 
   if (I == E) {
@@ -117,7 +118,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for '*' flag if it is present.
-  if (*I == '*') {
+  if (FormatStrConverter.convert(*I) == '*') {
     FS.setSuppressAssignment(I);
     if (++I == E) {
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -127,7 +128,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
 
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
-  const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(I, E);
+  const OptionalAmount &Amt =
+      clang::analyze_format_string::ParseAmount(I, E, FormatStrConverter);
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
@@ -140,7 +142,9 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, /*IsScanf=*/true) && I == E) {
+  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter,
+                          /*IsScanf=*/true) &&
+      I == E) {
     // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
@@ -155,7 +159,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ScanfConversionSpecifier::Kind k = ScanfConversionSpecifier::InvalidSpecifier;
-  switch (*conversionPosition) {
+  switch (FormatStrConverter.convert(*conversionPosition)) {
   default:
     break;
   case '%':
@@ -262,7 +266,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len);
+    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
+                                                    FormatStrConverter);
   }
   return ScanfSpecifierResult(Start, FS);
 }
@@ -616,11 +621,20 @@ bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
                                                     const TargetInfo &Target) {
 
   unsigned argIndex = 0;
+  // On z/OS, format strings are IBM-1047 encoded. Create the converter once
+  // here and pass it through to avoid recreating it for every specifier.
+  auto MaybeConverter =
+      Target.getTriple().isOSzOS()
+          ? llvm::TextEncodingConverter::create(llvm::TextEncoding::IBM1047,
+                                                llvm::TextEncoding::UTF8)
+          : llvm::TextEncodingConverter::createNoopConverter();
+  assert(MaybeConverter && "Failed to create format string converter");
+  llvm::TextEncodingConverter Conv = std::move(*MaybeConverter);
 
   // Keep looking for a format specifier until we have exhausted the string.
   while (I != E) {
     const ScanfSpecifierResult &FSR =
-        ParseScanfSpecifier(H, I, E, argIndex, LO, Target);
+        ParseScanfSpecifier(H, I, E, argIndex, LO, Target, Conv);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())

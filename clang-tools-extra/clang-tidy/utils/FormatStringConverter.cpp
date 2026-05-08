@@ -621,7 +621,8 @@ bool FormatStringConverter::convertArgument(const PrintfSpecifier &FS,
 bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   const char *StartSpecifier,
                                                   unsigned SpecifierLen,
-                                                  const TargetInfo &Target) {
+                                                  const TargetInfo &Target,
+                                                  const llvm::TextEncodingConverter &) {
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 
