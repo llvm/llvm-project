@@ -18,7 +18,7 @@ class RematerializerTest : public CodeGenTestBase {
 public:
   std::unique_ptr<SmallVector<Rematerializer::RegionBoundaries>> Regions;
   std::unique_ptr<Rematerializer> Remater;
-  MachineFunction* MF;
+  MachineFunction *MF;
 
   static void SetUpTestCase() {
     InitializeAllTargets();
