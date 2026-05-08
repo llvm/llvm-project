@@ -4,10 +4,14 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-readelf -S %t.exe | FileCheck %s --check-prefix=SECTIONS
 # RUN: llvm-bolt %t.exe -o %t.bolt -relocs 2>&1 | FileCheck %s
+# RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=OUTPUT
 
 # SECTIONS: .crel.text
 
 # CHECK: BOLT-INFO: enabling relocation mode
+
+# OUTPUT: .text
+# OUTPUT-NOT: .crel.text
 
 --- !ELF
 FileHeader:
