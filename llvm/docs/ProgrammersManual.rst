@@ -391,7 +391,7 @@ doxygen documentation or by looking at the unit test suite.
   S = formatv("{0,+7}", 'a');  // S == "      a";
 
   // Custom styles
-  S = formatv("{0:N} - {0:x} - {1:E}", 12345, 123908342); // S == "12,345 - 0x3039 - 1.24E8"
+  S = formatv("{0:N} - {0:x}", 12345); // S == "12,345 - 0x3039"
 
   // Adapters
   S = formatv("{0}", fmt_align(42, AlignStyle::Center, 7));  // S == "  42   "
