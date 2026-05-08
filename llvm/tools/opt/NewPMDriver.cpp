@@ -238,6 +238,10 @@ static cl::opt<bool> DisableLoopUnrolling(
     "disable-loop-unrolling",
     cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
 
+static cl::opt<bool>
+    EnableLoopInterchange("enable-loopinterchange", cl::init(false), cl::Hidden,
+                          cl::desc("Enable the LoopInterchange Pass"));
+
 template <typename PassManagerT>
 bool tryParsePipelineText(PassBuilder &PB,
                           const cl::opt<std::string> &PipelineOpt) {
@@ -459,6 +463,7 @@ bool llvm::runPassPipeline(
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
   PTO.LoopFusion = EnableLoopFusion;
+  PTO.LoopInterchange = EnableLoopInterchange;
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
