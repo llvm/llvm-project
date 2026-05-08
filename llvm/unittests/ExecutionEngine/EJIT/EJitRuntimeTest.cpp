@@ -1713,4 +1713,391 @@ TEST(EJitEndToEnd, CacheInvalidation) {
   EXPECT_EQ(stats.entryCount, 1u);  // only key_b remains
 }
 
+//===----------------------------------------------------------------------===//
+// JIT pipeline IR verification tests
+//===----------------------------------------------------------------------===//
+
+/// Create IR matching the process_board trace test pattern:
+///   if (g_cfg.field0 == 1) { g_cfg.field1 = 100; } else { g_cfg.field1 = 200; }
+/// After StructField, the branch on field0 should fold, eliminating the dead path.
+static Function *createBranchOnFieldFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  auto *Int32Ty = B.getInt32Ty();
+  auto *STy = StructType::create(Ctx, {Int32Ty, Int32Ty}, "Cfg");
+
+  auto *GV = new GlobalVariable(M, STy, false, GlobalValue::InternalLinkage,
+                                 ConstantStruct::get(STy, ConstantInt::get(Int32Ty, 0),
+                                                     ConstantInt::get(Int32Ty, 0)),
+                                 "g_cfg");
+  Metadata *PeriodOps[] = {
+      MDString::get(Ctx, "ejit_period"),
+      MDString::get(Ctx, "static"),
+  };
+  GV->setMetadata(MD_EJIT_METADATA,
+                  MDNode::get(Ctx, {MDNode::get(Ctx, PeriodOps)}));
+
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "process_data", &M);
+
+  auto *Entry = BasicBlock::Create(Ctx, "entry", F);
+  auto *ThenBB = BasicBlock::Create(Ctx, "then", F);
+  auto *ElseBB = BasicBlock::Create(Ctx, "else", F);
+  auto *Merge = BasicBlock::Create(Ctx, "merge", F);
+
+  B.SetInsertPoint(Entry);
+  Value *I0[] = {B.getInt32(0), B.getInt32(0)};
+  auto *GEP_f0 = B.CreateInBoundsGEP(STy, GV, I0, "field0");
+  auto *Load = B.CreateLoad(Int32Ty, GEP_f0, "load_field0");
+  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  auto *Cmp = B.CreateICmpEQ(Load, B.getInt32(1), "cmp");
+  B.CreateCondBr(Cmp, ThenBB, ElseBB);
+
+  B.SetInsertPoint(ThenBB);
+  Value *I1_t[] = {B.getInt32(0), B.getInt32(1)};
+  auto *GEP_xx_t = B.CreateInBoundsGEP(STy, GV, I1_t, "xx_then");
+  B.CreateStore(B.getInt32(100), GEP_xx_t);
+  B.CreateBr(Merge);
+
+  B.SetInsertPoint(ElseBB);
+  Value *I1_e[] = {B.getInt32(0), B.getInt32(1)};
+  auto *GEP_xx_e = B.CreateInBoundsGEP(STy, GV, I1_e, "xx_else");
+  B.CreateStore(B.getInt32(200), GEP_xx_e);
+  B.CreateBr(Merge);
+
+  B.SetInsertPoint(Merge);
+  B.CreateRetVoid();
+  return F;
+}
+
+TEST(EJitPipelineIR, BranchFoldingOnMayConst) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("branch_fold", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createBranchOnFieldFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  // Count branches before optimization
+  int brBefore = 0;
+  for (auto &BB : *F)
+    if (isa<BranchInst>(BB.getTerminator()))
+      ++brBefore;
+  EXPECT_GE(brBefore, 1);
+
+  // Mock: field0 = 1
+  struct MockCfg { int32_t f0; int32_t f1; };
+  MockCfg mock = {1, 0};
+
+  PeriodArrayRegistry reg;
+  reg.registerStaticVar("g_cfg", &mock);
+
+  // Full pipeline: StructField -> InstCombine -> Inline -> L2
+  EJitStructFieldPass sfp(reg);
+  EJitOptimizer opt(reg);
+
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  sfp.run(*F, FAM);
+  opt.runInstCombine(*M);
+  opt.runInline(*M);
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
+
+  // After full pipeline: no loads should remain (all may_const replaced)
+  int loadCount = 0;
+  for (auto &BB : *F)
+    for (auto &I : BB)
+      if (isa<LoadInst>(&I))
+        ++loadCount;
+  EXPECT_EQ(loadCount, 0) << "All may_const loads should be replaced";
+
+  // The branch on field0 == 1 should be folded (single conditional branch gone)
+  // May still have unconditional branches for block transitions
+  int condBrCount = 0;
+  for (auto &BB : *F) {
+    auto *BI = dyn_cast<BranchInst>(BB.getTerminator());
+    if (BI && BI->isConditional())
+      ++condBrCount;
+  }
+  EXPECT_EQ(condBrCount, 0) << "Conditional branch should be eliminated";
+}
+
+/// Create IR matching the process_cell trace test pattern:
+///   g_arr[idx].field == 0xFD ? a += 5 : a += 15
+/// With idx=0 replaced by constant during preReplacePeriodIndices.
+static Function *createCellProcessFunc(LLVMContext &Ctx, Module &M) {
+  IRBuilder<> B(Ctx);
+  auto *Int32Ty = B.getInt32Ty();
+  auto *STy = StructType::create(Ctx, {Int32Ty, Int32Ty}, "CellCfg");
+  auto *ArrTy = ArrayType::get(STy, 4);
+
+  auto *GV = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                                 ConstantAggregateZero::get(ArrTy), "g_cells");
+  Metadata *ArrOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GV->setMetadata(MD_EJIT_METADATA,
+                  MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
+
+  // Function: void process_cell(i32 cell_idx) — ejit_period_arr_ind on arg 0
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {Int32Ty}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "process_cell", &M);
+  F->getArg(0)->setName("cell_idx");
+
+  // Attach ejit_period_arr_ind metadata on arg 0
+  Metadata *IndOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR_IND),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 0)),
+  };
+  F->setMetadata(MD_EJIT_METADATA,
+                 MDNode::get(Ctx, {MDNode::get(Ctx, IndOps)}));
+
+  auto *Entry = BasicBlock::Create(Ctx, "entry", F);
+  auto *ThenBB = BasicBlock::Create(Ctx, "then", F);
+  auto *ElseBB = BasicBlock::Create(Ctx, "else", F);
+  auto *Merge  = BasicBlock::Create(Ctx, "merge", F);
+
+  B.SetInsertPoint(Entry);
+  // Load field 0 at cell_idx: gep %STy, %ArrTy* @g_cells, i32 0, i64 %cell_idx, i32 0
+  Value *Idx_f0[] = {B.getInt32(0), F->getArg(0), B.getInt32(0)};
+  auto *GEP_f0 = B.CreateInBoundsGEP(ArrTy, GV, Idx_f0, "cell_f0");
+  auto *Load = B.CreateLoad(Int32Ty, GEP_f0, "load_f0");
+  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  auto *Cmp = B.CreateICmpEQ(Load, B.getInt32(253), "cmp"); // 0xFD = 253
+  B.CreateCondBr(Cmp, ThenBB, ElseBB);
+
+  B.SetInsertPoint(ThenBB);
+  Value *Idx_f1_t[] = {B.getInt32(0), F->getArg(0), B.getInt32(1)};
+  auto *GEP_xx = B.CreateInBoundsGEP(ArrTy, GV, Idx_f1_t, "field1_then");
+  auto *Old = B.CreateLoad(Int32Ty, GEP_xx, "old_val");
+  auto *New = B.CreateAdd(Old, B.getInt32(5));
+  B.CreateStore(New, GEP_xx);
+  B.CreateBr(Merge);
+
+  B.SetInsertPoint(ElseBB);
+  Value *Idx_f1_e[] = {B.getInt32(0), F->getArg(0), B.getInt32(1)};
+  auto *GEP_xx_e = B.CreateInBoundsGEP(ArrTy, GV, Idx_f1_e, "field1_else");
+  auto *Old_e = B.CreateLoad(Int32Ty, GEP_xx_e, "old_val_e");
+  auto *New_e = B.CreateAdd(Old_e, B.getInt32(15));
+  B.CreateStore(New_e, GEP_xx_e);
+  B.CreateBr(Merge);
+
+  B.SetInsertPoint(Merge);
+  B.CreateRetVoid();
+  return F;
+}
+
+TEST(EJitPipelineIR, CellProcessBranchFolding) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("cell_process", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createCellProcessFunc(Ctx, *M);
+  ASSERT_NE(F, nullptr);
+
+  // Mock: g_cells[0].field0 = 0xFD (253), g_cells[0].field1 = 0
+  struct MockCell { int32_t f0; int32_t f1; };
+  MockCell mockArr[4] = {{253, 0}, {0, 0}, {0, 0}, {0, 0}};
+
+  PeriodArrayRegistry reg;
+  reg.registerArray("cell", "g_cells", mockArr, 4);
+
+  SpecializationContext ctx;
+  ctx.fnName = "process_cell";
+  ctx.dimensions.push_back({"cell", 0});
+  ctx.optLevel = llvm::ejit::OptimizationLevel::L2;
+
+  EJitOptimizer opt(reg);
+  // 1. Replace period index arg (cell_idx=0) with constant
+  opt.preReplacePeriodIndices(*M, ctx);
+  // 2. Fold constant chains + Promote
+  opt.runInstCombine(*M);
+
+  // 3. StructField: replace may_const loads
+  EJitStructFieldPass sfp(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  sfp.run(*F, FAM);
+
+  // 4. Final cleanup
+  opt.runInstCombine(*M);
+  opt.runInline(*M);
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
+
+  // All may_const loads should be gone
+  int mayConstLoads = 0;
+  for (auto &BB : *F)
+    for (auto &I : BB)
+      if (auto *LI = dyn_cast<LoadInst>(&I))
+        if (LI->hasMetadata("ejit.may_const"))
+          ++mayConstLoads;
+  EXPECT_EQ(mayConstLoads, 0);
+
+  // Conditional branch should be eliminated
+  int condBr = 0;
+  for (auto &BB : *F) {
+    auto *BI = dyn_cast<BranchInst>(BB.getTerminator());
+    if (BI && BI->isConditional())
+      ++condBr;
+  }
+  EXPECT_EQ(condBr, 0) << "Conditional branch on may_const field should be folded";
+}
+
+/// Verify InstCombine runs correctly after period index replacement
+/// (catches the case where preReplacePeriodIndices + InstCombine should
+/// fold a constant expression like "period_idx" replaced with constant).
+TEST(EJitPipelineIR, PeriodIndexReplacementAndFold) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("period_idx_fold", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  IRBuilder<> B(Ctx);
+  auto *Int32Ty = B.getInt32Ty();
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {Int32Ty}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "test_fn", M.get());
+  F->getArg(0)->setName("period_idx");
+
+  Metadata *IndOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR_IND),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 0)),
+  };
+  F->setMetadata(MD_EJIT_METADATA,
+                 MDNode::get(Ctx, {MDNode::get(Ctx, IndOps)}));
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+  // period_idx * 2 + 10: should fold to 42 * 2 + 10 = 94 after replacement
+  auto *Mul = B.CreateMul(F->getArg(0), B.getInt32(2), "mul");
+  auto *Add = B.CreateAdd(Mul, B.getInt32(10), "add");
+  B.CreateRet(Add);
+
+  PeriodArrayRegistry reg;
+  SpecializationContext ctx;
+  ctx.fnName = "test_fn";
+  ctx.dimensions.push_back({"cell", 42});
+
+  EJitOptimizer opt(reg);
+  opt.preReplacePeriodIndices(*M, ctx);
+  opt.runInstCombine(*M);
+
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 94);
+}
+
+/// Verify that Inline actually inlines a callee (for L2+ optimization).
+TEST(EJitPipelineIR, InlineVerification) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("inline_verify", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  IRBuilder<> B(Ctx);
+  auto *Int32Ty = B.getInt32Ty();
+
+  // Callee (internal, always_inline)
+  FunctionType *CalleeFT = FunctionType::get(Int32Ty, {}, false);
+  auto *Callee = Function::Create(CalleeFT, GlobalValue::InternalLinkage, "callee", M.get());
+  Callee->addFnAttr(Attribute::AlwaysInline);
+  BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "entry", Callee);
+  B.SetInsertPoint(CalleeBB);
+  B.CreateRet(B.getInt32(77));
+
+  // Caller
+  FunctionType *CallerFT = FunctionType::get(Int32Ty, {}, false);
+  auto *Caller = Function::Create(CallerFT, GlobalValue::ExternalLinkage, "caller", M.get());
+  BasicBlock *CallerBB = BasicBlock::Create(Ctx, "entry", Caller);
+  B.SetInsertPoint(CallerBB);
+  auto *Call = B.CreateCall(Callee);
+  B.CreateRet(Call);
+
+  PeriodArrayRegistry reg;
+  EJitOptimizer opt(reg);
+  opt.runInline(*M);
+
+  // Callee should be dead (all uses inlined)
+  EXPECT_TRUE(Callee->use_empty() || Callee->hasNUses(0));
+
+  // Return should be constant 77
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&Caller->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 77);
+}
+
+//===----------------------------------------------------------------------===//
+// JIT cache lifecycle tests
+//===----------------------------------------------------------------------===//
+
+TEST(EJitCacheLifecycle, HitAfterPut) {
+  EJitCache cache(100, 1024 * 1024);
+  int dummy = 42;
+  EXPECT_EQ(cache.getOrNull("key"), nullptr);
+  cache.put("key", &dummy, 64);
+  EXPECT_EQ(cache.getOrNull("key"), &dummy);
+}
+
+TEST(EJitCacheLifecycle, MissAfterInvalidate) {
+  EJitCache cache(100, 1024 * 1024);
+  int dummy = 42;
+  std::set<std::string> deps = {"cell=5"};
+  cache.put("key", &dummy, 64, deps);
+  EXPECT_NE(cache.getOrNull("key"), nullptr);
+  cache.invalidateByPeriod("cell", 5);
+  EXPECT_EQ(cache.getOrNull("key"), nullptr);
+}
+
+TEST(EJitCacheLifecycle, MissAfterEviction) {
+  EJitCache cache(2, 1024 * 1024);
+  int a, b, c;
+  cache.put("a", &a, 1);
+  cache.put("b", &b, 1);
+  cache.put("c", &c, 1);  // should evict 'a'
+  EXPECT_EQ(cache.getOrNull("a"), nullptr);
+  EXPECT_NE(cache.getOrNull("c"), nullptr);
+}
+
+TEST(EJitCacheLifecycle, MissAfterClear) {
+  EJitCache cache(10, 1024 * 1024);
+  int dummy;
+  cache.put("a", &dummy, 64);
+  cache.put("b", &dummy, 64);
+  cache.clear();
+  EXPECT_EQ(cache.getOrNull("a"), nullptr);
+  EXPECT_EQ(cache.getOrNull("b"), nullptr);
+}
+
+TEST(EJitCacheLifecycle, ReputAfterInvalidate) {
+  EJitCache cache(100, 1024 * 1024);
+  int dummy = 42;
+  std::set<std::string> deps = {"cell=3"};
+  cache.put("key", &dummy, 64, deps);
+  cache.invalidateByPeriod("cell", 3);
+  // Reput with new value
+  int newVal = 99;
+  cache.put("key", &newVal, 64, deps);
+  EXPECT_EQ(cache.getOrNull("key"), &newVal);
+}
+
 
