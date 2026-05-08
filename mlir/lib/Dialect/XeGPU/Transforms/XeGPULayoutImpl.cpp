@@ -148,6 +148,9 @@ static void propagateResultsToRegularOperands(Operation *op) {
   if (isa<VectorType>(resultType) || isa<vector::MultiDimReductionOp>(op))
     xegpu::setTemporaryLayout(result, resLayout);
 
+  if (isa<vector::DeinterleaveOp>(op))
+    xegpu::setTemporaryLayout(op->getResult(1), resLayout);
+
   for (OpOperand &opr : op->getOpOperands()) {
     xegpu::DistributeLayoutAttr operandLayout =
         xegpu::inferSourceLayoutFromResult(opr, resLayout);
@@ -1003,6 +1006,7 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
   int resElemTyBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
   SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
@@ -1013,7 +1017,6 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
   int64_t instDataValue = -1;
   int64_t laneDataValue = -1;
   const int subgroupSize = uArch->getSubgroupSize();
-
   if (srcElemTyBitWidth > resElemTyBitWidth) {
     // When casting to a smaller bitwidth, multiply the result layout
     // accordingly to ensure it can be divided by the ratio back to the
@@ -1022,18 +1025,21 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     int innermostDimLaneLayout = subgroupSize;
     if (layoutKind == xegpu::LayoutKind::Subgroup) {
       sgDataValue = sgData[dim];
+      while ((sgDataValue <= resShape[dim]) &&
+             (sgDataValue % bitWidthRatio) != 0)
+        sgDataValue *= 2;
     } else if (layoutKind == xegpu::LayoutKind::InstData) {
       instDataValue = instData[dim];
       // Adjust instDataValue so it still fits within an instruction after
       // dividing by bitWidthRatio
-      while ((instDataValue <= srcShape[dim]) &&
+      while ((instDataValue <= resShape[dim]) &&
              (instDataValue % (innermostDimLaneLayout * bitWidthRatio) != 0))
         instDataValue *= 2;
-      assert((srcShape[dim] % instDataValue) == 0 &&
-             "srcShape, instData, and lanelayout for innermost must be 2^n !");
+      assert((resShape[dim] % instDataValue) == 0 &&
+             "resShape, instData, and lanelayout for innermost must be 2^n !");
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
       laneDataValue = laneData[dim];
-      while ((laneDataValue <= srcShape[dim]) &&
+      while ((laneDataValue <= resShape[dim]) &&
              (laneDataValue % bitWidthRatio != 0))
         laneDataValue *= 2;
     }
