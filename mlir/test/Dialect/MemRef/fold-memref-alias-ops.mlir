@@ -792,7 +792,7 @@ func.func @fold_vector_transfer_read_expand_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[PAD:.*]] = ub.poison : f32
-//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index disjoint [%[[ARG1]], %[[C0]]] by (4, 8)
 //       CHECK:   vector.transfer_read %[[ARG0]][%[[IDX]]], %[[PAD]] {in_bounds = [true]}
 
 // -----
@@ -812,8 +812,8 @@ func.func @fold_vector_transfer_read_expand_shape_non_identity(
 //  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[PAD:.*]] = ub.poison : f32
-//       CHECK:   %[[IDX1:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
-//       CHECK:   %[[IDX2:.*]] = affine.linearize_index [%[[ARG2]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[IDX1:.*]] = affine.linearize_index disjoint [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[IDX2:.*]] = affine.linearize_index disjoint [%[[ARG2]], %[[C0]]] by (4, 8)
 //       CHECK:   vector.transfer_read %[[ARG0]][%[[IDX1]], %[[IDX2]]], %[[PAD]] {in_bounds = [true, true]}
 
 // -----
@@ -924,6 +924,41 @@ func.func @fold_vector_maskedstore_collapse_shape(
 //  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
 //       CHECK:   vector.maskedstore %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @no_fold_collapse_shape_transfer_read(
+    %arg0 : memref<4x4x8xf32>, %arg1 : index) -> vector<4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<4x4x8xf32> into memref<16x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true, true]} : memref<16x8xf32>, vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
+// CHECK-LABEL: func @no_fold_collapse_shape_transfer_read
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x4x8xf32>
+//       CHECK:   memref.collapse_shape %[[ARG0]]
+//       CHECK:   vector.transfer_read
+
+// -----
+
+func.func @fold_collapse_shape_transfer_read(
+    %arg0 : memref<4x4x8xf32>, %arg1 : index) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<4x4x8xf32> into memref<16x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true]} : memref<16x8xf32>, vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_collapse_shape_transfer_read
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x4x8xf32>
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 4)
+//       CHECK:   vector.transfer_read %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1, %[[C0]]], %[[PAD]] {in_bounds = [true]}
 
 // -----
 

@@ -88,12 +88,12 @@ bool boolfalse = false;
 // OGCG:  @boolfalse = global i8 0, align 1
 
 _Float16 f16;
-// CHECK: @f16 = global half 0xH0000, align 2
-// OGCG:  @f16 = global half 0xH0000, align 2
+// CHECK: @f16 = global half 0.000000e+00, align 2
+// OGCG:  @f16 = global half 0.000000e+00, align 2
 
 __bf16 bf16;
-// CHECK: @bf16 = global bfloat 0xR0000, align 2
-// OGCG:  @bf16 = global bfloat 0xR0000, align 2
+// CHECK: @bf16 = global bfloat 0.000000e+00, align 2
+// OGCG:  @bf16 = global bfloat 0.000000e+00, align 2
 
 float f;
 // CHECK: @f = global float 0.000000e+00, align 4
@@ -104,12 +104,12 @@ double d = 1.25;
 // OGCG:  @d = global double 1.250000e+00, align 8
 
 long double ld;
-// CHECK: @ld = global x86_fp80 0xK00000000000000000000, align 16
-// OGCG:  @ld = global x86_fp80 0xK00000000000000000000, align 16
+// CHECK: @ld = global x86_fp80 0.000000e+00, align 16
+// OGCG:  @ld = global x86_fp80 0.000000e+00, align 16
 
 __float128 f128;
-// CHECK: @f128 = global fp128 0xL00000000000000000000000000000000, align 16
-// OGCG:  @f128 = global fp128 0xL00000000000000000000000000000000, align 16
+// CHECK: @f128 = global fp128 0.000000e+00, align 16
+// OGCG:  @f128 = global fp128 0.000000e+00, align 16
 
 void *vp;
 // CHECK: @vp = global ptr null, align 8

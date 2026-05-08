@@ -26,6 +26,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <functional>
 
+namespace Fortran::evaluate::characteristics {
+struct DummyDataObject;
+}
+
 namespace Fortran::semantics {
 
 class DeclTypeSpec;
@@ -230,6 +234,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 }
 
 bool HasCUDAComponent(const Symbol &sym);
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &);
 
 inline bool IsCUDADevice(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {

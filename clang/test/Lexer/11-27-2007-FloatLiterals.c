@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
 
-// CHECK: 0x3BFD83C940000000
-// CHECK: 2.000000e+{{[0]*}}32
-// CHECK: 0x3BFD83C940000000
-// CHECK: 2.000000e+{{[0]*}}32
-// CHECK: 0x7FF0000000000000
+// CHECK: f0x1FEC1E4A
+// CHECK: 2.{{[0]*}}e+32
+// CHECK: f0x1FEC1E4A
+// CHECK: 2.{{[0]*}}e+32
+// CHECK: +inf
 
 float  F  = 1e-19f;
 double D  = 2e32;

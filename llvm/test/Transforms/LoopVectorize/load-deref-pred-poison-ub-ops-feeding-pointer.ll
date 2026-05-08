@@ -161,7 +161,7 @@ define void @ptr_doesnt_depend_on_poison_or_ub(ptr noalias %dst, i16 noundef %of
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 9, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr @src, i16 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -290,7 +290,7 @@ define void @ptr_depends_on_noundef_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i16 9, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr @src, i16 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

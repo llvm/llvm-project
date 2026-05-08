@@ -20,7 +20,7 @@ namespace llvm {
 
 class Function;
 
-class LoopFusePass : public PassInfoMixin<LoopFusePass> {
+class LoopFusePass : public OptionalPassInfoMixin<LoopFusePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

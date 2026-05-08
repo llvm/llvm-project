@@ -21,7 +21,7 @@ class LPMUpdater;
 class Loop;
 
 /// A simple loop rotation transformation.
-class LoopRotatePass : public PassInfoMixin<LoopRotatePass> {
+class LoopRotatePass : public OptionalPassInfoMixin<LoopRotatePass> {
 public:
   LoopRotatePass(bool EnableHeaderDuplication = true,
                  bool PrepareForLTO = false, bool CheckExitCount = false);

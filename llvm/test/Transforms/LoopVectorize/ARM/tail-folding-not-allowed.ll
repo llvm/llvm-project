@@ -421,7 +421,7 @@ define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fptrunc <4 x float> [[TMP5]] to <4 x half>
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x half> [[TMP8]], splat (half 0xH4000)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x half> [[TMP8]], splat (half 2.000000e+00)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds half, ptr [[D:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x half> [[TMP9]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -443,7 +443,7 @@ define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[I_017]]
 ; CHECK-NEXT:    store float [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = fptrunc float [[ADD]] to half
-; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast half [[CONV]], 0xH4000
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast half [[CONV]], 2.000000e+00
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds half, ptr [[D]], i32 [[I_017]]
 ; CHECK-NEXT:    store half [[FACTOR]], ptr [[ARRAYIDX5]], align 2
 ; CHECK-NEXT:    [[ADD6]] = add nuw nsw i32 [[I_017]], 1

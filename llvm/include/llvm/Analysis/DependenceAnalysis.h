@@ -727,13 +727,11 @@ private:
 
 /// Printer pass to dump DA results.
 struct DependenceAnalysisPrinterPass
-    : public PassInfoMixin<DependenceAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DependenceAnalysisPrinterPass> {
   DependenceAnalysisPrinterPass(raw_ostream &OS, bool NormalizeResults = false)
       : OS(OS), NormalizeResults(NormalizeResults) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

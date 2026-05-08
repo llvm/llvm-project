@@ -1000,7 +1000,7 @@ define float @fmin(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = call fast float @llvm.vp.reduce.fmin.nxv4f32(float 0x47EFFFFFE0000000, <vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = call fast float @llvm.vp.reduce.fmin.nxv4f32(float f0x7F7FFFFF, <vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
 ; IF-EVL-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast olt float [[TMP14]], [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[RDX_MINMAX_SELECT]] = select fast i1 [[RDX_MINMAX_CMP]], float [[TMP14]], float [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP11]] to i64
@@ -1088,7 +1088,7 @@ define float @fmax(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = call fast float @llvm.vp.reduce.fmax.nxv4f32(float 0xC7EFFFFFE0000000, <vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = call fast float @llvm.vp.reduce.fmax.nxv4f32(float f0xFF7FFFFF, <vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
 ; IF-EVL-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt float [[TMP14]], [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[RDX_MINMAX_SELECT]] = select fast i1 [[RDX_MINMAX_CMP]], float [[TMP14]], float [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP11]] to i64

@@ -98,7 +98,7 @@ class TargetTransformInfo;
 class Type;
 class Value;
 
-class NaryReassociatePass : public PassInfoMixin<NaryReassociatePass> {
+class NaryReassociatePass : public OptionalPassInfoMixin<NaryReassociatePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

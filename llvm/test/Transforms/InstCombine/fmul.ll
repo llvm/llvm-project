@@ -634,7 +634,7 @@ define float @log2half(float %x, float %y) {
 
 define float @log2half_commute(float %x1, float %y) {
 ; CHECK-LABEL: @log2half_commute(
-; CHECK-NEXT:    [[X:%.*]] = fmul fast float [[X1:%.*]], 0x3FC24924A0000000
+; CHECK-NEXT:    [[X:%.*]] = fmul fast float [[X1:%.*]], f0x3E124925
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log2.f32(float [[Y:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fsub fast float [[TMP2]], [[X]]
@@ -756,7 +756,7 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec_constexpr(<4 x float> %x)
 
 define float @fmul_constant_reassociation(float %x) {
 ; CHECK-LABEL: @fmul_constant_reassociation(
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], 0x3800000000000000
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], f0x00400000
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %mul_flt_min = fmul reassoc nsz float %x, 0x3810000000000000
@@ -770,7 +770,7 @@ define float @fmul_constant_reassociation(float %x) {
 
 define float @fdiv_constant_denominator_fmul_denorm(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm(
-; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[X:%.*]], 0x3760620000000000
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[X:%.*]], 5.877050e-42
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv fast float %x, 2.0e+3
@@ -784,7 +784,7 @@ define float @fdiv_constant_denominator_fmul_denorm(float %x) {
 
 define float @fdiv_constant_denominator_fmul_denorm_try_harder(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm_try_harder(
-; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float [[X:%.*]], 0x47E8000000000000
+; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float [[X:%.*]], f0x7F400000
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv reassoc float %x, 3.0
@@ -797,7 +797,7 @@ define float @fdiv_constant_denominator_fmul_denorm_try_harder(float %x) {
 define float @fdiv_constant_denominator_fmul_denorm_try_harder_extra_use(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm_try_harder_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fdiv float [[X:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T1]], 0x3810000000000000
+; CHECK-NEXT:    [[T3:%.*]] = fmul fast float [[T1]], f0x00800000
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[T1]], [[T3]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -907,8 +907,8 @@ define float @fmul_fadd_distribute_extra_use(float %x) {
 
 define double @fmul_fadd_fdiv_distribute2(double %x) {
 ; CHECK-LABEL: @fmul_fadd_fdiv_distribute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], 0x7FE8000000000000
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], 0x34000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], f0x7FE8000000000000
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], f0x0034000000000000
 ; CHECK-NEXT:    ret double [[T3]]
 ;
   %t1 = fdiv reassoc double %x, 3.0
@@ -922,8 +922,8 @@ define double @fmul_fadd_fdiv_distribute2(double %x) {
 
 define double @fmul_fadd_fdiv_distribute3(double %x) {
 ; CHECK-LABEL: @fmul_fadd_fdiv_distribute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], 0x7FE8000000000000
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], 0x34000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], f0x7FE8000000000000
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], f0x0034000000000000
 ; CHECK-NEXT:    ret double [[T3]]
 ;
   %t1 = fdiv reassoc double %x, 3.0
@@ -1278,7 +1278,7 @@ define <vscale x 2 x float> @mul_scalable_splat_zero(<vscale x 2 x float> %z) {
 
 define half @mul_zero_nnan(half %x) {
 ; CHECK-LABEL: @mul_zero_nnan(
-; CHECK-NEXT:    [[R:%.*]] = call nnan half @llvm.copysign.f16(half 0xH0000, half [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call nnan half @llvm.copysign.f16(half 0.000000e+00, half [[X:%.*]])
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %r = fmul nnan half %x, 0.0
@@ -1300,7 +1300,7 @@ define <2 x float> @mul_zero_nnan_vec_poison(<2 x float> %x) {
 
 define half @mul_zero(half %x) {
 ; CHECK-LABEL: @mul_zero(
-; CHECK-NEXT:    [[R:%.*]] = fmul ninf nsz half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[R:%.*]] = fmul ninf nsz half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %r = fmul ninf nsz half %x, 0.0
@@ -1310,7 +1310,7 @@ define half @mul_zero(half %x) {
 define half @mul_negzero_nnan(half %x) {
 ; CHECK-LABEL: @mul_negzero_nnan(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan half [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call nnan half @llvm.copysign.f16(half 0xH0000, half [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call nnan half @llvm.copysign.f16(half 0.000000e+00, half [[TMP1]])
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %r = fmul nnan half %x, -0.0

@@ -339,7 +339,7 @@ define <8 x i8> @constantdiff2(<8 x i8> %a) {
 
 define <8 x half> @constantsplatf(<8 x half> %a) {
 ; CHECK-LABEL: @constantsplatf(
-; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], splat (half 0xH4900)
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], splat (half 1.000000e+01)
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -1202,7 +1202,7 @@ define <16 x i32> @const_types(<16 x i32> %wide.vec, <16 x i32> %wide.vec116) {
 define <32 x half> @cast_types(<32 x i16> %wide.vec) {
 ; CHECK-LABEL: @cast_types(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <32 x i16> [[WIDE_VEC:%.*]] to <32 x half>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fmul fast <32 x half> [[TMP1]], splat (half 0xH0200)
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fmul fast <32 x half> [[TMP1]], splat (half 3.051760e-05)
 ; CHECK-NEXT:    ret <32 x half> [[INTERLEAVED_VEC]]
 ;
   %strided.vec = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>

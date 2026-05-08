@@ -6,15 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVISelLowering.h"
 #include "SPIRVInstrInfo.h"
+#include "SPIRVSubtarget.h"
+#include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -70,4 +77,27 @@ TEST_F(SPIRVGlobalRegistryTest, IsAggregateType) {
   EXPECT_TRUE(GR.isAggregateType(makeTypeInstr(SPIRV::OpTypeArray)));
   EXPECT_FALSE(GR.isAggregateType(makeTypeInstr(SPIRV::OpTypeFloat)));
   EXPECT_FALSE(GR.isAggregateType(SPIRVTypeInst(nullptr)));
+}
+
+TEST_F(SPIRVGlobalRegistryTest, PrepareFunctionsClearsStalePointers) {
+  auto *STM = static_cast<SPIRVTargetMachine *>(TM.get());
+  auto *GR = STM->getSubtargetImpl()->getSPIRVGlobalRegistry();
+
+  Function *F = Mod->getFunction("f");
+  ASSERT_NE(F, nullptr);
+  Type *I32 = Type::getInt32Ty(*Ctx);
+  GR->addDeducedElementType(F, I32);
+  ASSERT_EQ(GR->findDeducedElementType(F), I32);
+
+  LLVMContext Ctx2;
+  Module Mod2("M2", Ctx2);
+  Mod2.setDataLayout(TM->createDataLayout());
+  Function::Create(FunctionType::get(Type::getVoidTy(Ctx2), false),
+                   GlobalValue::ExternalLinkage, "g", Mod2);
+
+  legacy::PassManager PM;
+  PM.add(createSPIRVPrepareFunctionsPass(*STM));
+  PM.run(Mod2);
+
+  EXPECT_EQ(GR->findDeducedElementType(F), nullptr);
 }

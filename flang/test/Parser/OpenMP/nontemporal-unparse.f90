@@ -20,7 +20,7 @@ end program omp_simd
 !UNPARSE:  ALLOCATE(a(10_4))
 !UNPARSE: !$OMP SIMD NONTEMPORAL(a)
 !UNPARSE:  DO i=1_4,10_4
-!UNPARSE:    a(int(i,kind=8))=i
+!UNPARSE:    a(__builtin_int(i,kind=8))=i
 !UNPARSE:  END DO
 !UNPARSE: !$OMP END SIMD
 !UNPARSE: END PROGRAM OMP_SIMD
@@ -40,8 +40,8 @@ end program omp_simd
 !PARSE-TREE: | | | | | Scalar -> Expr = '10_4'
 !PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '10'
 !PARSE-TREE: | | | Block
-!PARSE-TREE: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'a(int(i,kind=8))=i'
-!PARSE-TREE: | | | | | Variable = 'a(int(i,kind=8))'
+!PARSE-TREE: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'a(__builtin_int(i,kind=8))=i'
+!PARSE-TREE: | | | | | Variable = 'a(__builtin_int(i,kind=8))'
 !PARSE-TREE: | | | | | | Designator -> DataRef -> ArrayElement
 !PARSE-TREE: | | | | | | | DataRef -> Name = 'a'
 !PARSE-TREE: | | | | | | | SectionSubscript -> Integer -> Expr = 'i'

@@ -17,7 +17,8 @@ class LPMUpdater;
 class LoopNest;
 
 /// A simple loop rotation transformation.
-class LoopUnrollAndJamPass : public PassInfoMixin<LoopUnrollAndJamPass> {
+class LoopUnrollAndJamPass
+    : public OptionalPassInfoMixin<LoopUnrollAndJamPass> {
   const int OptLevel;
 
 public:

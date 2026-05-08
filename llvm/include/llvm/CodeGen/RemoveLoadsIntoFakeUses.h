@@ -14,7 +14,7 @@
 namespace llvm {
 
 class RemoveLoadsIntoFakeUsesPass
-    : public PassInfoMixin<RemoveLoadsIntoFakeUsesPass> {
+    : public OptionalPassInfoMixin<RemoveLoadsIntoFakeUsesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

@@ -483,7 +483,7 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
           return !isa<affine::AffineMinOp, affine::AffineMaxOp,
                       affine::AffineApplyOp>(op);
         },
-        /*closedUB=*/true);
+        ValueBoundsOptions{/*closedUB=*/true});
     assert(succeeded(loopUb) && "could not get upper bound");
     Value ubVal = getValueOrCreateConstantIndexOp(rewriter, loc, *loopUb);
 

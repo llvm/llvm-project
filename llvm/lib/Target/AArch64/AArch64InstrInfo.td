@@ -11363,12 +11363,10 @@ foreach i = 0-7 in {
 }
 
 let Predicates = [HasLS64] in {
-  let mayLoad = 1 in
-  def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
-                                          (outs GPR64x8:$Rt)>;
-  let mayStore = 1 in
-  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
-                                          (outs)>;
+  defm LD64B: LoadStore64B<0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
+                                           (outs GPR64x8:$Rt)>;
+  defm ST64B: LoadStore64B<0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
+                                           (outs)>;
   def ST64BV:   Store64BV<0b011, "st64bv">;
   def ST64BV0:  Store64BV<0b010, "st64bv0">;
 

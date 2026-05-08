@@ -22,7 +22,7 @@
 namespace llvm {
 class BasicBlock;
 
-struct BlockExtractorPass : PassInfoMixin<BlockExtractorPass> {
+struct BlockExtractorPass : OptionalPassInfoMixin<BlockExtractorPass> {
   LLVM_ABI
   BlockExtractorPass(std::vector<std::vector<BasicBlock *>> &&GroupsOfBlocks,
                      bool EraseFunctions);

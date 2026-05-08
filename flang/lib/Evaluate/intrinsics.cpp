@@ -1187,6 +1187,7 @@ static const std::pair<const char *, const char *> genericAlias[]{
     {"unsigned", "uint"}, // Sun vs gfortran names
     {"xor", "ieor"},
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
+    {IntrinsicProcTable::BuiltinIntName, "int"},
 };
 
 // The following table contains the intrinsic functions listed in

@@ -235,6 +235,13 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
     return nullptr;
   }
 
+  if (auto *process = exe_ctx.GetProcessPtr()) {
+    raw_addr = process->FixCodeAddress(raw_addr);
+  } else {
+    LLDB_LOG(log, "IndirectCallEdge: No Process available, unable to call "
+                  "FixCodeAddress on function pointer");
+  }
+
   Address callee_addr;
   if (!exe_ctx.GetTargetPtr()->ResolveLoadAddress(raw_addr, callee_addr)) {
     LLDB_LOG(log, "IndirectCallEdge: Could not resolve callee's load address");

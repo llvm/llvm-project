@@ -222,7 +222,7 @@ PreservedAnalyses ProfileVerifierPass::run(Module &M,
   // expose the function-level run as public through a wrapper, so we can use
   // pass manager mechanisms dealing with declarations and with composing the
   // returned PreservedAnalyses values.
-  struct Wrapper : PassInfoMixin<Wrapper> {
+  struct Wrapper : OptionalPassInfoMixin<Wrapper> {
     ProfileVerifierPass &PVP;
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
       return PVP.run(F, FAM);

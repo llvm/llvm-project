@@ -143,6 +143,17 @@ public:
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
 
+  // Returns the result of converting ConstantBuffer<T> to
+  // `const hlsl_constant T&`. If `BaseExpr`'s type is not ConstantBuffer<T>
+  // then the return value is `std::nullopt`.
+  std::optional<ExprResult>
+  tryPerformConstantBufferConversion(ExprResult &BaseExpr);
+
+  // Returns the conversion operator to convert `RD` to `const hlsl_constant
+  // Type&`. Returns `nullptr` if it could not be found.
+  NamedDecl *getConstantBufferConversionFunction(QualType Type,
+                                                 CXXRecordDecl *RD);
+
   /// Computes the unique Root Signature identifier from the given signature,
   /// then lookup if there is a previousy created Root Signature decl.
   ///

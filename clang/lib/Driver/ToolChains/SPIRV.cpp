@@ -184,6 +184,8 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Use of --sycl-link will call the clang-sycl-linker instead of
     // the default linker (spirv-link).
     Linker = ToolChain.GetProgramPath("clang-sycl-linker");
+    if (Args.hasArg(options::OPT_v))
+      CmdArgs.push_back("-v");
   } else if (!llvm::sys::fs::can_execute(Linker) &&
              !C.getArgs().hasArg(clang::options::OPT__HASH_HASH_HASH)) {
     C.getDriver().Diag(clang::diag::err_drv_no_spv_tools) << getShortName();

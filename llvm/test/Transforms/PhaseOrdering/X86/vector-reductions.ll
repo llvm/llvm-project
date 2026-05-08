@@ -280,8 +280,8 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <4 x double> [[TMP9]], <double 1.000000e+00, double 1.000000e+00, double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
-; CHECK-NEXT:    [[TMP11:%.*]] = fcmp uge <4 x double> [[TMP9]], <double 1.000000e+00, double 1.000000e+00, double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <4 x double> [[TMP9]], <double 1.000000e+00, double 1.000000e+00, double f0x3EB0C6F7A0B5ED8D, double f0x3EB0C6F7A0B5ED8D>
+; CHECK-NEXT:    [[TMP11:%.*]] = fcmp uge <4 x double> [[TMP9]], <double 1.000000e+00, double 1.000000e+00, double f0x3EB0C6F7A0B5ED8D, double f0x3EB0C6F7A0B5ED8D>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP11]], <4 x i1> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
 ; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = or <4 x i1> [[SHIFT]], [[TMP8]]

@@ -19,10 +19,11 @@ namespace llvm {
 
 class Function;
 
-struct InstCountPass : PassInfoMixin<InstCountPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+class InstCountPass : public RequiredPassInfoMixin<InstCountPass> {
+public:
+  explicit InstCountPass() {}
 
-  static bool isRequired() { return true; }
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // end namespace llvm

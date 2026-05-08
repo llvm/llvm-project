@@ -75,9 +75,8 @@ std::string lldb_private::FunctionCallLabel::toString() const {
 
 void llvm::format_provider<FunctionCallLabel>::format(
     const FunctionCallLabel &label, raw_ostream &OS, StringRef Style) {
-  OS << llvm::formatv("FunctionCallLabel{ discriminator: {0}, module_id: "
-                      "{1:x}, symbol_id: {2:x}, "
-                      "lookup_name: {3} }",
+  OS << llvm::formatv("FunctionCallLabel{{ discriminator: {}, module_id: "
+                      "{:x}, symbol_id: {:x}, lookup_name: {} }}",
                       label.discriminator, label.module_id, label.symbol_id,
                       label.lookup_name);
 }

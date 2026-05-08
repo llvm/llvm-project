@@ -55,7 +55,7 @@ define <2 x half> @test_atomicrmw_fadd_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
   ; CHECK-NEXT:   [[ATOMICRMW_FADD:%[0-9]+]]:_(<2 x s16>) = G_ATOMICRMW_FADD [[COPY]](p3), [[BUILD_VECTOR]] :: (load store seq_cst (<2 x s16>) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ATOMICRMW_FADD]](<2 x s16>)
@@ -71,7 +71,7 @@ define <2 x half> @test_atomicrmw_fsub_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[COPY]](p3) :: (load (<2 x s16>) from %ir.addr, addrspace 3)
@@ -109,7 +109,7 @@ define <2 x half> @test_atomicrmw_fmin_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[COPY]](p3) :: (load (<2 x s16>) from %ir.addr, addrspace 3)
@@ -147,7 +147,7 @@ define <2 x half> @test_atomicrmw_fmax_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[COPY]](p3) :: (load (<2 x s16>) from %ir.addr, addrspace 3)

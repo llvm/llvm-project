@@ -7,17 +7,17 @@ declare double @llvm.amdgcn.fract.f64(double)
 
 define void @test_f16(ptr %p) {
 ; CHECK-LABEL: @test_f16(
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P:%.*]]
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH3400, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH3B00, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH0400, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH3BFF, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH7E00, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH7E00, ptr [[P]]
-; CHECK-NEXT:    store volatile half 0xH7E00, ptr [[P]]
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P:%.*]]
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]]
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]]
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]]
+; CHECK-NEXT:    store volatile half 2.500000e-01, ptr [[P]]
+; CHECK-NEXT:    store volatile half 8.750000e-01, ptr [[P]]
+; CHECK-NEXT:    store volatile half 6.103520e-05, ptr [[P]]
+; CHECK-NEXT:    store volatile half 9.995110e-01, ptr [[P]]
+; CHECK-NEXT:    store volatile half +qnan, ptr [[P]]
+; CHECK-NEXT:    store volatile half +qnan, ptr [[P]]
+; CHECK-NEXT:    store volatile half +qnan, ptr [[P]]
 ; CHECK-NEXT:    ret void
 ;
   %p0 = call half @llvm.amdgcn.fract.f16(half +0.0)
@@ -53,11 +53,11 @@ define void @test_f32(ptr %p) {
 ; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P]]
 ; CHECK-NEXT:    store volatile float 2.500000e-01, ptr [[P]]
 ; CHECK-NEXT:    store volatile float 8.750000e-01, ptr [[P]]
-; CHECK-NEXT:    store volatile float 0x3810000000000000, ptr [[P]]
-; CHECK-NEXT:    store volatile float 0x3FEFFFFFE0000000, ptr [[P]]
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr [[P]]
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr [[P]]
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr [[P]]
+; CHECK-NEXT:    store volatile float f0x00800000, ptr [[P]]
+; CHECK-NEXT:    store volatile float f0x3F7FFFFF, ptr [[P]]
+; CHECK-NEXT:    store volatile float +qnan, ptr [[P]]
+; CHECK-NEXT:    store volatile float +qnan, ptr [[P]]
+; CHECK-NEXT:    store volatile float +qnan, ptr [[P]]
 ; CHECK-NEXT:    ret void
 ;
   %p0 = call float @llvm.amdgcn.fract.f32(float +0.0)
@@ -94,10 +94,10 @@ define void @test_f64(ptr %p) {
 ; CHECK-NEXT:    store volatile double 2.500000e-01, ptr [[P]]
 ; CHECK-NEXT:    store volatile double 8.750000e-01, ptr [[P]]
 ; CHECK-NEXT:    store volatile double 2.000000e-308, ptr [[P]]
-; CHECK-NEXT:    store volatile double 0x3FEFFFFFFFFFFFFF, ptr [[P]]
-; CHECK-NEXT:    store volatile double 0x7FF8000000000000, ptr [[P]]
-; CHECK-NEXT:    store volatile double 0x7FF8000000000000, ptr [[P]]
-; CHECK-NEXT:    store volatile double 0x7FF8000000000000, ptr [[P]]
+; CHECK-NEXT:    store volatile double f0x3FEFFFFFFFFFFFFF, ptr [[P]]
+; CHECK-NEXT:    store volatile double +qnan, ptr [[P]]
+; CHECK-NEXT:    store volatile double +qnan, ptr [[P]]
+; CHECK-NEXT:    store volatile double +qnan, ptr [[P]]
 ; CHECK-NEXT:    ret void
 ;
   %p0 = call double @llvm.amdgcn.fract.f64(double +0.0)

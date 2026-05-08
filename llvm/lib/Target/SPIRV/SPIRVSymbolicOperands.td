@@ -1677,6 +1677,7 @@ defm ImageMemory : MemorySemanticsOperand<0x800, 0, 0, [], []>;
 defm OutputMemoryKHR : MemorySemanticsOperand<0x1000, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakeAvailableKHR : MemorySemanticsOperand<0x2000, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakeVisibleKHR : MemorySemanticsOperand<0x4000, 0, 0, [], [VulkanMemoryModelKHR]>;
+defm Volatile : MemorySemanticsOperand<0x8000, 0, 0, [], [VulkanMemoryModelKHR]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemoryOperand enum values and at the same time

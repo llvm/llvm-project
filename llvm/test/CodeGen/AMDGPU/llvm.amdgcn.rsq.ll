@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=SI-GISEL %s
 ; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=VI-GISEL %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12-GISEL %s
 
 declare float @llvm.amdgcn.rsq.f32(float) #0
 declare double @llvm.amdgcn.rsq.f64(double) #0
@@ -51,6 +52,18 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) %out, float %src) #1 {
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: rsq_f32:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_s_rsq_f32 s2, s2
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-GISEL-NEXT:    s_endpgm
   %rsq = call float @llvm.amdgcn.rsq.f32(float %src) #0
   store float %rsq, ptr addrspace(1) %out, align 4
   ret void
@@ -97,6 +110,16 @@ define amdgpu_kernel void @rsq_f32_constant_4.0(ptr addrspace(1) %out) #1 {
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: rsq_f32_constant_4.0:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    v_s_rsq_f32 s2, 4.0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-GISEL-NEXT:    s_endpgm
   %rsq = call float @llvm.amdgcn.rsq.f32(float 4.0) #0
   store float %rsq, ptr addrspace(1) %out, align 4
   ret void
@@ -142,6 +165,16 @@ define amdgpu_kernel void @rsq_f32_constant_100.0(ptr addrspace(1) %out) #1 {
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: rsq_f32_constant_100.0:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    v_s_rsq_f32 s2, 0x42c80000
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-GISEL-NEXT:    s_endpgm
   %rsq = call float @llvm.amdgcn.rsq.f32(float 100.0) #0
   store float %rsq, ptr addrspace(1) %out, align 4
   ret void
@@ -189,6 +222,15 @@ define amdgpu_kernel void @rsq_f64(ptr addrspace(1) %out, double %src) #1 {
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-GISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: rsq_f64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], s[2:3]
+; GFX12-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-GISEL-NEXT:    s_endpgm
   %rsq = call double @llvm.amdgcn.rsq.f64(double %src) #0
   store double %rsq, ptr addrspace(1) %out, align 4
   ret void
@@ -235,6 +277,15 @@ define amdgpu_kernel void @rsq_f64_constant_4.0(ptr addrspace(1) %out) #1 {
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: rsq_f64_constant_4.0:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], 4.0
+; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-GISEL-NEXT:    s_endpgm
   %rsq = call double @llvm.amdgcn.rsq.f64(double 4.0) #0
   store double %rsq, ptr addrspace(1) %out, align 4
   ret void
@@ -280,6 +331,15 @@ define amdgpu_kernel void @rsq_f64_constant_100.0(ptr addrspace(1) %out) #1 {
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: rsq_f64_constant_100.0:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], 0x40590000
+; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-GISEL-NEXT:    s_endpgm
   %rsq = call double @llvm.amdgcn.rsq.f64(double 100.0) #0
   store double %rsq, ptr addrspace(1) %out, align 4
   ret void
@@ -316,6 +376,17 @@ define amdgpu_kernel void @rsq_undef_f32(ptr addrspace(1) %out) #1 {
 ; VI-GISEL-NEXT:    v_rsq_f32_e32 v0, s0
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: rsq_undef_f32:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_s_rsq_f32 s2, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-GISEL-NEXT:    s_endpgm
   %rsq = call float @llvm.amdgcn.rsq.f32(float poison)
   store float %rsq, ptr addrspace(1) %out, align 4
   ret void

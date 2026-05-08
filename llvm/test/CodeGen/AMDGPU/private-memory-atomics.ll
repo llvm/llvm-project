@@ -453,7 +453,7 @@ define bfloat @atomicrmw_fadd_private_bf16(ptr addrspace(5) %ptr) {
 ; IR-LABEL: define bfloat @atomicrmw_fadd_private_bf16(
 ; IR-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR0]] {
 ; IR-NEXT:    [[TMP1:%.*]] = load bfloat, ptr addrspace(5) [[PTR]], align 2
-; IR-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP1]], 0xR4000
+; IR-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP1]], 2.000000e+00
 ; IR-NEXT:    store bfloat [[NEW]], ptr addrspace(5) [[PTR]], align 2
 ; IR-NEXT:    ret bfloat [[TMP1]]
 ;

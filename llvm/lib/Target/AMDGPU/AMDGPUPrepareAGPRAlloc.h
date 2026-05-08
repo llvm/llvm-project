@@ -13,7 +13,7 @@
 
 namespace llvm {
 class AMDGPUPrepareAGPRAllocPass
-    : public PassInfoMixin<AMDGPUPrepareAGPRAllocPass> {
+    : public OptionalPassInfoMixin<AMDGPUPrepareAGPRAllocPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

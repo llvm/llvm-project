@@ -216,7 +216,7 @@ declare void @use_f(float)
 define double @pow_ok_base(double %e) {
 ; CHECK-LABEL: @pow_ok_base(
 ; Do not change 0xBFE0776{{.*}} to the exact constant, see PR42740
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0xBFE0776{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], f0xBFE0776{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -226,7 +226,7 @@ define double @pow_ok_base(double %e) {
 
 define double @pow_ok_base_fast(double %e) {
 ; CHECK-LABEL: @pow_ok_base_fast(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[E:%.*]], 0xBFE0776{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[E:%.*]], f0xBFE0776{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call fast double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -236,7 +236,7 @@ define double @pow_ok_base_fast(double %e) {
 
 define double @pow_ok_base2(double %e) {
 ; CHECK-LABEL: @pow_ok_base2(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x4010952{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], f0x4010952{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -246,7 +246,7 @@ define double @pow_ok_base2(double %e) {
 
 define double @pow_ok_base3(double %e) {
 ; CHECK-LABEL: @pow_ok_base3(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x400AB0B5{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], f0x400AB0B5{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -256,7 +256,7 @@ define double @pow_ok_base3(double %e) {
 
 define double @pow_ok_ten_base(double %e) {
 ; CHECK-LABEL: @pow_ok_ten_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x400A934F{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], f0x400A934F{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -266,7 +266,7 @@ define double @pow_ok_ten_base(double %e) {
 
 define double @pow_ok_denorm_base(double %e) {
 ; CHECK-LABEL: @pow_ok_denorm_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0xC0904800000005C5
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], f0xC0904800000005C5
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -276,7 +276,7 @@ define double @pow_ok_denorm_base(double %e) {
 
 define float @powf_ok_base(float %e) {
 ; CHECK-LABEL: @powf_ok_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0xBFE07762{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], f0xBF03BB1{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = tail call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
@@ -286,7 +286,7 @@ define float @powf_ok_base(float %e) {
 
 define float @powf_ok_base2(float %e) {
 ; CHECK-LABEL: @powf_ok_base2(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x4010952{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], f0x4084A96{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = tail call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
@@ -296,7 +296,7 @@ define float @powf_ok_base2(float %e) {
 
 define float @powf_ok_base3(float %e) {
 ; CHECK-LABEL: @powf_ok_base3(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x400AB0B5{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], f0x405585A{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = tail call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
@@ -306,7 +306,7 @@ define float @powf_ok_base3(float %e) {
 
 define float @powf_ok_ten_base(float %e) {
 ; CHECK-LABEL: @powf_ok_ten_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x400A934{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], f0x40549A7{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = tail call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
@@ -346,7 +346,7 @@ define double @pow_zero_base2(double %e) {
 
 define double @pow_inf_base(double %e) {
 ; CHECK-LABEL: @pow_inf_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0x7FF0000000000000, double [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double +inf, double [[E:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = tail call afn nnan ninf double @pow(double 0x7FF0000000000000, double %e)
@@ -355,7 +355,7 @@ define double @pow_inf_base(double %e) {
 
 define double @pow_nan_base(double %e) {
 ; CHECK-LABEL: @pow_nan_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0x7FF8000000000000, double [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double +qnan, double [[E:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = tail call afn nnan ninf double @pow(double 0x7FF8000000000000, double %e)
@@ -373,7 +373,7 @@ define double @pow_negative_base(double %e) {
 
 define double @pow_multiuse(double %e) {
 ; CHECK-LABEL: @pow_multiuse(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x4002934{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], f0x4002934{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    tail call void @use_d(double [[EXP2]])
 ; CHECK-NEXT:    ret double [[EXP2]]
@@ -385,7 +385,7 @@ define double @pow_multiuse(double %e) {
 
 define double @pow_ok_base_no_afn(double %e) {
 ; CHECK-LABEL: @pow_ok_base_no_afn(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf double @pow(double 0x3FE6666666666666, double [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf double @pow(double f0x3FE6666666666666, double [[E:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = tail call nnan ninf double @pow(double 0x3FE6666666666666, double %e)
@@ -394,7 +394,7 @@ define double @pow_ok_base_no_afn(double %e) {
 
 define double @pow_ok_base_no_nnan(double %e) {
 ; CHECK-LABEL: @pow_ok_base_no_nnan(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ninf afn double @pow(double 0x3FE6666666666666, double [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ninf afn double @pow(double f0x3FE6666666666666, double [[E:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = tail call afn ninf double @pow(double 0x3FE6666666666666, double %e)
@@ -403,7 +403,7 @@ define double @pow_ok_base_no_nnan(double %e) {
 
 define double @pow_ok_base_no_ninf(double %e) {
 ; CHECK-LABEL: @pow_ok_base_no_ninf(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan afn double [[E:%.*]], 0xBFE0776{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan afn double [[E:%.*]], f0xBFE0776{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -431,7 +431,7 @@ define float @powf_zero_base2(float %e) {
 
 define float @powf_inf_base(float %e) {
 ; CHECK-LABEL: @powf_inf_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x7FF0000000000000, float [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float +inf, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = tail call afn nnan ninf float @powf(float 0x7FF0000000000000, float %e)
@@ -440,7 +440,7 @@ define float @powf_inf_base(float %e) {
 
 define float @powf_nan_base(float %e) {
 ; CHECK-LABEL: @powf_nan_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x7FF8000000000000, float [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float +qnan, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = tail call afn nnan ninf float @powf(float 0x7FF8000000000000, float %e)
@@ -458,7 +458,7 @@ define float @powf_negative_base(float %e) {
 
 define float @powf_multiuse(float %e) {
 ; CHECK-LABEL: @powf_multiuse(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x4002934{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], f0x40149A7{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = tail call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    tail call void @use_f(float [[EXP2F]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
@@ -470,7 +470,7 @@ define float @powf_multiuse(float %e) {
 
 define float @powf_ok_base_no_afn(float %e) {
 ; CHECK-LABEL: @powf_ok_base_no_afn(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call float @powf(float 0x3FE6666660000000, float [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @powf(float f0x3F333333, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = tail call float @powf(float 0x3FE6666660000000, float %e)
@@ -479,7 +479,7 @@ define float @powf_ok_base_no_afn(float %e) {
 
 define fp128 @powl_long_dbl_no_fold(fp128 %e) {
 ; CHECK-LABEL: @powl_long_dbl_no_fold(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn fp128 @powl(fp128 0xL00000000000000005001000000000000, fp128 [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn fp128 @powl(fp128 f0x50010000000000000000000000000000, fp128 [[E:%.*]])
 ; CHECK-NEXT:    ret fp128 [[CALL]]
 ;
   %call = tail call afn nnan ninf fp128 @powl(fp128 0xL00000000000000005001000000000000, fp128 %e)

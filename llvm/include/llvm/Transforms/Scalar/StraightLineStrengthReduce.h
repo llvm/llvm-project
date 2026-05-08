@@ -14,7 +14,7 @@
 namespace llvm {
 
 class StraightLineStrengthReducePass
-    : public PassInfoMixin<StraightLineStrengthReducePass> {
+    : public OptionalPassInfoMixin<StraightLineStrengthReducePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

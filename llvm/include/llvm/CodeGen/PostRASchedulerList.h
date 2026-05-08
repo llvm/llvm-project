@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class PostRASchedulerPass : public PassInfoMixin<PostRASchedulerPass> {
+class PostRASchedulerPass : public OptionalPassInfoMixin<PostRASchedulerPass> {
   const TargetMachine *TM;
 
 public:

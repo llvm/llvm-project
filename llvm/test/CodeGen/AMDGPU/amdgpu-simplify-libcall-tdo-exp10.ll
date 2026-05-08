@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_exp10() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_exp10() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH3C00
+; CHECK-NEXT:    ret half 1.000000e+00
 ;
 entry:
   %c = call half @_Z5exp10Dh(half 0.000000e+00)
@@ -34,7 +34,7 @@ entry:
 define <3 x half> @test_tdo_v2_f16_exp10() {
 ; CHECK-LABEL: define <3 x half> @test_tdo_v2_f16_exp10() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH4900>
+; CHECK-NEXT:    ret <3 x half> <half 1.000000e+00, half 1.000000e+00, half 1.000000e+01>
 ;
 entry:
   %c = call <3 x half> @_Z5exp10Dv3_Dh(<3 x half> <half 0.000000e+00, half -0.000000e+00, half 1.000000e+00>)

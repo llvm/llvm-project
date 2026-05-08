@@ -59,7 +59,7 @@ class Module;
 
 // Pass that converts lookup tables to relative lookup tables.
 class RelLookupTableConverterPass
-    : public PassInfoMixin<RelLookupTableConverterPass> {
+    : public OptionalPassInfoMixin<RelLookupTableConverterPass> {
 public:
   RelLookupTableConverterPass() = default;
 

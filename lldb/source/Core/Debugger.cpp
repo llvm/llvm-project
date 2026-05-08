@@ -780,6 +780,12 @@ bool Debugger::SetShowInlineDiagnostics(bool b) {
   return SetPropertyAtIndex(idx, b);
 }
 
+uint64_t Debugger::GetGuiMaxConsoleLines() const {
+  const uint32_t idx = ePropertyGuiMaxConsoleLines;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
 #pragma mark Debugger
 
 // const DebuggerPropertiesSP &

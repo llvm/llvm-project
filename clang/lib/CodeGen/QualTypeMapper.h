@@ -71,7 +71,7 @@ public:
 
   void clearCache() { TypeCache.clear(); }
 
-  llvm::abi::TypeBuilder getTypeBuilder() { return Builder; }
+  llvm::abi::TypeBuilder &getTypeBuilder() { return Builder; }
 };
 
 } // namespace CodeGen

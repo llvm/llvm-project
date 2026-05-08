@@ -69,8 +69,18 @@ template <typename T> inline int ctz(T V) { return __builtin_ctzg(V); }
 template <typename T> inline int popc(T V) { return __builtin_popcountg(V); }
 
 /// Return \p V aligned up to the nearest power of two multiple of \p A.
-template <typename T, typename U> inline int alignUp(T V, U A) {
+template <typename T, typename U> inline T alignUp(T V, U A) {
   return __builtin_align_up(V, A);
+}
+
+/// Return \p V aligned down to the nearest power of two multiple of \p A.
+template <typename T, typename U> inline T alignDown(T V, U A) {
+  return __builtin_align_down(V, A);
+}
+
+/// Return \p X divided by \p Y, rounded up to the nearest integer.
+template <typename T, typename U> inline T roundUp(T X, U Y) {
+  return (X + Y - 1) / Y;
 }
 
 /// Return \p Ptr advanced by \p Offset bytes.

@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class PatchableFunctionPass : public PassInfoMixin<PatchableFunctionPass> {
+class PatchableFunctionPass
+    : public RequiredPassInfoMixin<PatchableFunctionPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -21,7 +22,6 @@ public:
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoVRegs();
   }
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

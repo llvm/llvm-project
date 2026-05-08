@@ -432,7 +432,7 @@ define float @fdiv_fsub_uses3(float %x, float %y, float %z) {
 
 define float @fdiv_fadd_not_denorm(float %x) {
 ; CHECK-LABEL: @fdiv_fadd_not_denorm(
-; CHECK-NEXT:    [[R:%.*]] = fdiv fast float 0x3818000000000000, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv fast float f0x00C00000, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fdiv fast float 0x3810000000000000, %x
@@ -445,8 +445,8 @@ define float @fdiv_fadd_not_denorm(float %x) {
 
 define float @fdiv_fadd_denorm(float %x) {
 ; CHECK-LABEL: @fdiv_fadd_denorm(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float 0xB810000000000000, [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float 0x3800000000000000, [[X]]
+; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float f0x80800000, [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float f0x00400000, [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[T1]], [[T2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -460,8 +460,8 @@ define float @fdiv_fadd_denorm(float %x) {
 
 define float @fdiv_fsub_denorm(float %x) {
 ; CHECK-LABEL: @fdiv_fsub_denorm(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float 0x3810000000000000, [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float 0x3800000000000000, [[X]]
+; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float f0x00800000, [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float f0x00400000, [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub fast float [[T1]], [[T2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;

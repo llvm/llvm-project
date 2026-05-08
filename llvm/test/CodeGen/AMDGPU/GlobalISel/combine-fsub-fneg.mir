@@ -37,7 +37,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %input:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: %cst:_(s16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: %cst:_(s16) = G_FCONSTANT half 0.000000e+00
     ; CHECK-NEXT: %sub:_(s16) = G_FSUB %cst, %input
     ; CHECK-NEXT: %res:_(s32) = G_ANYEXT %sub(s16)
     ; CHECK-NEXT: $vgpr0 = COPY %res(s32)
@@ -225,7 +225,7 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %input:_(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %cst:_(s16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: %cst:_(s16) = G_FCONSTANT half 0.000000e+00
     ; CHECK-NEXT: %veccst:_(<4 x s16>) = G_BUILD_VECTOR %cst(s16), %cst(s16), %cst(s16), %cst(s16)
     ; CHECK-NEXT: %sub:_(<4 x s16>) = G_FSUB %veccst, %input
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %sub(<4 x s16>)

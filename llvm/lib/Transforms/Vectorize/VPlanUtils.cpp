@@ -79,8 +79,9 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
     return true;
   }
 
-  return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
-         B == Plan.getBackedgeTakenCount();
+  auto MaskMatch = m_ICmp(m_VPValue(A), m_VPValue(B));
+  return (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch)))) &&
+         IsWideCanonicalIV(A) && B == Plan.getBackedgeTakenCount();
 }
 
 /// Returns true if \p R propagates poison from any operand to its result.

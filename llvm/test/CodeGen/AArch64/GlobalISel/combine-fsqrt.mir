@@ -7,7 +7,7 @@ body:             |
   bb.1:
   liveins:
     ; CHECK-LABEL: name: test_combine_half_fsqrt_constant
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4000
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 2.000000e+00
     ; CHECK-NEXT: $h0 = COPY [[C]](s16)
     %0:_(s16) = G_FCONSTANT half 4.000000e+00
     %1:_(s16) = G_FSQRT %0

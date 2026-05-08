@@ -910,7 +910,7 @@ bool parseAnalysisUtilityPasses(
 // These are special since they are only for testing purposes.
 
 /// No-op module pass which does nothing.
-struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
+struct NoOpModulePass : OptionalPassInfoMixin<NoOpModulePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -927,7 +927,7 @@ public:
 };
 
 /// No-op CGSCC pass which does nothing.
-struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
+struct NoOpCGSCCPass : OptionalPassInfoMixin<NoOpCGSCCPass> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
                         LazyCallGraph &, CGSCCUpdateResult &UR) {
     return PreservedAnalyses::all();
@@ -947,7 +947,7 @@ public:
 };
 
 /// No-op function pass which does nothing.
-struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
+struct NoOpFunctionPass : OptionalPassInfoMixin<NoOpFunctionPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -964,7 +964,7 @@ public:
 };
 
 /// No-op loop nest pass which does nothing.
-struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
+struct NoOpLoopNestPass : OptionalPassInfoMixin<NoOpLoopNestPass> {
   PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -972,7 +972,7 @@ struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
 };
 
 /// No-op loop pass which does nothing.
-struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
+struct NoOpLoopPass : OptionalPassInfoMixin<NoOpLoopPass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -980,7 +980,8 @@ struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
 };
 
 /// No-op machine function pass which does nothing.
-struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
+struct NoOpMachineFunctionPass
+    : public OptionalPassInfoMixin<NoOpMachineFunctionPass> {
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }

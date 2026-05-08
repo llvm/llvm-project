@@ -127,7 +127,7 @@ define float @function_pointer(ptr %fptr, float %p1) {
 
 define double @log10_exp(double %x) {
 ; CHECK-LABEL: @log10_exp(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], 0x3FDBCB7B1526E50E
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], f0x3FDBCB7B1526E50E
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
   %exp = call fast double @exp(double %x)
@@ -137,7 +137,7 @@ define double @log10_exp(double %x) {
 
 define <2 x float> @logv_exp2v(<2 x float> %x) {
 ; CHECK-LABEL: @logv_exp2v(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 0x3FE62E4300000000)
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float f0x3F317218)
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %exp = call fast <2 x float> @llvm.exp2.v2f32(<2 x float> %x)
@@ -147,7 +147,7 @@ define <2 x float> @logv_exp2v(<2 x float> %x) {
 
 define float @log2f_exp10f(float %x) {
 ; CHECK-LABEL: @log2f_exp10f(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X:%.*]], 0x400A934F00000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X:%.*]], f0x40549A78
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %exp = call fast float @exp10f(float %x)

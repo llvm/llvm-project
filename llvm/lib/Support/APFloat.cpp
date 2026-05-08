@@ -3703,7 +3703,8 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
   initFromDoubleAPInt(APInt(64, i1));
   [[maybe_unused]] opStatus fs = convert(APFloatBase::semPPCDoubleDoubleLegacy,
                                          rmNearestTiesToEven, &losesInfo);
-  assert(fs == opOK && !losesInfo);
+  // (convert may return opInvalidOp if i1 is an sNaN).
+  assert((fs == opOK || fs == opInvalidOp) && !losesInfo);
 
   // Unless we have a special case, add in second double.
   if (isFiniteNonZero()) {
@@ -4514,6 +4515,13 @@ APFloat::opStatus IEEEFloat::next(bool nextDown) {
     changeSign();
 
   return result;
+}
+
+APInt IEEEFloat::getNaNPayload() const {
+  assert(isNaN() && "Can only be called on NaN values");
+  // Number of bits in the payload, excluding the (maybe implied) integer bit.
+  unsigned Bits = semantics->precision - 1;
+  return APInt(Bits, ArrayRef(significandParts(), partCountForBits(Bits)));
 }
 
 APFloatBase::ExponentType IEEEFloat::exponentNaN() const {
@@ -5780,6 +5788,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
                        std::move(Second));
 }
 
+APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 } // namespace detail
 
 APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {

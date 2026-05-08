@@ -483,9 +483,9 @@ define <4 x float> @test_subvec_memset() {
 ; CHECK-LABEL: @test_subvec_memset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float 0x3820202020000000, float 0x3820202020000000, float undef>, <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float undef, float 0x3860606060000000, float 0x3860606060000000>, <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float 0x38E0E0E0E0000000, i32 3
+; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float f0x01010101, float f0x01010101, float undef>, <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float undef, float f0x03030303, float f0x03030303>, <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float f0x07070707, i32 3
 ; CHECK-NEXT:    ret <4 x float> [[A_12_VEC_INSERT]]
 ;
 ; DEBUG-LABEL: @test_subvec_memset(
@@ -493,11 +493,11 @@ define <4 x float> @test_subvec_memset() {
 ; DEBUG-NEXT:      #dbg_value(ptr poison, [[META215:![0-9]+]], !DIExpression(), [[META220:![0-9]+]])
 ; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>, !dbg [[DBG221:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META216:![0-9]+]], !DIExpression(), [[META222:![0-9]+]])
-; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float 0x3820202020000000, float 0x3820202020000000, float undef>, <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>, !dbg [[DBG223:![0-9]+]]
+; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float f0x01010101, float f0x01010101, float undef>, <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>, !dbg [[DBG223:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META217:![0-9]+]], !DIExpression(), [[META224:![0-9]+]])
-; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float undef, float 0x3860606060000000, float 0x3860606060000000>, <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>, !dbg [[DBG225:![0-9]+]]
+; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float undef, float f0x03030303, float f0x03030303>, <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>, !dbg [[DBG225:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META218:![0-9]+]], !DIExpression(), [[META226:![0-9]+]])
-; DEBUG-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float 0x38E0E0E0E0000000, i32 3, !dbg [[DBG227:![0-9]+]]
+; DEBUG-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float f0x07070707, i32 3, !dbg [[DBG227:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(<4 x float> [[A_12_VEC_INSERT]], [[META219:![0-9]+]], !DIExpression(), [[META228:![0-9]+]])
 ; DEBUG-NEXT:    ret <4 x float> [[A_12_VEC_INSERT]], !dbg [[DBG229:![0-9]+]]
 ;

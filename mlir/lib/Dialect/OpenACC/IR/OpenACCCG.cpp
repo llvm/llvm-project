@@ -684,6 +684,8 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, regionArgs))
     return failure();
+  ComputeRegionOp::ensureTerminator(*body, parser.getBuilder(),
+                                    result.location);
 
   const size_t numLaunchOperands = launchOperands.size();
   const size_t numInputOperands = inputOperands.size();

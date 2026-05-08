@@ -45977,7 +45977,7 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
 
 bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, unsigned Depth) const {
+    UndefPoisonKind Kind, unsigned Depth) const {
   unsigned NumElts = DemandedElts.getBitWidth();
 
   switch (Op.getOpcode()) {
@@ -45996,10 +45996,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
                         DemandedRHS);
     return (!DemandedLHS ||
             DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
-                                                 PoisonOnly, Depth + 1)) &&
+                                                 Kind, Depth + 1)) &&
            (!DemandedRHS ||
             DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
-                                                 PoisonOnly, Depth + 1));
+                                                 Kind, Depth + 1));
   }
   case X86ISD::INSERTPS:
   case X86ISD::BLENDI:
@@ -46033,7 +46033,7 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       for (auto Op : enumerate(Ops))
         if (!DemandedSrcElts[Op.index()].isZero() &&
             !DAG.isGuaranteedNotToBeUndefOrPoison(
-                Op.value(), DemandedSrcElts[Op.index()], PoisonOnly, Depth + 1))
+                Op.value(), DemandedSrcElts[Op.index()], Kind, Depth + 1))
           return false;
       return true;
     }
@@ -46044,19 +46044,19 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     MVT SrcVT = Src.getSimpleValueType();
     if (SrcVT.isVector()) {
       APInt DemandedSrc = APInt::getOneBitSet(SrcVT.getVectorNumElements(), 0);
-      return DAG.isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrc, PoisonOnly,
+      return DAG.isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrc, Kind,
                                                   Depth + 1);
     }
-    return DAG.isGuaranteedNotToBeUndefOrPoison(Src, PoisonOnly, Depth + 1);
+    return DAG.isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
   }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
-      Op, DemandedElts, DAG, PoisonOnly, Depth);
+      Op, DemandedElts, DAG, Kind, Depth);
 }
 
 bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+    UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
   // SSE bit logic.
@@ -46152,7 +46152,7 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     }
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
-      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+      Op, DemandedElts, DAG, Kind, ConsiderFlags, Depth);
 }
 
 bool X86TargetLowering::isSplatValueForTargetNode(SDValue Op,

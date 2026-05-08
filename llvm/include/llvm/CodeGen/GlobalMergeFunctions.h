@@ -77,7 +77,7 @@ public:
 };
 
 /// Global function merging pass for new pass manager.
-struct GlobalMergeFuncPass : public PassInfoMixin<GlobalMergeFuncPass> {
+struct GlobalMergeFuncPass : public OptionalPassInfoMixin<GlobalMergeFuncPass> {
   const ModuleSummaryIndex *ImportSummary = nullptr;
   GlobalMergeFuncPass() = default;
   GlobalMergeFuncPass(const ModuleSummaryIndex *ImportSummary)

@@ -14,7 +14,7 @@
 namespace llvm {
 
 class MachineCopyPropagationPass
-    : public PassInfoMixin<MachineCopyPropagationPass> {
+    : public OptionalPassInfoMixin<MachineCopyPropagationPass> {
   bool UseCopyInstr;
 
 public:

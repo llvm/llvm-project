@@ -8,6 +8,7 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include <memory>
@@ -16,8 +17,14 @@
 using namespace clang;
 using namespace ssaf;
 
-EntityId TUSummaryBuilder::addEntity(const EntityName &E) {
-  return Summary.IdTable.getId(E);
+EntityId TUSummaryBuilder::addEntity(const EntityName &EN,
+                                     EntityLinkageType Linkage) {
+  EntityId Id = Summary.IdTable.getId(EN);
+  [[maybe_unused]] EntityLinkageType Link =
+      Summary.LinkageTable.try_emplace(Id, Linkage).first->second.getLinkage();
+  // Even if we had in the past a linkage, that must bee the same as we set now.
+  assert(Link == Linkage);
+  return Id;
 }
 
 std::pair<EntitySummary *, bool>

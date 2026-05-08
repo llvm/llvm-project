@@ -10,8 +10,8 @@ define void @select_with_identical_phi(ptr %m, ptr %n, i32 %count) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V0:%.*]] = phi float [ 0x4415AF1D80000000, [[ENTRY:%.*]] ], [ [[V0_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V0:%.*]] = phi float [ 1.000000e+20, [[ENTRY:%.*]] ], [ [[V0_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[Q:%.*]] = phi ptr [ [[M:%.*]], [[ENTRY]] ], [ [[Q_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[C:%.*]] = phi ptr [ [[N:%.*]], [[ENTRY]] ], [ [[C_NEXT:%.*]], [[FOR_BODY]] ]
@@ -69,7 +69,7 @@ define void @select_with_identical_phi_2(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
@@ -107,7 +107,7 @@ define void @select_with_identical_phi_3(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[V1]], float [[X:%.*]]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
@@ -145,7 +145,7 @@ define void @select_with_identical_phi_4(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
@@ -183,7 +183,7 @@ define void @select_with_identical_phi_5(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[V1]], float [[X:%.*]]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
@@ -221,7 +221,7 @@ define void @select_with_identical_phi_6(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
@@ -258,8 +258,8 @@ define void @select_with_identical_phi_negative_1(i1 %cmp1, i1 %cmp2, float %x) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0x4415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ -1.000000e+20, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V1]], float [[PHI_TO_REMOVE]]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
@@ -298,8 +298,8 @@ define void @select_with_identical_phi_negative_2(i1 %cmp1, i1 %cmp2, float %x) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ -1.000000e+20, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V1]], float [[PHI_TO_REMOVE]]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[V1]], float [[X:%.*]]
@@ -339,8 +339,8 @@ define void @select_with_identical_phi_negative_3(i1 %cmp1, i1 %cmp2, i1 %cmp3, 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ -1.000000e+20, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V1]], float [[PHI_TO_REMOVE]]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP3:%.*]], float [[V1]], float [[X:%.*]]
@@ -379,9 +379,9 @@ define void @select_with_identical_phi_negative_4(i1 %cmp1, i1 %cmp2, float %x) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V0:%.*]] = phi float [ 0x4415AF1D80000000, [[ENTRY:%.*]] ], [ [[V0_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V0:%.*]] = phi float [ 1.000000e+20, [[ENTRY:%.*]] ], [ [[V0_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ -1.000000e+20, [[ENTRY]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ -1.000000e+20, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V0]], float [[PHI_TO_REMOVE]]
 ; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]

@@ -96,10 +96,10 @@ define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP5]], i32 [[ARG4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[GEP]], i32 [[ARG5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> poison, half [[ARG6_HALF]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x half> [[TMP7]], half 0xH0000, i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP8]], half 0xH0000, i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x half> [[TMP9]], half 0xH0000, i32 3
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP10]], half 0xH0000, i32 4
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x half> [[TMP7]], half 0.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP8]], half 0.000000e+00, i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x half> [[TMP9]], half 0.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP10]], half 0.000000e+00, i32 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x half> [[TMP11]], half [[TMP12]], i32 5
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i32 1

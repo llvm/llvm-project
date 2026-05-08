@@ -411,6 +411,7 @@ bool isConvergenceIntrinsic(const Instruction *I) {
 bool expectIgnoredInIRTranslation(const Instruction *I) {
   return match(I, m_AnyIntrinsic<Intrinsic::invariant_start,
                                  Intrinsic::spv_resource_handlefrombinding,
+                                 Intrinsic::spv_resource_getbasepointer,
                                  Intrinsic::spv_resource_getpointer>());
 }
 
@@ -1022,7 +1023,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     // TODO: maybe improve performance by caching demangled names
 
     auto *II = dyn_cast<IntrinsicInst>(I);
-    if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+    if (II && (II->getIntrinsicID() == Intrinsic::spv_resource_getbasepointer ||
+               II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)) {
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
       if (HandleType->getTargetExtName() == "spirv.Image" ||
           HandleType->getTargetExtName() == "spirv.SignedImage") {
@@ -1034,12 +1036,15 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        if (Ty->isArrayTy())
-          Ty = Ty->getArrayElementType();
-        else {
-          assert(Ty && Ty->isStructTy());
-          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
-          Ty = cast<StructType>(Ty)->getElementType(Index);
+        if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+          if (Ty->isArrayTy())
+            Ty = Ty->getArrayElementType();
+          else {
+            assert(Ty && Ty->isStructTy());
+            uint32_t Index =
+                cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+            Ty = cast<StructType>(Ty)->getElementType(Index);
+          }
         }
         Ty = reconstitutePeeledArrayType(Ty);
       } else {

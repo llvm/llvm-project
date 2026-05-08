@@ -55,6 +55,29 @@ func.func @arith_muli(%a: index) -> index {
 
 // -----
 
+// CHECK: #[[$map_muli_i32:.*]] = affine_map<()[s0] -> (s0 * 7)>
+// CHECK-LABEL: func @arith_muli_integer(
+//  CHECK-SAME:     %[[a:.*]]: i32
+//       CHECK:   %[[cast:.*]] = arith.index_cast %[[a]] : i32 to index
+//       CHECK:   %[[apply:.*]] = affine.apply #[[$map_muli_i32]]()[%[[cast]]]
+//       CHECK:   return %[[apply]]
+// CHECK-ARITH-LABEL: func @arith_muli_integer(
+//  CHECK-ARITH-SAME:     %[[a:.*]]: i32
+//       CHECK-ARITH:   %[[c7:.*]] = arith.constant 7 : i32
+//       CHECK-ARITH:   arith.muli %[[a]], %[[c7]] : i32
+//   CHECK-ARITH-DAG:   %[[cast:.*]] = arith.index_cast %[[a]] : i32 to index
+//   CHECK-ARITH-DAG:   %[[c7_reified:.*]] = arith.constant 7 : index
+//       CHECK-ARITH:   %[[mul:.*]] = arith.muli %[[cast]], %[[c7_reified]] : index
+//       CHECK-ARITH:   return %[[mul]]
+func.func @arith_muli_integer(%a: i32) -> index {
+  %c7 = arith.constant 7 : i32
+  %product = arith.muli %a, %c7 : i32
+  %0 = "test.reify_bound"(%product) {allow_integer_type} : (i32) -> (index)
+  return %0 : index
+}
+
+// -----
+
 func.func @arith_muli_non_pure(%a: index, %b: index) -> index {
   %0 = arith.muli %a, %b : index
   // Semi-affine expressions (such as "symbol * symbol") are not supported.
@@ -96,6 +119,22 @@ func.func @arith_floordivsi_non_pure(%a: index, %b: index) -> index {
 func.func @arith_const() -> index {
   %c5 = arith.constant 5 : index
   %0 = "test.reify_bound"(%c5) : (index) -> (index)
+  return %0 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_addi_integer_constant()
+//       CHECK:   %[[c12:.*]] = arith.constant 12 : index
+//       CHECK:   return %[[c12]]
+// CHECK-ARITH-LABEL: func @arith_addi_integer_constant()
+//       CHECK-ARITH:   %[[c12:.*]] = arith.constant 12 : index
+//       CHECK-ARITH:   return %[[c12]]
+func.func @arith_addi_integer_constant() -> index {
+  %c5 = arith.constant 5 : i32
+  %c7 = arith.constant 7 : i32
+  %sum = arith.addi %c5, %c7 : i32
+  %0 = "test.reify_bound"(%sum) {allow_integer_type, constant} : (i32) -> (index)
   return %0 : index
 }
 

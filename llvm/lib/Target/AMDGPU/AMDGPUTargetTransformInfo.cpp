@@ -1012,9 +1012,24 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
   case Instruction::InsertElement: {
     unsigned EltSize
       = DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
+    // Dynamic indexing isn't free and is best avoided.
+    if (Index == ~0u)
+      return 2;
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
+      // Some i8 inserts and extracts are free so we want to reduce the
+      // cost to avoid scalarization. We limit the zero cost cases to avoid
+      // adversely impacting all i8 vectorizing.
+      if (EltSize == 8) {
+        unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
+        if (NumElts >= 4 && isPowerOf2_32(NumElts)) {
+          // Extracts at indices aligned to 32-bit boundaries (0, 4, 8, 12 for
+          // v16i8) are free as they access the low byte of each VGPR. Other
+          // indices require bit manipulation (shifts/byte selects) and cost 1.
+          return Index % 4 == 0 ? 0 : 1;
+        }
+      }
       return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
                                        VIC);
     }
@@ -1022,9 +1037,7 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
     // operations, and we don't have to copy into a different register class.
-
-    // Dynamic indexing isn't free and is best avoided.
-    return Index == ~0u ? 2 : 0;
+    return 0;
   }
   default:
     return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,

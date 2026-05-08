@@ -1229,7 +1229,7 @@ define half @fadd_4xf16(ptr %p) {
 ;
 ; ZVFH-LABEL: @fadd_4xf16(
 ; ZVFH-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr [[P:%.*]], align 2
-; ZVFH-NEXT:    [[TMP2:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP1]])
+; ZVFH-NEXT:    [[TMP2:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0.000000e+00, <4 x half> [[TMP1]])
 ; ZVFH-NEXT:    ret half [[TMP2]]
 ;
   %x0 = load half, ptr %p

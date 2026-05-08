@@ -12,7 +12,6 @@ add_llvm_unittest(DWARFLinkerParallelTests
 
 target_link_libraries(DWARFLinkerParallelTests PRIVATE
   LLVMTestingSupport
-  LLVMDebugInfoDWARF
   )
 
 add_dependencies(DWARFLinkerParallelTests intrinsics_gen)

@@ -115,6 +115,9 @@ public:
   static const inline std::string InvalidName{
       "(invalid intrinsic function call)"};
 
+  // Name of intrinsics used in various locations.
+  static inline const char *const BuiltinIntName{"__builtin_int"};
+
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:

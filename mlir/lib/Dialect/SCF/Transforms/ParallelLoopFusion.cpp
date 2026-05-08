@@ -748,8 +748,9 @@ static std::optional<ParallelOp> interchangeLoops(OpBuilder &builder,
                                   loop.getUpperBound(), loop.getStep(),
                                   loop.getInitVals(), nullptr);
   IRMapping mapping;
-  for (auto [iv, riv] : llvm::zip(loop.getInductionVars(),
-                                  llvm::reverse(newOp.getInductionVars()))) {
+  auto ivs = loop.getInductionVars();
+  auto newIvs = newOp.getInductionVars();
+  for (auto [iv, riv] : llvm::zip(ivs, llvm::reverse(newIvs))) {
     mapping.map(iv, riv);
   }
   // Copy parallel loop body

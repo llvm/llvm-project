@@ -27,9 +27,8 @@ namespace llvm {
 /// This pass inserts calls to runtime library functions. If the
 /// functions aren't declared yet, the pass inserts the declarations.
 struct NumericalStabilitySanitizerPass
-    : public PassInfoMixin<NumericalStabilitySanitizerPass> {
+    : public RequiredPassInfoMixin<NumericalStabilitySanitizerPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

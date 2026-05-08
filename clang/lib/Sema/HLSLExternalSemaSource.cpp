@@ -472,6 +472,17 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   ConceptDecl *StructuredBufferConcept = constructBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ false);
 
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConstantBuffer")
+             .addSimpleTemplateParams({"element_type"})
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::CBuffer, /*IsROV=*/false,
+                    /*RawBuffer=*/false, /*HasCounter=*/false)
+        .addConstantBufferConversionToType()
+        .completeDefinition();
+  });
+
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Buffer")
              .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
              .finalizeForwardDeclaration();

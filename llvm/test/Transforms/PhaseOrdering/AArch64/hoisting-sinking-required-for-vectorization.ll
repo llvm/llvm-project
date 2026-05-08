@@ -160,8 +160,8 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !alias.scope [[META7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD9]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr [4 x i8], ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 16
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META11]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP6]], [[WIDE_LOAD10]]

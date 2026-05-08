@@ -1893,3 +1893,156 @@ TEST(ScudoCombinedTest, VerifyConfigOverrideMatchChecks) {
     Allocator->deallocateAligned(Ptr, scudo::Chunk::Origin::Malloc, Alignment);
   }
 }
+
+struct TestNumericValuesConfig {
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const scudo::s32 DefaultReleaseToOsIntervalMs = INT32_MIN;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#endif
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
+    struct Cache {
+      static const scudo::u32 EntriesArraySize = 128;
+      static const scudo::u32 QuarantineSize = 0;
+      static const scudo::u32 DefaultMaxEntriesCount = 64;
+      static const scudo::uptr DefaultMaxEntrySize = 1UL << 20;
+      static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+      static const scudo::s32 MaxReleaseToOsIntervalMs = 2000;
+      static const scudo::s32 DefaultReleaseToOsIntervalMs = 1500;
+    };
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+TEST(ScudoCombinedTest, VerifyNumericValuesConfig) {
+  using AllocatorT = scudo::Allocator<TestNumericValuesConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  std::string Stats(10000, '\0');
+  Allocator->getStats(Stats.data(), Stats.size());
+  EXPECT_NE(Stats.find("CompactPtrScale: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("EntriesArraySize: 128"), std::string::npos);
+  EXPECT_NE(Stats.find("QuarantineSize: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("DefaultMaxEntriesCount: 64"), std::string::npos);
+  EXPECT_NE(Stats.find("DefaultMaxEntrySize: 1048576"), std::string::npos);
+  EXPECT_NE(Stats.find("MinReleaseToOsIntervalMs: 1000"), std::string::npos);
+  EXPECT_NE(Stats.find("MaxReleaseToOsIntervalMs: 2000"), std::string::npos);
+  EXPECT_NE(Stats.find("DefaultReleaseToOsIntervalMs: 1500"),
+            std::string::npos);
+}
+
+struct TestAllBoolFalseConfig {
+  static const bool MaySupportMemoryTagging = false;
+  static const bool QuarantineDisabled = false;
+  static const bool ExactUsableSize = false;
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#endif
+    static const bool EnableBlockCache = false;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = false;
+    static const bool EnableContiguousRegions = false;
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+TEST(ScudoCombinedTest, VerifyAllBoolFalseConfig) {
+  using AllocatorT = scudo::Allocator<TestAllBoolFalseConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  std::string Stats(10000, '\0');
+  Allocator->getStats(Stats.data(), Stats.size());
+  EXPECT_NE(Stats.find("MaySupportMemoryTagging: false"), std::string::npos);
+  EXPECT_NE(Stats.find("QuarantineDisabled: false"), std::string::npos);
+  EXPECT_NE(Stats.find("ExactUsableSize: false"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableBlockCache: false"), std::string::npos);
+  EXPECT_NE(Stats.find("CompactPtrScale: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableRandomOffset: false"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableContiguousRegions: false"), std::string::npos);
+}
+
+struct TestAllBoolTrueConfig {
+  static const bool MaySupportMemoryTagging = true;
+  static const bool QuarantineDisabled = true;
+  static const bool ExactUsableSize = true;
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#endif
+    static const bool EnableBlockCache = true;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const bool EnableContiguousRegions = true;
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+TEST(ScudoCombinedTest, VerifyAllBoolTrueConfig) {
+  using AllocatorT = scudo::Allocator<TestAllBoolTrueConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  std::string Stats(10000, '\0');
+  Allocator->getStats(Stats.data(), Stats.size());
+  EXPECT_NE(Stats.find("MaySupportMemoryTagging: true"), std::string::npos);
+  EXPECT_NE(Stats.find("QuarantineDisabled: true"), std::string::npos);
+  EXPECT_NE(Stats.find("ExactUsableSize: true"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableBlockCache: true"), std::string::npos);
+  EXPECT_NE(Stats.find("CompactPtrScale: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableRandomOffset: true"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableContiguousRegions: true"), std::string::npos);
+}

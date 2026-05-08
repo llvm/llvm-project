@@ -148750,12 +148750,11 @@ define inreg <64 x bfloat> @bitcast_v128i8_to_v64bf16_scalar(<128 x i8> inreg %a
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v11, 0xff, v180
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v30, v30, v31
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v31, 8, v166
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v183, 0xffff, v10
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v10, s77
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v10, s77 :: v_dual_and_b32 v183, 0xffff, v10
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v31, v11, v31
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v11, v182, v167, 0xc0c0004
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v30, v30, 16, v183
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v40, 0xffff, v11
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v11, s78, 16, v8
@@ -175278,12 +175277,11 @@ define inreg <64 x half> @bitcast_v128i8_to_v64f16_scalar(<128 x i8> inreg %a, i
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v11, 0xff, v180
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v30, v30, v31
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v31, 8, v166
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v183, 0xffff, v10
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v10, s77
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v10, s77 :: v_dual_and_b32 v183, 0xffff, v10
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v31, v11, v31
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v11, v182, v167, 0xc0c0004
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v30, v30, 16, v183
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v40, 0xffff, v11
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v11, s78, 16, v8
@@ -195905,12 +195903,11 @@ define inreg <64 x i16> @bitcast_v128i8_to_v64i16_scalar(<128 x i8> inreg %a, i3
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v11, 0xff, v180
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v30, v30, v31
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v31, 8, v166
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v183, 0xffff, v10
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v10, s77
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v10, s77 :: v_dual_and_b32 v183, 0xffff, v10
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v31, v11, v31
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v11, v182, v167, 0xc0c0004
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v30, v30, 16, v183
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v40, 0xffff, v11
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v11, s78, 16, v8

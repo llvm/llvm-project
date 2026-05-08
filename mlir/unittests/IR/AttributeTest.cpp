@@ -191,28 +191,28 @@ TEST(DenseSplatTest, StringAttrSplat) {
 TEST(DenseComplexTest, ComplexFloatSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(Float32Type::get(&context));
-  std::complex<float> value(10.0, 15.0);
+  mlir::Complex<float> value(10.0, 15.0);
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
-  std::complex<int64_t> value(10, 15);
+  mlir::Complex<int64_t> value(10, 15);
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPFloatSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(Float32Type::get(&context));
-  std::complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
+  mlir::Complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
-  std::complex<APInt> value(APInt(64, 10), APInt(64, 15));
+  mlir::Complex<APInt> value(APInt(64, 10), APInt(64, 15));
   testSplat(complexType, value);
 }
 

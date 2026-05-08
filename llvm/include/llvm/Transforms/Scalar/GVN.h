@@ -125,7 +125,7 @@ struct GVNOptions {
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class GVNPass : public PassInfoMixin<GVNPass> {
+class GVNPass : public OptionalPassInfoMixin<GVNPass> {
   GVNOptions Options;
 
 public:
@@ -428,14 +428,14 @@ LLVM_ABI FunctionPass *createGVNPass();
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.
-struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
+struct GVNHoistPass : OptionalPassInfoMixin<GVNHoistPass> {
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Uses an "inverted" value numbering to decide the similarity of
 /// expressions and sinks similar expressions into successors.
-struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
+struct GVNSinkPass : OptionalPassInfoMixin<GVNSinkPass> {
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

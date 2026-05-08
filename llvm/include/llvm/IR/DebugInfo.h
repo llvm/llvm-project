@@ -323,7 +323,8 @@ LLVM_ABI std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
 /// be left with their dbg.declare intrinsics.
 /// The pass sets the debug-info-assignment-tracking module flag to true to
 /// indicate assignment tracking has been enabled.
-class AssignmentTrackingPass : public PassInfoMixin<AssignmentTrackingPass> {
+class AssignmentTrackingPass
+    : public OptionalPassInfoMixin<AssignmentTrackingPass> {
   /// Note: this method does not set the debug-info-assignment-tracking module
   /// flag.
   bool runOnFunction(Function &F);

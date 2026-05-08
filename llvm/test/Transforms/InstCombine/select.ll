@@ -1641,7 +1641,7 @@ define <4 x float> @PR33721(<4 x float> %w) {
 ; CHECK-SAME: <4 x float> [[W:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp ole <4 x float> [[W]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x float> splat (float 0xFFFFFFFFE0000000), <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x float> splat (float -nan(0x3FFFFF)), <4 x float> zeroinitializer
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
 entry:

@@ -859,6 +859,10 @@ public:
   /// Return true if this instruction has a volatile memory access.
   LLVM_ABI bool isVolatile() const LLVM_READONLY;
 
+  /// Return true if this instruction may synchronize, in the sense that it
+  /// may introduce a synchronizes-with edge.
+  LLVM_ABI bool maySynchronize() const LLVM_READONLY;
+
   /// Return the type this instruction accesses in memory, if any.
   LLVM_ABI Type *getAccessType() const LLVM_READONLY;
 

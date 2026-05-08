@@ -6,8 +6,8 @@ define noundef i32 @sign_half(half noundef %a) {
 ; CHECK-LABEL: define noundef i32 @sign_half(
 ; CHECK-SAME: half noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = fcmp olt half 0xH0000, [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt half [[A]], 0xH0000
+; CHECK-NEXT:    [[TMP0:%.*]] = fcmp olt half 0.000000e+00, [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt half [[A]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP2]], [[TMP3]]

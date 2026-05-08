@@ -11,8 +11,8 @@ interface
 end interface
 type(t) :: x(10)
 allocate(x(1)%a(2))
-!CHECK: PRINT *, ubound(x(int(impure(1_4),kind=8))%a,dim=1_4)
+!CHECK: PRINT *, ubound(x(__builtin_int(impure(1_4),kind=8))%a,dim=1_4)
 print *, ubound(x(impure(1))%a, dim=1)
-!CHECK: PRINT *, int(size(x(int(pure(1_4),kind=8))%a,dim=1,kind=8)+lbound(x(int(pure(1_4),kind=8))%a,dim=1,kind=8)-1_8,kind=4)
+!CHECK: PRINT *, __builtin_int(size(x(__builtin_int(pure(1_4),kind=8))%a,dim=1,kind=8)+lbound(x(__builtin_int(pure(1_4),kind=8))%a,dim=1,kind=8)-1_8,kind=4)
 print *, ubound(x(pure(1))%a, dim=1)
 end

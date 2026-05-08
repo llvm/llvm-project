@@ -15,7 +15,7 @@ namespace llvm {
 
 class TargetMachine;
 
-class SjLjEHPreparePass : public PassInfoMixin<SjLjEHPreparePass> {
+class SjLjEHPreparePass : public RequiredPassInfoMixin<SjLjEHPreparePass> {
   const TargetMachine *TM;
 
 public:

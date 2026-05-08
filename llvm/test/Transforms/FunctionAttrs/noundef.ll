@@ -226,7 +226,7 @@ define nofpclass(nan) float @maybe_nofpclass(float noundef %x) {
 define nofpclass(nan) float @compute_not_nofpclass(float noundef nofpclass(nan) %x) {
 ; CHECK-LABEL: define nofpclass(nan) float @compute_not_nofpclass(
 ; CHECK-SAME: float noundef nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X]], 0x7FF8000000000000
+; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X]], +qnan
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %y = fmul float %x, 0x7FF8000000000000
