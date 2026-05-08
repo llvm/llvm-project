@@ -30,7 +30,7 @@ constexpr bool test() {
 
   {
     std::ranges::concat_view v(NonSimpleCommon{buffer_1}, NonSimpleCommonRandomAccessSized{buffer_2});
-    auto iter1                                       = v.begin();
+    auto iter1 = v.begin();
     iter1++;
     std::ranges::iterator_t<const decltype(v)> iter2 = iter1;
     assert(iter1 == iter2);

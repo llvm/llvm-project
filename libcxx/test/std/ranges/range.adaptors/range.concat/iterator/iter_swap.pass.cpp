@@ -86,7 +86,7 @@ struct SwapIterTracked {
   using difference_type   = std::ptrdiff_t;
   using value_type        = T;
 
-  T* p                       = nullptr;
+  T* p                        = nullptr;
   int* iter_swap_called_times = nullptr;
 
   constexpr T& operator*() const noexcept { return *p; }

@@ -143,15 +143,15 @@ constexpr bool test() {
     std::ranges::concat_view v(a, b);
     auto it1 = v.begin();
 
-    auto it2 = it1 + 3;
-    auto x2  = *it2;
+    auto it2  = it1 + 3;
+    auto x2   = *it2;
     it2       = it2 + (-2);
     auto x2_1 = *it2;
     assert(x2 == buffer1[3]);
     assert(x2_1 == buffer1[1]);
 
-    auto it3 = 3 + it1;
-    auto x3  = *it3;
+    auto it3  = 3 + it1;
+    auto x3   = *it3;
     it3       = (-2) + it3;
     auto x3_1 = *it3;
     assert(x3 == buffer1[3]);
@@ -179,15 +179,15 @@ constexpr bool test() {
     std::ranges::concat_view v(a, e, b);
     auto it1 = v.begin();
 
-    auto it2 = it1 + 3;
-    auto x2  = *it2;
+    auto it2  = it1 + 3;
+    auto x2   = *it2;
     it2       = it2 + (-2);
     auto x2_1 = *it2;
     assert(x2 == buffer1[3]);
     assert(x2_1 == buffer1[1]);
 
-    auto it3 = 3 + it1;
-    auto x3  = *it3;
+    auto it3  = 3 + it1;
+    auto x3   = *it3;
     it3       = (-2) + it3;
     auto x3_1 = *it3;
     assert(x3 == buffer1[3]);
@@ -215,15 +215,15 @@ constexpr bool test() {
     std::ranges::concat_view v(a, e, b, c);
     auto it1 = v.begin();
 
-    auto it2 = it1 + 3;
-    auto x2  = *it2;
+    auto it2  = it1 + 3;
+    auto x2   = *it2;
     it2       = it2 + (-2);
     auto x2_1 = *it2;
     assert(x2 == buffer1[3]);
     assert(x2_1 == buffer1[1]);
 
-    auto it3 = 3 + it1;
-    auto x3  = *it3;
+    auto it3  = 3 + it1;
+    auto x3   = *it3;
     it3       = (-2) + it3;
     auto x3_1 = *it3;
     assert(x3 == buffer1[3]);
@@ -240,7 +240,7 @@ constexpr bool test() {
     assert(*it == buffer2[0]);
 
     // jumps big enough to skip several number of ranges
-    it = v.begin() + 14;
+    it       = v.begin() + 14;
     auto x   = *it;
     it       = it + (-3);
     auto x_1 = *it;
@@ -256,8 +256,8 @@ constexpr bool test() {
     std::ranges::concat_view v(a, b);
     auto it1 = v.end();
 
-    auto it2 = it1 - 3;
-    auto x2  = *it2;
+    auto it2  = it1 - 3;
+    auto x2   = *it2;
     it2       = it2 - (-1);
     auto x2_1 = *it2;
     assert(x2 == buffer2[6]);
@@ -292,8 +292,8 @@ constexpr bool test() {
     std::ranges::concat_view v(a, e, b);
     auto it1 = v.end();
 
-    auto it2 = it1 - 3;
-    auto x2  = *it2;
+    auto it2  = it1 - 3;
+    auto x2   = *it2;
     it2       = it2 - (-1);
     auto x2_1 = *it2;
     assert(x2 == buffer2[6]);
