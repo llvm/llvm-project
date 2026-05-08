@@ -793,8 +793,11 @@ int main(int argc, char const *argv[]) {
   pthread_t main_thread = pthread_self();
 
   // Set when the signal thread sends itself a SIGINT to wake the main thread.
-  // The next SIGINT callback invocation observes this flag and skips the work.
-  std::atomic<bool> skip_next_sigint{false};
+  // The next callback invocation observes this flag and skips the work. A
+  // plain bool is sufficient because the callback only ever runs on the
+  // signal thread; it lives outside the lambda because MainLoopPosix copies
+  // the callback on every dispatch, which would discard in-lambda state.
+  bool skip_next_sigint = false;
 
   // Handle signals in a MainLoop running on a separate thread.
   MainLoop signal_loop;
@@ -805,7 +808,7 @@ int main(int argc, char const *argv[]) {
       [&, main_thread](MainLoopBase &) {
         // Skip the self-sent wakeup SIGINT queued at the end of the previous
         // invocation.
-        if (skip_next_sigint.exchange(false))
+        if (std::exchange(skip_next_sigint, false))
           return;
 
         // Temporarily restore the default disposition so that a second SIGINT
@@ -833,7 +836,7 @@ int main(int argc, char const *argv[]) {
         // observe the pending interrupt queued by DispatchInputInterrupt and
         // raise KeyboardInterrupt. Flag the resulting callback invocation so
         // it's skipped rather than re-running DispatchInputInterrupt.
-        skip_next_sigint.store(true);
+        skip_next_sigint = true;
         pthread_kill(main_thread, SIGINT);
       },
       signal_status);
