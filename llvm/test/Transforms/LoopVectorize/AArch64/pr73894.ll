@@ -16,29 +16,19 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[UMAX]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE5:%.*]] ]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_LOAD_CONTINUE5]] ]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT7:%.*]], [[PRED_LOAD_CONTINUE5]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[PRED_LOAD_CONTINUE5]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[PRED_LOAD_CONTINUE5]] ]
-; CHECK-NEXT:    br i1 [[ACTIVE_LANE_MASK]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
-; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
-; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    br i1 [[ACTIVE_LANE_MASK2]], label [[PRED_LOAD_IF4:%.*]], label [[PRED_LOAD_CONTINUE5]]
-; CHECK:       pred.load.if4:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT7:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 4
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE5]]
-; CHECK:       pred.load.continue5:
-; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], [[PRED_LOAD_IF4]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP8]], i32 [[VEC_PHI]])
+; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP12]], i32 [[VEC_PHI]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP14]], i32 [[VEC_PHI3]])
 ; CHECK-NEXT:    [[TMP17]] = select i1 [[ACTIVE_LANE_MASK]], i32 [[TMP15]], i32 [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP18]] = select i1 [[ACTIVE_LANE_MASK2]], i32 [[TMP16]], i32 [[VEC_PHI3]]

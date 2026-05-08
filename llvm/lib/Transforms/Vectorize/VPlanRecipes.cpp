@@ -3397,7 +3397,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
   return false;
 }
 
-/// Return true if \p R is a predicated load/store with a loop-invariant address
+/// Return true if \p R is a predicated store with a loop-invariant address
 /// only masked by the header mask.
 static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
                                                      const SCEV *PtrSCEV,
@@ -3544,20 +3544,15 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
 
-    // Check if this is a predicated load/store with a loop-invariant address
-    // only masked by the header mask. If so, return the uniform mem op cost.
-    if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
+    // Check if this is a predicated store with a loop-invariant address only
+    // masked by the header mask. If so, return the uniform mem op cost.
+    if (!IsLoad &&
+        isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
       InstructionCost UniformCost =
           ScalarMemOpCost +
           Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
                                             /*Ptr=*/nullptr, Ctx.CostKind);
       auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-      if (IsLoad) {
-        return UniformCost +
-               Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast,
-                                      VectorTy, VectorTy, {}, Ctx.CostKind);
-      }
-
       VPValue *StoredVal = getOperand(0);
       if (!StoredVal->isDefinedOutsideLoopRegions())
         UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(

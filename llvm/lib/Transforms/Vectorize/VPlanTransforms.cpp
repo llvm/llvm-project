@@ -1697,6 +1697,24 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))))
     return Def->replaceAllUsesWith(IRV);
 
+  // Narrow a single-scalar predicated load with a header mask to an
+  // unpredicated load; the header mask only restricts the active lanes, but a
+  // single-scalar load reads from a uniform address and produces the same value
+  // for every lane.
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(Def)) {
+    if (RepR->isPredicated() && RepR->isSingleScalar() &&
+        RepR->getOpcode() == Instruction::Load &&
+        vputils::isHeaderMask(RepR->getMask(), *Plan)) {
+      auto *NewR = new VPReplicateRecipe(
+          RepR->getUnderlyingInstr(), drop_end(RepR->operands()),
+          /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR, *RepR,
+          RepR->getDebugLoc());
+      NewR->insertBefore(RepR);
+      RepR->replaceAllUsesWith(NewR);
+      return;
+    }
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
