@@ -1054,6 +1054,10 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
     if (!isa<spirv::LoopControlAttr>(attr))
       return op->emitError("'")
              << symbol << "' must be a spirv::LoopControlAttr";
+  } else if (symbol == spirv::getSelectionControlAttrName()) {
+    if (!isa<spirv::SelectionControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::SelectionControlAttr";
   } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";
