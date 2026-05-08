@@ -137,5 +137,68 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T13 = unsigned _BitInt(13);
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      // Byte-aligned widths: numeric_limits::digits is correct, so all
+      // values including all-ones are safe to test.
+      assert(std::countl_one(T32(0)) == 0);
+      assert(std::countl_one(T32(1)) == 0);
+      assert(std::countl_one(T32(~T32(0))) == 32);
+      assert(std::countl_one(T32(~T32(0) - 1)) == 31);
+      assert(std::countl_one(T32(~T32(0) - 2)) == 30);
+      assert(std::countl_one(T32(~T32(0) - 8)) == 28);
+      assert(std::countl_one(T32(~T32(0) - 127)) == 25);
+      assert(std::countl_one(T32(~T32(0) - 128)) == 24);
+      assert(std::countl_one(T64(0)) == 0);
+      assert(std::countl_one(T64(~T64(0))) == 64);
+      assert(std::countl_one(T64(~T64(0) - 1)) == 63);
+
+      // Odd widths: safe for values that are not all-ones.
+      assert(std::countl_one(T13(0)) == 0);
+      assert(std::countl_one(T13(1)) == 0);
+      assert(std::countl_one(T13(~T13(0) - 1)) == 12);
+      assert(std::countl_one(T13(~T13(0) - 2)) == 11);
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T77  = unsigned _BitInt(77);
+      using T128 = unsigned _BitInt(128);
+      assert(std::countl_one(T77(0)) == 0);
+      assert(std::countl_one(T77(1)) == 0);
+      assert(std::countl_one(T77(~T77(0) - 1)) == 76);
+
+      assert(std::countl_one(T128(0)) == 0);
+      assert(std::countl_one(T128(~T128(0))) == 128);
+      assert(std::countl_one(T128(~T128(0) - 1)) == 127);
+      // Clear a single bit at position 64: 63 leading ones.
+      assert(std::countl_one(T128(~T128(0) ^ (T128(1) << 64))) == 63);
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::countl_one(T256(0)) == 0);
+      assert(std::countl_one(T256(~T256(0))) == 256);
+      assert(std::countl_one(T256(~T256(0) - 1)) == 255);
+      // Clear a single bit at position 100: 155 leading ones.
+      assert(std::countl_one(T256(~T256(0) ^ (T256(1) << 100))) == 155);
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 4096
+    {
+      using T4096 = unsigned _BitInt(4096);
+      assert(std::countl_one(T4096(0)) == 0);
+      assert(std::countl_one(T4096(~T4096(0))) == 4096);
+      // Clear a single bit at position 1000: 3095 leading ones.
+      assert(std::countl_one(T4096(~T4096(0) ^ (T4096(1) << 1000))) == 3095);
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
+
     return 0;
 }
