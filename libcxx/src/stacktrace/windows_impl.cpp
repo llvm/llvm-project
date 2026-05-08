@@ -24,42 +24,42 @@ namespace __stacktrace {
 
 namespace {
 
-namespace __dll {
-
 template <typename F>
 bool get_func(HMODULE module, F** func, char const* name) {
   return ((*func = reinterpret_cast<F*>(reinterpret_cast<void*>(GetProcAddress(module, name)))) != nullptr);
 }
 
 // clang-format off
-bool(WINAPI* EnumProcessModules)(HANDLE, HMODULE*, DWORD, DWORD*);
-bool(WINAPI* GetModuleInformation)(HANDLE, HMODULE, MODULEINFO*, DWORD);
-DWORD(WINAPI* GetModuleBaseName)(HANDLE, HMODULE, char**, DWORD);
-IMAGE_NT_HEADERS* (*ImageNtHeader)(void*);
-bool(WINAPI* SymCleanup)(HANDLE);
-DWORD(WINAPI* SymGetOptions)();
-bool(WINAPI* SymGetSearchPath)(HANDLE, char const*, DWORD);
-bool(WINAPI* SymInitialize)(HANDLE, char const*, bool);
-DWORD(WINAPI* SymSetOptions)(DWORD);
-bool(WINAPI* SymSetSearchPath)(HANDLE, char const*);
+BOOL   (WINAPI*   EnumProcessModules)(HANDLE, HMODULE*, DWORD, LPDWORD);
+BOOL   (WINAPI*   GetModuleInformation)(HANDLE, HMODULE, LPMODULEINFO, DWORD);
+DWORD  (WINAPI*   GetModuleBaseName)(HANDLE, HMODULE, LPSTR, DWORD);
+PIMAGE_NT_HEADERS (IMAGEAPI* ImageNtHeader)(PVOID);
+BOOL   (IMAGEAPI* SymCleanup)(HANDLE);
+DWORD  (IMAGEAPI* SymGetOptions)();
+BOOL   (IMAGEAPI* SymGetSearchPath)(HANDLE, PSTR, DWORD);
+BOOL   (IMAGEAPI* SymInitialize)(HANDLE, PCSTR, BOOL);
+DWORD  (IMAGEAPI* SymSetOptions)(DWORD);
+BOOL   (IMAGEAPI* SymSetSearchPath)(HANDLE, PCSTR);
 #  ifdef _WIN64
-void*(WINAPI* SymFunctionTableAccess)(HANDLE, DWORD64);
-bool(WINAPI* SymGetLineFromAddr)(HANDLE, DWORD64, DWORD*, IMAGEHLP_LINE64*);
-DWORD64(WINAPI* SymGetModuleBase)(HANDLE, DWORD64);
-bool(WINAPI* SymGetModuleInfo)(HANDLE, DWORD64, IMAGEHLP_MODULE64*);
-bool(WINAPI* SymGetSymFromAddr)(HANDLE, DWORD64, DWORD64*, IMAGEHLP_SYMBOL64*);
-DWORD64(WINAPI* SymLoadModule)(HANDLE, HANDLE, char const*, char const*, void*, DWORD);
-bool(WINAPI* StackWalk)(DWORD, HANDLE, HANDLE, STACKFRAME64*, void*, void*,
-                        decltype(SymFunctionTableAccess), decltype(SymGetModuleBase), void*);
+PVOID  (IMAGEAPI* SymFunctionTableAccess)(HANDLE, DWORD64);
+BOOL   (IMAGEAPI* SymGetLineFromAddr)(HANDLE, DWORD64, PDWORD, IMAGEHLP_LINE64*);
+DWORD64(IMAGEAPI* SymGetModuleBase)(HANDLE, DWORD64);
+BOOL   (IMAGEAPI* SymGetModuleInfo)(HANDLE, DWORD64, PIMAGEHLP_MODULE64);
+BOOL   (IMAGEAPI* SymGetSymFromAddr)(HANDLE, DWORD64, PDWORD64, PIMAGEHLP_SYMBOL64);
+DWORD64(IMAGEAPI* SymLoadModule)(HANDLE, HANDLE, PCSTR, PCSTR, DWORD64, DWORD);
+BOOL   (IMAGEAPI* StackWalk)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64, PVOID,
+                             PREAD_PROCESS_MEMORY_ROUTINE64, PFUNCTION_TABLE_ACCESS_ROUTINE64,
+                             PGET_MODULE_BASE_ROUTINE64, PTRANSLATE_ADDRESS_ROUTINE64);
 #  else
-void*(WINAPI* SymFunctionTableAccess)(HANDLE, DWORD);
-bool(WINAPI* SymGetLineFromAddr)(HANDLE, DWORD, DWORD*, IMAGEHLP_LINE*);
-DWORD(WINAPI* SymGetModuleBase)(HANDLE, DWORD);
-bool(WINAPI* SymGetModuleInfo)(HANDLE, DWORD, IMAGEHLP_MODULE*);
-bool(WINAPI* SymGetSymFromAddr)(HANDLE, DWORD, DWORD*, IMAGEHLP_SYMBOL*);
-DWORD(WINAPI* SymLoadModule)(HANDLE, HANDLE, char const*, char const*, void*, DWORD);
-bool(WINAPI* StackWalk)(DWORD, HANDLE, HANDLE, STACKFRAME*, void*, void*,
-                        decltype(SymFunctionTableAccess), decltype(SymGetModuleBase), void*);
+PVOID  (IMAGEAPI* SymFunctionTableAccess)(HANDLE, DWORD);
+BOOL   (IMAGEAPI* SymGetLineFromAddr)(HANDLE, DWORD, PDWORD, IMAGEHLP_LINE*);
+DWORD  (IMAGEAPI* SymGetModuleBase)(HANDLE, DWORD);
+BOOL   (IMAGEAPI* SymGetModuleInfo)(HANDLE, DWORD, PIMAGEHLP_MODULE);
+BOOL   (IMAGEAPI* SymGetSymFromAddr)(HANDLE, DWORD, PDWORD, PIMAGEHLP_SYMBOL);
+DWORD  (IMAGEAPI* SymLoadModule)(HANDLE, HANDLE, PCSTR, PCSTR, DWORD, DWORD);
+BOOL   (IMAGEAPI* StackWalk)(DWORD, HANDLE, HANDLE, STACKFRAME64*, PVOID,
+                             PREAD_PROCESS_MEMORY_ROUTINE, PFUNCTION_TABLE_ACCESS_ROUTINE,
+                             PGET_MODULE_BASE_ROUTINE, PTRANSLATE_ADDRESS_ROUTINE);
 #  endif
 // clang-format on
 
@@ -73,7 +73,7 @@ bool loadFuncs() {
   if (succeeded) {
     return true;
   }
-  if (attempted) {
+  if (attempted /* but not successful */) {
     return false;
   }
 
@@ -119,21 +119,17 @@ bool loadFuncs() {
   return succeeded;
 }
 
-} // namespace __dll
-
-using namespace __dll;
-
-struct _Sym_Init_Scope {
+struct SymInitScope {
   HANDLE proc_;
 
-  explicit _Sym_Init_Scope(HANDLE proc) : proc_(proc) { SymInitialize(proc_, nullptr, true); }
-  ~_Sym_Init_Scope() { SymCleanup(proc_); }
+  explicit SymInitScope(HANDLE proc) : proc_(proc) { SymInitialize(proc_, nullptr, true); }
+  ~SymInitScope() { SymCleanup(proc_); }
 };
 
 } // namespace
 
 _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_depth) {
-  static bool loadedDLLFuncs = loadFuncs();
+  static BOOL loadedDLLFuncs = loadFuncs();
   if (!loadedDLLFuncs) {
     return;
   }
@@ -156,7 +152,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
     return;
   }
 
-  _Sym_Init_Scope symscope(proc);
+  SymInitScope symscope(proc);
 
   // Allow space for a handful of paths
   char sym_path[MAX_PATH * 4];
@@ -197,8 +193,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
   CONTEXT ccx;
   RtlCaptureContext(&ccx);
 
-  STACKFRAME frame;
-  memset(&frame, 0, sizeof(frame));
+  STACKFRAME frame{};
   frame.AddrPC.Mode    = AddrModeFlat;
   frame.AddrStack.Mode = AddrModeFlat;
   frame.AddrFrame.Mode = AddrModeFlat;
