@@ -1120,7 +1120,7 @@ void BreakableLineCommentSection::adaptStartOfLine(
         /*Spaces=*/LineColumn,
         /*StartOfTokenColumn=*/LineColumn,
         /*AlignedTo=*/tokenAt(0).NewlinesBefore == 0 ? &tokenAt(0) : nullptr,
-        /*InPPDirective=*/false);
+        /*InPPDirective=*/false, /*IndentedFromColumn=*/StartColumn);
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
     // Adjust the prefix if necessary.

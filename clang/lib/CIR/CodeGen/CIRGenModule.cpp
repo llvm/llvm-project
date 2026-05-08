@@ -465,11 +465,19 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
+  // Weak references don't produce any output by themselves.
   if (global->hasAttr<WeakRefAttr>())
-    errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
+    return;
 
-  if (global->hasAttr<AliasAttr>())
-    errorNYI(global->getSourceRange(), "emitGlobal: AliasAttr");
+  // If this is an alias definition (which otherwise looks like a declaration)
+  // emit it now.
+  if (global->hasAttr<AliasAttr>()) {
+    // Classic codegen calls shouldSkipAliasEmission here to skip alias
+    // emission for OpenMP target device and CUDA configurations.
+    assert(!cir::MissingFeatures::shouldSkipAliasEmission());
+    emitAliasDefinition(gd);
+    return;
+  }
 
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted
@@ -3374,8 +3382,88 @@ void CIRGenModule::release() {
 
   emitLLVMUsed();
 
+  // Classic codegen calls `checkAliases` here to validate any alias
+  // definitions emitted during codegen.
+  assert(!cir::MissingFeatures::checkAliases());
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
+}
+
+void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
+  const auto *d = cast<ValueDecl>(gd.getDecl());
+  const AliasAttr *aa = d->getAttr<AliasAttr>();
+  assert(aa && "Not an alias?");
+
+  StringRef mangledName = getMangledName(gd);
+
+  if (aa->getAliasee() == mangledName) {
+    diags.Report(aa->getLocation(), diag::err_cyclic_alias) << 0;
+    return;
+  }
+
+  // If there is a definition in the module, then it wins over the alias.
+  // This is dubious, but allow it to be safe. Just ignore the alias.
+  mlir::Operation *entry = getGlobalValue(mangledName);
+  if (entry) {
+    auto entryGV = mlir::dyn_cast<cir::CIRGlobalValueInterface>(entry);
+    if (entryGV && entryGV.isDefinition())
+      return;
+  }
+
+  // Classic codegen pushes the alias onto an `Aliases` list at this point so
+  // that `checkAliases` can later validate the alias and recover on error.
+  assert(!cir::MissingFeatures::checkAliases());
+
+  mlir::Location loc = getLoc(d->getSourceRange());
+  bool isFunction = isa<FunctionDecl>(d);
+
+  // Get the linkage and the type of the alias.
+  mlir::Type declTy;
+  cir::GlobalLinkageKind linkage;
+  if (isFunction) {
+    declTy = getTypes().getFunctionType(gd);
+    linkage = getFunctionLinkage(gd);
+  } else {
+    declTy = getTypes().convertTypeForMem(d->getType());
+    const auto *vd = cast<VarDecl>(d);
+    linkage = getCIRLinkageVarDefinition(vd);
+  }
+
+  // Aliases that target weak symbols must themselves be marked weak.
+  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
+      d->isWeakImported())
+    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
+
+  // Create the alias op. If there is an existing declaration with the same
+  // name, erase it: any references to it via flat symbol reference will
+  // automatically resolve to the new alias.
+  if (entry) {
+    eraseGlobalSymbol(entry);
+    entry->erase();
+  }
+
+  // Aliases are always definitions, so the MLIR visibility should match the
+  // linkage rather than defaulting to private.
+  mlir::SymbolTable::Visibility visibility =
+      getMLIRVisibilityFromCIRLinkage(linkage);
+
+  // TODO(cir): Make GlobalAlias a separate op.
+  cir::CIRGlobalValueInterface alias =
+      isFunction
+          ? mlir::cast<cir::CIRGlobalValueInterface>(
+                createCIRFunction(loc, mangledName,
+                                  mlir::cast<cir::FuncType>(declTy),
+                                  cast<FunctionDecl>(d))
+                    .getOperation())
+          : mlir::cast<cir::CIRGlobalValueInterface>(
+                createGlobalOp(*this, loc, mangledName, declTy).getOperation());
+  alias.setAliasee(aa->getAliasee());
+  alias.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(alias, visibility);
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  setCommonAttributes(gd, alias);
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
 void CIRGenModule::emitAliasForGlobal(StringRef mangledName,

@@ -206,6 +206,7 @@ on support follow.
      ``Zicboz``        Assembly Support
      ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccid``        Supported
      ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)

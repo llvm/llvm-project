@@ -2095,10 +2095,10 @@ def LWAT : X_RD5_RS5_IM5<31, 582, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            Requires<[IsISA3_0]>,
            RegConstraint<"$RSTi = $RST">;
 
-let hasExtraSrcRegAllocReq = 1, mayLoad = 1,
-       mayStore = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
-def LWAT_CSNE : X_RD5_RS5_IM5<31, 582, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
-                         "lwat $RST, $RA, $RB", IIC_LdStLoad>,
+let hasExtraSrcRegAllocReq = 1, mayLoad = 1, mayStore = 1,
+       isCodeGenOnly = 1, hasNoSchedulingInfo = 1, RB = 16 in
+def LWAT_CSNE : X_RD5_RS5_IM5<31, 582, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
+                         "lwat $RST, $RA, 16", IIC_LdStLoad>,
            Requires<[IsISA3_0]>;
 
 def LWAT_PSEUDO : PPCCustomInserterPseudo<
