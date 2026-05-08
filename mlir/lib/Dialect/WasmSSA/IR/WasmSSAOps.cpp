@@ -318,6 +318,44 @@ GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalSetOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GlobalSetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *symTabOp = SymbolTable::getNearestSymbolTable(*this);
+  StringRef referencedSymbol = getGlobal();
+  Operation *definitionOp = symbolTable.lookupSymbolIn(
+      symTabOp, StringAttr::get(this->getContext(), referencedSymbol));
+  if (!definitionOp)
+    return emitError() << "symbol @" << referencedSymbol << " is undefined";
+
+  Type globalType;
+  bool isMutable = false;
+  if (auto global = dyn_cast<GlobalOp>(definitionOp)) {
+    globalType = global.getType();
+    isMutable = global.getIsMutable();
+  } else if (auto globalImport = dyn_cast<GlobalImportOp>(definitionOp)) {
+    globalType = globalImport.getType();
+    isMutable = globalImport.getIsMutable();
+  } else {
+    return emitError() << "symbol @" << referencedSymbol
+                       << " is not a global symbol";
+  }
+
+  if (!isMutable)
+    return emitError("global.set target must be mutable");
+
+  Type valueType = getValue().getType();
+  if (globalType != valueType)
+    return emitError("global.set value type does not match target global "
+                     "type: expected ")
+           << globalType << " but got " << valueType;
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalImportOp
 //===----------------------------------------------------------------------===//
 

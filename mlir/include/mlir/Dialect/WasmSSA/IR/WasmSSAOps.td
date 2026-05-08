@@ -378,6 +378,25 @@ def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<Sy
   let assemblyFormat = "$global attr-dict `:` type($global_val)";
 }
 
+def WasmSSA_GlobalSetOp : WasmSSA_Op<"global_set", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Sets the value of the mutable global passed as argument.";
+  let description = [{
+     Sets the value of the mutable global referenced by the symbol to the given
+     value.
+
+     Example:
+
+     ```mlir
+     // Sets the value of `@global_0` to `%v`.
+     wasmssa.global_set @global_0 to %v : i32
+     ```
+    }];
+  let arguments = (ins FlatSymbolRefAttr: $global,
+                       WasmSSA_ValType: $value);
+  let assemblyFormat = "$global `to` $value `:` type($value) attr-dict";
+}
+
 def WasmSSA_IfOp : WasmSSA_Op<"if", [Terminator,
     DeclareOpInterfaceMethods<LabelLevelOpInterface>]> {
   let summary = "Execute the if region if condition value is non-zero, the else region otherwise.";
