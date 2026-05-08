@@ -137,13 +137,13 @@ PreservedAnalyses EJitRegisterPeriodPass::run(Module& M, ModuleAnalysisManager& 
     return PreservedAnalyses::none();
 }
 
-// [BiSheng] 获取或创建 ejit_auto_register 函数
+// 获取或创建 ejit_auto_register 函数
 // 若 PASS1 已创建，直接返回；否则创建空函数（含 entry 块和 ret void）
 Function* getOrCreateAutoRegister(Module& M) {
     Function* F = M.getFunction("ejit_auto_register");
     if (F) return F;
 
-    // [BiSheng] 首次创建: 构造空函数体
+    // 首次创建: 构造空函数体
     FunctionType* FT = FunctionType::get(
         Type::getVoidTy(M.getContext()), false);
     F = Function::Create(FT, GlobalValue::InternalLinkage,
@@ -161,7 +161,7 @@ Function* getOrCreateAutoRegister(Module& M) {
 ### 3.3 注册调用生成
 
 ```cpp
-// [BiSheng] 生成 ejit_register_period_array 调用
+// 生成 ejit_register_period_array 调用
 void emitRegisterPeriodArrayCall(IRBuilder<>& B, Function* regFn,
                                   const std::string& periodName,
                                   GlobalVariable* GV, uint64_t arraySize) {
@@ -173,7 +173,7 @@ void emitRegisterPeriodArrayCall(IRBuilder<>& B, Function* regFn,
     B.CreateCall(regFn, {periodNameStr, varNameStr, baseAddr, arrSize});
 }
 
-// [BiSheng] 生成 ejit_register_static_var 调用
+// 生成 ejit_register_static_var 调用
 void emitRegisterStaticVarCall(IRBuilder<>& B, Function* regFn,
                                 GlobalVariable* GV) {
     Value* varNameStr = B.CreateGlobalString(GV->getName());
@@ -219,7 +219,7 @@ entry:
 ## 5. 关键数据结构
 
 ```cpp
-// [BiSheng] PeriodVarInfo — 时间窗变量信息（本 Pass 内部使用）
+// PeriodVarInfo — 时间窗变量信息（本 Pass 内部使用）
 struct PeriodVarInfo {
     GlobalVariable* GV;
     bool isPeriodArr;           // true: ejit_period_arr, false: ejit_period(static)
@@ -227,7 +227,7 @@ struct PeriodVarInfo {
     uint64_t arraySize;         // 仅 ejit_period_arr 有效
 };
 
-// [BiSheng] 运行时注册 API
+// 运行时注册 API
 // void ejit_register_period_array(const char* periodName, const char* varName,
 //                                  void* baseAddr, uint64_t arraySize);
 //

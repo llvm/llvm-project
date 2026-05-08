@@ -158,14 +158,14 @@ void insertDeactivateAtEntry(Function* F,
     // 声明运行时函数
     Function* deactivateFn = getOrDeclareDeactivateArray(M);
 
-    // [BiSheng] 为每个 lc 时间窗插入 deactivate_array 调用
+    // 为每个 lc 时间窗插入 deactivate_array 调用
     // 调用顺序: metadata 中出现顺序 (与 activate 配对)
     for (auto& lcInfo : lcInfoList) {
         // 参数: periodName 字符串 + arrayPtr + cellIdx
         Value* periodNameStr = Builder.CreateGlobalStringPtr(lcInfo.periodName);
         Value* argVal = F->getArg(lcInfo.argIdx);
 
-        // [BiSheng] 确定对应的全局数组指针
+        // 确定对应的全局数组指针
         // 从 metadata 推断: ejit_period_arr_ind 关联的 periodName → 同名 ejit_period_arr 全局变量
         Value* arrayPtr = getArrayPtrForPeriod(M, lcInfo.periodName);
         // 若找不到对应数组，arrayPtr = null (fallback 到 period 级 deactivate)
@@ -202,7 +202,7 @@ void insertActivateAtExits(Function* F,
         IRBuilder<> Builder(Ctx);
         Builder.SetInsertPoint(RI); // 插入点: return 之前
 
-        // [BiSheng] 逆序插入 activate (配对: deactivate(A)→deactivate(B)→activate(B)→activate(A))
+        // 逆序插入 activate (配对: deactivate(A)→deactivate(B)→activate(B)→activate(A))
         for (auto it = lcInfoList.rbegin(); it != lcInfoList.rend(); ++it) {
             Value* periodNameStr = Builder.CreateGlobalStringPtr(it->periodName);
             Value* argVal = F->getArg(it->argIdx);
@@ -222,7 +222,7 @@ void insertActivateAtExits(Function* F,
 
 ```cpp
 Value* getArrayPtrForPeriod(Module& M, const std::string& periodName) {
-    // [BiSheng] 查找与 periodName 匹配的 ejit_period_arr 全局变量
+    // 查找与 periodName 匹配的 ejit_period_arr 全局变量
     // 遍历所有全局变量的 ejit.metadata:
     //   找 !{"ejit_period_arr", !"<periodName>" ...}
 
@@ -298,7 +298,7 @@ early_exit:
 ; 输出:
 define void @update_both(i32 %cellIdx, i32 %trpIdx) {
 entry:
-  ; [BiSheng] deactivate 按 metadata 出现顺序 (cell 先, trp 后)
+  ; deactivate 按 metadata 出现顺序 (cell 先, trp 后)
   call void @ejit_deactivate_array(ptr @".str.cell", ptr bitcast (%CellConfig* @g_cellCfg to ptr), i32 %cellIdx)
   call void @ejit_deactivate_array(ptr @".str.trp",  ptr bitcast (%TrpConfig* @g_trpCfg to ptr),   i32 %trpIdx)
 
@@ -307,13 +307,13 @@ entry:
 
 body:
   ; ... 函数体 ...
-  ; [BiSheng] activate 逆序 (trp 先, cell 后)
+  ; activate 逆序 (trp 先, cell 后)
   call void @ejit_activate_array(ptr @".str.trp",  ptr bitcast (%TrpConfig* @g_trpCfg to ptr),   i32 %trpIdx)
   call void @ejit_activate_array(ptr @".str.cell", ptr bitcast (%CellConfig* @g_cellCfg to ptr), i32 %cellIdx)
   ret void
 
 early_exit:
-  ; [BiSheng] 所有 return 前均插入 activate (同样逆序)
+  ; 所有 return 前均插入 activate (同样逆序)
   call void @ejit_activate_array(ptr @".str.trp",  ptr bitcast (%TrpConfig* @g_trpCfg to ptr),   i32 %trpIdx)
   call void @ejit_activate_array(ptr @".str.cell", ptr bitcast (%CellConfig* @g_cellCfg to ptr), i32 %cellIdx)
   ret void
@@ -335,20 +335,20 @@ call void @ejit_activate_array(ptr @".str.custom_p", ptr null, i32 %idx)
 ## 5. 关键数据结构
 
 ```cpp
-// [BiSheng] 生命周期函数信息
+// 生命周期函数信息
 struct LifecycleFuncInfo {
     Function* F;
     std::vector<PeriodAssociation> associations;
 };
 
-// [BiSheng] 时间窗 lc → period_arr_ind 关联
+// 时间窗 lc → period_arr_ind 关联
 struct PeriodAssociation {
     std::string periodName;      // ejit_period_lc 参数
     unsigned paramIdx;           // 对应的 ejit_period_arr_ind 参数索引
     GlobalVariable* periodArr;   // 关联的全局数组 (可为 null)
 };
 
-// [BiSheng] 运行时 API 声明
+// 运行时 API 声明
 // void ejit_deactivate_array(const char* periodName, void* arrayPtr, int cellIdx);
 // void ejit_activate_array(const char* periodName, void* arrayPtr, int cellIdx);
 ```

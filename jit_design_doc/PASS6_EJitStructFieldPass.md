@@ -242,7 +242,7 @@ GEP 指令的模式提供了完整的信息用于替换：
 
 ```cpp
 PreservedAnalyses EJitStructFieldPass::run(Module& M, ModuleAnalysisManager& AM) {
-    // [BiSheng] context_ 用于日志/断言定位，非地址计算必需
+    // context_ 用于日志/断言定位，非地址计算必需
     // v1.4 起地址计算完全由 accumulateConstantOffset 完成，
     // context_ 中的 fnName/periodName/cellIdx 仅用于诊断输出和调试断言
     assert(context_ && "SpecializationContext not set");
@@ -266,14 +266,14 @@ PreservedAnalyses EJitStructFieldPass::run(Module& M, ModuleAnalysisManager& AM)
                 auto* LI = dyn_cast<LoadInst>(&I);
                 if (!LI) continue;
 
-                // [BiSheng] v1.2: 先检查 load 上的 !ejit.may_const metadata
+                // v1.2: 先检查 load 上的 !ejit.may_const metadata
                 // 这是 may_const 识别的唯一依据，不再依赖 offset 匹配
                 if (!LI->hasMetadata("ejit.may_const"))
                     continue;
 
                 Value* PtrOp = LI->getPointerOperand();
 
-                // [BiSheng] v1.3: 处理直接 GlobalVariable load (标量全局变量, 无 GEP)
+                // v1.3: 处理直接 GlobalVariable load (标量全局变量, 无 GEP)
                 if (auto* GV = dyn_cast<GlobalVariable>(PtrOp)) {
                     if (!gvPeriodMap.count(GV)) continue;
                     GEPAnalysis analysis;
@@ -288,7 +288,7 @@ PreservedAnalyses EJitStructFieldPass::run(Module& M, ModuleAnalysisManager& AM)
                 if (!GEP)
                     continue;  // PHI/Select → Inline+InstCombine 已消除绝大多数
 
-                // [BiSheng] v1.5: 检查是否通过指针全局变量间接访问
+                // v1.5: 检查是否通过指针全局变量间接访问
                 // GEP 基址可能是一个 LoadInst (加载指针值)
                 GlobalVariable* GV = nullptr;
                 GEPAnalysis analysis;
@@ -326,8 +326,8 @@ PreservedAnalyses EJitStructFieldPass::run(Module& M, ModuleAnalysisManager& AM)
     std::vector<LoadReplacement> replacements;
 
     for (auto& info : candidates) {
-        // [BiSheng] v1.2: may_const 身份已由 metadata 确认
-        // [BiSheng] v1.5: info 包含 indirect/indirectPtrOffset 用于指针间接访问
+        // v1.2: may_const 身份已由 metadata 确认
+        // v1.5: info 包含 indirect/indirectPtrOffset 用于指针间接访问
 
         RuntimeValue value = readRuntimeValue(info, info.load->getType());
         Constant* constVal = createConstantFromRuntimeValue(info.load->getType(), value);
@@ -360,7 +360,7 @@ bool analyzeGEPChain(GlobalVariable* GV, GEPOperator* GEP,
                      GEPAnalysis& result) {
     result.gv = GV;
 
-    // [BiSheng] v1.4: 仅计算 byteOffset 用于运行时地址计算
+    // v1.4: 仅计算 byteOffset 用于运行时地址计算
     // accumulateConstantOffset 隐含验证了所有 GEP 索引为常量
     // （任何非常量索引都会导致它返回 false）
     APInt gepOffset(DL.getIndexSizeInBits(0), 0);
@@ -376,7 +376,7 @@ bool analyzeGEPChain(GlobalVariable* GV, GEPOperator* GEP,
 ### 3.4 指针间接访问解析 (resolveIndirectLoad) — v1.5 新增
 
 ```cpp
-// [BiSheng] v1.5: 处理通过指针全局变量间接访问 ejit_may_const 字段
+// v1.5: 处理通过指针全局变量间接访问 ejit_may_const 字段
 // IR 模式: %ptr = load ptr, ptr @g_pCfg / @g_ptrArr[idx]
 //           %field = GEP %S, ptr %ptr, ...
 //           %val = load, !ejit.may_const
@@ -469,10 +469,11 @@ RuntimeValue readRuntimeValue(const GEPAnalysis& info, Type* loadType) {
     void* baseAddr;
     if (info.indirect) {
         // v1.5: 间接访问 — 从 GV 读出指针值作为基地址
-        // gvAddr + indirectPtrOffset = 指针值在 GV 中的地址
-        // *(void**)ptrSlot = 实际的基地址
+        // 使用 memcpy 避免未对齐访问 (ARM safe)
         uintptr_t ptrSlot = (uintptr_t)gvAddr + info.indirectPtrOffset;
-        baseAddr = *(void**)ptrSlot;
+        void* ptrVal = nullptr;
+        memcpy(&ptrVal, (void*)ptrSlot, sizeof(void*));
+        baseAddr = ptrVal;
         if (!baseAddr) return RuntimeValue{};  // 空指针
     } else {
         baseAddr = gvAddr;
@@ -487,7 +488,7 @@ RuntimeValue readRuntimeValue(const GEPAnalysis& info, Type* loadType) {
 
 ```cpp
 void* getGlobalVariableRuntimeAddr(GlobalVariable* GV) {
-    // [BiSheng] 全局变量的运行时地址
+    // 全局变量的运行时地址
     // 方法 1: 通过 PeriodArrayRegistry 查询
     //   - PeriodArrayRegistry 在 ejit_auto_register 中填入 baseAddr
     //   - 运行时直接查找
@@ -501,6 +502,34 @@ void* getGlobalVariableRuntimeAddr(GlobalVariable* GV) {
     if (addr) return addr;
 
     return nullptr;
+}
+```
+
+### 3.7.1 readMemory — 安全内存读取
+
+```cpp
+// 从进程内存读取值，使用 memcpy 避免未对齐访问
+// ARM Cortex-A 上非对齐的 int64_t/double 读取可能触发 SIGBUS
+RuntimeValue readMemory(uintptr_t addr, Type* loadType) {
+    RuntimeValue rv{};
+    memset(&rv, 0, sizeof(rv));
+
+    if (loadType->isIntegerTy()) {
+        unsigned bw = loadType->getIntegerBitWidth();
+        if (bw <= 32)
+            memcpy(&rv.intVal, (void*)addr, sizeof(int32_t));
+        else
+            memcpy(&rv.longVal, (void*)addr, sizeof(int64_t));
+    } else if (loadType->isFloatTy()) {
+        memcpy(&rv.floatVal, (void*)addr, sizeof(float));
+    } else if (loadType->isDoubleTy()) {
+        memcpy(&rv.doubleVal, (void*)addr, sizeof(double));
+    } else if (loadType->isPointerTy()) {
+        memcpy(&rv.ptrVal, (void*)addr, sizeof(void*));
+    }
+    // 其他类型暂不处理
+
+    return rv;
 }
 ```
 
@@ -521,7 +550,7 @@ Constant* createConstantFromRuntimeValue(Type* ty, const RuntimeValue& value) {
     } else if (ty->isFloatTy()) {
         return ConstantFP::get(ty, value.floatVal);
     } else if (ty->isDoubleTy()) {
-        return ConstantFP::get(ty, (double)value.floatVal);
+        return ConstantFP::get(ty, value.doubleVal);
     } else if (ty->isPointerTy()) {
         return ConstantExpr::getIntToPtr(
             ConstantInt::get(Type::getInt64Ty(Ctx),
@@ -591,7 +620,7 @@ define void @process_task(i32 %cellIdx) {
 ## 5. 关键数据结构
 
 ```cpp
-// [BiSheng] JIT 编译时上下文 (由 JIT 编译器传入)
+// JIT 编译时上下文 (由 JIT 编译器传入)
 // 注意: 使用 std::string 而非 const char*，防止异步模式下的悬空指针
 // (异步编译时，请求可能在线程间传递，原始 C 字符串生命周期不足)
 struct SpecializationContext {
@@ -604,11 +633,11 @@ struct SpecializationContext {
     OptimizationLevel optLevel;
 };
 
-// [BiSheng] v1.2: StructLayoutInfo 和 LayoutRegistry 已废弃
+// v1.2: StructLayoutInfo 和 LayoutRegistry 已废弃
 // may_const 识别由 load->hasMetadata("ejit.may_const") 完成
 // 类型信息从 load->getType() 直接获取
 
-// [BiSheng] 全局变量 → period 信息映射 (JIT 时从 metadata 构建)
+// 全局变量 → period 信息映射 (JIT 时从 metadata 构建)
 struct GVPeriodMap {
     struct Info {
         std::string periodName;
@@ -620,11 +649,12 @@ struct GVPeriodMap {
     std::map<GlobalVariable*, Info> mapping;
 };
 
-// [BiSheng] 运行时值读取 (联合体)
+// 运行时值读取 (联合体)
 union RuntimeValue {
     int32_t intVal;
     int64_t longVal;
     float floatVal;
+    double doubleVal;
     bool boolVal;
     void* ptrVal;
 };

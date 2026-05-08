@@ -191,7 +191,7 @@ process_task_multi(idx, iter);  →  Wrapper 构建 dims
 根据 SPEC4.md 的时间窗设计：
 
 ```cpp
-// [BiSheng] 运行时值类型 (支持多种常量类型)
+// 运行时值类型 (支持多种常量类型)
 union RuntimeValue {
     int32_t intVal;
     int64_t longVal;
@@ -200,7 +200,7 @@ union RuntimeValue {
     void* ptrVal;             // v1.5: 指针类型 (如函数指针)
 };
 
-// [BiSheng] 时间窗状态枚举
+// 时间窗状态枚举
 enum class PeriodState {
     Inactive,   // 未激活
     Active,     // 已激活，可 JIT
@@ -213,7 +213,7 @@ enum class PeriodState {
 AOT 阶段由 `EJitRegisterPeriodPass` 生成注册代码，在 `ejit_init` 时自动执行，将全局变量运行时地址桥接到 JIT 编译环境。
 
 ```cpp
-// [BiSheng] ejit_period_arr 数组注册信息
+// ejit_period_arr 数组注册信息
 // 由 AOT 生成的注册代码调用 ejit_register_period_array() 填入
 struct PeriodArrayInfo {
     std::string varName;       // 全局变量名 (如 "g_cellCfg")
@@ -222,13 +222,13 @@ struct PeriodArrayInfo {
     size_t arraySize;          // 数组长度
 };
 
-// [BiSheng] static 时间窗变量注册信息
+// static 时间窗变量注册信息
 struct StaticVarInfo {
     std::string varName;       // 全局变量名 (如 "g_boardCfg")
     void* varAddr;             // 变量地址
 };
 
-// [BiSheng] 时间窗数组注册表
+// 时间窗数组注册表
 // periodName → 该名称下所有 ejit_period_arr 数组
 class PeriodArrayRegistry {
     std::unordered_map<std::string, std::vector<PeriodArrayInfo>> arraysByPeriod_;
@@ -261,7 +261,7 @@ static void ejit_auto_register(void) {
 #### 3.1.2 运行时激活状态
 
 ```cpp
-// [BiSheng] 时间窗激活状态
+// 时间窗激活状态
 // 支持两种粒度:
 //   - period 级: ejit_activate(name, idx) 激活该名称下所有数组
 //   - array 级: ejit_activate_array(name, ptr, idx) 激活指定数组
@@ -318,10 +318,10 @@ JIT 编译时读取常量:
 根据 SPEC4.md 的 Cache key 格式设计：
 
 ```cpp
-// [BiSheng] 特化函数指针类型
+// 特化函数指针类型
 using CompiledFunction = void*;
 
-// [BiSheng] 缓存条目
+// 缓存条目
 struct CacheEntry {
     std::string cacheKey;            // Cache key (格式见下方)
     CompiledFunction fn;             // 编译后的函数指针
@@ -330,13 +330,13 @@ struct CacheEntry {
     uint64_t compileTimeMs;          // 编译耗时
 };
 
-// [BiSheng] Code Cache 管理器
+// Code Cache 管理器
 class EJitCache {
     // 缓存存储：cacheKey -> CacheEntry
-    // [BiSheng] Cache key 格式 (根据 SPEC4.md §2.3.2):
-    // [BiSheng]   - 单维度："fnName|periodName=cellIdx"
-    // [BiSheng]   - 多维度："fnName|periodName1=cellIdx1,periodName2=cellIdx2,..."
-    // [BiSheng] 示例："process_task_multi|cell=1,trp=5"
+    // Cache key 格式 (根据 SPEC4.md §2.3.2):
+    //   - 单维度："fnName|periodName=cellIdx"
+    //   - 多维度："fnName|periodName1=cellIdx1,periodName2=cellIdx2,..."
+    // 示例："process_task_multi|cell=1,trp=5"
     std::unordered_map<std::string, CacheEntry> cache_;
 
     // LRU 队列
@@ -356,7 +356,7 @@ public:
     void evictLRU();
 };
 
-// [BiSheng] 构建 Cache key (根据 SPEC4.md §2.3.2)
+// 构建 Cache key (根据 SPEC4.md §2.3.2)
 std::string buildCacheKey(const std::string& fnName,
                           const std::vector<std::pair<std::string, int>>& periodIndices) {
     // periodIndices: [(periodName1, cellIdx1), (periodName2, cellIdx2), ...]
@@ -465,7 +465,7 @@ void process_static_data(void) {
 ### 3.3 特化上下文模型
 
 ```cpp
-// [BiSheng] 特化参数上下文
+// 特化参数上下文
 // 注意: 使用 std::string 而非 const char*，
 // 异步模式时请求在线程间传递，原始 C 字符串生命周期不足
 struct SpecializationContext {
@@ -478,7 +478,7 @@ struct SpecializationContext {
     OptimizationLevel optLevel;             // 优化等级
 };
 
-// [BiSheng] 优化等级配置 (对应 SPEC4.md 3.4.1)
+// 优化等级配置 (对应 SPEC4.md 3.4.1)
 enum class OptimizationLevel {
     Level1 = 1,  // 保守：SCCP + DCE
     Level2 = 2,  // 中等：+ Inline + CFGSimplify
@@ -491,7 +491,7 @@ enum class OptimizationLevel {
 根据 SPEC4.md 3.2 的属性定义：
 
 ```cpp
-// [BiSheng] 函数元数据 (对应 SPEC4.md §4.1)
+// 函数元数据 (对应 SPEC4.md §4.1)
 struct EjitFuncMeta {
     const char* name;                       // 函数名
     const void* bitcode_ptr;                // 嵌入的 bitcode 指针
@@ -701,17 +701,17 @@ private:
 ### 4.1 C++ 主 API
 
 ```cpp
-// [BiSheng] include/llvm/ExecutionEngine/EJIT/EJit.h
+// include/llvm/ExecutionEngine/EJIT/EJit.h
 
 namespace llvm::ejit {
 
-// [BiSheng] 编译模式
+// 编译模式
 enum class CompileMode {
     Sync,    // 同步：阻塞等待 JIT 完成
     Async    // 异步：立即返回，后台编译
 };
 
-// [BiSheng] 初始化配置
+// 初始化配置
 struct Config {
     CompileMode compileMode = CompileMode::Sync; // 编译模式
     size_t maxCacheSize = 512 * 1024;     // 默认 512KB
@@ -722,34 +722,34 @@ struct Config {
     std::string logLevel = "info";        // debug/info/warn/error
 };
 
-// [BiSheng] 主类
+// 主类
 class EJit {
 public:
-    // [BiSheng] 构造函数
+    // 构造函数
     explicit EJit(const Config& config = Config{});
     ~EJit();
 
-    // [BiSheng] 生命周期 API (用户可见，对应 SPEC4.md 3.3)
-    // [BiSheng] 激活指定时间窗实例，记录状态变更
+    // 生命周期 API (用户可见，对应 SPEC4.md 3.3)
+    // 激活指定时间窗实例，记录状态变更
     void activate(const char* periodName, int cellIdx);
     void deactivate(const char* periodName, int cellIdx);
 
-    // [BiSheng] 激活数组指定实例 (显式传入数组指针)
+    // 激活数组指定实例 (显式传入数组指针)
     void activate_array(const char* periodName, void* arrayPtr, int cellIdx);
     void deactivate_array(const char* periodName, void* arrayPtr, int cellIdx);
 
-    // [BiSheng] 激活时间窗所有实例
+    // 激活时间窗所有实例
     void activate_all(const char* periodName);
     void deactivate_all(const char* periodName);
 
-    // [BiSheng] 预热：提前编译指定实例 (可选优化)
+    // 预热：提前编译指定实例 (可选优化)
     void warmup(const char* periodName, int cellIdx);
 
-    // [BiSheng] 清除缓存
+    // 清除缓存
     void clearCache();
     void invalidate(const char* periodName, int cellIdx);
 
-    // [BiSheng] 获取统计信息
+    // 获取统计信息
     struct Stats {
         size_t cacheHits;
         size_t cacheMisses;
@@ -758,17 +758,17 @@ public:
     };
     Stats getStats() const;
 
-    // [BiSheng] 设置优化等级 (运行时动态调整)
+    // 设置优化等级 (运行时动态调整)
     void setOptimizationLevel(OptimizationLevel level);
 
-    // [BiSheng] 获取最近错误
+    // 获取最近错误
     const Error& getLastError() const;
 
 private:
-    // [BiSheng] 内部实现...
+    // 内部实现...
 };
 
-// [BiSheng] 错误类型
+// 错误类型
 enum class ErrorCode {
     Success = 0,
     BitcodeLoadFailed,
@@ -780,7 +780,7 @@ enum class ErrorCode {
     CodeSizeExceeded
 };
 
-// [BiSheng] 错误信息
+// 错误信息
 struct Error {
     ErrorCode code;
     std::string message;
@@ -809,13 +809,13 @@ struct Error {
 ### 4.2 C 运行时 API
 
 ```c
-// [BiSheng] include/llvm/ExecutionEngine/EJIT/EJitRuntime.h
+// include/llvm/ExecutionEngine/EJIT/EJitRuntime.h
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// [BiSheng] 错误码 (对应 SPEC3 §3.1)
+// 错误码 (对应 SPEC3 §3.1)
 typedef enum {
     EJIT_OK = 0,
     EJIT_ERR_INVALID_PARAM = -1,
@@ -826,20 +826,20 @@ typedef enum {
     EJIT_ERR_BITCODE_NOT_FOUND = -6
 } ejit_status_t;
 
-// [BiSheng] 编译模式 (对应 SPEC3 §3.1)
+// 编译模式 (对应 SPEC3 §3.1)
 typedef enum {
     EJIT_COMPILE_SYNC,    /* 同步编译：阻塞等待 JIT 完成 */
     EJIT_COMPILE_ASYNC    /* 异步编译：立即返回，后台编译 */
 } ejit_compile_mode_t;
 
-// [BiSheng] 优化等级 (对应 SPEC3 §3.1)
+// 优化等级 (对应 SPEC3 §3.1)
 typedef enum {
     EJIT_OPT_L1 = 1,      /* 保守：常量传播 + 死代码消除 */
     EJIT_OPT_L2 = 2,      /* 中等：+ 函数内联 + CFG 简化 */
     EJIT_OPT_L3 = 3       /* 激进：+ 循环展开 */
 } ejit_opt_level_t;
 
-// [BiSheng] 初始化 (C 接口，对应 SPEC3 §3.2)
+// 初始化 (C 接口，对应 SPEC3 §3.2)
 typedef struct {
     ejit_compile_mode_t mode;       /* 编译模式：同步/异步 */
     ejit_opt_level_t opt_level;     /* 优化等级：L1/L2/L3 */
@@ -850,15 +850,15 @@ typedef struct {
     int enable_logging;             /* 是否启用日志 */
 } ejit_config_t;
 
-// [BiSheng] 初始化/销毁
+// 初始化/销毁
 ejit_status_t ejit_init(const ejit_config_t* config);
 void ejit_shutdown(void);
 
-// [BiSheng] 编译模式控制 (对应 SPEC3 §3.2)
+// 编译模式控制 (对应 SPEC3 §3.2)
 void ejit_set_compile_mode(ejit_compile_mode_t mode);
 ejit_compile_mode_t ejit_get_compile_mode(void);
 
-// [BiSheng] 生命周期 API (用户可见，对应 SPEC4.md 3.3)
+// 生命周期 API (用户可见，对应 SPEC4.md 3.3)
 void ejit_activate(const char* periodName, int cellIdx);
 void ejit_deactivate(const char* periodName, int cellIdx);
 
@@ -870,25 +870,25 @@ void ejit_deactivate_all(const char* periodName);
 
 bool ejit_is_active(const char* periodName, int cellIdx);
 
-// [BiSheng] 维度信息结构 (用于 ejit_compile_or_get)
-// [BiSheng] 包含维度名称和索引值，用于 JIT 特化
+// 维度信息结构 (用于 ejit_compile_or_get)
+// 包含维度名称和索引值，用于 JIT 特化
 typedef struct {
     const char* name;    /* 维度名称，如 "cell", "trp" */
     int index;           /* 参数值 */
 } ejit_dim_t;
 
-// [BiSheng] 内部使用: Wrapper 入口和编译函数
-// [BiSheng] 返回特化函数指针，NULL 表示编译失败继续执行原函数逻辑
-// [BiSheng] ejit_dim_t 传递 {name, index} 结构化数据用于 JIT 特化
-// [BiSheng] out_pfn 保留作为 future 扩展，用于跨平台适配或状态查询
+// 内部使用: Wrapper 入口和编译函数
+// 返回特化函数指针，NULL 表示编译失败继续执行原函数逻辑
+// ejit_dim_t 传递 {name, index} 结构化数据用于 JIT 特化
+// out_pfn 保留作为 future 扩展，用于跨平台适配或状态查询
 void* ejit_compile_or_get(const char* func_name, ejit_dim_t* dims,
                           int count, void** out_pfn);
 
-// [BiSheng] 缓存管理
+// 缓存管理
 void ejit_clear_cache(void);
 void ejit_invalidate(const char* periodName, int cellIdx);
 
-// [BiSheng] 统计信息
+// 统计信息
 typedef struct {
     size_t cacheHits;
     size_t cacheMisses;
@@ -898,7 +898,7 @@ typedef struct {
 
 int ejit_get_stats(ejit_stats_t* stats);
 
-// [BiSheng] 错误信息
+// 错误信息
 typedef struct {
     int code;
     const char* message;
@@ -916,7 +916,7 @@ const ejit_error_t* ejit_get_last_error(void);
 根据 §3.6 的 Pass 架构，定义各 Pass 接口：
 
 ```cpp
-// [BiSheng] include/llvm/ExecutionEngine/EJIT/EJitPasses.h
+// include/llvm/ExecutionEngine/EJIT/EJitPasses.h
 
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/Module.h>
@@ -924,15 +924,15 @@ const ejit_error_t* ejit_get_last_error(void);
 
 namespace llvm {
 
-// [BiSheng] 前置声明
+// 前置声明
 class SpecializationContext;
 
 // ===== AOT Pipeline Passes =====
 
 // ===== 早期 AOT Pipeline (标准优化之前) =====
 
-// [BiSheng] EJitRegisterBitcodePass - 在标准优化前提取 ejit_entry 函数 bitcode
-// [BiSheng] 作为独立早期 Pass 注册，不包含在 EJitAotModulePass 内
+// EJitRegisterBitcodePass - 在标准优化前提取 ejit_entry 函数 bitcode
+// 作为独立早期 Pass 注册，不包含在 EJitAotModulePass 内
 class EJitRegisterBitcodePass : public PassInfoMixin<EJitRegisterBitcodePass> {
 public:
     PreservedAnalyses run(Module& M, ModuleAnalysisManager& AM);
@@ -941,28 +941,28 @@ public:
 
 // ===== 晚期 AOT Pipeline (标准优化之后) =====
 
-// [BiSheng] 1. EJitRegisterPeriodPass - 生成 period 数组/static 变量注册代码
+// 1. EJitRegisterPeriodPass - 生成 period 数组/static 变量注册代码
 class EJitRegisterPeriodPass : public PassInfoMixin<EJitRegisterPeriodPass> {
 public:
     PreservedAnalyses run(Module& M, ModuleAnalysisManager& AM);
     static StringRef name() { return "ejit-register-period"; }
 };
 
-// [BiSheng] 2. EJitWrapperGenPass - 为 ejit_entry 函数生成 Wrapper 插桩代码
+// 2. EJitWrapperGenPass - 为 ejit_entry 函数生成 Wrapper 插桩代码
 class EJitWrapperGenPass : public PassInfoMixin<EJitWrapperGenPass> {
 public:
     PreservedAnalyses run(Module& M, ModuleAnalysisManager& AM);
     static StringRef name() { return "ejit-wrapper-gen"; }
 };
 
-// [BiSheng] 3. EJitPeriodHandlerPass - 为 ejit_period_lc 函数插入 deactivate/activate 调用
+// 3. EJitPeriodHandlerPass - 为 ejit_period_lc 函数插入 deactivate/activate 调用
 class EJitPeriodHandlerPass : public PassInfoMixin<EJitPeriodHandlerPass> {
 public:
     PreservedAnalyses run(Module& M, ModuleAnalysisManager& AM);
     static StringRef name() { return "ejit-period-handler"; }
 };
 
-// [BiSheng] AOT 协调 Pass
+// AOT 协调 Pass
 class EJitAotModulePass : public PassInfoMixin<EJitAotModulePass> {
 public:
     PreservedAnalyses run(Module& M, ModuleAnalysisManager& AM);
@@ -971,10 +971,10 @@ public:
 
 // ===== JIT Pipeline Passes =====
 
-// [BiSheng] EJitStructFieldPass - 替换 load(!ejit.may_const) 为运行时常量
-// [BiSheng] 运行在 ejit_compile_or_get 内部，Inline 之后
-// [BiSheng] v1.2: may_const 识别通过 load 上的 !ejit.may_const metadata
-// [BiSheng] v1.3: 支持直接 GlobalVariable load（无 GEP），内联后的函数也可处理
+// EJitStructFieldPass - 替换 load(!ejit.may_const) 为运行时常量
+// 运行在 ejit_compile_or_get 内部，Inline 之后
+// v1.2: may_const 识别通过 load 上的 !ejit.may_const metadata
+// v1.3: 支持直接 GlobalVariable load（无 GEP），内联后的函数也可处理
 class EJitStructFieldPass : public PassInfoMixin<EJitStructFieldPass> {
 public:
     EJitStructFieldPass(PeriodArrayRegistry &reg);
@@ -1047,35 +1047,35 @@ private:
 > **注意**: 以下为伪代码，实际 TableGen 语法使用 `def` 定义，Spellings/Subjects 语法有差异。
 
 ```cpp
-// [BiSheng] include/clang/Basic/Attr.td - Attribute definitions (伪代码)
+// include/clang/Basic/Attr.td - Attribute definitions (伪代码)
 
-// [BiSheng] 1. ejit_may_const - 结构体成员属性
+// 1. ejit_may_const - 结构体成员属性
 class EjitMayConst : InheritableAttr {
     string Spellings = [Clang<"ejit_may_const">];
     string Subjects = [SubjectList<"FieldDecl", Error>];
     string DocComment = "标记结构体成员在时间窗内可视为常量";
 };
 
-// [BiSheng] 2. ejit_period - 全局变量时间窗标记
+// 2. ejit_period - 全局变量时间窗标记
 class EjitPeriod : InheritableAttr {
     string Spellings = [Clang<"ejit_period">];
     string Subjects = [SubjectList<"VarDecl", Error>];
 
-    // [BiSheng] 时间窗名称参数 (如 "static", "cell", "trp")
+    // 时间窗名称参数 (如 "static", "cell", "trp")
     ArgumentKind Kind = String;
 
-    // [BiSheng] 判断是否为 static 时间窗 (运行期不变)
+    // 判断是否为 static 时间窗 (运行期不变)
     bool isStatic() const { return getArgument() == "static"; }
 
     string DocComment = "定义全局变量所属的时间窗";
 };
 
-// [BiSheng] 3. ejit_period_arr - 全局数组时间窗标记
+// 3. ejit_period_arr - 全局数组时间窗标记
 class EjitPeriodArr : InheritableAttr {
     string Spellings = [Clang<"ejit_period_arr">];
     string Subjects = [SubjectList<"VarDecl", Error>];
 
-    // [BiSheng] 时间窗数组名称 (如 "cell", "trp")
+    // 时间窗数组名称 (如 "cell", "trp")
     ArgumentKind Kind = String;
 
     std::string getPeriodName() const { return getArgument(); }
@@ -1083,12 +1083,12 @@ class EjitPeriodArr : InheritableAttr {
     string DocComment = "定义全局数组所属的时间窗数组，按索引独立控制";
 };
 
-// [BiSheng] 4. ejit_period_arr_ind - 函数参数特化维度标记
+// 4. ejit_period_arr_ind - 函数参数特化维度标记
 class EjitPeriodIdx : InheritableAttr {
     string Spellings = [Clang<"ejit_period_arr_ind">];
     string Subjects = [SubjectList<"ParmVarDecl", Error>];
 
-    // [BiSheng] 关联的时间窗数组名称 (如 "cell", "trp")
+    // 关联的时间窗数组名称 (如 "cell", "trp")
     ArgumentKind Kind = String;
 
     std::string getPeriodName() const { return getArgument(); }
@@ -1096,23 +1096,23 @@ class EjitPeriodIdx : InheritableAttr {
     string DocComment = "标记 JIT 特化维度参数，关联对应时间窗数组";
 };
 
-// [BiSheng] 5. ejit_entry - JIT 优化入口函数标记
+// 5. ejit_entry - JIT 优化入口函数标记
 class EjitEntry : InheritableAttr {
     string Spellings = [Clang<"ejit_entry">];
     string Subjects = [SubjectList<"FunctionDecl", Error>];
 
     string DocComment = "标记函数将进行 JIT 优化";
 
-    // [BiSheng] 限制：不支持递归
+    // 限制：不支持递归
     bool isRecursive() const;
 };
 
-// [BiSheng] 6. ejit_period_lc - 时间窗生命周期管理函数标记
+// 6. ejit_period_lc - 时间窗生命周期管理函数标记
 class EjitPeriodLc : InheritableAttr {
     string Spellings = [Clang<"ejit_period_lc">];
     string Subjects = [SubjectList<"FunctionDecl", Error>];
 
-    // [BiSheng] 管理的时间窗名称
+    // 管理的时间窗名称
     ArgumentKind Kind = String;
 
     std::string getPeriodName() const { return getArgument(); }
@@ -1126,20 +1126,20 @@ class EjitPeriodLc : InheritableAttr {
 ### 属性处理流程
 
 ```cpp
-// [BiSheng] clang/lib/Sema/SemaEJIT.cpp - 属性语义检查
+// clang/lib/Sema/SemaEJIT.cpp - 属性语义检查
 
 namespace clang::sema {
 
 class EJitAttributeHandler {
 public:
-    // [BiSheng] 处理 ejit_may_const
+    // 处理 ejit_may_const
     void HandleEjitMayConst(Decl* D, const ParsedAttr& AL) {
         // 1. 检查是否标记在 FieldDecl 上
         // 2. 检查类型：仅支持整型、布尔型、浮点型、嵌套结构体
         // 3. 检查是否为 volatile (volatile 不视为常量)
     }
 
-    // [BiSheng] 处理 ejit_period
+    // 处理 ejit_period
     void HandleEjitPeriod(Decl* D, const ParsedAttr& AL) {
         // 1. 检查是否标记在 VarDecl 上
         // 2. 检查是否为数组 (数组应使用 ejit_period_arr)
@@ -1147,7 +1147,7 @@ public:
         // 4. 检查 static 时间窗的特殊规则
     }
 
-    // [BiSheng] 处理 ejit_period_arr
+    // 处理 ejit_period_arr
     void HandleEjitPeriodArr(Decl* D, const ParsedAttr& AL) {
         // 1. 检查是否标记在 VarDecl 上
         // 2. 检查是否为数组类型
@@ -1155,7 +1155,7 @@ public:
         // 4. 注册到时间窗数组表
     }
 
-    // [BiSheng] 处理 ejit_period_arr_ind
+    // 处理 ejit_period_arr_ind
     void HandleEjitPeriodIdx(Decl* D, const ParsedAttr& AL) {
         // 1. 检查是否标记在 ParmVarDecl 上
         // 2. 检查类型：必须为整数类型
@@ -1163,14 +1163,14 @@ public:
         // 4. 验证该时间窗数组已定义
     }
 
-    // [BiSheng] 处理 ejit_entry
+    // 处理 ejit_entry
     void HandleEjitEntry(Decl* D, const ParsedAttr& AL) {
         // 1. 检查是否标记在 FunctionDecl 上
         // 2. 检查递归调用
         // 3. 生成元数据 (bitcode 收集)
     }
 
-    // [BiSheng] 处理 ejit_period_lc
+    // 处理 ejit_period_lc
     void HandleEjitPeriodLc(Decl* D, const ParsedAttr& AL) {
         // 1. 检查是否标记在 FunctionDecl 上
         // 2. 检查是否有对应的 ejit_period_arr_ind 参数
@@ -1186,38 +1186,38 @@ public:
 ### IR 元数据生成
 
 ```cpp
-// [BiSheng] clang/lib/CodeGen/CGEJIT.cpp - 属性到 LLVM IR 的转换
+// clang/lib/CodeGen/CGEJIT.cpp - 属性到 LLVM IR 的转换
 
 namespace clang::cg {
 
 class CodeGenEJIT {
 public:
-    // [BiSheng] 生成 ejit_may_const metadata
+    // 生成 ejit_may_const metadata
     void emitMayConstMetadata(llvm::Module& M, const FieldDecl* FD) {
         // 生成类似：!ejit.may_const = !{!{i32 偏移，字符串 "fieldName"}}
     }
 
-    // [BiSheng] 生成 ejit_period metadata
+    // 生成 ejit_period metadata
     void emitPeriodMetadata(llvm::Module& M, const VarDecl* VD) {
         // 生成类似：!ejit.period = !{!{字符串 "varName", 字符串 "periodName"}}
     }
 
-    // [BiSheng] 生成 ejit_period_arr metadata
+    // 生成 ejit_period_arr metadata
     void emitPeriodArrMetadata(llvm::Module& M, const VarDecl* VD) {
         // 生成类似：!ejit.period_arr = !{!{字符串 "varName", 字符串 "periodName", i32 数组大小}}
     }
 
-    // [BiSheng] 生成 ejit_period_arr_ind metadata
+    // 生成 ejit_period_arr_ind metadata
     void emitPeriodIdxMetadata(llvm::Module& M, const FunctionDecl* FD) {
         // 生成类似：!ejit.period_idx = !{!{字符串 "funcName", i32 参数索引，字符串 "periodName"}}
     }
 
-    // [BiSheng] 生成 ejit_entry metadata
+    // 生成 ejit_entry metadata
     void emitEntryMetadata(llvm::Module& M, const FunctionDecl* FD) {
         // 生成类似：!ejit.entry = !{!{字符串 "funcName", !bitcode_ref}}
     }
 
-    // [BiSheng] 生成 ejit_period_lc metadata
+    // 生成 ejit_period_lc metadata
     void emitPeriodLcMetadata(llvm::Module& M, const FunctionDecl* FD) {
         // 生成类似：!ejit.period_lc = !{!{字符串 "funcName", 字符串 "periodName"}}
     }

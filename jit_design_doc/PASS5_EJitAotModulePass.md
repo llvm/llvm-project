@@ -106,7 +106,7 @@ public:
             PA.intersect(PA3);
         }
 
-        // [BiSheng] 防呆检测: 元数据一致性检测 (SPEC4 §9.4)
+        // 防呆检测: 元数据一致性检测 (SPEC4 §9.4)
         if (anyChange) {
             runDiagnosticCheck(M);
         }
@@ -116,7 +116,7 @@ public:
 
     static StringRef name() { return "ejit-aot-module"; }
 
-    // [BiSheng] 注册到 Pass Pipeline (通过 PassBuilder)
+    // 注册到 Pass Pipeline (通过 PassBuilder)
     static void registerPasses(PassBuilder& PB) {
         PB.registerPipelineParsingCallback(
             [](StringRef Name, ModulePassManager& MPM,
@@ -135,7 +135,7 @@ public:
 
 ```cpp
 bool hasAnyEjitMetadata(Module& M) {
-    // [BiSheng] 快速扫描: 检查全局变量/函数的 ejit.metadata
+    // 快速扫描: 检查全局变量/函数的 ejit.metadata
     // 若无任何 EmbeddedJIT 标记，跳过整个 AOT Pipeline
     // 注意: ejit.metadata 是 per-function / per-global 的 metadata，
     //   通过 setMetadata() 附加，不是 module-level named metadata
@@ -160,7 +160,7 @@ bool hasAnyEjitMetadata(Module& M) {
 
 ```cpp
 void runDiagnosticCheck(Module& M) {
-    // [BiSheng] 检查 ejit_entry 函数实际引用的全局变量
+    // 检查 ejit_entry 函数实际引用的全局变量
     // 是否与其声明的 ejit_period_arr_ind 一致
 
     for (Function& F : M.functions()) {

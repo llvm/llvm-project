@@ -248,7 +248,7 @@ Module* extractModule(Module& SrcM, const std::set<Function*>& funcSet) {
 
         SmallVector<ReturnInst*, 4> Returns;
         CloneFunctionInto(newF, F, VMap,
-                          CloneFunctionChangeType::LocalChangesOnly,
+                          CloneFunctionChangeType::DifferentModule,
                           Returns);
     }
 
@@ -271,7 +271,7 @@ Module* extractModule(Module& SrcM, const std::set<Function*>& funcSet) {
 ```cpp
 void insertBitcodeRegisterCall(Module& M, GlobalVariable* bitcodeGV,
                                 const std::vector<Function*>& entryFuncs) {
-    // [BiSheng] 查找或创建 ejit_auto_register 初始化函数
+    // 查找或创建 ejit_auto_register 初始化函数
     Function* registerFn = M.getFunction("ejit_auto_register");
     if (!registerFn) {
         auto* FT = FunctionType::get(Type::getVoidTy(M.getContext()), false);
@@ -352,14 +352,14 @@ entry:
 ## 5. 关键数据结构
 
 ```cpp
-// [BiSheng] Bitcode 提取结果
+// Bitcode 提取结果
 struct BitcodeExtractResult {
     GlobalVariable* bitcodeVar;         // 嵌入的 bitcode 全局变量
     std::vector<Function*> entryFuncs;  // 所有 ejit_entry 函数列表
     size_t bitcodeSize;                 // bitcode 字节数
 };
 
-// [BiSheng] 运行时注册 API (在 libejit 中实现)
+// 运行时注册 API (在 libejit 中实现)
 // void ejit_register_bitcode(const char* funcName, void* bitcodePtr, size_t bitcodeSize);
 //   - funcName: ejit_entry 函数名
 //   - bitcodePtr: bitcode 数据指针
@@ -445,15 +445,19 @@ EJitPeriodHandlerPass    (晚期: 生命周期处理)
 
 ## 9. 实施注意事项
 
-1. **Metadata 映射**: `CloneFunctionInto` 默认不映射命名 metadata。需要手动遍历源 Module 的 metadata 并调用 `MapMetadata` 映射到目标 Module。
+1. **CloneFunctionChangeType**: 必须使用 `DifferentModule`（非 `LocalChangesOnly`），因为目标函数克隆到独立的新 Module 中。`LocalChangesOnly` 要求源和目标在同一 Module 内，否则会导致 VMap 中的全局变量引用指向源 Module 的 GV 而非目标 Module 的 GV，引发运行时 crash。
 
-2. **结构体类型**: 依赖函数可能引用 `%struct.CellConfig` 等命名结构体类型。提取 Module 时需要保留这些类型的声明。可以从引用全局变量的类型中自动收集。
+2. **Metadata 映射**: `CloneFunctionInto` 默认不映射命名 metadata。需要手动遍历源 Module 的 metadata 并调用 `MapMetadata` 映射到目标 Module。使用 `DifferentModule` 时，`CloneFunctionInto` 会通过 VMap 自动映射函数级 metadata（如 `!ejit.metadata`），但 Module 级 named metadata 需要手动处理。
 
-3. **llvm.used**: 被提取的全局变量可能在 `@llvm.used` 中，提取时需注意。
+3. **结构体类型**: 依赖函数可能引用 `%struct.CellConfig` 等命名结构体类型。提取 Module 时需要保留这些类型的声明。可以从引用全局变量的类型中自动收集。
 
-4. **与 easyJIT 的关系**: easyJIT 的 `RegisterBitcodePass` 可作为参考实现，但 EmbeddedJIT 的提取条件不同（基于 metadata 而非参数属性）。
+4. **llvm.used**: 被提取的全局变量可能在 `@llvm.used` 中，提取时需注意。
 
-5. **多 Module 支持**: 若链接时优化 (LTO) 启用，多个编译单元合并为一个 Module，此时所有 ejit_entry 函数在一个 Module 中，一次提取即可。若为普通编译（每个 .c 文件独立 Module），则每个 Module 有独立的 bitcode 段，运行时按需加载。
+5. **与 easyJIT 的关系**: easyJIT 的 `RegisterBitcodePass` 可作为参考实现，但 EmbeddedJIT 的提取条件不同（基于 metadata 而非参数属性）。
+
+6. **多 Module 支持**: 若链接时优化 (LTO) 启用，多个编译单元合并为一个 Module，此时所有 ejit_entry 函数在一个 Module 中，一次提取即可。若为普通编译（每个 .c 文件独立 Module），则每个 Module 有独立的 bitcode 段，运行时按需加载。
+
+7. **多 ejit_entry 函数的 Bitcode 合并**: 当前设计将所有 ejit_entry 函数（含传递闭包）放入一个 `@__ejit_bitcode` 全局变量。运行时通过 `ejit_register_bitcode(funcName, ptr, size)` 为每个函数名注册同一份 bitcode。JIT 编译时，从 bitcode 中按函数名定位目标函数，仅编译该函数及其依赖。
 
 ---
 

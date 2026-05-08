@@ -263,18 +263,14 @@ void insertDispatchLogic(Function* F, const DimInfo& dims, BasicBlock* fallback)
     // (通过 F 中查找名为 "jit_result" 的 call 指令)
     Value* result = findJitResultCall(F);
 
-    // Step 2: 类型转换: void* → 函数指针类型
-    // PFN_xxx = 原始函数签名的函数指针类型
-    PointerType* pfnTy = PointerType::getUnqual(F->getFunctionType());
-    Value* pfn = Builder.CreatePointerCast(result, pfnTy, "jit_pfn");
-
-    // Step 3: 调用特化函数，传递原始参数
+    // Step 2: 调用特化函数，传递原始参数
+    // opaque pointer 模型下无需类型转换，直接用 ptr 调用
     std::vector<Value*> args;
     for (Argument& arg : F->args()) {
         args.push_back(&arg);
     }
 
-    CallInst* pfnCall = Builder.CreateCall(F->getFunctionType(), pfn, args);
+    CallInst* pfnCall = Builder.CreateCall(F->getFunctionType(), result, args);
 
     // Step 4: 处理返回值并返回
     if (F->getReturnType()->isVoidTy()) {
@@ -308,8 +304,7 @@ jit_entry:
   br i1 %jit_is_null, label %jit_fallback, label %jit_dispatch
 
 jit_dispatch:
-  %jit_pfn = ptrtoint ptr %jit_result to void ()*
-  call void %jit_pfn()
+  call void %jit_result()
   ret void
 
 jit_fallback:
@@ -341,8 +336,7 @@ jit_entry:
   br i1 %jit_is_null, label %jit_fallback, label %jit_dispatch
 
 jit_dispatch:
-  %jit_pfn = ptrtoint ptr %jit_result to void (i32)*
-  call void %jit_pfn(i32 %cellIdx)
+  call void %jit_result(i32 %cellIdx)
   ret void
 
 jit_fallback:
@@ -383,8 +377,7 @@ jit_entry:
   br i1 %jit_is_null, label %jit_fallback, label %jit_dispatch
 
 jit_dispatch:
-  %jit_pfn = ptrtoint ptr %jit_result to void (i32, i32, i32)*
-  call void %jit_pfn(i32 %cellIdx, i32 %trpIdx, i32 %iter)
+  call void %jit_result(i32 %cellIdx, i32 %trpIdx, i32 %iter)
   ret void
 
 jit_fallback:
@@ -398,21 +391,21 @@ jit_fallback:
 ## 5. 关键数据结构
 
 ```cpp
-// [BiSheng] ejit_period_arr_ind 参数信息
+// ejit_period_arr_ind 参数信息
 struct PeriodArrIndParam {
     unsigned argIdx;                // 参数在函数参数列表中的索引
     std::string periodName;         // 关联的时间窗名称 (如 "cell", "trp")
     Type* originalType;             // 原始参数类型 (用于 ZExt)
 };
 
-// [BiSheng] 维度信息汇总
+// 维度信息汇总
 struct DimInfo {
     std::vector<PeriodArrIndParam> params;
     bool hasStaticOnly;             // 仅依赖 static 时间窗 (dimCount = 0)
     unsigned maxDimensions = 4;     // 最大维度限制
 };
 
-// [BiSheng] ejit_dim_t 的 LLVM IR 对应类型
+// ejit_dim_t 的 LLVM IR 对应类型
 // C 定义: typedef struct { const char* name; int index; } ejit_dim_t;
 // IR 类型: { i8*, i32 }
 ```
@@ -473,8 +466,7 @@ EJitPeriodHandlerPass    →  处理生命周期函数
 ;
 ; TEST 4: JIT 成功路径 — 调用 pfn
 ;   CHECK: jit_dispatch:
-;   CHECK: ptrtoint ptr %jit_result to void (i32)*
-;   CHECK: call void %jit_pfn
+;   CHECK: call void %jit_result
 ;
 ; TEST 5: JIT 失败路径 — fallback
 ;   CHECK: jit_fallback:
@@ -482,7 +474,7 @@ EJitPeriodHandlerPass    →  处理生命周期函数
 ;   CHECK: br i1 %jit_is_null, label %jit_fallback, label %jit_dispatch
 ;
 ; TEST 6: 返回值处理 — 非 void 函数
-;   CHECK: %ret = call i32 %jit_pfn(i32 %arg)
+;   CHECK: %ret = call i32 %jit_result(i32 %arg)
 ;   CHECK: ret i32 %ret
 ```
 
