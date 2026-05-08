@@ -187,31 +187,42 @@ void process_nested(
 
 //===-- Main: 运行时演示 ----------------------------------------------------===//
 
+#include <stdio.h>
+#include <stdlib.h>
+
 // 声明运行时 C API (来自 EJitRuntime.h)
 extern int ejit_init(const void *config);
 extern int ejit_activate(const char *name, unsigned char idx);
 extern int ejit_deactivate(const char *name, unsigned char idx);
 extern void ejit_shutdown(void);
 
-int main(void)
+int main(int argc, char **argv)
 {
+    // 从命令行读取 cellIdx（模拟真实运行时外部输入）
+    uint8_t ci = (argc >= 2) ? (uint8_t)atoi(argv[1]) : 0;
+    uint8_t ti = (argc >= 3) ? (uint8_t)atoi(argv[2]) : 0;
+    uint8_t ni = (argc >= 4) ? (uint8_t)atoi(argv[3]) : 0;
+    uint8_t ci2 = (ci + 1) % 16;  // 第二个 cellIdx 用于生命周期测试
+
+    printf("cellIdx=%u trpIdx=%u nestedIdx=%u\n", ci, ti, ni);
+
     ejit_init(0);
 
-    // 激活时间窗实例
-    ejit_activate("cell", 0);
-    ejit_activate("trp", 0);
-    ejit_activate("nested", 0);
+    // 激活时间窗实例 (使用外部输入的 idx)
+    ejit_activate("cell", ci);
+    ejit_activate("trp", ti);
+    ejit_activate("nested", ni);
 
-    // 调用 ejit_entry 函数 (首次触发 JIT 编译)
+    // 调用 ejit_entry 函数 (首次触发 JIT 编译，idx 来自外部输入)
     process_board();
     process_sensor();
-    process_cell(0);
-    process_trp_task(0, 0);
-    process_nested(0);
+    process_cell(ci);
+    process_trp_task(ci, ti);
+    process_nested(ni);
 
-    // 生命周期管理
-    update_cell_config(1);
-    change_cell_only(0);
+    // 生命周期管理 (使用外部输入的 ci2)
+    update_cell_config(ci2);
+    change_cell_only(ci);
 
     ejit_shutdown();
     return 0;
