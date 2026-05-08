@@ -29,6 +29,7 @@
 #include <__numeric/reduce.h>
 #include <__numeric/transform_exclusive_scan.h>
 #include <__numeric/transform_inclusive_scan.h>
+#include <__numeric/transform_reduce.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
