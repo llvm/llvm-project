@@ -37,7 +37,7 @@ define nofpclass(qnan inf norm sub zero) half @ret_only_snan__extractelement_unk
 define nofpclass(nan inf norm sub nzero) half @ret_only_pzero__extractelement_unknown(<4 x half> %vec, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) half @ret_only_pzero__extractelement_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
   %ext = extractelement <4 x half> %vec, i32 %idx
   ret half %ext
@@ -46,7 +46,7 @@ define nofpclass(nan inf norm sub nzero) half @ret_only_pzero__extractelement_un
 define nofpclass(nan inf norm sub pzero) half @ret_only_nzero__extractelement_unknown(<4 x half> %vec, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) half @ret_only_nzero__extractelement_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret half 0xH8000
+; CHECK-NEXT:    ret half -0.000000e+00
 ;
   %ext = extractelement <4 x half> %vec, i32 %idx
   ret half %ext
@@ -65,7 +65,7 @@ define nofpclass(nan inf norm sub) half @ret_only_zero__extractelement_unknown(<
 define nofpclass(nan pinf norm sub zero) half @ret_only_ninf__extractelement_unknown(<4 x half> %vec, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) half @ret_only_ninf__extractelement_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %ext = extractelement <4 x half> %vec, i32 %idx
   ret half %ext
@@ -74,7 +74,7 @@ define nofpclass(nan pinf norm sub zero) half @ret_only_ninf__extractelement_unk
 define nofpclass(nan ninf norm sub zero) half @ret_only_pinf__extractelement_unknown(<4 x half> %vec, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) half @ret_only_pinf__extractelement_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7C00
+; CHECK-NEXT:    ret half +inf
 ;
   %ext = extractelement <4 x half> %vec, i32 %idx
   ret half %ext

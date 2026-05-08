@@ -70,6 +70,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_weak_ptr : public std::exception {
 public:
@@ -1536,6 +1537,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
 
 #endif // _LIBCPP_HAS_THREADS
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

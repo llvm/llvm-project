@@ -608,40 +608,39 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
 }
 
 static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
-  SmallVector<const Instruction *, 16> WorkSet(1, I);
-  SmallPtrSet<const Instruction *, 32> Visited;
-  SmallPtrSet<const Instruction *, 16> EphValues;
-
   // The instruction defining an assumption's condition itself is always
   // considered ephemeral to that assumption (even if it has other
   // non-ephemeral users). See r246696's test case for an example.
   if (is_contained(I->operands(), E))
     return true;
 
-  while (!WorkSet.empty()) {
-    const Instruction *V = WorkSet.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
+  const auto *EI = dyn_cast<Instruction>(E);
+  if (!EI)
+    return false;
 
-    // If all uses of this value are ephemeral, then so is this value.
-    if (all_of(V->users(), [&](const User *U) {
-          return EphValues.count(cast<Instruction>(U));
-        })) {
-      if (V == E)
-        return true;
+  if (EI == I)
+    return true;
 
-      if (V == I || (!V->mayHaveSideEffects() && !V->isTerminator())) {
-        EphValues.insert(V);
-
-        for (const Use &U : V->operands()) {
-          if (const auto *I = dyn_cast<Instruction>(U.get()))
-            WorkSet.push_back(I);
-        }
+  SmallPtrSet<const Instruction *, 16> Visited;
+  SmallVector<const Instruction *, 16> WorkList;
+  Visited.insert(EI);
+  WorkList.push_back(EI);
+  bool ReachesI = false;
+  while (!WorkList.empty()) {
+    const Instruction *V = WorkList.pop_back_val();
+    for (const User *U : V->users()) {
+      const auto *UI = cast<Instruction>(U);
+      if (UI == I) {
+        ReachesI = true;
+        continue;
       }
+      if (UI->mayHaveSideEffects() || UI->isTerminator())
+        return false;
+      if (Visited.insert(UI).second)
+        WorkList.push_back(UI);
     }
   }
-
-  return false;
+  return ReachesI;
 }
 
 // Is this an intrinsic that cannot be speculated but also cannot trap?

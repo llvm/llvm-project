@@ -291,8 +291,6 @@ Modified Compiler Flags
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
-- The `-fms-kernel` flag will now implicitly add -fno-delete-null-pointer-checks.
-  Still -fdelete-null-pointer-checks can be used to override this behavior.
 
 Removed Compiler Flags
 ----------------------
@@ -318,6 +316,10 @@ Attribute Changes in Clang
   meant to be a low level tool for language runtime authors to associate a
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
+
+- :doc:`ThreadSafetyAnalysis` attributes now correctly handle implicit member
+  accesses in C, and parameter attributes in C++. This improves diagnostic
+  precision and fixes false positives.
 
 - The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
   ``pt_guarded_by`` now accept multiple capability arguments with refined
@@ -478,6 +480,9 @@ Improvements to Clang's diagnostics
   skipping subsequent valid declarations when their previous decl is missing semicolon.
 
 - Removed the body of lambdas from some diagnostic messages.
+
+- Fixed false positive host-device mismatch errors in discarded `if constexpr` branches for CUDA/HIP;
+  such calls are now correctly skipped.
 
 Improvements to Clang's time-trace
 ----------------------------------

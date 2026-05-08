@@ -77,6 +77,9 @@ Makes programs 10x faster by doing Special New Thing.
 
   * Special values for infinities and NaNs, including NaN payloads, are added.
 
+* The standard textual output for floating-point literals is changed to take
+  advantage of the new floating-point literals formats.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -199,6 +202,7 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
+* Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
 
 ### Changes to the WebAssembly Backend
 

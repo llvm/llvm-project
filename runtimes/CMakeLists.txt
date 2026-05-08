@@ -223,7 +223,7 @@ set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(option_prefix "")
-  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+  if (CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
     set(option_prefix "/clang:")
   endif()
   set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
