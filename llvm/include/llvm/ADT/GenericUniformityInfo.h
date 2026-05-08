@@ -74,6 +74,9 @@ public:
   /// divergent.
   bool isDivergentUse(const UseT &U) const;
 
+  /// \brief Whether \p U is uniform/non-divergent at its use.
+  bool isUniformUse(const UseT &U) const { return !isDivergentUse(U); }
+
   bool hasDivergentTerminator(const BlockT &B);
 
   void print(raw_ostream &Out) const;
