@@ -139,7 +139,7 @@ static Value dropLeadingUnitDims0DIsScalar(OpBuilder &b, Location loc,
          "expected non-scalable leading unit dims to drop");
 
   if (k == oldType.getRank()) {
-    llvm::Repeated<int64_t> zeros(static_cast<size_t>(k), 0);
+    SmallVector<int64_t> zeros(k, static_cast<int64_t>(0));
     return vector::ExtractOp::create(b, loc, operand, zeros);
   }
 
