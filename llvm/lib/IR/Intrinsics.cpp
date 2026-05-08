@@ -605,7 +605,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::VarArg:
     // VarArg token should be consumed by `getIntrinsicInfoTableEntries`, so we
     // should never see it here.
-    break;
+    llvm_unreachable("IITDescriptor::VarArg not expected");
   }
   llvm_unreachable("unhandled");
 }
@@ -1062,14 +1062,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::VarArg:
     // VarArg token should be consumed by `getIntrinsicInfoTableEntries`, so we
     // should never see it here.
-    break;
+    llvm_unreachable("IITDescriptor::VarArg not expected");
   }
   llvm_unreachable("unhandled");
 }
 
 /// Return true if the function type \p FTy is a valid type signature for the
 /// type constraints specified in the .td file, represented by \p Infos and
-/// \p IsVarArg. The overloaded type for the intrinsic are pushed to the
+/// \p IsVarArg. The overloaded types for the intrinsic are pushed to the
 /// \p OverloadTys vector.
 ///
 /// If the type is not valid, returns false and prints an error message to
