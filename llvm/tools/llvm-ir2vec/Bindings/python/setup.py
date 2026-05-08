@@ -5,7 +5,7 @@
 import glob
 import os
 import warnings
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.dist import Distribution
 
 
@@ -21,7 +21,7 @@ if (
 ):
     warnings.warn(
         "No native module (.so/.pyd/.dylib) found in ir2vec/. "
-        "Run the CMake build step before invoking pip wheel.",
+        "Run the build step before invoking pip wheel.",
         stacklevel=1,
     )
 
@@ -30,9 +30,9 @@ if (
 # Examples:
 #   "20.1.0"   - first release built against LLVM 20.1.0
 #   "20.1.0.1" - binding-layer fix, same LLVM 20.1.0
-#   "20.1.1"   - built against LLVM 20.1.1
+#   "20.1.1"   - built against a different LLVM 20.1.1
 #
-# Must be a plain PEP 440 version with no local segment (+...) 
+# Must be a plain PEP 440 version with no local segment (+...)
 # so it can be published to PyPI.
 #
 # "0.0.0.dev0" signals a local dev build where version was not injected.
@@ -40,7 +40,6 @@ version = os.environ.get("IR2VEC_VERSION", "0.0.0.dev0")
 
 setup(
     version=version,
-    packages=find_packages(),
     package_data={
         "ir2vec": ["*.so", "*.pyd", "*.dylib"],
         "ir2vec.vocab_data": ["*.json"],

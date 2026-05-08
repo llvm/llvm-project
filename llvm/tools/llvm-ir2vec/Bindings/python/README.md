@@ -44,7 +44,7 @@ The package ships a pre-trained seed embedding vocabulary:
 |---|---|---|
 | `ir2vec.vocab.seedEmbedding75D` | 75 |
 
-Pass this or an vocab of your choice directly to `loadVocab(vocabPath=...)`.
+Pass this or a vocab of your choice directly to `loadVocab(vocabPath=...)`.
 
 ## Building from source
 

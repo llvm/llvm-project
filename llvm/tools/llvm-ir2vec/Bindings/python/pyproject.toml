@@ -12,27 +12,11 @@ dynamic = ["version"]
 description = "Python bindings for IR2Vec, an LLVM IR embedding framework"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = "Apache-2.0 WITH LLVM-exception"
-authors = [{ name = "LLVM" }]
-keywords = ["llvm", "ir2vec", "embeddings", "compiler", "machine-learning"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Topic :: Software Development :: Compilers",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: C++",
-    "Operating System :: POSIX :: Linux",
-]
 requires-python = ">=3.10"
 dependencies = ["numpy"]
 
 [project.urls]
 Homepage = "https://llvm.org/"
-Documentation = "https://llvm.org/docs/MLGO.html#ir2vec"
 "Issue Tracker" = "https://github.com/llvm/llvm-project/issues"
 "Source Code" = "https://github.com/llvm/llvm-project/tree/main/llvm/tools/llvm-ir2vec"
 
