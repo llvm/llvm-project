@@ -22,6 +22,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -44,6 +45,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cassert>
+#include <clang/Sema/SemaInternal.h>
 #include <cstddef>
 #include <cstdlib>
 #include <optional>
@@ -12487,38 +12489,27 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case TemplateDeductionResult::InvalidExplicitArguments:
+  case TemplateDeductionResult::InvalidExplicitArguments: {
     assert(ParamD && "no parameter found for invalid explicit arguments");
-    if (ParamD->getDeclName())
-      S.Diag(Templated->getLocation(),
-             diag::note_ovl_candidate_explicit_arg_mismatch_named)
-          << ParamD->getDeclName();
-    else {
-      int index = 0;
-      if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ParamD))
-        index = TTP->getIndex();
-      else if (NonTypeTemplateParmDecl *NTTP
-                                  = dyn_cast<NonTypeTemplateParmDecl>(ParamD))
-        index = NTTP->getIndex();
-      else
-        index = cast<TemplateTemplateParmDecl>(ParamD)->getIndex();
-      S.Diag(Templated->getLocation(),
-             diag::note_ovl_candidate_explicit_arg_mismatch_unnamed)
-          << (index + 1);
-    }
 
-    // FIXME: Attach this diagnostic to the parent error.
+    auto Diag = S.Diag(Templated->getLocation(),
+                       diag::note_ovl_candidate_explicit_arg_mismatch);
+    if (ParamD->getDeclName())
+      Diag << diag::ExplicitArgMismatchNameKind::Named << ParamD->getDeclName();
+    else
+      Diag << diag::ExplicitArgMismatchNameKind::Unnamed
+           << (getDepthAndIndex(ParamD).second + 1);
     if (PartialDiagnosticAt *PDiag = DeductionFailure.getSFINAEDiagnostic()) {
-      unsigned DiagID =
-          S.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Note, "%0");
       SmallString<128> DiagContent;
       PDiag->second.EmitToString(S.getDiagnostics(), DiagContent);
-      S.Diag(Templated->getLocation(), DiagID) << DiagContent;
+      Diag << diag::ExplicitArgMismatchReasonKind::Detailed << DiagContent;
+    } else {
+      Diag << diag::ExplicitArgMismatchReasonKind::Vague;
     }
 
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
-
+  }
   case TemplateDeductionResult::ConstraintsNotSatisfied: {
     // Format the template argument list into the argument string.
     SmallString<128> TemplateArgString;
