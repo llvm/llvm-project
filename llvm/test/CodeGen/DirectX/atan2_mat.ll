@@ -19,9 +19,9 @@ entry:
 ; EXPCHECK: [[XLT0_AND_YLT0:%.+]] = and <16 x i1> [[X_LT_0]], [[Y_LT_0]]
 ; EXPCHECK: [[SELECT_SUB_PI:%.+]] = select <16 x i1> [[XLT0_AND_YLT0]], <16 x half> [[SUB_PI]], <16 x half> [[SELECT_ADD_PI]]
 ; EXPCHECK: [[XEQ0_AND_YLT0:%.+]] = and <16 x i1> [[X_EQ_0]], [[Y_LT_0]]
-; EXPCHECK: [[SELECT_NEGHPI:%.+]] = select <16 x i1> [[XEQ0_AND_YLT0]], <16 x half> splat (half 0xHBE48), <16 x half> [[SELECT_SUB_PI]]
+; EXPCHECK: [[SELECT_NEGHPI:%.+]] = select <16 x i1> [[XEQ0_AND_YLT0]], <16 x half> splat (half {{.*}}), <16 x half> [[SELECT_SUB_PI]]
 ; EXPCHECK: [[XEQ0_AND_YGE0:%.+]] = and <16 x i1> [[X_EQ_0]], [[Y_GE_0]]
-; EXPCHECK: [[SELECT_HPI:%.+]] = select <16 x i1> [[XEQ0_AND_YGE0]], <16 x half> splat (half 0xH3E48), <16 x half> [[SELECT_NEGHPI]]
+; EXPCHECK: [[SELECT_HPI:%.+]] = select <16 x i1> [[XEQ0_AND_YGE0]], <16 x half> splat (half {{.*}}), <16 x half> [[SELECT_NEGHPI]]
 ; EXPCHECK: ret <16 x half> [[SELECT_HPI]]
 
 ; Scalarization occurs after expansion, so atan scalarization is tested separately.

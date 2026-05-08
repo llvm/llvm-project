@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm  \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" 
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm  \
+// RUN:   -o - | FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden noundef nofpclass(nan inf)" 
 
 // CHECK: define [[FNATTRS]] <2 x float> @_{{.*}}test_atan2_double1x2{{.*}}(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} <2 x double> %{{.*}} to <2 x float>
