@@ -75,6 +75,9 @@ def RetCC_PPC : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[X3, X4, X5, X6]>>,
   CCIfType<[i128], CCAssignToReg<[X3, X4, X5, X6]>>,
 
+  // Return f16 in FPR as 16 bit value.
+  CCIfType<[f16], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
+
   // Floating point types returned as "direct" go into F1 .. F8; note that
   // only the ELFv2 ABI fully utilizes all these registers.
   CCIfNotSubtarget<"hasSPE()",
@@ -125,8 +128,8 @@ def CC_PPC64_ELF : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[X3, X4, X5, X6, X7, X8, X9, X10]>>,
 
   // Handle fp types and shadow the corresponding registers as necessary.
-  CCIfType<[f32, f64], CCIfNotVarArg<CCCustom<"CC_PPC64_ELF_Shadow_GPR_Regs">>>,
-  CCIfType<[f32, f64],
+  CCIfType<[f16, f32, f64], CCIfNotVarArg<CCCustom<"CC_PPC64_ELF_Shadow_GPR_Regs">>>,
+  CCIfType<[f16, f32, f64],
            CCIfNotVarArg<CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10,
                                         F11, F12, F13]>>>,
 
@@ -161,7 +164,7 @@ def CC_PPC64_ELF_FIS : CallingConv<[
   CCIfType<[i16], CCPromoteToType<i64>>,
   CCIfType<[i32], CCPromoteToType<i64>>,
   CCIfType<[i64], CCAssignToReg<[X3, X4, X5, X6, X7, X8, X9, X10]>>,
-  CCIfType<[f32, f64], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>
+  CCIfType<[f16, f32, f64], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>
 ]>;
 
 // Simple return-value convention for 64-bit ELF PowerPC fast isel.
@@ -178,6 +181,7 @@ def RetCC_PPC64_ELF_FIS : CallingConv<[
   CCIfType<[i32],  CCPromoteToType<i64>>,
   CCIfType<[i64],  CCAssignToReg<[X3, X4, X5, X6]>>,
   CCIfType<[i128], CCAssignToReg<[X3, X4, X5, X6]>>,
+  CCIfType<[f16],  CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
   CCIfType<[f32],  CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
   CCIfType<[f64],  CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
   CCIfType<[f128],
@@ -217,6 +221,9 @@ def CC_PPC32_SVR4_Common : CallingConv<[
 
   // The first 8 integer arguments are passed in integer registers.
   CCIfType<[i32], CCAssignToReg<[R3, R4, R5, R6, R7, R8, R9, R10]>>,
+
+  // Pass f16 in FPRs.
+  CCIfType<[f16], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
 
   // Make sure the i64 words from a long double are either both passed in
   // registers or both passed on the stack.

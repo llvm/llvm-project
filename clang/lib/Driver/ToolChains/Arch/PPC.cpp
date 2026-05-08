@@ -77,6 +77,11 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     D.Diag(diag::err_opt_not_valid_on_target)
         << "-maix-shared-lib-tls-model-opt";
 
+  // The _Float16 datatype is supported throguh the -mfloat16 flag.
+  if (Args.hasArg(options::OPT_mfloat16)) {
+    Features.push_back("+float16");
+  }
+
   // The integrated assembler counts as a "modern AIX assembler" for the
   // purposes of the modern-aix-as.
   if (Args.hasFlag(options::OPT_fintegrated_as, options::OPT_fno_integrated_as,
