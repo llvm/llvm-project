@@ -533,6 +533,7 @@ Bug Fixes in This Version
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
 - Fixed a crash caused by lambda capture handling in delayed default arguments. (#GH176534)
 - Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
+- Fixed an infinite loop in the parser when a ``::`` token appears inside a parenthesized expression in C mode (e.g. ``int x = (::h);``). (#GH195367)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
