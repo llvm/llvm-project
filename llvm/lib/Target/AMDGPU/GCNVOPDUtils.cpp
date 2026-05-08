@@ -63,6 +63,38 @@ static bool isValidVOPDSrc(const SIInstrInfo &TII, int VOPDOpc,
   return TII.getRegClass(TII.get(VOPDOpc), OpIdx)->contains(PhysSrcReg);
 }
 
+static const MachineOperand &getNamedOp(const MachineInstr &MI,
+                                        AMDGPU::OpName Name) {
+  return MI.getOperand(getNamedOperandIdx(MI.getOpcode(), Name));
+}
+
+// Check if MI is a VOP3P instruction with operands that satisfy the constraints
+// for mapping it to a VOP2/VOPD opcode: no modifiers, no clamp, src1 and src2
+// are registers (src0 can be register or literal), and src2 is same as dst.
+static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  if (Opc != AMDGPU::V_DOT2_F32_F16 && Opc != AMDGPU::V_DOT2_F32_BF16)
+    return false;
+  // src0 can be register or literal
+  if (getNamedOp(MI, AMDGPU::OpName::src0_modifiers).getImm() !=
+      SISrcMods::OP_SEL_1)
+    return false;
+  if (getNamedOp(MI, AMDGPU::OpName::src1_modifiers).getImm() !=
+      SISrcMods::OP_SEL_1)
+    return false;
+  if (!getNamedOp(MI, AMDGPU::OpName::src1).isReg())
+    return false;
+  if (getNamedOp(MI, AMDGPU::OpName::src2_modifiers).getImm() !=
+      SISrcMods::OP_SEL_1)
+    return false;
+  if (!getNamedOp(MI, AMDGPU::OpName::src2).isReg())
+    return false;
+  if (getNamedOp(MI, AMDGPU::OpName::clamp).getImm() != 0)
+    return false;
+  return getNamedOp(MI, AMDGPU::OpName::vdst).getReg() ==
+         getNamedOp(MI, AMDGPU::OpName::src2).getReg();
+}
+
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
                                    const MachineInstr &MIY, bool IsVOPD3,
@@ -74,7 +106,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
-  if (!IsVOPD3 && (TII.isVOP3(MIX) || TII.isVOP3(MIY)))
+  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
+                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
