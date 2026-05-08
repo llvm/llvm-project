@@ -18,6 +18,9 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
+
+using llvm::ejit::MAX_PERIOD_ARR_IND_PARAMS;
 
 using namespace clang;
 
@@ -61,7 +64,7 @@ void handleEjitMayConstAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Check type: integer, boolean, floating-point, struct/class, or array
   if (!FT->isIntegerType() && !FT->isBooleanType() &&
-      !FT->isFloatingType() && !FT->isStructureOrClassType() &&
+      !FT->isRealFloatingType() && !FT->isStructureOrClassType() &&
       !FT->isArrayType()) {
     S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
         << AL << AL.isRegularKeywordAttribute()
@@ -263,7 +266,7 @@ void handleEjitPeriodLcAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  FD->addAttr(::new (S.Context) EjitPeriodLcAttr(S.Context, AL, PeriodName));
+  D->addAttr(::new (S.Context) EjitPeriodLcAttr(S.Context, AL, PeriodName));
 }
 
 /// checkEjitPeriodArrIndLimit - Enforce the limit of at most 4
@@ -278,7 +281,7 @@ void checkEjitPeriodArrIndLimit(Sema &S, const FunctionDecl *FD) {
   for (const ParmVarDecl *P : FD->parameters()) {
     if (P->hasAttr<EjitPeriodArrIndAttr>()) {
       Count++;
-      if (Count > 4)
+      if (Count > MAX_PERIOD_ARR_IND_PARAMS)
         OverflowPVD = P;
     }
   }

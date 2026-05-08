@@ -73,7 +73,7 @@ void clang::CodeGen::emitEjitGlobalMetadata(CodeGenModule &CGM,
   // ejit_period
   if (const auto *PA = VD->getAttr<EjitPeriodAttr>()) {
     Entries.push_back(llvm::MDNode::get(Ctx, {
-        llvm::MDString::get(Ctx, "ejit_period"),
+        llvm::MDString::get(Ctx, TAG_EJIT_PERIOD),
         llvm::MDString::get(Ctx, PA->getPeriodName())
     }));
   }
