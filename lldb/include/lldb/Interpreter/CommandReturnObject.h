@@ -189,7 +189,7 @@ private:
   std::vector<DiagnosticDetail> m_diagnostics;
   std::optional<uint16_t> m_diagnostic_indent;
 
-  lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
+  lldb::ReturnStatus m_status = lldb::eReturnStatusInvalid;
 
   /// An optionally empty list of values produced by this command.
   ValueObjectList m_value_objects;
