@@ -2563,7 +2563,6 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
      << "  const TargetSubtargetInfo &ST = MF.getSubtarget();\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
-     << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
      << "  if (executeMatchTable(*this, State, ExecInfo, B"

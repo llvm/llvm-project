@@ -59,6 +59,15 @@ bool GIMatchTableExecutor::executeMatchTable(
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
   const uint32_t Flags = State.MIs[0]->getFlags();
+  bool BuilderInitialized = false;
+  const auto initializeBuilder = [&]() {
+    if (BuilderInitialized)
+      return;
+    // Delay setting the insertion point and debug location until a successful
+    // action needs the builder.
+    Builder.setInstrAndDebugLoc(*State.MIs[0]);
+    BuilderInitialized = true;
+  };
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -1089,6 +1098,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
+      initializeBuilder();
       OutMIs[NewInsnID] = Builder.buildInstr(Opcode);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildMI(OutMIs["
@@ -1099,6 +1109,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_BuildConstant: {
       uint64_t TempRegID = readULEB();
       uint64_t Imm = readU64();
+      initializeBuilder();
       Builder.buildConstant(State.TempRegisters[TempRegID], Imm);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildConstant(TempReg["
@@ -1495,6 +1506,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t InsnID = readULEB();
       MachineInstr *MI = State.MIs[InsnID];
       assert(MI && "Attempted to erase an undefined instruction");
+      initializeBuilder();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_EraseFromParent(MIs["
                              << InsnID << "])\n");
@@ -1502,6 +1514,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
     case GIR_EraseRootFromParent_Done: {
+      initializeBuilder();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs()
                           << CurrentIdx << ": GIR_EraseRootFromParent_Done\n");
