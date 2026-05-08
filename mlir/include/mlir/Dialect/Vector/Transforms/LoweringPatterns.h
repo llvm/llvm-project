@@ -50,33 +50,32 @@ namespace vector {
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
 /// linearized `vector.extract` + `vector.outerproduct` + `vector.insert`.
 
-/// A `VectorContractLoweringFilter` lets clients compose multiple lowering
-/// strategies by benefit. Returning failure means this strategy silently
-/// declines the op without consuming it or diagnosing invalid IR; lower-benefit
-/// strategies may still match the same op.
-using VectorContractLoweringFilter =
-    std::function<LogicalResult(ContractionOp)>;
+/// A `FilterConstraintType` lets clients compose multiple lowering strategies
+/// by benefit. Returning failure means this strategy silently declines the op
+/// without consuming it or diagnosing invalid IR; lower-benefit strategies may
+/// still match the same op.
+using FilterConstraintType = std::function<LogicalResult(ContractionOp op)>;
 
 LogicalResult acceptAllVectorContractLoweringFilter(ContractionOp op);
 
 void populateVectorContractToDotPatterns(
     RewritePatternSet &patterns,
-    VectorContractLoweringFilter filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractToOuterProductPatterns(
     RewritePatternSet &patterns,
-    VectorContractLoweringFilter filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractToParallelArithPatterns(
     RewritePatternSet &patterns,
-    VectorContractLoweringFilter filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractGenericLoweringPatterns(
     RewritePatternSet &patterns,
-    VectorContractLoweringFilter filter = acceptAllVectorContractLoweringFilter,
+    FilterConstraintType filter = acceptAllVectorContractLoweringFilter,
     PatternBenefit benefit = 1);
 
 void populateVectorContractLoweringPatterns(
