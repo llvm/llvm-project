@@ -21,6 +21,7 @@
 #include <cassert>
 #include <type_traits>
 #include <utility>
+#include <ratio>
 
 #include "test_macros.h"
 
