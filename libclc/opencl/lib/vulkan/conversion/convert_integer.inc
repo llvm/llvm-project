@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Do not generate user-facing default conversions for clspv as they are handled
-// natively. Do not generate user-facing "_rte" conversions for clspv as they
+// Do not generate user-facing default conversions for Vulkan targets as they
+// are handled natively. Do not generate user-facing "_rte" conversions as they
 // are handled natively.
 
 #define __CLC_DEFINE_FUNCTION_ROUNDING_MODE_SATURATION_IMPL(TYPE_SRC, MODE)    \
