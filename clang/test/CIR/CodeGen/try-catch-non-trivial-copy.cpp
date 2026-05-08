@@ -48,11 +48,11 @@ int test_non_trivial_exception_copy() {
 // CIR:           %[[E:.*]] = cir.alloca !rec_MyException, !cir.ptr<!rec_MyException>, ["e"]
 // CIR:           cir.try {
 // CIR:             cir.call @_Z8mayThrowv() : () -> ()
-// CIR:           } catch [type #cir.global_view<@_ZTI11MyException> : !cir.ptr<!u8i>] (%arg0: !cir.eh_token {{.*}}) {
-// CIR:             cir.construct_catch_param non_trivial_copy %arg0 to %[[E]] using @__clang_cir_catch_copy__ZTS11MyException : !cir.ptr<!rec_MyException>
-// CIR:             %catch_token, %exn_ptr = cir.begin_catch %arg0 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:           } catch [type #cir.global_view<@_ZTI11MyException> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR:             cir.construct_catch_param non_trivial_copy %[[EH_TOKEN]] to %[[E]] using @__clang_cir_catch_copy__ZTS11MyException : !cir.ptr<!rec_MyException>
+// CIR:             %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CIR:             cir.cleanup.scope {
-// CIR:               cir.init_catch_param non_trivial_copy %exn_ptr to %[[E]] : !cir.ptr<!void>, !cir.ptr<!rec_MyException>
+// CIR:               cir.init_catch_param non_trivial_copy %[[EXN_PTR]] to %[[E]] : !cir.ptr<!void>, !cir.ptr<!rec_MyException>
 // CIR:               cir.cleanup.scope {
 // CIR:                 %[[GET:.*]] = cir.call @_ZN11MyException3getEv(%[[E]]) : (!cir.ptr<!rec_MyException> {{.*}}) -> (!s32i {{.*}})
 // CIR:                 cir.store{{.*}} %[[GET]], %[[RV]]
@@ -63,18 +63,18 @@ int test_non_trivial_exception_copy() {
 // CIR:               }
 // CIR:               cir.yield
 // CIR:             } cleanup all {
-// CIR:               cir.end_catch %catch_token : !cir.catch_token
+// CIR:               cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
 // CIR:               cir.yield
 // CIR:             }
-// CIR:           } unwind (%arg0: !cir.eh_token {{.*}}) {
-// CIR:             cir.resume %arg0 : !cir.eh_token
+// CIR:           } unwind (%[[EH_TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR:             cir.resume %[[EH_TOKEN]] : !cir.eh_token
 // CIR:           }
 // CIR:         }
 // CIR:         cir.return
 
 // CIR-LABEL: cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS11MyException
 // CIR-SAME:    attributes {cir.eh.catch_copy_thunk}
-// CIR:         cir.call @_ZN11MyExceptionC1ERKS_(%arg0, %arg1)
+// CIR:         cir.call @_ZN11MyExceptionC1ERKS_(%{{.*}}, %{{.*}})
 // CIR:         cir.return
 
 // --- CIR-FLAT (after hoist-allocas + flatten-cfg) ---
@@ -143,28 +143,6 @@ int test_non_trivial_exception_copy() {
 
 // Final return.
 // CIR-FLAT:         cir.return %{{.*}} : !s32i
-
-// --- CIR-AFTER-EHABI ---
-//
-// EH ABI lowering replaces:
-//  - `cir.eh.initiate`            -> `cir.eh.inflight_exception [@RTTI]`
-//  - `cir.eh.dispatch`            -> `cir.eh.typeid` + `cir.cmp` + `cir.brcond`
-//  - `cir.construct_catch_param`  -> `__cxa_get_exception_ptr` + the thunk's
-//                                    body cloned inline. Plain `cir.call`s
-//                                    inside the cloned body that may unwind
-//                                    are wrapped in a `cir.try_call` whose
-//                                    unwind edge is a terminate block;
-//                                    any `cir.resume.flat` in the inlined
-//                                    body is rewritten to a direct call to
-//                                    `__clang_call_terminate`. After this
-//                                    pass the thunk function itself is dead
-//                                    and is removed by the post-lowering
-//                                    sweep.
-//  - `cir.begin_catch`            -> `__cxa_get_exception_ptr` (preceding the
-//                                    inlined copy) + `__cxa_begin_catch`
-//                                    (after)
-//  - `cir.end_catch`              -> `__cxa_end_catch`
-//  - `cir.resume`                 -> `cir.resume.flat`
 
 // CIR-AFTER-EHABI-LABEL: cir.func {{.*}} @_Z31test_non_trivial_exception_copyv()
 // CIR-AFTER-EHABI:         cir.try_call @_Z8mayThrowv() ^[[T1E_CONT:bb[0-9]+]], ^[[T1E_LPAD:bb[0-9]+]]
@@ -297,7 +275,7 @@ int test_non_trivial_exception_copy() {
 // OGCG:       catch.dispatch:
 // OGCG:         %[[O1_TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI11MyException)
 // OGCG:         %[[O1_MATCH:.*]] = icmp eq i32 %{{.*}}, %[[O1_TYPEID]]
-// OGCG:         br i1 %[[O1_MATCH]], label %[[O1_CATCH:.*]], label %eh.resume
+// OGCG:         br i1 %[[O1_MATCH]], label %[[O1_CATCH:.*]], label %[[EH_RESUME:.*]]
 
 // OGCG:       [[O1_CATCH]]:
 // OGCG:         %[[O1_ADJ:.*]] = call ptr @__cxa_get_exception_ptr(ptr %{{.*}})
@@ -326,7 +304,7 @@ int test_non_trivial_exception_copy() {
 // OGCG:         invoke void @__cxa_end_catch()
 // OGCG:                 to label %{{.*}} unwind label %[[O1_TERM]]
 
-// OGCG:       eh.resume:
+// OGCG:       [[EH_RESUME]]:
 // OGCG:         resume { ptr, i32 }
 
 // OGCG:       [[O1_TERM]]:
@@ -520,7 +498,7 @@ int test_copy_ctor_extra_args() {
 // OGCG:       catch.dispatch:
 // OGCG:         %[[O2_TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI11WithDefault)
 // OGCG:         icmp eq i32 %{{.*}}, %[[O2_TYPEID]]
-// OGCG:         br i1 %{{.*}}, label %[[O2_CATCH:.*]], label %eh.resume
+// OGCG:         br i1 %{{.*}}, label %[[O2_CATCH:.*]], label %[[EH_RESUME:.*]]
 
 // OGCG:       [[O2_CATCH]]:
 // OGCG:         %[[O2_ADJ:.*]] = call ptr @__cxa_get_exception_ptr(ptr %{{.*}})
@@ -532,13 +510,13 @@ int test_copy_ctor_extra_args() {
 // OGCG:         store i32 0, ptr %{{.*}}
 // OGCG:         call void @_ZN11WithDefaultD1Ev(
 // OGCG:         call void @__cxa_end_catch()
-// OGCG:         br label %return
+// OGCG:         br label %[[RETURN:.*]]
 
-// OGCG:       try.cont:
+// OGCG:       [[TRY_CONT:.*]]:
 // OGCG:         store i32 -1, ptr %{{.*}}
-// OGCG:         br label %return
+// OGCG:         br label %[[RETURN:.*]]
 
-// OGCG:       return:
+// OGCG:       [[RETURN]]:
 // OGCG:         load i32, ptr %{{.*}}
 // OGCG:         ret i32
 
