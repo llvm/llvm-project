@@ -13823,9 +13823,10 @@ protected:
   /// Smart shuffle instruction emission, walks through shuffles trees and
   /// tries to find the best matching vector for the actual shuffle
   /// instruction.
-  template <typename T, typename ShuffleBuilderTy>
+  template <typename T, typename ShuffleBuilderTy, typename... Args>
   static T createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
-                         ShuffleBuilderTy &Builder, Type *ScalarTy) {
+                         ShuffleBuilderTy &Builder, Type *ScalarTy,
+                         Args... Arguments) {
     assert(V1 && "Expected at least one vector value.");
     unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewMask(Mask);
@@ -13940,7 +13941,7 @@ protected:
     assert(V1 && "Expected non-null value after looking through shuffles.");
 
     if (!IsIdentity)
-      return Builder.createShuffleVector(V1, NewMask);
+      return Builder.createShuffleVector(V1, NewMask, Arguments...);
     return Builder.createIdentity(V1);
   }
 
@@ -15204,6 +15205,19 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   bool IsFinalized = false;
   SmallVector<int> CommonMask;
   SmallVector<PointerUnion<Value *, const TreeEntry *>, 2> InVectors;
+  /// Captures the original scalar VL of a single, "clean" gather() call so
+  /// the values can be forwarded as the Args operand to getShuffleCost() for
+  /// the final permutation in finalize(). This lets the target cost model
+  /// recognize patterns such as broadcast-of-load (e.g. on X86,
+  /// vbroadcast{ss,sd} folds the broadcast and the load into one instruction
+  /// under AVX/AVX2 and is reported as TCC_Free by getShuffleCost). The
+  /// state machine is:
+  ///   * engaged + empty: tracking active, no qualifying gather seen yet.
+  ///   * engaged + non-empty: exactly one qualifying gather observed and its
+  ///     VL still corresponds to InVectors.front().
+  ///   * disengaged: the cached VL is no longer trustworthy (multiple
+  ///     gather() calls, or a state-mutating add() happened).
+  std::optional<SmallVector<Value *>> BVValues = SmallVector<Value *>();
   const TargetTransformInfo &TTI;
   InstructionCost Cost = 0;
   SmallDenseSet<Value *> VectorizedVals;
@@ -15496,14 +15510,16 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       return ::getShuffleCost(TTI, TTI::SK_PermuteTwoSrc,
                               cast<VectorType>(V1->getType()), Mask);
     }
-    InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask) const {
+    InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask,
+                                        ArrayRef<Value *> VL) const {
       // Empty mask or identity mask are free.
       unsigned VF =
           cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
       if (isEmptyOrIdentity(Mask, VF))
         return TTI::TCC_Free;
-      return ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
-                              cast<VectorType>(V1->getType()), Mask);
+      return ::getShuffleCost(
+          TTI, TTI::SK_PermuteSingleSrc, cast<VectorType>(V1->getType()), Mask,
+          TTI::TCK_RecipThroughput, /*Index=*/0, /*SubTp=*/nullptr, VL);
     }
     InstructionCost createIdentity(Value *) const { return TTI::TCC_Free; }
     InstructionCost createPoison(Type *Ty, unsigned VF) const {
@@ -15518,7 +15534,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   InstructionCost
   createShuffle(const PointerUnion<Value *, const TreeEntry *> &P1,
                 const PointerUnion<Value *, const TreeEntry *> &P2,
-                ArrayRef<int> Mask) {
+                ArrayRef<int> Mask, ArrayRef<Value *> VL = {}) {
     ShuffleCostBuilder Builder(TTI);
     SmallVector<int> CommonMask(Mask);
     Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
@@ -15726,7 +15742,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     if (InVectors.size() == 2)
       InVectors.pop_back();
     return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
-                           V1, V2, CommonMask, Builder, ScalarTy);
+                           V1, V2, CommonMask, Builder, ScalarTy, VL);
   }
 
 public:
@@ -15876,6 +15892,7 @@ public:
     SameNodesEstimated = true;
   }
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
+    BVValues.reset();
     if (&E1 == &E2) {
       assert(all_of(Mask,
                     [&](int Idx) {
@@ -15900,6 +15917,7 @@ public:
     estimateNodesPermuteCost(E1, &E2, Mask, Part, SliceSize);
   }
   void add(const TreeEntry &E1, ArrayRef<int> Mask) {
+    BVValues.reset();
     if (InVectors.empty()) {
       CommonMask.assign(Mask.begin(), Mask.end());
       InVectors.assign(1, &E1);
@@ -15935,6 +15953,8 @@ public:
   }
   /// Adds another one input vector and the mask for the shuffling.
   void add(Value *V1, ArrayRef<int> Mask, bool ForExtracts = false) {
+    if (BVValues && !isa<Constant>(V1))
+      BVValues.reset();
     if (InVectors.empty()) {
       assert(CommonMask.empty() && !ForExtracts &&
              "Expected empty input mask/vectors.");
@@ -15984,6 +16004,12 @@ public:
   Value *gather(ArrayRef<Value *> VL, unsigned MaskVF = 0,
                 Value *Root = nullptr) {
     Cost += getBuildVectorCost(VL, Root);
+    if (BVValues) {
+      if (BVValues->empty() && InVectors.empty())
+        BVValues->assign(VL.begin(), VL.end());
+      else
+        BVValues.reset();
+    }
     if (!Root) {
       // FIXME: Need to find a way to avoid use of getNullValue here.
       SmallVector<Constant *> Vals;
@@ -16113,10 +16139,13 @@ public:
       assert(InVectors.size() == 1 && "Expected only one vector with no mask");
       return Cost;
     }
+    ArrayRef<Value *> VL;
+    if (BVValues)
+      VL = *BVValues;
     return Cost +
            createShuffle(InVectors.front(),
                          InVectors.size() == 2 ? InVectors.back() : nullptr,
-                         CommonMask);
+                         CommonMask, VL);
   }
 
   ~ShuffleCostEstimator() {
