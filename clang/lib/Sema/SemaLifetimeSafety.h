@@ -35,7 +35,10 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
          !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
                           D->getBeginLoc()) ||
          !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
-                          D->getBeginLoc());
+                          D->getBeginLoc()) ||
+         !Diags.isIgnored(
+             diag::warn_lifetime_safety_param_lifetimebound_violation,
+             D->getBeginLoc());
 }
 
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
