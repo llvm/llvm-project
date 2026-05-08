@@ -235,35 +235,36 @@ namespace hlsl {
   _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
   constexpr matrix<float, R, C> fn(matrix<double, R, C> V1,                    \
                                    matrix<double, R, C> V2) {                  \
-    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
   }
 
 #define _DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(fn)                        \
   template <uint R, uint C>                                                    \
   _DXC_DEPRECATED_INT_FN(fn)                                                   \
-  constexpr matrix<float, R, C> fn(matrix<int, R, C> y, matrix<int, R, C> x) { \
-    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  constexpr matrix<float, R, C> fn(matrix<int, R, C> V1,                       \
+                                   matrix<int, R, C> V2) {                     \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
   }                                                                            \
                                                                                \
   template <uint R, uint C>                                                    \
   _DXC_DEPRECATED_INT_FN(fn)                                                   \
-  constexpr matrix<float, R, C> fn(matrix<uint, R, C> y,                       \
-                                   matrix<uint, R, C> x) {                     \
-    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  constexpr matrix<float, R, C> fn(matrix<uint, R, C> V1,                      \
+                                   matrix<uint, R, C> V2) {                    \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
   }                                                                            \
                                                                                \
   template <uint R, uint C>                                                    \
   _DXC_DEPRECATED_INT_FN(fn)                                                   \
-  constexpr matrix<float, R, C> fn(matrix<int64_t, R, C> y,                    \
-                                   matrix<int64_t, R, C> x) {                  \
-    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  constexpr matrix<float, R, C> fn(matrix<int64_t, R, C> V1,                   \
+                                   matrix<int64_t, R, C> V2) {                 \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
   }                                                                            \
                                                                                \
   template <uint R, uint C>                                                    \
   _DXC_DEPRECATED_INT_FN(fn)                                                   \
-  constexpr matrix<float, R, C> fn(matrix<uint64_t, R, C> y,                   \
-                                   matrix<uint64_t, R, C> x) {                 \
-    return fn((matrix<float, R, C>)y, (matrix<float, R, C>)x);                 \
+  constexpr matrix<float, R, C> fn(matrix<uint64_t, R, C> V1,                  \
+                                   matrix<uint64_t, R, C> V2) {                \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
   }
 
 //===----------------------------------------------------------------------===//
