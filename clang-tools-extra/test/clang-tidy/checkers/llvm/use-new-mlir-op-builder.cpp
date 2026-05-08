@@ -78,8 +78,8 @@ void f() {
   builder.create<NamedOp>(builder.getUnknownLoc(), "baz");
 
   // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
-  // CHECK-FIXES: NamedOp::create(builder,
-  // CHECK-FIXES:      builder.getUnknownLoc(),
+  // CHECK-FIXES: NamedOp::create  (
+  // CHECK-FIXES:      builder, builder.getUnknownLoc(),
   // CHECK-FIXES:      "caz");
   builder.
    create<NamedOp>  (
@@ -93,7 +93,7 @@ void f() {
 
   mlir::ImplicitLocOpBuilder ib;
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
-  // CHECK-FIXES: mlir::ModuleOp::create(ib );
+  // CHECK-FIXES: mlir::ModuleOp::create(   ib);
   ib.create<mlir::ModuleOp>(   );
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
