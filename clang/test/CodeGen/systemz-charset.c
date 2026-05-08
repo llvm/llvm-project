@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple s390x-none-zos -fexec-charset IBM-1047 -o - | FileCheck %s
+// RUN: %clang %s -emit-llvm -S -target s390x-ibm-zos -o - | FileCheck %s
 // RUN: %clang_cc1 %s -emit-llvm -triple s390x-none-zos -fexec-charset UTF-8 -DIBM1047_ONLY=1 -o - | FileCheck %s --check-prefix=CHECK-UTF8
 
 const char *UpperCaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
