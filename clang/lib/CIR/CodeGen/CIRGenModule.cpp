@@ -17,6 +17,7 @@
 #include "CIRGenFunction.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
+#include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attrs.inc"
@@ -33,6 +34,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "CIRGenFunctionInfo.h"
@@ -55,10 +57,10 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::AppleARM64:
+  case TargetCXXABI::GenericARM:
     return CreateCIRGenItaniumCXXABI(cgm);
 
   case TargetCXXABI::Fuchsia:
-  case TargetCXXABI::GenericARM:
   case TargetCXXABI::iOS:
   case TargetCXXABI::WatchOS:
   case TargetCXXABI::GenericMIPS:
@@ -463,6 +465,20 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
+  // Weak references don't produce any output by themselves.
+  if (global->hasAttr<WeakRefAttr>())
+    return;
+
+  // If this is an alias definition (which otherwise looks like a declaration)
+  // emit it now.
+  if (global->hasAttr<AliasAttr>()) {
+    // Classic codegen calls shouldSkipAliasEmission here to skip alias
+    // emission for OpenMP target device and CUDA configurations.
+    assert(!cir::MissingFeatures::shouldSkipAliasEmission());
+    emitAliasDefinition(gd);
+    return;
+  }
+
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted
   // unless they are used on device side.
@@ -724,6 +740,85 @@ void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
   }
 }
 
+/// Get the feature delta from the default feature map for the given target CPU.
+static std::vector<std::string>
+getFeatureDeltaFromDefault(const CIRGenModule &cgm, llvm::StringRef targetCPU,
+                           llvm::StringMap<bool> &featureMap) {
+  llvm::StringMap<bool> defaultFeatureMap;
+  cgm.getTarget().initFeatureMap(
+      defaultFeatureMap, cgm.getASTContext().getDiagnostics(), targetCPU, {});
+
+  std::vector<std::string> delta;
+  for (const auto &[k, v] : featureMap) {
+    auto defaultIt = defaultFeatureMap.find(k);
+    if (defaultIt == defaultFeatureMap.end() || defaultIt->getValue() != v)
+      delta.push_back((v ? "+" : "-") + k.str());
+  }
+
+  return delta;
+}
+
+bool CIRGenModule::getCPUAndFeaturesAttributes(
+    GlobalDecl gd, llvm::StringMap<std::string> &attrs,
+    bool setTargetFeatures) {
+  // Add target-cpu and target-features attributes to functions. If
+  // we have a decl for the function and it has a target attribute then
+  // parse that and add it to the feature set.
+  llvm::StringRef targetCPU = getTarget().getTargetOpts().CPU;
+  llvm::StringRef tuneCPU = getTarget().getTargetOpts().TuneCPU;
+  std::vector<std::string> features;
+  // `fd` may be null when emitting attributes for globals that don't have a
+  // FunctionDecl. The AMDGPU branch below handles
+  // the null case via initFeatureMap.
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
+  fd = fd ? fd->getMostRecentDecl() : fd;
+  const auto *td = fd ? fd->getAttr<TargetAttr>() : nullptr;
+  const auto *tv = fd ? fd->getAttr<TargetVersionAttr>() : nullptr;
+  assert((!td || !tv) && "both target_version and target specified");
+  const auto *sd = fd ? fd->getAttr<CPUSpecificAttr>() : nullptr;
+  const auto *tc = fd ? fd->getAttr<TargetClonesAttr>() : nullptr;
+  bool addedAttr = false;
+  if (td || tv || sd || tc) {
+    assert(!cir::MissingFeatures::opFuncMultiVersioning());
+  } else {
+    // Just add the existing target cpu and target features to the function.
+    if (setTargetFeatures && getTarget().getTriple().isAMDGPU()) {
+      llvm::StringMap<bool> featureMap;
+      if (fd)
+        astContext.getFunctionFeatureMap(featureMap, gd);
+      else
+        getTarget().initFeatureMap(featureMap, astContext.getDiagnostics(),
+                                   targetCPU,
+                                   getTarget().getTargetOpts().Features);
+      features = getFeatureDeltaFromDefault(*this, targetCPU, featureMap);
+    } else {
+      features = getTarget().getTargetOpts().Features;
+    }
+  }
+
+  if (!targetCPU.empty()) {
+    attrs["cir.target-cpu"] = targetCPU.str();
+    addedAttr = true;
+  }
+  if (!tuneCPU.empty()) {
+    attrs["cir.tune-cpu"] = tuneCPU.str();
+    addedAttr = true;
+  }
+  if (!features.empty() && setTargetFeatures) {
+    llvm::erase_if(features, [&](const std::string &f) {
+      assert(!f.empty() && (f[0] == '+' || f[0] == '-') &&
+             "feature string must start with '+' or '-'");
+      return getTarget().isReadOnlyFeature(f.substr(1));
+    });
+    llvm::sort(features);
+    attrs["cir.target-features"] = llvm::join(features, ",");
+    addedAttr = true;
+  }
+  // TODO(cir): add metadata for AArch64 Function Multi Versioning.
+  assert(!cir::MissingFeatures::opFuncMultiVersioning());
+  return addedAttr;
+}
+
 void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   setCommonAttributes(gd, op);
 
@@ -734,12 +829,21 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
         gvi.setSection(builder.getStringAttr(sa->getName()));
       if (d->hasAttr<RetainAttr>())
         addUsedGlobal(gvi);
+
+      if (auto func = dyn_cast<cir::FuncOp>(op)) {
+        llvm::StringMap<std::string> attrs;
+        if (getCPUAndFeaturesAttributes(gd, attrs)) {
+          // TODO(cir): Classic codegen removes the existing target-cpu,
+          // target-features, tune-cpu and fmv-features attributes here
+          // before adding the new ones.
+          for (const auto &[key, val] : attrs)
+            func->setAttr(key, builder.getStringAttr(val));
+        }
+      }
     }
   }
 
   assert(!cir::MissingFeatures::opGlobalPragmaClangSection());
-  assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
-
   getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
 }
 
@@ -1553,15 +1657,10 @@ void CIRGenModule::addReplacement(StringRef name, mlir::Operation *op) {
 }
 
 #ifndef NDEBUG
-static bool verifyPointerTypeArgs(mlir::ModuleOp modOp, cir::FuncOp oldF,
-                                  cir::FuncOp newF) {
-  std::optional<mlir::SymbolTable::UseRange> optionalUseRange =
-      oldF.getSymbolUses(modOp);
-  if (!optionalUseRange)
-    return true;
-
-  for (const mlir::SymbolTable::SymbolUse &u : *optionalUseRange) {
-    auto call = mlir::dyn_cast<cir::CallOp>(u.getUser());
+static bool verifyPointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF,
+                                  mlir::SymbolUserMap &userMap) {
+  for (mlir::Operation *user : userMap.getUsers(oldF)) {
+    auto call = mlir::dyn_cast<cir::CallOp>(user);
     if (!call)
       continue;
 
@@ -1577,6 +1676,15 @@ static bool verifyPointerTypeArgs(mlir::ModuleOp modOp, cir::FuncOp oldF,
 #endif // NDEBUG
 
 void CIRGenModule::applyReplacements() {
+  if (replacements.empty())
+    return;
+
+  // Build a symbol user map once — this walks the module O(M) one time.
+  // Previously, each replaceAllSymbolUses call walked the entire module,
+  // giving O(R × M) quadratic behavior for R replacements.
+  mlir::SymbolTableCollection symbolTableCollection;
+  mlir::SymbolUserMap userMap(symbolTableCollection, theModule);
+
   for (auto &i : replacements) {
     StringRef mangledName = i.first;
     mlir::Operation *replacement = i.second;
@@ -1592,17 +1700,15 @@ void CIRGenModule::applyReplacements() {
       continue;
     }
 
-    assert(verifyPointerTypeArgs(theModule, oldF, newF) &&
+    assert(verifyPointerTypeArgs(oldF, newF, userMap) &&
            "call argument types do not match replacement function");
 
-    // Replace old with new, but keep the old order.
-    if (oldF.replaceAllSymbolUses(newF.getSymNameAttr(), theModule).failed())
-      llvm_unreachable("internal error, cannot RAUW symbol");
-    if (newF) {
-      newF->moveBefore(oldF);
-      eraseGlobalSymbol(oldF);
-      oldF->erase();
-    }
+    // Replace old with new, but keep the old order.  Uses
+    // SymbolUserMap to touch only actual users, not the whole module.
+    userMap.replaceAllUsesWith(oldF, newF.getSymNameAttr());
+    newF->moveBefore(oldF);
+    eraseGlobalSymbol(oldF);
+    oldF->erase();
   }
 }
 
@@ -2701,10 +2807,10 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  // TODO(cir): typically the calling conv is set right here, but since
-  // cir::CallingConv is empty and we've not yet added calling-conv to FuncOop,
-  // this isn't really useful here.  This should call func.setCallingConv/etc
-  // later.
+  // TODO(cir): Set the calling convention computed by constructAttributeList
+  // on the function. FuncOp supports calling_conv, but target-specific
+  // CodeGen is needed to set it correctly (e.g., AMDGPU kernel functions
+  // should be marked with AMDGPUKernel).
   assert(!cir::MissingFeatures::opFuncCallingConv());
 }
 
@@ -3276,8 +3382,88 @@ void CIRGenModule::release() {
 
   emitLLVMUsed();
 
+  // Classic codegen calls `checkAliases` here to validate any alias
+  // definitions emitted during codegen.
+  assert(!cir::MissingFeatures::checkAliases());
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
+}
+
+void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
+  const auto *d = cast<ValueDecl>(gd.getDecl());
+  const AliasAttr *aa = d->getAttr<AliasAttr>();
+  assert(aa && "Not an alias?");
+
+  StringRef mangledName = getMangledName(gd);
+
+  if (aa->getAliasee() == mangledName) {
+    diags.Report(aa->getLocation(), diag::err_cyclic_alias) << 0;
+    return;
+  }
+
+  // If there is a definition in the module, then it wins over the alias.
+  // This is dubious, but allow it to be safe. Just ignore the alias.
+  mlir::Operation *entry = getGlobalValue(mangledName);
+  if (entry) {
+    auto entryGV = mlir::dyn_cast<cir::CIRGlobalValueInterface>(entry);
+    if (entryGV && entryGV.isDefinition())
+      return;
+  }
+
+  // Classic codegen pushes the alias onto an `Aliases` list at this point so
+  // that `checkAliases` can later validate the alias and recover on error.
+  assert(!cir::MissingFeatures::checkAliases());
+
+  mlir::Location loc = getLoc(d->getSourceRange());
+  bool isFunction = isa<FunctionDecl>(d);
+
+  // Get the linkage and the type of the alias.
+  mlir::Type declTy;
+  cir::GlobalLinkageKind linkage;
+  if (isFunction) {
+    declTy = getTypes().getFunctionType(gd);
+    linkage = getFunctionLinkage(gd);
+  } else {
+    declTy = getTypes().convertTypeForMem(d->getType());
+    const auto *vd = cast<VarDecl>(d);
+    linkage = getCIRLinkageVarDefinition(vd);
+  }
+
+  // Aliases that target weak symbols must themselves be marked weak.
+  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
+      d->isWeakImported())
+    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
+
+  // Create the alias op. If there is an existing declaration with the same
+  // name, erase it: any references to it via flat symbol reference will
+  // automatically resolve to the new alias.
+  if (entry) {
+    eraseGlobalSymbol(entry);
+    entry->erase();
+  }
+
+  // Aliases are always definitions, so the MLIR visibility should match the
+  // linkage rather than defaulting to private.
+  mlir::SymbolTable::Visibility visibility =
+      getMLIRVisibilityFromCIRLinkage(linkage);
+
+  // TODO(cir): Make GlobalAlias a separate op.
+  cir::CIRGlobalValueInterface alias =
+      isFunction
+          ? mlir::cast<cir::CIRGlobalValueInterface>(
+                createCIRFunction(loc, mangledName,
+                                  mlir::cast<cir::FuncType>(declTy),
+                                  cast<FunctionDecl>(d))
+                    .getOperation())
+          : mlir::cast<cir::CIRGlobalValueInterface>(
+                createGlobalOp(*this, loc, mangledName, declTy).getOperation());
+  alias.setAliasee(aa->getAliasee());
+  alias.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(alias, visibility);
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  setCommonAttributes(gd, alias);
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
 void CIRGenModule::emitAliasForGlobal(StringRef mangledName,

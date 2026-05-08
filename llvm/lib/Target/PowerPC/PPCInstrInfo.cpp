@@ -3023,10 +3023,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     if (Num || MF->getTarget().getTargetTriple().isOSAIX() ||
         !MF->getTarget().getTargetTriple().isLittleEndian())
       return Num * 4;
@@ -5924,7 +5921,6 @@ bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
 
   BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X8)
       .addReg(ScratchReg)
-      .addImm(16)
       .addReg(PPC::X9, RegState::Implicit)
       .addReg(PPC::X10, RegState::Implicit);
 

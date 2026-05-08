@@ -235,8 +235,7 @@ int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length arr
                                               // expected-error {{variable length array}} \
                                               // pedantic-expected-error {{variable length array}}
 
-const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}} \
-                                              // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
 _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \

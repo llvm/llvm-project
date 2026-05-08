@@ -122,16 +122,16 @@ static std::optional<Instruction *> modifyIntrinsicCall(
     InstCombiner &IC,
     std::function<void(SmallVectorImpl<Value *> &, SmallVectorImpl<Type *> &)>
         Func) {
-  SmallVector<Type *, 4> ArgTys;
-  if (!Intrinsic::getIntrinsicSignature(OldIntr.getCalledFunction(), ArgTys))
+  SmallVector<Type *, 4> OverloadTys;
+  if (!Intrinsic::isSignatureValid(OldIntr.getCalledFunction(), OverloadTys))
     return std::nullopt;
 
   SmallVector<Value *, 8> Args(OldIntr.args());
 
   // Modify arguments and types
-  Func(Args, ArgTys);
+  Func(Args, OverloadTys);
 
-  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, ArgTys, Args);
+  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, OverloadTys, Args);
   NewCall->takeName(&OldIntr);
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
@@ -278,13 +278,13 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
         // Obtain the original image sample intrinsic's signature
         // and replace its return type with the half-vector for D16 folding
-        SmallVector<Type *, 8> SigTys;
-        Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
-        SigTys[0] = HalfVecTy;
+        SmallVector<Type *, 8> OverloadTys;
+        Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys);
+        OverloadTys[0] = HalfVecTy;
 
         Module *M = II.getModule();
-        Function *HalfDecl =
-            Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
+        Function *HalfDecl = Intrinsic::getOrInsertDeclaration(
+            M, ImageDimIntr->Intr, OverloadTys);
 
         II.mutateType(HalfVecTy);
         II.setCalledFunction(HalfDecl);
@@ -2028,7 +2028,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   // Validate function argument and return types, extracting overloaded types
   // along the way.
   SmallVector<Type *, 6> OverloadTys;
-  if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), OverloadTys))
+  if (!Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys))
     return nullptr;
 
   Type *NewTy =

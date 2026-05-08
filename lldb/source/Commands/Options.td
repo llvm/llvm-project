@@ -867,7 +867,8 @@ let Command = "log enable" in {
   def log_file : Option<"file", "f">,
                  Group<1>,
                  Arg<"Filename">,
-                 Desc<"Set the destination file to log to.">;
+                 Desc<"Set the destination file that all the enabled "
+                      "categories in the specified log channel will log to.">;
   def log_handler : Option<"log-handler", "h">,
                     Group<1>,
                     EnumArg<"LogHandler">,
@@ -1233,6 +1234,23 @@ let Command = "platform shell" in {
 let Command = "plugin list" in {
   def plugin_list_json : Option<"json", "j">,
                          Desc<"Output the plugin list in json format.">;
+  def plugin_list_domain : Option<"domain", "d">,
+                           EnumArg<"PluginDomain">,
+                           Desc<"The ${d}omain to list plugins for. Defaults to 'global'.">;
+}
+
+let Command = "plugin enable" in {
+  def plugin_enable_domain : Option<"domain", "d">,
+                             EnumArg<"PluginDomain">,
+                             Desc<"The ${d}omain in which to enable the "
+                                  "matching plugins. Defaults to 'global'.">;
+}
+
+let Command = "plugin disable" in {
+  def plugin_disable_domain : Option<"domain", "d">,
+                              EnumArg<"PluginDomain">,
+                              Desc<"The ${d}omain in which to disable the "
+                                   "matching plugins. Defaults to 'global'.">;
 }
 
 let Command = "process launch" in {

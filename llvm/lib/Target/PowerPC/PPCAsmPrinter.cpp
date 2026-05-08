@@ -952,10 +952,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(!Subtarget->isAIXABI() &&
            "AIX does not support patchable function entry!");
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     if (!Num)
       return;
     emitNops(Num);
@@ -1817,10 +1814,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // of instructions change.
     // XRAY is only supported on PPC Linux little endian.
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
 
     if (!MAI.isLittleEndian() || Num)
       break;

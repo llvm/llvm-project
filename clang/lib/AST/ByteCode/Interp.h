@@ -418,9 +418,14 @@ bool Sub(InterpState &S, CodePtr OpPC) {
     // a AddrLabelDiff integral.
     if (LHS.getKind() == IntegralKind::LabelAddress ||
         RHS.getKind() == IntegralKind::LabelAddress) {
-      const auto *A = reinterpret_cast<const Expr *>(LHS.getPtr());
-      const auto *B = reinterpret_cast<const Expr *>(RHS.getPtr());
-      if (!isa<AddrLabelExpr>(A) || !isa<AddrLabelExpr>(B))
+      const auto *A = LHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(LHS.getPtr())
+                          : nullptr;
+      const auto *B = RHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(RHS.getPtr())
+                          : nullptr;
+      if (!isa_and_nonnull<AddrLabelExpr>(A) ||
+          !isa_and_nonnull<AddrLabelExpr>(B))
         return false;
       const auto *LHSAddrExpr = cast<AddrLabelExpr>(A);
       const auto *RHSAddrExpr = cast<AddrLabelExpr>(B);
@@ -1972,6 +1977,11 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return handleReference(S, OpPC, LocalBlock);
 }
 
+inline bool CheckRefInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  return CheckRange(S, OpPC, Ptr, AK_Read);
+}
+
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
@@ -3423,6 +3433,12 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
     return false;
 
   if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
+    return false;
+
+  const Descriptor *SrcDesc = SrcPtr.getFieldDesc();
+  const Descriptor *DestDesc = DestPtr.getFieldDesc();
+  if (!SrcDesc->isPrimitiveArray() || !DestDesc->isPrimitiveArray() ||
+      SrcDesc->getPrimType() != Name || DestDesc->getPrimType() != Name)
     return false;
 
   for (uint32_t I = 0; I != Size; ++I) {

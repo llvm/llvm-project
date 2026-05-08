@@ -1199,8 +1199,12 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
     guardAlignment = clang::CharUnits::One();
   } else if (useARMGuardVarABI()) {
-    globalOp->emitError("NYI: ARM-style guard variables for static locals");
-    return;
+    // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
+    const unsigned sizeTypeSize =
+        astCtx->getTypeSize(astCtx->getSignedSizeType());
+    guardTy = cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
+    guardAlignment =
+        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
   } else {
     guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
     guardAlignment =
@@ -1283,10 +1287,11 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     //   This ABI instead only specifies the value bit 0 of the static guard
     //   variable; all other bits are platform defined. Bit 0 shall be 0 when
     //   the variable is not initialized and 1 when it is.
-    if (useARMGuardVarABI()) {
-      globalOp->emitError(
-          "NYI: ARM-style guard variable check (bit 0 only) for static locals");
-      return;
+    if (useARMGuardVarABI() && !useInt8GuardVariable) {
+      auto one = builder.getConstantInt(
+          localInitOp.getLoc(), mlir::cast<cir::IntType>(guardLoad.getType()),
+          1);
+      guardLoad = builder.createAnd(localInitOp.getLoc(), guardLoad, one);
     }
 
     // Check if the first byte of the guard variable is zero.
@@ -1553,6 +1558,17 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     mlir::Region &partialDtor = arrayCtor.getPartialDtor();
     if (!partialDtor.empty())
       partialDtorBlock = &partialDtor.front();
+  } else if (auto arrayDtor = mlir::dyn_cast<cir::ArrayDtor>(op)) {
+    // When the element destructor may throw, reuse the body block as the
+    // partial-dtor block so that an exception thrown by an element's dtor
+    // continues the reverse-destruction loop in the EH cleanup region. The
+    // body block already stores the next element pointer to `tmpAddr`
+    // before invoking the dtor, so when an exception unwinds from the
+    // dtor call `tmpAddr` already points at the element that threw, and
+    // the cleanup loop picks up from `tmpAddr - 1` and walks back to
+    // `begin`.
+    if (arrayDtor.getDtorMayThrow())
+      partialDtorBlock = bodyBlock;
   }
 
   auto emitCtorDtorLoop = [&]() {
@@ -1958,7 +1974,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
                                         GlobalLinkageKind::PrivateLinkage);
   fatbinStr.setAlignment(8);
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
-      fatbinType, builder.getStringAttr(gpuBinary->getBuffer())));
+      fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -2198,8 +2214,8 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
         /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
 
     // We must make the string zero-terminated.
-    tmpString.setInitialValueAttr(ConstArrayAttr::get(
-        strType, StringAttr::get(&getContext(), str + "\0")));
+    tmpString.setInitialValueAttr(
+        ConstArrayAttr::get(strType, StringAttr::get(str + "\0", strType)));
     tmpString.setPrivate();
     return tmpString;
   };

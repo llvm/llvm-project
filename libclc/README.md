@@ -61,9 +61,9 @@ cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release
 #### Configure for SPIR-V targets
 ```
 cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
-  -DRUNTIMES_spirv-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
-  -DRUNTIMES_spirv64-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
-  -DLLVM_RUNTIME_TARGETS="spirv-mesa3d-;spirv64-mesa3d-"
+  -DRUNTIMES_spirv-mesa-mesa3d_LLVM_ENABLE_RUNTIMES=libclc \
+  -DRUNTIMES_spirv64-mesa-mesa3d_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="spirv-mesa-mesa3d;spirv64-mesa-mesa3d"
 ```
 
 To build multiple targets, pass them as a semicolon-separated list in
