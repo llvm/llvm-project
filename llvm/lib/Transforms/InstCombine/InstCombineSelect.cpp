@@ -4423,7 +4423,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
 
-  if (Value *V = simplifySelectInst(CondVal, TrueVal, FalseVal,
+  FastMathFlags FMF;
+  if (auto *FPMO = dyn_cast_if_present<FPMathOperator>(&SI))
+    FMF = FPMO->getFastMathFlags();
+
+  if (Value *V = simplifySelectInst(CondVal, TrueVal, FalseVal, FMF,
                                     SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
@@ -5083,7 +5087,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // TODO: preserve FMF flags
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
-    if (Value *V = simplifySelectInst(B, TrueVal, FalseVal,
+    if (Value *V = simplifySelectInst(B, TrueVal, FalseVal, FMF,
                                       SQ.getWithInstruction(&SI))) {
       Value *NewTrueVal = IsAnd ? V : TrueVal;
       Value *NewFalseVal = IsAnd ? FalseVal : V;
