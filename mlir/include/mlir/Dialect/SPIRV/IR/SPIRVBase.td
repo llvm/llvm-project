@@ -4383,8 +4383,8 @@ def SPIRV_IntVec4 : SPIRV_Vec4<SPIRV_Integer>;
 def SPIRV_IOrUIVec4 : SPIRV_Vec4<SPIRV_SignlessOrUnsignedInt>;
 def SPIRV_Int32Vec4 : SPIRV_Vec4<AnyI32>;
 
-// TODO: From 1.4, this should also include Composite type.
-def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr]>;
+def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr,
+                                  SPIRV_AnyMatrix, SPIRV_AnyArray, SPIRV_AnyStruct]>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V OpTrait definitions
@@ -4686,6 +4686,10 @@ def SPIRV_OC_OpSubgroupBlockWriteINTEL        : I32EnumAttrCase<"OpSubgroupBlock
 def SPIRV_OC_OpAssumeTrueKHR                  : I32EnumAttrCase<"OpAssumeTrueKHR", 5630>;
 def SPIRV_OC_OpExpectKHR                      : I32EnumAttrCase<"OpExpectKHR", 5631>;
 def SPIRV_OC_OpAtomicFAddEXT                  : I32EnumAttrCase<"OpAtomicFAddEXT", 6035>;
+def SPIRV_OC_OpTypeStructContinuedINTEL       : I32EnumAttrCase<"OpTypeStructContinuedINTEL", 6090>;
+def SPIRV_OC_OpConstantCompositeContinuedINTEL : I32EnumAttrCase<"OpConstantCompositeContinuedINTEL", 6091>;
+def SPIRV_OC_OpSpecConstantCompositeContinuedINTEL : I32EnumAttrCase<"OpSpecConstantCompositeContinuedINTEL", 6092>;
+def SPIRV_OC_OpCompositeConstructContinuedINTEL : I32EnumAttrCase<"OpCompositeConstructContinuedINTEL", 6096>;
 def SPIRV_OC_OpConvertFToBF16INTEL            : I32EnumAttrCase<"OpConvertFToBF16INTEL", 6116>;
 def SPIRV_OC_OpConvertBF16ToFINTEL            : I32EnumAttrCase<"OpConvertBF16ToFINTEL", 6117>;
 def SPIRV_OC_OpControlBarrierArriveINTEL      : I32EnumAttrCase<"OpControlBarrierArriveINTEL", 6142>;
@@ -4810,6 +4814,10 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpEmitMeshTasksEXT, SPIRV_OC_OpSetMeshOutputsEXT,
       SPIRV_OC_OpSubgroupBlockReadINTEL, SPIRV_OC_OpSubgroupBlockWriteINTEL,
       SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpExpectKHR, SPIRV_OC_OpAtomicFAddEXT,
+      SPIRV_OC_OpTypeStructContinuedINTEL,
+      SPIRV_OC_OpConstantCompositeContinuedINTEL,
+      SPIRV_OC_OpSpecConstantCompositeContinuedINTEL,
+      SPIRV_OC_OpCompositeConstructContinuedINTEL,
       SPIRV_OC_OpConvertFToBF16INTEL, SPIRV_OC_OpConvertBF16ToFINTEL,
       SPIRV_OC_OpControlBarrierArriveINTEL, SPIRV_OC_OpControlBarrierWaitINTEL,
       SPIRV_OC_OpGroupIMulKHR, SPIRV_OC_OpGroupFMulKHR,
