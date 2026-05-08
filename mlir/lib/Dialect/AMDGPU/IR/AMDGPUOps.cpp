@@ -958,8 +958,8 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (failed(verifyIndexCount(*this, "source", srcType,
-                              getSrcIndices().size())) ||
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())) ||
       failed(verifyIndexCount(*this, "destination", dstType,
                               getDstIndices().size())))
     return failure();
@@ -1036,8 +1036,8 @@ LogicalResult GlobalLoadAsyncToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (failed(verifyIndexCount(*this, "source", srcType,
-                              getSrcIndices().size())) ||
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())) ||
       failed(verifyIndexCount(*this, "destination", dstType,
                               getDstIndices().size())))
     return failure();
@@ -1238,8 +1238,7 @@ static LogicalResult verifyDescriptorOp(DescriptorOp op) {
   if (Value atomicBarrierAddress = op.getAtomicBarrierAddress()) {
     auto atomicBarrierAddressType =
         cast<MemRefType>(atomicBarrierAddress.getType());
-    if (failed(verifyIndexCount(op, "atomic barrier",
-                                atomicBarrierAddressType,
+    if (failed(verifyIndexCount(op, "atomic barrier", atomicBarrierAddressType,
                                 op.getAtomicBarrierIndices().size())))
       return failure();
 
