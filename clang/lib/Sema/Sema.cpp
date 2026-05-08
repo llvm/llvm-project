@@ -891,6 +891,11 @@ static bool ShouldRemoveFromUnused(Sema *SemaRef, const DeclaratorDecl *D) {
     return true;
 
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    // If a constexpr function is referenced for constant evaluation,
+    // don't warn even if it is not odr-used.
+    if (FD->isReferenced() && FD->isConstexpr())
+      return true;
+
     // If this is a function template and none of its specializations is used,
     // we should warn.
     if (FunctionTemplateDecl *Template = FD->getDescribedFunctionTemplate())
