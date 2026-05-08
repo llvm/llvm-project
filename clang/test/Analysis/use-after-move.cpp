@@ -1015,3 +1015,39 @@ struct OtherMoveSafeClasses {
     // aggressive-note@-2   {{Moved-from object 'Task' is moved}}
   }
 };
+
+// This test case does not pass because my implementation uses IteratorModeling.cpp
+// and the warning can be only emitted if IteratorModeling is enabled.
+// If both Move checker and the IteratorModeling are enabled then the analyzer can emit a warning.
+
+/*
+void starOperatorAfterMove() {
+  std::list<std::string> l1;
+  l1.push_back("l1");
+  std::list<std::string> l2;
+
+  std::move(l1.begin(), l1.end(), std::back_inserter(l2)); // peaceful-note {{Object 'l1' is moved}}
+  *l1.cbegin(); // peaceful-warning {{Method called on moved-from object 'l1'}}
+                // peaceful-note@-1 {{Method called on moved-from object 'l1'}}
+}
+*/
+
+void safeOperatorAfterMove() {
+  std::list<std::string> l1;
+  l1.push_back("l1");
+  std::list<std::string> l2;
+
+  std::move(l1.begin(), l1.end(), std::back_inserter(l2));
+  *l2.cbegin(); // no-warning
+}
+
+void sizeAfterMove() {
+  std::list<std::string> l1;
+  l1.push_back("l1");
+  l1.push_back("l2");
+  std::list<std::string> l2;
+
+  std::move(l1.begin(), l1.end(), std::back_inserter(l2));
+  l1.size(); // no-warning
+}
+
