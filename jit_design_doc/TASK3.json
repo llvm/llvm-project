@@ -1,0 +1,717 @@
+{
+  "meta": {
+    "task_id": "TASK3",
+    "title": "LLVM Passes 与 JIT 核心引擎",
+    "version": "1.0",
+    "created": "2026-05-03",
+    "description": "实现 EmbeddedJIT 的 5 个 AOT Pass (PASS1-PASS5)、1 个 JIT Pass (PASS6)、运行时核心库 (OrcJIT+JITLink)、Code Cache、错误处理系统的完整构建。对应 PLAN4.md 阶段 3 (6周) + 阶段 4 (3周) + 阶段 5 (2周)，约 11 周工作量。",
+    "design_docs": [
+      "SPEC4.md",
+      "PLAN4.md",
+      "PASS1_EJitRegisterBitcode.md",
+      "PASS2_EJitRegisterPeriod.md",
+      "PASS3_EJitWrapperGen.md",
+      "PASS4_EJitPeriodHandler.md",
+      "PASS5_EJitAotModulePass.md",
+      "PASS6_EJitStructFieldPass.md",
+      "PASS7_EJitRuntime_OrcJITLink.md"
+    ]
+  },
+
+  "tasks": [
+    {
+      "id": "T3-01",
+      "group": "AOT_PASS",
+      "name": "EJitRegisterBitcodePass (PASS1) — 早期 Bitcode 提取",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 5,
+      "depends_on": [],
+      "design_doc": "PASS1_EJitRegisterBitcode.md",
+      "files_to_create": [
+        "llvm/lib/Transforms/EmbeddedJIT/EJitRegisterBitcode.cpp"
+      ],
+      "files_to_modify": [
+        "llvm/lib/Transforms/EmbeddedJIT/CMakeLists.txt"
+      ],
+      "description": "实现在标准优化之前提取所有 ejit_entry 函数及其传递闭包的原始 IR 为 Bitcode 并嵌入可执行文件的 Module Pass。必须作为独立的早期 Pass 注册（不在 EJitAotModulePass 内），确保 !ejit.may_const metadata 在优化前被完整保存。",
+      "implementation_prompt": "实现 EJitRegisterBitcodePass::run(Module &M, ModuleAnalysisManager &AM):\n\n1. CollectEntryFunctions(M):\n   - 遍历 M.functions()，对每个 Function 检查其 metadata\n   - 若 F.hasMetadata(\"ejit.metadata\") 且 metadata 中包含 !{\"ejit_entry\"} 子节点，标记为入口函数\n   - 若无入口函数，直接返回 PreservedAnalyses::all()\n\n2. ComputeTransitiveClosure(entryFuncs):\n   - 对每个入口函数调用 collectTransitiveCalls(F, visited)\n   - BFS/DFS 遍历所有 CallInst，若 callee 非 declaration 且非 intrinsic，递归收集\n   - 跳过已访问的函数（防止递归，虽然 Sema 已排除）\n   - 收集被引用的全局变量（通过遍历函数体中的 operands）\n   - 收集被调用的外部函数声明（仅 declaration）\n\n3. ExtractModule(M, fullFuncSet):\n   - 创建新 Module \"ejit_bitcode\"，复制 DataLayout 和 TargetTriple\n   - 声明所有外部函数（ExternalLinkage）\n   - 克隆全局变量声明（同名）\n   - 使用 CloneFunctionInto 克隆函数体\n   - 手动映射 metadata（MapMetadata）保留 ejit.metadata\n\n4. SerializeToBitcode(extractedModule) → std::string:\n   - 使用 llvm::WriteBitcodeToFile 或内存序列化\n\n5. EmbedBitcodeInModule(M, bitcodeStr):\n   - 创建 ConstantDataArray::getString(M.getContext(), bitcodeStr, true)\n   - 创建 @__ejit_bitcode InternalLinkage Constant 全局变量\n   - 设置 section 属性为 \".ejit.bitcode\"，align 1\n\n6. GenerateRegisterCall(M, bitcodeGV, entryFuncs):\n   - 查找或创建 ejit_auto_register() 函数（InternalLinkage）\n   - 若不存在创建空函数体（entry 块 + ret void）\n   - 在 ret 指令前为每个 entryFunc 插入 ejit_register_bitcode 调用:\n     call void @ejit_register_bitcode(ptr @\".str.funcname\", ptr bitcast(@__ejit_bitcode to ptr), i64 N)\n   - 将 ejit_auto_register 添加到 @llvm.global_ctors（优先级 65535）\n\n7. 返回值: PreservedAnalyses::none()",
+      "acceptance_criteria": [
+        "Lit 测试: opt -passes=ejit-register-bitcode 生成 @__ejit_bitcode 全局变量",
+        "Lit 测试: FileCheck 验证 section \".ejit.bitcode\"",
+        "Lit 测试: 验证 ejit_auto_register 正确生成",
+        "Lit 测试: 验证 ejit_register_bitcode 调用参数正确",
+        "Lit 测试: 无 ejit_entry 的 Module 不做修改",
+        "Lit 测试: 外部函数声明被正确克隆",
+        "反序列化验证: 嵌入的 bitcode 可重新解析，函数列表一致"
+      ],
+      "notes": "参考 easyJIT 的 RegisterBitcodePass 实现；元数据映射需手动处理 CloneFunctionInto 默认不拷贝命名 metadata；section 属性确保链接器将 bitcode 放入独立段方便运行时查找。"
+    },
+
+    {
+      "id": "T3-02",
+      "group": "AOT_PASS",
+      "name": "EJitRegisterPeriodPass (PASS2) — 时间窗变量注册",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 3,
+      "depends_on": ["T3-01"],
+      "design_doc": "PASS2_EJitRegisterPeriod.md",
+      "files_to_create": [
+        "llvm/lib/Transforms/EmbeddedJIT/EJitRegisterPeriod.cpp"
+      ],
+      "files_to_modify": [
+        "llvm/lib/Transforms/EmbeddedJIT/CMakeLists.txt"
+      ],
+      "description": "实现扫描 Module 中所有 ejit_period / ejit_period_arr 全局变量并生成运行时注册代码的 Module Pass。为运行时提供全局变量的基地址映射。v2.0 版本移除了结构体布局计算，仅保留时间窗变量注册。",
+      "implementation_prompt": "实现 EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM):\n\n1. CollectPeriodVariables(M):\n   - 遍历 M.globals()，检查每个 GlobalVariable 的 ejit.metadata\n   - 解析 metadata 中的 ejit_period 和 ejit_period_arr 条目\n   - MDNode 格式:\n     * ejit_period: !{!\"ejit_period\", !\"static\"}\n     * ejit_period_arr: !{!\"ejit_period_arr\", !\"cell\", i32 16}\n   - 构建 PeriodVarInfo 列表（GV指针, isPeriodArr, periodName, arraySize）\n\n2. getOrCreateAutoRegister(M):\n   - 检查 ejit_auto_register 是否已存在（PASS1 可能已创建）\n   - 若不存在: 创建 InternalLinkage 空函数（entry + ret void）\n   - 若存在: 在 ret void 指令之前插入新调用\n\n3. 生成注册调用:\n   a. 对 ejit_period_arr 变量:\n      call void @ejit_register_period_array(\n          ptr @\".str.periodName\",    // periodName 字符串\n          ptr @\".str.varName\",       // 变量名字符串\n          ptr bitcast(GV to ptr),     // 数组基地址\n          i64 arraySize)              // 数组大小\n   b. 对 ejit_period(static) 变量:\n      call void @ejit_register_static_var(\n          ptr @\".str.varName\",       // 变量名字符串\n          ptr bitcast(GV to ptr))     // 变量地址\n\n4. 声明外部运行时函数:\n   declare void @ejit_register_period_array(ptr, ptr, ptr, i64)\n   declare void @ejit_register_static_var(ptr, ptr)\n\n5. IRBuilder 使用:\n   - 创建 GlobalString 传递字符串参数\n   - 使用 BitCast 将 GV 转为 i8*\n   - arraySize 用 i64 常量\n\n6. 返回值: PreservedAnalyses::none()（若有 period 变量），否则 all()",
+      "acceptance_criteria": [
+        "Lit 测试: call void @ejit_register_period_array 正确生成",
+        "Lit 测试: call void @ejit_register_static_var 正确生成",
+        "Lit 测试: periodName 字符串正确传递",
+        "Lit 测试: 多个时间窗变量均注册",
+        "Lit 测试: 无 period 变量的 Module 无变化",
+        "Lit 测试: 验证与 PASS1 的 ejit_auto_register 协调"
+      ],
+      "notes": "v2.0 已移除布局注册 (LayoutRegistry)，may_const 识别由 PASS6 的 !ejit.may_const load metadata 完成；与 PASS1 共享 ejit_auto_register 函数，需处理已存在/不存在两种情况。"
+    },
+
+    {
+      "id": "T3-03",
+      "group": "AOT_PASS",
+      "name": "EJitWrapperGenPass (PASS3) — 函数入口插桩",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 5,
+      "depends_on": [],
+      "design_doc": "PASS3_EJitWrapperGen.md",
+      "files_to_create": [
+        "llvm/lib/Transforms/EmbeddedJIT/EJitWrapperGen.cpp"
+      ],
+      "files_to_modify": [
+        "llvm/lib/Transforms/EmbeddedJIT/CMakeLists.txt"
+      ],
+      "description": "实现为所有 ejit_entry 函数生成 Wrapper 插桩代码的 Module Pass。采用单函数混合方案：在原函数入口插入 dims 构建 + ejit_compile_or_get 调用 + 判空分支，JIT 成功则调用特化函数，失败则执行原函数体。",
+      "implementation_prompt": "实现 EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM):\n\n1. CollectEjitEntryFunctions(M):\n   - 遍历 M.functions()，找到有 ejit_entry metadata 的函数\n   - 对每个 entry 函数，解析 ejit_period_arr_ind 参数映射\n   - 从 metadata 提取: !{!\"ejit_period_arr_ind\", !\"periodName\", i32 argIndex}\n\n2. 对每个 entryFunc 执行 splitFunction(F):\n   - 原始结构: entry { ... 原函数体 ... ret }\n   - 变换后:\n     * jit_entry: Wrapper 逻辑 + cond_br (pfn==null → jit_fallback, else → jit_dispatch)\n     * jit_dispatch: pfn 类型转换 + 调用 + ret\n     * jit_fallback: 原函数体 + ret\n   - 实现: 创建 3 个 BasicBlock → splice 原指令到 jit_fallback → 删除空 entry\n\n3. 对每个 entryFunc 执行 insertWrapperPrologue(F, dims, fallbackBB):\n   a. 分配 dims 数组 (alloca [N x {ptr, i32}]):\n      - ejit_dim_t IR 类型: StructType { PointerType(i8), i32 }\n      - 无维度参数时 dimsArray = null, count = 0\n   b. 填充每个 dims[i]:\n      - name: GlobalStringPtr(periodName)\n      - index: ZExtOrTrunc(argVal, i32)\n   c. 构建 funcName: GlobalStringPtr(F->getName())\n   d. 调用 ejit_compile_or_get:\n      %jit_result = call ptr @ejit_compile_or_get(\n          ptr %funcNameStr, ptr %dimsPtr, i32 %count, ptr null)\n   e. 判空分支:\n      %is_null = icmp eq ptr %jit_result, null\n      br i1 %is_null, label %jit_fallback, label %jit_dispatch\n\n4. 对每个 entryFunc 执行 insertDispatchLogic(F, dims, dispatchBB):\n   a. 类型转换: %pfn = ptrtoint ptr %jit_result to <原函数签名>*\n   b. 调用特化函数: call <返回值> %pfn(原参数列表)\n   c. 返回: ret void / ret <返回值>\n\n5. 声明外部函数:\n   declare ptr @ejit_compile_or_get(ptr, ptr, i32, ptr)\n\n6. 返回值: PreservedAnalyses::none()（若有 entry 函数），否则 all()",
+      "acceptance_criteria": [
+        "仅 static: CHECK call ptr @ejit_compile_or_get(ptr %str, ptr null, i32 0, ptr null)",
+        "单维度: CHECK alloca [1 x {ptr, i32}]; CHECK call ... i32 1",
+        "多维度: CHECK alloca [2 x {ptr, i32}]; CHECK call ... i32 2",
+        "JIT 成功路径: CHECK jit_dispatch:; CHECK ptrtoint; CHECK call void %jit_pfn",
+        "JIT 失败路径: CHECK jit_fallback:; CHECK br i1 %is_null, ..., ...",
+        "返回值处理: 非 void 函数正确传递返回值",
+        "原函数体完整保留在 jit_fallback 块"
+      ],
+      "notes": "单函数混合方案，无需独立 wrapper 函数；ejit_period_arr_ind 参数通过函数级 ejit.metadata 识别（不再依赖 debug info）；alloca 在 jit_entry 最前面插入；参数类型转换使用 ZExtOrTrunc；最多 4 个维度。"
+    },
+
+    {
+      "id": "T3-04",
+      "group": "AOT_PASS",
+      "name": "EJitPeriodHandlerPass (PASS4) — 生命周期函数处理",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 3,
+      "depends_on": ["T3-02"],
+      "design_doc": "PASS4_EJitPeriodHandler.md",
+      "files_to_create": [
+        "llvm/lib/Transforms/EmbeddedJIT/EJitPeriodHandler.cpp"
+      ],
+      "files_to_modify": [
+        "llvm/lib/Transforms/EmbeddedJIT/CMakeLists.txt"
+      ],
+      "description": "实现为 ejit_period_lc 标记的函数在入口插入 ejit_deactivate_array、在所有出口 (return 前) 插入 ejit_activate_array 的 Module Pass。支持多时间窗、多出口。",
+      "implementation_prompt": "实现 EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM):\n\n1. CollectLifecycleFunctions(M):\n   - 遍历 M.functions()，检查 ejit.metadata 中的 ejit_period_lc 条目\n   - 解析: !{!\"ejit_period_lc\", !\"periodName\"}\n   - 从同一 metadata 中查找对应的 ejit_period_arr_ind: !{!\"ejit_period_arr_ind\", !\"periodName\", i32 argIdx}\n   - 构建 LifecycleInfo 列表（periodName → argIdx 映射）\n\n2. insertDeactivateAtEntry(F, lcInfoList):\n   a. 找到 entry 块第一条非 alloca 指令作为插入点\n   b. 按 metadata 出现顺序依次插入 deactivate_array 调用:\n      call void @ejit_deactivate_array(\n          ptr @\".str.periodName\",    // periodName\n          ptr bitcast(@g_array to ptr), // arrayPtr\n          i32 %cellIdx)                // 数组下标\n   c. 通过 getArrayPtrForPeriod(M, periodName) 查找对应全局数组\n      - 若无匹配数组，传 null ptr\n\n3. insertActivateAtExits(F, lcInfoList):\n   a. 收集所有 ReturnInst（遍历所有 BB 的 terminator）\n   b. 在每个 return 之前逆序插入 activate_array 调用\n   c. 逆序原因: 配对 deactivate(A)→deactivate(B)→activate(B)→activate(A)\n\n4. getArrayPtrForPeriod(M, periodName):\n   - 遍历 M.globals()，找 ejit_period_arr metadata 且 periodName 匹配的 GV\n   - 返回 bitcast(GV, ptr) 或 null\n\n5. 声明外部函数:\n   declare void @ejit_deactivate_array(ptr, ptr, i32)\n   declare void @ejit_activate_array(ptr, ptr, i32)\n\n6. 返回值: PreservedAnalyses::none()（若有 lc 函数），否则 all()",
+      "acceptance_criteria": [
+        "单 lc + 单出口: CHECK call void @ejit_deactivate_array; CHECK call void @ejit_activate_array",
+        "多 lc + 多出口: DAG 匹配 cell 和 trp 的 deactivate/activate 调用",
+        "逆序配对: activate 顺序为 trp 先 cell 后",
+        "多出口: 每个 return 前均有 activate 调用",
+        "arrayPtr 正确指向全局变量",
+        "无 lc 函数 Module 不做修改"
+      ],
+      "notes": "deactivate 在 alloca 之后、第一条非 alloca 指令之前插入；activate 逆序配对（RAII 模式）；unreachable 指令不插入 activate；仅通过函数级 metadata 识别参数关联。"
+    },
+
+    {
+      "id": "T3-05",
+      "group": "AOT_PASS",
+      "name": "EJitAotModulePass (PASS5) — AOT 协调器",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 2,
+      "depends_on": ["T3-02", "T3-03", "T3-04"],
+      "design_doc": "PASS5_EJitAotModulePass.md",
+      "files_to_create": [
+        "llvm/lib/Transforms/EmbeddedJIT/EJitAotModulePass.cpp"
+      ],
+      "files_to_modify": [
+        "llvm/lib/Transforms/EmbeddedJIT/CMakeLists.txt"
+      ],
+      "description": "实现晚期 AOT Pipeline 协调器，按正确顺序调度 PASS2→PASS3→PASS4，管理 PreservedAnalyses 组合，并执行元数据一致性诊断检查。",
+      "implementation_prompt": "实现 EJitAotModulePass::run(Module &M, ModuleAnalysisManager &AM):\n\n1. hasAnyEjitMetadata(M) 快速扫描:\n   - 遍历 M.globals() 检查 hasMetadata(\"ejit.metadata\")\n   - 遍历 M.functions() 检查 hasMetadata(\"ejit.metadata\")\n   - 若无任何 metadata → 返回 PreservedAnalyses::all()\n\n2. 按序执行子 Pass:\n   a. EJitRegisterPeriodPass().run(M, AM)\n   b. EJitWrapperGenPass().run(M, AM)\n   c. EJitPeriodHandlerPass().run(M, AM)\n   - 使用 PA.intersect() 组合各子 Pass 的 PreservedAnalyses\n\n3. 防呆检测 runDiagnosticCheck(M):\n   - 对每个 ejit_entry 函数，收集声明的 period 依赖集合（从 metadata）\n   - 收集函数中实际引用的 ejit_period_arr 全局变量\n   - 交叉校验: 若引用未声明的 period_arr → errs() 输出 warning\n\n4. 注册回调 (registerPasses):\n   - 使用 PassBuilder::registerPipelineParsingCallback\n   - 注册名: \"ejit-aot-module\"\n\n5. 返回值: PA",
+      "acceptance_criteria": [
+        "Lit 测试: opt -passes=ejit-aot-module 正确执行全部子 Pass",
+        "Lit 测试: 输出包含 register_period_array + compile_or_get + deactivate/activate 调用",
+        "Lit 测试: 无 ejit metadata Module 快速返回无修改",
+        "防呆检测: 构造不一致场景，验证 stderr 输出 warning"
+      ],
+      "notes": "不包含 EJitRegisterBitcodePass（作为独立早期 Pass）；快速扫描避免无 ejit 代码的普通 C/C++ 模块产生额外开销；warning 不阻止编译。"
+    },
+
+    {
+      "id": "T3-06",
+      "group": "AOT_PASS",
+      "name": "AOT Pass Pipeline 注册与集成",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 1,
+      "depends_on": ["T3-01", "T3-05"],
+      "design_doc": "PLAN4.md §3.6, PASS5 §4",
+      "files_to_create": [],
+      "files_to_modify": [
+        "llvm/lib/Passes/PassBuilder.cpp",
+        "clang/lib/CodeGen/BackendUtil.cpp"
+      ],
+      "description": "在 LLVM PassBuilder 和 Clang 后端中注册 EmbeddedJIT 的 AOT Pass Pipeline。早期 Pass (ejit-register-bitcode) 在 O2/O3 优化前执行，晚期 Pass (ejit-aot-module) 在优化后执行。",
+      "implementation_prompt": "1. 在 llvm/lib/Passes/PassBuilder.cpp 中注册两个 Pipeline 回调:\n   a. \"ejit-register-bitcode\" → EJitRegisterBitcodePass()\n   b. \"ejit-aot-module\" → EJitAotModulePass()\n   \n2. 在 clang/lib/CodeGen/BackendUtil.cpp 中集成:\n   - 找到 RunOptimizationPipeline 或等效位置\n   - 在标准优化 Pipeline 之前插入 EJitRegisterBitcodePass\n   - 在标准优化 Pipeline 之后插入 EJitAotModulePass\n   - Pipeline 布局: ... → EJitRegisterBitcodePass → O2/O3 → EJitAotModulePass → codegen\n   \n3. 添加 CMake 编译选项 (如 LLVM_ENABLE_EMBEDDEDJIT):\n   - 当选项开启时才注册 EmbeddedJIT Pass\n   - 确保不引入运行时依赖到非 JIT 构建",
+      "acceptance_criteria": [
+        "opt -passes=ejit-register-bitcode 可用",
+        "opt -passes=ejit-aot-module 可用",
+        "clang -fembedjit 集成编译 Pipeline 正确（早期+晚期 Pass 均执行）",
+        "无 -fembedjit 时 Pass 不执行，无影响"
+      ],
+      "notes": "注册时使用 PipelineParsingCallback 确保与 LLVM 新 Pass Manager 兼容；LTO 模式下需确保 Pipeline 在链接时正确执行。"
+    },
+
+    {
+      "id": "T3-07",
+      "group": "AOT_PASS",
+      "name": "AOT Pass CMakeLists.txt 构建配置",
+      "status": "pending",
+      "priority": "medium",
+      "estimated_days": 1,
+      "depends_on": ["T3-01", "T3-02", "T3-03", "T3-04", "T3-05"],
+      "design_doc": "PLAN4.md §1",
+      "files_to_create": [
+        "llvm/lib/Transforms/EmbeddedJIT/CMakeLists.txt"
+      ],
+      "files_to_modify": [],
+      "description": "创建 llvm/lib/Transforms/EmbeddedJIT/CMakeLists.txt，配置 5 个 AOT Pass 的编译依赖。",
+      "implementation_prompt": "编写 CMakeLists.txt:\n\n1. 创建 EmbeddedJIT 库:\n   add_llvm_component_library(LLVMEmbeddedJIT\n     EJitRegisterBitcode.cpp\n     EJitRegisterPeriod.cpp\n     EJitWrapperGen.cpp\n     EJitPeriodHandler.cpp\n     EJitAotModulePass.cpp\n     \n     LINK_COMPONENTS\n     Core\n     IRReader\n     Support\n     TransformUtils\n     Passes\n   )\n\n2. 确保依赖关系正确:\n   - 所有 Pass 需要 Core (Module/Function/Instruction)\n   - IRBuilder 在 Core 中\n   - PassManager 在 IR 中\n   - BitcodeWriter 在 BitWriter 中 (PASS1 需要)\n\n3. 添加到上层 CMakeLists.txt:\n   - llvm/lib/Transforms/CMakeLists.txt 中添加 add_subdirectory(EmbeddedJIT)",
+      "acceptance_criteria": [
+        "cmake --build 编译通过",
+        "生成的 LLVMEmbeddedJIT 库包含全部 5 个 Pass",
+        "opt -load-pass-plugin 可加载"
+      ],
+      "notes": "使用 add_llvm_component_library 而非普通 add_library，与 LLVM 构建系统集成。"
+    },
+
+    {
+      "id": "T3-08",
+      "group": "RUNTIME_CORE",
+      "name": "EJitRegistrationStore — 全局注册暂存区",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 1,
+      "depends_on": [],
+      "design_doc": "PASS7 §2.7.1",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitRegistrationStore.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
+      ],
+      "description": "实现进程级全局单例 EJitRegistrationStore，解决 ejit_auto_register (constructor 阶段) 与 ejit_init (main 阶段) 之间的数据传递问题。注册函数写入 Store，ejit_init 通过 consume() 取出并清空。",
+      "implementation_prompt": "实现 EJitRegistrationStore 类:\n\n1. 单例模式:\n   static EJitRegistrationStore& instance() { static EJitRegistrationStore store; return store; }\n\n2. 三种注册数据条目 (内部结构体):\n   - BitcodeEntry { string funcName; const uint8_t* data; size_t size; }\n   - PeriodArrayEntry { string periodName; string varName; void* baseAddr; uint64_t arraySize; }\n   - StaticVarEntry { string varName; void* varAddr; }\n\n3. 写入接口 (constructor 阶段调用):\n   - registerBitcode(funcName, data, size) → bitcodes_.push_back(...)\n   - registerPeriodArray(periodName, varName, baseAddr, arraySize) → periodArrays_.push_back(...)\n   - registerStaticVar(varName, varAddr) → staticVars_.push_back(...)\n   每个方法内部加锁（防御性，constructor 阶段单线程）\n\n4. 消费接口 (ejit_init 调用):\n   StoredData consume():\n     - 加锁\n     - 将 bitcodes_, periodArrays_, staticVars_ move 到 StoredData 结构体\n     - 清空内部容器\n     - 返回 StoredData\n\n5. StoredData 结构体包含三个 std::vector（BitcodeEntry, PeriodArrayEntry, StaticVarEntry）\n\n6. 头文件声明在 llvm/include/llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h",
+      "acceptance_criteria": [
+        "构造测试: register + consume 后数据正确传递",
+        "consume 后 Store 为空（再次 consume 返回空容器）",
+        "线程安全: 并发 register + consume 无数据竞争",
+        "多条目写入后 consume 取出全部数据"
+      ],
+      "notes": "Store 是进程级单例，生命周期覆盖整个进程；constructor 阶段单线程，mutex 为防御性编程；consume 仅调用一次（ejit_init 中）。"
+    },
+
+    {
+      "id": "T3-09",
+      "group": "RUNTIME_CORE",
+      "name": "EJitModuleLoader / BitcodeTracker — Bitcode 按需加载",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 2,
+      "depends_on": ["T3-08"],
+      "design_doc": "PASS7 §2.6, §4.2",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitModuleLoader.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
+      ],
+      "description": "实现 BitcodeTracker 类，维护 funcName → bitcode 数据的映射，支持按需加载（首次 JIT 编译时才解析 Module，减少启动内存占用）。",
+      "implementation_prompt": "实现 BitcodeTracker 类:\n\n1. 数据结构:\n   - std::unordered_map<string, BitcodeEntry> entries_\n     其中 BitcodeEntry = {funcName, const uint8_t* data, size_t size}\n   - 注意: data 指向嵌入的 .ejit.bitcode section（AOT 嵌入的只读数据）\n\n2. 注册接口:\n   registerBitcode(funcName, data, size): 填充 entries_\n\n3. 查询接口:\n   Expected<StringRef> getBitcode(funcName):\n     - 查找 entries_\n     - 返回指向 bitcode 数据的 StringRef（不复制）\n     - 未找到返回错误\n\n4. 统计接口:\n   - getEntryCount() → entries_.size()\n   - getTotalBitcodeSize() → sum of sizes\n\n5. 性能考量:\n   - 不预解析 Module（节省内存）\n   - 首次 JIT 编译时才通过 LLVMContext 解析\n   - 解析后的 Module 由 OrcJIT 管理生命周期\n\n6. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitModuleLoader.h",
+      "acceptance_criteria": [
+        "registerBitcode 后 getBitcode 返回正确数据",
+        "getBitcode 未注册的函数返回 Error",
+        "多次查询返回相同数据（数据稳定性）",
+        "支持多函数注册"
+      ],
+      "notes": "data 指向 .ejit.bitcode section，生命周期在程序运行期间稳定；不缓存解析后的 Module（由 OrcJIT 管理）；参考 easyJIT 的 BitcodeTracker 实现。"
+    },
+
+    {
+      "id": "T3-10",
+      "group": "RUNTIME_CORE",
+      "name": "EJitCache — Code Cache (LRU + 大小限制)",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 4,
+      "depends_on": [],
+      "design_doc": "PLAN4.md §3.2, PASS7 §2.6",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitCache.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitCache.h"
+      ],
+      "description": "实现线程安全的 Code Cache 管理器，支持复合 Cache Key (fnName|periodName=idx)、LRU 淘汰策略、大小限制和按时间窗失效。",
+      "implementation_prompt": "实现 EJitCache 类:\n\n1. Cache Key 构建:\n   buildCacheKey(fnName, periodIndices):\n     - 格式: \"fnName|period1=idx1,period2=idx2,...\"\n     - 示例: \"process_task_multi|cell=1,trp=5\"\n     - 无维度参数: 仅 fnName\n\n2. 缓存条目 Entry:\n   - string cacheKey\n   - void* funcPtr          (编译后的函数指针)\n   - size_t codeSize        (代码大小)\n   - uint64_t lastAccessTime (LRU 时间戳)\n   - set<string> periodDeps (依赖的时间窗，用于失效)\n\n3. 核心接口:\n   a. getOrNull(cacheKey) → void*:\n      - shared_lock 读锁\n      - 命中: 更新 lastAccessTime, 移动到 LRU front, 返回 funcPtr\n      - 未命中: 返回 nullptr\n   b. put(cacheKey, funcPtr, codeSize, periodDeps):\n      - unique_lock 写锁\n      - 检查是否超大小限制: currentTotalSize + codeSize > maxTotalSize → evictLRU\n      - 检查最大条目数: cache_.size() >= maxEntries → evictLRU\n      - 检查单函数大小: codeSize > maxSingleFuncSize → 拒绝\n      - 插入 entry, 添加到 LRU front\n   c. invalidateByPeriod(periodName, cellIdx):\n      - 构建失效 key: \"periodName=cellIdx\"\n      - 查找 periodIndex_ 获取受影响的 cacheKeys\n      - 从 cache_ 和 lruList_ 移除这些条目\n\n4. LRU 实现:\n   - list<string> lruList_ (front = 最近访问, back = 最久未访问)\n   - unordered_map<string, list::iterator> lruIter_\n   - evictLRU: 从 lruList_.back() 开始淘汰，直到满足大小/条目限制\n   - 访问时移动到 front\n\n5. 并发安全:\n   - shared_mutex mutex_\n   - getOrNull: shared_lock (多读者并发)\n   - put/evict/invalidate: unique_lock (写者独占)\n\n6. 统计接口 (Stats):\n   - entryCount, totalCodeSize, maxSize, hits, misses, evictions\n\n7. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitCache.h",
+      "acceptance_criteria": [
+        "基本读写: put 后 getOrNull 返回正确指针",
+        "LRU 淘汰: 插入超限条目时最久未访问条目被淘汰",
+        "大小限制: 超总大小时触发淘汰",
+        "条目数限制: 超 maxEntries 时触发淘汰",
+        "按时间窗失效: invalidateByPeriod 正确移除依赖条目",
+        "单函数大小限制: 超大函数拒绝缓存",
+        "线程安全: 并发 getOrNull + put 无数据竞争",
+        "统计信息正确"
+      ],
+      "notes": "使用 std::shared_mutex (C++17)；cacheKey 格式有严格的顺序约定（period 按字母序排列以确保确定性）；LRU 淘汰时需同时清理 periodIndex_。"
+    },
+
+    {
+      "id": "T3-11",
+      "group": "RUNTIME_CORE",
+      "name": "PeriodArrayRegistry + EJitRuntimeState — 运行时状态管理",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 3,
+      "depends_on": ["T3-08"],
+      "design_doc": "PLAN4.md §3.1, PASS7 §2.7",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitRuntimeState.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+      ],
+      "description": "实现 PeriodArrayRegistry（时间窗数组注册表）和 EJitRuntimeState（activate/deactivate 状态管理），为 PASS6 提供全局变量基地址查询和激活状态检查。",
+      "implementation_prompt": "实现两个核心类:\n\n=== PeriodArrayRegistry ===\n1. 数据结构:\n   - arraysByPeriod_: unordered_map<periodName, vector<PeriodArrayInfo>>\n   - staticVars_: vector<StaticVarInfo>\n   - PeriodArrayInfo: {varName, periodName, void* baseAddr, size_t arraySize}\n   - StaticVarInfo: {varName, void* varAddr}\n\n2. 注册接口:\n   - registerArray(periodName, varName, baseAddr, size): 推入 arraysByPeriod_[periodName]\n   - registerStaticVar(varName, varAddr): 推入 staticVars_\n\n3. 查询接口 (JIT 编译时使用):\n   - getArrays(periodName) → const vector<PeriodArrayInfo>*\n   - getStaticVars() → const vector<StaticVarInfo>&\n   - getArrayInfo(varName) → const PeriodArrayInfo* (按 varName 查找)\n\n=== EJitRuntimeState ===\n4. 激活状态管理:\n   - PeriodInstance: {periodName, cellIdx, PeriodState, activateTime, arrayInfo*}\n   - PeriodState: {Inactive, Active, Invalid}\n\n5. activate/deactivate 接口:\n   - activate(periodName, cellIdx): 设置 Active 状态, atomic_thread_fence(release)\n   - deactivate(periodName, cellIdx): 设置 Invalid 状态\n   - activate_array(periodName, arrayPtr, cellIdx): 数组粒度激活\n   - deactivate_array(periodName, arrayPtr, cellIdx): 数组粒度去激活\n   - activate_all(periodName): 激活所有实例\n   - deactivate_all(periodName): 去激活所有实例\n\n6. 查询接口:\n   - isActive(periodName, cellIdx) → bool\n   - isPeriodActive(SpecializationContext) → bool: 检查上下文中的所有维度是否都 Active\n\n7. 并发安全: mutex 保护所有读写操作\n\n8. 内存屏障:\n   - activate 结束时: atomic_thread_fence(memory_order_release)\n   - 编译前检查后: atomic_thread_fence(memory_order_acquire)\n   （详见 PASS7 §3.4）",
+      "acceptance_criteria": [
+        "registerArray 后 getArrays 返回正确信息",
+        "activate 后 isActive 返回 true",
+        "deactivate 后 isActive 返回 false",
+        "staticVar 永远 isActive=true",
+        "activate_array vs activate 粒度区分正确",
+        "线程安全: 并发 activate + isActive 无数据竞争"
+      ],
+      "notes": "PeriodArrayRegistry 初始化后只读，无需运行时锁；RuntimeState 使用 mutex 保护；activate 返回值体现 release 语义（对全局变量的写入对编译线程可见）。"
+    },
+
+    {
+      "id": "T3-12",
+      "group": "RUNTIME_CORE",
+      "name": "EJitLogger — 错误日志系统",
+      "status": "pending",
+      "priority": "medium",
+      "estimated_days": 1,
+      "depends_on": [],
+      "design_doc": "PASS7 §5.2",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitLogger.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitLogger.h"
+      ],
+      "description": "实现基于环形缓冲区的错误日志系统，避免 JIT 错误路径中 malloc 失败。",
+      "implementation_prompt": "实现 EJitLogger 类:\n\n1. 数据结构:\n   - 环形缓冲区: EJitError errors_[kMaxErrors] (默认 32)\n   - writeIdx_: 写入位置\n   - mutex_: 防御性锁\n\n2. EJitError 结构:\n   - ErrorCode code\n   - string message\n   - string funcName\n   - string cacheKey\n   - uint64_t timestamp\n   - size_t attemptedMemUsage\n\n3. 接口:\n   - log(code, msg, func, key): 写入环形缓冲区\n   - getLastError() → const EJitError*: 返回最近错误\n   - getErrors(limit) → vector<EJitError>: 返回最近 N 条错误\n   - clear(): 清空日志\n\n4. 日志级别:\n   - info: 编译统计信息\n   - warn: 可恢复异常（fallback 到 AOT）\n   - error: 不可恢复异常（如 bitcode 损坏）\n\n5. 嵌入式友好:\n   - 预分配内存（环形缓冲区），不动态分配\n   - 固定最大条目数",
+      "acceptance_criteria": [
+        "写入日志后 getLastError 返回最新条目",
+        "超最大条目时覆盖最旧条目",
+        "线程安全: 并发 log 无数据竞争",
+        "日志级别正确区分"
+      ],
+      "notes": "日志系统专注于 JIT 编译过程错误；不使用 fprintf 直接输出（嵌入式可能无 stderr），提供回调接口让用户自定义输出。"
+    },
+
+    {
+      "id": "T3-13",
+      "group": "JIT_ENGINE",
+      "name": "EJitJITLinkMemoryManager — 嵌入式内存管理器",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 4,
+      "depends_on": [],
+      "design_doc": "PASS7 §2.2",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitJITLinkMemoryManager.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitJITLinkMemoryManager.h"
+      ],
+      "description": "实现基于 JITLink 的嵌入式内存管理器，使用固定 slab 分配器 (bump allocator) 管理 Code (RX) 和 Data (RW) 内存区域，支持嵌入式资源受限环境。",
+      "implementation_prompt": "实现 EJitJITLinkMemoryManager 类 (继承 jitlink::JITLinkMemoryManager):\n\n1. SlabRegion 结构:\n   - void* baseAddr: slab 基地址（mmap 分配或预分配）\n   - size_t totalSize: 总大小 (Code=384KB, Data=128KB 默认)\n   - size_t usedSize: 已使用（bump pointer）\n   - mutex allocMutex\n\n2. allocate(JD, G, OnAllocated):\n   a. 使用 BasicLayout BL(G) 分析 LinkGraph 段布局\n   b. 遍历 segments:\n      - 按 AllocGroup 分类到 codeSlab (RX) 或 dataSlab (RW)\n      - 从 slab 顺序分配: addr = slab.baseAddr + slab.usedSize\n      - slab.usedSize += allocSize\n      - 超出限制 → 返回 Error (触发 Cache 淘汰)\n      - 设置内存保护 (mprotect)\n   c. BL.apply() 应用布局\n   d. 创建 InFlightAlloc 传给 OnAllocated\n\n3. deallocate(Allocs, OnDeallocated):\n   - 当前 bump allocator 不支持单独释放\n   - 仅在整个 cache clear 时重置 slab\n   - 调用 OnDeallocated(Error::success())\n\n4. 构造函数:\n   EJitJITLinkMemoryManager(maxTotalSize, pageSize=4096):\n     - 分配 codeSlab (maxCodeMemory)\n     - 分配 dataSlab (maxDataMemory)\n     - 使用 mmap 或预分配内存\n\n5. 嵌入式优化:\n   - 预分配连续内存块\n   - 不使用 malloc/free 碎片管理\n   - LRU 淘汰时整体重置 slab（重新编译活跃函数）\n\n6. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitJITLinkMemoryManager.h",
+      "acceptance_criteria": [
+        "基本分配: allocate + deallocate 正常完成",
+        "OOM: 超大小限制时返回 Error",
+        "内存保护: Code 段 RX, Data 段 RW",
+        "并发分配: mutex 保护下无竞争",
+        "统计: getCurrentUsage/getMaxUsage 正确"
+      ],
+      "notes": "继承 jitlink::JITLinkMemoryManager（不是 orc:: 命名空间）；使用 BasicLayout 辅助划分段；ARM/AArch64 页大小 4KB；mprotect 设置内存保护。"
+    },
+
+    {
+      "id": "T3-14",
+      "group": "JIT_ENGINE",
+      "name": "EJitOrcEngine — OrcJIT 引擎封装",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 4,
+      "depends_on": ["T3-13", "T3-11"],
+      "design_doc": "PASS7 §2.1, §2.4",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitOrcEngine.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
+      ],
+      "description": "实现 EJitOrcEngine 封装 LLJIT 实例，管理 JIT 编译生命周期。注册 IRTransformLayer 回调执行完整的 JIT Pipeline（参数替换→InstCombine→Inline→PASS6→标准优化）。",
+      "implementation_prompt": "实现 EJitOrcEngine 类:\n\n1. 成员变量:\n   - unique_ptr<orc::LLJIT> J_\n   - orc::JITDylib* MainJD_\n   - EJitJITLinkMemoryManager* MemMgr_\n   - SpecializationContext* ActiveCtx (编译时设置)\n   - OptimizationLevel OptLevel_\n   - PeriodArrayRegistry* PeriodReg_\n   - EJitRuntimeState* RuntimeState_\n\n2. 工厂方法 Create(config):\n   a. 创建 EJitJITLinkMemoryManager\n   b. 配置 JITTargetMachineBuilder (detectHost)\n   c. 构建 LLJITBuilder:\n      - setObjectLinkingLayerCreator → 注入嵌入式 MemoryManager\n      - setNumCompileThreads: Sync=0, Async=1\n   d. Builder.create() → LLJIT 实例\n   e. 注册 IRTransformLayer 回调 (完整 JIT Pipeline):\n      [engine](ThreadSafeModule TSM, MaterializationResponsibility& R):\n        TSM.withModuleDo([engine](Module &M):\n          if (!ActiveCtx) return TSM\n          preReplacePeriodIndices(M, ActiveCtx)     // 参数→常量\n          runInstCombine(M)                          // 折叠常量链\n          runInline(M)                               // 内联 callee\n          SFPass.run(M, MAM) with ActiveCtx          // PASS6\n          runOptimizationPipeline(M, OptLevel)       // L1/L2/L3\n        )\n   f. 注册 Process Symbols JITDylib\n\n3. 加载接口:\n   - loadBitcodeModule(bitcodeData, funcName): 解析 bitcode → ThreadSafeModule → 添加到 MainJD\n   - lookup(funcName) → Expected<void*>\n\n4. 上下文管理:\n   - 设置/清理 ActiveCtx（同步模式在调用线程，异步模式在后台线程）\n   - 同步模式下上下文设置无竞态；异步模式下后台线程独立实例\n\n5. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitOrcEngine.h",
+      "acceptance_criteria": [
+        "Create 成功创建 LLJIT 实例",
+        "loadBitcodeModule + lookup 返回正确函数指针",
+        "IRTransformLayer 正确执行 JIT Pipeline",
+        "PASS6 正确替换 may_const load 为常量",
+        "Sync 模式: 0 编译线程",
+        "Async 模式: 1 编译线程"
+      ],
+      "notes": "使用 cantFail 处理不可恢复错误；ThreadSafeModule 确保 LLVMContext 隔离；IRTransformLayer 回调为内联 lambda 直接捕获 engine 指针，不需要插件类。"
+    },
+
+    {
+      "id": "T3-15",
+      "group": "JIT_ENGINE",
+      "name": "EJitStructFieldPass (PASS6) — 结构体字段常量替换",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 5,
+      "depends_on": ["T3-11"],
+      "design_doc": "PASS6_EJitStructFieldPass.md",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitStructFieldPass.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
+      ],
+      "description": "实现 JIT Pipeline 核心特化 Pass，扫描 Module 中所有含 !ejit.may_const metadata 的 load 指令，从进程内存读取运行时实际值，替换 load 为 LLVM Constant。支持 5 种访问模式（标量、数组、多维度、内联后、指针间接）。",
+      "implementation_prompt": "实现 EJitStructFieldPass::run(Module &M, ModuleAnalysisManager &AM):\n\n1. BuildGVPeriodMap(M):\n   - 遍历 M.globals()，检查 ejit.metadata\n   - 构建 GV → {periodName, isArray, arraySize} 映射\n\n2. 遍历所有函数的 load 指令进行 GEPAnalysis:\n\n   对每条 load 指令:\n   a. FilterByMetadata: 检查 LI->hasMetadata(\"ejit.may_const\") → 无则跳过\n\n   b. 分析指针操作数:\n      模式1: dyn_cast<GlobalVariable>(PtrOp) → byteOffset=0, GV 赋值（直接 load 全局变量）\n      模式2-3: dyn_cast<GEPOperator>(PtrOp) → analyzeGEPChain(GV, GEP, DL, result)\n      模式5: GEP 基址是 LoadInst → resolveIndirectLoad(PtrLoad, FieldGEP) (指针间接访问)\n      其他(PHI/Select等): 跳过\n\n   c. analyzeGEPChain:\n      - 找到根 GV (findRootGV)\n      - accumulateConstantOffset(DL, gepOffset) → 所有索引必须为常量\n      - 失败则跳过\n\n   d. resolveIndirectLoad (v1.5):\n      - 追溯指针值的来源 GV (可能也是 GEP)\n      - 计算指针在 GV 中的偏移 + 结构体字段偏移\n      - 标记 indirect=true\n\n   e. 检查根 GV 是否在 gvPeriodMap 中 → 无则跳过\n\n3. 收集替换列表 (LoadReplacement):\n   - readRuntimeValue(analysis, loadType):\n     * 从 PeriodArrayRegistry 获取 gvAddr\n     * indirect 模式: baseAddr = *(void**)(gvAddr + indirectPtrOffset)\n     * 否则: baseAddr = gvAddr\n     * fieldAddr = baseAddr + byteOffset\n     * readMemory(fieldAddr, loadType) → RuntimeValue\n   - createConstantFromRuntimeValue(loadType, value):\n     * IntegerTy → ConstantInt\n     * FloatTy/DoubleTy → ConstantFP\n     * PointerTy → ConstantExpr::getIntToPtr\n     * ArrayTy → ConstantArray\n   - 添加到 replacements\n\n4. 批量替换:\n   - replaceAllUsesWith(constVal)\n   - eraseFromParent() (删除已替换的 load)\n\n5. 返回值: 有替换 → PreservedAnalyses::none(); 无替换 → all()\n\n6. setSpecializationContext(ctx): 设置当前编译上下文（用于日志/断言）",
+      "acceptance_criteria": [
+        "ReplaceByMetadata: !ejit.may_const load 被替换为常量",
+        "SkipNoMetadata: 无 metadata 的 load 保留不变",
+        "SkipNonPeriodGV: 非 ejit_period GV 的 load 保留不变",
+        "SkipNonConstantIndex: 非常量 GEP 索引跳过",
+        "HandleMultiDim: cell+trp 多维度正确替换",
+        "HandleIndirectPointer: 指针间接访问正确替换 (v1.5)",
+        "HandleIndirectPointerArray: 指针数组间接访问正确替换 (v1.5)",
+        "SkipNullPtr: 空指针跳过并记录 warning",
+        "累积偏移计算: 嵌套结构体字段正确计算 byteOffset",
+        "替换后 IR 有效: verifyModule 无错误"
+      ],
+      "notes": "v1.2: may_const 识别仅通过 hasMetadata(\"ejit.may_const\")；v1.4: accumulateConstantOffset 隐含验证所有索引为常量；v1.5: 支持指针间接访问；PHI/Select 跳过（Inline+InstCombine 已消除绝大多数）；类型映射从 load->getType() 直接获取；批量替换避免迭代器失效。"
+    },
+
+    {
+      "id": "T3-16",
+      "group": "JIT_ENGINE",
+      "name": "EJitOptimizer — 优化 Pipeline (L1/L2/L3)",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 3,
+      "depends_on": ["T3-15"],
+      "design_doc": "PASS7 §2.4.3, PLAN4.md §3.6",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitOptimizer.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitOptimizer.h"
+      ],
+      "description": "实现 JIT Pipeline 中 PASS6 之后的优化管线，按 L1/L2/L3 三级配置：参数预处理 (replaceAllUsesWith)、InstCombine、Inline、标准 LLVM Pass 编排 (SCCP, DCE, CFGSimplify, LoopUnroll)。",
+      "implementation_prompt": "实现 JIT Pipeline 的各级优化函数:\n\n1. preReplacePeriodIndices(Module &M, SpecializationContext *ctx):\n   - 获取入口函数: M.getFunction(ctx->fnName)\n   - 对每个维度，从函数 metadata 查找 periodName → argIndex\n   - findPeriodArrIndArg(F, periodName): 扫描 ejit.metadata 中的 ejit_period_arr_ind 条目\n   - arg->replaceAllUsesWith(ConstantInt::get(arg->getType(), cellIdx))\n\n2. runInstCombine(Module &M):\n   - 创建 FunctionPassManager\n   - addPass(InstCombinePass())\n   - 为每个非声明函数运行\n   - 折叠 zext/GEP 常量链，清理 PHI 节点\n\n3. runInline(Module &M):\n   - ModulePassManager + InlinerPass()\n   - 内联被调用函数，展开跨函数 GEP 链\n   - 默认 LLVM Inline 阈值\n\n4. runOptimizationPipeline(Module &M, OptimizationLevel level):\n   a. L1 (全等级执行):\n      - SCCPPass()        // 稀疏条件常量传播\n      - ADCEPass()        // 激进死代码消除\n      - SimplifyCFGPass() // CFG 简化（分支折叠）\n   b. L2:\n      - InlinerPass()     // 二次内联（PASS6 常量替换后新暴露的调用）\n      - SimplifyCFGPass() // 内联后再次简化\n   c. L3:\n      - LoopUnrollPass(threshold=50, partial=false, runtime=false)\n      - SimplifyCFGPass() // 展开后简化\n\n5. OptimizationLevel 枚举:\n   Level1=1 (保守), Level2=2 (中等), Level3=3 (激进)\n\n6. 需要的 Analysis Managers:\n   - LoopAnalysisManager, FunctionAnalysisManager\n   - CGSCCAnalysisManager, ModuleAnalysisManager\n   - 注册并 crossRegisterProxies\n\n7. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitOptimizer.h",
+      "acceptance_criteria": [
+        "参数替换: ejit_period_arr_ind 参数被正确替换为常量",
+        "InstCombine: zext/GEP 链正确折叠",
+        "Inline: 被调用函数正确内联",
+        "L1: SCCP+DCE+CFG 正确执行",
+        "L2: 二次内联正确执行",
+        "L3: 循环展开正确执行",
+        "Pipeline 输出 IR 有效 (verifyModule)"
+      ],
+      "notes": "preReplacePeriodIndices 的参数索引从函数 metadata 获取（不使用 debug info）；Inline 在 PASS6 之前运行（非等级控制），PASS6 后的 Inline 是二次内联；L3 LoopUnroll 设置 upperBound=true 防止过度膨胀。"
+    },
+
+    {
+      "id": "T3-17",
+      "group": "JIT_ENGINE",
+      "name": "EJitSyncCompiler — 同步编译器",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 2,
+      "depends_on": ["T3-14", "T3-15", "T3-16"],
+      "design_doc": "PASS7 §2.3.2",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitSyncCompiler.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitSyncCompiler.h"
+      ],
+      "description": "实现在调用线程上阻塞执行完整 JIT 编译流程的同步编译器。设置编译上下文 → 加载 bitcode → lookup 触发 materialization → 返回函数指针。",
+      "implementation_prompt": "实现 EJitSyncCompiler 类:\n\n1. Result 结构:\n   - void* funcPtr       (NULL 表示失败)\n   - size_t compileTimeMs\n   - size_t codeSize\n\n2. compile(engine, bitcodeData, ctx, cacheKey) → Result:\n   a. 记录开始时间\n   b. 设置编译上下文:\n      engine->ActiveCtx = &ctx\n      engine->OptLevel = ctx.optLevel\n   c. 加载 bitcode:\n      if (Err = engine->loadBitcodeModule(bitcodeData, ctx.fnName)):\n        清理上下文, return {nullptr, ...}\n   d. lookup 触发 materialization:\n      - LLJIT 内部执行 IRTransformLayer → CompileLayer → LinkLayer\n      - IRTransformLayer 回调中: 参数替换→InstCombine→Inline→PASS6→优化\n      auto addr = engine->lookup(ctx.fnName)\n      if (!addr): 清理上下文, return {nullptr, ...}\n   e. 清理上下文: engine->ActiveCtx = nullptr\n   f. 记录结束时间，计算 codeSize\n   g. return {funcPtr, compileTimeMs, codeSize}\n\n3. 错误处理:\n   - 任何步骤失败 → return {nullptr, 0, 0}\n   - 调用方根据 funcPtr==nullptr 判断 fallback\n\n4. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitSyncCompiler.h",
+      "acceptance_criteria": [
+        "编译成功: Result.funcPtr != nullptr",
+        "编译失败: Result.funcPtr == nullptr",
+        "compileTimeMs 正确记录耗时",
+        "设置/清理 ActiveCtx 正确（无泄漏）",
+        "重复编译相同函数返回一致结果"
+      ],
+      "notes": "同步编译在调用线程执行，阻塞直到完成；lookup() 触发 LLJIT 的 materialization 流程；ActiveCtx 必须在编译完成后清理（无论成功/失败）。"
+    },
+
+    {
+      "id": "T3-18",
+      "group": "JIT_ENGINE",
+      "name": "EJitAsyncCompiler — 异步编译器",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 4,
+      "depends_on": ["T3-14", "T3-17"],
+      "design_doc": "PASS7 §2.3.3",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitAsyncCompiler.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitAsyncCompiler.h"
+      ],
+      "description": "实现后台线程 + 请求队列 + 隔离引擎的异步编译器。支持编译请求去重 (dedup)、时间窗状态重新检查、内存序保证 (acquire fence)。",
+      "implementation_prompt": "实现 EJitAsyncCompiler 类:\n\n1. 成员变量:\n   - workerThread_: 后台线程\n   - requestQueue_: queue<CompileRequest>\n   - queueMutex_, queueCV_: 队列同步\n   - running_, stopping_: 原子控制\n   - workerEngine_: 独立 LLJIT 实例（与用户线程隔离）\n   - requestsInFlight_: 去重集合（mutex 保护）\n   - 共享引用: config_, cache_, runtimeState_\n\n2. start():\n   - running_ = true\n   - workerThread_ = thread(&EJitAsyncCompiler::workerLoop, this)\n\n3. stop():\n   - stopping_ = true\n   - queueCV_.notify_all()\n   - workerThread_.join()\n   - 处理完剩余请求\n\n4. submitRequest(CompileRequest req):\n   a. 去重检查: 若 requestsInFlight_.count(cacheKey) > 0 → 直接返回\n   b. requestsInFlight_.insert(cacheKey)\n   c. lock → requestQueue_.push(req) → notify_one()\n\n5. workerLoop():\n   while (!stopping_):\n     - wait on queueCV_\n     - 取出请求\n     - compileOne(req)\n   - 处理完剩余所有请求\n\n6. compileOne(req):\n   a. 异步安全: 重新检查时间窗激活状态\n      if (!runtimeState_->isPeriodActive(req.ctx)):\n        从 in-flight 移除, return\n   b. 内存序: atomic_thread_fence(memory_order_acquire)\n   c. 设置 workerEngine_->ActiveCtx\n   d. 调用 syncCompiler.compile()\n   e. 成功 → cache_.put()\n   f. 清理: 从 in-flight 移除\n\n7. CompileRequest 结构:\n   - string funcName, cacheKey\n   - string bitcodeData    (复制一份，防止悬空指针)\n   - SpecializationContext ctx\n   - uint64_t timestamp\n\n8. 线程隔离:\n   - workerEngine_ 拥有独立的 LLVMContext、LLJIT、TargetMachine\n   - 共享 memoryMgr (mutex 保护)\n   - 共享 cache (内部有 mutex)\n\n9. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitAsyncCompiler.h",
+      "acceptance_criteria": [
+        "异步提交: submitRequest 后立即返回（非阻塞）",
+        "后台编译: 请求被后台线程正确处理并存入 Cache",
+        "去重: 相同 cacheKey 重复提交被忽略",
+        "安全停止: stop() 等待所有进行中的编译完成",
+        "状态检查: deactivate 后提交的请求不执行编译",
+        "内存序: activate 后的写入对编译线程可见"
+      ],
+      "notes": "workerEngine_ 独立创建（有自己的 LLVMContext），避免 LLVM 内部线程不安全；CompileRequest 中的 bitcodeData 和 ctx 是副本（异步传递，原始数据可能已析构）；in-flight 去重防止同一函数重复编译。"
+    },
+
+    {
+      "id": "T3-19",
+      "group": "JIT_ENGINE",
+      "name": "EJitCompileDriver — 编译调度器",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 3,
+      "depends_on": ["T3-10", "T3-11", "T3-17", "T3-18"],
+      "design_doc": "PASS7 §2.5",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitCompileDriver.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
+      ],
+      "description": "实现编译调度器，统一同步/异步编译路径。提供 getOrCompile(funcName, dims, count) 统一入口，内部处理 Cache 查询、时间窗状态验证、Bitcode 获取、编译调度。",
+      "implementation_prompt": "实现 EJitCompileDriver 类:\n\n1. 成员变量:\n   - config_, cache_, periodReg_, bitcodeTracker_\n   - syncEngine_ (同步 LLJIT)\n   - syncCompiler_\n   - asyncCompiler_\n\n2. getOrCompile(funcName, dims, count) → void*:\n   a. buildCacheKey(funcName, dims, count):\n      - 从 dims 数组提取 (periodName, index) 对\n      - 按 periodName 字母序排序\n      - 构建: \"funcName|period1=idx1,...\"\n   b. 查 Cache:\n      if (void* cached = cache_.getOrNull(cacheKey))\n        return cached  // 命中 → 直接返回\n   c. buildContext(funcName, dims, count):\n      - 构建 SpecializationContext\n      - period_count = count\n      - 填充 dimensions[i] = {periodName, cellIdx}\n   d. 验证时间窗状态:\n      if (!runtimeState_->isPeriodActive(ctx))\n        return nullptr  // 未激活 → fallback\n   e. 获取 Bitcode:\n      auto it = bitcodeCache_.find(funcName)\n      if (it == bitcodeCache_.end())\n        return nullptr  // 无 bitcode → fallback\n   f. 编译调度:\n      if (config_.compileMode == Sync):\n        result = syncCompiler_->compile(*syncEngine_, it->second, ctx, cacheKey)\n        if (result.funcPtr):\n          cache_.put(cacheKey, result.funcPtr, result.codeSize)\n        return result.funcPtr\n      else (Async):\n        req = {funcName, cacheKey, it->second, ctx, timestamp}\n        asyncCompiler_->submitRequest(req)\n        return nullptr  // 首次返回 NULL，下次调用命中 Cache\n\n3. buildCacheKey 实现:\n   - 收集 (periodName, cellIdx) 对\n   - 按 periodName 排序（确保确定性）\n   - 拼接: fnName + \"|\" + join(\",\", \"periodName=cellIdx\")\n\n4. buildContext 实现:\n   - 从 dims 数组创建 SpecializationContext\n   - 复制 std::string（避免异步模式下悬空指针）\n\n5. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitCompileDriver.h",
+      "acceptance_criteria": [
+        "Cache 命中: 直接返回缓存函数指针",
+        "Sync 未命中: 阻塞编译并返回结果",
+        "Async 未命中: 提交请求后返回 NULL",
+        "Async 二次调用: 命中 Cache 返回函数指针",
+        "时间窗未激活: 返回 NULL",
+        "无 Bitcode: 返回 NULL",
+        "Cache Key 确定性: 相同参数始终生成相同 key"
+      ],
+      "notes": "Cache Key 按 periodName 字母序排序确保确定性（参数声明顺序可能变化）；dims 和 ctx 中的 std::string 在异步提交时需要复制（原始 C 字符串生命周期不足）；调度器是同步/异步的统一入口，调用方不感知内部模式。"
+    },
+
+    {
+      "id": "T3-20",
+      "group": "MAIN_API",
+      "name": "EJit.cpp — C++ 主 API 实现",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 2,
+      "depends_on": ["T3-19"],
+      "design_doc": "PLAN4.md §4.1",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJit.cpp"
+      ],
+      "description": "实现 EJit 主类的 C++ API：构造函数（初始化所有组件）、activate/deactivate 生命周期管理、编译配置、统计信息、清理。",
+      "implementation_prompt": "实现 llvm::ejit::EJit 类:\n\n1. 构造函数 EJit(config):\n   - 存储配置\n   - 创建 PeriodArrayRegistry\n   - 创建 BitcodeTracker\n   - 创建 EJitRuntimeState\n   - 创建 EJitCache\n   - 创建 EJitOrcEngine (sync)\n   - 如果 Async 模式: 创建 asyncEngine + EJitAsyncCompiler\n   - 创建 EJitCompileDriver\n   - 从 EJitRegistrationStore::consume() 填充各组件\n   - 如果 Async: asyncCompiler->start()\n\n2. 生命周期 API:\n   - activate(periodName, cellIdx) → runtimeState_->activate()\n   - deactivate(periodName, cellIdx) → runtimeState_->deactivate()\n   - activate_array(periodName, arrayPtr, cellIdx)\n   - deactivate_array(periodName, arrayPtr, cellIdx)\n   - activate_all(periodName)\n   - deactivate_all(periodName)\n\n3. 编译相关:\n   - setCompileMode(mode)\n   - getCompileMode()\n   - setOptimizationLevel(level)\n   - getOptimizationLevel()\n\n4. 缓存管理:\n   - clearCache() → cache_->clear()\n   - invalidate(periodName, cellIdx) → cache_->invalidateByPeriod()\n\n5. 统计:\n   - getStats() → Stats{cacheHits, cacheMisses, totalCompileTimeMs, currentCacheSize}\n\n6. 错误:\n   - getLastError() → logger_->getLastError()\n\n7. 析构函数:\n   - 如果 Async: asyncCompiler->stop()\n   - 释放所有资源（按逆序）\n\n8. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJit.h",
+      "acceptance_criteria": [
+        "构造函数正确初始化所有组件",
+        "activate/deactivate 正确委托到 RuntimeState",
+        "getStats 返回正确统计信息",
+        "析构函数正确清理资源",
+        "Async 模式下异步编译器正确启动/停止"
+      ],
+      "notes": "EJit 是用户直接使用的主类；内部持有所有组件的所有权（通过 unique_ptr）；通过 EJitCompileDriver 间接调用 JIT 编译；不直接暴露内部组件。"
+    },
+
+    {
+      "id": "T3-21",
+      "group": "MAIN_API",
+      "name": "EJitRuntime.cpp — C 运行时 API 实现",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 2,
+      "depends_on": ["T3-20"],
+      "design_doc": "PLAN4.md §4.2, SPEC4.md §3",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitRuntime.cpp",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitRuntime.h"
+      ],
+      "description": "实现 C 语言运行时 API：ejit_init/shutdown、ejit_activate/deactivate（6 个生命周期 API）、ejit_compile_or_get、ejit_clear_cache、ejit_get_stats、ejit_get_last_error。",
+      "implementation_prompt": "实现 C 运行时 API (extern \"C\"):\n\n1. 全局单例:\n   static EJitInstance* gEJIT = nullptr\n   EJitInstance 结构包含: PeriodArrayRegistry, BitcodeTracker, RuntimeState, Cache, Engine(s), AsyncCompiler, CompileDriver, Config\n\n2. ejit_init(const ejit_config_t* config) → ejit_status_t:\n   a. 解析配置 (parseConfig)\n   b. 从 EJitRegistrationStore::consume() 取暂存数据\n   c. 创建所有组件（与 EJit.cpp 构造函数相同流程）\n   d. 如果 Async: asyncCompiler->start()\n   e. 返回 EJIT_OK\n\n3. ejit_shutdown():\n   - 停止异步编译器\n   - 释放所有组件\n   - gEJIT = nullptr\n\n4. 生命周期 API:\n   - ejit_activate(periodName, cellIdx)\n   - ejit_deactivate(periodName, cellIdx)\n   - ejit_activate_array(periodName, arrayPtr, cellIdx) → ejit_status_t\n   - ejit_deactivate_array(periodName, arrayPtr, cellIdx)\n   - ejit_activate_all(periodName) → ejit_status_t\n   - ejit_deactivate_all(periodName)\n   - ejit_is_active(periodName, cellIdx) → bool\n\n5. ejit_compile_or_get(func_name, dims, count, out_pfn) → void*:\n   - 从 bitcodeTracker 获取 bitcode（func_name）\n   - 将 C 的 ejit_dim_t[] 转换为内部 dims 格式\n   - 调用 CompileDriver::getOrCompile()\n   - 返回函数指针或 NULL\n\n6. 缓存与统计:\n   - ejit_clear_cache()\n   - ejit_invalidate(periodName, cellIdx)\n   - ejit_get_stats(ejit_stats_t* stats) → int\n   - ejit_get_last_error() → const ejit_error_t*\n\n7. 编译模式:\n   - ejit_set_compile_mode(mode)\n   - ejit_get_compile_mode() → ejit_compile_mode_t\n\n8. 头文件: llvm/include/llvm/ExecutionEngine/EJIT/EJitRuntime.h (C 兼容, extern \"C\" 包围)",
+      "acceptance_criteria": [
+        "ejit_init + ejit_shutdown 无内存泄漏",
+        "ejit_activate/deactivate 正确切换状态",
+        "ejit_is_active 返回正确状态",
+        "ejit_compile_or_get 返回特化函数指针",
+        "ejit_get_stats 返回正确统计信息",
+        "ejit_get_last_error 返回最近错误",
+        "多次 init/shutdown 循环无问题（如果不支持则文档说明）"
+      ],
+      "notes": "C API 是 AOT 生成的 Wrapper 代码直接调用的接口；ejit_compile_or_get 是 Wrapper 中的核心调用；ejit_dim_t 结构体在 C 头文件中定义；所有 API 需处理 gEJIT==nullptr 的情况。"
+    },
+
+    {
+      "id": "T3-22",
+      "group": "MAIN_API",
+      "name": "EJitRegistration.cpp — AOT 注册回调实现",
+      "status": "pending",
+      "priority": "high",
+      "estimated_days": 1,
+      "depends_on": ["T3-08"],
+      "design_doc": "PASS7 §2.7.1, PASS1 §3.6",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/EJitRegistration.cpp"
+      ],
+      "description": "实现 AOT 生成的注册代码调用的 C 运行时回调函数：ejit_register_bitcode、ejit_register_period_array、ejit_register_static_var。这些函数将数据写入 EJitRegistrationStore。",
+      "implementation_prompt": "实现 AOT 注册回调 (extern \"C\"):\n\n1. ejit_register_bitcode(funcName, bitcodePtr, bitcodeSize):\n   - 将数据写入 EJitRegistrationStore::instance().registerBitcode()\n   - bitcodePtr 指向嵌入的 .ejit.bitcode section 数据\n   - funcName 是入口函数名\n\n2. ejit_register_period_array(periodName, varName, baseAddr, arraySize):\n   - 写入 EJitRegistrationStore::instance().registerPeriodArray()\n   - baseAddr 是全局数组的运行时地址\n\n3. ejit_register_static_var(varName, varAddr):\n   - 写入 EJitRegistrationStore::instance().registerStaticVar()\n   - varAddr 是 static 全局变量的运行时地址\n\n4. 这三个函数在 constructor 阶段被 ejit_auto_register() 调用\n   - 此时 ejit_init 尚未执行\n   - 数据暂存在 EJitRegistrationStore 中\n   - ejit_init 时通过 consume() 取出\n\n5. 实现简单:\n   - 直接转发到 EJitRegistrationStore 单例\n   - 无复杂逻辑",
+      "acceptance_criteria": [
+        "register 后 Store 包含正确数据",
+        "多函数注册: 每个函数独立存储",
+        "多数组注册: 每个数组独立存储"
+      ],
+      "notes": "这些是 AOT 生成的 ejit_auto_register 函数中调用的外部符号，由 libejit.a 提供；它们不直接操作正式 Registry，而是写入暂存区 Store；生命周期: constructor → Store → ejit_init → Registry。"
+    },
+
+    {
+      "id": "T3-23",
+      "group": "MAIN_API",
+      "name": "头文件实现 — 所有 C++/C 头文件",
+      "status": "pending",
+      "priority": "medium",
+      "estimated_days": 1,
+      "depends_on": ["T3-08", "T3-10", "T3-11", "T3-12", "T3-13", "T3-14", "T3-15", "T3-16", "T3-17", "T3-18", "T3-19", "T3-20", "T3-21"],
+      "design_doc": "PLAN4.md §1 目录结构, §4 接口定义",
+      "files_to_create": [
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJit.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitError.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitOptions.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitRuntime.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitCache.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitOrcEngine.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitJITLinkMemoryManager.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitOptimizer.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h",
+        "llvm/include/llvm/ExecutionEngine/EJIT/EJitRegistration.h"
+      ],
+      "description": "创建所有运行时库头文件，定义 C++/C API、错误类型、配置选项、各组件类声明。",
+      "implementation_prompt": "按以下清单创建头文件:\n\n1. EJit.h: C++ 主 API 类声明\n   - class EJit (构造函数, activate/deactivate, getStats, 等)\n   - CompileMode, OptimizationLevel 枚举\n\n2. EJitError.h: 错误类型定义\n   - ErrorCode 枚举: Success/BitcodeLoadFailed/SpecializationFailed/...\n   - Error 结构: {code, message, details}\n\n3. EJitOptions.h: 配置选项\n   - Config 结构: {compileMode, maxCacheSize, maxEntries, optLevel, ...}\n   - 默认值常量\n\n4. EJitRuntime.h: C 运行时接口\n   - extern \"C\" 包围\n   - ejit_status_t, ejit_compile_mode_t, ejit_opt_level_t, ejit_dim_t\n   - ejit_config_t, ejit_stats_t, ejit_error_t\n   - 所有 C API 声明\n\n5. EJitCache.h: Cache 类声明\n6. EJitStructFieldPass.h: PASS6 声明\n7. EJitOrcEngine.h: OrcJIT 引擎声明\n8. EJitJITLinkMemoryManager.h: 内存管理器声明\n9. EJitOptimizer.h: 优化 Pipeline 声明\n10. EJitRegistrationStore.h: 注册暂存区声明\n11. EJitRegistration.h: AOT 注册回调声明",
+      "acceptance_criteria": [
+        "所有头文件无循环依赖",
+        "extern \"C\" 正确包裹 C API",
+        "C++17 标准兼容",
+        "命名空间 llvm::ejit 正确使用"
+      ],
+      "notes": "C API 头文件 (EJitRuntime.h) 需兼容 C 编译器（无 C++ 特性）；内部头文件使用 std::string、std::vector 等 C++17；使用 #pragma once 或 include guards。"
+    },
+
+    {
+      "id": "T3-24",
+      "group": "MAIN_API",
+      "name": "运行时库 CMakeLists.txt 构建配置",
+      "status": "pending",
+      "priority": "medium",
+      "estimated_days": 1,
+      "depends_on": ["T3-20", "T3-21", "T3-22", "T3-23"],
+      "design_doc": "PLAN4.md §1 目录结构",
+      "files_to_create": [
+        "llvm/lib/ExecutionEngine/EJIT/CMakeLists.txt"
+      ],
+      "files_to_modify": [
+        "llvm/lib/ExecutionEngine/CMakeLists.txt"
+      ],
+      "description": "创建 llvm/lib/ExecutionEngine/EJIT/CMakeLists.txt，配置运行时库 (libejit.a) 的所有源文件和 LLVM 依赖。",
+      "implementation_prompt": "编写 CMakeLists.txt:\n\n1. 创建 libejit 库:\n   add_llvm_component_library(LLVMEJIT\n     EJit.cpp\n     EJitRuntime.cpp\n     EJitRegistration.cpp\n     EJitOrcEngine.cpp\n     EJitJITLinkMemoryManager.cpp\n     EJitSyncCompiler.cpp\n     EJitAsyncCompiler.cpp\n     EJitCompileDriver.cpp\n     EJitCache.cpp\n     EJitStructFieldPass.cpp\n     EJitOptimizer.cpp\n     EJitModuleLoader.cpp\n     EJitLogger.cpp\n\n     LINK_COMPONENTS\n     Core\n     ExecutionEngine\n     OrcJIT\n     JITLink\n     IRReader\n     Support\n     TargetParser\n     Passes\n     TransformUtils\n     Analysis\n     BitWriter\n     BitReader\n     MC\n     Object\n   )\n\n2. 添加头文件搜索路径:\n   target_include_directories(LLVMEJIT PUBLIC\n     ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/EJIT)\n\n3. 确保 LLVM 编译选项传播:\n   - LLVM_ENABLE_THREADS (异步编译需要)\n   - 嵌入式优化选项\n\n4. 添加到上层 CMakeLists.txt:\n   - llvm/lib/ExecutionEngine/CMakeLists.txt 中添加 add_subdirectory(EJIT)",
+      "acceptance_criteria": [
+        "cmake --build 编译通过",
+        "生成的 LLVMEJIT 库包含所有运行时组件",
+        "链接到 LLVMEJIT 的程序可正常调用所有 API"
+      ],
+      "notes": "LINK_COMPONENTS 确保所有 LLVM 内部依赖正确传递；OrcJIT 依赖 ExecutionEngine 和 JITLink；嵌入模式下可能需要条件编译排除不需要的 Target。"
+    },
+
+    {
+      "id": "T3-25",
+      "group": "MAIN_API",
+      "name": "EJit 头文件在 LLVM include 目录中的放置",
+      "status": "pending",
+      "priority": "low",
+      "estimated_days": 0.5,
+      "depends_on": ["T3-23"],
+      "design_doc": "PLAN4.md §1",
+      "files_to_modify": [
+        "llvm/include/llvm/ExecutionEngine/CMakeLists.txt"
+      ],
+      "files_to_create": [],
+      "description": "确保 EJIT 头文件目录被正确添加到 LLVM include 路径中。",
+      "implementation_prompt": "在 llvm/include/llvm/ExecutionEngine/CMakeLists.txt 中添加:\n  add_subdirectory(EJIT)\n\n确保 llvm/include/llvm/ExecutionEngine/EJIT/ 目录下的头文件被包含在安装目标中。",
+      "acceptance_criteria": [
+        "#include <llvm/ExecutionEngine/EJIT/EJit.h> 可用",
+        "cmake install 后头文件正确部署"
+      ],
+      "notes": "简单的 CMake 配置，确保头文件路径正确。"
+    }
+  ],
+
+  "dependency_graph": {
+    "description": "TASK3 任务依赖关系（按组）：",
+    "groups": {
+      "AOT_PASS": {
+        "tasks": ["T3-01", "T3-02", "T3-03", "T3-04", "T3-05", "T3-06", "T3-07"],
+        "description": "AOT Pass Pipeline (PASS1-PASS5) + 注册集成 + CMake"
+      },
+      "RUNTIME_CORE": {
+        "tasks": ["T3-08", "T3-09", "T3-10", "T3-11", "T3-12"],
+        "description": "运行时核心组件 (RegistrationStore, ModuleLoader, Cache, RuntimeState, Logger)"
+      },
+      "JIT_ENGINE": {
+        "tasks": ["T3-13", "T3-14", "T3-15", "T3-16", "T3-17", "T3-18", "T3-19"],
+        "description": "JIT 引擎 (MemoryManager, OrcEngine, PASS6, Optimizer, Sync/Async Compiler, CompileDriver)"
+      },
+      "MAIN_API": {
+        "tasks": ["T3-20", "T3-21", "T3-22", "T3-23", "T3-24", "T3-25"],
+        "description": "主 API 与集成 (EJit.cpp, EJitRuntime.cpp, Registration callbacks, Headers, CMake)"
+      }
+    },
+    "execution_order": [
+      "Phase 1 (可并行): T3-01, T3-10, T3-11, T3-12, T3-13 同时开始",
+      "Phase 2: T3-02 (依赖 T3-01 完成), T3-03, T3-08",
+      "Phase 3: T3-04 (依赖 T3-02), T3-05 (依赖 T3-02, T3-03, T3-04), T3-09 (依赖 T3-08)",
+      "Phase 4: T3-06 (依赖 T3-01, T3-05), T3-07 (依赖 T3-01~05)",
+      "Phase 5: T3-14 (依赖 T3-13, T3-11), T3-15 (依赖 T3-11), T3-16 (依赖 T3-15)",
+      "Phase 6: T3-17 (依赖 T3-14, T3-15, T3-16), T3-18 (依赖 T3-14, T3-17)",
+      "Phase 7: T3-19 (依赖 T3-10, T3-11, T3-17, T3-18)",
+      "Phase 8: T3-20 (依赖 T3-19), T3-22 (依赖 T3-08)",
+      "Phase 9: T3-21 (依赖 T3-20), T3-23 (依赖所有组件), T3-24 (依赖 T3-20~22), T3-25 (依赖 T3-23)"
+    ]
+  },
+
+  "total_estimated_days": 60,
+  "total_tasks": 25,
+  "status_summary": {
+    "pending": 25,
+    "in_progress": 0,
+    "completed": 0,
+    "blocked": 0
+  }
+}
