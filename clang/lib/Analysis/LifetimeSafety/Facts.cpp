@@ -145,11 +145,9 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
 
 llvm::ArrayRef<const Fact *>
 FactManager::getBlockContaining(ProgramPoint P) const {
-  for (const auto &BlockToFactsVec : BlockToFacts) {
-    for (const Fact *F : BlockToFactsVec)
-      if (F == P)
-        return BlockToFactsVec;
-  }
+  std::optional<size_t> BlockIndex = getBlockID(P);
+  if (BlockIndex)
+    return BlockToFacts[BlockIndex.value()];
   return {};
 }
 

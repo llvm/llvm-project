@@ -18,7 +18,8 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 
 namespace clang::lifetimes::internal {
-using AssignmentPair = std::pair<DestOriginEntity, SrcOriginEntity>;
+
+using AssignmentUnit = Origin;
 
 /// Traces the provenance of a pointer to provide contextual notes for
 /// lifetime-related diagnostics.
@@ -26,11 +27,10 @@ using AssignmentPair = std::pair<DestOriginEntity, SrcOriginEntity>;
 /// To help user understand the data flow, we track where the problematic
 /// address originated.
 void trackAssignmentHistory(
-    const FactManager &FactMgr,
-    const LoanPropagationAnalysis &LoanPropagation,
-    llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+    const FactManager &FactMgr, const LoanPropagationAnalysis &LoanPropagation,
+    llvm::SmallVectorImpl<AssignmentUnit> &AssignmentList,
     const CFGBlock *StartBlock, const OriginID StartOID,
-    const LoanID EndLoanID);
+    const LoanID &EndLoanID);
 } // namespace clang::lifetimes::internal
 
 #endif

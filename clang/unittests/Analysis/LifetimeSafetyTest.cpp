@@ -205,20 +205,31 @@ public:
     return Runner.getAnalysis().getFactManager().getBlockContaining(P);
   }
 
+  std::optional<size_t> getBlockID(ProgramPoint P) {
+    return Runner.getAnalysis().getFactManager().getBlockID(P);
+  }
+
   void trackAssignmentHistoryInOneBlock(
-      llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+      llvm::SmallVectorImpl<AssignmentUnit> &AssignmentList,
       llvm::StringRef StartOriginVar, llvm::StringRef EndLoanVar) {
-    const CFG *CurrCFG = Runner.getAnalysisContext().getCFG();
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
-    for (const CFGBlock *CurrCFGBlock : *CurrCFG) {
-      for (const LoanID &LID : EndLoanIDs) {
-        trackAssignmentHistory(Runner.getAnalysis().getFactManager(), Runner.getAnalysis().getLoanPropagation(), AssignmentList, CurrCFGBlock,
-                               *StartOriginID, LID);
-        if (!AssignmentList.empty())
-          return;
+    const CFGBlock *StartBlock = nullptr;
+    const size_t BlockID = getBlockID(getProgramPoint("after_use")).value();
+    for (const CFGBlock *CurrBlock : *Runner.getAnalysisContext().getCFG()) {
+      if (CurrBlock->getBlockID() == BlockID) {
+        StartBlock = CurrBlock;
+        break;
       }
+    }
+
+    for (const LoanID &LID : EndLoanIDs) {
+      trackAssignmentHistory(Runner.getAnalysis().getFactManager(),
+                             Runner.getAnalysis().getLoanPropagation(),
+                             AssignmentList, StartBlock, *StartOriginID, LID);
+      if (!AssignmentList.empty())
+        return;
     }
   }
 
@@ -1987,13 +1998,14 @@ TEST_F(LifetimeAnalysisTest, TrackLinearAssignmentHistoryInOneBlock) {
         s = e;
       }
       (void)s;
+      POINT(after_use);
     }
   )");
 
-  llvm::SmallVector<AssignmentPair> AssignmentList;
+  llvm::SmallVector<AssignmentUnit> AssignmentList;
   Helper->trackAssignmentHistoryInOneBlock(AssignmentList, "s", "tgt");
 
-  EXPECT_EQ(4u, AssignmentList.size());
+  EXPECT_EQ(8u, AssignmentList.size());
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
