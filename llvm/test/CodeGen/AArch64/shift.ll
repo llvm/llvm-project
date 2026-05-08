@@ -528,8 +528,7 @@ define <4 x i8> @shl_v4i8(<4 x i8> %0, <4 x i8> %1){
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ushl v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
     %3 = shl <4 x i8> %0, %1
     ret <4 x i8> %3
@@ -564,8 +563,7 @@ define <2 x i16> @shl_v2i16(<2 x i16> %0, <2 x i16> %1){
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
     %3 = shl <2 x i16> %0, %1
     ret <2 x i16> %3
@@ -707,8 +705,7 @@ define <4 x i8> @ashr_v4i8(<4 x i8> %0, <4 x i8> %1){
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v1.8b, v1.8b
 ; CHECK-GI-NEXT:    sshl v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
     %3 = ashr <4 x i8> %0, %1
     ret <4 x i8> %3
@@ -743,8 +740,7 @@ define <2 x i16> @ashr_v2i16(<2 x i16> %0, <2 x i16> %1){
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    neg v1.4h, v1.4h
 ; CHECK-GI-NEXT:    sshl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
     %3 = ashr <2 x i16> %0, %1
     ret <2 x i16> %3
@@ -880,8 +876,7 @@ define <4 x i8> @lshr_v4i8(<4 x i8> %0, <4 x i8> %1){
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v1.8b, v1.8b
 ; CHECK-GI-NEXT:    ushl v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
     %3 = lshr <4 x i8> %0, %1
     ret <4 x i8> %3
@@ -915,8 +910,7 @@ define <2 x i16> @lshr_v2i16(<2 x i16> %0, <2 x i16> %1){
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    neg v1.4h, v1.4h
 ; CHECK-GI-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
     %3 = lshr <2 x i16> %0, %1
     ret <2 x i16> %3

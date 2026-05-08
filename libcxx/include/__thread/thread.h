@@ -29,6 +29,7 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <tuple>
 
@@ -44,6 +45,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_HAS_THREADS
 
@@ -260,6 +262,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x
 
 #endif // _LIBCPP_HAS_THREADS
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

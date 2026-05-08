@@ -59,15 +59,13 @@ public:
 
 /// Printer pass for the \c DXILMetadataAnalysis results.
 class DXILMetadataAnalysisPrinterPass
-    : public PassInfoMixin<DXILMetadataAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DXILMetadataAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DXILMetadataAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy pass

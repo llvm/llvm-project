@@ -425,9 +425,9 @@ define void @drop_zext_nneg(ptr noalias %p, ptr noalias %p1) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i32> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i32> [[VEC_IND]] to <4 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP3]], <4 x i1> [[TMP0]], <4 x double> poison)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x double> [[WIDE_MASKED_LOAD]], <4 x double> zeroinitializer
@@ -791,7 +791,7 @@ define void @Bgep_inbounds_unconditionally_due_to_store(ptr noalias %B, ptr read
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 20)
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[WIDE_LOAD1]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x float> splat (float 3.300000e+01), <4 x float> [[TMP5]]

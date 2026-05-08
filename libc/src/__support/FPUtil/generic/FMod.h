@@ -171,7 +171,6 @@ private:
   using StorageType = typename FPB::StorageType;
 
   LIBC_INLINE static constexpr bool pre_check(T x, T y, T &out) {
-    using FPB = fputil::FPBits<T>;
     const T quiet_nan = FPB::quiet_nan().get_val();
     FPB sx(x), sy(y);
     if (LIBC_LIKELY(!sy.is_zero() && !sy.is_inf_or_nan() &&
