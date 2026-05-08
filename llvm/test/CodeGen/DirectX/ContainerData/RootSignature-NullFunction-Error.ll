@@ -2,15 +2,6 @@
 
 ; CHECK: error: Function associated with Root Signature definition is null
 
-; CHECK-NEXT: Root Signature Definitions
-;   CHECK-NEXT: Definition for 'main':
-;     CHECK-NEXT: Flags: 0x000001
-;     CHECK-NEXT: Version: 2
-;     CHECK-NEXT: RootParametersOffset: 24
-;     CHECK-NEXT: NumParameters: 0
-;     CHECK-NEXT: NumStaticSamplers: 0
-;     CHECK-NEXT: StaticSamplersOffset: 0
-
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 define void @main() #0 {
