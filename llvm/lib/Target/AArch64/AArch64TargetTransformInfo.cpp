@@ -822,13 +822,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     MVT MTy = LT.second;
 
     // When SVE is available CNT will be used for fixed and scalable vectors.
-    if (ST->isSVEorStreamingSVEAvailable() && MTy.isFixedLengthVector()) {
-      EVT ScalableVT = MVT::getScalableVectorVT(
-          MTy.getVectorElementType(), 128 / MTy.getScalarSizeInBits());
-      if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP,
-                                              ScalableVT.getSimpleVT()))
-        return LT.first * Entry->Cost;
-    }
+    if (ST->isSVEorStreamingSVEAvailable() && MTy.isFixedLengthVector())
+      MTy = MVT::getScalableVectorVT(MTy.getVectorElementType(),
+                                     128 / MTy.getScalarSizeInBits());
 
     if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP, MTy)) {
       // Extra cost of +1 when illegal vector types are legalized by promoting
