@@ -768,11 +768,6 @@ ProcessWindows::OnDebugException(bool first_chance,
     return ExceptionResult::SendToApplication;
   }
 
-  // Drain any in-flight process output before announcing the stop. The I/O
-  // reader thread and this debug-event thread run concurrently. Without
-  // synchronization the eBroadcastBitStateChanged(Stopped) event can reach
-  // the Debugger event thread before the preceding eBroadcastBitSTDOUT
-  // events.
   if (!first_chance) {
     // Not any second chance exception is an application crash by definition.
     // It may be an expression evaluation crash.
@@ -797,6 +792,11 @@ ProcessWindows::OnDebugException(bool first_chance,
       LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
                record.GetExceptionAddress());
     }
+    // Drain any in-flight process output before announcing the stop. The I/O
+    // reader thread and this debug-event thread run concurrently. Without
+    // synchronization the eBroadcastBitStateChanged(Stopped) event can reach
+    // the Debugger event thread before the preceding eBroadcastBitSTDOUT
+    // events.
     DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
