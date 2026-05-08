@@ -38,16 +38,16 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50   3.00   3.00    -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.50   4.50    -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     smmla	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     sudot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     sudot	v0.4s, v0.16b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sudot	v0.2s, v0.8b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sudot	v0.4s, v0.16b, v0.4b[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ummla	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.2s, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.4s, v0.16b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usdot	v0.2s, v0.8b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usdot	v0.2s, v0.8b, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usdot	v0.4s, v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usdot	v0.4s, v0.16b, v0.4b[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usmmla	v0.4s, v0.16b, v0.16b

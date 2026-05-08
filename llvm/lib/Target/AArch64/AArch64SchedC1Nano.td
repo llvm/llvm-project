@@ -222,6 +222,18 @@ def : WriteRes<WriteFDiv, [C1NanoUnitVMC]> { let Latency = 22;
                                             let ReleaseAtCycles = [29]; }
 def C1NanoWriteVMAC : SchedWriteRes<[C1NanoUnitVMAC]> { let Latency = 4; }
 }
+
+class C1NanoWriteVMACBypass : SchedWriteRes<[C1NanoUnitVMAC]> {
+  let Latency = 4;
+}
+
+def C1NanoWriteVMACB64   : C1NanoWriteVMACBypass;
+def C1NanoWriteVMACB128  : C1NanoWriteVMACBypass;
+def C1NanoWriteVMACH64   : C1NanoWriteVMACBypass;
+def C1NanoWriteVMACH128  : C1NanoWriteVMACBypass;
+def C1NanoWriteVMACS64   : C1NanoWriteVMACBypass;
+def C1NanoWriteVMACS128  : C1NanoWriteVMACBypass;
+def C1NanoWriteVMACD128  : C1NanoWriteVMACBypass;
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
 
@@ -249,9 +261,16 @@ def C1NanoRd_LDR   : SchedReadAdvance<2, [C1NanoWr_ADRP, C1NanoWr_LDR]>;
 def : SchedAlias<ReadAdrBase, C1NanoRd_LDR>;
 
 // SIMD MAC forwarding - reduces latency to 1 cycle when conditions are met
-def C1NanoReadVMACForward : SchedReadAdvance<3, [C1NanoWriteVMAC]>;  // 4-1=3 cycles saved
+// for accumulator dependencies with matching destination element/register size.
+def C1NanoReadVMACB64   : SchedReadAdvance<3, [C1NanoWriteVMACB64]>;
+def C1NanoReadVMACB128  : SchedReadAdvance<3, [C1NanoWriteVMACB128]>;
+def C1NanoReadVMACH64   : SchedReadAdvance<3, [C1NanoWriteVMACH64]>;
+def C1NanoReadVMACH128  : SchedReadAdvance<3, [C1NanoWriteVMACH128]>;
+def C1NanoReadVMACS64   : SchedReadAdvance<3, [C1NanoWriteVMACS64]>;
+def C1NanoReadVMACS128  : SchedReadAdvance<3, [C1NanoWriteVMACS128]>;
+def C1NanoReadVMACD128  : SchedReadAdvance<3, [C1NanoWriteVMACD128]>;
 def : ReadAdvance<ReadVMAC, 0>;
-def : ReadAdvance<ReadVMACAccum, 3, [C1NanoWriteVMAC]>;
+def : ReadAdvance<ReadVMACAccum, 0>;
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific InstRWs.
@@ -783,28 +802,53 @@ def : InstRW<[C1NanoMC2Write<4, 1, C1NanoUnitVALU>], (instregex "[SU](MAX|MIN)Vv
 // ASIMD FP max/min, reduce.
 def : InstRW<[C1NanoMC2Write<4, 1, C1NanoUnitVALU>], (instregex "^F(MAX|MIN)(NM)?Vv")>;
 // ASIMD multiply, by element
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^MULv(2i32|4i16|4i32|8i16)_indexed$",
-  "SQR?DMULHv(1i16|1i32|2i32|4i16|4i32|8i16)(_indexed)?$")>;
+def : InstRW<[C1NanoWriteVMACH64], (instregex "^MULv4i16_indexed$")>;
+def : InstRW<[C1NanoWriteVMACH128], (instregex "^MULv8i16_indexed$")>;
+def : InstRW<[C1NanoWriteVMACS64], (instregex "^MULv2i32_indexed$")>;
+def : InstRW<[C1NanoWriteVMACS128], (instregex "^MULv4i32_indexed$")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>],
+             (instregex "SQR?DMULHv(1i16|1i32|2i32|4i16|4i32|8i16)(_indexed)?$")>;
 // ASIMD multiply
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^MULv(2i32|4i16|4i32|8i8|8i16|16i8)$")>;
+def : InstRW<[C1NanoWriteVMACB64], (instregex "^MULv8i8$")>;
+def : InstRW<[C1NanoWriteVMACB128], (instregex "^MULv16i8$")>;
+def : InstRW<[C1NanoWriteVMACH64], (instregex "^MULv4i16$")>;
+def : InstRW<[C1NanoWriteVMACH128], (instregex "^MULv8i16$")>;
+def : InstRW<[C1NanoWriteVMACS64], (instregex "^MULv2i32$")>;
+def : InstRW<[C1NanoWriteVMACS128], (instregex "^MULv4i32$")>;
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^PMULv(8i8|16i8)")>;
 // ASIMD multiply accumulate
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "ML[AS]v(2i32|4i16|8i8)$")>;
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "ML[AS]v(16i8|4i32|8i16)$")>;
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "ML[AS]v(2i32|4i16|4i32|8i16)_indexed$")>;
+def : InstRW<[C1NanoWriteVMACB64, C1NanoReadVMACB64], (instregex "^ML[AS]v8i8$")>;
+def : InstRW<[C1NanoWriteVMACB128, C1NanoReadVMACB128], (instregex "^ML[AS]v16i8$")>;
+def : InstRW<[C1NanoWriteVMACH64, C1NanoReadVMACH64], (instregex "^ML[AS]v4i16$")>;
+def : InstRW<[C1NanoWriteVMACH128, C1NanoReadVMACH128], (instregex "^ML[AS]v8i16$")>;
+def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^ML[AS]v2i32$")>;
+def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^ML[AS]v4i32$")>;
+def : InstRW<[C1NanoWriteVMACH64, C1NanoReadVMACH64], (instregex "^ML[AS]v4i16_indexed$")>;
+def : InstRW<[C1NanoWriteVMACH128, C1NanoReadVMACH128], (instregex "^ML[AS]v8i16_indexed$")>;
+def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^ML[AS]v2i32_indexed$")>;
+def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^ML[AS]v4i32_indexed$")>;
 // ASIMD multiply accumulate half
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "SQRDML[AS]H[vi]")>;
 // ASIMD multiply accumulate long
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "[SU]ML[AS]Lv")>;
+def : InstRW<[C1NanoWriteVMACH128, C1NanoReadVMACH128],
+             (instregex "^[SU]ML[AS]Lv(8i8|16i8)_v8i16$")>;
+def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128],
+             (instregex "^[SU]ML[AS]Lv(4i16|8i16)_v4i32$")>;
+def : InstRW<[C1NanoWriteVMACD128, C1NanoReadVMACD128],
+             (instregex "^[SU]ML[AS]Lv(2i32|4i32)_v2i64$")>;
 // ASIMD multiply accumulate long #2
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "SQDML[AS]L[iv]")>;
 // ASIMD dot product
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "(S|U|SU|US)DOTv8i8")>;
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "(S|U|SU|US)DOTv16i8")>;
+def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^[SU]DOTv8i8$")>;
+def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^[SU]DOTv16i8$")>;
 // ASIMD dot product, by scalar
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "(S|U|SU|US)DOTlanev")>;
+def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^[SU]DOTlanev8i8$")>;
+def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^[SU]DOTlanev16i8$")>;
 // ASIMD multiply long
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "[SU]MULLv", "SQDMULL[iv]")>;
+def : InstRW<[C1NanoWriteVMACH128], (instregex "^[SU]MULLv(8i8|16i8)_v8i16$")>;
+def : InstRW<[C1NanoWriteVMACS128], (instregex "^[SU]MULLv(4i16|8i16)_v4i32$")>;
+def : InstRW<[C1NanoWriteVMACD128], (instregex "^[SU]MULLv(2i32|4i32)_v2i64$")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "SQDMULL[iv]")>;
 // ASIMD polynomial (8x8) multiply long
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instrs PMULLv8i8, PMULLv16i8)>;
 // ASIMD pairwise add and accumulate
