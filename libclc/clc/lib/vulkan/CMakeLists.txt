@@ -1,4 +1,4 @@
-libclc_configure_source_list(CLC_CLSPV_SOURCES
+libclc_configure_source_list(CLC_VULKAN_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}
   integer/clc_mul_hi.cl
   math/clc_sw_fma.cl

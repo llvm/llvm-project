@@ -1,3 +1,4 @@
+// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -6,7 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Opt-out of libclc mul_hi implementation for clspv.
-// clspv has an internal implementation that does not required using a bigger
-// data size. That implementation is based on OpMulExtended which is SPIR-V
-// specific, thus it cannot be written in OpenCL-C.
+#ifndef _LIBCPP___CONFIGURATION_UTILITY_H
+#define _LIBCPP___CONFIGURATION_UTILITY_H
+
+#include <__config_site>
+
+#ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
+#  pragma GCC system_header
+#endif
+
+#define _LIBCPP_TOSTRING2(x) #x
+#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
+
+#endif // _LIBCPP___CONFIGURATION_UTILITY_H
