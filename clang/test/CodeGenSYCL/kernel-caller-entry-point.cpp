@@ -148,14 +148,14 @@ int main() {
 // CHECK-HOST-LINUX       @.str.5 = private unnamed_addr constant [30 x i8] c"_ZTS23fwd_ref_arg_kernel_name\00", align 1
 // CHECK-HOST-LINUX:      @.str.6 = private unnamed_addr constant [35 x i8] c"_ZTS28fwd_ref_arg_kernel_name_move\00", align 1
 // CHECK-HOST-LINUX:      @.str.7 = private unnamed_addr constant [33 x i8] c"_ZTS26rvalue_ref_arg_kernel_name\00", align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0CB@KFIJOMLB@_ZTS26single_purpose_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26single_purpose_kernel_name\00", comdat, align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0BC@NHCDOLAA@_ZTSZ4mainEUlT_E_?$AA@" = linkonce_odr dso_local unnamed_addr constant [18 x i8] c"_ZTSZ4mainEUlT_E_\00", comdat, align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0M@BCGAEMBE@_ZTS6?N?$LE?O?$IE?O?$IH?$AA@" = linkonce_odr dso_local unnamed_addr constant [12 x i8] c"_ZTS6\CE\B4\CF\84\CF\87\00", comdat, align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0P@DLGHPODL@_ZTSZ4mainE2KN?$AA@" = linkonce_odr dso_local unnamed_addr constant [15 x i8] c"_ZTSZ4mainE2KN\00", comdat, align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0BK@PPDJPOBM@_ZTS19ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [26 x i8] c"_ZTS19ref_arg_kernel_name\00", comdat, align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0BO@KEIBIHKH@_ZTS23fwd_ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [30 x i8] c"_ZTS23fwd_ref_arg_kernel_name\00", comdat, align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0CD@FDALJLMM@_ZTS28fwd_ref_arg_kernel_name_mo@" = linkonce_odr dso_local unnamed_addr constant [35 x i8] c"_ZTS28fwd_ref_arg_kernel_name_move\00", comdat, align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0CB@HCPMABHM@_ZTS26rvalue_ref_arg_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26rvalue_ref_arg_kernel_name\00", comdat, align 1
+// CHECK-HOST-WINDOWS: @"??_C@_0CB@KFIJOMLB@_ZTS26single_purpose_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26single_purpose_kernel_name\00", comdat
+// CHECK-HOST-WINDOWS: @"??_C@_0BC@NHCDOLAA@_ZTSZ4mainEUlT_E_?$AA@" = linkonce_odr dso_local unnamed_addr constant [18 x i8] c"_ZTSZ4mainEUlT_E_\00", comdat
+// CHECK-HOST-WINDOWS: @"??_C@_0M@BCGAEMBE@_ZTS6?N?$LE?O?$IE?O?$IH?$AA@" = linkonce_odr dso_local unnamed_addr constant [12 x i8] c"_ZTS6\CE\B4\CF\84\CF\87\00", comdat
+// CHECK-HOST-WINDOWS: @"??_C@_0P@DLGHPODL@_ZTSZ4mainE2KN?$AA@" = linkonce_odr dso_local unnamed_addr constant [15 x i8] c"_ZTSZ4mainE2KN\00", comdat
+// CHECK-HOST-WINDOWS: @"??_C@_0BK@PPDJPOBM@_ZTS19ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [26 x i8] c"_ZTS19ref_arg_kernel_name\00", comdat
+// CHECK-HOST-WINDOWS: @"??_C@_0BO@KEIBIHKH@_ZTS23fwd_ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [30 x i8] c"_ZTS23fwd_ref_arg_kernel_name\00", comdat
+// CHECK-HOST-WINDOWS: @"??_C@_0CD@FDALJLMM@_ZTS28fwd_ref_arg_kernel_name_mo@" = linkonce_odr dso_local unnamed_addr constant [35 x i8] c"_ZTS28fwd_ref_arg_kernel_name_move\00", comdat
+// CHECK-HOST-WINDOWS: @"??_C@_0CB@HCPMABHM@_ZTS26rvalue_ref_arg_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26rvalue_ref_arg_kernel_name\00", comdat
 //
 // CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
