@@ -29,6 +29,7 @@ add_clang_library(clangLex
   Preprocessor.cpp
   PreprocessorLexer.cpp
   ScratchBuffer.cpp
+  TextEncodingConfig.cpp
   TokenConcatenation.cpp
   TokenLexer.cpp
 
