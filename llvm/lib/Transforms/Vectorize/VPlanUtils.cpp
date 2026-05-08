@@ -260,12 +260,10 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     });
   if (match(V, m_Intrinsic<Intrinsic::abs>(m_VPValue(LHSVal), m_VPValue())))
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      // The is_int_min_poison operand of llvm.abs only states that this
-      // particular call is poison if its input is INT_MIN; it does not
-      // prove the input is never INT_MIN elsewhere. Forwarding it as
-      // SCEV's IsNSW would tag the cached negation SCEV as no-signed-wrap
-      // globally, which is unsound for other uses of the same SCEV.
-      // Revisit once getAbsExpr can carry the flag on a SCEVUse.
+      // is_int_min_poison only makes this call poison on INT_MIN; it does
+      // not prove the input is never INT_MIN, so forwarding it as IsNSW
+      // would attach a no-signed-wrap fact to the SCEV that is unsound
+      // for any other use of the same expression.
       return SE.getAbsExpr(Ops[0], /*IsNSW=*/false);
     });
 

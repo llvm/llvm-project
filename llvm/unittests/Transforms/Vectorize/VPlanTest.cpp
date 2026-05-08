@@ -57,18 +57,19 @@ loop:
   Argument *X = F->getArg(0);
   VPValue *Op = Plan.getOrAddLiveIn(X);
 
-  // is_int_min_poison is intentionally ignored when building the SCEV: it
-  // is a local poison property of the call, not a global no-wrap fact.
-  // Both forms must therefore produce the same wrapping abs SCEV.
-  const SCEV *ExpectedExpr = SE->getAbsExpr(SE->getSCEV(X), /*IsNSW=*/false);
+  // is_int_min_poison is local to the call, not a global no-wrap fact.
+  // Exercise both getAbsExpr flag paths; SCEV drops IsNSW for this input.
+  const SCEV *XSCEV = SE->getSCEV(X);
 
   VPWidenIntrinsicRecipe Abs(Intrinsic::abs, {Op, Plan.getTrue()},
                              X->getType());
-  EXPECT_EQ(ExpectedExpr, vputils::getSCEVExprForVPValue(&Abs, PSE, L));
+  EXPECT_EQ(SE->getAbsExpr(XSCEV, /*IsNSW=*/true),
+            vputils::getSCEVExprForVPValue(&Abs, PSE, L));
 
   VPWidenIntrinsicRecipe WrappingAbs(Intrinsic::abs, {Op, Plan.getFalse()},
                                      X->getType());
-  EXPECT_EQ(ExpectedExpr, vputils::getSCEVExprForVPValue(&WrappingAbs, PSE, L));
+  EXPECT_EQ(SE->getAbsExpr(XSCEV, /*IsNSW=*/false),
+            vputils::getSCEVExprForVPValue(&WrappingAbs, PSE, L));
 }
 
 TEST_F(VPInstructionTest, insertBefore) {
