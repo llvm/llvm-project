@@ -10,28 +10,28 @@
 #include "src/link/dl_iterate_phdr.h"
 #include "test/UnitTest/Test.h"
 
-int SaveReturn1(struct dl_phdr_info *info, [[maybe_unused]] size_t info_size,
-                void *arg) {
-  *static_cast<void **>(arg) = info;
+int save_return_1(struct dl_phdr_info *info, [[maybe_unused]] size_t info_size,
+                  void *arg) {
+  *static_cast<int *>(arg) = info->dlpi_phnum;
   return 1;
 }
 
 TEST(LlvmLibcLinkDlIteratePhdrTest, OnlyExecutable) {
-  struct dl_phdr_info executable_info;
-  EXPECT_EQ(LIBC_NAMESPACE::dl_iterate_phdr(SaveReturn1, &executable_info), 1);
-  int program_header_count = executable_info.dlpi_phnum;
+  int program_header_count = 0;
+  EXPECT_EQ(
+      LIBC_NAMESPACE::dl_iterate_phdr(save_return_1, &program_header_count), 1);
   EXPECT_GT(program_header_count, 0);
 }
 
-int SaveReturn0(struct dl_phdr_info *info, [[maybe_unused]] size_t info_size,
-                void *arg) {
-  *static_cast<void **>(arg) = info;
+int save_return_0(struct dl_phdr_info *info, [[maybe_unused]] size_t info_size,
+                  void *arg) {
+  *static_cast<int *>(arg) = info->dlpi_phnum;
   return 0;
 }
 
 TEST(LlvmLibcLinkDlIteratePhdrTest, BothExecutableAndVDSO) {
-  struct dl_phdr_info executable_info;
-  EXPECT_EQ(LIBC_NAMESPACE::dl_iterate_phdr(SaveReturn0, &executable_info), 0);
-  int program_header_count = executable_info.dlpi_phnum;
+  int program_header_count = 0;
+  EXPECT_EQ(
+      LIBC_NAMESPACE::dl_iterate_phdr(save_return_0, &program_header_count), 0);
   EXPECT_GT(program_header_count, 0);
 }
