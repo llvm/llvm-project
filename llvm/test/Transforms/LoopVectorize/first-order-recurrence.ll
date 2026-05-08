@@ -3239,8 +3239,7 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; UNROLL-NO-IC:       [[MIDDLE_BLOCK]]:
 ; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or <4 x i16> [[TMP5]], [[TMP5]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP8]] to <4 x i32>
+; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP3]], i64 2
 ; UNROLL-NO-IC-NEXT:    br label %[[FOR_END:.*]]
 ; UNROLL-NO-IC:       [[FOR_END]]:
@@ -3265,8 +3264,7 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; UNROLL-NO-VF:       [[MIDDLE_BLOCK]]:
 ; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = add i16 [[OFFSET_IDX]], 1
-; UNROLL-NO-VF-NEXT:    [[TMP5:%.*]] = or i16 [[TMP4]], [[TMP4]]
-; UNROLL-NO-VF-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP5]] to i32
+; UNROLL-NO-VF-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP4]] to i32
 ; UNROLL-NO-VF-NEXT:    br label %[[FOR_END:.*]]
 ; UNROLL-NO-VF:       [[FOR_END]]:
 ; UNROLL-NO-VF-NEXT:    ret i32 [[TMP10]]
@@ -3289,8 +3287,7 @@ define i32 @sink_after_dead_inst(ptr %A.ptr, i32 %n) {
 ; SINK-AFTER-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; SINK-AFTER:       [[MIDDLE_BLOCK]]:
 ; SINK-AFTER-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 1)
-; SINK-AFTER-NEXT:    [[TMP5:%.*]] = or <4 x i16> [[TMP2]], [[TMP2]]
-; SINK-AFTER-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
+; SINK-AFTER-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP3]], i64 2
 ; SINK-AFTER-NEXT:    br label %[[FOR_END:.*]]
 ; SINK-AFTER:       [[FOR_END]]:

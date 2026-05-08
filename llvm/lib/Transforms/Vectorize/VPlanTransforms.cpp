@@ -1420,10 +1420,19 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(X);
 
+  // x | x -> x
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Deferred(X))))
+    return Def->replaceAllUsesWith(X);
+
   // x | !x -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X)))))
     return Def->replaceAllUsesWith(
         Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
+
+  // x ^ x -> 0
+  if (match(Def, m_c_BinaryXor(m_VPValue(X), m_Deferred(X))))
+    return Def->replaceAllUsesWith(
+        Plan->getZero(TypeInfo.inferScalarType(Def)));
 
   // x & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
@@ -1432,6 +1441,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   // x & AllOnes -> x
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
+    return Def->replaceAllUsesWith(X);
+
+  // x & x -> x
+  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
   // x && false -> false
@@ -1486,6 +1499,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
+
+  // x - x -> 0
+  if (match(Def, m_Sub(m_VPValue(A), m_Deferred(A))))
+    return Def->replaceAllUsesWith(
+        Plan->getZero(TypeInfo.inferScalarType(Def)));
 
   if (match(Def, m_c_Mul(m_VPValue(A), m_One())))
     return Def->replaceAllUsesWith(A);
