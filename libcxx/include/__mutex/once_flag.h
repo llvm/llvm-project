@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___MUTEX_ONCE_FLAG_H
 #define _LIBCPP___MUTEX_ONCE_FLAG_H
 
+#include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__tuple/tuple_size.h>
@@ -63,7 +65,7 @@ struct once_flag {
   static const _State_type _Complete = ~_State_type(0);
 
 private:
-  _State_type __state_;
+  atomic<_State_type> __state_;
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Callable, class... _Args>
@@ -113,7 +115,7 @@ void _LIBCPP_HIDE_FROM_ABI __call_once_proxy(void* __vp) {
   (*__p)();
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile once_flag::_State_type&, void*, void (*)(void*));
+_LIBCPP_EXPORTED_FROM_ABI void __call_once(atomic<once_flag::_State_type>&, void*, void (*)(void*));
 
 template <class _ValueType>
 inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* __value) {
@@ -128,7 +130,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* 
 
 template <class _Callable, class... _Args>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __func, _Args&&... __args) {
-  if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
+  if (__flag.__state_.load(memory_order_acquire) != once_flag::_Complete) {
     typedef tuple<_Callable&&, _Args&&...> _Gp;
     _Gp __f(std::forward<_Callable>(__func), std::forward<_Args>(__args)...);
     __call_once_param<_Gp> __p(__f);
@@ -140,7 +142,7 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __fun
 
 template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func) {
-  if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
+  if (__flag.__state_.load(memory_order_acquire) != once_flag::_Complete) {
     __call_once_param<_Callable> __p(__func);
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Callable>));
   }
@@ -148,7 +150,7 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func
 
 template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, const _Callable& __func) {
-  if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
+  if (__flag.__state_.load(memory_order_acquire) != once_flag::_Complete) {
     __call_once_param<const _Callable> __p(__func);
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<const _Callable>));
   }

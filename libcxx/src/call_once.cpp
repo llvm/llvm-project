@@ -10,12 +10,6 @@
 #include <__mutex/once_flag.h>
 #include <__utility/exception_guard.h>
 
-#if _LIBCPP_HAS_THREADS
-#  include <__thread/support.h>
-#endif
-
-#include "include/atomic_support.h"
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // If dispatch_once_f ever handles C++ exceptions, and if one can get to it
@@ -24,12 +18,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // call into dispatch_once_f instead of here. Relevant radar this code needs to
 // keep in sync with:  7741191.
 
-#if _LIBCPP_HAS_THREADS
-static constinit __libcpp_mutex_t mut  = _LIBCPP_MUTEX_INITIALIZER;
-static constinit __libcpp_condvar_t cv = _LIBCPP_CONDVAR_INITIALIZER;
-#endif
-
-void __call_once(volatile once_flag::_State_type& flag, void* arg, void (*func)(void*)) {
+void __call_once(atomic<once_flag::_State_type>& flag, void* arg, void (*func)(void*)) {
 #if !_LIBCPP_HAS_THREADS
 
   if (flag == once_flag::_Unset) {
@@ -42,27 +31,34 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg, void (*func)(
 
 #else // !_LIBCPP_HAS_THREADS
 
-  __libcpp_mutex_lock(&mut);
-  while (flag == once_flag::_Pending)
-    __libcpp_condvar_wait(&cv, &mut);
-  if (flag == once_flag::_Unset) {
-    auto guard = std::__make_exception_guard([&flag] {
-      __libcpp_mutex_lock(&mut);
-      __libcpp_relaxed_store(&flag, once_flag::_Unset);
-      __libcpp_mutex_unlock(&mut);
-      __libcpp_condvar_broadcast(&cv);
-    });
+  auto flag_read = flag.load(memory_order_acquire);
 
-    __libcpp_relaxed_store(&flag, once_flag::_Pending);
-    __libcpp_mutex_unlock(&mut);
-    func(arg);
-    __libcpp_mutex_lock(&mut);
-    __libcpp_atomic_store(&flag, once_flag::_Complete, _AO_Release);
-    __libcpp_mutex_unlock(&mut);
-    __libcpp_condvar_broadcast(&cv);
-    guard.__complete();
-  } else {
-    __libcpp_mutex_unlock(&mut);
+WAIT:
+  while (flag_read == once_flag::_Pending) {
+    flag.wait(once_flag::_Pending, memory_order_acquire);
+    flag_read = flag.load(memory_order_acquire);
+  }
+
+  if (flag_read == once_flag::_Unset) {
+    once_flag::_State_type expected = once_flag::_Unset;
+    if (flag.compare_exchange_strong(expected, once_flag::_Pending, memory_order_acquire, memory_order_acquire)) {
+      auto guard = std::__make_exception_guard([&flag] {
+        flag.store(once_flag::_Unset, memory_order_release);
+        flag.notify_all();
+      });
+
+      func(arg);
+
+      flag.store(once_flag::_Complete, memory_order_release);
+      flag.notify_all();
+      guard.__complete();
+
+    } else {
+      if (expected == once_flag::_Pending) {
+        flag_read = expected;
+        goto WAIT;
+      }
+    }
   }
 
 #endif // !_LIBCPP_HAS_THREADS
