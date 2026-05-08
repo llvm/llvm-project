@@ -77,9 +77,9 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
 // Reduction within a block on the GPU.
 //
 // Template parameters:
-// - checkLiveness: Whether to check the liveness of the lanes. This is only
+// - checkLiveness: Whether to check the liveness of the lanes. This is
 //                  useful if gpu_block_reduce is called in a context where
-//                  L2 parallel regions are possible.
+//                  partial warps or L2 parallel regions are possible.
 // Parameters:
 // - reduce_data: Pointer to the reduction data
 // - shflFct:     Shuffle reduction function
@@ -302,7 +302,3 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
                                  ThreadId);
 }
 } // extern "C"
-
-void *__kmpc_reduction_get_fixed_buffer() {
-  return state::getKernelLaunchEnvironment().ReductionBuffer;
-}

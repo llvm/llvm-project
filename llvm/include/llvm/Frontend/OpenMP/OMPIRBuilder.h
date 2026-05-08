@@ -2165,7 +2165,7 @@ public:
   /// 4. Call the OpenMP runtime on the GPU to reduce across teams.
   ///    The last team writes the global reduced value to memory.
   ///
-  ///     ret = __kmpc_nvptx_teams_reduce_nowait(...,
+  ///     ret = __kmpc_gpu_teams_reduce_nowait(...,
   ///             reduceData, shuffleReduceFn, interWarpCpyFn,
   ///             scratchpadCopyFn, loadAndReduceFn)
   ///
@@ -2331,7 +2331,6 @@ public:
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
   /// \param GridValue          Optional GPU grid value.
-  /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
   /// \param SrcLocInfo         Source location information global.
   LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
@@ -2340,8 +2339,7 @@ public:
       ArrayRef<bool> IsByRef, bool IsNoWait = false,
       bool IsTeamsReduction = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
-      std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
-      Value *SrcLocInfo = nullptr);
+      std::optional<omp::GV> GridValue = {}, Value *SrcLocInfo = nullptr);
 
   // TODO: provide atomic and non-atomic reduction generators for reduction
   // operators defined by the OpenMP specification.

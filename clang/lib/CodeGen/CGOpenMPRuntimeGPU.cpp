@@ -1787,14 +1787,11 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
-  // ReductionBufNum is unused by the current teams-reduction runtime; the
-  // buffer length is resolved at kernel launch by the offload plugin. Ignore
-  // the deprecated -fopenmp-cuda-teams-reduction-recs-num value here.
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
           TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
-          CGF.getTarget().getGridValue(), /*ReductionBufNum=*/0, RTLoc));
+          CGF.getTarget().getGridValue(), RTLoc));
   CGF.Builder.restoreIP(AfterIP);
 }
 

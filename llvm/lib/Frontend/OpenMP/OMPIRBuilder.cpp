@@ -4517,7 +4517,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
     ArrayRef<bool> IsByRef, bool IsNoWait, bool IsTeamsReduction,
     ReductionGenCBKind ReductionGenCBKind, std::optional<omp::GV> GridValue,
-    unsigned ReductionBufNum, Value *SrcLocInfo) {
+    Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
   Builder.restoreIP(CodeGenIP);

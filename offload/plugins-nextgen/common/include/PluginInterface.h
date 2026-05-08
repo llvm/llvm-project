@@ -453,9 +453,8 @@ struct GenericKernelTy {
 
   /// Return a device pointer to a new kernel launch environment.
   ///
-  /// \p NumBlocks0 is the number of teams for this launch and is used to size
-  /// the teams-reduction buffer when the kernel environment's
-  /// ReductionBufferLength is 0 (i.e. unspecified at compile time).
+  /// \p NumBlocks0 is the number of blocks for this launch and is used to size
+  /// the reduction buffer.
   Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
       GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
       const DynBlockMemConfTy &DynBlockMemConf,
