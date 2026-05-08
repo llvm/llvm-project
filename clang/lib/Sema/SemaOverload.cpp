@@ -22,7 +22,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -45,7 +44,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cassert>
-#include <clang/Sema/SemaInternal.h>
 #include <cstddef>
 #include <cstdlib>
 #include <optional>
