@@ -29,11 +29,11 @@ class InprocBuiltinIOObject(abc.ABC):
     a text IO interface, but support reading and writing binary data too.
 
     The main reason that this exists is to solve the conflict that binary IO is
-    required for the daemonized testing project, as many tests involve tools
-    reading and writing binary files and piping binary data between themselves,
-    but for regular testing on z/OS, files must be opened in text mode so that
-    the character encoding is correct. So we need an IO object that can be both
-    a file open in text mode and a in-memory stream that can store binary data.
+    required for daemonized testing, as many tests involve tools reading and
+    writing binary files and piping binary data between themselves, but on z/OS
+    files must be opened in text mode so that the character encoding is correct.
+    So we need an IO object that can be both a file open in text mode and a
+    in-memory stream that can store binary data.
     """
 
     @abc.abstractmethod
