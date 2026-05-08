@@ -1,6 +1,8 @@
 # Transition of Lowering to HLFIR
 
-(This section was extracted from [HighLevelFIR.md‎](High-Level Fortran IR (HLFIR)) document: this information is no longer relevant to the current state of HLFIR lowering, but it could be useful as a historical reference.)
+(This section was extracted from [HighLevelFIR.md](High-Level Fortran IR (HLFIR))
+document: this information is no longer relevant to the current state of HLFIR
+lowering, but it could be useful as a historical reference.)
 
 ## Transition Plan
 
