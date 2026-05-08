@@ -37,8 +37,8 @@ struct NoDefaultView : std::ranges::view_base {
 using DefaultView = std::ranges::concat_view<DefaultConstructibleView, DefaultConstructibleView>;
 using DefaultViewWithDiffTypes =
     std::ranges::concat_view<DefaultConstructibleView, decltype(std::views::all(std::declval<std::vector<int>>()))>;
-using BadView1    = std::ranges::concat_view<DefaultConstructibleView, NoDefaultView>;
-using BadView2    = std::ranges::concat_view<NoDefaultView, NoDefaultView>;
+using BadView1 = std::ranges::concat_view<DefaultConstructibleView, NoDefaultView>;
+using BadView2 = std::ranges::concat_view<NoDefaultView, NoDefaultView>;
 
 constexpr bool test() {
   static_assert(std::is_default_constructible_v<DefaultView>);
