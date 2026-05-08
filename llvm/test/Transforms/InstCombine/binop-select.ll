@@ -274,7 +274,7 @@ define i32 @and_sel_op0_use(i1 %b) {
 ; CHECK-LABEL: @and_sel_op0_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 25, i32 0
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[B]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 25, i32 0

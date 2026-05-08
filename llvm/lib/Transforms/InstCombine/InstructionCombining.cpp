@@ -2309,8 +2309,27 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
   auto TryFoldOperand = [&](unsigned OpIdx,
                             bool IsOtherParamConst) -> Instruction * {
-    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx)))
-      return FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst);
+    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx))) {
+      // Fold binop(select(c, C, x), C2) => select(c, C3, binop(x, C2))
+      // when one arm and the other operand are both constants, even if
+      // the select has multiple uses. Also allow the non-constant arm
+      // to be a both-constant select when the binop feeds a cast.
+      bool MultiUse = false;
+      if (IsOtherParamConst && !Sel->hasOneUser()) {
+        Value *TV = Sel->getTrueValue(), *FV = Sel->getFalseValue();
+        if (isa<Constant>(TV) && isa<Constant>(FV)) {
+          MultiUse = true;
+        } else if (I.hasOneUse() && isa<CastInst>(*I.user_begin())) {
+          auto IsConstSel = [](Value *V) {
+            return match(V, m_Select(m_Value(), m_Constant(), m_Constant()));
+          };
+          MultiUse = (isa<Constant>(TV) && IsConstSel(FV)) ||
+                     (isa<Constant>(FV) && IsConstSel(TV));
+        }
+      }
+      return FoldOpIntoSelect(I, Sel, /*FoldWithMultiUse=*/MultiUse,
+                              !IsOtherParamConst);
+    }
     if (auto *PN = dyn_cast<PHINode>(I.getOperand(OpIdx)))
       return foldOpIntoPhi(I, PN);
     return nullptr;

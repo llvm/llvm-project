@@ -5,14 +5,9 @@ define i64 @pr80597(i1 %cond) {
 ; CHECK-LABEL: define i64 @pr80597(
 ; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[COND]], i64 0, i64 -12884901888
-; CHECK-NEXT:    [[SEXT1:%.*]] = add nsw i64 [[ADD]], 8836839514384105472
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SEXT1]], -34359738368
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[SEXT2:%.*]] = ashr exact i64 [[ADD]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = or disjoint i64 [[SEXT2]], 4418419761487020032
-; CHECK-NEXT:    ret i64 [[ASHR]]
+; CHECK-NEXT:    ret i64 poison
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i64 0
 ;

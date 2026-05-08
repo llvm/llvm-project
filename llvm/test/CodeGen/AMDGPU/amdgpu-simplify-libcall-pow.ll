@@ -1323,7 +1323,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_0.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP7]])
 ; NOPRELINK-NEXT:    [[TMP9:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = fcmp afn oeq <2 x float> [[TMP9]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP11:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 0.000000e+00, float -0.000000e+00>
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP11]])
 ; NOPRELINK-NEXT:    [[TMP13:%.*]] = fcmp afn une <2 x float> [[TMP12]], [[TMP11]]
 ; NOPRELINK-NEXT:    [[TMP14:%.*]] = and <2 x i1> [[TMP10]], [[TMP13]]
@@ -1384,7 +1384,7 @@ define float @test_pow_afn_f32_0.5(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 2.500000e-01
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -1427,7 +1427,7 @@ define float @test_pow_afn_f32_neg0.5(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -2.500000e-01
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -1472,7 +1472,7 @@ define <2 x float> @test_pow_afn_v2f32_0.5(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 2.500000e-01)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1515,7 +1515,7 @@ define <2 x float> @test_pow_afn_v2f32_neg0.5(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float -2.500000e-01)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1560,7 +1560,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_0.5(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 2.500000e-01, float -2.500000e-01>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1605,7 +1605,7 @@ define <3 x float> @test_pow_afn_v3f32_0.5_splat_undef(<3 x float> %x, <3 x floa
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <3 x float> @llvm.exp2.v3f32(<3 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <3 x float> @llvm.trunc.v3f32(<3 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <3 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <3 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <3 x i1> [[TMP1]], <3 x float> splat (float 5.000000e-01), <3 x float> <float 2.500000e-01, float poison, float 2.500000e-01>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <3 x float> @llvm.trunc.v3f32(<3 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <3 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <3 x i1> [[TMP8]], [[TMP11]]
@@ -1648,7 +1648,7 @@ define <3 x float> @test_pow_afn_v3f32_neg0.5_splat_undef(<3 x float> %x, <3 x f
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <3 x float> @llvm.exp2.v3f32(<3 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <3 x float> @llvm.trunc.v3f32(<3 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <3 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <3 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <3 x i1> [[TMP1]], <3 x float> splat (float 5.000000e-01), <3 x float> <float -2.500000e-01, float poison, float -2.500000e-01>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <3 x float> @llvm.trunc.v3f32(<3 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <3 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <3 x i1> [[TMP8]], [[TMP11]]
@@ -1731,7 +1731,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_1.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 5.000000e-01, float -5.000000e-01>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1805,7 +1805,7 @@ define float @test_pow_afn_f32_neg2.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -1.000000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -1860,7 +1860,7 @@ define <2 x float> @test_pow_afn_v2f32_neg2.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float -1.000000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1905,7 +1905,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_2.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 1.000000e+00, float -1.000000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1950,7 +1950,7 @@ define float @test_pow_afn_f32_3.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 1.500000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -1993,7 +1993,7 @@ define float @test_pow_afn_f32_neg3.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -1.500000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2038,7 +2038,7 @@ define <2 x float> @test_pow_afn_v2f32_3.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 1.500000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2081,7 +2081,7 @@ define <2 x float> @test_pow_afn_v2f32_neg3.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float -1.500000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2126,7 +2126,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_3.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 1.500000e+00, float -1.500000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2171,7 +2171,7 @@ define float @test_pow_afn_f32_3.99(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 1.995000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2214,7 +2214,7 @@ define float @test_pow_afn_f32_neg3.99(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -1.995000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2259,7 +2259,7 @@ define <2 x float> @test_pow_afn_v2f32_3.99(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 1.995000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2302,7 +2302,7 @@ define <2 x float> @test_pow_afn_v2f32_neg3.99(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float -1.995000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2347,7 +2347,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_3.99(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 1.995000e+00, float -1.995000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2392,7 +2392,7 @@ define float @test_pow_afn_f32_8.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 4.000000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2435,7 +2435,7 @@ define float @test_pow_afn_f32_neg8.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -4.000000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2480,7 +2480,7 @@ define <2 x float> @test_pow_afn_v2f32_8.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 4.000000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2523,7 +2523,7 @@ define <2 x float> @test_pow_afn_v2f32_neg8.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float -4.000000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2568,7 +2568,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_8.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 4.000000e+00, float -4.000000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2613,7 +2613,7 @@ define float @test_pow_afn_f32_12.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 6.000000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2656,7 +2656,7 @@ define float @test_pow_afn_f32_neg12.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -6.000000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2701,7 +2701,7 @@ define <2 x float> @test_pow_afn_v2f32_12.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 6.000000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2744,7 +2744,7 @@ define <2 x float> @test_pow_afn_v2f32_neg12.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float -6.000000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2789,7 +2789,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_12.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 6.000000e+00, float -6.000000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2834,7 +2834,7 @@ define float @test_pow_afn_f32_13.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 6.500000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2877,7 +2877,7 @@ define float @test_pow_afn_f32_neg13.0(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -6.500000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -2922,7 +2922,7 @@ define <2 x float> @test_pow_afn_v2f32_13.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 6.500000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -2965,7 +2965,7 @@ define <2 x float> @test_pow_afn_v2f32_neg13.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float -6.500000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -3010,7 +3010,7 @@ define <2 x float> @test_pow_afn_v2f32_13.0_15.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 6.500000e+00, float 7.500000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -3053,7 +3053,7 @@ define <2 x float> @test_pow_afn_v2f32_13.0_14.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 6.500000e+00, float 7.000000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -3096,7 +3096,7 @@ define <2 x float> @test_pow_afn_v2f32_14.0_16.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 7.000000e+00, float 8.000000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -3139,7 +3139,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_13.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 6.500000e+00, float -6.500000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -3184,7 +3184,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_13.0_minus_14.0(<2 x float> %x
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float -6.500000e+00, float -7.000000e+00>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -4254,7 +4254,7 @@ define float @test_pow_afn_f32__y_3(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 1.500000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -4308,7 +4308,7 @@ define float @test_pow_afn_f32__y_4(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 2.000000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -4362,7 +4362,7 @@ define float @test_pow_afn_f32_nnan_ninf__y_4_5(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call nnan ninf afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp nnan ninf afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan ninf afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 2.250000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call nnan ninf afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp nnan ninf afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -4400,7 +4400,7 @@ define float @test_pow_afn_f32__y_5(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float 2.500000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -4455,7 +4455,7 @@ define float @test_pow_afn_f32__y_neg5(float %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP1]], float 5.000000e-01, float -2.500000e+00
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -4557,7 +4557,7 @@ define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_4_5(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call nnan ninf afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp nnan ninf afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan ninf afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 2.250000e+00)
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call nnan ninf afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp nnan ninf afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -4595,7 +4595,7 @@ define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_4_5_undef(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call nnan ninf afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp nnan ninf afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = fmul nnan ninf afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 5.000000e-01), <2 x float> <float 2.250000e+00, float poison>
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call nnan ninf afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp nnan ninf afn une <2 x float> [[TMP10]], [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]

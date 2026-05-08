@@ -5,12 +5,8 @@ define noundef i32 @rust_155985(i32 noundef %n, i1 noundef zeroext %b) {
 ; CHECK-LABEL: @rust_155985(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[EQ]], i64 4294967297, i64 8589934593
-; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[B:%.*]], i64 0, i64 [[INNER]]
-; CHECK-NEXT:    [[TAG:%.*]] = trunc i64 [[OUTER]] to i1
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i64 [[OUTER]], 32
-; CHECK-NEXT:    [[PAYLOAD:%.*]] = trunc nuw nsw i64 [[SHIFT]] to i32
-; CHECK-NEXT:    [[FINAL:%.*]] = select i1 [[TAG]], i32 [[PAYLOAD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[EQ]], i32 1, i32 2
+; CHECK-NEXT:    [[FINAL:%.*]] = select i1 [[B:%.*]], i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[FINAL]]
 ;
 start:
