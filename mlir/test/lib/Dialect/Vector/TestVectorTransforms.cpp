@@ -178,10 +178,10 @@ struct TestVectorContractLoweringComposition final
             return success(!parentFunctionNameContains(op, "dot_reject"));
           },
           PatternBenefit(3));
-      populateVectorContractToOuterProductPatterns(
-          patterns, defaultFilter, PatternBenefit(2));
-      populateVectorContractGenericLoweringPatterns(
-          patterns, defaultFilter, PatternBenefit(1));
+      populateVectorContractToOuterProductPatterns(patterns, defaultFilter,
+                                                   PatternBenefit(2));
+      populateVectorContractGenericLoweringPatterns(patterns, defaultFilter,
+                                                    PatternBenefit(1));
     } else if (mode == "generic") {
       populateVectorContractGenericLoweringPatterns(patterns);
     } else if (mode == "parallel-arith") {
