@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUUnitTests.h"
+#include "AMDGPUGenSubtargetInfo.inc"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -14,24 +15,16 @@
 #include "llvm/TargetParser/TargetParser.h"
 #include "gtest/gtest.h"
 
-#include "AMDGPUGenSubtargetInfo.inc"
-
 using namespace llvm;
 
-std::once_flag flag;
-
-void InitializeAMDGPUTarget() {
-  std::call_once(flag, []() {
-    LLVMInitializeAMDGPUTargetInfo();
-    LLVMInitializeAMDGPUTarget();
-    LLVMInitializeAMDGPUTargetMC();
-  });
+void initializeAMDGPUTarget() {
+  LLVMInitializeAMDGPUTargetInfo();
+  LLVMInitializeAMDGPUTarget();
+  LLVMInitializeAMDGPUTargetMC();
 }
 
-std::unique_ptr<const GCNTargetMachine>
-llvm::createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
-  InitializeAMDGPUTarget();
-
+std::unique_ptr<GCNTargetMachine>
+createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   Triple TT(TStr);
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
@@ -180,7 +173,7 @@ static void testDynamicVGPRLimits(StringRef CPUName, StringRef FS,
   testWithBlockSize(32);
 }
 
-TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
+TEST_F(AMDGPUTestBase, TestVGPRLimitsPerOccupancy) {
   auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST,
                  unsigned DynamicVGPRBlockSize) {
     unsigned MaxVGPRNum = ST.getAddressableNumVGPRs(DynamicVGPRBlockSize);
@@ -240,7 +233,7 @@ static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
   EXPECT_EQ(12u, Range.second) << CPUName << ' ' << FS;
 }
 
-TEST(AMDGPU, TestOccupancyAbsoluteLimits) {
+TEST_F(AMDGPUTestBase, TestOccupancyAbsoluteLimits) {
   // CPUName, Features, DynamicVGPRBlockSize; Expected MinOcc, MaxOcc, MaxVGPRs
   testAbsoluteLimits("gfx1200", "+wavefrontsize32", 0, 1, 16, 256);
   testAbsoluteLimits("gfx1200", "+wavefrontsize32", 16, 1, 16, 128);
@@ -251,7 +244,7 @@ static const char *printSubReg(const TargetRegisterInfo &TRI, unsigned SubReg) {
   return SubReg ? TRI.getSubRegIndexName(SubReg) : "<none>";
 }
 
-TEST(AMDGPU, TestReverseComposeSubRegIndices) {
+TEST_F(AMDGPUTestBase, TestReverseComposeSubRegIndices) {
   auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
   if (!TM)
     return;
@@ -327,7 +320,7 @@ TEST(AMDGPU, TestReverseComposeSubRegIndices) {
   }
 }
 
-TEST(AMDGPU, TestGetNamedOperandIdx) {
+TEST_F(AMDGPUTestBase, TestGetNamedOperandIdx) {
   std::unique_ptr<const GCNTargetMachine> TM =
       createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
   if (!TM)
