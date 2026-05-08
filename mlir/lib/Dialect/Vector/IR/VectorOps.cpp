@@ -5625,11 +5625,54 @@ struct TransferReadAfterWriteToBroadcast
     return success();
   }
 };
+/// Canonicalize a rank-1, single-element vector transfer so that its
+/// permutation map is the minor identity.
+///
+/// When the vector type is `vector<1xT>`, the permutation map is irrelevant
+/// to which element is accessed: the single vector lane has iteration offset 0,
+/// so the element is always at `indices` regardless of which source dimension
+/// the map points at. Replacing the map with the minor identity unblocks
+/// lowering to vector.load / vector.store.
+template <typename TransferOp>
+struct CanonicalizeSize1TransferPermutationMap final
+    : OpRewritePattern<TransferOp> {
+  using OpRewritePattern<TransferOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TransferOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType vecType = op.getVectorType();
+    if (vecType.getRank() != 1 || vecType.getShape()[0] != 1)
+      return failure();
+
+    AffineMap map = op.getPermutationMap();
+    if (map.isMinorIdentity())
+      return failure();
+
+    int64_t srcRank = op.getShapedType().getRank();
+    AffineMap minorIdentity =
+        AffineMap::getMinorIdentityMap(srcRank, 1, rewriter.getContext());
+
+    if constexpr (std::is_same_v<TransferOp, vector::TransferReadOp>) {
+      rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+          op, vecType, op.getBase(), op.getIndices(),
+          AffineMapAttr::get(minorIdentity), op.getPadding(), op.getMask(),
+          op.getInBoundsAttr());
+    } else {
+      rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+          op, op.getVector(), op.getBase(), op.getIndices(),
+          AffineMapAttr::get(minorIdentity), op.getMask(),
+          op.getInBoundsAttr());
+    }
+    return success();
+  }
+};
+
 } // namespace
 
 void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add<TransferReadAfterWriteToBroadcast>(context);
+  results.add<TransferReadAfterWriteToBroadcast,
+              CanonicalizeSize1TransferPermutationMap<TransferReadOp>>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
@@ -6127,7 +6170,9 @@ public:
 
 void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<FoldWaw, SwapExtractSliceOfTransferWrite>(context);
+  results.add<FoldWaw, SwapExtractSliceOfTransferWrite,
+              CanonicalizeSize1TransferPermutationMap<TransferWriteOp>>(
+      context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
