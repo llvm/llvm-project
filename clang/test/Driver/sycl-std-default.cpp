@@ -1,6 +1,6 @@
 // Tests that SYCL defaults to C++17 when no -std= is specified
 
-// RUN: %clangxx -### -fsycl -c %s 2>&1 | FileCheck %s --check-prefixes=CHECK-DEVICE,CHECK-HOST
+// RUN: %clangxx -### -fsycl -c %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefixes=CHECK-DEVICE,CHECK-HOST
 
 // CHECK-DEVICE: "-cc1"{{.*}} "-fsycl-is-device"
 // CHECK-DEVICE-SAME: "-std=c++17"
@@ -8,7 +8,7 @@
 // CHECK-HOST-SAME: "-std=c++17"
 
 // Test that explicit -std= overrides the default
-// RUN: %clangxx -### -fsycl -std=c++20 -c %s 2>&1 | FileCheck %s --check-prefixes=CHECK-OVERRIDE-DEVICE,CHECK-OVERRIDE-HOST
+// RUN: %clangxx -### -fsycl -std=c++20 -c %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefixes=CHECK-OVERRIDE-DEVICE,CHECK-OVERRIDE-HOST
 
 // CHECK-OVERRIDE-DEVICE: "-cc1"{{.*}} "-fsycl-is-device"
 // CHECK-OVERRIDE-DEVICE-SAME: "-std=c++20"
@@ -34,7 +34,7 @@
 // CHECK-C99-ERROR: error: invalid argument '-std=c99' not allowed with '-fsycl'
 
 // Test on Windows with clang-cl (MSVC mode)
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### -fsycl -- %s 2>&1 | FileCheck %s --check-prefixes=CHECK-MSVC-DEVICE,CHECK-MSVC-HOST
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### -fsycl -- %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefixes=CHECK-MSVC-DEVICE,CHECK-MSVC-HOST
 
 // CHECK-MSVC-DEVICE: "-cc1"{{.*}} "-fsycl-is-device"
 // CHECK-MSVC-DEVICE-SAME: "-std=c++17"
@@ -42,7 +42,7 @@
 // CHECK-MSVC-HOST-SAME: "-std=c++17"
 
 // Test that /std: override works on Windows
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### -fsycl /std:c++20 -- %s 2>&1 | FileCheck %s --check-prefixes=CHECK-MSVC-OVERRIDE-DEVICE,CHECK-MSVC-OVERRIDE-HOST
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### -fsycl /std:c++20 -- %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefixes=CHECK-MSVC-OVERRIDE-DEVICE,CHECK-MSVC-OVERRIDE-HOST
 
 // CHECK-MSVC-OVERRIDE-DEVICE: "-cc1"{{.*}} "-fsycl-is-device"
 // CHECK-MSVC-OVERRIDE-DEVICE-SAME: "-std=c++20"

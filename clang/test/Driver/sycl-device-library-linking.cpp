@@ -3,7 +3,7 @@
 // RUN: %clangxx -fsycl %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-DEVICE-LIBS
 
-// RUN: %clangxx -fsycl --no-offloadlib %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
+// RUN: %clangxx -fsycl --no-offloadlib %s -### 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-NO-DEVICE-LIBS
 
 // CHECK-DEVICE-LIBS: "-cc1" "-triple" "spirv64-unknown-unknown"

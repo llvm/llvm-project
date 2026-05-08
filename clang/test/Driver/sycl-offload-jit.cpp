@@ -1,9 +1,9 @@
 /// Perform several driver tests for SYCL offloading for JIT
 
 /// Check the phases graph with -fsycl. Use of -fsycl enables offload
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl %s --no-offloadlib 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-PHASES %s
-// RUN: %clang_cl -ccc-print-phases --target=x86_64-pc-windows-msvc -fsycl -- %s 2>&1 \
+// RUN: %clang_cl -ccc-print-phases --target=x86_64-pc-windows-msvc -fsycl --no-offloadlib -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-PHASES %s
 // CHK-PHASES: 0: input, "[[INPUT:.+\.cpp]]", c++, (host-sycl)
 // CHK-PHASES-NEXT: 1: preprocessor, {0}, c++-cpp-output, (host-sycl)
@@ -21,7 +21,7 @@
 
 /// Check expected default values for device compilation when using -fsycl as
 /// well as llvm-offload-binary inputs.
-// RUN: %clang -### -fsycl -c --target=x86_64-unknown-linux-gnu %s 2>&1 \
+// RUN: %clang -### -fsycl -c --target=x86_64-unknown-linux-gnu %s --sysroot=%S/Inputs/SYCL 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-DEVICE-TRIPLE %s
 // CHK-DEVICE-TRIPLE: "-cc1"{{.*}} "-triple" "spirv64-unknown-unknown"
 // CHK-DEVICE-TRIPLE-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"

@@ -2,7 +2,7 @@
 
 // Verify that -Xarch_spirv64 forwards options to the SYCL device compilation
 // and clang-linker-wrapper call.
-// RUN: %clang -fsycl --offload-targets=spirv64-unknown-unknown -Xarch_spirv64 -O3 -### %s 2>&1 \
+// RUN: %clang -fsycl --offload-targets=spirv64-unknown-unknown -Xarch_spirv64 -O3 -### %s --sysroot=%S/Inputs/SYCL 2>&1 \
 // RUN: | FileCheck -check-prefix=SYCL-DEVICE-O3 %s
 // SYCL-DEVICE-O3: "-triple" "spirv64-unknown-unknown" "-aux-triple" "{{.*}}" "-O3"{{.*}} "-fsycl-is-device"
 // SYCL-DEVICE-O3: {{"[^"]*clang-linker-wrapper[^"]*".* "--device-compiler=spirv64-unknown-unknown=-O3"}}
