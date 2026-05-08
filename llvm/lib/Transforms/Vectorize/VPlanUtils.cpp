@@ -260,10 +260,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     });
   if (match(V, m_Intrinsic<Intrinsic::abs>(m_VPValue(LHSVal), m_VPValue())))
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
-      // is_int_min_poison only makes this call poison on INT_MIN; it does
-      // not prove the input is never INT_MIN, so forwarding it as IsNSW
-      // would attach a no-signed-wrap fact to the SCEV that is unsound
-      // for any other use of the same expression.
+      // is_int_min_poison is local to this intrinsic: poison on INT_MIN is
+      // not proof that the input is never INT_MIN, nor that poison reaches
+      // UB. Do not translate it to SCEV's global IsNSW flag.
       return SE.getAbsExpr(Ops[0], /*IsNSW=*/false);
     });
 
