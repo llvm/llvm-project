@@ -91,13 +91,14 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
       .Default([&](Type t) -> Operation * { return nullptr; });
 }
 
-static TypedAttr getScalarConstantAttrFromDenseSplat(Value input) {
+static std::optional<TypedAttr>
+getScalarConstantAttrFromDenseSplat(Value input) {
   DenseElementsAttr splatAttr;
   matchPattern(input, m_Constant<DenseElementsAttr>(&splatAttr));
   if (!splatAttr || !splatAttr.isSplat())
-    return {};
+    return std::nullopt;
 
-  return dyn_cast<TypedAttr>(splatAttr.getSplatValue<Attribute>());
+  return splatAttr.getSplatValue<TypedAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2134,14 +2135,6 @@ LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
     return success();
   }
 
-  if (getInput().getType() == getInit().getType()) {
-    auto splatAttr = dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput());
-    if (splatAttr && splatAttr.isSplat()) {
-      result.push_back(getInput());
-      return success();
-    }
-  }
-
   return failure();
 }
 
@@ -2178,17 +2171,15 @@ struct FoldTransposeSplatConstant : OpRewritePattern<linalg::TransposeOp> {
     if (!transposeOp.hasPureTensorSemantics())
       return failure();
 
-    TypedAttr splatValue =
+    auto splatValue =
         getScalarConstantAttrFromDenseSplat(transposeOp.getInput());
-    if (!splatValue)
+    if (!splatValue.has_value())
       return failure();
 
     auto resultType =
         cast<RankedTensorType>(transposeOp.getResult()[0].getType());
-    if (!resultType.hasStaticShape())
-      return failure();
 
-    auto resultAttr = DenseElementsAttr::get(resultType, splatValue);
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue.value());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(transposeOp, resultType,
                                                    resultAttr);
     return success();
