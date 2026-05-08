@@ -87,7 +87,7 @@ public:
 
   /// Returns true if fd has an explicit file action, or is the destination of a
   /// duplicate action.
-  const bool IsFDRedirected(int fd) const;
+  bool IsFDRedirected(int fd) const;
 
   Flags &GetFlags() { return m_flags; }
 

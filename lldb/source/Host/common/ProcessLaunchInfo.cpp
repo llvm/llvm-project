@@ -138,7 +138,7 @@ const FileAction *ProcessLaunchInfo::GetFileActionForFD(int fd) const {
   return nullptr;
 }
 
-const bool ProcessLaunchInfo::IsFDRedirected(int fd) const {
+bool ProcessLaunchInfo::IsFDRedirected(int fd) const {
   if (GetFileActionForFD(fd))
     return true;
   for (size_t i = 0; i < GetNumFileActions(); ++i) {
