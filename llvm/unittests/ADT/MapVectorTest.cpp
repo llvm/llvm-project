@@ -482,6 +482,26 @@ TEST(SmallMapVectorSmallTest, NonCopyable) {
   ASSERT_EQ(*MV.find(2)->second, 2);
 }
 
+TEST(SmallMapVectorSmallTest, UsesDenseMapInfoEquality) {
+  SmallMapVector<A, int, 4> MV;
+
+  auto R0 = MV.try_emplace(A(0), 1);
+  EXPECT_TRUE(R0.second);
+
+  auto R1 = MV.try_emplace(A(0), 2);
+  EXPECT_FALSE(R1.second);
+  EXPECT_EQ(R1.first, R0.first);
+  EXPECT_EQ(R1.first->second, 1);
+  EXPECT_EQ(MV.size(), 1u);
+
+  EXPECT_TRUE(MV.contains(A(0)));
+  EXPECT_EQ(MV.find(A(0)), MV.begin());
+  EXPECT_EQ(MV.lookup(A(0)), 1);
+  EXPECT_EQ(MV.at(A(0)), 1);
+  EXPECT_EQ(MV.erase(A(0)), 1u);
+  EXPECT_TRUE(MV.empty());
+}
+
 TEST(SmallMapVectorLargeTest, insert_pop) {
   SmallMapVector<int, int, 1> MV;
   std::pair<SmallMapVector<int, int, 1>::iterator, bool> R;
