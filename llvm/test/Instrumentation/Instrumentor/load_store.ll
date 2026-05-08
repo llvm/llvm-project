@@ -197,9 +197,9 @@ define noundef x86_fp80 @_Z22store_load_long_doublePe(ptr captures(none) noundef
 ; CHECK-SAME: ptr noundef captures(none) initializes((0, 10)) [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca x86_fp80, align 16
-; CHECK-NEXT:    store x86_fp80 0xK40028000000000000000, ptr [[TMP0]], align 16
+; CHECK-NEXT:    store x86_fp80 8.000000e+00, ptr [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__instrumentor_pre_store_ind(ptr [[A]], i32 0, ptr [[TMP0]], i64 10, i64 16, i32 4, i32 0, i8 1, i8 0)
-; CHECK-NEXT:    store x86_fp80 0xK40028000000000000000, ptr [[TMP1]], align 16
+; CHECK-NEXT:    store x86_fp80 8.000000e+00, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_post_store_ind(ptr [[A]], i32 0, ptr [[TMP0]], i64 10, i64 16, i32 4, i32 0, i8 1, i8 0)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__instrumentor_pre_load(ptr [[ARRAYIDX]], i32 0, i64 10, i64 16, i32 4, i32 0, i8 1, i8 0)

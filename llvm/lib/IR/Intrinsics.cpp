@@ -554,22 +554,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Overloaded:
   case IITDescriptor::VecOfAnyPtrsToElt:
     return OverloadTys[D.getOverloadIndex()];
-  case IITDescriptor::Extend: {
-    Type *Ty = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-      return VectorType::getExtendedElementVectorType(VTy);
-
-    return IntegerType::get(Context, 2 * cast<IntegerType>(Ty)->getBitWidth());
-  }
-  case IITDescriptor::Trunc: {
-    Type *Ty = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-      return VectorType::getTruncatedElementVectorType(VTy);
-
-    IntegerType *ITy = cast<IntegerType>(Ty);
-    assert(ITy->getBitWidth() % 2 == 0);
-    return IntegerType::get(Context, ITy->getBitWidth() / 2);
-  }
+  case IITDescriptor::Extend:
+    return OverloadTys[D.getOverloadIndex()]->getExtendedType();
+  case IITDescriptor::Trunc:
+    return OverloadTys[D.getOverloadIndex()]->getTruncatedType();
   case IITDescriptor::Subdivide2:
   case IITDescriptor::Subdivide4: {
     Type *Ty = OverloadTys[D.getOverloadIndex()];
@@ -960,14 +948,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
-      NewTy = VectorType::getExtendedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
-      NewTy = IntegerType::get(ITy->getContext(), 2 * ITy->getBitWidth());
-    else
-      return true;
-
+    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getExtendedType();
     return Ty != NewTy;
   }
   case IITDescriptor::Trunc: {
@@ -975,14 +956,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
-      NewTy = VectorType::getTruncatedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
-      NewTy = IntegerType::get(ITy->getContext(), ITy->getBitWidth() / 2);
-    else
-      return true;
-
+    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getTruncatedType();
     return Ty != NewTy;
   }
   case IITDescriptor::OneNthEltsVec: {

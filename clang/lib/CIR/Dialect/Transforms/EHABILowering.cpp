@@ -11,21 +11,26 @@
 // C++ ABI is supported.
 //
 // The Itanium ABI lowering performs these transformations:
-//   - cir.eh.initiate      → cir.eh.inflight_exception (landing pad)
-//   - cir.eh.dispatch      → cir.eh.typeid + cir.cmp + cir.brcond chains
-//   - cir.begin_cleanup    → (removed)
-//   - cir.end_cleanup      → (removed)
-//   - cir.begin_catch      → call to __cxa_begin_catch
-//   - cir.end_catch        → call to __cxa_end_catch
-//   - cir.eh.terminate     → call to __clang_call_terminate + unreachable
-//   - cir.resume           → cir.resume.flat
-//   - !cir.eh_token values → (!cir.ptr<!void>, !u32i) value pairs
+//   - cir.eh.initiate            → cir.eh.inflight_exception (landing pad)
+//   - cir.eh.dispatch            → cir.eh.typeid + cir.cmp + cir.brcond chains
+//   - cir.begin_cleanup          → (removed)
+//   - cir.end_cleanup            → (removed)
+//   - cir.begin_catch            → call to __cxa_begin_catch
+//   - cir.end_catch              → call to __cxa_end_catch
+//   - cir.eh.terminate           → call to __clang_call_terminate + unreachable
+//   - cir.resume                 → cir.resume.flat
+//   - !cir.eh_token values       → (!cir.ptr<!void>, !u32i) value pairs
+//   - cir.construct_catch_param  → __cxa_get_exception_ptr + inlined
+//                                  catch-copy thunk body
 //   - personality function set on functions requiring EH
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRTransformUtils.h"
 #include "PassDetail.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/PatternMatch.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -117,19 +122,28 @@ private:
   cir::FuncOp personalityFunc;
   cir::FuncOp beginCatchFunc;
   cir::FuncOp endCatchFunc;
+  cir::FuncOp getExceptionPtrFunc;
   cir::FuncOp clangCallTerminateFunc;
+
+  DenseMap<mlir::StringAttr, cir::FuncOp> catchCopyThunks;
 
   constexpr const static ::llvm::StringLiteral kGxxPersonality =
       "__gxx_personality_v0";
 
   void ensureRuntimeDecls(mlir::Location loc);
   void ensureClangCallTerminate(mlir::Location loc);
+  mlir::Block *buildTerminateBlock(cir::FuncOp funcOp, mlir::Location loc);
+  mlir::FailureOr<cir::FuncOp>
+  resolveCatchCopyThunk(cir::ConstructCatchParamOp op);
   mlir::LogicalResult lowerFunc(cir::FuncOp funcOp);
-  void lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
-                       SmallVectorImpl<mlir::Operation *> &deadOps);
+  mlir::LogicalResult
+  lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
+                  SmallVectorImpl<mlir::Operation *> &deadOps);
   void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
                      mlir::Value typeId,
                      SmallVectorImpl<mlir::Operation *> &deadOps);
+  mlir::LogicalResult lowerConstructCatchParam(cir::ConstructCatchParamOp op,
+                                               mlir::Value exnPtr);
   void lowerInitCatchParam(cir::InitCatchParamOp op);
 };
 
@@ -173,6 +187,13 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
     auto endCatchFuncTy = cir::FuncType::get({}, voidType, /*isVarArg=*/false);
     endCatchFunc =
         getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_end_catch", endCatchFuncTy);
+  }
+
+  if (!getExceptionPtrFunc) {
+    auto getExceptionPtrFuncTy =
+        cir::FuncType::get({voidPtrType}, u8PtrType, /*isVarArg=*/false);
+    getExceptionPtrFunc = getOrCreateRuntimeFuncDecl(
+        mod, loc, "__cxa_get_exception_ptr", getExceptionPtrFuncTy);
   }
 }
 
@@ -231,6 +252,26 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
   clangCallTerminateFunc = funcOp;
 }
 
+/// Create a terminate landing pad block at the end of the specified function.
+mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
+                                                    mlir::Location loc) {
+  assert(clangCallTerminateFunc &&
+         "ensureClangCallTerminate must run before buildTerminateBlock");
+  mlir::Region &body = funcOp.getRegion();
+  mlir::Block *terminateBlock = builder.createBlock(&body, body.end());
+  auto inflight = cir::EhInflightOp::create(
+      builder, loc, /*cleanup=*/false, /*catch_all=*/true,
+      /*catch_type_list=*/mlir::ArrayAttr{});
+  auto terminateCall = cir::CallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(clangCallTerminateFunc),
+      voidType, mlir::ValueRange{inflight.getExceptionPtr()});
+  terminateCall.setNothrowAttr(builder.getUnitAttr());
+  terminateCall->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                         builder.getUnitAttr());
+  cir::UnreachableOp::create(builder, loc);
+  return terminateBlock;
+}
+
 /// Lower all EH operations in a single function.
 mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   if (funcOp.isDeclaration())
@@ -263,7 +304,8 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   EhTokenMap ehTokenMap;
   SmallVector<mlir::Operation *> deadOps;
   for (cir::EhInitiateOp initiateOp : initiateOps)
-    lowerEhInitiate(initiateOp, ehTokenMap, deadOps);
+    if (mlir::failed(lowerEhInitiate(initiateOp, ehTokenMap, deadOps)))
+      return mlir::failure();
 
   // Erase operations that were deferred during per-initiate processing
   // (dispatch ops whose catch types were read by multiple initiates).
@@ -316,7 +358,7 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
 ///
 /// \p ehTokenMap is shared across all initiates in the function so that block
 /// arguments reachable from multiple sibling initiates are registered once.
-void ItaniumEHLowering::lowerEhInitiate(
+mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
     cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
     SmallVectorImpl<mlir::Operation *> &deadOps) {
   mlir::Value rootToken = initiateOp.getEhToken();
@@ -411,6 +453,10 @@ void ItaniumEHLowering::lowerEhInitiate(
                                   cir::CastKind::bitcast, callOp.getResult());
         op.getExnPtr().replaceAllUsesWith(castResult);
         op.erase();
+      } else if (auto op = mlir::dyn_cast<cir::ConstructCatchParamOp>(user)) {
+        auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
+        if (mlir::failed(lowerConstructCatchParam(op, exnPtr)))
+          return mlir::failure();
       } else if (auto op = mlir::dyn_cast<cir::EhDispatchOp>(user)) {
         // Read catch types from the dispatch and set them on the inflight op.
         mlir::ArrayAttr catchTypes = op.getCatchTypesAttr();
@@ -472,6 +518,7 @@ void ItaniumEHLowering::lowerEhInitiate(
   }
 
   initiateOp.erase();
+  return mlir::success();
 }
 
 /// Lower a cir.eh.dispatch by creating a comparison chain in new blocks.
@@ -538,6 +585,105 @@ void ItaniumEHLowering::lowerDispatch(
   deadOps.push_back(dispatch);
 }
 
+mlir::FailureOr<cir::FuncOp>
+ItaniumEHLowering::resolveCatchCopyThunk(cir::ConstructCatchParamOp op) {
+  mlir::FlatSymbolRefAttr thunkRef = op.getCopyFnAttr();
+  mlir::StringAttr thunkName = thunkRef.getAttr();
+  auto cached = catchCopyThunks.find(thunkName);
+  if (cached != catchCopyThunks.end())
+    return cached->second;
+
+  cir::FuncOp thunk = mod.lookupSymbol<cir::FuncOp>(thunkRef);
+  if (!thunk)
+    return op.emitError("could not resolve catch-copy thunk symbol");
+  assert(thunk->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()) &&
+         "verifier should have rejected non-thunk catch-copy reference");
+  if (thunk.isDeclaration())
+    return op.emitError("catch-copy thunk has no body to inline");
+
+  mlir::Region &thunkRegion = thunk.getRegion();
+  if (!llvm::hasSingleElement(thunkRegion))
+    return op.emitError("multi-block catch-copy thunks are NYI");
+
+  mlir::Block &thunkEntry = thunkRegion.front();
+  assert(thunkEntry.getNumArguments() == 2 &&
+         "catch-copy thunk must have exactly two parameters");
+  if (!mlir::isa<cir::ReturnOp>(thunkEntry.getTerminator()))
+    return op.emitError("catch-copy thunk must end in cir.return");
+
+  catchCopyThunks[thunkName] = thunk;
+  return thunk;
+}
+
+/// Lower a cir.construct_catch_param into the Itanium-specific sequence
+/// that runs before `__cxa_begin_catch` to bind the catch parameter to the
+/// in-flight exception.
+mlir::LogicalResult
+ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
+                                            mlir::Value exnPtr) {
+  if (op.getKind() != cir::InitCatchKind::NonTrivialCopy)
+    return op.emitError(
+        "ConstructCatchParam: only non_trivial_copy is supported");
+
+  mlir::Location loc = op.getLoc();
+  ensureRuntimeDecls(loc);
+  ensureClangCallTerminate(loc);
+
+  mlir::Value paramAddr = op.getParamAddr();
+  cir::PointerType paramAddrType =
+      mlir::cast<cir::PointerType>(paramAddr.getType());
+
+  // Call __cxa_get_exception_ptr to get the in-flight exception.
+  builder.setInsertionPoint(op);
+  cir::CallOp getExnCall = cir::CallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(getExceptionPtrFunc),
+      u8PtrType, mlir::ValueRange{exnPtr});
+  getExnCall.setNothrowAttr(builder.getUnitAttr());
+  mlir::Value adjusted =
+      cir::CastOp::create(builder, loc, paramAddrType, cir::CastKind::bitcast,
+                          getExnCall.getResult());
+
+  // Get the thunk function definition.
+  mlir::FailureOr<cir::FuncOp> thunkOr = resolveCatchCopyThunk(op);
+  if (mlir::failed(thunkOr))
+    return mlir::failure();
+  cir::FuncOp thunk = *thunkOr;
+
+  // This is also verified by resolveCatchCopyThunk, but the loop below is
+  // where the constraint is required so let's assert it again here.
+  assert(llvm::hasSingleElement(thunk.getRegion()) &&
+         "multi-block catch-copy thunks are NYI");
+
+  // Clone the thunk function to perform the copy.
+  mlir::Block &thunkEntry = thunk.getRegion().front();
+  mlir::IRMapping mapping;
+  mapping.map(thunkEntry.getArgument(0), paramAddr);
+  mapping.map(thunkEntry.getArgument(1), adjusted);
+  llvm::SmallVector<cir::CallOp> throwingCalls;
+  for (mlir::Operation &thunkOp : thunkEntry.without_terminator()) {
+    mlir::Operation *cloned = builder.clone(thunkOp, mapping);
+    if (cir::CallOp callOp = mlir::dyn_cast<cir::CallOp>(cloned))
+      if (!callOp.getNothrow())
+        throwingCalls.push_back(callOp);
+  }
+  op.erase();
+
+  if (throwingCalls.empty())
+    return mlir::success();
+
+  // All calls in the copy (which is usually just a single call) need to
+  // unwind to a terminate block if it throws an exception.
+  mlir::IRRewriter rewriter(builder);
+  mlir::Block *terminateBlock = nullptr;
+  for (cir::CallOp call : throwingCalls) {
+    if (!terminateBlock)
+      terminateBlock = buildTerminateBlock(call->getParentOfType<cir::FuncOp>(),
+                                           call.getLoc());
+    cir::replaceCallWithTryCall(call, terminateBlock, call.getLoc(), rewriter);
+  }
+  return mlir::success();
+}
+
 /// Lower a cir.init_catch_param into the Itanium-specific sequence that
 /// materializes the catch parameter's local variable from the exception
 /// pointer returned by __cxa_begin_catch. The shape of the lowering
@@ -554,8 +700,9 @@ void ItaniumEHLowering::lowerDispatch(
 ///   - Objc: Handle pointer representation with ObjCLifetime.
 ///   - TrivialCopy: copy the exception
 ///     object's bytes into the alloca via cir.copy.
-///   - NonTrivialCopy: copy the exception
-///     object's bytes into the alloca via copy constructor.
+///   - NonTrivialCopy: the construction was already performed by the
+///     companion `cir.construct_catch_param` before `cir.begin_catch`, so
+///     this lowering is a no-op.
 ///
 void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
   builder.setInsertionPoint(op);
@@ -591,10 +738,10 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
     cir::CopyOp::create(builder, loc, paramAddr, srcPtr, {}, {});
     break;
   }
-  case InitCatchKind::NonTrivialCopy: {
-    llvm_unreachable("InitCatchParam: non-trivial-copy is NYI");
+  case InitCatchKind::NonTrivialCopy:
+    // The non-trivial copy was performed by the matching
+    // cir.construct_catch_param before cir.begin_catch.
     break;
-  }
   case InitCatchKind::Scalar: {
     // Scalar by-value catch (integer, float, complex, etc.). The begin_catch
     // result points into the exception object; load the value through a
@@ -630,6 +777,23 @@ struct CIREHABILoweringPass
   void runOnOperation() override;
 };
 
+/// Erase all catch-init thunks after the EHABI lowering. CIRGen emits a thunk
+/// for every `cir.construct_catch_param` op, but those uses should all have
+/// been replaced during the lowering.
+static void eraseCatchCopyThunks(mlir::ModuleOp mod) {
+  llvm::StringRef catchHelperAttr =
+      cir::CIRDialect::getCatchCopyThunkAttrName();
+  for (cir::FuncOp f : llvm::make_early_inc_range(mod.getOps<cir::FuncOp>())) {
+    if (!f->hasAttr(catchHelperAttr))
+      continue;
+    // This is an expensive check, so we need to rely on the implementation
+    // to have done the right thing.
+    assert(mlir::SymbolTable::symbolKnownUseEmpty(f, mod) &&
+           "catch-init helper has remaining users");
+    f.erase();
+  }
+}
+
 void CIREHABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
 
@@ -658,6 +822,9 @@ void CIREHABILoweringPass::runOnOperation() {
 
   if (mlir::failed(lowering->run()))
     return signalPassFailure();
+
+  // Sweep away any the thunk functions. They've been inlined to all users now.
+  eraseCatchCopyThunks(mod);
 }
 
 } // namespace
