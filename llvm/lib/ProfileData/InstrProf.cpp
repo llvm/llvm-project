@@ -1049,6 +1049,10 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
                                    InstrProfSymtab *ValueMap) {
   // Remap values.
   std::vector<InstrProfValueData> RemappedVD;
+  // Zero values might occur multiple times (e.g., multiple functions that
+  // cannot be remapped). Deduplicate them to enforce the variant that
+  // values are unique, which allows passes to make some simplifying
+  // assumptions.
   std::optional<size_t> ZeroIndex = std::nullopt;
   RemappedVD.reserve(VData.size());
   for (const auto &V : VData) {
