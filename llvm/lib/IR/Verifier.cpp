@@ -6006,13 +6006,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         AttributeSet AS = AttributeSet().addAttribute(Context, Kind);
         AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
             Call.getOperand(Elem.Begin)->getType(), AS);
-        for (Attribute Attr : AS) {
-          if (!Attr.isStringAttribute() &&
-              IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
-            CheckFailed("Attribute '" + Attr.getAsString() +
-                            "' applied to incompatible type!",
-                        Call.getOperand(Elem.Begin));
-          }
+        if (IncompatibleAttrs.contains(AS.begin()->getKindAsEnum())) {
+          CheckFailed("Attribute '" + AS.begin()->getAsString() +
+                          "' applied to incompatible type!",
+                      Call.getOperand(Elem.Begin));
         }
       }
 
