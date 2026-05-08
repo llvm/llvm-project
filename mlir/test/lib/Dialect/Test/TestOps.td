@@ -2639,6 +2639,7 @@ def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
                        OptionalAttr<I64Attr>:$dim,
                        DefaultValuedAttr<StrAttr, "\"EQ\"">:$type,
                        UnitAttr:$constant,
+                       UnitAttr:$allow_integer_type,
                        UnitAttr:$scalable,
                        OptionalAttr<I64Attr>:$vscale_min,
                        OptionalAttr<I64Attr>:$vscale_max);

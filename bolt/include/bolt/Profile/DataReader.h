@@ -109,7 +109,7 @@ struct FuncBranchData {
   /// by counting the number of executed branches for each BranchInfo
   uint64_t getNumExecutedBranches() const;
 
-  /// Set entry counts derived to \p BF.
+  /// Set entry counts derived from EntryData to \p BF.
   void setEntryCounts(BinaryFunction &BF) const;
 
   /// Aggregation helpers

@@ -272,6 +272,7 @@ void Target::CleanupProcess() {
   m_breakpoint_list.ClearAllBreakpointSites();
   m_internal_breakpoint_list.ClearAllBreakpointSites();
   ResetBreakpointHitCounts();
+  llvm::consumeError(m_process_sp->FlushDelayedBreakpoints());
   // Disable watchpoints just on the debugger side.
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);

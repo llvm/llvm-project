@@ -9679,10 +9679,9 @@ SystemZTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
-bool SystemZTargetLowering::
-isGuaranteedNotToBeUndefOrPoisonForTargetNode(SDValue Op,
-         const APInt &DemandedElts, const SelectionDAG &DAG,
-         bool PoisonOnly, unsigned Depth) const {
+bool SystemZTargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    UndefPoisonKind Kind, unsigned Depth) const {
   switch (Op->getOpcode()) {
   case SystemZISD::PCREL_WRAPPER:
   case SystemZISD::PCREL_OFFSET:
