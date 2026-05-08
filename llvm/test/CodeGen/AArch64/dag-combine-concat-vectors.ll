@@ -22,41 +22,41 @@ define fastcc i8 @allocno_reload_assign(ptr %p) {
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    punpklo p2.h, p1.b
-; CHECK-NEXT:    punpkhi p4.h, p1.b
-; CHECK-NEXT:    punpklo p6.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    punpklo p1.h, p2.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    punpklo p3.h, p4.b
-; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpklo p5.h, p6.b
-; CHECK-NEXT:    punpkhi p6.h, p6.b
+; CHECK-NEXT:    punpklo p3.h, p1.b
+; CHECK-NEXT:    punpkhi p5.h, p1.b
 ; CHECK-NEXT:    punpklo p7.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p9.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p5.b
+; CHECK-NEXT:    punpkhi p5.h, p5.b
+; CHECK-NEXT:    punpklo p6.h, p7.b
+; CHECK-NEXT:    punpkhi p7.h, p7.b
+; CHECK-NEXT:    punpklo p0.h, p9.b
 ; CHECK-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    punpkhi p1.h, p9.b
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.d, z2.s
 ; CHECK-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEXT:    st1b { z3.d }, p1, [z0.d]
-; CHECK-NEXT:    st1b { z2.d }, p2, [z0.d]
+; CHECK-NEXT:    st1b { z3.d }, p2, [z0.d]
+; CHECK-NEXT:    st1b { z2.d }, p3, [z0.d]
 ; CHECK-NEXT:    uunpklo z2.d, z1.s
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    st1b { z2.d }, p3, [z0.d]
+; CHECK-NEXT:    st1b { z2.d }, p4, [z0.d]
 ; CHECK-NEXT:    uunpkhi z2.h, z0.b
 ; CHECK-NEXT:    uunpklo z3.s, z2.h
 ; CHECK-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEXT:    st1b { z1.d }, p4, [z0.d]
-; CHECK-NEXT:    uunpklo z1.d, z3.s
 ; CHECK-NEXT:    st1b { z1.d }, p5, [z0.d]
-; CHECK-NEXT:    uunpkhi z1.d, z3.s
+; CHECK-NEXT:    uunpklo z1.d, z3.s
 ; CHECK-NEXT:    st1b { z1.d }, p6, [z0.d]
-; CHECK-NEXT:    uunpklo z1.d, z2.s
+; CHECK-NEXT:    uunpkhi z1.d, z3.s
 ; CHECK-NEXT:    st1b { z1.d }, p7, [z0.d]
-; CHECK-NEXT:    uunpkhi z1.d, z2.s
+; CHECK-NEXT:    uunpklo z1.d, z2.s
 ; CHECK-NEXT:    st1b { z1.d }, p0, [z0.d]
+; CHECK-NEXT:    uunpkhi z1.d, z2.s
+; CHECK-NEXT:    st1b { z1.d }, p1, [z0.d]
 ; CHECK-NEXT:    str p8, [x0]
 ; CHECK-NEXT:    b .LBB0_1
   br label %1

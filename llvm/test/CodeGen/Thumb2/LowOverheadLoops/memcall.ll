@@ -64,11 +64,11 @@ define void @test_memset(ptr nocapture %x, i32 %n, i32 %m) {
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    lsl.w r12, r2, #2
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_4 Depth 2
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB1_3
 ; CHECK-NEXT:    b .LBB1_4

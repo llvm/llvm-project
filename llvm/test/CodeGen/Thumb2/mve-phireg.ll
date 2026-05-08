@@ -8,37 +8,41 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14}
+; CHECK-NEXT:    .vsave {d14}
+; CHECK-NEXT:    vpush {d14}
+; CHECK-NEXT:    .vsave {d12}
+; CHECK-NEXT:    vpush {d12}
+; CHECK-NEXT:    .vsave {d8, d9, d10}
+; CHECK-NEXT:    vpush {d8, d9, d10}
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, #32
 ; CHECK-NEXT:    adr r5, .LCPI0_0
 ; CHECK-NEXT:    adr r4, .LCPI0_1
-; CHECK-NEXT:    vldrw.u32 q6, [r5]
-; CHECK-NEXT:    vldrw.u32 q5, [r4]
+; CHECK-NEXT:    vldrw.u32 q0, [r5]
+; CHECK-NEXT:    vldrw.u32 q1, [r4]
 ; CHECK-NEXT:    add r0, sp, #16
-; CHECK-NEXT:    vmov.i32 q0, #0x1
-; CHECK-NEXT:    vmov.i8 q1, #0x0
-; CHECK-NEXT:    vmov.i8 q2, #0xff
-; CHECK-NEXT:    vmov.i16 q3, #0x6
-; CHECK-NEXT:    vmov.i16 q4, #0x3
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vand q5, q5, q0
-; CHECK-NEXT:    vand q6, q6, q0
-; CHECK-NEXT:    vcmp.i32 eq, q5, zr
-; CHECK-NEXT:    vpsel q5, q2, q1
-; CHECK-NEXT:    vcmp.i32 eq, q6, zr
-; CHECK-NEXT:    vpsel q6, q2, q1
-; CHECK-NEXT:    vstrh.32 q5, [r0]
-; CHECK-NEXT:    vstrh.32 q6, [r0, #8]
-; CHECK-NEXT:    vldrw.u32 q5, [r0]
-; CHECK-NEXT:    vcmp.i16 ne, q5, zr
-; CHECK-NEXT:    vmov.i32 q5, #0x0
-; CHECK-NEXT:    vpsel q6, q4, q3
-; CHECK-NEXT:    vstrh.16 q6, [r0]
-; CHECK-NEXT:    vmov.i32 q6, #0x0
+; CHECK-NEXT:    vmov.i32 q2, #0x1
+; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    vand q1, q1, q2
+; CHECK-NEXT:    vand q0, q0, q2
+; CHECK-NEXT:    vcmp.i32 eq, q1, zr
+; CHECK-NEXT:    vmov.i8 q1, #0x0
+; CHECK-NEXT:    vpsel q4, q3, q1
+; CHECK-NEXT:    vcmp.i32 eq, q0, zr
+; CHECK-NEXT:    vpsel q0, q3, q1
+; CHECK-NEXT:    vstrh.32 q4, [r0]
+; CHECK-NEXT:    vstrh.32 q0, [r0, #8]
+; CHECK-NEXT:    vmov.i16 q1, #0x6
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmov.i16 q2, #0x3
+; CHECK-NEXT:    vcmp.i16 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vstrh.16 q0, [r0]
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    cbz r1, .LBB0_2
 ; CHECK-NEXT:    le .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: @ %for.cond4.preheader

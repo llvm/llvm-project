@@ -14,40 +14,40 @@ define void @convert_vptblock(ptr %pchTarget, i16 signext %iTargetStride, ptr %p
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    ldrsh.w r10, [r3]
 ; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    ldrd r4, r5, [sp, #88]
+; CHECK-NEXT:    ldrd r4, r5, [sp, #72]
 ; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:    vidup.u16 q0, r8, #4
-; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    vmov.i16 q2, #0x100
-; CHECK-NEXT:    vmov.i16 q3, #0xff
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB0_3 Depth 2
-; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    mov r6, r8
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    dlstp.16 lr, r10
 ; CHECK-NEXT:  .LBB0_3: @ %do.body
 ; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vldrb.u16 q5, [r2, q4]
-; CHECK-NEXT:    vmul.i16 q4, q5, r5
-; CHECK-NEXT:    vshr.u16 q4, q4, #8
-; CHECK-NEXT:    vsub.i16 q5, q2, q4
-; CHECK-NEXT:    vpt.i16 eq, q4, q3
-; CHECK-NEXT:    vmovt q5, q1
-; CHECK-NEXT:    vldrb.u16 q6, [r0]
-; CHECK-NEXT:    vsub.i16 q4, q2, q5
-; CHECK-NEXT:    vmul.i16 q5, q5, q6
-; CHECK-NEXT:    vmla.i16 q5, q4, r4
-; CHECK-NEXT:    vshr.u16 q4, q5, #8
-; CHECK-NEXT:    vstrb.16 q4, [r0], #8
-; CHECK-NEXT:    vidup.u16 q4, r6, #4
+; CHECK-NEXT:    vmov.i16 q3, #0x100
+; CHECK-NEXT:    vldrb.u16 q5, [r2, q1]
+; CHECK-NEXT:    vmov.i16 q4, #0xff
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmul.i16 q1, q5, r5
+; CHECK-NEXT:    vshr.u16 q1, q1, #8
+; CHECK-NEXT:    vsub.i16 q5, q3, q1
+; CHECK-NEXT:    vpt.i16 eq, q1, q4
+; CHECK-NEXT:    vmovt q5, q2
+; CHECK-NEXT:    vldrb.u16 q2, [r0]
+; CHECK-NEXT:    vsub.i16 q1, q3, q5
+; CHECK-NEXT:    vmul.i16 q2, q5, q2
+; CHECK-NEXT:    vmla.i16 q2, q1, r4
+; CHECK-NEXT:    vshr.u16 q1, q2, #8
+; CHECK-NEXT:    vstrb.16 q1, [r0], #8
+; CHECK-NEXT:    vidup.u16 q1, r6, #4
 ; CHECK-NEXT:    letp lr, .LBB0_3
 ; CHECK-NEXT:  @ %bb.4: @ %do.end
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
@@ -57,7 +57,7 @@ define void @convert_vptblock(ptr %pchTarget, i16 signext %iTargetStride, ptr %p
 ; CHECK-NEXT:    cmp r11, r12
 ; CHECK-NEXT:    blt .LBB0_2
 ; CHECK-NEXT:  @ %bb.5:
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    bx lr

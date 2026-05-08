@@ -155,22 +155,22 @@ define void @sunken_vmovl(ptr noalias %pTarget, i16 signext %iTargetStride, ptr 
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    ldrsh.w r1, [sp, #8]
-; CHECK-NEXT:    vmov.i16 q0, #0x100
 ; CHECK-NEXT:    vldrb.u16 q1, [r2], #8
-; CHECK-NEXT:    vldrb.u16 q2, [r0], #8
+; CHECK-NEXT:    vldrb.u16 q0, [r0], #8
 ; CHECK-NEXT:    ldr r3, [sp, #12]
 ; CHECK-NEXT:    dlstp.16 lr, r1
 ; CHECK-NEXT:  .LBB3_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovlb.u8 q1, q1
-; CHECK-NEXT:    vsub.i16 q3, q0, q1
-; CHECK-NEXT:    vmovlb.u8 q2, q2
-; CHECK-NEXT:    vmul.i16 q3, q2, q3
-; CHECK-NEXT:    vldrb.u16 q2, [r0], #8
-; CHECK-NEXT:    vmla.i16 q3, q1, r3
+; CHECK-NEXT:    vmov.i16 q2, #0x100
+; CHECK-NEXT:    vmovlb.u8 q0, q0
+; CHECK-NEXT:    vsub.i16 q2, q2, q1
+; CHECK-NEXT:    vmul.i16 q2, q0, q2
+; CHECK-NEXT:    vldrb.u16 q0, [r0], #8
+; CHECK-NEXT:    vmla.i16 q2, q1, r3
 ; CHECK-NEXT:    vldrb.u16 q1, [r2], #8
-; CHECK-NEXT:    vshr.u16 q3, q3, #8
-; CHECK-NEXT:    vstrb.16 q3, [r0, #-16]
+; CHECK-NEXT:    vshr.u16 q2, q2, #8
+; CHECK-NEXT:    vstrb.16 q2, [r0, #-16]
 ; CHECK-NEXT:    letp lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
 ; CHECK-NEXT:    pop {r7, pc}

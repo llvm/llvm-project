@@ -5,7 +5,6 @@ define hidden void @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movs r0, #1
-; CHECK-NEXT:    lsls r1, r0, #2
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: @ %bb2
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
@@ -13,9 +12,10 @@ define hidden void @test() {
 ; CHECK-NEXT:    bne .LBB0_6
 ; CHECK-NEXT:  .LBB0_2: @ %switch
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    lsls r1, r0, #2
 ; CHECK-NEXT:    adr r2, .LJTI0_0
-; CHECK-NEXT:    ldr r2, [r2, r1]
-; CHECK-NEXT:    mov pc, r2
+; CHECK-NEXT:    ldr r1, [r2, r1]
+; CHECK-NEXT:    mov pc, r1
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LJTI0_0:
