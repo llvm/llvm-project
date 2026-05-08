@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Opt-in Linux/glibc main wrapper via __libc_start_main interception.
+// Common main wrapper interceptor for tools that define a macro MAIN_WRAPPER
+// as a int expression as follows:
 //
-// A sanitizer enables this file by defining:
-//   #define MAIN_WRAPPER(main, argc, argv, envp) \
-//     ToolMainWrapper(main, argc, argv, envp)
-// before including it. `main` is the real user main (__sanitizer::MainFnTy);
-// argc, argv, and envp are the startup arguments forwarded to the wrapper.
-// The wrapper returns the process exit code and decides when to call main.
+// #define MAIN_WRAPPER(main, argc, argv, envp) ...
+//
+// Arguments:
+//   - main: the function pointer with MainFnTy, representing the real main.
+//   - argc/argv/envp: the real arguments of main.
+// Return:
+//   - the final result of MAIN_WRAPPER should be an int like what main returns.
 //
 //===----------------------------------------------------------------------===//
 
