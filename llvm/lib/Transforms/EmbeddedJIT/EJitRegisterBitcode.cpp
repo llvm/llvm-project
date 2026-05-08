@@ -114,6 +114,15 @@ static std::string extractAndSerialize(Module &M,
     GV->eraseFromParent();
   }
 
+  // Convert kept global definitions to external declarations so the JIT
+  // linker resolves them from the host process (not from private copies).
+  for (GlobalVariable &GV : Extracted->globals()) {
+    if (GV.isDeclaration())
+      continue;
+    GV.setInitializer(nullptr);
+    GV.setLinkage(GlobalValue::ExternalLinkage);
+  }
+
   std::string Bitcode;
   raw_string_ostream OS(Bitcode);
   WriteBitcodeToFile(*Extracted, OS);

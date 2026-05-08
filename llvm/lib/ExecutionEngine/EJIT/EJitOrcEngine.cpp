@@ -6,6 +6,8 @@
 #include "llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -127,6 +129,29 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   auto ModuleOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
   if (!ModuleOrErr)
     return ModuleOrErr.takeError();
+
+  // Define global variable addresses from the PeriodArrayRegistry so that
+  // external global references in the bitcode resolve to AOT process memory.
+  {
+    auto &JD = P->J->getMainJITDylib();
+    for (GlobalVariable &GV : (*ModuleOrErr)->globals()) {
+      if (!GV.isDeclaration() || GV.getName().empty())
+        continue;
+      void *addr = nullptr;
+      // Try period array lookup by var name
+      if (const auto *info = P->periodReg->getArrayInfo(GV.getName().str()))
+        addr = info->baseAddr;
+      else
+        addr = P->periodReg->getStaticVarAddr(GV.getName().str());
+      if (!addr)
+        continue;
+      orc::SymbolMap symMap;
+      symMap[P->J->mangleAndIntern(GV.getName())] =
+          orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(addr),
+                                 JITSymbolFlags::Exported);
+      (void)JD.define(orc::absoluteSymbols(std::move(symMap)));
+    }
+  }
 
   // Each specialization gets its own JITDylib so that symbols from
   // different specializations (same TU bitcode loaded multiple times)
