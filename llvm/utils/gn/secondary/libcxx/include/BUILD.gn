@@ -76,7 +76,7 @@ if (current_toolchain == default_toolchain) {
   }
 
   action("copy_headers") {
-    script = "//llvm/utils/gn/build/sync_source_dir.py"
+    script = "//llvm/utils/gn/build/sync_dir.py"
     inputs = [
       "__algorithm/adjacent_find.h",
       "__algorithm/all_of.h",

@@ -7103,11 +7103,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
   RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
                  Legal->getLAI()->getSymbolicStrides());
 
-  auto BlockNeedsPredication = [this](BasicBlock *BB) {
-    return Legal->blockNeedsPredication(BB);
-  };
-  RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
-                 BlockNeedsPredication);
+  RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan);
 
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once

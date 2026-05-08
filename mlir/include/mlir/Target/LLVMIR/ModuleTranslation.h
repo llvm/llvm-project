@@ -36,6 +36,9 @@ class Function;
 class IRBuilderBase;
 class OpenMPIRBuilder;
 class Value;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 } // namespace llvm
 
 namespace mlir {
@@ -64,7 +67,7 @@ class ComdatSelectorOp;
 class ModuleTranslation {
   friend std::unique_ptr<llvm::Module>
   mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef,
-                                bool);
+                                bool, llvm::vfs::FileSystem *);
 
 public:
   /// Stores the mapping between a function name and its LLVM IR representation.
@@ -275,6 +278,10 @@ public:
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
 
+  /// Returns the virtual filesystem to use for file operations. Falls back to
+  /// the real filesystem if none was provided.
+  llvm::vfs::FileSystem &getFileSystem();
+
   /// Returns the LLVM module in which the IR is being constructed.
   llvm::Module *getLLVMModule() { return llvmModule.get(); }
 
@@ -386,8 +393,8 @@ public:
   llvm::Attribute convertAllocsizeAttr(DenseI32ArrayAttr allocsizeAttr);
 
 private:
-  ModuleTranslation(Operation *module,
-                    std::unique_ptr<llvm::Module> llvmModule);
+  ModuleTranslation(Operation *module, std::unique_ptr<llvm::Module> llvmModule,
+                    llvm::vfs::FileSystem *fs = nullptr);
   ~ModuleTranslation();
 
   /// Converts individual components.
@@ -455,6 +462,10 @@ private:
 
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
+
+  /// Optional virtual filesystem for file operations. When null, the real
+  /// filesystem is used (via getFileSystem()). Not owned.
+  llvm::vfs::FileSystem *fileSystem = nullptr;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
