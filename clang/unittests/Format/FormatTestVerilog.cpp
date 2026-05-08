@@ -1013,6 +1013,8 @@ TEST_F(FormatTestVerilog, Instantiation) {
 TEST_F(FormatTestVerilog, Loop) {
   verifyFormat("foreach (x[x])\n"
                "  x = x;");
+  verifyFormat("(* x = \"x\" *) foreach (x[x])\n"
+               "  x = x;");
   verifyFormat("repeat (x)\n"
                "  x = x;");
   verifyFormat("foreach (x[x]) begin\n"
