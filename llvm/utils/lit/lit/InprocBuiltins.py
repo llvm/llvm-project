@@ -1,4 +1,4 @@
-from __future__ import acknnotations
+from __future__ import annotations
 
 import abc
 import getopt
@@ -534,15 +534,15 @@ def get_default_inproc_builtins() -> dict[str, InprocBuiltin]:
     """
 
     return {
-        "@echo": InprocBuiltin(executeBuiltinEcho, None),
-        "cd": InprocBuiltin(executeBuiltinCd, None),
-        "export": InprocBuiltin(executeBuiltinExport, None),
-        "echo": InprocBuiltin(executeBuiltinEcho, None),
-        "mkdir": InprocBuiltin(executeBuiltinMkdir, None),
-        "popd": InprocBuiltin(executeBuiltinPopd, None),
-        "pushd": InprocBuiltin(executeBuiltinPushd, None),
-        "rm": InprocBuiltin(executeBuiltinRm, None),
-        "ulimit": InprocBuiltin(executeBuiltinUlimit, None),
-        "umask": InprocBuiltin(executeBuiltinUmask, None),
-        ":": InprocBuiltin(executeBuiltinColon, None),
+        "@echo": InprocBuiltin(executeBuiltinEcho),
+        "cd": InprocBuiltin(executeBuiltinCd),
+        "export": InprocBuiltin(executeBuiltinExport),
+        "echo": InprocBuiltin(executeBuiltinEcho),
+        "mkdir": InprocBuiltin(executeBuiltinMkdir),
+        "popd": InprocBuiltin(executeBuiltinPopd),
+        "pushd": InprocBuiltin(executeBuiltinPushd),
+        "rm": InprocBuiltin(executeBuiltinRm),
+        "ulimit": InprocBuiltin(executeBuiltinUlimit),
+        "umask": InprocBuiltin(executeBuiltinUmask),
+        ":": InprocBuiltin(executeBuiltinColon),
     }
