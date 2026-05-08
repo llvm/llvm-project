@@ -818,6 +818,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
 - Fixed an invalid rejection and assertion failure while generating `operator=` for fields with the `__restrict` qualifier. (#GH37979)
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
+- Fixed missing destructor cleanups for lambda init-captures in default member
+  initializers used during aggregate initialization. (#GH196469)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
