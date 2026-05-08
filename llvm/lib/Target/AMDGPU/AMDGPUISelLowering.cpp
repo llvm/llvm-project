@@ -4492,15 +4492,21 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   }
 
   KnownBits KnownLHS = DAG.computeKnownBits(LHS);
-  SDValue HiShift;
+  SDValue NewShift, HiShift;
   if (KnownLHS.isNegative()) {
     HiShift = DAG.getAllOnesConstant(SL, TargetType);
+    NewShift =
+        DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
+  } else if (CRHS &&
+             CRHS->getZExtValue() == (ElementType.getSizeInBits() - 1)) {
+    NewShift = HiShift =
+        DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
   } else {
     Hi = DAG.getFreeze(Hi);
     HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
+    NewShift =
+        DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
   }
-  SDValue NewShift =
-      DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
 
   SDValue Vec;
   if (VT.isVector()) {
@@ -6064,7 +6070,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
     if (SelfMultiply)
       SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
-          Op.getOperand(0), DemandedElts, false, Depth + 1);
+          Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
+          Depth + 1);
 
     Known = KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
     break;
@@ -6253,7 +6260,7 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
 
 bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+    UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::BFE_I32:
@@ -6261,7 +6268,7 @@ bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
-      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+      Op, DemandedElts, DAG, Kind, ConsiderFlags, Depth);
 }
 
 bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(

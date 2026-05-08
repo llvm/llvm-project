@@ -1,0 +1,13 @@
+functions:
+  catclose:
+    in-latest-posix: ""
+  catgets:
+    in-latest-posix: ""
+  catopen:
+    in-latest-posix: ""
+
+macros:
+  NL_CAT_LOCALE:
+    in-latest-posix: ""
+  NL_SETD:
+    in-latest-posix: ""

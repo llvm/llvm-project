@@ -312,23 +312,23 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
     return;
 
   const InputFile *file = sym->file;
-  auto *d = dyn_cast<Defined>(sym);
-
   auto report = [&](StringRef s) { Warn(ctx) << file << s << sym->getName(); };
-
-  if (sym->isUndefined()) {
+  if (auto *d = dyn_cast<Defined>(sym)) {
+    if (!d->section)
+      report(": unable to order absolute symbol: ");
+    else if (isa<OutputSection>(d->section))
+      report(": unable to order synthetic symbol: ");
+    else if (!d->section->isLive())
+      report(": unable to order discarded symbol: ");
+  } else if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
       report(": unable to order discarded symbol: ");
     else
       report(": unable to order undefined symbol: ");
-  } else if (sym->isShared())
+  } else {
+    assert(sym->isShared());
     report(": unable to order shared symbol: ");
-  else if (d && !d->section)
-    report(": unable to order absolute symbol: ");
-  else if (d && isa<OutputSection>(d->section))
-    report(": unable to order synthetic symbol: ");
-  else if (d && !d->section->isLive())
-    report(": unable to order discarded symbol: ");
+  }
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -579,7 +579,7 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
-  if (isDefined() && !isWeak() && !other.isWeak())
+  if (!isWeak() && !other.isWeak())
     reportDuplicate(ctx, *this, other.file,
                     dyn_cast_or_null<InputSectionBase>(other.section),
                     other.value);

@@ -341,6 +341,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
@@ -543,9 +544,12 @@ set(files
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
+  __locale_dir/support/llvm_libc.h
   __locale_dir/support/netbsd.h
   __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
+  __locale_dir/support/no_locale/conversions.h
+  __locale_dir/support/no_locale/formatting.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
@@ -732,6 +736,7 @@ set(files
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/enumerate_view.h
   __ranges/filter_view.h
   __ranges/from_range.h
   __ranges/iota_view.h
@@ -751,6 +756,7 @@ set(files
   __ranges/single_view.h
   __ranges/size.h
   __ranges/split_view.h
+  __ranges/stride_view.h
   __ranges/subrange.h
   __ranges/take_view.h
   __ranges/take_while_view.h
@@ -775,7 +781,6 @@ set(files
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
   __system_error/errc.h
@@ -1006,7 +1011,6 @@ set(files
   cstring
   ctgmath
   ctime
-  ctype.h
   cuchar
   cwchar
   cwctype
@@ -1033,7 +1037,6 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
-  fenv.h
   filesystem
   flat_map
   flat_set
@@ -1043,7 +1046,6 @@ set(files
   functional
   future
   initializer_list
-  inttypes.h
   iomanip
   ios
   iosfwd

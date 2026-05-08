@@ -328,7 +328,7 @@ define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP34:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -346,10 +346,10 @@ define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i32 3
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP17]], i32 2
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP17]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i64 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP17]], i64 3
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
@@ -533,7 +533,7 @@ define void @reduc_store_middle_store_predicated(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP34:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -551,10 +551,10 @@ define void @reduc_store_middle_store_predicated(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i32 3
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP17]], i32 2
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP17]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i64 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP17]], i64 3
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]

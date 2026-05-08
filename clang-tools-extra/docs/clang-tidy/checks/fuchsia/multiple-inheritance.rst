@@ -1,6 +1,4 @@
 .. title:: clang-tidy - fuchsia-multiple-inheritance
-.. meta::
-   :http-equiv=refresh: 5;URL=../misc/multiple-inheritance.html
 
 fuchsia-multiple-inheritance
 ============================

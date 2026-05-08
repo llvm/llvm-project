@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class OverloadedFunctionsTestCase(TestBase):
     def test_with_run_command(self):
         """Test that functions with the same name are resolved correctly"""

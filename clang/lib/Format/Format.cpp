@@ -39,7 +39,8 @@ enum BracketAlignmentStyle : int8_t {
   BAS_Align,
   BAS_DontAlign,
   BAS_AlwaysBreak,
-  BAS_BlockIndent
+  BAS_BlockIndent,
+  BAS_Ignore
 };
 
 namespace llvm {
@@ -539,6 +540,8 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageStandard> {
     IO.enumCase(Value, "c++14", FormatStyle::LS_Cpp14);
     IO.enumCase(Value, "c++17", FormatStyle::LS_Cpp17);
     IO.enumCase(Value, "c++20", FormatStyle::LS_Cpp20);
+    IO.enumCase(Value, "c++23", FormatStyle::LS_Cpp23);
+    IO.enumCase(Value, "c++26", FormatStyle::LS_Cpp26);
 
     IO.enumCase(Value, "Latest", FormatStyle::LS_Latest);
     IO.enumCase(Value, "Cpp11", FormatStyle::LS_Latest); // Legacy alias
@@ -1107,7 +1110,7 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
     } else {
       // For backward compatibility.
-      BracketAlignmentStyle LocalBAS = BAS_Align;
+      BracketAlignmentStyle LocalBAS = BAS_Ignore;
       if (IsGoogleOrChromium) {
         FormatStyle::LanguageKind Language = Style.Language;
         if (Language == FormatStyle::LK_None)
@@ -1120,33 +1123,61 @@ template <> struct MappingTraits<FormatStyle> {
         LocalBAS = BAS_DontAlign;
       }
       IO.mapOptional("AlignAfterOpenBracket", LocalBAS);
-      Style.BreakAfterOpenBracketBracedList = false;
-      Style.BreakAfterOpenBracketFunction = false;
-      Style.BreakAfterOpenBracketIf = false;
-      Style.BreakAfterOpenBracketLoop = false;
-      Style.BreakAfterOpenBracketSwitch = false;
-      Style.BreakBeforeCloseBracketBracedList = false;
-      Style.BreakBeforeCloseBracketFunction = false;
-      Style.BreakBeforeCloseBracketIf = false;
-      Style.BreakBeforeCloseBracketLoop = false;
-      Style.BreakBeforeCloseBracketSwitch = false;
 
       switch (LocalBAS) {
       case BAS_DontAlign:
         Style.AlignAfterOpenBracket = false;
+        Style.BreakAfterOpenBracketBracedList = false;
+        Style.BreakAfterOpenBracketFunction = false;
+        Style.BreakAfterOpenBracketIf = false;
+        Style.BreakAfterOpenBracketLoop = false;
+        Style.BreakAfterOpenBracketSwitch = false;
+        Style.BreakBeforeCloseBracketBracedList = false;
+        Style.BreakBeforeCloseBracketFunction = false;
+        Style.BreakBeforeCloseBracketIf = false;
+        Style.BreakBeforeCloseBracketLoop = false;
+        Style.BreakBeforeCloseBracketSwitch = false;
         break;
       case BAS_BlockIndent:
+        Style.AlignAfterOpenBracket = true;
         Style.BreakBeforeCloseBracketBracedList = true;
         Style.BreakBeforeCloseBracketFunction = true;
         Style.BreakBeforeCloseBracketIf = true;
-        [[fallthrough]];
+        Style.BreakAfterOpenBracketLoop = false;
+        Style.BreakAfterOpenBracketSwitch = false;
+        Style.BreakBeforeCloseBracketBracedList = false;
+        Style.BreakBeforeCloseBracketFunction = false;
+        Style.BreakBeforeCloseBracketIf = false;
+        Style.BreakBeforeCloseBracketLoop = false;
+        Style.BreakBeforeCloseBracketSwitch = false;
+        break;
       case BAS_AlwaysBreak:
+        Style.AlignAfterOpenBracket = true;
         Style.BreakAfterOpenBracketBracedList = true;
         Style.BreakAfterOpenBracketFunction = true;
         Style.BreakAfterOpenBracketIf = true;
-        [[fallthrough]];
+        Style.BreakAfterOpenBracketLoop = false;
+        Style.BreakAfterOpenBracketSwitch = false;
+        Style.BreakBeforeCloseBracketBracedList = false;
+        Style.BreakBeforeCloseBracketFunction = false;
+        Style.BreakBeforeCloseBracketIf = false;
+        Style.BreakBeforeCloseBracketLoop = false;
+        Style.BreakBeforeCloseBracketSwitch = false;
+        break;
       case BAS_Align:
         Style.AlignAfterOpenBracket = true;
+        Style.BreakAfterOpenBracketBracedList = false;
+        Style.BreakAfterOpenBracketFunction = false;
+        Style.BreakAfterOpenBracketIf = false;
+        Style.BreakAfterOpenBracketLoop = false;
+        Style.BreakAfterOpenBracketSwitch = false;
+        Style.BreakBeforeCloseBracketBracedList = false;
+        Style.BreakBeforeCloseBracketFunction = false;
+        Style.BreakBeforeCloseBracketIf = false;
+        Style.BreakBeforeCloseBracketLoop = false;
+        Style.BreakBeforeCloseBracketSwitch = false;
+        break;
+      case BAS_Ignore:
         break;
       }
     }
@@ -4422,6 +4453,8 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
     LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
     LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
     LangOpts.CPlusPlus20 = SinceCpp20;
+    LangOpts.CPlusPlus23 = LexingStd >= FormatStyle::LS_Cpp23;
+    LangOpts.CPlusPlus26 = LexingStd >= FormatStyle::LS_Cpp26;
     [[fallthrough]];
   default:
     LangOpts.CPlusPlus = 1;
