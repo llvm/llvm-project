@@ -3,8 +3,10 @@
 name:            foo
 body:             |
   ; HASH-LABEL: Machine Block Hash Info for function: foo
-  ; HASH-NEXT:  BB#0: 0xf33ebf30f33e0002
-  ; HASH-NEXT:  BB#1: 0xf33ee99ef33e0002
+  ; HASH-NEXT:  BB#0: [[#%#.4x,NB0:]][[#%.4x,INS:]][[#%.4x,OP0:]][[#%.4x,OFF0:]]
+  ; HASH-NOT:   [[#INS]]
+  ; HASH-NOT:   [[#OFF0]]
+  ; HASH-NEXT:  BB#1: [[#NB0]][[#%.4x,]][[#OP0]][[#%.4x,]]
   bb.0:
     $eax = MOV32ri 1
     RET 0
@@ -17,8 +19,10 @@ body:             |
 name:            func_mbb
 body:             |
   ; HASH-LABEL: Machine Block Hash Info for function: func_mbb
-  ; HASH-NEXT:  BB#0: 0xf60abf30f33e0002
-  ; HASH-NEXT:  BB#1: 0xf60ae99ef33e0002
+  ; HASH-NEXT:  BB#0: [[#%#.4x,NB1:]][[#%.4x,INS:]][[#OP0]][[#%.4x,OFF1:]]
+  ; HASH-NOT:   [[#INS]]
+  ; HASH-NOT:   [[#OFF1]]
+  ; HASH-NEXT:  BB#1: [[#NB1]][[#%.4x,]][[#OP0]][[#%.4x,]]
   bb.0:
     successors: %bb.1
     $eax = MOV32ri 1
@@ -32,7 +36,8 @@ body:             |
 name:            func_global
 body:             |
   ; HASH-LABEL: Machine Block Hash Info for function: func_global
-  ; HASH-NEXT:  BB#0: 0x7e32df2f7e320002
+  ; HASH-NOT:   [[#OP0]]
+  ; HASH-NEXT:  BB#0: [[#%#.8x,]][[#%.4x,OP1:]][[#%.4x,]]
   bb.0:
     $rax = MOV64rm $rip, 1, $noreg, @foo, $noreg
     RET 0
@@ -41,7 +46,9 @@ body:             |
 name:            func_fp
 body:             |
   ; HASH-LABEL: Machine Block Hash Info for function: func_fp
-  ; HASH-NEXT:  BB#0: 0x3e6b0e5c3e6b0002
+  ; HASH-NOT:   [[#OP0]]
+  ; HASH-NOT:   [[#OP1]]
+  ; HASH-NEXT:  BB#0: [[#%#.16x,]]
   bb.0:
     $xmm0 = MOVSSrm $rip, 1, $noreg, %const.0, $noreg
     RET 0

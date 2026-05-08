@@ -82,8 +82,9 @@ MachineBlockHashInfoResult::MachineBlockHashInfoResult(
   // Initialize hash components
   for (const MachineBasicBlock &MBB : F) {
     auto &HashInfo = HashInfos[&MBB];
+    Offset += MBB.size();
     // offset of the machine basic block
-    HashInfo.Offset = Offset + MBB.size();
+    HashInfo.Offset = Offset;
     // Hashing opcodes
     HashInfo.OpcodeHash = hashBlock(MBB, /*HashOperands=*/false);
     // Hash complete instructions
