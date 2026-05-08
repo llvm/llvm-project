@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
@@ -1106,6 +1107,46 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
   // `forOp`, no unroll jam.
   if (!areInnerBoundsInvariant(forOp))
     return failure();
+
+  // Refuse if the jammed iteration order would violate a memory dep. UJ at
+  // factor F reorders dep `d` iff `0 < d_outer < F` and some `d_inner_k < 0`.
+  SmallVector<AffineForOp, 4> band;
+  getPerfectlyNestedLoops(band, forOp);
+  if (band.size() > 1) {
+    SmallVector<Operation *, 8> loadAndStoreOps;
+    band[0]->walk([&](Operation *op) {
+      if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+        loadAndStoreOps.push_back(op);
+    });
+    unsigned numLoops = band.size();
+    for (unsigned d = 1; d <= numLoops + 1; ++d) {
+      for (Operation *srcOp : loadAndStoreOps) {
+        MemRefAccess srcAccess(srcOp);
+        for (Operation *dstOp : loadAndStoreOps) {
+          MemRefAccess dstAccess(dstOp);
+          SmallVector<DependenceComponent, 2> depComps;
+          DependenceResult result = checkMemrefAccessDependence(
+              srcAccess, dstAccess, d,
+              /*dependenceConstraints=*/nullptr, &depComps);
+          if (!hasDependence(result))
+            continue;
+          // d_outer >= F: stripe never spans this dep.
+          if (!depComps.empty() && depComps[0].lb.has_value() &&
+              *depComps[0].lb >= static_cast<int64_t>(unrollJamFactor))
+            continue;
+          for (unsigned k = 1; k < depComps.size(); ++k) {
+            const DependenceComponent &c = depComps[k];
+            if (c.lb.has_value() && c.ub.has_value() && *c.lb <= *c.ub &&
+                *c.ub < 0) {
+              LDBG() << "[failed] backward inner dep at depth " << d
+                     << " (k=" << k << "); factor " << unrollJamFactor;
+              return failure();
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Gather all sub-blocks to jam upon the loop being unrolled.
   JamBlockGatherer<AffineForOp> jbg;
