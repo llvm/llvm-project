@@ -112,6 +112,7 @@ public:
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+      llvm::StringRef BoundArch,
       Action::OffloadKind DeviceOffloadingKind) const override;
 
   llvm::DenormalMode getDefaultDenormalModeForType(
