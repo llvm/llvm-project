@@ -24,7 +24,15 @@ static constexpr uint32_t kmpc_min(uint32_t a, uint32_t b) {
 }
 
 [[clang::always_inline]]
-void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
+static uint32_t round_to_warpsize(uint32_t s) {
+  if (s < mapping::getWarpSize())
+    return 1;
+  return (s & ~static_cast<uint32_t>(mapping::getWarpSize() - 1u));
+}
+
+[[clang::always_inline]]
+static void gpu_regular_warp_reduce(void *reduce_data,
+                                    ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
             /*Offset = */ mask, /*AlgoVersion=*/0);
@@ -32,8 +40,9 @@ void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
 }
 
 [[clang::always_inline]]
-void gpu_irregular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
-                               uint32_t size, uint32_t tid) {
+static void gpu_irregular_warp_reduce(void *reduce_data,
+                                      ShuffleReductFnTy shflFct, uint32_t size,
+                                      uint32_t tid) {
   uint32_t curr_size;
   uint32_t mask;
   curr_size = size;
@@ -76,58 +85,51 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
 // - shflFct:     Shuffle reduction function
 // - cpyFct:      Inter-warp copy function (copies data from each warp's thread
 //                0 to the lanes of the zeroth warp)
-// - NumValues:   Number of values to reduce / threads to consider
+// - NumThreads:  Number of threads to consider / values to reduce
 // - ThreadId:    Thread ID in block (getThreadIdInBlock() in SPMD and 0 in
 //                Generic mode)
 //
 // Returns:
 // - 1 if the thread is the zeroth thread of the block
 // - 0 otherwise
+//
+// Note that it is expected that the caller checks for NumThreads <= 1 and acts
+// in a way that suits the callers situation.
+//
 template <bool checkLiveness = true>
 [[clang::always_inline]]
 static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
-                                 InterWarpCopyFnTy cpyFct, uint32_t NumValues,
+                                 InterWarpCopyFnTy cpyFct, uint32_t NumThreads,
                                  uint32_t BlockThreadId) {
-  if (NumValues <= 1)
-    return BlockThreadId == 0;
-
-  uint32_t WarpId = BlockThreadId / mapping::getWarpSize();
-  uint32_t WarpOffset = WarpId * mapping::getWarpSize();
-  // Calculate how many values this warp has to deal with. Cap WarpId *
-  // mapping::getWarpSize() at NumValues to avoid underflow.
-  uint32_t ActiveLanes =
-      WarpOffset < NumValues
-          ? kmpc_min(NumValues - WarpOffset, mapping::getWarpSize())
-          : 0;
-
   if constexpr (checkLiveness) {
     __kmpc_impl_lanemask_t Liveness = mapping::activemask();
     // Check for partial warp with non-contiguous lanes.
-    if (Liveness != lanes::All && (Liveness & (Liveness + 1))) {
-      // Only threads in L2 parallel region may enter here.
+    if (Liveness == lanes::All) {
+      gpu_regular_warp_reduce(reduce_data, shflFct);
+    } else if (!(Liveness & (Liveness + 1))) {
+      // Partial warp but contiguous lanes.
+      gpu_irregular_warp_reduce(reduce_data, shflFct, utils::popc(Liveness),
+                                BlockThreadId % mapping::getWarpSize());
+    } else {
+      // Dispersed lanes. Only threads in L2 parallel region may enter here.
       return gpu_irregular_simd_reduce(reduce_data, shflFct);
     }
-    ActiveLanes = kmpc_min(ActiveLanes, utils::popc(Liveness));
-  }
-
-  if (ActiveLanes < mapping::getWarpSize())
-    gpu_irregular_warp_reduce(reduce_data, shflFct, ActiveLanes,
-                              BlockThreadId % mapping::getWarpSize());
-  else
+  } else {
     gpu_regular_warp_reduce(reduce_data, shflFct);
+  }
 
   // When we have more than [mapping::getWarpSize()] number of threads
   // a block reduction is performed here.
   //
   // Only L1 parallel region can enter this if condition.
 
-  if (NumValues > mapping::getWarpSize()) {
+  if (NumThreads > mapping::getWarpSize()) {
     uint32_t WarpsNeeded =
-        (NumValues + mapping::getWarpSize() - 1) / mapping::getWarpSize();
-    // Gather all the reduced values from each warp
-    // to the first warp.
+        (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+    // Gather all the reduced values from each warp to the first warp.
     cpyFct(reduce_data, WarpsNeeded);
 
+    uint32_t WarpId = BlockThreadId / mapping::getWarpSize();
     if (WarpId == 0)
       gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
                                 BlockThreadId);
@@ -280,19 +282,23 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
     return 0;
 
   // The last team performs final reduction across all team values.
-  uint32_t ValidValues = NumThreads < NumTeams ? NumThreads : NumTeams;
-  if (ThreadId < ValidValues) {
-    // Make sure that global buffer is fresh.
-    fence::kernel(atomic::acquire);
-    // Get the team values from the global buffer.
-    glcpyFct(GlobalBuffer, ThreadId, reduce_data);
-    // In case we have more teams than threads, we need to iterate over the
-    // remaining teams.
-    for (uint32_t I = NumThreads + ThreadId; I < NumTeams; I += NumThreads)
-      glredFct(GlobalBuffer, I, reduce_data);
-  }
+  NumThreads = kmpc_min(NumThreads, round_to_warpsize(NumTeams));
+  if (ThreadId >= NumThreads)
+    return 0;
 
-  return gpu_block_reduce<false>(reduce_data, shflFct, cpyFct, ValidValues,
+  // Make sure that global buffer is fresh.
+  fence::kernel(atomic::acquire);
+  // Get the team values from the global buffer.
+  glcpyFct(GlobalBuffer, ThreadId, reduce_data);
+  // In case we have more teams than threads, we need to iterate over the
+  // remaining teams.
+  for (uint32_t I = NumThreads + ThreadId; I < NumTeams; I += NumThreads)
+    glredFct(GlobalBuffer, I, reduce_data);
+
+  if (NumThreads == 1)
+    return 1;
+
+  return gpu_block_reduce<false>(reduce_data, shflFct, cpyFct, NumThreads,
                                  ThreadId);
 }
 } // extern "C"
