@@ -515,6 +515,7 @@ class LoadOpcode : Opcode {
 def Load : LoadOpcode {}
 // [Pointer] -> [Value]
 def LoadPop : LoadOpcode {}
+def LoadPopL : Opcode {}
 
 class StoreOpcode : Opcode {
   let Types = [AllTypeClass];

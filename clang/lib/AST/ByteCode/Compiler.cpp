@@ -218,8 +218,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   switch (E->getCastKind()) {
   case CK_LValueToRValue: {
-    if (ToLValue && E->getType()->isPointerType())
-      return this->delegate(SubExpr);
+    if (ToLValue && E->getType()->isPointerType()) {
+      assert(!DiscardResult);
+      if (!this->visit(SubExpr))
+        return false;
+      return this->emitLoadPopL(E);
+    }
 
     if (SubExpr->getType().isVolatileQualified())
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, E);

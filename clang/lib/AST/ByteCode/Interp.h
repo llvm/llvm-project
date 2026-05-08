@@ -2132,6 +2132,28 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// Like LoadPop above, but if any of the checks fail, we simply
+/// push the Pointer itself.
+inline bool LoadPopL(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  auto P = S.getEvalStatus().Diag;
+  S.getEvalStatus().Diag = nullptr;
+  bool Failed = false;
+  if (!CheckLoad(S, OpPC, Ptr))
+    Failed = true;
+  if (!Ptr.isBlockPointer())
+    Failed = true;
+  if (!Ptr.canDeref(PT_Ptr))
+    Failed = true;
+  S.getEvalStatus().Diag = P;
+
+  if (Failed)
+    S.Stk.push<Pointer>(Ptr);
+  else
+    S.Stk.push<Pointer>(Ptr.deref<Pointer>());
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Store(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();

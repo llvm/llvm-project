@@ -2438,7 +2438,7 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
   bool ReportMinimum = (Kind & 2u);
   if (!UseFieldDesc || DetermineForCompleteObject) {
     // Can't read beyond the pointer decl desc.
-    if (!ReportMinimum && DeclDesc->getType()->isPointerType())
+    if (!ReportMinimum && DeclDesc->getDataType(ASTCtx)->isPointerType())
       return std::nullopt;
 
     if (InvalidBase)
