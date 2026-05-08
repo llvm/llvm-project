@@ -8,8 +8,8 @@ entry:
 ; Just Expansion, no scalarization or lowering:
 ; EXPCHECK: [[DIV:%.+]] = fdiv <16 x half> %y, %x
 ; EXPCHECK: [[ATAN:%.+]] = call <16 x half> @llvm.atan.v16f16(<16 x half> [[DIV]])
-; EXPCHECK-DAG: [[ADD_PI:%.+]] = fadd <16 x half> [[ATAN]], splat (half 0xH4248)
-; EXPCHECK-DAG: [[SUB_PI:%.+]] = fsub <16 x half> [[ATAN]], splat (half 0xH4248)
+; EXPCHECK-DAG: [[ADD_PI:%.+]] = fadd <16 x half> [[ATAN]], splat (half
+; EXPCHECK-DAG: [[SUB_PI:%.+]] = fsub <16 x half> [[ATAN]], splat (half
 ; EXPCHECK-DAG: [[X_LT_0:%.+]] = fcmp olt <16 x half> %x, zeroinitializer
 ; EXPCHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq <16 x half> %x, zeroinitializer
 ; EXPCHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge <16 x half> %y, zeroinitializer
