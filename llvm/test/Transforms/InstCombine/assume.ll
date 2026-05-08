@@ -7,6 +7,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @llvm.assume(i1) #1
+declare ptr @get_ptr()
 
 ; Check that the assume has not been removed:
 
@@ -77,6 +78,18 @@ entry:
   %trunc = trunc i64 %0 to i63
   %cmp = icmp eq i63 0, %trunc
   call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @redundant_align() {
+; CHECK-LABEL: @redundant_align(
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
   ret void
 }
 

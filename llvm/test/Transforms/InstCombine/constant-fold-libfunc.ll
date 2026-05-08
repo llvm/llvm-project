@@ -8,7 +8,7 @@ define double @test_simplify_acos() {
 ; CHECK-LABEL: @test_simplify_acos
   %pi = call double @acos(double -1.000000e+00)
 ; CHECK-NOT: call double @acos
-; CHECK: ret double 0x400921FB54442D18
+; CHECK: ret double f0x400921FB54442D18
   ret double %pi
 }
 
