@@ -1722,6 +1722,10 @@ private:
   /// predicate by splitting it into a set of independent predicates.
   bool ProvingSplitPredicate = false;
 
+  /// Set to true by IsKnownPredicateViaUMinBounds to prevent re-entry through
+  /// SE.isKnownPredicate when UpperLHS itself contains a umin.
+  bool ProvingUMinBounds = false;
+
   /// Memoized values for the getConstantMultiple
   DenseMap<const SCEV *, APInt> ConstantMultipleCache;
 
@@ -2347,6 +2351,10 @@ private:
   /// prove them individually.
   bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS,
                                     SCEVUse RHS);
+
+  /// Prove LHS Pred RHS by substituting umin operands as upper bounds into LHS.
+  bool isKnownPredicateViaUMinBounds(CmpPredicate Pred, const SCEV *LHS,
+                                     const SCEV *RHS);
 
   /// Try to match the Expr as "(L + R)<Flags>".
   bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,

@@ -254,6 +254,11 @@ static cl::opt<bool> UseContextForNoWrapFlagInference(
     cl::desc("Infer nuw/nsw flags using context where suitable"),
     cl::init(true));
 
+static cl::opt<bool> EnableUMinRelaxPredicate(
+    "scalar-evolution-umin-relax", cl::Hidden,
+    cl::desc("Prove predicates via umin bound substitution"),
+    cl::init(true));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -12896,6 +12901,90 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   return SE.isKnownPredicate(Pred, LStart, RStart);
 }
 
+/// Prove LHS Pred RHS by substituting umin operands as upper bounds into LHS.
+bool ScalarEvolution::isKnownPredicateViaUMinBounds(CmpPredicate Pred,
+                                                    const SCEV *LHS,
+                                                    const SCEV *RHS) {
+  if (!EnableUMinRelaxPredicate)
+    return false;
+
+  // Guard against re-entry via isKnownPredicate -> isKnownViaNonRecursiveReasoning.
+  if (ProvingUMinBounds)
+    return false;
+  SaveAndRestore Restore(ProvingUMinBounds, true);
+
+  // Transitivity LHS u<= UpperLHS /\ UpperLHS Pred RHS => LHS Pred RHS
+  // only holds when Pred is ULE/ULT (the direction matches the u<= step).
+  if (Pred == ICmpInst::ICMP_UGT) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::ICMP_ULT;
+  } else if (Pred == ICmpInst::ICMP_UGE) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::ICMP_ULE;
+  } else if (Pred != ICmpInst::ICMP_ULE && Pred != ICmpInst::ICMP_ULT) {
+    return false;
+  }
+
+  // Skip if LHS contains no umin at all.
+  if (!SCEVExprContains(LHS, [](const SCEV *S) { return isa<SCEVUMinExpr>(S); }))
+    return false;
+
+  // Prove LHS Pred RHS by finding a umin(A,B) inside LHS, substituting one
+  // of its operands (Bound >= umin) to get UpperLHS, and using transitivity:
+  //
+  //   LHS u<= UpperLHS  and  UpperLHS Pred RHS  =>  LHS Pred RHS
+  //
+  // Example: prove  (-1 + umin(N,M)) u<= M
+  //   Bound = M, UpperLHS = (-1 + M)
+  //   LHS u<= UpperLHS: N,M >= 1  =>  umin >= 1  =>  -1+umin u<= -1+M
+  //   UpperLHS u<= RHS: M >= 1    =>  -1+M u<= M
+  //
+  struct UMinBoundRewriter : public SCEVRewriteVisitor<UMinBoundRewriter> {
+    UMinBoundRewriter(ScalarEvolution &SE, const SCEV *UMin, const SCEV *Bound)
+        : SCEVRewriteVisitor(SE) {
+      RewriteResults[UMin] = Bound;
+    }
+  };
+
+  SmallPtrSet<const SCEV *, 8> Visited;
+  SmallVector<const SCEV *> WorkList = {LHS};
+  while (!WorkList.empty()) {
+    const SCEV *S = WorkList.pop_back_val();
+    if (!Visited.insert(S).second)
+      continue;
+
+    if (const auto *UMin = dyn_cast<SCEVUMinExpr>(S)) {
+      for (const SCEV *Bound : UMin->operands()) {
+        UMinBoundRewriter Rewriter(*this, UMin, Bound);
+        const SCEV *UpperLHS = Rewriter.visit(LHS);
+        LLVM_DEBUG(dbgs() << "UMinBoundRewriter: " << *LHS << " -> "
+                          << *UpperLHS << " (bound: " << *Bound << ")\n");
+        // LHS u<= UpperLHS requires that substituting the larger Bound did not
+        // introduce unsigned overflow. This is captured by isKnownNonNegative:
+        //   UpperLHS >= 0 (signed)  =>  no unsigned wrap  =>  LHS u<= UpperLHS
+        if (isKnownNonNegative(UpperLHS) &&
+            isKnownPredicate(Pred, UpperLHS, RHS))
+          return true;
+      }
+    } else if (isa<SCEVAddExpr, SCEVMulExpr>(S)) {
+      const auto *NAry = cast<SCEVNAryExpr>(S);
+      // Descend only into monotone-non-decreasing contexts. NAry >= 0 ensures
+      // the expression won't wrap when the umin operand is replaced by a larger
+      // Bound. For Mul, checking the full product (not per-operand) is required:
+      // e.g. 3 * (UINT64_MAX/3) = UINT64_MAX is signed-negative despite both
+      // factors being non-negative.
+      if (!isKnownNonNegative(NAry)) {
+        LLVM_DEBUG(dbgs() << "UMinBoundRewriter: skipping " << *S
+                          << " (non-monotone context)\n");
+        continue;
+      }
+      for (const SCEV *Op : NAry->operands())
+        WorkList.push_back(Op);
+    }
+  }
+  return false;
+}
+
 /// Is LHS `Pred` RHS true on the virtue of LHS or RHS being a Min or Max
 /// expression?
 static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
@@ -12924,6 +13013,7 @@ static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
         IsMinMaxConsistingOf<SCEVUMinExpr>(LHS, RHS) ||
         // A <= max(A, ...)
         IsMinMaxConsistingOf<SCEVUMaxExpr>(RHS, LHS);
+
   }
 
   llvm_unreachable("covered switch fell through?!");
@@ -13133,7 +13223,8 @@ bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
          isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
          IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS) ||
-         isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
+         isKnownPredicateViaNoOverflow(Pred, LHS, RHS) ||
+         isKnownPredicateViaUMinBounds(Pred, LHS, RHS);
 }
 
 bool ScalarEvolution::isImpliedCondOperandsHelper(CmpPredicate Pred,
