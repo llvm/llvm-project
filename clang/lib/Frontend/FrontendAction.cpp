@@ -525,7 +525,9 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   if (T.isAtStartOfLine() || T.getKind() != tok::string_literal)
     return SourceLocation();
 
-  StringLiteralParser Literal(T, CI.getPreprocessor());
+  StringLiteralParser Literal(T, CI.getPreprocessor(),
+                              StringLiteralEvalMethod::Evaluated,
+                              CA_NoConversion);
   if (Literal.hadError)
     return SourceLocation();
   RawLexer->LexFromRawLexer(T);
