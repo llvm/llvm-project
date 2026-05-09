@@ -393,7 +393,6 @@ Changes in existing checks
 
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
-
   - Fixed false positive where an array of pointers to ``const`` was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
@@ -402,6 +401,12 @@ Changes in existing checks
 
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
+
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by adding the
+  ``FragmentHeaders`` option for fragment-aware usage scanning and the
+  ``FragmentDependencyCommentFormat`` option for annotating includes kept only
+  by those fragments.
 
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
