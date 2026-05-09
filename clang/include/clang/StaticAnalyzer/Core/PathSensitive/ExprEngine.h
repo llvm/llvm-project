@@ -279,7 +279,7 @@ public:
   /// only used for block count calculations (`getNumVisited`); it is probably
   /// wise to follow this tradition until the discrepancies are resolved.
   const LocationContext *getCurrLocationContext() const {
-    return currBldrCtx ? currBldrCtx->getLocationContext() : nullptr;
+    return currBldrCtx ? currBldrCtx->getStackFrame() : nullptr;
   }
 
   /// Get the 'current' CFGBlock corresponding to the current work item

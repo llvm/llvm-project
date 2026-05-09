@@ -214,12 +214,12 @@ public:
 class NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;
-  const LocationContext *LC;
+  const StackFrame *SF;
 
 public:
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B,
-                     const LocationContext *L)
-      : Eng(E), Block(B), LC(L) {
+                     const StackFrame *S)
+      : Eng(E), Block(B), SF(S) {
     assert(B);
   }
 
@@ -233,14 +233,12 @@ public:
   const CFGBlock *getBlock() const { return Block; }
 
   /// Return the location context associated with this builder.
-  const LocationContext *getLocationContext() const { return LC; }
+  const StackFrame *getStackFrame() const { return SF; }
 
   /// Returns the number of times the current basic block has been
   /// visited on the exploded graph path.
   unsigned blockCount() const {
-    return Eng.WList->getBlockCounter().getNumVisited(
-                    LC->getStackFrame(),
-                    Block->getBlockID());
+    return Eng.WList->getBlockCounter().getNumVisited(SF, Block->getBlockID());
   }
 };
 
