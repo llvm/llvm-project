@@ -1,0 +1,39 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+cir.func coroutine @co_return_from_cleanup() {
+  %true = cir.const #cir.bool<true> : !cir.bool
+  cir.coro.body {
+    cir.await(user, ready : {
+      cir.condition(%true)
+    }, suspend : {
+      cir.yield
+    }, resume : {
+      cir.yield
+    },)
+    cir.cleanup.scope {
+      cir.co_return
+    } cleanup normal {
+      cir.call @cleanup() : () -> ()
+      cir.yield
+    }
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func coroutine @co_return_from_cleanup()
+// CHECK-NOT:     cir.cleanup.scope
+// CHECK:         cir.coro.body
+// CHECK:           cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:         ^[[BODY]]:
+// CHECK:           cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:         ^[[CLEANUP]]:
+// CHECK:           cir.call @cleanup()
+// CHECK:           cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK:         ^[[EXIT]]:
+// CHECK:           cir.co_return
+// CHECK-NOT:     cir.cleanup.scope
+// CHECK:       cir.func private @cleanup()
+
+cir.func private @cleanup()

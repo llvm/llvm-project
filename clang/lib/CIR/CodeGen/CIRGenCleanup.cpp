@@ -476,7 +476,11 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
 static bool bodyHasBranchThroughExits(mlir::Region &bodyRegion) {
   return bodyRegion
       .walk([&](mlir::Operation *op) {
-        if (isa<cir::ReturnOp, cir::GotoOp>(op))
+        // A cir.co_return inside cir.coro.body exits that coroutine body, not
+        // the cleanup scope currently being analyzed.
+        if (isa<cir::CoroBodyOp>(op))
+          return mlir::WalkResult::skip();
+        if (isa<cir::ReturnOp, cir::CoReturnOp, cir::GotoOp>(op))
           return mlir::WalkResult::interrupt();
         return mlir::WalkResult::advance();
       })
