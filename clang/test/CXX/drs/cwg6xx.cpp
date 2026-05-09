@@ -757,9 +757,7 @@ namespace cwg656 { // cwg656: 2.8
     // expected-error@-1 {{call to deleted function 'accept'}}
     //   expected-note@#cwg656-accept-var {{candidate function [with T = const cwg656::A &] has been explicitly deleted}}
     //   expected-note@#cwg656-accept-T {{candidate function template not viable: no known conversion from 'volatile Y' to 'const A &' for 1st argument}}
-    // expected-error@#cwg656-vy {{no matching constructor for initialization of 'volatile Y'}}
-    //   expected-note@#cwg656-Y {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('volatile Y') would lose volatile qualifier}}
-    //   expected-note@#cwg656-Y {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+    // cxx98-error@#cwg656-vy {{cannot pass object of non-POD type 'volatile Y' through variadic function; call will abort at runtime}}
     accept<const D&>(c);
   }
 } // namespace cwg656

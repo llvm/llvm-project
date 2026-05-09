@@ -470,6 +470,9 @@ Improvements to Clang's diagnostics
 
 - Clang now emits an error when implicitly casting a complex type to a built-in vector type. (#GH186805)
 
+- Fixed a frontend crash caused by recursive variadic argument promotion
+  involving volatile class types (#GH196713).
+
 - Added ``-Wnonportable-include-path-separator`` (off by default) to catch
   #include directives that use backslashes as a path separator. The warning
   includes a FixIt to change all the backslashes to forward slashes, so that the

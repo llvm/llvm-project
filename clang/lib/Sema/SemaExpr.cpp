@@ -935,7 +935,8 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
   //     is a prvalue for the temporary.
   // FIXME: add some way to gate this entire thing for correctness in
   // potentially potentially evaluated contexts.
-  if (getLangOpts().CPlusPlus && E->isGLValue() && !isUnevaluatedContext()) {
+  if (getLangOpts().CPlusPlus && E->isGLValue() && !isUnevaluatedContext() &&
+      !E->getType().isVolatileQualified()) {
     ExprResult Temp = PerformCopyInitialization(
                        InitializedEntity::InitializeTemporary(E->getType()),
                                                 E->getExprLoc(), E);
