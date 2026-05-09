@@ -445,6 +445,26 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
   }
 };
 
+/// Converts math.fpowi to spirv.CL.pown.
+struct PowIOpPattern final : public OpConversionPattern<math::FPowIOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(math::FPowIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (LogicalResult res = checkSourceOpTypes(rewriter, op); failed(res))
+      return res;
+
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<spirv::CLPownOp>(op, dstType, adaptor.getLhs(),
+                                                 adaptor.getRhs());
+    return success();
+  }
+};
+
 /// Converts math.round to GLSL SPIRV extended ops.
 struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
   using Base::Base;
@@ -556,7 +576,7 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       CheckedElementwiseOpPattern<math::FloorOp, spirv::CLFloorOp>,
       CheckedElementwiseOpPattern<math::FmaOp, spirv::CLFmaOp>,
       CheckedElementwiseOpPattern<math::LogOp, spirv::CLLogOp>,
-      CheckedElementwiseOpPattern<math::PowFOp, spirv::CLPowOp>,
+      CheckedElementwiseOpPattern<math::PowFOp, spirv::CLPowOp>, PowIOpPattern,
       CheckedElementwiseOpPattern<math::RoundEvenOp, spirv::CLRintOp>,
       CheckedElementwiseOpPattern<math::RoundOp, spirv::CLRoundOp>,
       CheckedElementwiseOpPattern<math::RsqrtOp, spirv::CLRsqrtOp>,
