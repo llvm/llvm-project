@@ -4433,6 +4433,16 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
 
+  // Fold: select (icmp ult X, 2), X, ctpop(X)  -->  ctpop(X)
+  // ctpop(0)==0 and ctpop(1)==1, so the guard is always redundant.
+  if (match(FalseVal, m_Ctpop(m_Specific(TrueVal))) &&
+      match(CondVal, m_SpecificICmp(ICmpInst::ICMP_ULT, m_Specific(TrueVal),
+                                    m_SpecificInt(2)))) {
+    cast<Instruction>(FalseVal)->dropPoisonGeneratingAnnotations();
+    addToWorklist(cast<Instruction>(FalseVal));
+    return replaceInstUsesWith(SI, FalseVal);
+  }
+
   // If the type of select is not an integer type or if the condition and
   // the selection type are not both scalar nor both vector types, there is no
   // point in attempting to match these patterns.

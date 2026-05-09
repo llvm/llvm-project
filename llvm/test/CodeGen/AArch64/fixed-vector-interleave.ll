@@ -139,9 +139,7 @@ define <4 x i16> @interleave2_same_const_splat_v4i16() {
 ;
 ; CHECK-GI-LABEL: interleave2_same_const_splat_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #3 // =0x3
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    movi v0.4h, #3
 ; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
   %retval = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> splat(i16 3), <2 x i16> splat(i16 3))
@@ -158,12 +156,8 @@ define <4 x i16> @interleave2_diff_const_splat_v4i16() {
 ;
 ; CHECK-GI-LABEL: interleave2_diff_const_splat_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #3 // =0x3
-; CHECK-GI-NEXT:    mov w9, #4 // =0x4
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    movi v0.4h, #3
+; CHECK-GI-NEXT:    movi v1.4h, #4
 ; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    ret
   %retval = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> splat(i16 3), <2 x i16> splat(i16 4))

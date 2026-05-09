@@ -9,6 +9,7 @@ LLVM's Analysis and Transform Passes
    :hidden:
 
    KernelInfo
+   LoopFusion
 
 Introduction
 ============
@@ -663,6 +664,12 @@ A pass wrapper around the ``ExtractLoop()`` scalar transformation to extract
 each top-level loop into its own new function.  If the loop is the *only* loop
 in a given function, it is not touched.  This is a pass most useful for
 debugging via bugpoint.
+
+``loop-fusion``: Loop Fusion
+----------------------------
+
+Merges adjacent loops when it can prove the transformation preserves the
+program's semantics.  This pass is :doc:`documented separately<LoopFusion>`.
 
 ``loop-reduce``: Loop Strength Reduction
 ----------------------------------------

@@ -342,12 +342,23 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
     if (property) {
       OptionValue *option_value = property->GetValue().get();
       assert(option_value);
+      if ((dump_mask & eDumpOptionOnlyChanged) && option_value->IsDefault())
+        continue;
       const bool transparent_value = option_value->ValueIsTransparent();
       property->Dump(exe_ctx, strm, dump_mask);
       if (!transparent_value)
         strm.EOL();
     }
   }
+}
+
+bool OptionValueProperties::IsDefault() const {
+  for (const Property &property : m_properties) {
+    if (OptionValue *value = property.GetValue().get())
+      if (!value->IsDefault())
+        return false;
+  }
+  return true;
 }
 
 llvm::json::Value
