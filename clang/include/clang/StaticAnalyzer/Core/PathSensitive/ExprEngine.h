@@ -268,7 +268,7 @@ public:
 
   const LocationContext *getRootLocationContext() const {
     assert(G.getRoot());
-    return G.getRoot()->getLocation().getLocationContext();
+    return G.getRoot()->getLocation().getStackFrame();
   }
 
   /// Get the 'current' location context corresponding to the current work item

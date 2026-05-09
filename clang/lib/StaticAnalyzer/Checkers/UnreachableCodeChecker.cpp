@@ -61,7 +61,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
   // Iterate over ExplodedGraph
   for (const ExplodedNode &N : G.nodes()) {
     const ProgramPoint &P = N.getLocation();
-    LC = P.getLocationContext();
+    LC = P.getStackFrame();
     if (!LC->inTopFrame())
       continue;
 

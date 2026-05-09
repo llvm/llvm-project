@@ -181,9 +181,9 @@ public:
   makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
                       ProgramStateRef State,
                       ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
-    const LocationContext *LC = Pred->getStackFrame();
-    State = State->BindExpr(E, LC, V);
-    const auto &L = ProgramPoint::getProgramPoint(E, K, LC, /*tag=*/nullptr);
+    const StackFrame *SF = Pred->getStackFrame();
+    State = State->BindExpr(E, SF, V);
+    const auto &L = ProgramPoint::getProgramPoint(E, K, SF, /*tag=*/nullptr);
     return makeNode(L, State, Pred);
   }
 

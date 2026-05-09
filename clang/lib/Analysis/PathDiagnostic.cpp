@@ -666,8 +666,8 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
     if (BSrc->getTerminator().isVirtualBaseBranch()) {
       // TODO: VirtualBaseBranches should also appear for destructors.
       // In this case we should put the diagnostic at the end of decl.
-      return PathDiagnosticLocation::createBegin(
-          P.getLocationContext()->getDecl(), SMng);
+      return PathDiagnosticLocation::createBegin(P.getStackFrame()->getDecl(),
+                                                 SMng);
 
     } else {
       S = BSrc->getTerminatorCondition();
@@ -677,14 +677,14 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
         // the beginning of a function), use the function's declaration instead.
         assert(BSrc == &BSrc->getParent()->getEntry() && "CFGBlock has no "
                "TerminatorCondition and is not the enrty block of the CFG");
-        return PathDiagnosticLocation::createBegin(
-            P.getLocationContext()->getDecl(), SMng);
+        return PathDiagnosticLocation::createBegin(P.getStackFrame()->getDecl(),
+                                                   SMng);
       }
     }
   } else if (std::optional<StmtPoint> SP = P.getAs<StmtPoint>()) {
     S = SP->getStmt();
     if (P.getAs<PostStmtPurgeDeadSymbols>())
-      return PathDiagnosticLocation::createEnd(S, SMng, P.getLocationContext());
+      return PathDiagnosticLocation::createEnd(S, SMng, P.getStackFrame());
   } else if (std::optional<PostInitializer> PIP = P.getAs<PostInitializer>()) {
     return PathDiagnosticLocation(PIP->getInitializer()->getSourceLocation(),
                                   SMng);
@@ -694,19 +694,17 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
                  P.getAs<PostImplicitCall>()) {
     return PathDiagnosticLocation(PIE->getLocation(), SMng);
   } else if (std::optional<CallEnter> CE = P.getAs<CallEnter>()) {
-    return getLocationForCaller(CE->getCalleeContext(),
-                                CE->getLocationContext(),
+    return getLocationForCaller(CE->getCalleeContext(), CE->getStackFrame(),
                                 SMng);
   } else if (std::optional<CallExitEnd> CEE = P.getAs<CallExitEnd>()) {
-    return getLocationForCaller(CEE->getCalleeContext(),
-                                CEE->getLocationContext(),
+    return getLocationForCaller(CEE->getCalleeContext(), CEE->getStackFrame(),
                                 SMng);
   } else if (auto CEB = P.getAs<CallExitBegin>()) {
     if (const ReturnStmt *RS = CEB->getReturnStmt())
       return PathDiagnosticLocation::createBegin(RS, SMng,
-                                                 CEB->getLocationContext());
+                                                 CEB->getStackFrame());
     return PathDiagnosticLocation(
-        CEB->getLocationContext()->getDecl()->getSourceRange().getEnd(), SMng);
+        CEB->getStackFrame()->getDecl()->getSourceRange().getEnd(), SMng);
   } else if (std::optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
     if (std::optional<CFGElement> BlockFront = BE->getFirstElement()) {
       if (auto StmtElt = BlockFront->getAs<CFGStmt>()) {
@@ -722,13 +720,12 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
         BE->getBlock()->getTerminatorStmt()->getBeginLoc(), SMng);
   } else if (std::optional<FunctionExitPoint> FE =
                  P.getAs<FunctionExitPoint>()) {
-    return PathDiagnosticLocation(FE->getStmt(), SMng,
-                                  FE->getLocationContext());
+    return PathDiagnosticLocation(FE->getStmt(), SMng, FE->getStackFrame());
   } else {
     llvm_unreachable("Unexpected ProgramPoint");
   }
 
-  return PathDiagnosticLocation(S, SMng, P.getLocationContext());
+  return PathDiagnosticLocation(S, SMng, P.getStackFrame());
 }
 
 PathDiagnosticLocation PathDiagnosticLocation::createSingleLocation(
@@ -844,10 +841,9 @@ void PathDiagnosticLocation::flatten() {
 std::shared_ptr<PathDiagnosticCallPiece>
 PathDiagnosticCallPiece::construct(const CallExitEnd &CE,
                                    const SourceManager &SM) {
-  const Decl *caller = CE.getLocationContext()->getDecl();
-  PathDiagnosticLocation pos = getLocationForCaller(CE.getCalleeContext(),
-                                                    CE.getLocationContext(),
-                                                    SM);
+  const Decl *caller = CE.getStackFrame()->getDecl();
+  PathDiagnosticLocation pos =
+      getLocationForCaller(CE.getCalleeContext(), CE.getStackFrame(), SM);
   return std::shared_ptr<PathDiagnosticCallPiece>(
       new PathDiagnosticCallPiece(caller, pos));
 }
@@ -869,7 +865,7 @@ void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
   Callee = CalleeSF->getDecl();
 
   callEnterWithin = PathDiagnosticLocation::createBegin(Callee, SM);
-  callEnter = getLocationForCaller(CalleeSF, CE.getLocationContext(), SM);
+  callEnter = getLocationForCaller(CalleeSF, CE.getStackFrame(), SM);
 
   // Autosynthesized property accessors are special because we'd never
   // pop back up to non-autosynthesized code until we leave them.

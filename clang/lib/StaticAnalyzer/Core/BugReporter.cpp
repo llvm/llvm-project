@@ -1184,7 +1184,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     } else {
       // The path terminated within a nested location context, create a new
       // call piece to encapsulate the rest of the path pieces.
-      const Decl *Caller = CE->getLocationContext()->getDecl();
+      const Decl *Caller = CE->getStackFrame()->getDecl();
       Call = PathDiagnosticCallPiece::construct(C.getActivePath(), Caller);
       assert(C.getActivePath().size() == 1 &&
              C.getActivePath().front().get() == Call);
@@ -2417,7 +2417,7 @@ const Stmt *PathSensitiveBugReport::getStmt() const {
   const Stmt *S = nullptr;
 
   if (std::optional<BlockEntrance> BE = ProgP.getAs<BlockEntrance>()) {
-    CFGBlock &Exit = ProgP.getLocationContext()->getCFG()->getExit();
+    CFGBlock &Exit = ProgP.getStackFrame()->getCFG()->getExit();
     if (BE->getBlock() == &Exit)
       S = ErrorNode->getPreviousStmtForDiagnostics();
   }
@@ -2464,17 +2464,19 @@ PathSensitiveBugReport::getLocation() const {
   assert(ErrorNode && "Cannot create a location with a null node.");
   const Stmt *S = ErrorNode->getStmtForDiagnostics();
     ProgramPoint P = ErrorNode->getLocation();
-  const LocationContext *LC = P.getLocationContext();
-  SourceManager &SM =
-      ErrorNode->getState()->getStateManager().getContext().getSourceManager();
+    const StackFrame *SF = P.getStackFrame();
+    SourceManager &SM = ErrorNode->getState()
+                            ->getStateManager()
+                            .getContext()
+                            .getSourceManager();
 
-  if (!S) {
-    // If this is an implicit call, return the implicit call point location.
+    if (!S) {
+      // If this is an implicit call, return the implicit call point location.
       if (std::optional<PreImplicitCall> PIE = P.getAs<PreImplicitCall>())
       return PathDiagnosticLocation(PIE->getLocation(), SM);
     if (auto FE = P.getAs<FunctionExitPoint>()) {
       if (const ReturnStmt *RS = FE->getStmt())
-        return PathDiagnosticLocation::createBegin(RS, SM, LC);
+        return PathDiagnosticLocation::createBegin(RS, SM, SF);
 
       S = findReasonableStmtCloseToFunctionExit(ErrorNode);
     }
@@ -2498,13 +2500,13 @@ PathSensitiveBugReport::getLocation() const {
       return PathDiagnosticLocation::createOperatorLoc(B, SM);
 
     if (P.getAs<PostStmtPurgeDeadSymbols>())
-      return PathDiagnosticLocation::createEnd(S, SM, LC);
+      return PathDiagnosticLocation::createEnd(S, SM, SF);
 
     if (S->getBeginLoc().isValid())
-      return PathDiagnosticLocation(S, SM, LC);
+      return PathDiagnosticLocation(S, SM, SF);
 
     return PathDiagnosticLocation(
-        PathDiagnosticLocation::getValidSourceLocation(S, LC), SM);
+        PathDiagnosticLocation::getValidSourceLocation(S, SF), SM);
   }
 
   return PathDiagnosticLocation::createDeclEnd(ErrorNode->getStackFrame(), SM);

@@ -295,7 +295,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   }
 
   // Check if we are entering the EXIT block.
-  const CFGBlock &ExitBlk = L.getLocationContext()->getCFG()->getExit();
+  const CFGBlock &ExitBlk = L.getStackFrame()->getCFG()->getExit();
   if (Blk == &ExitBlk) {
     assert(ExitBlk.empty() && "EXIT block cannot contain Stmts.");
 
@@ -546,13 +546,13 @@ void CoreEngine::HandlePostStmt(const CFGBlock *B, unsigned StmtIdx,
 
 void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
                                          ExplodedNode *Pred) {
-  const LocationContext *LCtx = Pred->getStackFrame();
-  if (const auto *CallerCtor = dyn_cast_or_null<CXXConstructExpr>(
-          LCtx->getStackFrame()->getCallSite())) {
+  const StackFrame *SF = Pred->getStackFrame();
+  if (const auto *CallerCtor =
+          dyn_cast_or_null<CXXConstructExpr>(SF->getCallSite())) {
     switch (CallerCtor->getConstructionKind()) {
     case CXXConstructionKind::NonVirtualBase:
     case CXXConstructionKind::VirtualBase: {
-      BlockEdge Loc(B, *B->succ_begin(), LCtx);
+      BlockEdge Loc(B, *B->succ_begin(), SF);
       HandleBlockEdge(Loc, Pred);
       return;
     }
@@ -563,7 +563,7 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
 
   // We either don't see a parent stack frame because we're in the top frame,
   // or the parent stack frame doesn't initialize our virtual bases.
-  BlockEdge Loc(B, *(B->succ_begin() + 1), LCtx);
+  BlockEdge Loc(B, *(B->succ_begin() + 1), SF);
   HandleBlockEdge(Loc, Pred);
 }
 

@@ -111,7 +111,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   ProgramStateRef state = node->getState();
   ProgramStateRef pred_state = pred->getState();
   if (state->store != pred_state->store || state->GDM != pred_state->GDM ||
-      progPoint.getLocationContext() != pred->getStackFrame())
+      progPoint.getStackFrame() != pred->getStackFrame())
     return false;
 
   // All further checks require expressions. As per #3, we know that we have
@@ -130,7 +130,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   // Do not collect nodes for non-consumed Stmt or Expr to ensure precise
   // diagnostic generation; specifically, so that we could anchor arrows
   // pointing to the beginning of statements (as written in code).
-  const ParentMap &PM = progPoint.getLocationContext()->getParentMap();
+  const ParentMap &PM = progPoint.getStackFrame()->getParentMap();
   if (!PM.isConsumedExpr(Ex))
     return false;
 

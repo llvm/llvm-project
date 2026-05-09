@@ -53,7 +53,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
     const ProgramPoint &P = N.getLocation();
 
     // Only check the coverage in the top level function (optimization).
-    if (D != P.getLocationContext()->getDecl())
+    if (D != P.getStackFrame()->getDecl())
       continue;
 
     if (std::optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {

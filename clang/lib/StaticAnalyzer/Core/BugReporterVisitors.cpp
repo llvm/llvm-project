@@ -2181,7 +2181,7 @@ PathDiagnosticPieceRef StoreHandler::constructNote(StoreInfo SI,
   PathDiagnosticLocation L;
   if (P.getAs<CallEnter>() && SI.SourceOfTheValue)
     L = PathDiagnosticLocation(SI.SourceOfTheValue, BRC.getSourceManager(),
-                               P.getLocationContext());
+                               P.getStackFrame());
 
   if (!L.isValid() || !L.asLocation().isValid())
     L = PathDiagnosticLocation::create(P, BRC.getSourceManager());
