@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-11
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-11
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx14
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx14
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx14
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx14
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx14
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-17
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-17
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-17
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-17
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20
 
-// cxx98-11-no-diagnostics
+// cxx98-17-no-diagnostics
 
 namespace cwg3106 { // cwg3106: 2.7
 #if __cplusplus >= 201103L
@@ -30,17 +30,17 @@ static_assert(!__is_final(decltype(lambda)), "");
 } // namespace cwg3151
 
 namespace cwg3156 { // cwg3156: 3.5
-#if __cplusplus >= 201402L
+#if __cplusplus >= 202002L
 struct C { // #cwg3156-C
   C(int) = delete; // #cwg3156-C-int
   C(){};
 };
 
-int x = [b = C(3)](){ return 4; }();
-// since-cxx14-error@-1 {{functional-style cast from 'int' to 'C' uses deleted function}}
-//   since-cxx14-note@#cwg3156-C-int {{candidate constructor has been explicitly deleted}}
-//   since-cxx14-note@#cwg3156-C {{candidate constructor (the implicit copy constructor)}}
-//   since-cxx14-note@#cwg3156-C {{candidate constructor (the implicit move constructor)}}
+decltype([b = C(3)](){ return 4; }()) x;
+// since-cxx20-error@-1 {{functional-style cast from 'int' to 'C' uses deleted function}}
+//   since-cxx20-note@#cwg3156-C-int {{candidate constructor has been explicitly deleted}}
+//   since-cxx20-note@#cwg3156-C {{candidate constructor (the implicit copy constructor)}}
+//   since-cxx20-note@#cwg3156-C {{candidate constructor (the implicit move constructor)}}
 #endif
 } // namespace cwg3156
 
