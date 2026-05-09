@@ -20,8 +20,9 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <string>
-#include <utility>
+#include <vector>
 
 namespace clang {
 class SourceLocation;
@@ -61,23 +62,33 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               const PragmaIncludes *PI, const Preprocessor &PP,
               UsedSymbolCB CB);
 
+/// A missing include insertion candidate.
+struct MissingInclude {
+  std::string Spelling;
+  Header Provider;
+};
+
+/// The result of include-cleaner analysis for one main file.
 struct AnalysisResults {
   std::vector<const Include *> Unused;
-  // Spellings, like "<vector>" paired with the Header that generated it.
-  std::vector<std::pair<std::string, Header>> Missing;
+  /// Deduplicated insertion plan, e.g. "<vector>" paired with the chosen
+  /// provider Header.
+  std::vector<MissingInclude> MissingIncludes;
+};
+
+/// Analysis configuration shared by include-cleaner consumers.
+struct AnalysisOptions {
+  /// No analysis will be performed for headers that satisfy the predicate.
+  std::function<bool(const Header &)> HeaderFilter;
 };
 
 /// Determine which headers should be inserted or removed from the main file.
 /// This exposes conclusions but not reasons: use lower-level walkUsed for that.
-///
-/// The HeaderFilter is a predicate that receives absolute path or spelling
-/// without quotes/brackets, when a phyiscal file doesn't exist.
-/// No analysis will be performed for headers that satisfy the predicate.
-AnalysisResults
-analyze(llvm::ArrayRef<Decl *> ASTRoots,
-        llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &I,
-        const PragmaIncludes *PI, const Preprocessor &PP,
-        llvm::function_ref<bool(llvm::StringRef)> HeaderFilter = nullptr);
+AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
+                        llvm::ArrayRef<SymbolReference> MacroRefs,
+                        const Includes &I, const PragmaIncludes *PI,
+                        const Preprocessor &PP,
+                        const AnalysisOptions &Options = {});
 
 /// Removes unused includes and inserts missing ones in the main file.
 /// Returns the modified main-file code.

@@ -51,6 +51,12 @@ std::string guard(llvm::StringRef Code) {
   return "#pragma once\n" + Code.str();
 }
 
+MATCHER_P2(missingInclude, Spelling, Provider, "") {
+  return arg.Spelling == Spelling && arg.Provider == Provider;
+}
+
+MATCHER_P(missingSpelling, Spelling, "") { return arg.Spelling == Spelling; }
+
 class WalkUsedTest : public testing::Test {
 protected:
   TestInputs Inputs;
@@ -269,7 +275,8 @@ int x = a + c;
 
   const Include *B = PP.Includes.atLine(3);
   ASSERT_EQ(B->Spelled, "b.h");
-  EXPECT_THAT(Results.Missing, ElementsAre(Pair("\"c.h\"", Header(CHeader))));
+  EXPECT_THAT(Results.MissingIncludes,
+              ElementsAre(missingInclude("\"c.h\"", Header(CHeader))));
   EXPECT_THAT(Results.Unused, ElementsAre(B));
 }
 
@@ -317,7 +324,7 @@ TEST_F(AnalyzeTest, ResourceDirIsIgnored) {
   TestAST AST(Inputs);
   auto Results = analyze({}, {}, PP.Includes, &PI, AST.preprocessor());
   EXPECT_THAT(Results.Unused, testing::IsEmpty());
-  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+  EXPECT_THAT(Results.MissingIncludes, testing::IsEmpty());
 }
 
 TEST_F(AnalyzeTest, DifferentHeaderSameSpelling) {
@@ -342,7 +349,7 @@ TEST_F(AnalyzeTest, DifferentHeaderSameSpelling) {
     DeclsInTU.push_back(D);
   auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
   EXPECT_THAT(Results.Unused, testing::IsEmpty());
-  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+  EXPECT_THAT(Results.MissingIncludes, testing::IsEmpty());
 }
 
 TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
@@ -374,26 +381,31 @@ TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
   auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
   // Check that we're spelling header using the symlink, and not underlying
   // path.
-  EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+  EXPECT_THAT(Results.MissingIncludes,
+              testing::ElementsAre(missingSpelling("\"inner.h\"")));
   // header.h should be unused.
   EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
 
   {
     // Make sure filtering is also applied to symlink, not underlying file.
-    auto HeaderFilter = [](llvm::StringRef Path) { return Path == "inner.h"; };
-    Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(),
-                      HeaderFilter);
-    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+    AnalysisOptions Options{
+        [](const Header &H) { return H.resolvedPath() == "inner.h"; }};
+    Results =
+        analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(), Options);
+    EXPECT_THAT(Results.MissingIncludes,
+                testing::ElementsAre(missingSpelling("\"inner.h\"")));
     // header.h should be unused.
     EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
   }
   {
-    auto HeaderFilter = [](llvm::StringRef Path) { return Path == "header.h"; };
-    Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(),
-                      HeaderFilter);
+    AnalysisOptions Options{
+        [](const Header &H) { return H.resolvedPath() == "header.h"; }};
+    Results =
+        analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(), Options);
     // header.h should be ignored now.
     EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
-    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+    EXPECT_THAT(Results.MissingIncludes,
+                testing::ElementsAre(missingSpelling("\"inner.h\"")));
   }
 }
 
@@ -422,7 +434,7 @@ TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotMissing) {
   for (auto *D : AST.context().getTranslationUnitDecl()->decls())
     DeclsInTU.push_back(D);
   auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
-  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+  EXPECT_THAT(Results.MissingIncludes, testing::IsEmpty());
 }
 
 TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotUnused) {
@@ -467,14 +479,14 @@ TEST(FixIncludes, Basic) {
   Inc.add(I);
 
   AnalysisResults Results;
-  Results.Missing.emplace_back("\"aa.h\"", Header(""));
-  Results.Missing.emplace_back("\"ab.h\"", Header(""));
-  Results.Missing.emplace_back("<e.h>", Header(""));
+  Results.MissingIncludes.push_back(MissingInclude{"\"aa.h\"", Header("")});
+  Results.MissingIncludes.push_back(MissingInclude{"\"ab.h\"", Header("")});
+  Results.MissingIncludes.push_back(MissingInclude{"<e.h>", Header("")});
   Results.Unused.push_back(Inc.atLine(3));
   Results.Unused.push_back(Inc.atLine(4));
 
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
-R"cpp(#include "d.h"
+            R"cpp(#include "d.h"
 #include "a.h"
 #include "aa.h"
 #include "ab.h"
@@ -482,10 +494,10 @@ R"cpp(#include "d.h"
 )cpp");
 
   Results = {};
-  Results.Missing.emplace_back("\"d.h\"", Header(""));
+  Results.MissingIncludes.push_back(MissingInclude{"\"d.h\"", Header("")});
   Code = R"cpp(#include "a.h")cpp";
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
-R"cpp(#include "d.h"
+            R"cpp(#include "d.h"
 #include "a.h")cpp");
 }
 
