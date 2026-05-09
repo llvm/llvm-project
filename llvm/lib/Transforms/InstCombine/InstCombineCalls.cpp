@@ -3109,50 +3109,59 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *SignVal = nullptr;
     CmpPredicate Pred;
     const APFloat *TC, *FC;
+    Value *Cond = nullptr;
+
+    if (!match(Sign,
+              m_Select(m_Value(Cond), m_APFloat(TC),
+                        m_APFloat(FC))))
+      return nullptr;
+
     auto *SelInst = cast<Instruction>(Sign);
 
-    if (!match(
-            Sign,
-            m_Select(
-                m_CombineOr(
-                    m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()), m_Value(B)),
-                    m_Select(m_Value(B),
-                             m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
-                             m_Zero())),
-                m_APFloat(TC), m_APFloat(FC))))
+    if (!match(Cond,
+              m_CombineOr(
+                  m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+                        m_Value(B)),
+                  m_Select(m_Value(B),
+                            m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+                            m_Zero()))))
       return nullptr;
 
     bool IsStandard = TC->isNegative() && !FC->isNegative() &&
                       abs(*TC).bitwiseIsEqual(abs(*FC));
     bool IsInverse = !TC->isNegative() && FC->isNegative() &&
-                     abs(*TC).bitwiseIsEqual(abs(*FC));
+                    abs(*TC).bitwiseIsEqual(abs(*FC));
 
     if (IsStandard || IsInverse) {
-      FCmpInst::Predicate Predicate = static_cast<FCmpInst::Predicate>(Pred);
-        if (Predicate == FCmpInst::FCMP_OLT || (SelInst->hasNoNaNs() && Predicate == FCmpInst::FCMP_ULT)) {
-          if (IsStandard)
-            SignVal = A;
-          else if (SelInst->hasNoSignedZeros())
-            SignVal = Builder.CreateFNeg(A);
-        } else if (Predicate == FCmpInst::FCMP_OGT || (SelInst->hasNoNaNs() && Predicate == FCmpInst::FCMP_UGT)) {
-          if (IsInverse)
-            SignVal = A;
-          else
-            SignVal = Builder.CreateFNeg(A);
-        } else if (Predicate == FCmpInst::FCMP_ULE) {
-          if (IsStandard)
-            SignVal = Builder.CreateFNeg(A);
-        } else if (Predicate == FCmpInst::FCMP_UGE) {
-          if (IsStandard)
-            SignVal = Builder.CreateFNeg(A);
-        }
+      FCmpInst::Predicate Predicate =
+          static_cast<FCmpInst::Predicate>(Pred);
 
-        if (SignVal) {
-          if (auto *NewInst = dyn_cast<Instruction>(SignVal))
-            NewInst->copyFastMathFlags(SelInst);
-          return replaceOperand(*II, 1, SignVal);
-        }
+      if (Predicate == FCmpInst::FCMP_OLT ||
+          (SelInst->hasNoNaNs() &&
+          Predicate == FCmpInst::FCMP_ULT)) {
+        if (IsStandard)
+          SignVal = A;
+        else if (SelInst->hasNoSignedZeros())
+          SignVal = Builder.CreateFNeg(A);
+      } else if (Predicate == FCmpInst::FCMP_OGT ||
+                (SelInst->hasNoNaNs() &&
+                  Predicate == FCmpInst::FCMP_UGT)) {
+        if (IsInverse)
+          SignVal = A;
+        else
+          SignVal = Builder.CreateFNeg(A);
+      } else if (Predicate == FCmpInst::FCMP_ULE ||
+                Predicate == FCmpInst::FCMP_UGE) {
+        if (IsStandard)
+          SignVal = Builder.CreateFNeg(A);
       }
+
+      if (SignVal) {
+        if (auto *NewInst = dyn_cast<Instruction>(SignVal))
+          NewInst->copyFastMathFlags(SelInst);
+        return replaceOperand(*II, 1, SignVal);
+      }
+    }
 
     Type *SignEltTy = Sign->getType()->getScalarType();
 
