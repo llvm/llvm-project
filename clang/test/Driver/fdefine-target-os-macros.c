@@ -281,6 +281,24 @@
 // RUN:                -DUNIX=1        \
 // RUN:                -DFIRMWARE=0
 
+// RUN: %clang -dM -E --target=x86_64-pc-illumos \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
+// RUN: | FileCheck %s -DMAC=0         \
+// RUN:                -DOSX=0         \
+// RUN:                -DIPHONE=0      \
+// RUN:                -DIOS=0         \
+// RUN:                -DTV=0          \
+// RUN:                -DWATCH=0       \
+// RUN:                -DVISION=0      \
+// RUN:                -DDRIVERKIT=0   \
+// RUN:                -DMACCATALYST=0 \
+// RUN:                -DEMBEDDED=0    \
+// RUN:                -DSIMULATOR=0   \
+// RUN:                -DWINDOWS=0     \
+// RUN:                -DLINUX=0       \
+// RUN:                -DUNIX=1        \
+// RUN:                -DFIRMWARE=0
+
 // If the firmware OS was valid for a non-Apple vendor,
 // it would be TARGET_OS_MAC=0, TARGET_OS_FIRMWARE=1.
 

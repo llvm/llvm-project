@@ -28,7 +28,8 @@ TARGET_OS(TARGET_OS_LINUX, Triple.isOSLinux())
 TARGET_OS(TARGET_OS_UNIX, Triple.isOSNetBSD() ||
                           Triple.isOSFreeBSD() ||
                           Triple.isOSOpenBSD() ||
-                          Triple.isOSSolaris())
+                          Triple.isOSSolaris() ||
+                          Triple.isOSIllumos())
 
 // Apple (Mac) targets.
 TARGET_OS(TARGET_OS_MAC, Triple.isOSDarwin())
