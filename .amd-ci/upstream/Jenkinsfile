@@ -178,15 +178,9 @@ try {
     timeout(time: fullTimeoutH, unit: 'HOURS') {
         node('atl && apptainer') {
             skipDefaultCheckout()
-            List cleanExcludes = [
-                [pattern: 'llvm-project/.git/**', type: 'EXCLUDE']
-            ]
             stage('prepare') {
                 String referenceRepo = env.JENKINS_REMOTE_GIT_CACHE ?: 'NoSuchReferenceRepo'
-                cleanWs(
-                    deleteDirs: true,
-                    patterns: cleanExcludes
-                )
+                cleanWs()
                 String essDir
                 if (actualTarget == upstreamBranch) {
                     dir('aocc-devops') {
@@ -357,10 +351,7 @@ try {
                 }
             }
             if (isSkippableMerge || !hasSourceChanges) {
-                cleanWs(
-                    deleteDirs: true,
-                    patterns: cleanExcludes
-                )
+                cleanWs()
                 return // From node
             }
             stage('run') {
@@ -414,10 +405,7 @@ try {
                     } else {
                         echo('No built compiler tar was found.')
                     }
-                    cleanWs(
-                        deleteDirs: true,
-                        patterns: cleanExcludes
-                    )
+                    cleanWs()
                 }
             }
         }
