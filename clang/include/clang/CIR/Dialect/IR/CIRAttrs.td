@@ -894,6 +894,155 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
 }
 
 //===----------------------------------------------------------------------===//
+// RelativeVTableComponentAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_RelativeVTableComponentAttr
+    : CIR_ValueLikeAttr<"RelativeVTableComponent", "relative_vtable_component"> {
+  let summary = "Represents one C++ relative vtable component";
+
+  let description = [{
+    Represents one entry in a C++ relative vtable.
+
+    A relative vtable entry does not materialize the absolute address of the
+    referenced entity. Instead, it represents the 32-bit offset from the vtable
+    address point to the referenced symbol, optionally adjusted according to the
+    kind of vtable component being emitted.
+
+    The symbol identifies the referenced global, such as an RTTI proxy or a
+    function. The vtable address point identifies the address point used as the
+    base for computing the relative offset. The component kind records how the
+    entry should be interpreted during lowering, for example as an RTTI entry or
+    a function entry.
+
+    This attribute is intended for relative vtable initializers. Unlike
+    #cir.global_view, it does not produce a pointer-valued constant view of a
+    global. Its lowered value is a 32-bit integer relative-offset entry.
+
+    Example:
+    ```
+      cir.global linkonce_odr @_ZTV1A =
+        #cir.relative_vtable<{
+          #cir.const_array<[
+            #cir.int<0> : !s32i,
+            #cir.relative_vtable_component<@_ZTI1A.rtti_proxy, 0, 2, 0> : !s32i,
+            #cir.relative_vtable_component<@_ZN1A1fEv, 0, 2, 1> : !s32i
+          ]> : !cir.array<!s32i x 3>
+        }> : !rec_anon_struct
+    ```
+  }];
+
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    "mlir::FlatSymbolRefAttr":$symbol,
+    "unsigned":$vtableComponentIndex,
+    "unsigned":$vtableAddressPoint,
+    "uint32_t":$componentKind // 0 -> RTTI 1 -> Virtual function pointer(TODO: magic number)
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "mlir::Type":$type,
+      "mlir::FlatSymbolRefAttr":$symbol,
+      "unsigned":$vtableComponentIndex,
+      "unsigned":$vtableAddressPoint,
+      "uint32_t":$componentKind
+    ), [{
+      return $_get(type.getContext(), type, symbol, vtableComponentIndex, vtableAddressPoint,
+                   componentKind);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<`
+      $symbol `,`
+      $vtableComponentIndex `,`
+      $vtableAddressPoint `,`
+      $componentKind
+    `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// RelativeVTableAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_RelativeVTableAttr : CIR_ValueLikeAttr<"RelativeVTable", "relative_vtable"> {
+  let summary = "Represents a C++ relative vtable";
+  let description = [{
+    Represents the initializer for a C++ relative vtable global.
+
+    The attribute stores the constant elements of the relative vtable object.
+    The associated attribute type is the anonymous record type of the global.
+    The data parameter contains the record members, where each member is a
+    constant array corresponding to one vtable component.
+
+    Unlike a regular vtable, a relative vtable does not store absolute pointers
+    in its entries. Each vtable entry is represented as a 32-bit relative offset.
+    The offset is interpreted relative to the address point of vtable.
+
+    In the common single-inheritance case, the anonymous record type contains a
+    single array corresponding to the primary vtable for one class. In multiple
+    inheritance cases, the anonymous record may contain multiple arrays, each
+    representing a distinct vtable component within the same vtable object.
+
+    Example 1 (single vtable):
+    ```
+    cir.global linkonce_odr @_ZTV6Mother =
+      #cir.relative_vtable<{
+        #cir.const_array<[
+          #cir.int<0> : !s32i,
+          #cir.int<...> : !s32i,
+          #cir.int<...> : !s32i,
+          #cir.int<...> : !s32i
+        ]> : !cir.array<!s32i x 4>
+      }> : !rec_anon_struct1
+    ```
+
+    Example 2 (multiple vtables):
+    ```
+    cir.global linkonce_odr @_ZTV5Child =
+      #cir.relative_vtable<{
+        #cir.const_array<[
+          #cir.int<0> : !s32i,
+          #cir.int<...> : !s32i,
+          #cir.int<...> : !s32i,
+          #cir.int<...> : !s32i
+        ]> : !cir.array<!s32i x 4>,
+        #cir.const_array<[
+          #cir.int<-8> : !s32i,
+          #cir.int<...> : !s32i,
+          #cir.int<...> : !s32i
+        ]> : !cir.array<!s32i x 3>
+      }> : !rec_anon_struct2
+    ```
+  }];
+
+  // `type` is the anonymous record type of the relative vtable global.
+  // `data` contains the record members. Each member is expected to be a
+  // constant array of 32-bit relative-offset entries representing one vtable
+  // component.
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    "mlir::ArrayAttr":$data
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($data) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // DynamicCastInfoAttr
 //===----------------------------------------------------------------------===//
 

@@ -492,6 +492,15 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
                 cir::VTableAttr>(attrType))
     return success();
 
+  if (mlir::isa<cir::RelativeVTableAttr>(attrType)) {
+    auto at = mlir::cast<mlir::TypedAttr>(attrType);
+    if (at.getType() != opType)
+      return op->emitOpError("result type (")
+             << opType << ") does not match value type (" << at.getType()
+             << ")";
+    return success();
+  }
+
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
          << cast<TypedAttr>(attrType).getType() << " not yet supported";
@@ -2130,8 +2139,9 @@ cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
-  if (!isa<cir::VTableAttr>(*init))
-    return emitOpError("Expected #cir.vtable in initializer for global '")
+  if (!(isa<cir::VTableAttr>(*init) || isa<cir::RelativeVTableAttr>(*init)))
+    return emitOpError("Expected #cir.vtable or #cir.relative_vtable in "
+                       "initializer for global '")
            << name << "'";
   return success();
 }

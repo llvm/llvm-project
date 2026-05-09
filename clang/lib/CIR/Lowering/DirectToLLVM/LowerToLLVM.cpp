@@ -692,6 +692,58 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
   return result;
 }
 
+// RelativeVTableAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::RelativeVTableAttr rVtableArr) {
+  mlir::Type llvmTy = converter->convertType(rVtableArr.getType());
+  mlir::Location loc = parentOp->getLoc();
+  mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+
+  for (auto [idx, elt] : llvm::enumerate(rVtableArr.getData())) {
+    mlir::Value init = visit(elt);
+    result =
+        mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
+  }
+
+  return result;
+}
+
+// RelativeVTableComponentAttr visitor.
+mlir::Value
+CIRAttrToValue::visitCirAttr(cir::RelativeVTableComponentAttr attr) {
+  mlir::Location loc = parentOp->getLoc();
+
+  auto i32Ty = mlir::IntegerType::get(rewriter.getContext(), 32);
+  auto i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+
+  auto globalOp = mlir::cast<cir::GlobalOp>(parentOp);
+
+  auto target = mlir::LLVM::AddressOfOp::create(rewriter, loc, ptrTy,
+                                                attr.getSymbol().getValue());
+
+  auto vtable = mlir::LLVM::AddressOfOp::create(rewriter, loc, ptrTy,
+                                                globalOp.getSymName());
+
+  auto vtableObjectTy = converter->convertType(globalOp.getSymType());
+
+  auto addressPoint = mlir::LLVM::GEPOp::create(
+      rewriter, loc, ptrTy, vtableObjectTy, vtable,
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{0, attr.getVtableComponentIndex(),
+                                         attr.getVtableAddressPoint()},
+      mlir::LLVM::GEPNoWrapFlags::inbounds);
+  addressPoint->dump();
+
+  auto targetInt = mlir::LLVM::PtrToIntOp::create(rewriter, loc, i64Ty, target);
+
+  auto addressPointInt =
+      mlir::LLVM::PtrToIntOp::create(rewriter, loc, i64Ty, addressPoint);
+
+  auto diff = mlir::LLVM::SubOp::create(rewriter, loc, i64Ty, targetInt,
+                                        addressPointInt);
+
+  return mlir::LLVM::TruncOp::create(rewriter, loc, i32Ty, diff);
+}
+
 /// ZeroAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
   mlir::Location loc = parentOp->getLoc();
@@ -2430,7 +2482,7 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   assert((isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
               cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
               cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-              cir::VTableAttr, cir::ZeroAttr>(init)));
+              cir::VTableAttr, cir::ZeroAttr, cir::RelativeVTableAttr>(init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
@@ -2509,7 +2561,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
                          cir::ConstRecordAttr, cir::ConstPtrAttr,
                          cir::ConstComplexAttr, cir::GlobalViewAttr,
                          cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
+                         cir::VTableAttr, cir::ZeroAttr,
+                         cir::RelativeVTableAttr>(init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
