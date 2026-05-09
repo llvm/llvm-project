@@ -839,3 +839,62 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
 // OGCG: cleanup4:
 // OGCG:   call void @_ZN7HasDtorD1Ev({{.*}} %[[LOCAL]])
 // OGCG:   br label %coro.final
+
+folly::coro::Task<int __complex__> fetchData() noexcept {
+  int __complex__ a;
+  co_return a;
+}
+
+folly::coro::Task<int __complex__> complex_co_await() noexcept { 
+  co_await fetchData();
+}
+
+// CIR: cir.func coroutine {{.*}} @_Z16complex_co_awaitv
+
+// CIR: %[[COMPLEX_ADDR:.*]] = cir.alloca !rec_folly3A3Acoro3A3ATask3C_Complex_int3E, !cir.ptr<!rec_folly3A3Acoro3A3ATask3C_Complex_int3E>, ["ref.tmp1"]
+// CIR: %[[RESUME_VAL_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["__coawait_resume_rval"]
+
+// CIR: cir.cleanup.scope {
+// CIR:   cir.await(init, ready : {
+// CIR:   }, suspend : {
+// CIR:   }, resume : {
+// CIR:   },)
+
+// CIR:   cir.coro.body {
+// CIR:     %[[CALL:.*]] = cir.call @_Z9fetchDatav() nothrow : () -> !rec_folly3A3Acoro3A3ATask3C_Complex_int3E
+// CIR:     cir.store {{.*}} %[[CALL]], %[[COMPLEX_ADDR]] : !rec_folly3A3Acoro3A3ATask3C_Complex_int3E, !cir.ptr<!rec_folly3A3Acoro3A3ATask3C_Complex_int3E>
+
+// CIR:       cir.await(user, ready : {
+// CIR:       }, suspend : {
+// CIR:       }, resume : {
+// CIR:         %[[RESUME_VAL:.*]] = cir.call @_ZN5folly4coro4TaskICiE12await_resumeEv(%[[COMPLEX_ADDR]]) : (!cir.ptr<!rec_folly3A3Acoro3A3ATask3C_Complex_int3E> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> (!cir.complex<!s32i> {llvm.noundef})
+// CIR:         cir.store %[[RESUME_VAL]], %[[RESUME_VAL_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CIR:       },)
+// CIR:       %[[V:.*]] = cir.load %[[RESUME_VAL_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR:       cir.yield
+// CIR:   }
+
+// CIR: } cleanup  normal {
+// CIR: }
+
+// OGCG: define dso_local void @_Z16complex_co_awaitv()
+
+// OGCG: %[[RESUME_VAL_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[RESUME_REAL_ADDR:.*]] = alloca i32, align 4
+// OGCG: %[[RESUME_IMAG_ADDR:.*]] = alloca i32, align 4
+
+// OGCG: coro.init:
+// OGCG: await.ready:
+// OGCG:   %[[RESUME_VAL:.*]] = call noundef i64 @_ZN5folly4coro4TaskICiE12await_resumeEv(ptr noundef nonnull align 1 dereferenceable(1) %{{.*}})
+// OGCG:   store i64 %[[RESUME_VAL]], ptr %[[RESUME_VAL_ADDR]], align 4
+// OGCG:   %[[RESUME_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESUME_VAL_ADDR]], i32 0, i32 0
+// OGCG:   %[[RESUME_REAL:.*]] = load i32, ptr %[[RESUME_REAL_PTR]], align 4
+// OGCG:   store i32 %[[RESUME_REAL]], ptr %[[RESUME_REAL_ADDR]], align 4
+// OGCG:   %[[RESUME_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESUME_VAL_ADDR]], i32 0, i32 1
+// OGCG:   %[[RESUME_IMAG:.*]] = load i32, ptr %[[RESUME_IMAG_PTR]], align 4
+// OGCG:   store i32 %[[RESUME_IMAG]], ptr %[[RESUME_IMAG_ADDR]], align 4
+// OGCG:   br label %[[CLEANUP_FROM_AWAIT_READY:.*]]
+
+// OGCG: [[CLEANUP_CONT:.*]]:
+// OGCG:   %[[RESUME_REAL:.*]] = load i32, ptr %[[RESUME_REAL_ADDR]], align 4
+// OGCG:   %[[RESUME_IMAG:.*]] = load i32, ptr %[[RESUME_IMAG_ADDR]], align 4

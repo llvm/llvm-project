@@ -843,7 +843,7 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
   if (Required.allowsOptionalArgs())
     NumRequired = Required.getNumRequiredArgs();
 
-  llvm::abi::FunctionInfo *AbiFI = llvm::abi::FunctionInfo::create(
+  auto AbiFI = llvm::abi::FunctionInfo::create(
       FI.getCallingConvention(), AbiMapper->convertType(FI.getReturnType()),
       MappedArgTypes, NumRequired);
 
