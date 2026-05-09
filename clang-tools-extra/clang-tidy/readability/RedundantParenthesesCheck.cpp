@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/TypeLoc.h"
 #include "RedundantParenthesesCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
@@ -61,13 +62,31 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                              hasParent(unaryExprOrTypeTraitExpr()))))
           .bind("dup"),
       this);
+
+  Finder->addMatcher(typeLoc(loc(parenType())).bind("parentheses-decl"), this);
 }
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
-  diag(PE->getBeginLoc(), "redundant parentheses around expression")
-      << FixItHint::CreateRemoval(PE->getLParen())
-      << FixItHint::CreateRemoval(PE->getRParen());
+  if (const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup")) {
+
+    diag(PE->getBeginLoc(), "redundant parentheses around expression")
+        << FixItHint::CreateRemoval(PE->getLParen())
+        << FixItHint::CreateRemoval(PE->getRParen());
+    return ;
+  }
+
+  if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("parentheses-decl")) {
+    ParenTypeLoc ParenType = TL->getAs<ParenTypeLoc>();
+
+    if (ParenType.isNull())
+      return;
+
+    diag(ParenType.getLParenLoc(), "redundant parentheses in declaration")
+        << FixItHint::CreateRemoval(ParenType.getLParenLoc())
+        << FixItHint::CreateRemoval(ParenType.getRParenLoc());
+    return;
+  }
+
 }
 
 } // namespace clang::tidy::readability
