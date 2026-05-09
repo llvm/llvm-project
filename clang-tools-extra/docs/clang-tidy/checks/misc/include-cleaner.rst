@@ -4,7 +4,8 @@ misc-include-cleaner
 ====================
 
 Checks for unused and missing includes. Generates findings only for
-the main file of a translation unit.
+the main file of a translation unit. Optionally, direct includes can be
+treated as fragments of the main file for usage scanning.
 Findings correspond to https://clangd.llvm.org/design/include-cleaner.
 
 Example:
@@ -33,6 +34,50 @@ Options
    files that match this regex as a suffix.  E.g., `foo/.*` disables
    insertion/removal for all headers under the directory `foo`. Default is an
    empty string, no headers will be ignored.
+
+.. option:: FragmentHeaders
+
+   A semicolon-separated list of regular expressions that match against
+   normalized resolved include paths (POSIX-style separators). Direct includes
+   of the main file that match are treated as fragments of the main file for
+   usage scanning. This is intended for non-self-contained generated
+   ``.inc``/``.def`` files or other include fragments. Only direct includes are
+   considered; includes inside fragments are not treated as fragments. Default
+   is ``""``.
+
+   Diagnostics remain anchored to the main file, but symbol uses inside
+   fragments can keep prerequisite includes in the main file from being
+   removed or marked missing. Note that include-cleaner does not support
+   ``// IWYU pragma: associated``.
+
+   Example configuration:
+
+   .. code-block:: yaml
+
+      CheckOptions:
+        - key: misc-include-cleaner.FragmentHeaders
+          value: 'gen-out/;generated/;\\.(inc|def)$'
+
+.. option:: FragmentDependencyCommentFormat
+
+   A trailing comment format to add to includes that are kept only because they
+   are used from fragment headers matched by :option:`FragmentHeaders`. The
+   value should not include the leading ``//``. An empty string disables these
+   diagnostics and fix-its. Default is ``""``.
+
+   Use ``{0}`` to substitute the comma-separated direct fragment include
+   spellings that keep the include alive.
+
+   Example configuration:
+
+   .. code-block:: yaml
+
+      CheckOptions:
+        - key: misc-include-cleaner.FragmentDependencyCommentFormat
+          value: 'needed by {0}'
+
+   For example, setting the value to ``IWYU pragma: keep`` inserts
+   ``// IWYU pragma: keep``.
 
 .. option:: DeduplicateFindings
 
