@@ -2285,39 +2285,27 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   // unprototyped function type works like a *non-variadic* call. The way we
   // make this work is to cast to the exxact type fo the promoted arguments.
   //
-  // We can also have a function type mismatch when the callee's stored
-  // signature differs from what this call site expects despite both being
-  // prototyped if the called function is redirected (such as with asm renaming)
-  // to a function with a different signature. This happens with the GNU
-  // __REDIRECT/__REDIRECT_NTH macros in older glibc headers. Because we use
-  // typed pointers in CIR, we need to update the call site to avoid a mismatch.
-  cir::FuncType calleeFnTy = getTypes().getFunctionType(funcInfo);
-  bool isNoProto = isa<FunctionNoProtoType>(fnType);
-  if (isNoProto) {
-    // Treat a no-prototype callee as non-variadic.
-    calleeFnTy = cir::FuncType::get(calleeFnTy.getInputs(),
-                                    calleeFnTy.getReturnType(), false);
-  }
-
-  mlir::Operation *fn = callee.getFunctionPointer();
-  auto calleeFuncOp = mlir::dyn_cast_or_null<cir::FuncOp>(fn);
-  // No-prototype FuncOps are handled by the call verifier (it skips operand
-  // type checking when the callee is marked no_proto), so a mismatch there
-  // doesn't actually require a bitcast.
-  bool prototypeMismatch = calleeFuncOp && !calleeFuncOp.getNoProto() &&
-                           calleeFuncOp.getFunctionType() != calleeFnTy;
-
-  if (isNoProto || prototypeMismatch) {
+  // The redirected-callee case (two declarations sharing a mangled name via
+  // __asm__ renaming, e.g. glibc's __REDIRECT_NTH pattern, where the existing
+  // FuncOp's signature differs from this call site's expected signature) is
+  // handled in CIRGenFunction::emitCall (the funcInfo workhorse below) by
+  // demoting a direct call to an indirect call when the FuncOp signature
+  // doesn't match cirFuncTy.
+  if (isa<FunctionNoProtoType>(fnType)) {
     assert(!cir::MissingFeatures::opCallChain());
     assert(!cir::MissingFeatures::addressSpace());
-    auto calleePtrTy = cir::PointerType::get(calleeFnTy);
+    cir::FuncType calleeTy = getTypes().getFunctionType(funcInfo);
+    // get non-variadic function type
+    calleeTy = cir::FuncType::get(calleeTy.getInputs(),
+                                  calleeTy.getReturnType(), false);
+    auto calleePtrTy = cir::PointerType::get(calleeTy);
 
+    mlir::Operation *fn = callee.getFunctionPointer();
     mlir::Value addr;
-    if (calleeFuncOp) {
+    if (auto funcOp = mlir::dyn_cast<cir::FuncOp>(fn)) {
       addr = cir::GetGlobalOp::create(
           builder, getLoc(e->getSourceRange()),
-          cir::PointerType::get(calleeFuncOp.getFunctionType()),
-          calleeFuncOp.getSymName());
+          cir::PointerType::get(funcOp.getFunctionType()), funcOp.getSymName());
     } else {
       addr = fn->getResult(0);
     }
