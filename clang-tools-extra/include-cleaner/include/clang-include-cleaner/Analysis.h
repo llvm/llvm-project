@@ -16,11 +16,13 @@
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,7 +33,6 @@ class Decl;
 class FileEntry;
 class HeaderSearch;
 namespace tooling {
-class Replacements;
 struct IncludeStyle;
 } // namespace tooling
 namespace include_cleaner {
@@ -119,12 +120,54 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
                         const Preprocessor &PP,
                         const AnalysisOptions &Options = {});
 
+enum class FragmentDependencyCommentStatus {
+  CanInsert,
+  AlreadyPresent,
+  ConflictingComment,
+};
+
+/// Planned comment state for an include kept alive by fragments.
+struct FragmentDependencyComment {
+  const Include *Preserved = nullptr;
+  llvm::SmallVector<const Include *> Fragments;
+  std::string Text;
+  FragmentDependencyCommentStatus Status =
+      FragmentDependencyCommentStatus::CanInsert;
+  std::optional<tooling::Replacement> Replacement;
+};
+
+/// Replacements computed from include-cleaner findings.
+struct IncludeFixes {
+  tooling::Replacements Replacements;
+  std::vector<FragmentDependencyComment> FragmentComments;
+};
+
+/// Options for turning analysis results into source edits.
+struct FixIncludesOptions {
+  /// Raw trailing comment text without the leading //.
+  ///
+  /// When it contains `{0}`, that placeholder is replaced with a comma-
+  /// separated list of direct fragment include spellings that keep the include
+  /// alive.
+  llvm::StringRef FragmentDependencyCommentFormat;
+};
+
+/// Computes replacements to apply include-cleaner findings to the main file.
+IncludeFixes computeIncludeFixes(const AnalysisResults &Results,
+                                 llvm::StringRef FileName, llvm::StringRef Code,
+                                 const format::FormatStyle &IncludeStyle,
+                                 const FixIncludesOptions &Options = {});
+
 /// Removes unused includes and inserts missing ones in the main file.
 /// Returns the modified main-file code.
 /// The FormatStyle must be C++ or ObjC (to support include ordering).
 std::string fixIncludes(const AnalysisResults &Results,
                         llvm::StringRef FileName, llvm::StringRef Code,
                         const format::FormatStyle &IncludeStyle);
+std::string fixIncludes(const AnalysisResults &Results,
+                        llvm::StringRef FileName, llvm::StringRef Code,
+                        const format::FormatStyle &IncludeStyle,
+                        const FixIncludesOptions &Options);
 
 /// Gets all the providers for a symbol by traversing each location.
 /// Returned headers are sorted by relevance, first element is the most

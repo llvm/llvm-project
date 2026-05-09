@@ -379,19 +379,160 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
   return Results;
 }
 
-std::string fixIncludes(const AnalysisResults &Results,
-                        llvm::StringRef FileName, llvm::StringRef Code,
-                        const format::FormatStyle &Style) {
+namespace {
+
+// The fix planner only receives FileName and Code, so comment edits map
+// Include::Line back to offsets in that text.
+class LineIndex {
+public:
+  explicit LineIndex(llvm::StringRef Code) : Code(Code) {
+    Starts.push_back(0);
+    for (unsigned I = 0; I < Code.size(); ++I) {
+      if (Code[I] == '\n')
+        Starts.push_back(I + 1);
+    }
+    Starts.push_back(Code.size());
+  }
+
+  llvm::StringRef line(unsigned OneBasedLine) const {
+    auto [Start, End] = bounds(OneBasedLine);
+    return Code.slice(Start, End);
+  }
+
+  unsigned trimmedLineEnd(unsigned OneBasedLine) const {
+    auto [Start, End] = bounds(OneBasedLine);
+    while (End > Start && (Code[End - 1] == ' ' || Code[End - 1] == '\t'))
+      --End;
+    return End;
+  }
+
+private:
+  std::pair<unsigned, unsigned> bounds(unsigned OneBasedLine) const {
+    if (OneBasedLine == 0 || OneBasedLine >= Starts.size())
+      return {Code.size(), Code.size()};
+    unsigned Start = Starts[OneBasedLine - 1];
+    unsigned End =
+        Starts[OneBasedLine] == 0 ? Code.size() : Starts[OneBasedLine] - 1;
+    if (End > Start && Code[End - 1] == '\r')
+      --End;
+    return {Start, End};
+  }
+
+  llvm::StringRef Code;
+  llvm::SmallVector<unsigned> Starts;
+};
+
+std::string formatFragmentDependencyComment(
+    llvm::StringRef Format, llvm::ArrayRef<const Include *> FragmentIncludes) {
+  if (Format.empty())
+    return {};
+
+  std::string FragmentList;
+  for (const Include *Fragment : FragmentIncludes) {
+    if (!FragmentList.empty())
+      FragmentList += ", ";
+    FragmentList += Fragment->quote();
+  }
+
+  std::string Result;
+  llvm::StringRef Remaining = Format;
+  while (true) {
+    auto Pos = Remaining.find("{0}");
+    if (Pos == llvm::StringRef::npos) {
+      Result += Remaining.str();
+      return Result;
+    }
+    Result += Remaining.take_front(Pos).str();
+    Result += FragmentList;
+    Remaining = Remaining.drop_front(Pos + 3);
+  }
+}
+
+FragmentDependencyComment inspectFragmentDependencyComment(
+    const FragmentDependency &Dependency, llvm::StringRef FileName,
+    const LineIndex &Lines, llvm::StringRef CommentFormat) {
+  FragmentDependencyComment Comment{
+      Dependency.Preserved, Dependency.Fragments,
+      formatFragmentDependencyComment(CommentFormat, Dependency.Fragments),
+      FragmentDependencyCommentStatus::CanInsert, std::nullopt};
+  if (Comment.Text.empty())
+    return Comment;
+
+  llvm::StringRef Line = Lines.line(Dependency.Preserved->Line);
+  size_t IncludePos = Line.find(Dependency.Preserved->quote());
+  if (IncludePos == llvm::StringRef::npos) {
+    Comment.Status = FragmentDependencyCommentStatus::ConflictingComment;
+    return Comment;
+  }
+
+  llvm::StringRef Tail =
+      Line.drop_front(IncludePos + Dependency.Preserved->quote().size());
+  llvm::StringRef TrimmedTail = Tail.ltrim(" \t");
+  if (TrimmedTail.empty()) {
+    Comment.Status = FragmentDependencyCommentStatus::CanInsert;
+    Comment.Replacement = tooling::Replacement(
+        FileName, Lines.trimmedLineEnd(Dependency.Preserved->Line), 0,
+        " // " + Comment.Text);
+    return Comment;
+  }
+
+  if (TrimmedTail.starts_with("//")) {
+    llvm::StringRef Existing = TrimmedTail.drop_front(2).trim();
+    Comment.Status = Existing == Comment.Text
+                         ? FragmentDependencyCommentStatus::AlreadyPresent
+                         : FragmentDependencyCommentStatus::ConflictingComment;
+    return Comment;
+  }
+
+  Comment.Status = FragmentDependencyCommentStatus::ConflictingComment;
+  return Comment;
+}
+
+} // namespace
+
+IncludeFixes computeIncludeFixes(const AnalysisResults &Results,
+                                 llvm::StringRef FileName, llvm::StringRef Code,
+                                 const format::FormatStyle &Style,
+                                 const FixIncludesOptions &Options) {
   assert(Style.isCpp() && "Only C++ style supports include insertions!");
-  tooling::Replacements R;
+  IncludeFixes Fixes;
+  tooling::Replacements &R = Fixes.Replacements;
   // Encode insertions/deletions in the magic way clang-format understands.
   for (const Include *I : Results.Unused)
     cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 1, I->quote())));
   for (const MissingInclude &Missing : Results.MissingIncludes)
     cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 0,
                                         "#include " + Missing.Spelling)));
+
+  if (Options.FragmentDependencyCommentFormat.empty())
+    return Fixes;
+
+  LineIndex Lines(Code);
+  for (const FragmentDependency &Dependency : Results.FragmentDependencies) {
+    FragmentDependencyComment Comment = inspectFragmentDependencyComment(
+        Dependency, FileName, Lines, Options.FragmentDependencyCommentFormat);
+    if (Comment.Replacement)
+      cantFail(R.add(*Comment.Replacement));
+    Fixes.FragmentComments.push_back(std::move(Comment));
+  }
+  return Fixes;
+}
+
+std::string fixIncludes(const AnalysisResults &Results,
+                        llvm::StringRef FileName, llvm::StringRef Code,
+                        const format::FormatStyle &Style) {
+  return fixIncludes(Results, FileName, Code, Style, {});
+}
+
+std::string fixIncludes(const AnalysisResults &Results,
+                        llvm::StringRef FileName, llvm::StringRef Code,
+                        const format::FormatStyle &Style,
+                        const FixIncludesOptions &Options) {
+  IncludeFixes Fixes =
+      computeIncludeFixes(Results, FileName, Code, Style, Options);
   // "cleanup" actually turns the UINT_MAX replacements into concrete edits.
-  auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
+  auto Positioned = cantFail(
+      format::cleanupAroundReplacements(Code, Fixes.Replacements, Style));
   return cantFail(tooling::applyAllReplacements(Code, Positioned));
 }
 

@@ -812,6 +812,198 @@ TEST(FixIncludes, Basic) {
 #include "a.h")cpp");
 }
 
+TEST(FixIncludes, FragmentDependencyComments) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "gen.inc"
+#include "existing.h" // needed by "gen.inc"
+#include "conflict.h" // keep me
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+  Include Existing;
+  Existing.Spelled = "existing.h";
+  Existing.Line = 3;
+  Inc.add(Existing);
+  Include Conflict;
+  Conflict.Spelled = "conflict.h";
+  Conflict.Line = 4;
+  Inc.add(Conflict);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+  Results.FragmentDependencies.push_back({Inc.atLine(3), {Inc.atLine(2)}});
+  Results.FragmentDependencies.push_back({Inc.atLine(4), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options{"needed by {0}"};
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(3));
+  EXPECT_EQ(Fixes.FragmentComments[0].Status,
+            FragmentDependencyCommentStatus::CanInsert);
+  ASSERT_TRUE(Fixes.FragmentComments[0].Replacement.has_value());
+  EXPECT_EQ(Fixes.FragmentComments[1].Status,
+            FragmentDependencyCommentStatus::AlreadyPresent);
+  EXPECT_FALSE(Fixes.FragmentComments[1].Replacement.has_value());
+  EXPECT_EQ(Fixes.FragmentComments[2].Status,
+            FragmentDependencyCommentStatus::ConflictingComment);
+  EXPECT_FALSE(Fixes.FragmentComments[2].Replacement.has_value());
+
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle(), Options),
+            R"cpp(#include "a.h" // needed by "gen.inc"
+#include "gen.inc"
+#include "existing.h" // needed by "gen.inc"
+#include "conflict.h" // keep me
+)cpp");
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsEmptyFormat) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "gen.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  IncludeFixes Fixes =
+      computeIncludeFixes(Results, "d.cc", Code, format::getLLVMStyle(), {});
+  EXPECT_THAT(Fixes.FragmentComments, testing::IsEmpty());
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()), Code);
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsLiteralFormat) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "gen.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options{"IWYU pragma: keep"};
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  EXPECT_EQ(Fixes.FragmentComments.front().Text, "IWYU pragma: keep");
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle(), Options),
+            R"cpp(#include "a.h" // IWYU pragma: keep
+#include "gen.inc"
+)cpp");
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsMultipleFragments) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "a.inc"
+#include "b.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include FragmentA;
+  FragmentA.Spelled = "a.inc";
+  FragmentA.Line = 2;
+  Inc.add(FragmentA);
+  Include FragmentB;
+  FragmentB.Spelled = "b.inc";
+  FragmentB.Line = 3;
+  Inc.add(FragmentB);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back(
+      {Inc.atLine(1), {Inc.atLine(2), Inc.atLine(3)}});
+
+  FixIncludesOptions Options{"needed by {0}"};
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  EXPECT_EQ(Fixes.FragmentComments.front().Text,
+            "needed by \"a.inc\", \"b.inc\"");
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsBlockCommentConflict) {
+  llvm::StringRef Code = R"cpp(#include "a.h" /* keep me */
+#include "gen.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options{"needed by {0}"};
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  EXPECT_EQ(Fixes.FragmentComments.front().Status,
+            FragmentDependencyCommentStatus::ConflictingComment);
+  EXPECT_FALSE(Fixes.FragmentComments.front().Replacement.has_value());
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsCRLFAndTrailingWhitespace) {
+  llvm::StringRef Code = "#include \"a.h\"  \r\n#include \"gen.inc\"\r\n";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options{"needed by {0}"};
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  ASSERT_TRUE(Fixes.FragmentComments.front().Replacement.has_value());
+  size_t ExpectedOffset = Code.find("  \r\n");
+  ASSERT_NE(ExpectedOffset, llvm::StringRef::npos);
+  EXPECT_EQ(Fixes.FragmentComments.front().Replacement->getOffset(),
+            ExpectedOffset);
+}
+
 MATCHER_P3(expandedAt, FileID, Offset, SM, "") {
   auto [ExpanedFileID, ExpandedOffset] = SM->getDecomposedExpansionLoc(arg);
   return ExpanedFileID == FileID && ExpandedOffset == Offset;
