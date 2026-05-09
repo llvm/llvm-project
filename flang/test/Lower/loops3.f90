@@ -12,7 +12,7 @@ subroutine loop_test
 
   ! CHECK: %[[M:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEm"}
   ! CHECK: %[[SUM:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEsum"}
-  ! CHECK: fir.do_concurrent.loop ({{.*}}) = ({{.*}}) to ({{.*}}) step ({{.*}}) local(@_QFloop_testEtmp_private_i32 %{{.*}} -> %{{.*}} : !fir.ref<i32>) reduce(@add_reduction_i32 #fir.reduce_attr<add> %[[SUM]]#0 -> %{{.*}}, @other_reduction_f32 #fir.reduce_attr<max> %[[M]]#0 -> %{{.*}} : !fir.ref<i32>, !fir.ref<f32>) {
+  ! CHECK: fir.do_concurrent.loop ({{.*}}) = ({{.*}}) to ({{.*}}) step ({{.*}}) local(@_QFloop_testEtmp_private_i32 %{{.*}} -> %{{.*}} : !fir.ref<i32>) reduce(@add_reduction_i32 #fir.reduce_attr<add> %[[SUM]]#0 -> %{{.*}}, @max_reduction_f32 #fir.reduce_attr<max> %[[M]]#0 -> %{{.*}} : !fir.ref<i32>, !fir.ref<f32>) {
   ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEtmp"}
   ! CHECK: %[[SUM_INNER:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEsum"}
   ! CHECK: %[[M_INNER:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEm"}
