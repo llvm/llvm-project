@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // struct nullopt_t{see below};
@@ -15,16 +15,20 @@
 // [optional.nullopt]/2:
 //  nullopt_t models copyable and three_way_comparable<strong_ordering>.
 
-#include <ratio>
-#include <vector>
-#include <ranges>
-#include <cassert>
 #include <algorithm>
+#include <cassert>
+#include <concepts>
 #include <optional>
+#include <vector>
 
 #include "test_macros.h"
 
 using std::nullopt;
+
+#if TEST_STD_VER >= 20
+static_assert(std::copyable<std::nullopt_t>);
+static_assert(std::three_way_comparable<std::nullopt_t, std::strong_ordering>);
+#endif
 
 constexpr bool test() {
   static_assert(nullopt == nullopt);
@@ -47,6 +51,8 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
+  test();
+
   static_assert(test());
 
   return 0;

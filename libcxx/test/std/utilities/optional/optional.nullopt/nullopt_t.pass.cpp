@@ -21,21 +21,23 @@
 
 #include "test_macros.h"
 
-using std::nullopt;
 using std::nullopt_t;
+using std::nullopt;
 
-constexpr bool test() {
-  nullopt_t foo{nullopt};
-  (void)foo;
-  return true;
+constexpr bool test()
+{
+    nullopt_t foo{nullopt};
+    (void)foo;
+    return true;
 }
 
-int main(int, char**) {
-  static_assert(std::is_empty_v<nullopt_t>);
-  static_assert(!std::is_default_constructible_v<nullopt_t>);
+int main(int, char**)
+{
+    static_assert(std::is_empty_v<nullopt_t>);
+    static_assert(!std::is_default_constructible_v<nullopt_t>);
 
-  static_assert(std::is_same_v<const nullopt_t, decltype(nullopt)>);
-  static_assert(test());
+    static_assert(std::is_same_v<const nullopt_t, decltype(nullopt)>);
+    static_assert(test());
 
   return 0;
 }
