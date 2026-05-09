@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Record.h"
+#include "TypesInternal.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -159,13 +160,7 @@ public:
 
 private:
   bool shouldRecordMacroRef(SourceLocation Loc) const {
-    const SourceLocation ExpandedLoc = SM.getExpansionLoc(Loc);
-    const FileID FID = SM.getFileID(ExpandedLoc);
-    if (FID == SM.getMainFileID())
-      return true;
-    const SourceLocation IncludeLoc = SM.getIncludeLoc(FID);
-    return IncludeLoc.isValid() &&
-           SM.getFileID(IncludeLoc) == SM.getMainFileID();
+    return locateInMainFile(Loc, SM) != MainFileLocation::Other;
   }
 
   void recordMacroRef(const Token &Tok, const MacroInfo &MI,

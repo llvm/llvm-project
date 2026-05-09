@@ -19,6 +19,9 @@
 namespace llvm {
 class raw_ostream;
 }
+namespace clang {
+class SourceManager;
+} // namespace clang
 namespace clang::include_cleaner {
 /// A place where a symbol can be provided.
 /// It is either a physical file of the TU (SourceLocation) or a logical
@@ -97,6 +100,13 @@ template <typename T> struct Hinted : public T {
 };
 
 llvm::SmallString<128> normalizePath(llvm::StringRef Path);
+
+enum class MainFileLocation {
+  MainFile,
+  DirectInclude,
+  Other,
+};
+MainFileLocation locateInMainFile(SourceLocation Loc, const SourceManager &SM);
 
 } // namespace clang::include_cleaner
 
