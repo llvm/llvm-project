@@ -329,7 +329,7 @@ void ExprInspectionChecker::analyzerGetExtent(const CallExpr *CE,
   ProgramStateRef State = C.getState();
   SVal Size = getDynamicExtentWithOffset(State, C.getSVal(Arg));
 
-  State = State->BindExpr(CE, C.getLocationContext(), Size);
+  State = State->BindExpr(CE, C.getStackFrame(), Size);
   C.addTransition(State);
 }
 
@@ -430,8 +430,8 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
   const LangOptions &Opts = C.getLangOpts();
   const SourceManager &SM = C.getSourceManager();
   FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
-  std::string HashContent = getIssueString(
-      FL, getName(), "Category", C.getLocationContext()->getDecl(), Opts);
+  std::string HashContent = getIssueString(FL, getName(), "Category",
+                                           C.getStackFrame()->getDecl(), Opts);
 
   reportBug(HashContent, C);
 }

@@ -408,7 +408,7 @@ void MacOSKeychainAPIChecker::checkPostStmt(const CallExpr *CE,
   // If the argument entered as an enclosing function parameter, skip it to
   // avoid false positives.
   if (isEnclosingFunctionParam(ArgExpr) &&
-      C.getLocationContext()->getParent() == nullptr)
+      C.getStackFrame()->getParent() == nullptr)
     return;
 
   if (SymbolRef V = getAsPointeeSymbol(ArgExpr, C)) {

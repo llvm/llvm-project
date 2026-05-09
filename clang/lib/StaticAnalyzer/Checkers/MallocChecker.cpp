@@ -1492,7 +1492,7 @@ void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
   if (const auto *BufArg = getPlacementNewBufferArg(CE, FD)) {
     // Placement new does not allocate memory
     auto RetVal = State->getSVal(BufArg, Call.getStackFrame());
-    State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+    State = State->BindExpr(CE, C.getStackFrame(), RetVal);
     C.addTransition(State);
     return;
   }
@@ -1739,7 +1739,7 @@ ProgramStateRef MallocChecker::ProcessZeroAllocCheck(
   }
 
   if (!RetVal)
-    RetVal = State->getSVal(Call.getOriginExpr(), C.getLocationContext());
+    RetVal = State->getSVal(Call.getOriginExpr(), C.getStackFrame());
 
   assert(Arg);
 
@@ -1828,7 +1828,7 @@ MallocChecker::processNewAllocation(const CXXAllocatorCall &Call,
     return nullptr;
 
   const CXXNewExpr *NE = Call.getOriginExpr();
-  const ParentMap &PM = C.getLocationContext()->getParentMap();
+  const ParentMap &PM = C.getStackFrame()->getParentMap();
   ProgramStateRef State = C.getState();
 
   // Non-trivial constructors have a chance to escape 'this', but marking all
@@ -1947,7 +1947,7 @@ ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
       isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
                : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), LCtx,
                                               CE->getType(), Count);
-  return State->BindExpr(CE, C.getLocationContext(), RetVal);
+  return State->BindExpr(CE, C.getStackFrame(), RetVal);
 }
 
 ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
@@ -2030,7 +2030,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
          "Allocation functions must return a pointer");
 
   const LocationContext *LCtx = C.getPredecessor()->getStackFrame();
-  SVal RetVal = State->getSVal(CE, C.getLocationContext());
+  SVal RetVal = State->getSVal(CE, C.getStackFrame());
 
   // Fill the region with the initialization value.
   State = State->bindDefaultInitial(RetVal, Init, LCtx);
@@ -2057,7 +2057,7 @@ static ProgramStateRef MallocUpdateRefState(CheckerContext &C, const Expr *E,
 
   // Get the return value.
   if (!RetVal)
-    RetVal = State->getSVal(E, C.getLocationContext());
+    RetVal = State->getSVal(E, C.getStackFrame());
 
   // We expect the malloc functions to return a pointer.
   if (!RetVal->getAs<Loc>())
@@ -2415,7 +2415,7 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   // conforts languages standards, since reading from freed memory is considered
   // UB and may result in arbitrary value.
   State = State->invalidateRegions({location}, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getLocationContext(),
+                                   C.blockCount(), C.getStackFrame(),
                                    /*CausesPointerEscape=*/false,
                                    /*InvalidatedSymbols=*/nullptr);
 
@@ -2940,7 +2940,7 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
 
     // Get the from and to pointer symbols as in toPtr = realloc(fromPtr, size).
     SymbolRef FromPtr = arg0Val.getLocSymbolInBase();
-    SVal RetVal = stateRealloc->getSVal(CE, C.getLocationContext());
+    SVal RetVal = stateRealloc->getSVal(CE, C.getStackFrame());
     SymbolRef ToPtr = RetVal.getAsSymbol();
     assert(FromPtr && ToPtr &&
            "By this point, FreeMemAux and MallocMemAux should have checked "
@@ -3527,14 +3527,13 @@ void MallocChecker::checkPostStmt(const BlockExpr *BE,
   if (ReferencedVars.empty())
     return;
 
-  SmallVector<const MemRegion*, 10> Regions;
-  const LocationContext *LC = C.getLocationContext();
+  SmallVector<const MemRegion *, 10> Regions;
   MemRegionManager &MemMgr = C.getSValBuilder().getRegionManager();
 
   for (const auto &Var : ReferencedVars) {
     const VarRegion *VR = Var.getCapturedRegion();
     if (VR->getSuperRegion() == R) {
-      VR = MemMgr.getVarRegion(VR->getDecl(), LC);
+      VR = MemMgr.getVarRegion(VR->getDecl(), C.getStackFrame());
     }
     Regions.push_back(VR);
   }

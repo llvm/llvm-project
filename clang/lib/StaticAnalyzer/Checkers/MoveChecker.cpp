@@ -361,8 +361,8 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
   if (MK == MK_Dereference && OK.StdKind != SK_SmartPtr)
     MK = MK_FunCall;
 
-  if (!RS || !shouldWarnAbout(OK, MK)
-          || isInMoveSafeContext(C.getLocationContext())) {
+  if (!RS || !shouldWarnAbout(OK, MK) ||
+      isInMoveSafeContext(C.getStackFrame())) {
     // Finalize changes made by the caller.
     C.addTransition(State);
     return;

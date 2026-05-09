@@ -847,7 +847,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
                              .ShouldAssumeControlledEnvironment)
     return;
 
-  const auto *FD = dyn_cast<FunctionDecl>(C.getLocationContext()->getDecl());
+  const auto *FD = dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl());
   if (!FD || !FD->isMain() || FD->param_size() < 2)
     return;
 
@@ -859,7 +859,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   const MemRegion *ArgcReg =
-      State->getRegion(FD->parameters()[0], C.getLocationContext());
+      State->getRegion(FD->parameters()[0], C.getStackFrame());
   SVal ArgcSVal = State->getSVal(ArgcReg);
   State = addTaint(State, ArgcSVal);
   StringRef ArgcName = FD->parameters()[0]->getName();
@@ -872,7 +872,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   }
 
   const MemRegion *ArgvReg =
-      State->getRegion(FD->parameters()[1], C.getLocationContext());
+      State->getRegion(FD->parameters()[1], C.getStackFrame());
   SVal ArgvSVal = State->getSVal(ArgvReg);
   State = addTaint(State, ArgvSVal);
   StringRef ArgvName = FD->parameters()[1]->getName();
@@ -884,7 +884,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
     return;
   if (HaveEnvp) {
     const MemRegion *EnvPReg =
-        State->getRegion(FD->parameters()[2], C.getLocationContext());
+        State->getRegion(FD->parameters()[2], C.getStackFrame());
     EnvpSVal = State->getSVal(EnvPReg);
     EnvpName = FD->parameters()[2]->getName();
     State = addTaint(State, EnvpSVal);

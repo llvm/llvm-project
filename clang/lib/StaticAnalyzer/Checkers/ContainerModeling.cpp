@@ -264,7 +264,7 @@ void ContainerModeling::handleBegin(CheckerContext &C, ConstCFGElementRef Elem,
   auto BeginSym = getContainerBegin(State, ContReg);
   if (!BeginSym) {
     State = createContainerBegin(State, ContReg, Elem, C.getASTContext().LongTy,
-                                 C.getLocationContext(), C.blockCount());
+                                 C.getStackFrame(), C.blockCount());
     BeginSym = getContainerBegin(State, ContReg);
   }
   State = setIteratorPosition(State, RetVal,
@@ -286,7 +286,7 @@ void ContainerModeling::handleEnd(CheckerContext &C, ConstCFGElementRef Elem,
   auto EndSym = getContainerEnd(State, ContReg);
   if (!EndSym) {
     State = createContainerEnd(State, ContReg, Elem, C.getASTContext().LongTy,
-                               C.getLocationContext(), C.blockCount());
+                               C.getStackFrame(), C.blockCount());
     EndSym = getContainerEnd(State, ContReg);
   }
   State = setIteratorPosition(State, RetVal,
@@ -330,7 +330,7 @@ void ContainerModeling::handleAssignment(CheckerContext &C, SVal Cont,
           auto &SVB = C.getSValBuilder();
           // Then generate and assign a new "end" symbol for the new container.
           auto NewEndSym =
-              SymMgr.conjureSymbol(Elem, C.getLocationContext(),
+              SymMgr.conjureSymbol(Elem, C.getStackFrame(),
                                    C.getASTContext().LongTy, C.blockCount());
           State = assumeNoOverflow(State, NewEndSym, 4);
           if (CData) {

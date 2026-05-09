@@ -462,10 +462,10 @@ void DereferenceChecker::checkPreStmt(const BinaryOperator *Op,
   const char *OpcodeStr =
       Op->getOpcode() == BO_Add ? "Addition" : "Subtraction";
   const char *ResultStr = IsConstrained ? "results" : "may result";
-  ValueDescStr DerefArg1{
-      Ranges, E1, State.get(), C.getLocationContext(), T1IsPointer, V1IsNull};
-  ValueDescStr DerefArg2{
-      Ranges, E2, State.get(), C.getLocationContext(), T2IsPointer, V2IsNull};
+  ValueDescStr DerefArg1{Ranges,      E1,      State.get(), C.getStackFrame(),
+                         T1IsPointer, V1IsNull};
+  ValueDescStr DerefArg2{Ranges,      E2,      State.get(), C.getStackFrame(),
+                         T2IsPointer, V2IsNull};
   std::string Msg =
       llvm::formatv("{0} of a {1} and a {2} {3} in undefined behavior",
                     OpcodeStr, DerefArg1, DerefArg2, ResultStr);

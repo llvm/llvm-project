@@ -101,12 +101,10 @@ public:
     return Eng.getContext().getLangOpts();
   }
 
-  const StackFrame *getLocationContext() const { return Pred->getStackFrame(); }
-
   const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
 
-  /// Return true if the current LocationContext has no caller context.
-  bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
+  /// Return true if the current StackFrame has no caller context.
+  bool inTopFrame() const { return getStackFrame()->inTopFrame(); }
 
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();

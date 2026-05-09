@@ -162,13 +162,13 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
   // via captured variables, even though captured variables result in a copy
   // and in implicit increment/decrement of a retain count.
   SmallVector<const MemRegion*, 10> Regions;
-  const LocationContext *LC = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   MemRegionManager &MemMgr = C.getSValBuilder().getRegionManager();
 
   for (auto Var : ReferencedVars) {
     const VarRegion *VR = Var.getCapturedRegion();
     if (VR->getSuperRegion() == R) {
-      VR = MemMgr.getVarRegion(VR->getDecl(), LC);
+      VR = MemMgr.getVarRegion(VR->getDecl(), SF);
     }
     Regions.push_back(VR);
   }
@@ -909,7 +909,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
   // annotate attribute. If it does, we will not inline it.
   bool hasTrustedImplementationAnnotation = false;
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
 
   using BehaviorSummary = RetainSummaryManager::BehaviorSummary;
   std::optional<BehaviorSummary> BSmr =
@@ -928,7 +928,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
         (BSmr == BehaviorSummary::IdentityThis)
             ? cast<CXXMemberCallExpr>(CE)->getImplicitObjectArgument()
             : CE->getArg(0);
-    SVal RetVal = state->getSVal(BindReturnTo, LCtx);
+    SVal RetVal = state->getSVal(BindReturnTo, SF);
 
     // If the receiver is unknown or the function has
     // 'rc_ownership_trusted_implementation' annotate attribute, conjure a
@@ -941,7 +941,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
     }
 
     // Bind the value.
-    state = state->BindExpr(CE, LCtx, RetVal, /*Invalidate=*/false);
+    state = state->BindExpr(CE, SF, RetVal, /*Invalidate=*/false);
 
     if (BSmr == BehaviorSummary::IdentityOrZero) {
       // Add a branch where the output is zero.
@@ -949,7 +949,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
 
       // Assume that output is zero on the other branch.
       NullOutputState = NullOutputState->BindExpr(
-          CE, LCtx, C.getSValBuilder().makeNullWithType(ResultTy),
+          CE, SF, C.getSValBuilder().makeNullWithType(ResultTy),
           /*Invalidate=*/false);
       C.addTransition(NullOutputState, &getCastFailTag());
 
@@ -987,7 +987,7 @@ ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
   ProgramStateRef state = C.getState();
   // We need to dig down to the symbolic base here because various
   // custom allocators do sometimes return the symbol with an offset.
-  SymbolRef Sym = state->getSValAsScalarOrLoc(RetE, C.getLocationContext())
+  SymbolRef Sym = state->getSValAsScalarOrLoc(RetE, C.getStackFrame())
                       .getAsLocSymbol(/*IncludeBaseRegions=*/true);
   if (!Sym)
     return Pred;
@@ -1331,8 +1331,8 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
     return;
 
   RetainSummaryManager &SmrMgr = getSummaryManager(Ctx);
-  const LocationContext *LCtx = Ctx.getLocationContext();
-  const Decl *D = LCtx->getDecl();
+  const StackFrame *SF = Ctx.getStackFrame();
+  const Decl *D = SF->getDecl();
   std::optional<AnyCall> C = AnyCall::forDecl(D);
 
   if (!C || SmrMgr.isTrustedReferenceCountImplementation(D))
@@ -1344,7 +1344,7 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
 
   for (unsigned idx = 0, e = C->param_size(); idx != e; ++idx) {
     const ParmVarDecl *Param = C->parameters()[idx];
-    SymbolRef Sym = state->getSVal(state->getRegion(Param, LCtx)).getAsSymbol();
+    SymbolRef Sym = state->getSVal(state->getRegion(Param, SF)).getAsSymbol();
 
     QualType Ty = Param->getType();
     const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);

@@ -806,7 +806,7 @@ void RefLeakReport::deriveParamLocation(CheckerContext &Ctx) {
           PathDiagnosticLocation::create(PDecl, SMgr);
       Location = ParamLocation;
       UniqueingLocation = ParamLocation;
-      UniqueingDecl = Ctx.getLocationContext()->getDecl();
+      UniqueingDecl = Ctx.getStackFrame()->getDecl();
     }
   }
 }

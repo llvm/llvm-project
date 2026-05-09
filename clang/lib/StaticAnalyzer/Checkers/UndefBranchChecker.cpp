@@ -97,7 +97,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
     if (PS->getStmt() == Ex)
       St = PrevN->getState();
 
-  FindUndefExpr FindIt(St, Ctx.getLocationContext());
+  FindUndefExpr FindIt(St, Ctx.getStackFrame());
   Ex = FindIt.FindExpr(Ex);
 
   // Emit the bug report.

@@ -133,8 +133,8 @@ static bool hasUnguardedAccess(const FieldDecl *FD, ProgramStateRef State);
 void UninitializedObjectChecker::checkEndFunction(
     const ReturnStmt *RS, CheckerContext &Context) const {
 
-  const auto *CtorDecl = dyn_cast_or_null<CXXConstructorDecl>(
-      Context.getLocationContext()->getDecl());
+  const auto *CtorDecl =
+      dyn_cast_or_null<CXXConstructorDecl>(Context.getStackFrame()->getDecl());
   if (!CtorDecl)
     return;
 
@@ -492,11 +492,11 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
   if (!CurrRegion)
     return false;
 
-  const LocationContext *LC = Context.getLocationContext();
-  while ((LC = LC->getParent())) {
+  const StackFrame *SF = Context.getStackFrame();
+  while ((SF = SF->getParent())) {
 
     // If \p Ctor was called by another constructor.
-    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(LC->getDecl());
+    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(SF->getDecl());
     if (!OtherCtor)
       continue;
 
