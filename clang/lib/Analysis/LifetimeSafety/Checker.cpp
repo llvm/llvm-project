@@ -131,16 +131,17 @@ public:
       // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
       if (IsMoved)
         return;
-      // Otherwise, suggest lifetimebound for parameter escaping through return
-      // or a field in constructor.
-      if (!PVD->hasAttr<LifetimeBoundAttr>()) {
+      if (PVD->hasAttr<LifetimeBoundAttr>()) {
+        // Track that this lifetimebound parameter correctly escapes.
+        VerifiedLiftimeboundEscapes.insert(PVD);
+      } else {
+        // Otherwise, suggest lifetimebound for parameter escaping through
+        // return or a field in constructor.
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
                  FieldEsc && isa<CXXConstructorDecl>(FD))
           AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
-      } else {
-        VerifiedLiftimeboundEscapes.insert(PVD);
       }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!
@@ -370,8 +371,9 @@ public:
         continue;
       bool isImplicit = PVD->getAttr<LifetimeBoundAttr>()->isImplicit();
       bool Escapes = VerifiedLiftimeboundEscapes.contains(PVD);
-      if (isImplicit && !Escapes && !isInStlNamespace(FD))
-        assert(false && "Implicit lifetimebound parameters should be verified");
+      assert((!isImplicit || Escapes || isInStlNamespace(FD)) &&
+             "Implicit lifetimebound parameters "
+             "should escape through return");
       if (!isImplicit && !Escapes)
         SemaHelper->reportLifetimeboundViolation(PVD);
     }
