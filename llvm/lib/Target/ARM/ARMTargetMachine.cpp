@@ -365,7 +365,12 @@ void ARMPassConfig::addIRPasses() {
   // ldrex/strex loops to simplify this, but it needs tidying up.
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass(
-        SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true),
+        SimplifyCFGOptions()
+            .forwardSwitchCondToPhi(true)
+            .convertSwitchRangeToICmp(true)
+            .convertSwitchToLookupTable(true)
+            .hoistCommonInsts(true)
+            .sinkCommonInsts(true),
         [this](const Function &F) {
           const auto &ST = this->TM->getSubtarget<ARMSubtarget>(F);
           return ST.hasAnyDataBarrier() && !ST.isThumb1Only();
@@ -385,8 +390,10 @@ void ARMPassConfig::addIRPasses() {
     addPass(createComplexDeinterleavingPass(TM));
 
   // Match interleaved memory accesses to ldN/stN intrinsics.
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createInterleavedLoadCombinePass());
     addPass(createInterleavedAccessPass());
+  }
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
