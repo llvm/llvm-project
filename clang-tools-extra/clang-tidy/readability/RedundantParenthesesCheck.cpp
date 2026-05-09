@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/TypeLoc.h"
 #include "RedundantParenthesesCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Lex/Lexer.h"
 #include <cassert>
 
 using namespace clang::ast_matchers;
@@ -68,25 +69,27 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup")) {
-
     diag(PE->getBeginLoc(), "redundant parentheses around expression")
         << FixItHint::CreateRemoval(PE->getLParen())
         << FixItHint::CreateRemoval(PE->getRParen());
-    return ;
+    return;
   }
 
   if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("parentheses-decl")) {
-    ParenTypeLoc ParenType = TL->getAs<ParenTypeLoc>();
+    const auto ParenType = TL->getAs<ParenTypeLoc>();
 
     if (ParenType.isNull())
       return;
-
+    const QualType InnerLocType = ParenType.getInnerLoc().getType();
+    if (InnerLocType->isPointerType() || InnerLocType->isReferenceType() ||
+        InnerLocType->isMemberPointerType() || InnerLocType->isFunctionType() ||
+        InnerLocType->isArrayType())
+      return;
     diag(ParenType.getLParenLoc(), "redundant parentheses in declaration")
         << FixItHint::CreateRemoval(ParenType.getLParenLoc())
         << FixItHint::CreateRemoval(ParenType.getRParenLoc());
     return;
   }
-
 }
 
 } // namespace clang::tidy::readability

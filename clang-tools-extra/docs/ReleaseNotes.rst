@@ -641,6 +641,9 @@ Changes in existing checks
   note to suggest materializing the temporary range when iterating over temporary
   range expressions or initializer lists, as reusing them directly could be unsafe.
 
+- Improved :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check to diagnose
+  redundant parentheses in declarations such as int (x) and int (f(int(arg)))
 Removed checks
 ^^^^^^^^^^^^^^
 

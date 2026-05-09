@@ -121,3 +121,15 @@ void memberExpr() {
    // CHECK-FIXES:    if (foo.fooBar().z) {
   }
 }
+
+int (x);
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in declaration
+// CHECK-FIXES: int x;
+
+void f(int (arg));
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses in declaration
+// CHECK-FIXES: void f(int arg);
+
+//Negative Test cases for redundant parentheses in declaration
+int (*functionPtr)(int);
+int (*array[2])(int);
