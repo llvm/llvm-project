@@ -3374,9 +3374,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   }
   case ISD::FREEZE: {
     SDValue N0 = Op.getOperand(0);
-    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts,
-                                                 /*PoisonOnly=*/false,
-                                                 Depth + 1))
+    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(
+            N0, DemandedElts, UndefPoisonKind::UndefOrPoison, Depth + 1))
       return TLO.CombineTo(Op, N0);
 
     // TODO: Replace this with the general fold from DAGCombiner::visitFREEZE
@@ -4033,7 +4032,7 @@ const Constant *TargetLowering::getTargetConstantFromLoad(LoadSDNode*) const {
 
 bool TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, unsigned Depth) const {
+    UndefPoisonKind Kind, unsigned Depth) const {
   assert(
       (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
        Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
@@ -4044,17 +4043,16 @@ bool TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
 
   // If Op can't create undef/poison and none of its operands are undef/poison
   // then Op is never undef/poison.
-  return !canCreateUndefOrPoisonForTargetNode(Op, DemandedElts, DAG, PoisonOnly,
+  return !canCreateUndefOrPoisonForTargetNode(Op, DemandedElts, DAG, Kind,
                                               /*ConsiderFlags*/ true, Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
-           return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly,
-                                                       Depth + 1);
+           return DAG.isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
          });
 }
 
 bool TargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+    UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const {
   assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
           Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
           Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
@@ -9024,6 +9022,196 @@ SDValue TargetLowering::expandFCANONICALIZE(SDNode *Node,
   return Mul;
 }
 
+SDValue
+TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
+                                                SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT DstVT = Node->getValueType(0);
+  EVT DstScalarVT = DstVT.getScalarType();
+
+  SDValue IntVal = Node->getOperand(0);
+  const uint64_t SemEnum = Node->getConstantOperandVal(1);
+  const auto Sem = static_cast<APFloatBase::Semantics>(SemEnum);
+
+  // Supported source formats.
+  switch (Sem) {
+  case APFloatBase::S_Float8E5M2:
+  case APFloatBase::S_Float8E4M3FN:
+  case APFloatBase::S_Float6E3M2FN:
+  case APFloatBase::S_Float6E2M3FN:
+  case APFloatBase::S_Float4E2M1FN:
+    break;
+  default:
+    DAG.getContext()->emitError("CONVERT_FROM_ARBITRARY_FP: not implemented "
+                                "source format (semantics enum " +
+                                Twine(SemEnum) + ")");
+    return SDValue();
+  }
+
+  const fltSemantics &SrcSem = APFloatBase::EnumToSemantics(Sem);
+  const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
+  const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
+  const unsigned SrcMant = SrcPrecision - 1;
+  const unsigned SrcExp = SrcBits - SrcMant - 1;
+  const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
+  const fltNonfiniteBehavior NFBehavior = SrcSem.nonFiniteBehavior;
+
+  // Destination format parameters.
+  const fltSemantics &DstSem = DstScalarVT.getFltSemantics();
+  const unsigned DstBits = APFloat::getSizeInBits(DstSem);
+  const unsigned DstMant = APFloat::semanticsPrecision(DstSem) - 1;
+  const unsigned DstExpBits = DstBits - DstMant - 1;
+  const int DstMinExp = APFloat::semanticsMinExponent(DstSem);
+  const int DstBias = 1 - DstMinExp;
+  const uint64_t DstExpAllOnes = (1ULL << DstExpBits) - 1;
+
+  // Work in an integer type matching the destination float width.
+  EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
+  EVT IntVT = DstVT.isVector()
+                  ? EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
+                                     DstVT.getVectorElementCount())
+                  : IntScalarVT;
+
+  SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
+
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
+
+  SDValue Zero = DAG.getConstant(0, dl, IntVT);
+  SDValue One = DAG.getConstant(1, dl, IntVT);
+
+  // Extract bit fields.
+  const uint64_t MantMask = (SrcMant > 0) ? ((1ULL << SrcMant) - 1) : 0;
+  const uint64_t ExpMask = (1ULL << SrcExp) - 1;
+
+  SDValue MantField = DAG.getNode(ISD::AND, dl, IntVT, Src,
+                                  DAG.getConstant(MantMask, dl, IntVT));
+
+  SDValue ExpField =
+      DAG.getNode(ISD::AND, dl, IntVT,
+                  DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                              DAG.getShiftAmountConstant(SrcMant, IntVT, dl)),
+                  DAG.getConstant(ExpMask, dl, IntVT));
+
+  SDValue SignBit =
+      DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                  DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
+
+  SDValue SignShifted =
+      DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
+                  DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl));
+
+  // Classify the input.
+  SDValue ExpAllOnes = DAG.getConstant(ExpMask, dl, IntVT);
+  SDValue IsExpAllOnes =
+      DAG.getSetCC(dl, SetCCVT, ExpField, ExpAllOnes, ISD::SETEQ);
+  SDValue IsExpZero = DAG.getSetCC(dl, SetCCVT, ExpField, Zero, ISD::SETEQ);
+  SDValue IsMantZero = DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETEQ);
+  SDValue IsMantNonZero =
+      DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETNE);
+
+  SDValue IsNaN;
+  if (NFBehavior == fltNonfiniteBehavior::FiniteOnly) {
+    IsNaN = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
+  } else if (NFBehavior == fltNonfiniteBehavior::IEEE754) {
+    IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantNonZero);
+  } else {
+    assert(SrcSem.nanEncoding == fltNanEncoding::AllOnes);
+    SDValue MantAllOnes = DAG.getConstant(MantMask, dl, IntVT);
+    SDValue IsMantAllOnes =
+        DAG.getSetCC(dl, SetCCVT, MantField, MantAllOnes, ISD::SETEQ);
+    IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantAllOnes);
+  }
+
+  SDValue IsInf;
+  if (NFBehavior == fltNonfiniteBehavior::IEEE754)
+    IsInf = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantZero);
+  else
+    IsInf = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
+
+  SDValue IsZero = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantZero);
+  SDValue IsDenorm =
+      DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantNonZero);
+
+  // Normal value conversion.
+  const int BiasAdjust = DstBias - SrcBias;
+  SDValue NormDstExp =
+      DAG.getNode(ISD::ADD, dl, IntVT, ExpField,
+                  DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
+
+  SDValue NormDstMant;
+  if (DstMant > SrcMant) {
+    SDValue NormDstMantShift =
+        DAG.getShiftAmountConstant(DstMant - SrcMant, IntVT, dl);
+    NormDstMant = DAG.getNode(ISD::SHL, dl, IntVT, MantField, NormDstMantShift);
+  } else {
+    NormDstMant = MantField;
+  }
+
+  SDValue DstMantShift = DAG.getShiftAmountConstant(DstMant, IntVT, dl);
+  SDValue NormExpShifted =
+      DAG.getNode(ISD::SHL, dl, IntVT, NormDstExp, DstMantShift);
+  SDValue NormResult =
+      DAG.getNode(ISD::OR, dl, IntVT,
+                  DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
+                  NormDstMant);
+
+  // Denormal value conversion.
+  SDValue DenormResult;
+  {
+    const unsigned IntVTBits = DstBits;
+    SDValue LeadingZeros =
+        DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, IntVT, MantField);
+
+    const int DenormExpConst =
+        (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
+    SDValue DenormDstExp = DAG.getNode(
+        ISD::SUB, dl, IntVT,
+        DAG.getConstant(APInt(DstBits, DenormExpConst, true), dl, IntVT),
+        LeadingZeros);
+
+    SDValue MantMSB =
+        DAG.getNode(ISD::SUB, dl, IntVT,
+                    DAG.getConstant(IntVTBits - 1, dl, IntVT), LeadingZeros);
+
+    SDValue LeadingOne = DAG.getNode(ISD::SHL, dl, IntVT, One, MantMSB);
+    SDValue Frac = DAG.getNode(ISD::XOR, dl, IntVT, MantField, LeadingOne);
+
+    const unsigned ShiftSub = IntVTBits - 1 - DstMant;
+    SDValue ShiftAmount = DAG.getNode(ISD::SUB, dl, IntVT, LeadingZeros,
+                                      DAG.getConstant(ShiftSub, dl, IntVT));
+
+    SDValue DenormDstMant = DAG.getNode(ISD::SHL, dl, IntVT, Frac, ShiftAmount);
+
+    SDValue DenormExpShifted =
+        DAG.getNode(ISD::SHL, dl, IntVT, DenormDstExp, DstMantShift);
+    DenormResult = DAG.getNode(
+        ISD::OR, dl, IntVT,
+        DAG.getNode(ISD::OR, dl, IntVT, SignShifted, DenormExpShifted),
+        DenormDstMant);
+  }
+
+  SDValue FiniteResult =
+      DAG.getSelect(dl, IntVT, IsDenorm, DenormResult, NormResult);
+
+  const uint64_t QNaNBit = (DstMant > 0) ? (1ULL << (DstMant - 1)) : 0;
+  SDValue NaNResult =
+      DAG.getConstant((DstExpAllOnes << DstMant) | QNaNBit, dl, IntVT);
+
+  SDValue InfResult =
+      DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
+                  DAG.getConstant(DstExpAllOnes << DstMant, dl, IntVT));
+
+  SDValue ZeroResult = SignShifted;
+
+  SDValue Result = FiniteResult;
+  Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
+  Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
+  Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
+
+  return DAG.getNode(ISD::BITCAST, dl, DstVT, Result);
+}
+
 bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
                                       SelectionDAG &DAG) const {
   unsigned OpNo = Node->isStrictFPOpcode() ? 1 : 0;
@@ -10667,17 +10855,21 @@ SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
     // Use a rotate by 8. This can be further expanded if necessary.
     return DAG.getNode(ISD::ROTL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
   case MVT::i32:
-    // This is meant for ARM speficially, which has ROTR but no ROTL.
+    // This is meant for ARM specifically, which has ROTR but no ROTL.
+    //   t = x ^ rotr(x, 16)
+    //   t = bic(t, 0x00ff0000)
+    //   t = lshr(t, 8)
+    //   x = t ^ rotr(x, 8)
     if (isOperationLegalOrCustom(ISD::ROTR, VT)) {
-      SDValue Mask = DAG.getConstant(0x00FF00FF, dl, VT);
-      // (x & 0x00FF00FF) rotr 8 | (x rotl 8) & 0x00FF00FF
-      SDValue And = DAG.getNode(ISD::AND, dl, VT, Op, Mask);
-      SDValue Rotr =
-          DAG.getNode(ISD::ROTR, dl, VT, And, DAG.getConstant(8, dl, SHVT));
-      SDValue Rotl =
-          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
-      SDValue And2 = DAG.getNode(ISD::AND, dl, VT, Rotl, Mask);
-      return DAG.getNode(ISD::OR, dl, VT, Rotr, And2);
+      SDValue Rotr16 =
+          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(16, dl, SHVT));
+      SDValue Tmp = DAG.getNode(ISD::XOR, dl, VT, Op, Rotr16);
+      Tmp = DAG.getNode(ISD::AND, dl, VT, Tmp,
+                        DAG.getConstant(0xFF00FFFF, dl, VT));
+      Tmp = DAG.getNode(ISD::SRL, dl, VT, Tmp, DAG.getConstant(8, dl, SHVT));
+      SDValue Rotr8 =
+          DAG.getNode(ISD::ROTR, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
+      return DAG.getNode(ISD::XOR, dl, VT, Tmp, Rotr8);
     }
     Tmp4 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
     Tmp3 = DAG.getNode(ISD::AND, dl, VT, Op,
@@ -12367,6 +12559,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   ISD::NodeType BaseOpcode = ISD::getVecReduceBaseOpcode(Node->getOpcode());
   SDValue Op = Node->getOperand(0);
+  SDNodeFlags Flags = Node->getFlags();
   EVT VT = Op.getValueType();
 
   // Try to use a shuffle reduction for power of two vectors.
@@ -12403,7 +12596,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
             std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
             Lo = DAG.getInsertSubvector(dl, DAG.getPOISON(WideVT), Lo, 0);
             Hi = DAG.getInsertSubvector(dl, DAG.getPOISON(WideVT), Hi, 0);
-            Op = DAG.getNode(BaseOpcode, dl, WideVT, Lo, Hi, Node->getFlags());
+            Op = DAG.getNode(BaseOpcode, dl, WideVT, Lo, Hi, Flags);
             Op = DAG.getExtractSubvector(dl, HalfVT, Op, 0);
             VT = HalfVT;
             continue;
@@ -12414,13 +12607,13 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
 
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
-      Op = DAG.getNode(BaseOpcode, dl, HalfVT, Lo, Hi, Node->getFlags());
+      Op = DAG.getNode(BaseOpcode, dl, HalfVT, Lo, Hi, Flags);
       VT = HalfVT;
 
       // Stop if splitting is enough to make the reduction legal.
       if (isOperationLegalOrCustom(Node->getOpcode(), HalfVT))
         return DAG.getNode(Node->getOpcode(), dl, Node->getValueType(0), Op,
-                           Node->getFlags());
+                           Flags);
     }
   }
 
@@ -12436,7 +12629,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
 
   SDValue Res = Ops[0];
   for (unsigned i = 1; i < NumElts; i++)
-    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res, Ops[i], Node->getFlags());
+    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res, Ops[i], Flags);
 
   // Result type may be wider than element type.
   if (EltVT != Node->getValueType(0))

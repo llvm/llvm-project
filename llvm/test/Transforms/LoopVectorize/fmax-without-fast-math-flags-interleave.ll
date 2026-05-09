@@ -233,8 +233,7 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]

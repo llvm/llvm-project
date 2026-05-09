@@ -492,9 +492,8 @@ VPIRBasicBlock *VPIRBasicBlock::clone() {
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
-  bool Replica = bool(State->Lane);
-  BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
-
+  assert(!State->Lane &&
+         "replicate regions must be dissolved before ::execute");
   if (VPBlockUtils::isHeader(this, State->VPDT)) {
     // Create and register the new vector loop.
     Loop *PrevParentLoop = State->CurrentParentLoop;
@@ -508,31 +507,17 @@ void VPBasicBlock::execute(VPTransformState *State) {
       State->LI->addTopLevelLoop(State->CurrentParentLoop);
   }
 
-  auto IsReplicateRegion = [](VPBlockBase *BB) {
-    auto *R = dyn_cast_or_null<VPRegionBlock>(BB);
-    assert((!R || R->isReplicator()) &&
-           "only replicate region blocks should remain");
-    return R;
-  };
   // 1. Create an IR basic block.
-  if ((Replica && this == getParent()->getEntry()) ||
-      IsReplicateRegion(getSingleHierarchicalPredecessor())) {
-    // Reuse the previous basic block if the current VPBB is either
-    //  * the entry to a replicate region, or
-    //  * the exit of a replicate region.
-    State->CFG.VPBB2IRBB[this] = NewBB;
-  } else {
-    NewBB = createEmptyBasicBlock(*State);
+  BasicBlock *NewBB = createEmptyBasicBlock(*State);
 
-    State->Builder.SetInsertPoint(NewBB);
-    // Temporarily terminate with unreachable until CFG is rewired.
-    UnreachableInst *Terminator = State->Builder.CreateUnreachable();
-    State->Builder.SetInsertPoint(Terminator);
+  State->Builder.SetInsertPoint(NewBB);
+  // Temporarily terminate with unreachable until CFG is rewired.
+  UnreachableInst *Terminator = State->Builder.CreateUnreachable();
+  State->Builder.SetInsertPoint(Terminator);
 
-    State->CFG.PrevBB = NewBB;
-    State->CFG.VPBB2IRBB[this] = NewBB;
-    connectToPredecessors(*State);
-  }
+  State->CFG.PrevBB = NewBB;
+  State->CFG.VPBB2IRBB[this] = NewBB;
+  connectToPredecessors(*State);
 
   // 2. Fill the IR basic block with IR instructions.
   executeRecipes(State, NewBB);
@@ -756,25 +741,7 @@ VPRegionBlock *VPRegionBlock::clone() {
 }
 
 void VPRegionBlock::execute(VPTransformState *State) {
-  assert(isReplicator() &&
-         "Loop regions should have been lowered to plain CFG");
-  assert(!State->Lane && "Replicating a Region with non-null instance.");
-  assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
-
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
-      Entry);
-  State->Lane = VPLane(0);
-  for (unsigned Lane = 0, VF = State->VF.getFixedValue(); Lane < VF; ++Lane) {
-    State->Lane = VPLane(Lane, VPLane::Kind::First);
-    // Visit the VPBlocks connected to \p this, starting from it.
-    for (VPBlockBase *Block : RPOT) {
-      LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
-      Block->execute(State);
-    }
-  }
-
-  // Exit replicating mode.
-  State->Lane.reset();
+  llvm_unreachable("regions must get dissolved before ::execute");
 }
 
 InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -949,6 +916,9 @@ static void printFinalVPlan(VPlan &) {}
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
+  assert(none_of(vp_depth_first_shallow(getEntry()), IsaPred<VPRegionBlock>) &&
+         "all region blocks must be dissolved before ::execute");
+
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
@@ -1106,6 +1076,14 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
     if (auto *R = dyn_cast<VPRegionBlock>(B))
       return R->isReplicator() ? nullptr : R;
   return nullptr;
+}
+
+bool VPlan::isOuterLoop() const {
+  const VPRegionBlock *LoopRegion = getVectorLoopRegion();
+  assert(LoopRegion && "expected a vector loop region");
+  return any_of(VPBlockUtils::blocksOnly<const VPRegionBlock>(
+                    vp_depth_first_shallow(LoopRegion->getEntry())),
+                [](const VPRegionBlock *R) { return !R->isReplicator(); });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1697,27 +1675,6 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
   return PredicateAtRangeStart;
 }
 
-/// Build VPlans for the full range of feasible VF's = {\p MinVF, 2 * \p MinVF,
-/// 4 * \p MinVF, ..., \p MaxVF} by repeatedly building a VPlan for a sub-range
-/// of VF's starting at a given VF and extending it as much as possible. Each
-/// vectorization decision can potentially shorten this sub-range during
-/// buildVPlan().
-void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
-                                           ElementCount MaxVF) {
-  auto MaxVFTimes2 = MaxVF * 2;
-  for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
-    VFRange SubRange = {VF, MaxVFTimes2};
-    if (auto Plan = tryToBuildVPlan(SubRange)) {
-      VPlanTransforms::optimize(*Plan);
-      // Update the name of the latch of the top-level vector loop region region
-      // after optimizations which includes block folding.
-      Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
-      VPlans.push_back(std::move(Plan));
-    }
-    VF = SubRange.End;
-  }
-}
-
 VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
   assert(count_if(VPlans,
                   [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
@@ -1982,4 +1939,12 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
     }
   }
   return *NumPredStores > NumberOfStoresToPredicate;
+}
+
+bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
+  return is_contained({Intrinsic::assume, Intrinsic::lifetime_end,
+                       Intrinsic::lifetime_start, Intrinsic::sideeffect,
+                       Intrinsic::pseudoprobe,
+                       Intrinsic::experimental_noalias_scope_decl},
+                      ID);
 }

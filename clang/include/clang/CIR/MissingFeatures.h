@@ -97,7 +97,6 @@ struct MissingFeatures {
   static bool opCallABIIndirectArg() { return false; }
   static bool opCallWidenArg() { return false; }
   static bool opCallBitcastArg() { return false; }
-  static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
@@ -144,6 +143,8 @@ struct MissingFeatures {
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
+  static bool checkAliases() { return false; }
+  static bool shouldSkipAliasEmission() { return false; }
   static bool deferredFuncDecls() { return false; }
 
   // CXXABI
@@ -248,7 +249,6 @@ struct MissingFeatures {
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
-  static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehScopeFilter() { return false; }

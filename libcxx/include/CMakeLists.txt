@@ -341,6 +341,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
@@ -1009,7 +1010,6 @@ set(files
   cstring
   ctgmath
   ctime
-  ctype.h
   cuchar
   cwchar
   cwctype
@@ -1036,7 +1036,6 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
-  fenv.h
   filesystem
   flat_map
   flat_set
