@@ -44,3 +44,22 @@ subroutine loop_min_max_test
     hi = max(hi, real(i))
   enddo
 end subroutine loop_min_max_test
+
+! CHECK-LABEL: func.func @_QPloop_bitwise_test
+subroutine loop_bitwise_test
+  integer :: i
+  integer :: a, o, x
+  a = -1
+  o = 0
+  x = 0
+
+  ! CHECK: fir.do_concurrent.loop
+  ! CHECK-SAME: @iand_reduction_i32 #fir.reduce_attr<iand>
+  ! CHECK-SAME: @ior_reduction_i32 #fir.reduce_attr<ior>
+  ! CHECK-SAME: @ieor_reduction_i32 #fir.reduce_attr<ieor>
+  do concurrent (i=1:10) reduce(iand:a) reduce(ior:o) reduce(ieor:x)
+    a = iand(a, i)
+    o = ior(o, i)
+    x = ieor(x, i)
+  enddo
+end subroutine loop_bitwise_test
