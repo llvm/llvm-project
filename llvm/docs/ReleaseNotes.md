@@ -203,6 +203,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
+* Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 
 ### Changes to the WebAssembly Backend
 
