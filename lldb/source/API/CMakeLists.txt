@@ -142,12 +142,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${option_install_prefix}
 )
 
-if (LLDB_ENABLE_PYTHON)
-  add_python_wrapper(liblldb)
-endif()
+if (NOT LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  if (LLDB_ENABLE_PYTHON)
+    add_python_wrapper(liblldb)
+  endif()
 
-if(LLDB_ENABLE_LUA)
-  add_lua_wrapper(liblldb)
+  if(LLDB_ENABLE_LUA)
+    add_lua_wrapper(liblldb)
+  endif()
 endif()
 
 set_target_properties(liblldb
@@ -216,7 +218,7 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
 endif()
 
-if (NOT MSVC)
+if(NOT WIN32 OR MINGW)
   set_target_properties(liblldb
     PROPERTIES
     OUTPUT_NAME lldb

@@ -128,8 +128,8 @@ public:
   };
 
   CSKYAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+                const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII) {
 
     MCAsmParserExtension::Initialize(Parser);
 

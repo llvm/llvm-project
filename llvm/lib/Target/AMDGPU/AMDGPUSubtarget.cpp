@@ -173,6 +173,10 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
+bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
+  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
+}
+
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
     std::pair<unsigned, unsigned> RequestedWavesPerEU,
     std::pair<unsigned, unsigned> FlatWorkGroupSizes, unsigned LDSBytes) const {
@@ -268,6 +272,11 @@ bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
       return false;
   }
 
+  // If the function may call the WWM intrinsic, just return false as
+  // all threads will be active at some point
+  if (!Func.hasFnAttribute("amdgpu-no-wwm"))
+    return false;
+
   return true;
 }
 
@@ -340,7 +349,6 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
 }
 
 unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
-  assert(AMDGPU::isKernel(F));
 
   // We don't allocate the segment if we know the implicit arguments weren't
   // used, even if the ABI implies we need them.

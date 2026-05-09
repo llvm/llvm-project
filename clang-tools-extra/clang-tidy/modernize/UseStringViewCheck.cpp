@@ -21,6 +21,38 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
+AST_MATCHER(FunctionDecl, isOverloaded) {
+  const DeclarationName Name = Node.getDeclName();
+  // Sanity check
+  if (Name.isEmpty())
+    return false;
+  const DeclContext *DC = Node.getDeclContext();
+  auto LookupResult = DC->lookup(Name);
+  size_t UniqueSignatures = 0;
+  llvm::SmallPtrSet<const FunctionDecl *, 2> SeenFunctions;
+  for (NamedDecl *ND : LookupResult) {
+    const FunctionDecl *FD = nullptr;
+    if (const auto *Func = dyn_cast<FunctionDecl>(ND)) {
+      // Regular functions
+      FD = Func;
+    } else if (const auto *USD = dyn_cast<UsingShadowDecl>(ND)) {
+      // Overloads via "using ns::func_name"
+      FD = dyn_cast<FunctionDecl>(USD->getTargetDecl());
+    } else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND)) {
+      // Templated functions
+      FD = FTD->getTemplatedDecl();
+    }
+    if (FD && SeenFunctions.insert(FD->getCanonicalDecl()).second) {
+      UniqueSignatures++;
+      if (UniqueSignatures > 1)
+        return true;
+    }
+  }
+  return false;
+}
+} // namespace
+
 static constexpr StringRef StringViewClassKey = "string";
 static constexpr StringRef WStringViewClassKey = "wstring";
 static constexpr StringRef U8StringViewClassKey = "u8string";
@@ -81,6 +113,7 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
       functionDecl(
           isDefinition(),
           unless(anyOf(VirtualOrOperator, IgnoredFunctionsMatcher,
+                       isOverloaded(),
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(
@@ -100,8 +133,8 @@ void UseStringViewCheck::check(const MatchFinder::MatchResult &Result) {
   assert(MatchedDecl);
   bool ShouldAKA = false;
   const std::string DesugaredTypeStr =
-      clang::desugarForDiagnostic(
-          *Result.Context, QualType(MatchedDecl->getReturnType()), ShouldAKA)
+      desugarForDiagnostic(*Result.Context,
+                           QualType(MatchedDecl->getReturnType()), ShouldAKA)
           .getAsString();
   const StringRef DestReturnTypeStr = toStringViewTypeStr(DesugaredTypeStr);
 

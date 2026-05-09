@@ -47,9 +47,9 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64all = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[INSERT_SUBREG]]
-    %0(s32) = COPY $w0
-    %1(s64) = G_ANYEXT %0
-    $x0 = COPY %1(s64)
+    %0(i32) = COPY $w0
+    %1(i64) = G_ANYEXT %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -71,10 +71,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %2:gpr(s32) = COPY $w0
-    %0(s8) = G_TRUNC %2
-    %1(s32) = G_ANYEXT %0
-    $w0 = COPY %1(s32)
+    %2:gpr(i32) = COPY $w0
+    %0(i8) = G_TRUNC %2
+    %1(i32) = G_ANYEXT %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -98,9 +98,9 @@ body:             |
     ; CHECK-NEXT: [[USHLLv8i8_shift:%[0-9]+]]:fpr128 = USHLLv8i8_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[USHLLv8i8_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<8 x s8>) = COPY $d0
-    %1:fpr(<8 x s16>) = G_ANYEXT %0(<8 x s8>)
-    $q0 = COPY %1(<8 x s16>)
+    %0:fpr(<8 x i8>) = COPY $d0
+    %1:fpr(<8 x i16>) = G_ANYEXT %0(<8 x i8>)
+    $q0 = COPY %1(<8 x i16>)
     RET_ReallyLR implicit $q0
 ...
 
@@ -125,9 +125,9 @@ body:             |
     ; CHECK-NEXT: [[USHLLv4i16_shift:%[0-9]+]]:fpr128 = USHLLv4i16_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[USHLLv4i16_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<4 x s16>) = COPY $d0
-    %1:fpr(<4 x s32>) = G_ANYEXT %0(<4 x s16>)
-    $q0 = COPY %1(<4 x s32>)
+    %0:fpr(<4 x i16>) = COPY $d0
+    %1:fpr(<4 x i32>) = G_ANYEXT %0(<4 x i16>)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 ...
 
@@ -152,9 +152,9 @@ body:             |
     ; CHECK-NEXT: [[USHLLv2i32_shift:%[0-9]+]]:fpr128 = USHLLv2i32_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[USHLLv2i32_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<2 x s32>) = COPY $d0
-    %1:fpr(<2 x s64>) = G_ANYEXT %0(<2 x s32>)
-    $q0 = COPY %1(<2 x s64>)
+    %0:fpr(<2 x i32>) = COPY $d0
+    %1:fpr(<2 x i64>) = G_ANYEXT %0(<2 x i32>)
+    $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0
 ...
 
@@ -178,9 +178,9 @@ body:             |
     ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[COPY]], 0
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
-    %0(s32) = COPY $w0
-    %1(s64) = G_ZEXT %0
-    $x0 = COPY %1(s64)
+    %0(i32) = COPY $w0
+    %1(i64) = G_ZEXT %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -202,9 +202,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 15
     ; CHECK-NEXT: $w0 = COPY [[UBFMWri]]
-    %2:gpr(s32) = COPY $w0
-    %0(s16) = G_TRUNC %2
-    %1(s32) = G_ZEXT %0
+    %2:gpr(i32) = COPY $w0
+    %0(i16) = G_TRUNC %2
+    %1(i32) = G_ZEXT %0
     $w0 = COPY %1
 ...
 
@@ -227,10 +227,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 15
     ; CHECK-NEXT: $w0 = COPY [[UBFMWri]]
-    %2:gpr(s32) = COPY $w0
-    %0(s16) = G_TRUNC %2
-    %1(s32) = G_ZEXT %0
-    $w0 = COPY %1(s32)
+    %2:gpr(i32) = COPY $w0
+    %0(i16) = G_TRUNC %2
+    %1(i32) = G_ZEXT %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -253,11 +253,11 @@ body:             |
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 7
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[UBFMWri]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %2:gpr(s32) = COPY $w0
-    %0(s8) = G_TRUNC %2
-    %1(s16) = G_ZEXT %0
-    %3:gpr(s32) = G_ANYEXT %1
-    $w0 = COPY %3(s32)
+    %2:gpr(i32) = COPY $w0
+    %0(i8) = G_TRUNC %2
+    %1(i16) = G_ZEXT %0
+    %3:gpr(i32) = G_ANYEXT %1
+    $w0 = COPY %3(i32)
 ...
 
 ---
@@ -281,9 +281,9 @@ body:             |
     ; CHECK-NEXT: [[USHLLv8i8_shift:%[0-9]+]]:fpr128 = USHLLv8i8_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[USHLLv8i8_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<8 x s8>) = COPY $d0
-    %1:fpr(<8 x s16>) = G_ZEXT %0(<8 x s8>)
-    $q0 = COPY %1(<8 x s16>)
+    %0:fpr(<8 x i8>) = COPY $d0
+    %1:fpr(<8 x i16>) = G_ZEXT %0(<8 x i8>)
+    $q0 = COPY %1(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -309,9 +309,9 @@ body:             |
     ; CHECK-NEXT: [[USHLLv4i16_shift:%[0-9]+]]:fpr128 = USHLLv4i16_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[USHLLv4i16_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<4 x s16>) = COPY $d0
-    %1:fpr(<4 x s32>) = G_ZEXT %0(<4 x s16>)
-    $q0 = COPY %1(<4 x s32>)
+    %0:fpr(<4 x i16>) = COPY $d0
+    %1:fpr(<4 x i32>) = G_ZEXT %0(<4 x i16>)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 ...
 
@@ -336,9 +336,9 @@ body:             |
     ; CHECK-NEXT: [[USHLLv2i32_shift:%[0-9]+]]:fpr128 = USHLLv2i32_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[USHLLv2i32_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<2 x s32>) = COPY $d0
-    %1:fpr(<2 x s64>) = G_ZEXT %0(<2 x s32>)
-    $q0 = COPY %1(<2 x s64>)
+    %0:fpr(<2 x i32>) = COPY $d0
+    %1:fpr(<2 x i64>) = G_ZEXT %0(<2 x i32>)
+    $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0
 ...
 
@@ -363,9 +363,9 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
     ; CHECK-NEXT: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[INSERT_SUBREG]], 0, 31
     ; CHECK-NEXT: $x0 = COPY [[SBFMXri]]
-    %0(s32) = COPY $w0
-    %1(s64) = G_SEXT %0
-    $x0 = COPY %1(s64)
+    %0(i32) = COPY $w0
+    %1(i64) = G_SEXT %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -387,9 +387,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 0, 15
     ; CHECK-NEXT: $w0 = COPY [[SBFMWri]]
-    %2:gpr(s32) = COPY $w0
-    %0(s16) = G_TRUNC %2
-    %1(s32) = G_SEXT %0
+    %2:gpr(i32) = COPY $w0
+    %0(i16) = G_TRUNC %2
+    %1(i32) = G_SEXT %0
     $w0 = COPY %1
 ...
 
@@ -412,10 +412,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 0, 7
     ; CHECK-NEXT: $w0 = COPY [[SBFMWri]]
-    %2:gpr(s32) = COPY $w0
-    %0(s8) = G_TRUNC %2
-    %1(s32) = G_SEXT %0
-    $w0 = COPY %1(s32)
+    %2:gpr(i32) = COPY $w0
+    %0(i8) = G_TRUNC %2
+    %1(i32) = G_SEXT %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -438,11 +438,11 @@ body:             |
     ; CHECK-NEXT: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 0, 7
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[SBFMWri]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %2:gpr(s32) = COPY $w0
-    %0(s8) = G_TRUNC %2
-    %1(s16) = G_SEXT %0
-    %3:gpr(s32) = G_ANYEXT %1
-    $w0 = COPY %3(s32)
+    %2:gpr(i32) = COPY $w0
+    %0(i8) = G_TRUNC %2
+    %1(i16) = G_SEXT %0
+    %3:gpr(i32) = G_ANYEXT %1
+    $w0 = COPY %3(i32)
 ...
 
 ---
@@ -466,9 +466,9 @@ body:             |
     ; CHECK-NEXT: [[SSHLLv8i8_shift:%[0-9]+]]:fpr128 = SSHLLv8i8_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[SSHLLv8i8_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<8 x s8>) = COPY $d0
-    %1:fpr(<8 x s16>) = G_SEXT %0(<8 x s8>)
-    $q0 = COPY %1(<8 x s16>)
+    %0:fpr(<8 x i8>) = COPY $d0
+    %1:fpr(<8 x i16>) = G_SEXT %0(<8 x i8>)
+    $q0 = COPY %1(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -494,9 +494,9 @@ body:             |
     ; CHECK-NEXT: [[SSHLLv4i16_shift:%[0-9]+]]:fpr128 = SSHLLv4i16_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[SSHLLv4i16_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<4 x s16>) = COPY $d0
-    %1:fpr(<4 x s32>) = G_SEXT %0(<4 x s16>)
-    $q0 = COPY %1(<4 x s32>)
+    %0:fpr(<4 x i16>) = COPY $d0
+    %1:fpr(<4 x i32>) = G_SEXT %0(<4 x i16>)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 ...
 
@@ -521,7 +521,7 @@ body:             |
     ; CHECK-NEXT: [[SSHLLv2i32_shift:%[0-9]+]]:fpr128 = SSHLLv2i32_shift [[COPY]], 0
     ; CHECK-NEXT: $q0 = COPY [[SSHLLv2i32_shift]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<2 x s32>) = COPY $d0
-    %1:fpr(<2 x s64>) = G_SEXT %0(<2 x s32>)
-    $q0 = COPY %1(<2 x s64>)
+    %0:fpr(<2 x i32>) = COPY $d0
+    %1:fpr(<2 x i64>) = G_SEXT %0(<2 x i32>)
+    $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0

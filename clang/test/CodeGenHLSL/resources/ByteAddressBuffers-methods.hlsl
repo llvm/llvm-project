@@ -17,42 +17,42 @@ export float TestLoad() {
 }
 
 // CHECK: define {{.*}} float @TestLoad()()
-// CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int)(ptr {{.*}} @Buf, i32 noundef 0)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int)(ptr {{.*}} @RWBuf, i32 noundef 4)
-// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int)(ptr {{.*}} @Buf, i32 noundef 20)
-// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int)(ptr {{.*}} @RWBuf, i32 noundef 24)
+// CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 0)
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 4)
+// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 20)
+// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 24)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_0_0t(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_0_0t.i32(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VAL:.*]] = load i32, ptr %[[PTR]]
 // CHECK-NEXT: ret i32 %[[VAL]]
 
-// CHECK: define {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VEC:.*]] = load <4 x i32>, ptr %[[PTR]]
 // CHECK-NEXT: ret <4 x i32> %[[VEC]]
 
-// CHECK: define {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_0_0t(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_0_0t.i32(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
-// CHECK: define {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VEC:.*]] = load <4 x float>, ptr %[[PTR]]
 // CHECK-NEXT: ret <4 x float> %[[VEC]]
 
@@ -64,14 +64,14 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define {{.*}} float @TestLoadWithStatus()()
-// CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 0, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 4, ptr {{.*}} %tmp1)
-// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 20, ptr {{.*}} %tmp4)
-// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 24, ptr {{.*}} %tmp7)
+// CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 0, ptr {{.*}} %tmp)
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 4, ptr {{.*}} %tmp1)
+// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 20, ptr {{.*}} %tmp4)
+// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 24, ptr {{.*}} %tmp7)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -83,7 +83,7 @@ export float TestLoadWithStatus() {
 // CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
 // CHECK-NEXT: ret i32 %[[VALUE]]
 
-// CHECK: define {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -95,7 +95,7 @@ export float TestLoadWithStatus() {
 // CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
 // CHECK-NEXT: ret <4 x i32> %[[VALUE]]
 
-// CHECK: define {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -107,7 +107,7 @@ export float TestLoadWithStatus() {
 // CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
 // CHECK-NEXT: ret float %[[VALUE]]
 
-// CHECK: define {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -141,7 +141,7 @@ export void TestStore() {
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: store i32 %[[VALUE]], ptr %[[PTR]]
 // CHECK-NEXT: ret void
 
@@ -150,7 +150,7 @@ export void TestStore() {
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: store <4 x i32> %[[VALUE]], ptr %[[PTR]]
 // CHECK-NEXT: ret void
 
@@ -159,7 +159,7 @@ export void TestStore() {
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: store float %[[VALUE]], ptr %[[PTR]]
 // CHECK-NEXT: ret void
 
@@ -168,7 +168,7 @@ export void TestStore() {
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: store <4 x float> %[[VALUE]], ptr %[[PTR]]
 // CHECK-NEXT: ret void
 
@@ -188,16 +188,16 @@ export uint TestGetDimensions() {
 // CHECK: define {{.*}} void @hlsl::ByteAddressBuffer::GetDimensions(unsigned int&)(ptr {{.*}} %this, {{.*}} %dim)
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %[[HANDLE_PTR]]
-// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_i8_0_0t(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]])
+// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} void @hlsl::RWByteAddressBuffer::GetDimensions(unsigned int&)(ptr {{.*}} %this, ptr noalias {{.*}} %dim)
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %[[HANDLE_PTR]]
-// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]])
+// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 

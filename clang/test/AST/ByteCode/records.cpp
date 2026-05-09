@@ -466,7 +466,14 @@ namespace ConditionalInit {
 
   static_assert(getS(true).a == 12, "");
   static_assert(getS(false).a == 13, "");
-};
+
+  struct T {
+    virtual ~T() = default;
+  };
+  struct D : T {};
+  void foo() { const T &t = true ? (const T)(D()) : D(); }
+}
+
 namespace DeclRefs {
   struct A{ int m; const int &f = m; };
 
@@ -605,7 +612,7 @@ namespace Destructors {
 
   struct A { int n; };
   constexpr void double_destroy() {
-    A a;
+    A a; // both-note {{declared here}}
     a.~A();
     a.~A(); // both-note {{destruction of object outside its lifetime}}
   }
@@ -1327,12 +1334,27 @@ namespace pr18633 {
   }
 }
 
-namespace {
+namespace MemberExprOnStatic {
   struct F {
     static constexpr int Z = 12;
   };
   F f;
   static_assert(f.Z == 12, "");
+
+  template<int I>
+  struct S {
+    static constexpr const auto &k = I;
+    int a;
+  };
+
+  S<10> s{12};
+  static_assert(s.k == 10, "");
+
+  constexpr int foo() {
+    S<100> s{12};
+    return s.k;
+  }
+  static_assert(foo() == 100, "");
 }
 
 namespace UnnamedBitFields {
@@ -1901,4 +1923,91 @@ namespace StaticRedecl {
   T T::tt;
   constexpr T t;
   static_assert(t.p == &T::tt, "");
+}
+
+namespace VirtCallNoRecord {
+  struct S {
+    virtual int foo();
+  };
+  int bar(int{((S *const)0)->foo()});
+}
+
+namespace ErroneousVoidDecl {
+#if __cplusplus >= 201703L
+  struct S {};
+  template <auto V> struct M;
+  template <typename C, int N1, int N2> auto f(const C &, M<N1> *, M<N1> *) {} // both-note {{couldn't infer template argument}}
+
+  template <typename F, typename C, typename N1, typename N2>
+  constexpr bool check(const C &c, N1 *n1, N2 *n2) {
+    decltype(f(c, n1, n2)) *chk{}; // both-error {{no matching function}} \
+                                   // ref-note {{destroying object 'chk' whose lifetime has already ended}}
+    return true;
+  }
+
+  template <int N> constexpr M<N> *bar() { return nullptr; }
+  static_assert(check<S>([](int n) constexpr {}, bar<1u>(), bar<1u>())); // both-note {{in instantiation}} \
+                                                                         // ref-error {{not an integral constant expression}} \
+                                                                         // ref-note {{in call to}}
+#endif
+}
+
+namespace FieldLifetimeNotStarted {
+  struct R { // both-note {{during field initialization in the implicit default constructor}}
+    struct Inner { constexpr int f() const { return 0; } };
+    int a = b.f(); // both-warning {{field 'b' is uninitialized when used here}} \
+                   // both-note {{member call on object outside its lifetime}}
+    Inner b;
+  };
+  constexpr R r; // both-error {{constant expression}} \
+                 // both-note {{in call to}} \
+                 // both-note {{declared here}} \
+                 // both-note {{in implicit default constructor for 'FieldLifetimeNotStarted::R' first required here}}
+}
+
+namespace EmptyRecords {
+  struct E1 {} e1;
+  union E2 {} e2; // both-note 4{{here}}
+  struct E3 : E1 {} e3;
+
+  template<typename E>
+  constexpr int f(E &a, int kind) {
+    switch (kind) {
+    case 0: { E e(a); return 0; } // both-note {{read}} \
+                                  // both-note {{in call}}
+    case 1: { E e(static_cast<E&&>(a)); return 0; } // both-note {{read}} \
+                                                    // both-note {{in call}}
+    case 2: { E e; e = a; return 0; } // both-note {{read}} \
+                                      // both-note {{in call}}
+    case 3: { E e; e = static_cast<E&&>(a); return 0; } // both-note {{read}} \
+                                                        // both-note {{in call}}
+    }
+  }
+  constexpr int test1 = f(e1, 0);
+  constexpr int test2 = f(e2, 0); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int test3 = f(e3, 0);
+  constexpr int test4 = f(e1, 1);
+  constexpr int test5 = f(e2, 1); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int test6 = f(e3, 1);
+  constexpr int test7 = f(e1, 2);
+  constexpr int test8 = f(e2, 2); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int test9 = f(e3, 2);
+  constexpr int testa = f(e1, 3);
+  constexpr int testb = f(e2, 3); // both-error {{constant expression}} \
+                                  // both-note {{in call}}
+  constexpr int testc = f(e3, 3);
+}
+
+namespace RVOPtrIsExtern {
+  struct __ph {
+  } extern const _1;
+  constexpr void test(__ph) {}
+  constexpr bool test_all() {
+    test(_1);
+    return true;
+  }
+  static_assert(test_all(), "");
 }

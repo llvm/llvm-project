@@ -193,7 +193,7 @@ namespace {
       list.push_back(UnqualUsingEntry(UD->getNominatedNamespace(), Common));
     }
 
-    void done() { llvm::sort(list, UnqualUsingEntry::Comparator()); }
+    void done() { llvm::stable_sort(list, UnqualUsingEntry::Comparator()); }
 
     typedef ListTy::const_iterator const_iterator;
 
@@ -1575,7 +1575,7 @@ void Sema::makeMergedDefinitionVisible(NamedDecl *ND) {
   if (auto *ED = dyn_cast<EnumDecl>(ND);
       ED && ED->isFromGlobalModule() && !ED->isScoped()) {
     for (auto *ECD : ED->enumerators()) {
-      ECD->setVisibleDespiteOwningModule();
+      ECD->setVisiblePromoted();
       DeclContext *RedeclCtx = ED->getDeclContext()->getRedeclContext();
       if (RedeclCtx->lookup(ECD->getDeclName()).empty())
         RedeclCtx->makeDeclVisibleInContext(ECD);
@@ -2032,7 +2032,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   // Directly imported module are necessarily reachable.
   // Since we can't export import a module implementation partition unit, we
   // don't need to count for Exports here.
-  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+  if (CurrentM &&
+      llvm::is_contained(CurrentM->getTopLevelModule()->Imports, DeclTopModule))
     return true;
 
   // Then we treat all module implementation partition unit as unreachable.
@@ -4750,7 +4751,7 @@ void TypoCorrectionConsumer::addCorrection(TypoCorrection Correction) {
           RI->getAsString(SemaRef.getLangOpts())};
 
       if (NewKey < PrevKey)
-        *RI = Correction;
+        *RI = std::move(Correction);
       return;
     }
   }
@@ -5487,7 +5488,7 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
 
     if (BestTC.getCorrection().getAsString() != "super") {
       if (SecondBestTC.getCorrection().getAsString() == "super")
-        BestTC = SecondBestTC;
+        BestTC = std::move(SecondBestTC);
       else if ((*Consumer)["super"].front().isKeyword())
         BestTC = (*Consumer)["super"].front();
     }

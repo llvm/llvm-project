@@ -72,6 +72,17 @@ mlirApiObjectToCapsule(nanobind::handle apiObject) {
   return api;
 }
 
+/// Clears the Python error indicator if the given condition `val` is false and
+/// returns the condition. This is needed in `from_python` of the type casters
+/// below, where a failed conversion from a Python capsule sets the Python error
+/// indicator but the caller of the caster expects or may even need a clean
+/// error indicator.
+inline bool pyErrClearIfFalse(bool val) {
+  if (!val)
+    PyErr_Clear();
+  return val;
+}
+
 // Note: Currently all of the following support cast from nanobind::object to
 // the Mlir* C-API type, but only a few light-weight, context-bound ones
 // implicitly cast the other way because the use case has not yet emerged and
@@ -85,7 +96,7 @@ struct type_caster<MlirAffineMap> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAffineMap(capsule->ptr());
-      return !mlirAffineMapIsNull(value);
+      return pyErrClearIfFalse(!mlirAffineMapIsNull(value));
     }
     return false;
   }
@@ -108,7 +119,7 @@ struct type_caster<MlirAttribute> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAttribute(capsule->ptr());
-      return !mlirAttributeIsNull(value);
+      return pyErrClearIfFalse(!mlirAttributeIsNull(value));
     }
     return false;
   }
@@ -131,7 +142,7 @@ struct type_caster<MlirBlock> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToBlock(capsule->ptr());
-      return !mlirBlockIsNull(value);
+      return pyErrClearIfFalse(!mlirBlockIsNull(value));
     }
     return false;
   }
@@ -159,7 +170,7 @@ struct type_caster<MlirContext> {
     }
     if (std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToContext(capsule->ptr());
-      return !mlirContextIsNull(value);
+      return pyErrClearIfFalse(!mlirContextIsNull(value));
     }
     return false;
   }
@@ -173,7 +184,7 @@ struct type_caster<MlirDialectRegistry> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToDialectRegistry(capsule->ptr());
-      return !mlirDialectRegistryIsNull(value);
+      return pyErrClearIfFalse(!mlirDialectRegistryIsNull(value));
     }
     return false;
   }
@@ -200,7 +211,7 @@ struct type_caster<MlirLocation> {
     }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToLocation(capsule->ptr());
-      return !mlirLocationIsNull(value);
+      return pyErrClearIfFalse(!mlirLocationIsNull(value));
     }
     return false;
   }
@@ -222,7 +233,7 @@ struct type_caster<MlirModule> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToModule(capsule->ptr());
-      return !mlirModuleIsNull(value);
+      return pyErrClearIfFalse(!mlirModuleIsNull(value));
     }
     return false;
   }
@@ -246,7 +257,7 @@ struct type_caster<MlirFrozenRewritePatternSet> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule->ptr());
-      return value.ptr != nullptr;
+      return pyErrClearIfFalse(value.ptr != nullptr);
     }
     return false;
   }
@@ -269,7 +280,7 @@ struct type_caster<MlirOperation> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToOperation(capsule->ptr());
-      return !mlirOperationIsNull(value);
+      return pyErrClearIfFalse(!mlirOperationIsNull(value));
     }
     return false;
   }
@@ -293,7 +304,7 @@ struct type_caster<MlirValue> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToValue(capsule->ptr());
-      return !mlirValueIsNull(value);
+      return pyErrClearIfFalse(!mlirValueIsNull(value));
     }
     return false;
   }
@@ -319,7 +330,7 @@ struct type_caster<MlirPassManager> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToPassManager(capsule->ptr());
-      return !mlirPassManagerIsNull(value);
+      return pyErrClearIfFalse(!mlirPassManagerIsNull(value));
     }
     return false;
   }
@@ -332,7 +343,7 @@ struct type_caster<MlirTypeID> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToTypeID(capsule->ptr());
-      return !mlirTypeIDIsNull(value);
+      return pyErrClearIfFalse(!mlirTypeIDIsNull(value));
     }
     return false;
   }
@@ -356,7 +367,7 @@ struct type_caster<MlirType> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToType(capsule->ptr());
-      return !mlirTypeIsNull(value);
+      return pyErrClearIfFalse(!mlirTypeIsNull(value));
     }
     return false;
   }

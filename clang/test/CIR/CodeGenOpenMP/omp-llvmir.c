@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// CIR-LABEL: cir.func no_inline no_proto dso_local @main() -> !s32i {
+// CIR-LABEL: cir.func no_inline no_proto dso_local @main() -> !s32i {{.*}}{
 // CIR: [[RETVAL:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR: [[J:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["j"] {alignment = 4 : i64}
 // CIR:   omp.parallel {
@@ -16,7 +16,7 @@
 // CIR:       cir.for : cond {
 // CIR:         [[LOAD1:%.*]] = cir.load align(4) [[I]] : !cir.ptr<!s32i>, !s32i
 // CIR:         [[LIMIT:%.*]] = cir.const #cir.int<10000> : !s32i
-// CIR:         [[CMP:%.*]] = cir.cmp(lt, [[LOAD1]], [[LIMIT]]) : !s32i, !cir.bool
+// CIR:         [[CMP:%.*]] = cir.cmp lt [[LOAD1]], [[LIMIT]] : !s32i
 // CIR:         cir.condition([[CMP]])
 // CIR:       } body {
 // CIR:         [[ZERO2:%.*]] = cir.const #cir.int<0> : !s32i
@@ -25,7 +25,7 @@
 // CIR:       } step {
 // CIR:         [[LOAD2:%.*]] = cir.load align(4) [[I]] : !cir.ptr<!s32i>, !s32i
 // CIR:         [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
-// CIR:         [[ADD:%.*]] = cir.binop(add, [[LOAD2]], [[ONE]]) nsw : !s32i
+// CIR:         [[ADD:%.*]] = cir.add nsw [[LOAD2]], [[ONE]] : !s32i
 // CIR:         cir.store align(4) [[ADD]], [[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       }

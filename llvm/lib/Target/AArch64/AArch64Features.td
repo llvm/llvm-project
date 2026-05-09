@@ -590,9 +590,6 @@ def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
 def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
   "Enable Armv9.7-A TLBI Domains extension">;
 
-def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
-  "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
-
 def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
   "Enable Virtual Memory Tagging Extension", [FeatureMTE]>;
 
@@ -609,7 +606,7 @@ def FeatureSVE_B16MM : ExtensionWithMArch<"sve-b16mm", "SVE_B16MM", "FEAT_SVE_B1
   "Enable Armv9.7-A SVE non-widening BFloat16 matrix multiply-accumulate", [FeatureSVE]>;
 
 def FeatureF16MM : ExtensionWithMArch<"f16mm", "F16MM", "FEAT_F16MM",
-  "Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate", [FeatureFullFP16]>;
+  "Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate", [FeatureNEON, FeatureFullFP16]>;
 
 def FeatureF16F32DOT : ExtensionWithMArch<"f16f32dot", "F16F32DOT", "FEAT_F16F32DOT",
   "Enable Armv9.7-A Advanced SIMD half-precision dot product accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
@@ -792,6 +789,10 @@ def FeatureFuseCmpCSet : SubtargetFeature<
     "fuse-cset", "HasFuseCmpCSet", "true",
     "CPU can fuse CMP and CSET operations">;
 
+def FeatureFuseFCmpFCSel : SubtargetFeature<
+    "fuse-fcsel", "HasFuseFCmpFCSel", "true",
+    "CPU can fuse FCMP and FCSEL operations">;
+
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
     "CPU fuses AES/PMULL and EOR operations">;
@@ -907,6 +908,18 @@ def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
                                                "HasDisableFastIncVL", "true",
                                                "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
 
+// For some cores it is preferable to choose a destination predicate register
+// that does not match the governing predicate, for example integer compares
+// and logical predicate instructions.
+// While the algorithm avoids introducing callee-save spill/fills and therefore
+// shouldn't have any adverse affects on cores where using distinct registers is
+// not necessarily preferable, we still provide a way to turn the feature off.
+def FeatureDisableDistinctPredicateDstReg : SubtargetFeature<
+    "disable-distinct-predicate-dst-reg", "UseDistinctPredicateDstReg",
+    "false",
+    "Disabling selecting a distinct predicate register for the destination "
+    "operand of instructions that take a governing predicate">;
+
 // On most processors we want to avoid moving from WZR to vector registers
 // (relying on materializing 0 to a FPR and moving from there instead),
 // but on some (in-order) cores it's preferable to avoid the extra instruction instead.
@@ -1013,8 +1026,9 @@ def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
   !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
     FeatureLSUI, FeatureOCCMO])>;
 def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
-  [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT],
-  !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT])>;
+  [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
+  !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,
+    FeatureF16F32DOT])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

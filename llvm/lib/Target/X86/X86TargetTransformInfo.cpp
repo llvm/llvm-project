@@ -1576,8 +1576,41 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     LT.first = 1;
 
     // If we're broadcasting a load then AVX/AVX2 can do this for free.
+    // If many-used-load whose every use is one of a small set of operations
+    // that SLP can rewrite into a single vector lane, codegen can fold it into
+    // the free broadcast.
     using namespace PatternMatch;
-    if (!Args.empty() && match(Args[0], m_OneUse(m_Load(m_Value()))) &&
+    auto IsBroadcastLoadFoldUser = [&](const User *U) {
+      if (isa<InsertElementInst>(U) && U->getOperand(1) == Args[0])
+        return true;
+      if (U->getType()->isVectorTy())
+        return false;
+      // Terminators (return/branch/switch/indirectbr/resume/invoke EH)
+      // and phis carry the value across control flow.
+      if (const auto *I = dyn_cast<Instruction>(U))
+        if (I->isTerminator() ||
+            isa<PHINode, AtomicRMWInst, AtomicCmpXchgInst>(I))
+          return false;
+      // Only pure calls can be folded.
+      if (const auto *CB = dyn_cast<CallBase>(U))
+        return CB->doesNotAccessMemory() && !CB->mayHaveSideEffects();
+      return true;
+    };
+    auto IsFoldableSLPBroadcastLoad = [&]() {
+      if (!match(Args[0], m_Load(m_Value())))
+        return false;
+      auto *FVT = dyn_cast<FixedVectorType>(DstTy);
+      if (!FVT)
+        return false;
+      // getNumUses() counts each Use, matching the per-lane broadcast
+      // accounting (a use like `op %x, %x` consumes two broadcast lanes).
+      if (Args[0]->getNumUses() != FVT->getNumElements())
+        return false;
+      return all_of(Args[0]->users(), IsBroadcastLoadFoldUser);
+    };
+    if (!Args.empty() &&
+        (match(Args[0], m_OneUse(m_Load(m_Value()))) ||
+         IsFoldableSLPBroadcastLoad()) &&
         (ST->hasAVX2() ||
          (ST->hasAVX() && LT.second.getScalarSizeInBits() >= 32)))
       return TTI::TCC_Free;
@@ -5479,7 +5512,7 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
+    InstructionCost BranchCost = getCFInstrCost(Instruction::CondBr, CostKind);
     InstructionCost MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
     InstructionCost ValueSplitCost = getScalarizationOverhead(
         SrcVTy, DemandedElts, IsLoad, IsStore, CostKind);
@@ -7226,16 +7259,40 @@ bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
 }
 
 unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                       Type *ScalarValTy) const {
+                                       Type *ScalarValTy, Align Alignment,
+                                       unsigned AddrSpace) const {
   if (ST->hasF16C() && ScalarMemTy->isHalfTy()) {
     return 4;
   }
-  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                  AddrSpace);
 }
 
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
+
+  if (I->getOpcode() == Instruction::And &&
+      (ST->hasBMI() || (I->getType()->isVectorTy() && ST->hasSSE2()))) {
+    for (auto &Op : I->operands()) {
+      // (and X, (not Y)) -> (andn X, Y)
+      if (match(Op.get(), m_Not(m_Value())) && !I->getType()->isIntegerTy(8)) {
+        Ops.push_back(&Op);
+        return true;
+      }
+      // (and X, (splat (not Y))) -> (andn X, (splat Y))
+      if (match(Op.get(),
+                m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()), m_ZeroInt()),
+                          m_Value(), m_ZeroMask()))) {
+        Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+        Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+        Ops.push_back(&Not);
+        Ops.push_back(&InsertElt);
+        Ops.push_back(&Op);
+        return true;
+      }
+    }
+  }
 
   FixedVectorType *VTy = dyn_cast<FixedVectorType>(I->getType());
   if (!VTy)

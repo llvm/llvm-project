@@ -10,13 +10,13 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
 // CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[YVAL:%.+]] = cir.load{{.*}} [[Y]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
-// CIR: [[CMP:%.+]] = cir.cmp(gt, [[YVAL]], [[ZERO]]) : !s32i, !cir.bool
+// CIR: [[CMP:%.+]] = cir.cmp gt [[YVAL]], [[ZERO]] : !s32i
 // CIR: [[THREE:%.+]] = cir.const #cir.int<3> : !s32i
 // CIR: [[FIVE:%.+]] = cir.const #cir.int<5> : !s32i
 // CIR: [[SELECT_RES:%.+]] = cir.select if [[CMP]] then [[THREE]] else [[FIVE]] : (!cir.bool, !s32i, !s32i) -> !s32i
@@ -52,7 +52,7 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
 // CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
@@ -61,7 +61,7 @@ int foo(int a, int b) {
 // CIR: cir.scope {
 // CIR: [[ALOAD:%.+]] = cir.load{{.*}} [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[BLOAD:%.+]] = cir.load{{.*}} [[B]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP:%.+]] = cir.cmp(lt, [[ALOAD]], [[BLOAD]]) : !s32i, !cir.bool
+// CIR: [[CMP:%.+]] = cir.cmp lt [[ALOAD]], [[BLOAD]] : !s32i
 // CIR: [[TERNARY_RES:%.+]] = cir.ternary([[CMP]], true {
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.yield [[ZERO]] : !s32i
@@ -185,7 +185,7 @@ void test_cond_lvalue_assign(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: %[[B:.*]] = alloca i32
 // OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
-// OGCG: %[[COND:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: %[[COND:.*]] = icmp ne i8 %[[FLAG_VAL]], 0
 // OGCG: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]
@@ -237,7 +237,7 @@ int& test_cond_lvalue_ref(bool cond, int x, int y) {
 // OGCG: %[[X:.*]] = alloca i32
 // OGCG: %[[Y:.*]] = alloca i32
 // OGCG: %[[COND_VAL:.*]] = load i8, ptr %[[COND]]
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[COND_VAL]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[COND_VAL]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]
@@ -265,7 +265,7 @@ void test_cond_lvalue_compound(bool flag) {
 // CIR:   cir.yield %[[B]] : !cir.ptr<!s32i>
 // CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
 // CIR: %[[OLD_VAL:.*]] = cir.load{{.*}} %[[LVAL_PTR]]
-// CIR: %[[NEW_VAL:.*]] = cir.binop(add, %[[OLD_VAL]], %{{.*}})
+// CIR: %[[NEW_VAL:.*]] = cir.add nsw %[[OLD_VAL]], %{{.*}}
 // CIR: cir.store{{.*}} %[[NEW_VAL]], %[[LVAL_PTR]]
 
 // LLVM-LABEL: define{{.*}} void @_Z25test_cond_lvalue_compoundb(
@@ -292,7 +292,7 @@ void test_cond_lvalue_compound(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: %[[B:.*]] = alloca i32
 // OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[FLAG_VAL]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]
@@ -355,3 +355,36 @@ void test_cond_const_false_lvalue() {
 // OGCG: %[[B:.*]] = alloca i32
 // OGCG-NOT: br i1
 // OGCG: store i32 88, ptr %[[B]]
+
+void foo(), bar();
+void ternary_void(bool b) {
+  b ? foo(): bar();
+}
+
+// CIR-LABEL: cir.func{{.*}}@_Z12ternary_voidb
+// CIR: %[[ARG:.*]] = cir.alloca !cir.bool
+// CIR: %[[LOAD_ARG:.*]] = cir.load{{.*}}%[[ARG]] : !cir.ptr<!cir.bool>
+// CIR: cir.ternary(%[[LOAD_ARG]], true {
+// CIR-NEXT: cir.call @_Z3foov()
+// CIR-NEXT: cir.yield
+// CIR-NEXT: }, false {
+// CIR-NEXT: cir.call @_Z3barv()
+// CIR-NEXT: cir.yield
+// CIR-NEXT: }) : (!cir.bool) -> ()
+// CIR-NEXT: cir.return
+// LLVM-LABEL: define{{.*}}@_Z12ternary_voidb
+// LLVM: br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM: [[TRUE]]:
+// LLVM-NEXT: call void @_Z3foov()
+// LLVM-NEXT: br
+// LLVM: [[FALSE]]:
+// LLVM-NEXT: call void @_Z3barv()
+// LLVM-NEXT: br
+// OGCG-LABEL: define{{.*}}@_Z12ternary_voidb
+// OGCG: br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// OGCG: [[TRUE]]:
+// OGCG-NEXT: call void @_Z3foov()
+// OGCG-NEXT: br
+// OGCG: [[FALSE]]:
+// OGCG-NEXT: call void @_Z3barv()
+// OGCG-NEXT: br

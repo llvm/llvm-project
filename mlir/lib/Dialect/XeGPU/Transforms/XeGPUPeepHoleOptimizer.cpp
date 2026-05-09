@@ -25,6 +25,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -144,10 +145,17 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
     return tdescType;
 
   SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
+  auto ctx = tdescType.getContext();
+  auto origLayout = tdescType.getLayoutAttr();
+  auto laneLayoutI64 = origLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int32_t> laneLayoutI32(laneLayoutI64.begin(),
+                                     laneLayoutI64.end());
+
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
-      tdescType.getContext(), tdescType.getLayoutAttr().getLaneLayout(),
-      DenseI32ArrayAttr::get(tdescType.getContext(), {1, 1}),
-      tdescType.getLayoutAttr().getOrder());
+      ctx, /*lane_layout=*/DenseI32ArrayAttr::get(ctx, laneLayoutI32),
+      /*lane_data=*/DenseI32ArrayAttr::get(ctx, {1, 1}),
+      /*order=*/origLayout.getOrder());
+
   // Array length can not be larger than 1 for transpose case.
   return xegpu::TensorDescType::get(supportedShape, newElemTy, arrayLen,
                                     tdescType.getBoundaryCheck(),
@@ -427,10 +435,8 @@ class MultiRed2dOpPattern
   matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto sourceVecType = reductionOp.getSourceVectorType();
-    if (reductionOp.getReductionDims().size() != 2 ||
-        sourceVecType.getRank() != 2)
-      return rewriter.notifyMatchFailure(
-          reductionOp, "Expected 2D multi reduction of a 2D source");
+    if (reductionOp.getReductionDims().size() != 2)
+      return rewriter.notifyMatchFailure(reductionOp, "Expected 2D reduction");
     auto resLayout = xegpu::getDistributeLayoutAttr(reductionOp.getResult());
     // Retrieve and order dims for 1D decomposition (prefer intra-lane first).
     auto dims = llvm::to_vector(reductionOp.getReductionDims());
@@ -443,36 +449,75 @@ class MultiRed2dOpPattern
     auto loc = reductionOp.getLoc();
     auto acc = reductionOp.getAcc();
 
-    // The first reduction's dist attribute does not have the cross lane dim.
-    auto resSliceLayoutAttr = cast<xegpu::SliceAttr>(resLayout);
-    SmallVector<int64_t> dropDims{crossLaneDim};
-    auto intraLaneRedResLayout = resSliceLayoutAttr.dropSliceDims(dropDims);
+    // The decomposition below splits the 2D reduction into an intra-lane
+    // then a cross-lane 1D reduction. The natural result layout of the
+    // decomposed sequence (a doubly-sliced layout) differs from the
+    // original 2D reduction's result layout that the rest of the IR was
+    // written/propagated against. To keep the post-peephole IR
+    // self-consistent without depending on a follow-up layout
+    // propagation pass, we always insert a bridge xegpu.convert_layout
+    // from the natural post-decomposition layout to the original
+    // reduction's result layout. Trivial bridges fold away in
+    // canonicalization.
+    xegpu::DistributeLayoutAttr postDecompLayout;
+    if (resLayout) {
+      // Derive the source vector's layout.
+      xegpu::DistributeLayoutAttr srcLayoutForCvt;
+      if (auto resSlice = dyn_cast_if_present<xegpu::SliceAttr>(resLayout))
+        srcLayoutForCvt = resSlice.getParent();
+      if (!srcLayoutForCvt)
+        srcLayoutForCvt =
+            xegpu::getDistributeLayoutAttr(reductionOp.getSource());
+      if (srcLayoutForCvt) {
+        // The natural layout of the post-decomposition reduction result
+        // is a nested SliceAttr: REDUCE_1 (reduces `intraLaneDim` from
+        // the source) yields `slice<src, [intraLaneDim]>`; REDUCE_2
+        // then reduces `adjCrossLaneDim` from that intermediate, giving
+        // `slice<slice<src, [intraLaneDim]>, [adjCrossLaneDim]>`.
+        MLIRContext *ctx = reductionOp.getContext();
+        int64_t adjCrossLaneDim =
+            crossLaneDim > intraLaneDim ? crossLaneDim - 1 : crossLaneDim;
+        auto intermediateLayout = xegpu::SliceAttr::get(
+            ctx, srcLayoutForCvt, DenseI64ArrayAttr::get(ctx, {intraLaneDim}));
+        postDecompLayout = xegpu::SliceAttr::get(
+            ctx, intermediateLayout,
+            DenseI64ArrayAttr::get(ctx, {adjCrossLaneDim}));
+      }
+    }
 
     SmallVector<int64_t> accShape(sourceVecType.getShape());
     accShape.erase(accShape.begin() + intraLaneDim);
-    if (acc) {
-      acc = vector::BroadcastOp::create(
-          rewriter, loc,
-          VectorType::get(accShape, sourceVecType.getElementType()), acc);
-      xegpu::setDistributeLayoutAttr(
-          llvm::dyn_cast<OpResult>(acc),
-          cast<xegpu::DistributeLayoutAttr>(intraLaneRedResLayout));
-    }
-    Value intraLaneReduced = vector::MultiDimReductionOp::create(
-        rewriter, loc, reductionOp.getKind(), reductionOp.getSource(), acc,
-        ArrayRef<int64_t>(intraLaneDim));
-    xegpu::setDistributeLayoutAttr(
-        llvm::dyn_cast<OpResult>(intraLaneReduced),
-        cast<xegpu::DistributeLayoutAttr>(intraLaneRedResLayout));
+    Type eTy = sourceVecType.getElementType();
+    Value constNeutralVal = xegpu::createReductionNeutralValue(
+        rewriter, loc, VectorType::get(accShape, eTy), reductionOp.getKind());
 
-    Value crossLaneReduced = vector::ReductionOp::create(
-        rewriter, loc, reductionOp.getKind(), intraLaneReduced, nullptr);
-    xegpu::setDistributeLayoutAttr(
-        llvm::dyn_cast<OpResult>(crossLaneReduced),
-        cast<xegpu::DistributeLayoutAttr>(resLayout));
+    Value intraLaneReduced = vector::MultiDimReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), reductionOp.getSource(),
+        constNeutralVal, ArrayRef<int64_t>(intraLaneDim));
+
+    // Adjust crossLaneDim after the first reduction.
+    if (crossLaneDim > intraLaneDim)
+      crossLaneDim -= 1;
+    Value crossLaneReduced = vector::MultiDimReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), intraLaneReduced, acc,
+        ArrayRef<int64_t>(crossLaneDim));
     assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
            "Type mismatch");
-    rewriter.replaceOp(reductionOp, crossLaneReduced);
+
+    Value replacement = crossLaneReduced;
+    if (resLayout && postDecompLayout) {
+      // Bridge from the natural post-decomposition layout to the
+      // original reduction's result layout. This preserves the contract
+      // any consumer (convert_layout, anchor op, or otherwise) was
+      // written against, so the rewrite is correct independent of
+      // whether layout propagation runs afterwards.
+      auto bridgeOp = xegpu::ConvertLayoutOp::create(
+          rewriter, loc, crossLaneReduced.getType(), crossLaneReduced,
+          postDecompLayout, resLayout);
+      replacement = bridgeOp.getResult();
+    }
+
+    rewriter.replaceOp(reductionOp, replacement);
     return success();
   }
 
@@ -537,6 +582,18 @@ struct XeGPUPeepHoleOptimizerPass final
       return;
     }
 
+    // Run array length optimization patterns first so that subsequent transpose
+    // peephole patterns operate on the array-length-optimized tensor descs.
+    {
+      RewritePatternSet arrayLenPatterns(&context);
+      xegpu::populateXeGPUArrayLengthOptimizationPatterns(arrayLenPatterns);
+      if (failed(applyPatternsGreedily(getOperation(),
+                                       std::move(arrayLenPatterns)))) {
+        DBGS() << "Array length optimization patterns failed.\n";
+        return signalPassFailure();
+      }
+    }
+
     // CreateNdDescOp and LoadNdOp with optimizable tensor desc types must be
     // converted.
     target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
@@ -575,6 +632,9 @@ struct XeGPUPeepHoleOptimizerPass final
 
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            vector::VectorDialect>();
+    // xegpu.convert_layout is left untouched by this pass; mark it legal
+    // so in-place updates don't trigger re-legalization failures.
+    target.addLegalOp<xegpu::ConvertLayoutOp>();
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     xegpu::populateXeGPUPeepHoleOptimizerPatterns(patterns);
@@ -583,6 +643,13 @@ struct XeGPUPeepHoleOptimizerPass final
       DBGS() << "Optimize block loads pass failed.\n";
       return signalPassFailure();
     }
+
+    // Apply folding for cleaning up IR.
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet emptyPatterns(ctx);
+    (void)applyPatternsGreedily(getOperation(), std::move(emptyPatterns));
+
+    xegpu::removeTemporaryLayoutAttrs(getOperation());
   }
 };
 

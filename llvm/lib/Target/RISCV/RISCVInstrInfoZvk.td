@@ -158,7 +158,7 @@ let Predicates = [HasStdExtZvkgs], VS1VS2Constraint = VS2Constraint in {
                  SchedBinaryMC<"WriteVGMULV", "ReadVGMULV", "ReadVGMULV">;
 } // Predicates = [HasStdExtZvkgs]
 
-let Predicates = [HasStdExtZvknhaOrZvknhb], VS1VS2Constraint = Sha2Constraint in {
+let Predicates = [HasStdExtZvknha], VS1VS2Constraint = Sha2Constraint in {
   def VSHA2CH_VV : ZvkALUVVNoVmTernary<0b101110, OPMVV, "vsha2ch.vv">,
                    SchedTernaryMC<"WriteVSHA2CHV", "ReadVSHA2CHV", "ReadVSHA2CHV",
                                   "ReadVSHA2CHV">;
@@ -168,7 +168,7 @@ let Predicates = [HasStdExtZvknhaOrZvknhb], VS1VS2Constraint = Sha2Constraint in
   def VSHA2MS_VV : ZvkALUVVNoVmTernary<0b101101, OPMVV, "vsha2ms.vv">,
                    SchedTernaryMC<"WriteVSHA2MSV", "ReadVSHA2MSV", "ReadVSHA2MSV",
                                   "ReadVSHA2MSV">;
-} // Predicates = [HasStdExtZvknhaOrZvknhb]
+} // Predicates = [HasStdExtZvknha]
 
 let Predicates = [HasStdExtZvkned] in {
   defm VAESDF     : VAES_MV_V_S<0b101000, 0b101001, 0b00001, OPMVV, "vaesdf">;
@@ -527,7 +527,7 @@ let Predicates = [HasStdExtZvbb] in {
   defm PseudoVWSLL : VPseudoVWSLL;
 } // Predicates = [HasStdExtZvbb]
 
-let Predicates = [HasStdExtZvbc] in {
+let Predicates = [HasStdExtZvbcOrZvbc32e] in {
   defm PseudoVCLMUL  : VPseudoVCLMUL_VV_VX;
   defm PseudoVCLMULH : VPseudoVCLMUL_VV_VX;
 } // Predicates = [HasStdExtZvbc]
@@ -555,13 +555,13 @@ let Predicates = [HasStdExtZvkned] in {
   defm PseudoVAESZ   : VPseudoVAESZ;
 } // Predicates = [HasStdExtZvkned]
 
-let Predicates = [HasStdExtZvknhaOrZvknhb] in {
+let Predicates = [HasStdExtZvknha] in {
   defm PseudoVSHA2CH : VPseudoVSHA2CH;
   defm PseudoVSHA2CL : VPseudoVSHA2CL;
   defm PseudoVSHA2MS : VPseudoVSHA2MS<sew=32>;
   let Predicates = [HasStdExtZvknhb] in
   defm PseudoVSHA2MS : VPseudoVSHA2MS<sew=64>;
-} // Predicates = [HasStdExtZvknhaOrZvknhb]
+} // Predicates = [HasStdExtZvknha]
 
 let Predicates = [HasStdExtZvksed] in {
   defm PseudoVSM4K : VPseudoVSM4K;
@@ -716,8 +716,16 @@ foreach vtiToWti = AllWidenableIntVectors in {
   }
 }
 
-defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
-defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", I64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", I64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc]>;
+
+defvar NonI64IntegerVectors = !filter(vti, AllIntegerVectors, !le(vti.SEW, 32));
+defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", NonI64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc32e]>;
+defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", NonI64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc32e]>;
 
 //===----------------------------------------------------------------------===//
 // VL patterns
@@ -1039,6 +1047,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
     defvar Pseudo = !cast<Instruction>(
         !if(isSEWAware, instruction#"_VI_"#vti.LMul.MX#"_E"#vti.SEW,
                         instruction#"_VI_"#vti.LMul.MX));
+    defvar InvRotImm = !cast<SDNodeXForm>("InvRot" # vti.SEW # "Imm");
     let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     def : Pat<(vti.Vector (Intr (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
@@ -1046,7 +1055,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
                           VLOpFrag)),
                           (Pseudo (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
-                          (InvRot64Imm uimm6:$rs1),
+                          (InvRotImm uimm6:$rs1),
                           GPR:$vl, vti.Log2SEW, TU_MU)>;
 
     defvar IntrMask = !cast<Intrinsic>(intrinsic#"_mask");
@@ -1061,7 +1070,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
                           VLOpFrag, (XLenVT timm:$policy))),
                           (PseudoMask (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
-                          (InvRot64Imm uimm6:$rs1),
+                          (InvRotImm uimm6:$rs1),
                           (vti.Mask VMV0:$vm),
                           GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
     }
@@ -1122,9 +1131,9 @@ defm : VPatBinaryV_VI_NoMaskTU<"int_riscv_vaeskf1", "PseudoVAESKF1", I32IntegerV
 defm : VPatBinaryV_VI_NoMask<"int_riscv_vaeskf2", "PseudoVAESKF2", I32IntegerVectors, [HasStdExtZvkned]>;
 defm : VPatUnaryV_S_NoMaskVectorCrypto<"int_riscv_vaesz", "PseudoVAESZ", I32IntegerVectors, [HasStdExtZvkned] >;
 
-defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32IntegerVectors, [HasStdExtZvknhaOrZvknhb]>;
-defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CL", I32IntegerVectors, [HasStdExtZvknhaOrZvknhb]>;
-defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32IntegerVectors, [HasStdExtZvknhaOrZvknhb], isSEWAware=true>;
+defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32IntegerVectors, [HasStdExtZvknha]>;
+defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CL", I32IntegerVectors, [HasStdExtZvknha]>;
+defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32IntegerVectors, [HasStdExtZvknha], isSEWAware=true>;
 
 defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I64IntegerVectors, [HasStdExtZvknhb]>;
 defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CL", I64IntegerVectors, [HasStdExtZvknhb]>;

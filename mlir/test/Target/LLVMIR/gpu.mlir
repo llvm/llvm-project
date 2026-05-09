@@ -93,10 +93,54 @@ module attributes {gpu.container_module} {
     %c1 = llvm.mlir.constant(1 : index) : i64
     %c2 = llvm.mlir.constant(2 : index) : i64
     %c3 = llvm.mlir.constant(3 : index) : i64
-    gpu.launch_func @kernel_module::@kernel 
+    gpu.launch_func @kernel_module::@kernel
         clusters in (%c1, %c1, %c1)
         blocks in (%c2, %c2, %c2)
         threads in (%c3, %c3, %c3) : i64
+    llvm.return
+  }
+}
+
+// -----
+
+// Test cooperative launch without a cluster: lowers to
+// mgpuLaunchKernelCooperative with cluster dims = 0.
+module attributes {gpu.container_module} {
+  gpu.binary @kernel_module  [#gpu.object<#nvvm.target, "BLOB">]
+  llvm.func @cooperative_no_cluster() {
+  // CHECK: call void @mgpuLaunchKernelCooperative(
+  // CHECK-SAME: i64 2, i64 2, i64 2,
+  // CHECK-SAME: i64 0, i64 0, i64 0,
+  // CHECK-SAME: i64 3, i64 3, i64 3,
+    %c2 = llvm.mlir.constant(2 : index) : i64
+    %c3 = llvm.mlir.constant(3 : index) : i64
+    gpu.launch_func @kernel_module::@kernel
+        blocks in (%c2, %c2, %c2)
+        threads in (%c3, %c3, %c3) : i64
+        cooperative
+    llvm.return
+  }
+}
+
+// -----
+
+// Test cooperative launch combined with a cluster: lowers to
+// mgpuLaunchKernelCooperative with the real cluster dims.
+module attributes {gpu.container_module} {
+  gpu.binary @kernel_module  [#gpu.object<#nvvm.target, "BLOB">]
+  llvm.func @cooperative_with_cluster() {
+  // CHECK: call void @mgpuLaunchKernelCooperative(
+  // CHECK-SAME: i64 2, i64 2, i64 2,
+  // CHECK-SAME: i64 1, i64 1, i64 1,
+  // CHECK-SAME: i64 3, i64 3, i64 3,
+    %c1 = llvm.mlir.constant(1 : index) : i64
+    %c2 = llvm.mlir.constant(2 : index) : i64
+    %c3 = llvm.mlir.constant(3 : index) : i64
+    gpu.launch_func @kernel_module::@kernel
+        clusters in (%c1, %c1, %c1)
+        blocks in (%c2, %c2, %c2)
+        threads in (%c3, %c3, %c3) : i64
+        cooperative
     llvm.return
   }
 }

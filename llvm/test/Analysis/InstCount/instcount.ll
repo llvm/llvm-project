@@ -3,13 +3,14 @@
 ; RUN: opt -stats -passes='thinlto<O3>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -passes='thinlto-pre-link<O2>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -passes='lto<O1>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -passes='lto-pre-link<Os>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes='lto-pre-link<O2>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -O3 -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -O0 -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-DAG: 10 instcount - Largest number of basic blocks in a single function
 ; CHECK-DAG: 18 instcount - Largest number of instructions in a single function
-; CHECK-DAG: 8 instcount - Number of Br insts
+; CHECK-DAG: 6 instcount - Number of UncondBr insts
+; CHECK-DAG: 2 instcount - Number of CondBr insts
 ; CHECK-DAG: 6 instcount - Number of Call insts
 ; CHECK-DAG: 2 instcount - Number of ICmp insts
 ; CHECK-DAG: 2 instcount - Number of Ret insts

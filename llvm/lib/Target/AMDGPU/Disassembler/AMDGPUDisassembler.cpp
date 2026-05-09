@@ -57,7 +57,7 @@ static int64_t getInlineImmVal64(unsigned Imm);
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
     : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-      MAI(*Ctx.getAsmInfo()),
+      MAI(Ctx.getAsmInfo()),
       HwModeRegClass(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
@@ -590,6 +590,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (isGFX11Plus() && Bytes.size() >= 12) {
       std::bitset<96> DecW = eat12Bytes(Bytes);
 
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX117096, DecoderTableGFX1170_FAKE1696, MI,
+                        DecW, Address, CS))
+        break;
+
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1196, DecoderTableGFX11_FAKE1696, MI,
                         DecW, Address, CS))
@@ -687,7 +692,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX1170() &&
-          tryDecodeInst(DecoderTableGFX117064, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX117064, DecoderTableGFX1170_FAKE1664, MI,
+                        QW, Address, CS))
         break;
 
       if (isGFX11() &&
@@ -743,6 +749,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
+        break;
+
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX117032, DecoderTableGFX1170_FAKE1632, MI,
+                        DW, Address, CS))
         break;
 
       if (isGFX11() &&
@@ -2263,7 +2274,9 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
   return AMDGPU::isGFX11Plus(STI);
 }
 
-bool AMDGPUDisassembler::isGFX1170() const { return AMDGPU::isGFX1170(STI); }
+bool AMDGPUDisassembler::isGFX1170() const {
+  return STI.hasFeature(AMDGPU::FeatureGFX11_7Insts);
+}
 
 bool AMDGPUDisassembler::isGFX12() const {
   return STI.hasFeature(AMDGPU::FeatureGFX12);
@@ -2419,13 +2432,13 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_PRIV);
 
-  if (!isGFX12Plus())
+  if (STI.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
     PRINT_DIRECTIVE(".amdhsa_dx10_clamp",
                     COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP);
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_DEBUG_MODE);
 
-  if (!isGFX12Plus())
+  if (STI.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
     PRINT_DIRECTIVE(".amdhsa_ieee_mode",
                     COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE);
 
@@ -2668,7 +2681,7 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   StringRef Indent = "\t";
 
   assert(Bytes.size() == 64);
-  DataExtractor DE(Bytes, /*IsLittleEndian=*/true, /*AddressSize=*/8);
+  DataExtractor DE(Bytes, /*IsLittleEndian=*/true);
 
   switch (Cursor.tell()) {
   case amdhsa::GROUP_SEGMENT_FIXED_SIZE_OFFSET:

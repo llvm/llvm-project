@@ -20,9 +20,7 @@ entry:
   ret i32 %mul
 
 ; CHECK-LABEL: .globl  foo
-; GENERIC: .p2align  2
-; BASIC: .p2align  4
-; PWR: .p2align  4
+; CHECK: .p2align  2
 ; CHECK: @foo
 }
 

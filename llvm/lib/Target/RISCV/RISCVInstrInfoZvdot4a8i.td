@@ -61,9 +61,9 @@ let HasPassthruOp = true, HasMaskOp = true in {
 // Pseudo Instructions for CodeGen
 //===----------------------------------------------------------------------===//
 
-multiclass VPseudoVDOTA4_VV_VX {
+multiclass VPseudoVDOTA4_VV_VX<bit Commutable = 0> {
   foreach m = MxSet<32>.m in {
-    defm "" : VPseudoBinaryV_VV<m>,
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
               SchedBinary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV", m.MX,
                           forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
@@ -72,11 +72,10 @@ multiclass VPseudoVDOTA4_VV_VX {
   }
 }
 
-// TODO: Add isCommutable for VDOTA4 and VDOTA4U
 let Predicates = [HasStdExtZvdot4a8i], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0 in {
-  defm PseudoVDOTA4 : VPseudoVDOTA4_VV_VX;
-  defm PseudoVDOTA4U : VPseudoVDOTA4_VV_VX;
+  defm PseudoVDOTA4 : VPseudoVDOTA4_VV_VX<Commutable=1>;
+  defm PseudoVDOTA4U : VPseudoVDOTA4_VV_VX<Commutable=1>;
   defm PseudoVDOTA4SU : VPseudoVDOTA4_VV_VX;
   // VDOTA4US does not have a VV variant
   foreach m = MxListVF4 in {
@@ -95,53 +94,39 @@ defm : VPatBinaryVL_VV_VX<riscv_vdota4su_vl, "PseudoVDOTA4SU", AllE32Vectors, Ex
 
 // These VPat definitions are for vdota4 because they have a different operand
 // order with other ternary instructions (i.e. vop.vx vd, vs2, rs1)
-multiclass VPatTernaryV_VX_AABX<string intrinsic, string instruction,
-                                list<VTypeInfoToWide> info_pairs,
+multiclass VPatTernaryV_VX_AAAX<string intrinsic, string instruction,
+                                list<VTypeInfo> vtilist,
                                 list<Predicate> ExtraPreds> {
-  foreach pair = info_pairs in {
-    defvar VdInfo = pair.Wti;
-    defvar Vs2Info = pair.Vti;
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<VdInfo>.Predicates) in
+  foreach vti = vtilist in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     defm : VPatTernaryWithPolicy<intrinsic, instruction,
-                                 "V"#VdInfo.ScalarSuffix,
-                                 VdInfo.Vector, Vs2Info.Vector, Vs2Info.Scalar,
-                                 VdInfo.Mask, VdInfo.Log2SEW, VdInfo.LMul,
-                                 VdInfo.RegClass, Vs2Info.RegClass,
-                                 Vs2Info.ScalarRegClass>;
-  }
+                                 "V"#vti.ScalarSuffix,
+                                 vti.Vector, vti.Vector, vti.Scalar,
+                                 vti.Mask, vti.Log2SEW, vti.LMul,
+                                 vti.RegClass, vti.RegClass,
+                                 vti.ScalarRegClass>;
 }
 
-multiclass VPatTernaryV_VV_AABX<string intrinsic, string instruction,
-                                list<VTypeInfoToWide> info_pairs,
+multiclass VPatTernaryV_VV_AAAX<string intrinsic, string instruction,
+                                list<VTypeInfo> vtilist,
                                 list<Predicate> ExtraPreds> {
-  foreach pair = info_pairs in {
-    defvar VdInfo = pair.Wti;
-    defvar Vs2Info = pair.Vti;
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<VdInfo>.Predicates) in
+  foreach vti = vtilist in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     defm : VPatTernaryWithPolicy<intrinsic, instruction,
                                  "VV",
-                                 VdInfo.Vector, Vs2Info.Vector, Vs2Info.Vector,
-                                 VdInfo.Mask, VdInfo.Log2SEW, VdInfo.LMul,
-                                 VdInfo.RegClass, Vs2Info.RegClass,
-                                 Vs2Info.RegClass>;
-  }
+                                 vti.Vector, vti.Vector, vti.Vector,
+                                 vti.Mask, vti.Log2SEW, vti.LMul,
+                                 vti.RegClass, vti.RegClass,
+                                 vti.RegClass>;
 }
 
-multiclass VPatTernaryV_VV_VX_AABX<string intrinsic, string instruction,
-                                   list<VTypeInfoToWide> info_pairs,
+multiclass VPatTernaryV_VV_VX_AAAX<string intrinsic, string instruction,
+                                   list<VTypeInfo> vtilist,
                                    list<Predicate> ExtraPreds>
-    : VPatTernaryV_VV_AABX<intrinsic, instruction, info_pairs, ExtraPreds>,
-      VPatTernaryV_VX_AABX<intrinsic, instruction, info_pairs, ExtraPreds>;
+    : VPatTernaryV_VV_AAAX<intrinsic, instruction, vtilist, ExtraPreds>,
+      VPatTernaryV_VX_AAAX<intrinsic, instruction, vtilist, ExtraPreds>;
 
-defset list<VTypeInfoToWide> VDOTA4InfoPairs = {
-  def : VTypeInfoToWide<VI8MF2, VI32MF2>;
-  def : VTypeInfoToWide<VI8M1, VI32M1>;
-  def : VTypeInfoToWide<VI8M2, VI32M2>;
-  def : VTypeInfoToWide<VI8M4, VI32M4>;
-  def : VTypeInfoToWide<VI8M8, VI32M8>;
-}
-
-defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vdota4", "PseudoVDOTA4", VDOTA4InfoPairs, [HasStdExtZvdot4a8i]>;
-defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vdota4u", "PseudoVDOTA4U", VDOTA4InfoPairs, [HasStdExtZvdot4a8i]>;
-defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vdota4su", "PseudoVDOTA4SU", VDOTA4InfoPairs, [HasStdExtZvdot4a8i]>;
-defm : VPatTernaryV_VX_AABX<"int_riscv_vdota4us", "PseudoVDOTA4US", VDOTA4InfoPairs, [HasStdExtZvdot4a8i]>;
+defm : VPatTernaryV_VV_VX_AAAX<"int_riscv_vdota4", "PseudoVDOTA4", AllE32Vectors, [HasStdExtZvdot4a8i]>;
+defm : VPatTernaryV_VV_VX_AAAX<"int_riscv_vdota4u", "PseudoVDOTA4U", AllE32Vectors, [HasStdExtZvdot4a8i]>;
+defm : VPatTernaryV_VV_VX_AAAX<"int_riscv_vdota4su", "PseudoVDOTA4SU", AllE32Vectors, [HasStdExtZvdot4a8i]>;
+defm : VPatTernaryV_VX_AAAX<"int_riscv_vdota4us", "PseudoVDOTA4US", AllE32Vectors, [HasStdExtZvdot4a8i]>;

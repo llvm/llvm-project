@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected,since-cxx20 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -193,6 +193,29 @@ int j = f('a', 2);
 
 #endif
 } // namespace cwg2770
+
+namespace cwg2780 { // cwg2780: 2.7
+
+void f();
+
+void g() {
+  (void)reinterpret_cast<void(&)(int)>(f);
+}
+
+} // namespace cwg2780
+
+namespace cwg2785 { // cwg2785: 10
+#if __cplusplus >= 202002L
+void g(void *); // #cwg2785-g
+
+template <typename T>
+void f() {
+  g(requires { T(); });
+  // since-cxx20-error@-1 {{no matching function for call to 'g'}}
+  //   since-cxx20-note@#cwg2785-g {{candidate function not viable: no known conversion from 'bool' to 'void *' for 1st argument}}
+}
+#endif
+} // namespace cwg2785
 
 namespace cwg2789 { // cwg2789: 18
 #if __cplusplus >= 202302L

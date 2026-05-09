@@ -175,7 +175,8 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
 bool isCtorOfRetainPtrOrOSPtr(const clang::FunctionDecl *F) {
   const std::string &FunctionName = safeGetName(F);
   return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
-         FunctionName == "adoptCF" || FunctionName == "retainPtr" ||
+         FunctionName == "adoptNSNullable" || FunctionName == "adoptCF" ||
+         FunctionName == "adoptCFNullable" || FunctionName == "retainPtr" ||
          FunctionName == "RetainPtrArc" || FunctionName == "adoptNSArc" ||
          FunctionName == "adoptOSObject" || FunctionName == "adoptOSObjectArc";
 }
@@ -884,10 +885,6 @@ public:
 
     // Recursively descend into the callee to confirm that it's trivial.
     return IsFunctionTrivial(CE->getConstructor());
-  }
-
-  bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-    return CanTriviallyDestruct(DE->getDestroyedType());
   }
 
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {

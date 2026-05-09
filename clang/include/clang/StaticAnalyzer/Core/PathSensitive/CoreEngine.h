@@ -49,10 +49,8 @@ class ExprEngine;
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class ExprEngine;
-  friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
   friend class NodeBuilderContext;
-  friend class SwitchNodeBuilder;
 
 public:
   using BlocksExhausted =
@@ -172,6 +170,29 @@ public:
   ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
                          ExplodedNode *Pred, bool MarkAsSink = false) const;
 
+  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+                                 ExplodedNode *Pred,
+                                 bool MarkAsSink = false) const {
+    PostStmt Loc(S, Pred->getLocationContext(), /*tag=*/nullptr);
+    return makeNode(Loc, State, Pred, MarkAsSink);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramStateRef State,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    const LocationContext *LC = Pred->getLocationContext();
+    State = State->BindExpr(E, LC, V);
+    const auto &L = ProgramPoint::getProgramPoint(E, K, LC, /*tag=*/nullptr);
+    return makeNode(L, State, Pred);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    return makeNodeWithBinding(Pred, E, V, Pred->getState(), K);
+  }
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
@@ -260,7 +281,7 @@ public:
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
       : NodeBuilder(DstSet, Ctx) {
-    Frontier.Add(SrcNode);
+    Frontier.insert(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
@@ -306,7 +327,6 @@ public:
 
   const ExplodedNodeSet &getResults() const { return Frontier; }
 
-  const NodeBuilderContext &getContext() const { return C; }
   bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
@@ -316,65 +336,7 @@ public:
 
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
-  void addNodes(ExplodedNode *N) { Frontier.Add(N); }
-};
-
-/// BranchNodeBuilder is responsible for constructing the nodes
-/// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder : public NodeBuilder {
-  const CFGBlock *DstT;
-  const CFGBlock *DstF;
-
-public:
-  BranchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &C,
-                    const CFGBlock *DT, const CFGBlock *DF)
-      : NodeBuilder(DstSet, C), DstT(DT), DstF(DF) {}
-
-  ExplodedNode *generateNode(ProgramStateRef State, bool branch,
-                             ExplodedNode *Pred);
-};
-
-class IndirectGotoNodeBuilder : public NodeBuilder {
-  const CFGBlock &DispatchBlock;
-  const Expr *Target;
-
-public:
-  IndirectGotoNodeBuilder(ExplodedNodeSet &DstSet, NodeBuilderContext &Ctx,
-                          const Expr *Tgt, const CFGBlock *Dispatch)
-      : NodeBuilder(DstSet, Ctx), DispatchBlock(*Dispatch), Target(Tgt) {}
-
-  using iterator = CFGBlock::const_succ_iterator;
-
-  iterator begin() { return DispatchBlock.succ_begin(); }
-  iterator end() { return DispatchBlock.succ_end(); }
-
-  using NodeBuilder::generateNode;
-
-  ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
-                             ExplodedNode *Pred);
-
-  const Expr *getTarget() const { return Target; }
-
-  const LocationContext *getLocationContext() const {
-    return C.getLocationContext();
-  }
-};
-
-class SwitchNodeBuilder : public NodeBuilder {
-public:
-  SwitchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
-      : NodeBuilder(DstSet, Ctx) {}
-
-  using iterator = CFGBlock::const_succ_reverse_iterator;
-
-  iterator begin() { return C.getBlock()->succ_rbegin() + 1; }
-  iterator end() { return C.getBlock()->succ_rend(); }
-
-  ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
-                                     ProgramStateRef State, ExplodedNode *Pred);
-
-  ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        ExplodedNode *Pred);
+  void addNodes(ExplodedNode *N) { Frontier.insert(N); }
 };
 
 } // namespace ento

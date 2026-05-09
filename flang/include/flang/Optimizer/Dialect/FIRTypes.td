@@ -602,6 +602,9 @@ def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 def AnyLogicalType : Type<AnyLogicalLike.predicate, "any logical">;
+def AnyLogicalOrIntegerLike : TypeConstraint<Or<[
+    fir_LogicalType.predicate,
+    SignlessIntegerLike.predicate]>, "fir.logical or signless integer">;
 
 def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
   "any floating point complex type">;

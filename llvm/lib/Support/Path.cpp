@@ -548,6 +548,12 @@ void native(const Twine &path, SmallVectorImpl<char> &result, Style style) {
   native(result, style);
 }
 
+std::string native(const Twine &path, Style style) {
+  SmallString<128> Result;
+  native(path, Result, style);
+  return std::string(Result);
+}
+
 void native(SmallVectorImpl<char> &Path, Style style) {
   if (Path.empty())
     return;
@@ -847,6 +853,9 @@ void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
                       bool MakeAbsolute) {
   SmallString<128> ModelStorage;
   Model.toVector(ModelStorage);
+
+  assert(llvm::is_contained(ModelStorage, '%') &&
+         "createUniquePath: Model must contain at least one '%'");
 
   if (MakeAbsolute) {
     // Make model absolute by prepending a temp directory if it's not already.

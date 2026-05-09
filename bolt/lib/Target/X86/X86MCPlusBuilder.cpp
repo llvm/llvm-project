@@ -827,6 +827,12 @@ public:
     Regs.set(X86::R15);
   }
 
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector FP = getAliases(X86::RBP);
+    FP.flip();
+    Regs &= FP;
+  }
+
   void getClassicGPRegs(BitVector &Regs) const override {
     Regs |= getAliases(X86::RAX);
     Regs |= getAliases(X86::RBX);
@@ -1438,7 +1444,7 @@ public:
     assert(Offset + I.DataSize <= ConstantData.size() &&
            "invalid offset for given constant data");
     int64_t ImmVal =
-        DataExtractor(ConstantData, true, 8).getSigned(&Offset, I.DataSize);
+        DataExtractor(ConstantData, true).getSigned(&Offset, I.DataSize);
 
     // Compute the new opcode.
     unsigned NewOpcode = 0;

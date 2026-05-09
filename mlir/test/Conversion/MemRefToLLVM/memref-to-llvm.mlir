@@ -547,6 +547,37 @@ llvm.func @generic_atomic_rmw() {
 
 // -----
 
+// CHECK-LABEL: func @generic_atomic_rmw_f16
+// CHECK-INTERFACE-LABEL: func @generic_atomic_rmw_f16
+llvm.func @generic_atomic_rmw_f16() {
+  %I = "test.foo"() : () -> (memref<10xf16>)
+  %i = "test.foo"() : () -> (index)
+  %x = memref.generic_atomic_rmw %I[%i] : memref<10xf16> {
+    ^bb0(%old_value : f16):
+      memref.atomic_yield %old_value : f16
+  }
+  llvm.return
+}
+// `llvm.cmpxchg` only accepts integer/pointer operands, so floating-point
+// values are bitcast to a same-width integer for the CAS and bitcast back.
+// CHECK:        %[[INIT:.*]] = llvm.load %{{.*}} : !llvm.ptr -> f16
+// CHECK-NEXT:   %[[INIT_INT:.*]] = llvm.bitcast %[[INIT]] : f16 to i16
+// CHECK-NEXT:   llvm.br ^bb1(%[[INIT_INT]] : i16)
+// CHECK-NEXT: ^bb1(%[[LOADED:.*]]: i16):
+// CHECK-NEXT:   %[[LOADED_F16:.*]] = llvm.bitcast %[[LOADED]] : i16 to f16
+// CHECK-NEXT:   %[[RES_INT:.*]] = llvm.bitcast %[[LOADED_F16]] : f16 to i16
+// CHECK-NEXT:   %[[PAIR:.*]] = llvm.cmpxchg %{{.*}}, %[[LOADED]], %[[RES_INT]]
+// CHECK-SAME:                      acq_rel monotonic : !llvm.ptr, i16
+// CHECK-NEXT:   %[[NEW:.*]] = llvm.extractvalue %[[PAIR]][0]
+// CHECK-NEXT:   %[[OK:.*]] = llvm.extractvalue %[[PAIR]][1]
+// CHECK-NEXT:   llvm.cond_br %[[OK]], ^bb2, ^bb1(%[[NEW]] : i16)
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT:   %{{.*}} = llvm.bitcast %[[NEW]] : i16 to f16
+
+// CHECK-INTERFACE: llvm.cmpxchg
+
+// -----
+
 // CHECK-LABEL: func @generic_atomic_rmw_in_alloca_scope
 // CHECK-INTERFACE-LABEL: func @generic_atomic_rmw_in_alloca_scope
 llvm.func @generic_atomic_rmw_in_alloca_scope() {

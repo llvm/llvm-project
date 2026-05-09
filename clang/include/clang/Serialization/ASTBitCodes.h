@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 35;
+const unsigned VERSION_MAJOR = 38;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -748,6 +748,13 @@ enum ASTRecordTypes {
 
   /// Record code for #pragma clang riscv intrinsic vector.
   RISCV_VECTOR_INTRINSICS_PRAGMA = 78,
+
+  /// Record code for extname-redefined undeclared identifiers.
+  EXTNAME_UNDECLARED_IDENTIFIERS = 79,
+
+  /// Record that encodes the number of submodules, their base ID in the AST
+  /// file, and for each module the relative bit offset into the stream.
+  SUBMODULE_METADATA = 80,
 };
 
 /// Record types used within a source manager block.
@@ -816,8 +823,8 @@ enum PreprocessorDetailRecordTypes {
 
 /// Record types used within a submodule description block.
 enum SubmoduleRecordTypes {
-  /// Metadata for submodules as a whole.
-  SUBMODULE_METADATA = 0,
+  /// Defines the end of a single submodule. Sentinel record without any data.
+  SUBMODULE_END = 0,
 
   /// Defines the major attributes of a submodule, including its
   /// name and parent.
@@ -881,6 +888,10 @@ enum SubmoduleRecordTypes {
 
   /// Specifies affecting modules that were not imported.
   SUBMODULE_AFFECTING_MODULES = 18,
+
+  /// Specifies a direct submodule by name and ID, enabling on-demand
+  /// deserialization of children without loading the entire submodule block.
+  SUBMODULE_CHILD = 19,
 };
 
 /// Record types used within a comments block.
@@ -1163,7 +1174,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 514;
+const unsigned NUM_PREDEF_TYPE_IDS = 529;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1540,7 +1551,10 @@ enum DeclCode {
   // An OpenACCRoutineDecl record.
   DECL_OPENACC_ROUTINE,
 
-  DECL_LAST = DECL_OPENACC_ROUTINE
+  /// An ExplicitInstantiationDecl record.
+  DECL_EXPLICIT_INSTANTIATION,
+
+  DECL_LAST = DECL_EXPLICIT_INSTANTIATION
 };
 
 /// Record codes for each kind of statement or expression.
@@ -1617,6 +1631,9 @@ enum StmtCode {
 
   /// A SYCLKernelCallStmt record.
   STMT_SYCLKERNELCALL,
+
+  /// An UnresolvedSYCLKernelCallStmt record.
+  STMT_UNRESOLVED_SYCL_KERNEL_CALL,
 
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,
@@ -1959,6 +1976,7 @@ enum StmtCode {
   STMP_OMP_STRIPE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
   STMT_OMP_REVERSE_DIRECTIVE,
+  STMT_OMP_SPLIT_DIRECTIVE,
   STMT_OMP_INTERCHANGE_DIRECTIVE,
   STMT_OMP_FUSE_DIRECTIVE,
   STMT_OMP_FOR_DIRECTIVE,

@@ -17,7 +17,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 
-namespace llvm {
+using namespace llvm;
 
 void MCLFIRewriter::error(const MCInst &Inst, const char Msg[]) {
   Ctx.reportError(Inst.getLoc(), Msg);
@@ -51,4 +51,9 @@ bool MCLFIRewriter::mayModifyRegister(const MCInst &Inst,
                                       MCRegister Reg) const {
   return InstInfo->get(Inst.getOpcode()).hasDefOfPhysReg(Inst, Reg, *RegInfo);
 }
-} // namespace llvm
+
+bool MCLFIRewriter::explicitlyModifiesRegister(const MCInst &Inst,
+                                               MCRegister Reg) const {
+  return InstInfo->get(Inst.getOpcode())
+      .hasExplicitDefOfPhysReg(Inst, Reg, *RegInfo);
+}

@@ -62,7 +62,35 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
-  libc.config.app_h
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    .environ_internal
+)
+
+# GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
+set(environ_internal_gcc12_workaround "")
+if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
+   (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
+   (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
+  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow")
+endif()
+
+add_object_library(
+  environ_internal
+  SRCS
+    environ_internal.cpp
+  HDRS
+    environ_internal.h
+  COMPILE_OPTIONS
+    ${environ_internal_gcc12_workaround}
+  DEPENDS
+    libc.config.app_h
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -492,6 +520,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
       DEPENDS
         ${SCUDO_DEPS}
     )
+    add_entrypoint_external(
+      posix_memalign
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
   else()
     add_entrypoint_external(
       malloc
@@ -510,6 +543,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       mallopt
+    )
+    add_entrypoint_external(
+      posix_memalign
     )
   endif()
 endif()
@@ -705,11 +741,22 @@ add_entrypoint_object(
     ${exit_deps}
 )
 
+add_header_library(
+  abort_utils
+  HDRS
+    abort_utils.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.abort_utils
+)
+
 add_entrypoint_object(
   abort
-  ALIAS
+  SRCS
+    abort.cpp
+  HDRS
+    abort.h
   DEPENDS
-    .${LIBC_TARGET_OS}.abort
+    .abort_utils
 )
 
 add_entrypoint_object(

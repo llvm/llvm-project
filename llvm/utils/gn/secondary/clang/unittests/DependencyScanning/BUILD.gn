@@ -10,6 +10,6 @@ unittest("ClangDependencyScanningTests") {
   ]
   sources = [
     "DependencyScanningFilesystemTest.cpp",
-    "DependencyScanningWorkerTest.cpp",
+    "InProcessModuleCacheTest.cpp",
   ]
 }

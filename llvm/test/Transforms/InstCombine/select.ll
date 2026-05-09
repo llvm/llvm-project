@@ -1641,7 +1641,7 @@ define <4 x float> @PR33721(<4 x float> %w) {
 ; CHECK-SAME: <4 x float> [[W:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp ole <4 x float> [[W]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x float> splat (float 0xFFFFFFFFE0000000), <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x float> splat (float -nan(0x3FFFFF)), <4 x float> zeroinitializer
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
 entry:
@@ -3964,18 +3964,12 @@ define i32 @pr61361(i32 %arg) {
 
 define i32 @pr62088() {
 ; CHECK-LABEL: define i32 @pr62088() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[NOT2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ -2, %[[LOOP]] ]
-; CHECK-NEXT:    [[H_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
-; CHECK-NEXT:    [[XOR:%.*]] = or disjoint i32 [[H_0]], [[NOT2]]
-; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR]]
-; CHECK-NEXT:    [[XOR6:%.*]] = xor i32 [[SUB5]], -1260914025
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[XOR6]], 824855120
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[H_0]]
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   br label %loop

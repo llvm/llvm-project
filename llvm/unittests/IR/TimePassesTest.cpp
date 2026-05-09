@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include <gtest/gtest.h>
@@ -115,8 +116,8 @@ TEST(TimePassesTest, LegacyCustomOut) {
   TimePassesIsEnabled = false;
 }
 
-class MyPass1 : public PassInfoMixin<MyPass1> {};
-class MyPass2 : public PassInfoMixin<MyPass2> {};
+class MyPass1 : public OptionalPassInfoMixin<MyPass1> {};
+class MyPass2 : public OptionalPassInfoMixin<MyPass2> {};
 
 TEST(TimePassesTest, CustomOut) {
   PassInstrumentationCallbacks PIC;

@@ -409,6 +409,12 @@ public:
   void applyCombineConstantFoldFpUnary(MachineInstr &MI,
                                        const ConstantFP *Cst) const;
 
+  /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
+  /// _ZERO_UNDEF variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
+  /// a scalar constant or a G_BUILD_VECTOR of constants.
+  bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
+
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
   void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
@@ -537,6 +543,9 @@ public:
                              std::tuple<Register, Register> &MatchInfo) const;
   void applySimplifyAddToSub(MachineInstr &MI,
                              std::tuple<Register, Register> &MatchInfo) const;
+
+  /// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+  bool matchBinopWithNeg(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
   bool matchHoistLogicOpWithSameOpcodeHands(
@@ -1054,6 +1063,11 @@ public:
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
+
+  /// Helper function for matchBinopWithNeg: tries to match one commuted form
+  /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
+  bool matchBinopWithNegInner(Register MInner, Register Other, unsigned RootOpc,
+                              Register Dst, LLT Ty, BuildFnTy &MatchInfo) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///

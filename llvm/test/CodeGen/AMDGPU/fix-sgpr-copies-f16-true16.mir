@@ -272,8 +272,8 @@ body:             |
     ; GCN-LABEL: name: s_pack_ll_b32_b16
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].lo16, %subreg.lo16, [[DEF1]].lo16, %subreg.hi16
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY]].lo16, %subreg.lo16, [[DEF1]].lo16, %subreg.hi16
     %0:sreg_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:sreg_32 = COPY %1:vgpr_32
@@ -287,8 +287,8 @@ body:             |
     ; GCN-LABEL: name: s_pack_lh_b32_b16
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].lo16, %subreg.lo16, [[DEF1]].hi16, %subreg.hi16
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY]].lo16, %subreg.lo16, [[DEF1]].hi16, %subreg.hi16
     %0:sreg_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:sreg_32 = COPY %1:vgpr_32
@@ -302,8 +302,8 @@ body:             |
     ; GCN-LABEL: name: s_pack_hl_b32_b16
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].hi16, %subreg.lo16, [[DEF1]].lo16, %subreg.hi16
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY]].hi16, %subreg.lo16, [[DEF1]].lo16, %subreg.hi16
     %0:sreg_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:sreg_32 = COPY %1:vgpr_32
@@ -317,8 +317,8 @@ body:             |
     ; GCN-LABEL: name: s_pack_hh_b32_b16
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].hi16, %subreg.lo16, [[DEF1]].hi16, %subreg.hi16
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY]].hi16, %subreg.lo16, [[DEF1]].hi16, %subreg.hi16
     %0:sreg_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:sreg_32 = COPY %1:vgpr_32
