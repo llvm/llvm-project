@@ -3954,6 +3954,15 @@ entry:
   ret i1 %test
 }
 
+; Fold to true when known classes are a subset of the test mask.
+define i1 @test_pnorm_subset_normal_fold(float nofpclass(nan inf zero sub nnorm) %x) {
+; CHECK-LABEL: @test_pnorm_subset_normal_fold(
+; CHECK-NEXT:    ret i1 true
+;
+  %r = call i1 @llvm.is.fpclass.f32(float %x, i32 264)
+  ret i1 %r
+}
+
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare i1 @llvm.is.fpclass.f64(double, i32 immarg)
 declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32 immarg)
