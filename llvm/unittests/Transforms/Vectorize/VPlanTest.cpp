@@ -1804,5 +1804,39 @@ TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
 }
 #endif
 
+TEST_F(VPRecipeTest, UFAddUsersBeforeMaterialization) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("vector.header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("vector.latch");
+  VPRegionBlock *LoopRegion = Plan.createLoopRegion(
+      Type::getInt32Ty(C), DebugLoc(), "vector.loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
+  VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
+
+  auto *VScale = new VPInstruction(VPInstruction::VScale, {});
+  Plan.getVectorPreheader()->appendRecipe(VScale);
+
+  VPValue *UF = &Plan.getUF();
+  auto *Step =
+      new VPInstruction(Instruction::Mul, {VScale, UF},
+                        VPIRFlags(VPIRFlags::WrapFlagsTy(false, false)));
+  Plan.getVectorPreheader()->appendRecipe(Step);
+
+  auto *Increment = new VPInstruction(
+      Instruction::Add, {LoopRegion->getCanonicalIV(), Step},
+      VPIRFlags(VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false)),
+      {}, DebugLoc(), "index.next");
+  Latch->appendRecipe(Increment);
+
+  auto *Br = new VPInstruction(VPInstruction::BranchOnCount,
+                               {Increment, &Plan.getVectorTripCount()});
+  Latch->appendRecipe(Br);
+
+  Plan.getVFxUF().markMaterialized();
+  Plan.dump();
+  EXPECT_EQ(Increment, LoopRegion->getOrCreateCanonicalIVIncrement());
+}
+
 } // namespace
 } // namespace llvm
