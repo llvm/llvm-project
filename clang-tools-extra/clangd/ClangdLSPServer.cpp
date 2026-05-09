@@ -519,8 +519,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
   Opts.CodeComplete.EnableInsertReplace = Params.capabilities.InsertReplace;
-  if (!Opts.CodeComplete.BundleOverloads)
-    Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
   Opts.CodeComplete.DocumentationFormat =
       Params.capabilities.CompletionDocumentationFormat;
   Opts.SignatureHelpDocumentationFormat =
@@ -1800,9 +1798,9 @@ bool ClangdLSPServer::shouldRunCompletion(
   auto Offset = positionToOffset(*Code, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
-    vlog("could not convert position '{0}' to offset for file '{1}'",
-         Params.position, Params.textDocument.uri.file());
-    return true;
+    elog("could not convert position '{0}' to offset for file '{1}': {2}",
+         Params.position, Params.textDocument.uri.file(), Offset.takeError());
+    return false;
   }
   return allowImplicitCompletion(*Code, *Offset);
 }

@@ -177,10 +177,8 @@ define <2 x i8> @replace_through_binop_preserve_flags(i8 %inp, <2 x i8> %d, <2 x
 ; CHECK-SAME: i8 [[INP:%.*]], <2 x i8> [[D:%.*]], <2 x i8> [[ANY:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP2]], <i8 0, i8 5>
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i8> [[TMP3]], <i8 123, i8 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i8> [[TMP3]], <i8 123, i8 1>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP4]], <2 x i8> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP2]], <i8 123, i8 5>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP3]], <i8 0, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %add = xor i8 %inp, 5

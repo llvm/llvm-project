@@ -180,6 +180,10 @@
 #    error "__cpp_lib_concepts should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
@@ -668,6 +672,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -694,6 +702,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -794,10 +806,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -1098,6 +1106,10 @@
 
 #  ifdef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_algorithms
@@ -1624,6 +1636,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -1650,6 +1666,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -1765,10 +1785,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -2120,6 +2136,10 @@
 
 #  ifdef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_algorithms
@@ -2745,6 +2765,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -2771,6 +2795,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -2916,10 +2944,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -3367,6 +3391,10 @@
 #  endif
 #  if __cpp_lib_concepts != 202207L
 #    error "__cpp_lib_concepts should have the value 202207L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -4133,6 +4161,10 @@
 #    error "__cpp_lib_ranges_contains should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
@@ -4159,6 +4191,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -4328,10 +4364,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -4830,6 +4862,10 @@
 #  endif
 #  if __cpp_lib_concepts != 202207L
 #    error "__cpp_lib_concepts should have the value 202207L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -5713,6 +5749,13 @@
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
+#  endif
+
 #  ifndef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should be defined in c++23"
 #  endif
@@ -5763,6 +5806,13 @@
 #  endif
 #  if __cpp_lib_ranges_starts_ends_with != 202106L
 #    error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_to_container
@@ -5947,10 +5997,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6341,8 +6387,8 @@
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++26"
 #  endif
-#  if __cpp_lib_atomic_ref != 202411L
-#    error "__cpp_lib_atomic_ref should have the value 202411L in c++26"
+#  if __cpp_lib_atomic_ref != 202603L
+#    error "__cpp_lib_atomic_ref should have the value 202603L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6515,6 +6561,13 @@
 #  endif
 #  if __cpp_lib_concepts != 202207L
 #    error "__cpp_lib_concepts should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should be defined in c++26"
+#  endif
+#  if __cpp_lib_constant_wrapper != 202603L
+#    error "__cpp_lib_constant_wrapper should have the value 202603L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -7635,6 +7688,13 @@
 #    error "__cpp_lib_ranges_contains should have the value 202207L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should be defined in c++26"
 #  endif
@@ -7688,6 +7748,13 @@
 #  endif
 #  if __cpp_lib_ranges_starts_ends_with != 202106L
 #    error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_to_container
@@ -7782,8 +7849,8 @@
 #  ifndef __cpp_lib_saturation_arithmetic
 #    error "__cpp_lib_saturation_arithmetic should be defined in c++26"
 #  endif
-#  if __cpp_lib_saturation_arithmetic != 202311L
-#    error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
+#  if __cpp_lib_saturation_arithmetic != 202603L
+#    error "__cpp_lib_saturation_arithmetic should have the value 202603L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
@@ -7911,13 +7978,6 @@
 #  endif
 #  if __cpp_lib_span_at != 202311L
 #    error "__cpp_lib_span_at should have the value 202311L in c++26"
-#  endif
-
-#  ifndef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should be defined in c++26"
-#  endif
-#  if __cpp_lib_span_initializer_list != 202311L
-#    error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

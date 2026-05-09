@@ -29,6 +29,11 @@ class F16F128MathTemplate : Template<["__fp16", "__float128"],
 class IntMathTemplate : Template<["int", "long int", "long long int"],
                                  ["",     "l",       "ll"], /*AsPrefix=*/1>;
 
+class IntBitUtilTemplate : Template<
+    ["unsigned char", "unsigned short", "unsigned int",
+     "unsigned long int", "unsigned long long int"],
+    ["_uc", "_us", "_ui", "_ul", "_ull"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -796,6 +801,264 @@ def StdcRotateRight : Builtin {
   let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "void(...)";
 }
+
+def StdcLeadingZeros: Builtin {
+  let Spellings = ["__builtin_stdc_leading_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcLeadingOnes: Builtin {
+  let Spellings = ["__builtin_stdc_leading_ones"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcTrailingZeros: Builtin {
+  let Spellings = ["__builtin_stdc_trailing_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcTrailingOnes: Builtin {
+  let Spellings = ["__builtin_stdc_trailing_ones"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstLeadingZero: Builtin {
+  let Spellings = ["__builtin_stdc_first_leading_zero"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstLeadingOne: Builtin {
+  let Spellings = ["__builtin_stdc_first_leading_one"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstTrailingZero: Builtin {
+  let Spellings = ["__builtin_stdc_first_trailing_zero"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstTrailingOne: Builtin {
+  let Spellings = ["__builtin_stdc_first_trailing_one"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcCountZeros: Builtin {
+  let Spellings = ["__builtin_stdc_count_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcCountOnes: Builtin {
+  let Spellings = ["__builtin_stdc_count_ones"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcHasSingleBit: Builtin {
+  let Spellings = ["__builtin_stdc_has_single_bit"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "bool(...)";
+}
+
+def StdcBitWidth: Builtin {
+  let Spellings = ["__builtin_stdc_bit_width"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcBitFloor: Builtin {
+  let Spellings = ["__builtin_stdc_bit_floor"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcBitCeil: Builtin {
+  let Spellings = ["__builtin_stdc_bit_ceil"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcLeadingZerosLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_leading_zeros"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcLeadingOnesLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_leading_ones"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcTrailingZerosLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_trailing_zeros"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcTrailingOnesLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_trailing_ones"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstLeadingZeroLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_first_leading_zero"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstLeadingOneLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_first_leading_one"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstTrailingZeroLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_first_trailing_zero"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstTrailingOneLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_first_trailing_one"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcCountZerosLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_count_zeros"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcCountOnesLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_count_ones"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcHasSingleBitLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_has_single_bit"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "bool(...)";
+}
+
+def StdcBitWidthLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_bit_width"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcBitFloorLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_bit_floor"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcBitCeilLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
+  let Spellings = ["stdc_bit_ceil"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+// Typed variants of the C23 stdbit.h builtins (e.g. stdc_leading_zeros_uc).
+// IntBitUtilTemplate generates the _uc/_us/_ui/_ul/_ull spellings with
+// concrete prototypes so the compiler can match the <stdbit.h> declarations.
+
+def StdcLeadingZerosTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_leading_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcLeadingOnesTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_leading_ones"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcTrailingZerosTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_trailing_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcTrailingOnesTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_trailing_ones"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstLeadingZeroTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_leading_zero"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstLeadingOneTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_leading_one"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstTrailingZeroTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_trailing_zero"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcFirstTrailingOneTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_first_trailing_one"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcCountZerosTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_count_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcCountOnesTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_count_ones"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcBitWidthTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_bit_width"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "unsigned int(T)";
+}
+
+def StdcHasSingleBitTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_has_single_bit"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "bool(T)";
+}
+
+def StdcBitFloorTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_bit_floor"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T)";
+}
+
+def StdcBitCeilTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_bit_ceil"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T)";
+}
+
+
 
 // Random GCC builtins
 // FIXME: The builtins marked FunctionWithBuiltinPrefix below should be
@@ -5078,6 +5341,18 @@ def HLSLResourceSampleCmpLevelZero : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceCalculateLod : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_calculate_lod"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceCalculateLodUnclamped : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_calculate_lod_unclamped"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceGather : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_gather"];
   let Attributes = [NoThrow];
@@ -5124,6 +5399,36 @@ def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getdimensions_x"];
   let Attributes = [NoThrow];
   let Prototype = "void(__hlsl_resource_t, uint32_t&)";
+}
+
+def HLSLResourceGetDimensionsXY : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_xy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, uint32_t&, uint32_t&)";
+}
+
+def HLSLResourceGetDimensionsLevelsXY : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_levels_xy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, uint32_t, uint32_t&, uint32_t&, uint32_t&)";
+}
+
+def HLSLResourceGetDimensionsXFloat : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_x_float"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, float&)";
+}
+
+def HLSLResourceGetDimensionsXYFloat : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_xy_float"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, float&, float&)";
+}
+
+def HLSLResourceGetDimensionsLevelsXYFloat : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_levels_xy_float"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(__hlsl_resource_t, uint32_t, float&, float&, float&)";
 }
 
 def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
@@ -5188,6 +5493,12 @@ def HLSLWaveActiveBitOr : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLWaveActiveBitXor : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_bit_xor"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
+def HLSLWaveActiveBitAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_bit_and"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void (...)";
 }
@@ -5272,6 +5583,12 @@ def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLQuadReadAcrossX : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_quad_read_across_x"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLQuadReadAcrossY : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_quad_read_across_y"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
@@ -5436,6 +5753,36 @@ def HLSLClip: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clip"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
+}
+
+def HLSLAllMemoryBarrier : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_all_memory_barrier"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
+}
+
+def HLSLAllMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_all_memory_barrier_with_group_sync"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
+}
+
+def HLSLDeviceMemoryBarrier : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_device_memory_barrier"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
+}
+
+def HLSLDeviceMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_device_memory_barrier_with_group_sync"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
+}
+
+def HLSLGroupMemoryBarrier : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_group_memory_barrier"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
 }
 
 def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {

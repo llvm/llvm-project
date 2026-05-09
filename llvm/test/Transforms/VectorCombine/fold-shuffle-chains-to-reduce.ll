@@ -193,3 +193,53 @@ define i16 @test_reduce_v6i16_xor_neg(<6 x i16> %a0) {
   %7 = extractelement <6 x i16> %6, i64 0
   ret i16 %7
 }
+
+; Partial reduction: reduce lower 8 elements of a 16-element vector using smax.
+define i16 @test_partial_reduce_v16i16_v8i16_smax(<16 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_partial_reduce_v16i16_v8i16_smax(
+; CHECK-SAME: <16 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0]], <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> [[TMP1]])
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %1 = shufflevector <16 x i16> %a0, <16 x i16> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %a0, <16 x i16> %1)
+  %3 = shufflevector <16 x i16> %2, <16 x i16> poison, <16 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %2, <16 x i16> %3)
+  %5 = shufflevector <16 x i16> %4, <16 x i16> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %4, <16 x i16> %5)
+  %7 = extractelement <16 x i16> %6, i64 0
+  ret i16 %7
+}
+
+; Partial reduction: reduce lower 4 elements of an 8-element vector using add.
+define i32 @test_partial_reduce_v8i32_v4i32_add(<8 x i32> %a0) {
+; CHECK-LABEL: define i32 @test_partial_reduce_v8i32_v4i32_add(
+; CHECK-SAME: <8 x i32> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %1 = shufflevector <8 x i32> %a0, <8 x i32> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = add <8 x i32> %a0, %1
+  %3 = shufflevector <8 x i32> %2, <8 x i32> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = add <8 x i32> %2, %3
+  %5 = extractelement <8 x i32> %4, i64 0
+  ret i32 %5
+}
+
+; Partial reduction: reduce lower 4 elements of a 16-element vector using umin.
+define i16 @test_partial_reduce_v16i16_v4i16_umin(<16 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_partial_reduce_v16i16_v4i16_umin(
+; CHECK-SAME: <16 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0]], <16 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.umin.v4i16(<4 x i16> [[TMP1]])
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %1 = shufflevector <16 x i16> %a0, <16 x i16> poison, <16 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <16 x i16> @llvm.umin.v16i16(<16 x i16> %a0, <16 x i16> %1)
+  %3 = shufflevector <16 x i16> %2, <16 x i16> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <16 x i16> @llvm.umin.v16i16(<16 x i16> %2, <16 x i16> %3)
+  %5 = extractelement <16 x i16> %4, i64 0
+  ret i16 %5
+}

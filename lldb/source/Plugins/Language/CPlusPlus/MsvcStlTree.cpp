@@ -227,7 +227,7 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_inner_sp)
-      return llvm::createStringError("There are no children.");
+      return llvm::createStringError("there are no children");
     return m_inner_sp->GetIndexOfChildWithName(name);
   }
 
@@ -260,7 +260,7 @@ lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::CalculateNumChildren() {
     return m_count;
   }
 
-  return llvm::createStringError("Failed to read size.");
+  return llvm::createStringError("failed to read size");
 }
 
 ValueObjectSP

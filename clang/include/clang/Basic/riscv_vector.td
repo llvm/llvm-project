@@ -1360,9 +1360,9 @@ def vfwcvtbf16_f_f_v : RVVConvBuiltin<"Fw", "Fwv", "y", "vfwcvtbf16_f">;
 let Log2LMUL = [-3, -2, -1, 0, 1, 2],
     RequiredFeatures = ["zvfofp8min"],
     UnMaskedPolicyScheme = HasPassthruOperand in {
-  let OverloadedName = "vfwcvt_f_f8e4m3_bf16" in
+  let OverloadedName = "vfwcvt_f_bf16" in
     defm : RVVConvBuiltinSet<"vfwcvt_f_f_v", "a", [["vw", "wv"]]>;
-  let OverloadedName = "vfwcvt_f_f8e5m2_bf16",
+  let OverloadedName = "vfwcvt_f_bf16",
       IRName = "vfwcvt_f_f_v_alt",
       MaskedIRName = "vfwcvt_f_f_v_alt_mask",
       AltFmt = 1 in
@@ -1451,16 +1451,16 @@ let ManualCodegen = [{
     // Zvfofp8min
     let RequiredFeatures = ["zvfofp8min"] in {
       let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-        let OverloadedName = "vfncvt_f_bf16_f8e4m3" in
+        let OverloadedName = "vfncvt_f_f8e4m3" in
           defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "a", [["wv", "vwu"]]>;
-        let OverloadedName = "vfncvt_f_bf16_f8e5m2",
+        let OverloadedName = "vfncvt_f_f8e5m2",
             IRName = "vfncvt_f_f_w_alt",
             MaskedIRName = "vfncvt_f_f_w_alt_mask",
             AltFmt = 1 in
           defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "b", [["wv", "vwu"]]>;
-        let OverloadedName = "vfncvt_sat_f_bf16_f8e4m3" in
+        let OverloadedName = "vfncvt_sat_f_f8e4m3" in
           defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_w", "a", [["wv", "vwu"]]>;
-        let OverloadedName = "vfncvt_sat_f_bf16_f8e5m2",
+        let OverloadedName = "vfncvt_sat_f_f8e5m2",
             IRName = "vfncvt_sat_f_f_w_alt",
             MaskedIRName = "vfncvt_sat_f_f_w_alt_mask",
             AltFmt = 1 in
@@ -1559,16 +1559,16 @@ let ManualCodegen = [{
   // Zvfofp8min
   let RequiredFeatures = ["zvfofp8min"] in {
     let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-      let OverloadedName = "vfncvt_f_bf16_f8e4m3" in
+      let OverloadedName = "vfncvt_f_f8e4m3" in
         defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "a", [["wv", "vw"]]>;
-      let OverloadedName = "vfncvt_f_bf16_f8e5m2",
+      let OverloadedName = "vfncvt_f_f8e5m2",
           IRName = "vfncvt_f_f_w_alt",
           MaskedIRName = "vfncvt_f_f_w_alt_mask",
           AltFmt = 1 in
         defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "b", [["wv", "vw"]]>;
-      let OverloadedName = "vfncvt_sat_f_bf16_f8e4m3" in
+      let OverloadedName = "vfncvt_sat_f_f8e4m3" in
         defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_w", "a", [["wv", "vw"]]>;
-      let OverloadedName = "vfncvt_sat_f_bf16_f8e5m2",
+      let OverloadedName = "vfncvt_sat_f_f8e5m2",
           IRName = "vfncvt_sat_f_f_w_alt",
           MaskedIRName = "vfncvt_sat_f_f_w_alt_mask",
           AltFmt = 1 in
@@ -1805,6 +1805,12 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     def vreinterpret_u_bf16 : RVVBuiltin<"vUv", "Uvv", "y", "Uv">;
     def vreinterpret_bf16_i : RVVBuiltin<"Ivv", "vIv", "y", "v">;
     def vreinterpret_bf16_u : RVVBuiltin<"Uvv", "vUv", "y", "v">;
+    let RequiredFeatures = ["zvfofp8min"] in {
+      def vreinterpret_u_f8e4m3 : RVVBuiltin<"vUv", "Uvv", "a", "Uv">;
+      def vreinterpret_f8e4m3_u : RVVBuiltin<"Uvv", "vUv", "a", "v">;
+      def vreinterpret_u_f8e5m2 : RVVBuiltin<"vUv", "Uvv", "b", "Uv">;
+      def vreinterpret_f8e5m2_u : RVVBuiltin<"Uvv", "vUv", "b", "v">;
+    }
 
     // Reinterpret between different SEW under the same LMUL
     foreach dst_sew = ["(FixedSEW:8)", "(FixedSEW:16)", "(FixedSEW:32)",
@@ -2132,4 +2138,22 @@ let RequiredFeatures = ["zvdot4a8i"] in {
       : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
                               ["vx", "v", "vvUvUe"]]>;
   defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vvUvUe"]]>;
+}
+
+// Zvzip
+let UnMaskedPolicyScheme = HasPassthruOperand in {
+  let RequiredFeatures = ["zvzip"] in {
+    // Signed and floating type
+    defm vzip : RVVOutOp0BuiltinSet<"vzip", "csilxfdy", [["vv", "d", "dvv"]]>;
+    defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csilxfdy", [["v", "v", "vd"]]>;
+    defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csilxfdy", [["v", "v", "vd"]]>;
+    defm vpaire : RVVOutBuiltinSet<"vpaire", "csilxfdy", [["vv", "v", "vvv"]]>;
+    defm vpairo : RVVOutBuiltinSet<"vpairo", "csilxfdy", [["vv", "v", "vvv"]]>;
+    // Unsigned
+    defm vzip : RVVOutOp0BuiltinSet<"vzip", "csil", [["vv", "Ud", "UdUvUv"]]>;
+    defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csil", [["v", "Uv", "UvUd"]]>;
+    defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csil", [["v", "Uv", "UvUd"]]>;
+    defm vpaire : RVVOutBuiltinSet<"vpaire", "csil", [["vv", "Uv", "UvUvUv"]]>;
+    defm vpairo : RVVOutBuiltinSet<"vpairo", "csil", [["vv", "Uv", "UvUvUv"]]>;
+  }
 }

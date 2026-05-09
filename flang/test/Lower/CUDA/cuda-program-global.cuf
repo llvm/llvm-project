@@ -20,7 +20,8 @@ end
 ! CHECK: hlfir.declare %[[ALLOCA]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "p", data_attr = #cuf.cuda<pinned>, uniq_name = "_QFEp"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: cuf.alloc !fir.array<10xf32> {bindc_name = "t", data_attr = #cuf.cuda<device>, uniq_name = "_QFEt"} -> !fir.ref<!fir.array<10xf32>>
+! CHECK: cuf.alloc !fir.array<10xi32> {bindc_name = "u", data_attr = #cuf.cuda<unified>, uniq_name = "_QFEu"} -> !fir.ref<!fir.array<10xi32>>
 
 ! CHECK-NOT: fir.global internal @_QFEa {data_attr = #cuf.cuda<device>} : !fir.array<10xi32> {{{$}}
 ! CHECK: fir.global internal @_QFEb : !fir.array<10xi32> {{{$}}
-! CHECK: fir.global internal @_QFEu {data_attr = #cuf.cuda<unified>} : !fir.array<10xi32>
+! CHECK-NOT: fir.global internal @_QFEu {data_attr = #cuf.cuda<unified>}

@@ -60,9 +60,11 @@ public:
   }
 
   static void free(InterpFrame *F) {
-    F->~InterpFrame();
     if (!F->isBottomFrame()) {
+      F->~InterpFrame();
       delete[] reinterpret_cast<char *>(F);
+    } else {
+      F->~InterpFrame();
     }
   }
 
@@ -102,6 +104,7 @@ public:
   template <typename T> void setLocal(unsigned Offset, const T &Value) {
     localRef<T>(Offset) = Value;
     localInlineDesc(Offset)->IsInitialized = true;
+    localInlineDesc(Offset)->LifeState = Lifetime::Started;
   }
 
   /// Returns a pointer to a local variables.

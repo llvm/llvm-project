@@ -122,16 +122,16 @@ static std::optional<Instruction *> modifyIntrinsicCall(
     InstCombiner &IC,
     std::function<void(SmallVectorImpl<Value *> &, SmallVectorImpl<Type *> &)>
         Func) {
-  SmallVector<Type *, 4> ArgTys;
-  if (!Intrinsic::getIntrinsicSignature(OldIntr.getCalledFunction(), ArgTys))
+  SmallVector<Type *, 4> OverloadTys;
+  if (!Intrinsic::isSignatureValid(OldIntr.getCalledFunction(), OverloadTys))
     return std::nullopt;
 
   SmallVector<Value *, 8> Args(OldIntr.args());
 
   // Modify arguments and types
-  Func(Args, ArgTys);
+  Func(Args, OverloadTys);
 
-  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, ArgTys, Args);
+  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, OverloadTys, Args);
   NewCall->takeName(&OldIntr);
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
@@ -278,13 +278,13 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
         // Obtain the original image sample intrinsic's signature
         // and replace its return type with the half-vector for D16 folding
-        SmallVector<Type *, 8> SigTys;
-        Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
-        SigTys[0] = HalfVecTy;
+        SmallVector<Type *, 8> OverloadTys;
+        Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys);
+        OverloadTys[0] = HalfVecTy;
 
         Module *M = II.getModule();
-        Function *HalfDecl =
-            Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
+        Function *HalfDecl = Intrinsic::getOrInsertDeclaration(
+            M, ImageDimIntr->Intr, OverloadTys);
 
         II.mutateType(HalfVecTy);
         II.setCalledFunction(HalfDecl);
@@ -1422,11 +1422,32 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
-  case Intrinsic::amdgcn_mbcnt_hi: {
+  case Intrinsic::amdgcn_mbcnt_hi:
     // exec_hi is all 0, so this is just a copy.
     if (ST->isWave32())
       return IC.replaceInstUsesWith(II, II.getArgOperand(1));
-    break;
+    [[fallthrough]];
+  case Intrinsic::amdgcn_mbcnt_lo: {
+    ConstantRange AccRange =
+        computeConstantRange(II.getArgOperand(1),
+                             /*ForSigned=*/false, IC.getSimplifyQuery());
+    if (AccRange.isFullSet())
+      return nullptr;
+
+    // TODO: Can raise lower bound by inspecting first argument.
+    ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
+    ConstantRange ComputedRange = AccRange.add(MbcntRange);
+    if (ComputedRange.isFullSet())
+      return nullptr;
+
+    if (std::optional<ConstantRange> ExistingRange = II.getRange()) {
+      ComputedRange = ComputedRange.intersectWith(*ExistingRange);
+      if (ComputedRange == *ExistingRange)
+        return nullptr;
+    }
+
+    II.addRangeRetAttr(ComputedRange);
+    return nullptr;
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Arg = II.getArgOperand(0);
@@ -2007,7 +2028,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   // Validate function argument and return types, extracting overloaded types
   // along the way.
   SmallVector<Type *, 6> OverloadTys;
-  if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), OverloadTys))
+  if (!Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys))
     return nullptr;
 
   Type *NewTy =

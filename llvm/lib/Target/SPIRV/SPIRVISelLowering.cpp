@@ -109,35 +109,60 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
     SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
     MachineFunction &MF, unsigned Intrinsic) const {
   IntrinsicInfo Info;
-  unsigned AlignIdx = 3;
+
+  unsigned AlignIdx = 0;
+  unsigned OrderingIdx = 0;
+  unsigned FlagsIdx;
+
   switch (Intrinsic) {
   case Intrinsic::spv_load:
+    FlagsIdx = 1;
     AlignIdx = 2;
-    [[fallthrough]];
-  case Intrinsic::spv_store: {
-    if (I.getNumOperands() >= AlignIdx + 1) {
-      auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
-      Info.align = Align(AlignOp->getZExtValue());
-    }
-    Info.flags = static_cast<MachineMemOperand::Flags>(
-        cast<ConstantInt>(I.getOperand(AlignIdx - 1))->getZExtValue());
-    Info.memVT = MVT::i64;
-    // TODO: take into account opaque pointers (don't use getElementType).
-    // MVT::getVT(PtrTy->getElementType());
-    Infos.push_back(Info);
+    break;
+  case Intrinsic::spv_store:
+    FlagsIdx = 2;
+    AlignIdx = 3;
+    break;
+  case Intrinsic::spv_atomic_load:
+    FlagsIdx = 1;
+    OrderingIdx = 2;
+    break;
+  case Intrinsic::spv_atomic_store:
+    FlagsIdx = 2;
+    OrderingIdx = 3;
+    break;
+  default:
     return;
   }
-  default:
-    break;
+
+  Info.flags = static_cast<MachineMemOperand::Flags>(
+      cast<ConstantInt>(I.getOperand(FlagsIdx))->getZExtValue());
+  Info.memVT = MVT::i64;
+  // TODO: take into account opaque pointers (don't use getElementType).
+  // MVT::getVT(PtrTy->getElementType());
+
+  if (AlignIdx) {
+    auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
+    Info.align = Align(AlignOp->getZExtValue());
   }
+
+  if (OrderingIdx) {
+    Info.order = static_cast<AtomicOrdering>(
+        cast<ConstantInt>(I.getOperand(OrderingIdx))->getZExtValue());
+  }
+  Infos.push_back(Info);
 }
 
 TargetLowering::ConstraintType
 SPIRVTargetLowering::getConstraintType(StringRef Constraint) const {
   // SPIR-V represents inline assembly via OpAsmINTEL where constraints are
   // passed through as literals defined by client API. Return C_RegisterClass
-  // for any constraint since SPIR-V does not distinguish between register,
-  // immediate, or memory operands at this level.
+  // for non-memory constraints since SPIR-V does not distinguish between
+  // register, immediate, or memory operands at this level. We do have to return
+  // C_Memory for memory constraints as otherwise IRTranslator gets confused
+  // trying to allocate registers for them.
+  if (Constraint == "m")
+    return C_Memory;
   return C_RegisterClass;
 }
 
@@ -152,7 +177,7 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (VT.isFloatingPoint())
     RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
   else if (VT.isInteger())
-    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
+    RC = VT.isVector() ? &SPIRV::viIDRegClass : &SPIRV::iIDRegClass;
   else
     RC = &SPIRV::iIDRegClass;
 
@@ -404,7 +429,7 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
   // We'd like to avoid the needless second processing pass.
-  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+  if (MF.getRegInfo().reservedRegsFrozen())
     return;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
@@ -546,12 +571,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
           SPIRVTypeInst RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
           assert(RetType && "Expected return type");
-          validatePtrTypes(STI, MRI, GR, MI, MI.getNumOperands() - 1,
-                           RetType->getOpcode() != SPIRV::OpTypeVector
-                               ? Int32Type
-                               : GR.getOrCreateSPIRVVectorType(
-                                     Int32Type, RetType->getOperand(2).getImm(),
-                                     MIB, false));
+          validatePtrTypes(
+              STI, MRI, GR, MI, MI.getNumOperands() - 1,
+              RetType->getOpcode() != SPIRV::OpTypeVector
+                  ? Int32Type
+                  : GR.getOrCreateSPIRVVectorType(
+                        Int32Type, GR.getScalarOrVectorComponentCount(RetType),
+                        MIB, false));
         } break;
         case SPIRV::OpenCLExtInst::fract:
         case SPIRV::OpenCLExtInst::modf:
@@ -578,7 +604,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       }
     }
   }
-  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }
 

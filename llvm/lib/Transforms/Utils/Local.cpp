@@ -1277,10 +1277,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // |       v
   // |    for.body <---- (md2)
   // |_______|  |______|
-  if (Instruction *TI = BB->getTerminator())
+  if (Instruction *TI = BB->getTerminatorOrNull())
     if (TI->hasNonDebugLocLoopMetadata())
       for (BasicBlock *Pred : predecessors(BB))
-        if (Instruction *PredTI = Pred->getTerminator())
+        if (Instruction *PredTI = Pred->getTerminatorOrNull())
           if (PredTI->hasNonDebugLocLoopMetadata())
             return false;
 
@@ -1348,7 +1348,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // If the unconditional branch we replaced contains non-debug llvm.loop
   // metadata, we add the metadata to the branch instructions in the
   // predecessors.
-  if (Instruction *TI = BB->getTerminator())
+  if (Instruction *TI = BB->getTerminatorOrNull())
     if (TI->hasNonDebugLocLoopMetadata()) {
       MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop);
       for (BasicBlock *Pred : predecessors(BB))
@@ -1363,7 +1363,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
       Succ->takeName(BB);
 
     // Clear the successor list of BB to match updates applying to DTU later.
-    if (BB->getTerminator())
+    if (BB->hasTerminator())
       BB->back().eraseFromParent();
 
     new UnreachableInst(BB->getContext(), BB);
@@ -3907,12 +3907,6 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // instructions.
   if (Op->isSwiftError())
     return false;
-
-  // Protected pointer field loads/stores should be paired with the intrinsic
-  // to avoid unnecessary address escapes.
-  if (auto *II = dyn_cast<IntrinsicInst>(Op))
-    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
-      return false;
 
   // Cannot replace alloca argument with phi/select.
   if (I->isLifetimeStartOrEnd())

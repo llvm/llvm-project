@@ -1,5 +1,4 @@
 header: stdlib.h
-header_template: stdlib.h.def
 standards:
   - stdc
 merge_yaml_files:
@@ -7,17 +6,24 @@ merge_yaml_files:
 macros:
   - macro_name: "NULL"
     macro_header: null-macro.h
+  - macro_name: EXIT_SUCCESS
+    macro_header: stdlib-macros.h
+  - macro_name: EXIT_FAILURE
+    macro_header: stdlib-macros.h
 types:
   - type_name: __atexithandler_t
   - type_name: __qsortcompare_t
   - type_name: __qsortrcompare_t
   - type_name: __search_compare_t
+  - type_name: constraint_handler_t
   - type_name: div_t
   - type_name: ldiv_t
   - type_name: lldiv_t
   - type_name: locale_t
+  - type_name: rsize_t
   - type_name: size_t
-  - type_name: wchar_t  
+  - type_name: wchar_t
+  - type_name: errno_t
 enums: []
 objects: []
 functions:

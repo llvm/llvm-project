@@ -26,6 +26,7 @@
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "CoverageMappingGen.h"
+#include "QualTypeMapper.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -47,6 +48,8 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/ABI/IRTypeMapper.h"
+#include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -247,6 +250,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
 
   case llvm::Triple::tce:
   case llvm::Triple::tcele:
+  case llvm::Triple::tcele64:
     return createTCETargetCodeGenInfo(CGM);
 
   case llvm::Triple::x86: {
@@ -335,6 +339,25 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
+bool CodeGenModule::shouldUseLLVMABILowering() const {
+  if (!CodeGenOpts.ExperimentalABILowering)
+    return false;
+  // Only opt in for targets that have an LLVMABI implementation; others
+  // continue through the legacy ABIInfo path.
+  return getTriple().isBPF();
+}
+
+const llvm::abi::TargetInfo &
+CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
+  if (TheLLVMABITargetInfo)
+    return *TheLLVMABITargetInfo;
+
+  assert(getTriple().isBPF() &&
+         "LLVMABI lowering requested for an unsupported target");
+  TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+  return *TheLLVMABITargetInfo;
+}
+
 static void checkDataLayoutConsistency(const TargetInfo &Target,
                                        llvm::LLVMContext &Context,
                                        const LangOptions &Opts) {
@@ -419,6 +442,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       SanitizerMD(new SanitizerMetadata(*this)),
       AtomicOpts(Target.getAtomicOpts()) {
 
+  AbiMapper = std::make_unique<QualTypeMapper>(C, M.getDataLayout(), AbiAlloc);
+  AbiReverseMapper = std::make_unique<llvm::abi::IRTypeMapper>(
+      M.getContext(), M.getDataLayout());
+
   // Initialize the type cache.
   Types.reset(new CodeGenTypes(*this));
   llvm::LLVMContext &LLVMContext = M.getContext();
@@ -451,6 +478,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
   GlobalsInt8PtrTy =
       llvm::PointerType::get(LLVMContext, DL.getDefaultGlobalsAddressSpace());
+  ProgramPtrTy =
+      llvm::PointerType::get(LLVMContext, DL.getProgramAddressSpace());
   ConstGlobalsPtrTy = llvm::PointerType::get(
       LLVMContext, C.getTargetAddressSpace(GetGlobalConstantAddressSpace()));
   ASTAllocaAddressSpace = getTargetCodeGenInfo().getASTAllocaAddressSpace();
@@ -1161,6 +1190,13 @@ void CodeGenModule::Release() {
         llvm::Module::Warning, "cfguard",
         static_cast<unsigned>(llvm::ControlFlowGuardMode::TableOnly));
   }
+  if (CodeGenOpts.getWinControlFlowGuardMechanism() !=
+      llvm::ControlFlowGuardMechanism::Automatic) {
+    // Specify the Control Flow Guard mechanism to use on Windows.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard-mechanism",
+        static_cast<unsigned>(CodeGenOpts.getWinControlFlowGuardMechanism()));
+  }
   if (CodeGenOpts.EHContGuard) {
     // Function ID tables for EH Continuation Guard.
     getModule().addModuleFlag(llvm::Module::Warning, "ehcontguard", 1);
@@ -1381,12 +1417,12 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
 
     if (LangOpts.PointerAuthELFGOT)
-      getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got", 1);
 
     if (getTriple().isOSLinux()) {
       if (LangOpts.PointerAuthCalls)
-        getModule().addModuleFlag(llvm::Module::Min, "ptrauth-sign-personality",
-                                  1);
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "ptrauth-sign-personality", 1);
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
@@ -1897,6 +1933,27 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
       LV.getVisibility() == HiddenVisibility) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     return;
+  }
+
+  // CUDA/HIP device kernels and global variables must be visible to the host
+  // so they can be registered / initialized. We require protected visibility
+  // unless the user explicitly requested hidden via an attribute.
+  if (Context.getLangOpts().CUDAIsDevice &&
+      LV.getVisibility() == HiddenVisibility && !LV.isVisibilityExplicit() &&
+      !D->hasAttr<OMPDeclareTargetDeclAttr>()) {
+    bool NeedsProtected = false;
+    if (isa<FunctionDecl>(D))
+      NeedsProtected =
+          D->hasAttr<CUDAGlobalAttr>() || D->hasAttr<DeviceKernelAttr>();
+    else if (const auto *VD = dyn_cast<VarDecl>(D))
+      NeedsProtected = VD->hasAttr<CUDADeviceAttr>() ||
+                       VD->hasAttr<CUDAConstantAttr>() ||
+                       VD->getType()->isCUDADeviceBuiltinSurfaceType() ||
+                       VD->getType()->isCUDADeviceBuiltinTextureType();
+    if (NeedsProtected) {
+      GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+      return;
+    }
   }
 
   if (Context.getLangOpts().HLSL && !D->isInExportDeclContext()) {
@@ -2997,6 +3054,19 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       F->addTypeMetadata(0, Id);
     }
   }
+
+  // Attach "sycl-module-id" to sycl_external function definitions to mark
+  // them as entry points for per-translation-unit device-code splitting.
+  if (getLangOpts().SYCLIsDevice) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      if (FD->hasAttr<SYCLExternalAttr>())
+        addSYCLModuleIdAttr(F);
+  }
+}
+
+void CodeGenModule::addSYCLModuleIdAttr(llvm::Function *Fn) {
+  assert(getLangOpts().SYCLIsDevice);
+  Fn->addFnAttr("sycl-module-id", getModule().getModuleIdentifier());
 }
 
 void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
@@ -4439,6 +4509,17 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           return;
         }
       }
+
+      // HLSL extern globals can be read/written to by the pipeline. Those
+      // are declared, but never defined.
+      if (LangOpts.HLSL) {
+        if (VD->getStorageClass() == SC_Extern) {
+          auto GV = cast<llvm::GlobalVariable>(GetAddrOfGlobalVar(VD));
+          getHLSLRuntime().handleGlobalVarDefinition(VD, GV);
+          return;
+        }
+      }
+
       // If this declaration may have caused an inline variable definition to
       // change linkage, make sure that it's emitted.
       if (Context.getInlineVariableDefinitionKind(VD) ==
@@ -5947,6 +6028,10 @@ void CodeGenModule::EmitExternalDeclaration(const DeclaratorDecl *D) {
     return;
 
   llvm::Constant *Addr = GetAddrOfGlobal(GD)->stripPointerCasts();
+  if (auto *GA = dyn_cast<llvm::GlobalAlias>(Addr)) {
+    DI->EmitGlobalAlias(GA, GD);
+    return;
+  }
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     DI->EmitExternalVariable(
         cast<llvm::GlobalVariable>(Addr->stripPointerCasts()), VD);
@@ -7357,10 +7442,15 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
           E->getStorageDuration() == SD_Thread) && "not a global temporary");
   const auto *VD = cast<VarDecl>(E->getExtendingDecl());
 
-  // If we're not materializing a subobject of the temporary, keep the
-  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
+  // Use the MaterializeTemporaryExpr's type if it has the same unqualified
+  // base type as Init. This preserves cv-qualifiers (e.g. const from a
+  // constexpr or const-ref binding) that skipRValueSubobjectAdjustments may
+  // have dropped via NoOp casts, while correctly falling back to Init's type
+  // when a real subobject adjustment changed the type (e.g. member access or
+  // base-class cast in C++98), where E->getType() reflects the reference type,
+  // not the actual storage type.
   QualType MaterializedType = Init->getType();
-  if (Init == E->getSubExpr())
+  if (getContext().hasSameUnqualifiedType(E->getType(), MaterializedType))
     MaterializedType = E->getType();
 
   CharUnits Align = getContext().getTypeAlignInChars(MaterializedType);
@@ -7738,6 +7828,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     break;
 
   case Decl::StaticAssert:
+  case Decl::ExplicitInstantiation:
     // Nothing to do.
     break;
 
@@ -7870,7 +7961,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
         EmitTopLevelDecl(D);
 
       // Visit the submodules of this module.
-      for (auto *Submodule : Mod->submodules()) {
+      for (Module *Submodule : Mod->submodules()) {
         // Skip explicit children; they need to be explicitly imported to emit
         // the initializers.
         if (Submodule->IsExplicit)
@@ -8276,8 +8367,7 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(RefExpr)->getDecl());
     bool PerformInit =
         VD->getAnyInitializer() &&
-        !VD->getAnyInitializer()->isConstantInitializer(getContext(),
-                                                        /*ForRef=*/false);
+        !VD->getAnyInitializer()->isConstantInitializer(getContext());
 
     Address Addr(GetAddrOfGlobalVar(VD),
                  getTypes().ConvertTypeForMem(VD->getType()),

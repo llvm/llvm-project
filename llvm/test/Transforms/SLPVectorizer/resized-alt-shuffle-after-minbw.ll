@@ -5,9 +5,8 @@ define void @func(i32 %0) {
 ; CHECK-LABEL: define void @func(
 ; CHECK-SAME: i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <32 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 0
@@ -56,6 +55,7 @@ define void @func(i32 %0) {
 ; CHECK-NEXT:    [[TMP54:%.*]] = and i1 false, [[TMP53]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <32 x i1> [[TMP20]], i32 14
 ; CHECK-NEXT:    [[TMP56:%.*]] = and i1 false, [[TMP55]]
+; CHECK-NEXT:    [[TMP80:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP57:%.*]] = extractelement <32 x i1> [[TMP20]], i32 13
 ; CHECK-NEXT:    [[TMP58:%.*]] = and i1 false, [[TMP57]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = extractelement <32 x i1> [[TMP20]], i32 12

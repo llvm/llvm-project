@@ -45,6 +45,11 @@ private:
   // record found.
   template <typename T> llvm::Error readBlock(unsigned ID, T I);
 
+  template <typename T, typename BlockBeginHandler, typename BlockEndHandler,
+            typename RecordHandler>
+  llvm::Error parseBlock(unsigned ID, T I, BlockBeginHandler &&BBH,
+                         BlockEndHandler &&BEH, RecordHandler &&RH);
+
   // Step through a block of records to find the next data field.
   template <typename T> llvm::Error readSubBlock(unsigned ID, T I);
 

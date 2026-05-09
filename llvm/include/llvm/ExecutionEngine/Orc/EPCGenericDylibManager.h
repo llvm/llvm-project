@@ -18,6 +18,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
@@ -28,7 +29,7 @@ namespace orc {
 
 class SymbolLookupSet;
 
-class EPCGenericDylibManager {
+class EPCGenericDylibManager : public DylibManager {
 public:
   /// Function addresses for memory access.
   struct SymbolAddrs {
@@ -80,6 +81,17 @@ public:
   LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
                             const RemoteSymbolLookupSet &Lookup,
                             SymbolLookupCompleteFn Complete);
+
+  /// Load the dynamic library at the given path and return a handle to it.
+  /// If DylibPath is null this function will return the global handle for
+  /// the target process.
+  LLVM_ABI Expected<tpctypes::DylibHandle>
+  loadDylib(const char *DylibPath) override;
+
+  /// Search for symbols in the target process.
+  LLVM_ABI void
+  lookupSymbolsAsync(ArrayRef<DylibManager::LookupRequest> Request,
+                     DylibManager::SymbolLookupCompleteFn Complete) override;
 
 private:
   ExecutorProcessControl &EPC;
