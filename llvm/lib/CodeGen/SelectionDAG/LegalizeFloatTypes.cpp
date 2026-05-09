@@ -3313,7 +3313,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BR_CC(SDNode *N) {
-  // BR_CC: chain(0), condcode(1), LHS(2), RHS(3), dest(4)
+  // ISD::BR_CC node: chain(0), condcode(1), LHS(2), RHS(3), dest(4)
   // The comparison operands (LHS, RHS) are soft-promoted halfs.
   SDValue Op0 = N->getOperand(2);
   SDValue Op1 = N->getOperand(3);
@@ -3327,7 +3327,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BR_CC(SDNode *N) {
   Op1 = GetSoftPromotedHalf(Op1);
 
   // Promote both comparison operands to the larger FP type.
-  auto PromotionOpcode = GetPromotionOpcode(SVT, NVT);
+  unsigned PromotionOpcode = GetPromotionOpcode(SVT, NVT);
   Op0 = DAG.getNode(PromotionOpcode, dl, NVT, Op0);
   Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
 
