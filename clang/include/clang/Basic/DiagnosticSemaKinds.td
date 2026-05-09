@@ -10985,6 +10985,14 @@ def warn_lifetime_safety_invalidation
     : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
+def warn_lifetime_safety_invalidated_field
+    : Warning<"object whose reference is stored in a field is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
+      DefaultIgnore;
+def warn_lifetime_safety_invalidated_global
+    : Warning<"object whose reference is stored in global or static storage is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
+      DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
     : Warning<"address of stack memory escapes to a field">,

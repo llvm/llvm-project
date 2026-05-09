@@ -88,6 +88,12 @@ public:
   virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
                                           const Expr *UseExpr,
                                           const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const Expr *IssueExpr,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
+                                       const VarDecl *DanglingGlobal,
+                                       const Expr *InvalidationExpr) {}
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
