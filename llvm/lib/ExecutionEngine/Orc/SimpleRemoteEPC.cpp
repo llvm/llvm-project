@@ -196,6 +196,13 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
 
   {
     std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
+    if (Disconnected) {
+      // The client is disconnected, there is no other ways to
+      // handle this error.
+      consumeError(std::move(Err));
+      return;
+    }
+
     std::swap(TmpPending, PendingCallWrapperResults);
   }
 

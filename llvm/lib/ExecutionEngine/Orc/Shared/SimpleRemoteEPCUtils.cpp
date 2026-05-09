@@ -108,26 +108,28 @@ Error FDSimpleRemoteEPCTransport::sendMessage(SimpleRemoteEPCOpcode OpC,
   return Error::success();
 }
 
-void FDSimpleRemoteEPCTransport::disconnect() {
-  if (Disconnected)
-    return; // Return if already disconnected.
+void FDSimpleRemoteEPCTransport::disconnect(Error Err) {
+  if (!Disconnected) {
+    Disconnected = true;
+    bool CloseOutFD = InFD != OutFD;
 
-  Disconnected = true;
-  bool CloseOutFD = InFD != OutFD;
-
-  // Close InFD.
-  while (close(InFD) == -1) {
-    if (errno == EBADF)
-      break;
-  }
-
-  // Close OutFD.
-  if (CloseOutFD) {
-    while (close(OutFD) == -1) {
+    // Close InFD.
+    while (close(InFD) == -1) {
       if (errno == EBADF)
         break;
     }
+
+    // Close OutFD.
+    if (CloseOutFD) {
+      while (close(OutFD) == -1) {
+        if (errno == EBADF)
+          break;
+      }
+    }
   }
+
+  // Call up to the client to handle the disconnection.
+  C.handleDisconnect(std::move(Err));
 }
 
 static Error makeUnexpectedEOFError() {
@@ -241,10 +243,7 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
 
   // Attempt to close FDs, set Disconnected to true so that subsequent
   // sendMessage calls fail.
-  disconnect();
-
-  // Call up to the client to handle the disconnection.
-  C.handleDisconnect(std::move(Err));
+  disconnect(std::move(Err));
 }
 
 } // end namespace orc
