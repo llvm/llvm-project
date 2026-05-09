@@ -3857,6 +3857,7 @@ the configuration (without a prefix: ``Auto``).
                        initializer2()
 
 
+
 .. _BreakFunctionDeclarationParameters:
 
 **BreakFunctionDeclarationParameters** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <BreakFunctionDeclarationParameters>`
