@@ -1772,21 +1772,11 @@ namespace {
       return inherited::ComputeLambdaDependency(LSI);
     }
 
-    AssociatedConstraint TransformConstraint(AssociatedConstraint AC) {
-      // If the concept refers to any outer parameter packs, we track the
-      // SubstIndex for evaluation.
-      if (AC && AC.ConstraintExpr->containsUnexpandedParameterPack() &&
-          !AC.ArgPackSubstIndex)
-        AC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
-
+    ExprResult TransformConstraint(Expr *AC) {
       // We don't want the template argument substitution into parameter
       // mappings to preserve the outer depths.
-      if (AC && SemaRef.inConstraintSubstitution()) {
-        ExprResult E = TransformExpr(const_cast<Expr *>(AC.ConstraintExpr));
-        if (E.isInvalid())
-          return {};
-        AC.ConstraintExpr = E.get();
-      }
+      if (AC && SemaRef.inConstraintSubstitution())
+        return TransformExpr(const_cast<Expr *>(AC));
 
       return AC;
     }
@@ -1906,8 +1896,7 @@ namespace {
       // Otherwise the template argument deduction would fail, if we reduced the
       // depth too early.
       if (SemaRef.inParameterMappingSubstitution() &&
-          getDepthAndIndex(OrigTPL->getParam(0)).first >=
-              TemplateArgs.getNumSubstitutedLevels())
+          OrigTPL->getDepth() >= TemplateArgs.getNumSubstitutedLevels())
         OldMLTAL = ForgetSubstitution();
 
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
