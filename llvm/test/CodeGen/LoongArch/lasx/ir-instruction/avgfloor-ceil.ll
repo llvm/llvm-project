@@ -7,10 +7,7 @@ define void @xvavg_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.b $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.b $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -30,10 +27,7 @@ define void @xvavg_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.h $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.h $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -53,10 +47,7 @@ define void @xvavg_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.w $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.w $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -76,10 +67,7 @@ define void @xvavg_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.d $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.d $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -99,10 +87,7 @@ define void @xvavg_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.b $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -122,10 +107,7 @@ define void @xvavg_hu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.h $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.h $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.hu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -145,10 +127,7 @@ define void @xvavg_wu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.w $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.w $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.wu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -168,10 +147,7 @@ define void @xvavg_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvand.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.d $xr0, $xr0, 1
-; CHECK-NEXT:    xvadd.d $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavg.du $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -191,10 +167,7 @@ define void @xvavgr_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.b $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.b $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -215,10 +188,7 @@ define void @xvavgr_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.h $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.h $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -239,10 +209,7 @@ define void @xvavgr_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.w $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.w $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -263,10 +230,7 @@ define void @xvavgr_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrai.d $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.d $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -287,10 +251,7 @@ define void @xvavgr_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.b $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -311,10 +272,7 @@ define void @xvavgr_hu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.h $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.h $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.hu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -335,10 +293,7 @@ define void @xvavgr_wu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.w $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.w $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.wu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -359,10 +314,7 @@ define void @xvavgr_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvor.v $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsrli.d $xr0, $xr0, 1
-; CHECK-NEXT:    xvsub.d $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvavgr.du $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

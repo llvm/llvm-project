@@ -49,6 +49,29 @@ func.func @m16n8k16_fp16_fp32(%arg0: vector<4x2xf16>, %arg1: vector<2x2xf16>, %a
   return %d : vector<2x2xf32>
 }
 
+// CHECK-LABEL: @m16n8k16_bf16_fp32
+func.func @m16n8k16_bf16_fp32(%arg0: vector<4x2xbf16>, %arg1: vector<2x2xbf16>, %arg2: vector<2x2xf32>) -> vector<2x2xf32> {
+  // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[2] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[3] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<2 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: [[d:%.+]] = nvvm.mma.sync A[{{%.+}}, {{%.+}}, {{%.+}}, {{%.+}}] B[{{%.+}}, {{%.+}}] C[{{%.+}}, {{%.+}}, {{%.+}}, {{%.+}}]
+  // CHECK-SAME: multiplicandAPtxType = #nvvm.mma_type<bf16>
+  // CHECK-SAME: multiplicandBPtxType = #nvvm.mma_type<bf16>
+  // CHECK-SAME: shape = #nvvm.shape<m = 16, n = 8, k = 16>
+  // CHECK-SAME: (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x2xbf16>, vector<2x2xbf16>, vector<2x2xf32>) -> vector<2x2xf32>
+  return %d : vector<2x2xf32>
+}
+
 // CHECK-LABEL: @m16n8k8_fp16
 func.func @m16n8k8_fp16(%arg0: vector<2x2xf16>, %arg1: vector<1x2xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
   // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xf16>>

@@ -180,8 +180,15 @@ perform various optimizations and transformations.  The final pass creates an
 LLVM IR representation of the program.
 
 **Commands:**
-  - `flang -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
   - `flang -fc1 -emit-llvm src.f90` dumps the LLVM IR to src.ll
+  - `flang -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
+  - `flang -mmlir --mlir-print-ir-before=<pass> -S src.f90` dumps the FIR code before a specific pass to standard error
+  - `flang -mmlir --mlir-print-ir-after=<pass> -S src.f90` dumps the FIR code after a specific pass to standard error
+
+Note: The exact set of passes depends on compilation options.  For example,
+`stack-arrays` only appears when `-fstack-arrays` is enabled.  To see the
+complete list for a given compilation, use `--mlir-print-ir-before-all` and
+look at the `IR Dump Before` headers.
 
 ## Object code generation and linking
 

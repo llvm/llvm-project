@@ -3813,14 +3813,17 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
     // For non-section Defined symbols in merge sections, pre-resolve the piece
     // index to avoid potentially repeated binary search (MarkLive, RelocScan,
     // includeInSymtab). Encode each non-section Defined symbol's value as
-    // ((pieceIdx + 1) << mergeValueShift) | intraPieceOffset.
+    // ((pieceIdx + 1) << mergeValueShift) | intraPieceOffset. A one-past-end
+    // label is anchored on the last piece.
     auto resolve = [](Defined *d) {
       auto *ms = dyn_cast_or_null<MergeInputSection>(d->section);
       if (!ms || d->isSection())
         return;
-      SectionPiece &piece = ms->getSectionPiece(d->value);
+      uint64_t v = d->value;
+      SectionPiece &piece = v >= ms->content().size() ? ms->pieces.back()
+                                                      : ms->getSectionPiece(v);
       uint32_t idx = &piece - ms->pieces.data();
-      uint64_t off = d->value - piece.inputOff;
+      uint64_t off = v - piece.inputOff;
       d->value = ((uint64_t)(idx + 1) << mergeValueShift) | off;
     };
     for (Symbol *sym : file->getLocalSymbols())
