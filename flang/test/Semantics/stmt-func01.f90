@@ -104,3 +104,16 @@ subroutine s6(b)
   !ERROR: 'b' is not a callable procedure
   b(c) = 0
 end
+
+subroutine s7
+  entry e7(b)
+  !ERROR: Dummy argument 'b' may not be used as a statement function
+  !ERROR: 'b' is not a callable procedure
+  b(c) = 0
+end
+
+subroutine s8(p)
+  external p
+  !ERROR: 'p' has not been declared as an array or pointer-valued function
+  p(c) = 0
+end
