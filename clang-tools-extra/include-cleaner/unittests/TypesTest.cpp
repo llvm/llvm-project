@@ -10,6 +10,7 @@
 #include "TypesInternal.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
+#include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -112,6 +113,38 @@ TEST(NormalizePathTest, CanonicalizesSeparators) {
 
 TEST(NormalizePathTest, PreservesRootPath) {
   EXPECT_EQ(normalizePath("/").str(), "/");
+}
+
+TEST(MainFileLocationTest, ClassifiesSourceLocations) {
+  TestInputs Inputs;
+  Inputs.Code = R"cpp(
+    #include "direct.h"
+    int main_file;
+  )cpp";
+  Inputs.ExtraFiles["direct.h"] = R"cpp(
+    int direct_include;
+    #include "transitive.h"
+  )cpp";
+  Inputs.ExtraFiles["transitive.h"] = "int transitive_include;\n";
+  TestAST AST(Inputs);
+  const SourceManager &SM = AST.sourceManager();
+
+  EXPECT_EQ(locateInMainFile(SM.translateLineCol(SM.getMainFileID(), 3, 9), SM),
+            MainFileLocation::MainFile);
+  EXPECT_EQ(
+      locateInMainFile(
+          SM.translateFileLineCol(
+              &AST.fileManager().getOptionalFileRef("direct.h")->getFileEntry(),
+              2, 9),
+          SM),
+      MainFileLocation::DirectInclude);
+  EXPECT_EQ(locateInMainFile(
+                SM.translateFileLineCol(&AST.fileManager()
+                                             .getOptionalFileRef("transitive.h")
+                                             ->getFileEntry(),
+                                        1, 9),
+                SM),
+            MainFileLocation::Other);
 }
 
 } // namespace
