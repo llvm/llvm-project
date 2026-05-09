@@ -28,19 +28,6 @@
 
 namespace llvm {
 
-namespace detail {
-template <typename MapT> struct MapVectorKeyInfo {};
-
-template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
-struct MapVectorKeyInfo<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>> {
-  using type = KeyInfoT;
-};
-
-template <typename MapT>
-using map_vector_key_info_t = typename MapVectorKeyInfo<MapT>::type;
-
-} // namespace detail
-
 /// This class implements a map that also provides access to all stored values
 /// in a deterministic order. The values are kept in a SmallVector<*, 0> and the
 /// mapping is done with DenseMap from Keys to indexes in that vector.
@@ -123,16 +110,8 @@ public:
   [[nodiscard]] ValueT lookup(const KeyT &Key) const {
     static_assert(std::is_copy_constructible_v<ValueT>,
                   "Cannot call lookup() if ValueT is not copyable.");
-    if constexpr (canBeSmall())
-      if (isSmall()) {
-        auto I = findInVector(Key);
-        if (I != Vector.end())
-          return I->second;
-        return ValueT();
-      }
-
-    typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
+    auto I = find(Key);
+    return I == end() ? ValueT() : I->second;
   }
 
   template <typename... Ts>
@@ -167,11 +146,7 @@ public:
   }
 
   [[nodiscard]] bool contains(const KeyT &Key) const {
-    if constexpr (canBeSmall())
-      if (isSmall())
-        return findInVector(Key) != Vector.end();
-
-    return Map.find(Key) != Map.end();
+    return find(Key) != end();
   }
 
   [[nodiscard]] size_type count(const KeyT &Key) const {
@@ -181,7 +156,7 @@ public:
   [[nodiscard]] iterator find(const KeyT &Key) {
     if constexpr (canBeSmall())
       if (isSmall())
-        return findInVector(Key);
+        return findInVector(Vector, Key);
 
     typename MapType::const_iterator Pos = Map.find(Key);
     return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
@@ -190,7 +165,7 @@ public:
   [[nodiscard]] const_iterator find(const KeyT &Key) const {
     if constexpr (canBeSmall())
       if (isSmall())
-        return findInVector(Key);
+        return findInVector(Vector, Key);
 
     typename MapType::const_iterator Pos = Map.find(Key);
     return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
@@ -199,33 +174,17 @@ public:
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
   [[nodiscard]] ValueT &at(const KeyT &Key) {
-    if constexpr (canBeSmall())
-      if (isSmall()) {
-        auto I = findInVector(Key);
-        assert(I != Vector.end() &&
-               "MapVector::at failed due to a missing key");
-        return I->second;
-      }
-
-    auto Pos = Map.find(Key);
-    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
-    return Vector[Pos->second].second;
+    auto I = find(Key);
+    assert(I != end() && "MapVector::at failed due to a missing key");
+    return I->second;
   }
 
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
   [[nodiscard]] const ValueT &at(const KeyT &Key) const {
-    if constexpr (canBeSmall())
-      if (isSmall()) {
-        auto I = findInVector(Key);
-        assert(I != Vector.end() &&
-               "MapVector::at failed due to a missing key");
-        return I->second;
-      }
-
-    auto Pos = Map.find(Key);
-    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
-    return Vector[Pos->second].second;
+    auto I = find(Key);
+    assert(I != end() && "MapVector::at failed due to a missing key");
+    return I->second;
   }
 
   /// Remove the last element from the vector.
@@ -286,29 +245,9 @@ public:
   template <class Predicate> void remove_if(Predicate Pred);
 
 private:
-  template <typename LookupKeyT, typename StoredKeyT>
-  [[nodiscard]] static bool keyEqual(const LookupKeyT &LookupKey,
-                                     const StoredKeyT &StoredKey) {
-    if constexpr (is_detected<detail::map_vector_key_info_t, MapType>::value) {
-      using KeyInfo = detail::map_vector_key_info_t<MapType>;
-      return KeyInfo::isEqual(LookupKey, StoredKey);
-    } else {
-      static_assert(has_equality_comparison_v<LookupKeyT, StoredKeyT>,
-                    "MapVector small mode requires MapType key info or "
-                    "operator== for key comparison");
-      return LookupKey == StoredKey;
-    }
-  }
-
-  template <typename T> [[nodiscard]] iterator findInVector(const T &Key) {
-    return find_if(Vector,
-                   [&Key](const auto &P) { return keyEqual(Key, P.first); });
-  }
-
-  template <typename T>
-  [[nodiscard]] const_iterator findInVector(const T &Key) const {
-    return find_if(Vector,
-                   [&Key](const auto &P) { return keyEqual(Key, P.first); });
+  template <typename VectorT, typename LookupKeyT>
+  [[nodiscard]] static auto findInVector(VectorT &Vec, const LookupKeyT &Key) {
+    return find_if(Vec, [&Key](const auto &P) { return P.first == Key; });
   }
 
   [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
@@ -336,7 +275,7 @@ private:
   std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
     if constexpr (canBeSmall())
       if (isSmall()) {
-        auto I = findInVector(Key);
+        auto I = findInVector(Vector, Key);
         if (I != Vector.end())
           return {I, false};
         Vector.emplace_back(std::piecewise_construct,
