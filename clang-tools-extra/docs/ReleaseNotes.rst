@@ -654,7 +654,9 @@ Improvements to clang-include-cleaner
 -------------------------------------
 
 - Added :program:`clang-include-cleaner` support for treating matching direct
-  includes as fragments of the main file with ``--fragment-headers``.
+  includes as fragments of the main file with ``--fragment-headers`` and for
+  optionally annotating preserved includes with
+  ``--fragment-dependency-comment-format``.
 
 Improvements to clang-include-fixer
 -----------------------------------

@@ -88,6 +88,15 @@ cl::opt<std::string> FragmentHeaders{
     cl::cat(IncludeCleaner),
 };
 
+cl::opt<std::string> FragmentDependencyCommentFormat{
+    "fragment-dependency-comment-format",
+    cl::desc("Append this trailing comment to includes that are used only by "
+             "fragment headers. Use {0} for the matched fragment include "
+             "spellings."),
+    cl::init(""),
+    cl::cat(IncludeCleaner),
+};
+
 enum class PrintStyle { Changes, Final };
 cl::opt<PrintStyle> Print{
     "print",
@@ -147,9 +156,12 @@ class Action : public clang::ASTFrontendAction {
 public:
   Action(std::function<bool(const Header &)> HeaderFilter,
          std::function<bool(llvm::StringRef)> FragmentHeaderFilter,
+         std::string FragmentDependencyCommentFormat,
          llvm::StringMap<std::string> &EditedFiles)
       : HeaderFilter(std::move(HeaderFilter)),
         FragmentHeaderFilter(std::move(FragmentHeaderFilter)),
+        FragmentDependencyCommentFormat(
+            std::move(FragmentDependencyCommentFormat)),
         EditedFiles(EditedFiles) {}
 
 private:
@@ -158,6 +170,7 @@ private:
   PragmaIncludes PI;
   std::function<bool(const Header &)> HeaderFilter;
   std::function<bool(llvm::StringRef)> FragmentHeaderFilter;
+  std::string FragmentDependencyCommentFormat;
   llvm::StringMap<std::string> &EditedFiles;
 
   bool BeginInvocation(CompilerInstance &CI) override {
@@ -237,7 +250,14 @@ private:
       Results.MissingIncludes.clear();
     if (!Remove || DisableRemove)
       Results.Unused.clear();
-    std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
+    format::FormatStyle Style = getStyle(AbsPath);
+    FixIncludesOptions FixOptions{FragmentDependencyCommentFormat};
+    IncludeFixes Fixes =
+        computeIncludeFixes(Results, AbsPath, Code, Style, FixOptions);
+    auto Positioned = cantFail(
+        format::cleanupAroundReplacements(Code, Fixes.Replacements, Style));
+    std::string Final =
+        cantFail(tooling::applyAllReplacements(Code, Positioned));
 
     if (Print.getNumOccurrences()) {
       switch (Print) {
@@ -246,6 +266,13 @@ private:
           llvm::outs() << "- " << I->quote() << " @Line:" << I->Line << "\n";
         for (const MissingInclude &I : Results.MissingIncludes)
           llvm::outs() << "+ " << I.Spelling << "\n";
+        for (const auto &Comment : Fixes.FragmentComments) {
+          if (!Comment.Replacement)
+            continue;
+          llvm::outs() << "~ " << Comment.Preserved->quote()
+                       << " @Line:" << Comment.Preserved->Line << " // "
+                       << Comment.Text << "\n";
+        }
         break;
       case PrintStyle::Final:
         llvm::outs() << Final;
@@ -253,7 +280,7 @@ private:
       }
     }
 
-    if (!Results.MissingIncludes.empty() || !Results.Unused.empty())
+    if (!Fixes.Replacements.empty())
       EditedFiles.try_emplace(AbsPath, Final);
   }
 
@@ -274,12 +301,16 @@ private:
 class ActionFactory : public tooling::FrontendActionFactory {
 public:
   ActionFactory(std::function<bool(const Header &)> HeaderFilter,
-                std::function<bool(llvm::StringRef)> FragmentHeaderFilter)
+                std::function<bool(llvm::StringRef)> FragmentHeaderFilter,
+                std::string FragmentDependencyCommentFormat)
       : HeaderFilter(std::move(HeaderFilter)),
-        FragmentHeaderFilter(std::move(FragmentHeaderFilter)) {}
+        FragmentHeaderFilter(std::move(FragmentHeaderFilter)),
+        FragmentDependencyCommentFormat(
+            std::move(FragmentDependencyCommentFormat)) {}
 
   std::unique_ptr<clang::FrontendAction> create() override {
     return std::make_unique<Action>(HeaderFilter, FragmentHeaderFilter,
+                                    FragmentDependencyCommentFormat,
                                     EditedFiles);
   }
 
@@ -290,6 +321,7 @@ public:
 private:
   std::function<bool(const Header &)> HeaderFilter;
   std::function<bool(llvm::StringRef)> FragmentHeaderFilter;
+  std::string FragmentDependencyCommentFormat;
   // Map from file name to final code with the include edits applied.
   llvm::StringMap<std::string> EditedFiles;
 };
@@ -431,7 +463,8 @@ int main(int argc, const char **argv) {
   auto FragmentHeaderFilter = fragmentHeaderFilter();
   if (!HeaderFilter || !FragmentHeaderFilter)
     return 1; // error already reported.
-  ActionFactory Factory(HeaderFilter, FragmentHeaderFilter);
+  ActionFactory Factory(HeaderFilter, FragmentHeaderFilter,
+                        FragmentDependencyCommentFormat);
   auto ErrorCode = Tool.run(&Factory);
   if (Edit) {
     for (const auto &NameAndContent : Factory.editedFiles()) {
