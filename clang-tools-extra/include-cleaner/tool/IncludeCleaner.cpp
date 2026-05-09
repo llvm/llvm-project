@@ -130,15 +130,15 @@ format::FormatStyle getStyle(llvm::StringRef Filename) {
 
 class Action : public clang::ASTFrontendAction {
 public:
-  Action(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
+  Action(std::function<bool(const Header &)> HeaderFilter,
          llvm::StringMap<std::string> &EditedFiles)
-      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles) {}
+      : HeaderFilter(std::move(HeaderFilter)), EditedFiles(EditedFiles) {}
 
 private:
   RecordedAST AST;
   RecordedPP PP;
   PragmaIncludes PI;
-  llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
+  std::function<bool(const Header &)> HeaderFilter;
   llvm::StringMap<std::string> &EditedFiles;
 
   bool BeginInvocation(CompilerInstance &CI) override {
@@ -192,9 +192,10 @@ private:
     SM.getFileManager().makeAbsolutePath(AbsPath);
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
+    AnalysisOptions AnalyzeOptions{HeaderFilter};
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
-                getCompilerInstance().getPreprocessor(), HeaderFilter);
+                getCompilerInstance().getPreprocessor(), AnalyzeOptions);
 
     if (!Insert) {
       llvm::errs()
@@ -213,7 +214,7 @@ private:
     }
 
     if (!Insert || DisableInsert)
-      Results.Missing.clear();
+      Results.MissingIncludes.clear();
     if (!Remove || DisableRemove)
       Results.Unused.clear();
     std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
@@ -223,8 +224,8 @@ private:
       case PrintStyle::Changes:
         for (const Include *I : Results.Unused)
           llvm::outs() << "- " << I->quote() << " @Line:" << I->Line << "\n";
-        for (const auto &[I, _] : Results.Missing)
-          llvm::outs() << "+ " << I << "\n";
+        for (const MissingInclude &I : Results.MissingIncludes)
+          llvm::outs() << "+ " << I.Spelling << "\n";
         break;
       case PrintStyle::Final:
         llvm::outs() << Final;
@@ -232,7 +233,7 @@ private:
       }
     }
 
-    if (!Results.Missing.empty() || !Results.Unused.empty())
+    if (!Results.MissingIncludes.empty() || !Results.Unused.empty())
       EditedFiles.try_emplace(AbsPath, Final);
   }
 
@@ -252,8 +253,8 @@ private:
 };
 class ActionFactory : public tooling::FrontendActionFactory {
 public:
-  ActionFactory(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter)
-      : HeaderFilter(HeaderFilter) {}
+  ActionFactory(std::function<bool(const Header &)> HeaderFilter)
+      : HeaderFilter(std::move(HeaderFilter)) {}
 
   std::unique_ptr<clang::FrontendAction> create() override {
     return std::make_unique<Action>(HeaderFilter, EditedFiles);
@@ -264,7 +265,7 @@ public:
   }
 
 private:
-  llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
+  std::function<bool(const Header &)> HeaderFilter;
   // Map from file name to final code with the include edits applied.
   llvm::StringMap<std::string> EditedFiles;
 };
@@ -295,16 +296,17 @@ std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag) {
   };
 }
 
-std::function<bool(llvm::StringRef)> headerFilter() {
+std::function<bool(const Header &)> headerFilter() {
   auto OnlyMatches = matchesAny(OnlyHeaders);
   auto IgnoreMatches = matchesAny(IgnoreHeaders);
   if (!OnlyMatches || !IgnoreMatches)
     return nullptr;
 
-  return [OnlyMatches, IgnoreMatches](llvm::StringRef Header) {
-    if (!OnlyHeaders.empty() && !OnlyMatches(Header))
+  return [OnlyMatches, IgnoreMatches](const Header &H) {
+    llvm::StringRef Path = H.resolvedPath();
+    if (!OnlyHeaders.empty() && !OnlyMatches(Path))
       return true;
-    if (!IgnoreHeaders.empty() && IgnoreMatches(Header))
+    if (!IgnoreHeaders.empty() && IgnoreMatches(Path))
       return true;
     return false;
   };
