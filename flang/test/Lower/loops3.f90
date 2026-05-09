@@ -28,3 +28,19 @@ subroutine loop_test
     m = max(m, sum)
   enddo
 end subroutine loop_test
+
+! CHECK-LABEL: func.func @_QPloop_min_max_test
+subroutine loop_min_max_test
+  integer :: i
+  real :: lo, hi
+  lo = huge(0.0)
+  hi = 0.0
+
+  ! CHECK: fir.do_concurrent.loop
+  ! CHECK-SAME: @min_reduction_f32 #fir.reduce_attr<min>
+  ! CHECK-SAME: @max_reduction_f32 #fir.reduce_attr<max>
+  do concurrent (i=1:10) reduce(min:lo) reduce(max:hi)
+    lo = min(lo, real(i))
+    hi = max(hi, real(i))
+  enddo
+end subroutine loop_min_max_test
