@@ -984,6 +984,24 @@ entry:
   ret <64 x i32> %6
 }
 
-
+define <4 x i32> @output_undefs(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
+; CHECK-LABEL: @output_undefs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHUF0:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[SHUF1:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF0]], [[SHUF1]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> [[SHUF0]], [[SHUF1]]
+; CHECK-NEXT:    [[U00:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> [[SUB]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x i32> [[U00]]
+;
+entry:
+  %shuf0 = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %shuf1 = shufflevector <4 x i32> %c, <4 x i32> %d, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %add = add <4 x i32> %shuf0, %shuf1
+  %sub = sub <4 x i32> %shuf0, %shuf1
+  %s0 = shufflevector <4 x i32> %add, <4 x i32> %sub, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %u00 = shufflevector <4 x i32> %s0, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %u00
+}
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

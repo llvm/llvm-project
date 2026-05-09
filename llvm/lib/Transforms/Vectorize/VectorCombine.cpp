@@ -4980,11 +4980,15 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   // Add any shuffle uses for the shuffles we have found, to include them in our
   // cost calculations.
   if (!FromReduction) {
-    for (ShuffleVectorInst *SV : Shuffles) {
+    size_t OldShuffleSize = Shuffles.size();
+    for (size_t i = 0; i < OldShuffleSize; ++i) {
+      ShuffleVectorInst *SV = Shuffles[i];
       for (auto *U : SV->users()) {
         ShuffleVectorInst *SSV = dyn_cast<ShuffleVectorInst>(U);
-        if (SSV && isa<UndefValue>(SSV->getOperand(1)) && SSV->getType() == VT)
+        if (SSV && isa<UndefValue>(SSV->getOperand(1)) &&
+            SSV->getType() == VT) {
           Shuffles.push_back(SSV);
+        }
       }
     }
   }
