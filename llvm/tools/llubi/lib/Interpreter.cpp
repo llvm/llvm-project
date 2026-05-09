@@ -1465,9 +1465,7 @@ public:
                                              /*IsInput=*/true));
         InputVec.push_back(&InputFloats.back());
       }
-      if (InputVec.empty())
-        return AnyValue::poison();
-
+      assert(!InputVec.empty());
       SmallVector<APFloat, 8> Worklist(InputFloats);
       const bool HasSNaN =
           any_of(InputVec, [](const APFloat *V) { return V->isSignaling(); });
