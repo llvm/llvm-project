@@ -1440,6 +1440,7 @@ bool PeepholeOptimizer::foldImmediate(
         if (DstReg.isVirtual() &&
             MRI->getRegClass(DstReg) == MRI->getRegClass(Reg)) {
           MRI->replaceRegWith(DstReg, Reg);
+          MRI->clearKillFlags(Reg);
           MI.eraseFromParent();
           Deleted = true;
         }

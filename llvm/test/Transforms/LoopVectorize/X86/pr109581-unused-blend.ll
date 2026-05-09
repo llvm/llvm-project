@@ -16,50 +16,43 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT16:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT17:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT16]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP0]], true
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT17]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE17:.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF4:.*]], label %[[PRED_SDIV_CONTINUE5:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF4:.*]], label %[[PRED_SDIV_CONTINUE5:.*]]
 ; CHECK:       [[PRED_SDIV_IF4]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE5]]
 ; CHECK:       [[PRED_SDIV_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_SDIV_IF6:.*]], label %[[PRED_SDIV_CONTINUE7:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF6:.*]], label %[[PRED_SDIV_CONTINUE7:.*]]
 ; CHECK:       [[PRED_SDIV_IF6]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE7]]
 ; CHECK:       [[PRED_SDIV_CONTINUE7]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_SDIV_IF8:.*]], label %[[PRED_SDIV_CONTINUE9:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF8:.*]], label %[[PRED_SDIV_CONTINUE9:.*]]
 ; CHECK:       [[PRED_SDIV_IF8]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE9]]
 ; CHECK:       [[PRED_SDIV_CONTINUE9]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF10:.*]], label %[[PRED_SDIV_CONTINUE11:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF10:.*]], label %[[PRED_SDIV_CONTINUE11:.*]]
 ; CHECK:       [[PRED_SDIV_IF10]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE11]]
 ; CHECK:       [[PRED_SDIV_CONTINUE11]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_SDIV_IF12:.*]], label %[[PRED_SDIV_CONTINUE13:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF12:.*]], label %[[PRED_SDIV_CONTINUE13:.*]]
 ; CHECK:       [[PRED_SDIV_IF12]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE13]]
 ; CHECK:       [[PRED_SDIV_CONTINUE13]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_SDIV_IF14:.*]], label %[[PRED_SDIV_CONTINUE15:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF14:.*]], label %[[PRED_SDIV_CONTINUE15:.*]]
 ; CHECK:       [[PRED_SDIV_IF14]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE15]]
 ; CHECK:       [[PRED_SDIV_CONTINUE15]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_SDIV_IF16:.*]], label %[[PRED_SDIV_CONTINUE17]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF16:.*]], label %[[PRED_SDIV_CONTINUE17]]
 ; CHECK:       [[PRED_SDIV_IF16]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE17]]
 ; CHECK:       [[PRED_SDIV_CONTINUE17]]:

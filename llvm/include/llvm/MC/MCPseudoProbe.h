@@ -446,7 +446,8 @@ public:
   // If pseudo_probe_desc section is mapped to memory and \p IsMMapped is true,
   // uses StringRefs pointing to the section.
   LLVM_ABI bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size,
-                                      bool IsMMapped = false);
+                                      bool IsMMapped = false,
+                                      bool VerboseWarnings = false);
 
   // Decode pseudo_probe section to count the number of probes and inlined
   // function records for each function record.

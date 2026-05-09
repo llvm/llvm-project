@@ -11,7 +11,6 @@
 
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 namespace llvm {
@@ -37,10 +36,6 @@ class VPRecipeBuilder {
   LoopVectorizationCostModel &CM;
 
   VPBuilder &Builder;
-
-  // VPlan construction support: Hold a mapping from ingredients to
-  // their recipe.
-  DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
@@ -93,34 +88,10 @@ public:
   bool replaceWithFinalIfReductionStore(VPInstruction *VPI,
                                         VPBuilder &FinalRedStoresBuilder);
 
-  /// Set the recipe created for given ingredient.
-  void setRecipe(Instruction *I, VPRecipeBase *R) {
-    assert(!Ingredient2Recipe.contains(I) &&
-           "Cannot reset recipe for instruction.");
-    Ingredient2Recipe[I] = R;
-  }
-
-  /// Return the recipe created for given ingredient.
-  VPRecipeBase *getRecipe(Instruction *I) {
-    assert(Ingredient2Recipe.count(I) &&
-           "Recording this ingredients recipe was not requested");
-    assert(Ingredient2Recipe[I] != nullptr &&
-           "Ingredient doesn't have a recipe");
-    return Ingredient2Recipe[I];
-  }
-
   /// Build a VPReplicationRecipe for \p VPI. If it is predicated, add the mask
   /// as last operand. Range.End may be decreased to ensure same recipe behavior
   /// from \p Range.Start to \p Range.End.
   VPReplicateRecipe *handleReplication(VPInstruction *VPI, VFRange &Range);
-
-  VPValue *getVPValueOrAddLiveIn(Value *V) {
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      if (auto *R = Ingredient2Recipe.lookup(I))
-        return R->getVPSingleValue();
-    }
-    return Plan.getOrAddLiveIn(V);
-  }
 };
 } // end namespace llvm
 
