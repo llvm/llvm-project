@@ -3995,6 +3995,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
   InstWorklist.push(VecOpEE);
 
+  bool IsPartialReduction = false;
+
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
     InstWorklist.pop();
@@ -4125,12 +4127,19 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
       ShouldBeCallOrBinInst ^= 1;
     } else {
+      // Check if this is a partial reduction - the chain ended because
+      // the source vector is not a recognized op/shuffle.
+      if (ShouldBeCallOrBinInst && VisitedCnt >= 1 && CI == PrevVecV[0]) {
+        IsPartialReduction = true;
+        break;
+      }
       return false;
     }
   }
 
-  // Pattern should end with a shuffle op.
-  if (ShouldBeCallOrBinInst)
+  // Full reduction pattern should end with a shuffle op.
+  // Partial reduction ends when the source vector is reached.
+  if (ShouldBeCallOrBinInst && !IsPartialReduction)
     return false;
 
   assert(VecSize != -1 && "Expected Match for Vector Size");
@@ -4147,14 +4156,32 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (!ReducedOp)
     return false;
 
-  IntrinsicCostAttributes ICA(ReducedOp, FinalVecVTy, {FinalVecV});
-  InstructionCost NewCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+  InstructionCost NewCost = 0;
+  FixedVectorType *ReduceVecTy = FinalVecVTy;
+  SmallVector<int> ExtractMask;
+
+  if (IsPartialReduction) {
+    unsigned SubVecSize = ShuffleMaskHalf;
+    ReduceVecTy = FixedVectorType::get(FVT->getElementType(), SubVecSize);
+    ExtractMask.resize(SubVecSize);
+    std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
+    NewCost +=
+        TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                           ReduceVecTy, FinalVecVTy, ExtractMask, CostKind, 0);
+  }
+
+  IntrinsicCostAttributes ICA(ReducedOp, ReduceVecTy, {ReduceVecTy});
+  NewCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
 
   if (NewCost >= OrigCost)
     return false;
 
-  auto *ReducedResult =
-      Builder.CreateIntrinsic(ReducedOp, {FinalVecV->getType()}, {FinalVecV});
+  Value *ReduceInput = FinalVecV;
+  if (IsPartialReduction)
+    ReduceInput = Builder.CreateShuffleVector(FinalVecV, ExtractMask);
+
+  auto *ReducedResult = Builder.CreateIntrinsic(
+      ReducedOp, {ReduceInput->getType()}, {ReduceInput});
   replaceValue(I, *ReducedResult);
 
   return true;
