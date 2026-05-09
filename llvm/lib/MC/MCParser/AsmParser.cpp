@@ -860,14 +860,18 @@ bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
   if (SymbolScanningMode)
     return false;
 
+  // The buffer is consumed only by emitBytes. Skip the NUL termination to
+  // enable mmap in more cases, reading only the touched pages instead of the
+  // whole file.
   std::string IncludedFile;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      SrcMgr.OpenIncludeFile(Filename, IncludedFile);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = SrcMgr.OpenIncludeFile(
+      Filename, IncludedFile, /*RequiresNullTerminator=*/false);
   if (!BufOrErr)
     return true;
 
   // Pick up the bytes from the file and emit them.
-  StringRef Bytes = (*BufOrErr)->getBuffer().drop_front(Skip);
+  StringRef Bytes = (*BufOrErr)->getBuffer();
+  Bytes = Bytes.drop_front(Skip);
   if (Count) {
     int64_t Res;
     if (!Count->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
