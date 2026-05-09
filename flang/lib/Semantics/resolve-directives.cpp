@@ -2134,9 +2134,18 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
         continue;
       }
       if (auto *symbol{ResolveOmp(*iv, ivDSA, scope)}) {
-        SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
+        Symbol::Flags ivFlags{Symbol::Flag::OmpPreDetermined, ivDSA};
+        // For a standalone SIMD loop variable set lastprivate so the original
+        // variable is correctly set to the last value of the loop variable as
+        // per the OpenMP spec
+        if (ivDSA == Symbol::Flag::OmpLinear &&
+            llvm::omp::topSimdSet.test(GetContext().directive))
+          ivFlags.set(Symbol::Flag::OmpLastPrivate);
+        SetSymbolDSA(*symbol, ivFlags);
         iv->symbol = symbol; // adjust the symbol within region
         AddToContextObjectWithDSA(*symbol, ivDSA);
+        if (ivFlags.test(Symbol::Flag::OmpLastPrivate))
+          AddToContextObjectWithDSA(*symbol, Symbol::Flag::OmpLastPrivate);
       }
     }
   }
