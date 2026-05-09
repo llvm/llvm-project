@@ -196,7 +196,8 @@ public:
 
   // Copy the cells in the intersection of
   // the rows between `fromRows` and `toRows` and
-  // the columns between `fromColumns` and `toColumns`, both inclusive.
+  // the columns between `fromColumns` and `toColumns`, inclusive on the left
+  // but exclusive on the right (same as canonical C++ ranges).
   Matrix<T> getSubMatrix(unsigned fromRow, unsigned toRow, unsigned fromColumn,
                          unsigned toColumn) const;
 

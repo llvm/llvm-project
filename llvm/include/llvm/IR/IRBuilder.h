@@ -2807,7 +2807,7 @@ public:
   /// specified alignment.
   LLVM_ABI CallInst *CreateAlignmentAssumption(const DataLayout &DL,
                                                Value *PtrValue,
-                                               unsigned Alignment,
+                                               uint64_t Alignment,
                                                Value *OffsetValue = nullptr);
 
   /// Create an assume intrinsic call that represents an alignment
@@ -2824,10 +2824,14 @@ public:
                                                Value *Alignment,
                                                Value *OffsetValue = nullptr);
 
-  /// Create an assume intrinsic call that represents an dereferencable
+  /// Create an assume intrinsic call that represents a dereferencable
   /// assumption on the provided pointer.
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
+
+  /// Create an assume intrinsic call that represents a nonnull assumption on
+  /// the provided pointer.
+  LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting
