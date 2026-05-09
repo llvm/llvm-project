@@ -523,12 +523,26 @@ bool ClauseProcessor::processInclusive(
 }
 
 bool ClauseProcessor::processInitializer(
-    lower::SymMap &symMap,
-    ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
+    lower::SymMap &symMap, ReductionProcessor::GenInitValueCBTy &genInitValueCB,
+    const parser::OmpStylizedInstance *parserInitInstance) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
-    genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Type type, mlir::Value moldArg,
-                                 mlir::Value privArg) {
+    // Extract the typed assignment from the parser-level instance, if
+    // the initializer is an assignment statement (as opposed to a call).
+    const evaluate::Assignment *assign = nullptr;
+    if (parserInitInstance) {
+      const auto &instance = std::get<parser::OmpStylizedInstance::Instance>(
+          parserInitInstance->t);
+      if (const auto *assignStmt =
+              std::get_if<parser::AssignmentStmt>(&instance.u)) {
+        if (auto *wrapper = assignStmt->typedAssignment.get())
+          if (wrapper->v)
+            assign = &*wrapper->v;
+      }
+    }
+    genInitValueCB = [&, clause, assign](fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Type type,
+                                         mlir::Value moldArg,
+                                         mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
       const StylizedInstance &inst = clause->v.front();
@@ -592,6 +606,37 @@ bool ClauseProcessor::processInitializer(
                 return privVal;
               },
               [&](const auto &expr) -> mlir::Value {
+                // For by-ref reductions with a typed assignment, lower
+                // the full assignment (both LHS and RHS) directly.
+                // This handles both whole-variable (omp_priv = val) and
+                // component-level (omp_priv%member = val) initializers.
+                // Mirror the combiner pattern: dispatch on assign->u to
+                // handle both intrinsic and user-defined assignment.
+                if (privArg && assign) {
+                  lower::StatementContext assignCtx;
+                  hlfir::Entity rhs = lower::convertExprToHLFIR(
+                      loc, converter, assign->rhs, symMap, assignCtx);
+                  rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
+                  hlfir::Entity lhs = lower::convertExprToHLFIR(
+                      loc, converter, assign->lhs, symMap, assignCtx);
+                  common::visit(
+                      common::visitors{
+                          [&](const evaluate::Assignment::Intrinsic &) {
+                            hlfir::AssignOp::create(builder, loc, rhs, lhs);
+                          },
+                          [&](const evaluate::ProcedureRef &procRef) {
+                            lower::convertUserDefinedAssignmentToHLFIR(
+                                loc, converter, procRef, lhs, rhs, symMap);
+                          },
+                          [&](const auto &) {
+                            llvm_unreachable("Unexpected assignment type in "
+                                             "reduction initializer");
+                          },
+                      },
+                      assign->u);
+                  assignCtx.finalizeAndPop();
+                  return mlir::Value{};
+                }
                 mlir::Value exprResult = fir::getBase(convertExprToValue(
                     loc, converter, initExpr, symMap, stmtCtx));
                 if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
@@ -2023,7 +2068,9 @@ bool ClauseProcessor::processNontemporal(
 
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
+    const {
   return findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> reductionVars;
@@ -2047,7 +2094,7 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms))
+                reductionSyms, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));

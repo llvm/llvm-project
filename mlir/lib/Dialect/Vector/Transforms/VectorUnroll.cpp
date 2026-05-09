@@ -26,12 +26,9 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// Compute the indices of the slice `index` for a transfer op.
-static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
-                                               ArrayRef<Value> indices,
-                                               AffineMap permutationMap,
-                                               Location loc,
-                                               OpBuilder &builder) {
+SmallVector<Value> mlir::vector::sliceTransferIndices(
+    ArrayRef<int64_t> elementOffsets, ArrayRef<Value> indices,
+    AffineMap permutationMap, Location loc, OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   auto isBroadcast = [](AffineExpr expr) {
     if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
@@ -41,11 +38,12 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
   SmallVector<Value> slicedIndices(indices);
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
-    if (isBroadcast(dim.value()))
+    int64_t elementOffset = elementOffsets[dim.index()];
+    if (isBroadcast(dim.value()) || elementOffset == 0)
       continue;
     unsigned pos = cast<AffineDimExpr>(dim.value()).getPosition();
     auto expr = getAffineDimExpr(0, builder.getContext()) +
-                getAffineConstantExpr(elementOffsets[dim.index()], ctx);
+                getAffineConstantExpr(elementOffset, ctx);
     auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
     slicedIndices[pos] =
         affine::AffineApplyOp::create(builder, loc, map, indices[pos]);
@@ -1389,6 +1387,242 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+// Unroll vector::BitCastOp into smaller slice-based bitcast operations.
+// Decomposes the result vector into target shape chunks and bitcasts
+// corresponding source slices, accounting for element bitwidth ratios.
+/// Example:
+///   Given a bitcast Op:
+///
+///     vector.bitcast %src : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///     %slice_0 = vector.extract_strided_slice %lhs[0, 0] : vector<2x4xf32>
+///     %slice_0 = vector.bitcast %slice_0 : vector<2x4xf32>
+///     %result = vector.insert_strided_slice %slice_0, %init[0, 0]
+///     // ... repeat for remaining slices
+struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
+  UnrollBitCastPattern(MLIRContext *context,
+                       const vector::UnrollVectorOptions &options,
+                       PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::BitCastOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::BitCastOp bitCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, bitCastOp);
+    if (!targetShape)
+      return rewriter.notifyMatchFailure(bitCastOp,
+                                         "failed to get target shape");
+
+    VectorType sourceType = bitCastOp.getSourceVectorType();
+    VectorType resultType = bitCastOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = bitCastOp.getLoc();
+
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          bitCastOp, "target shape rank must match result rank");
+
+    unsigned sourceElementBits = sourceType.getElementTypeBitWidth();
+    unsigned resultElementBits = resultType.getElementTypeBitWidth();
+
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+
+    sourceSliceShape[lastDim] =
+        ((*targetShape)[lastDim] * resultElementBits) / sourceElementBits;
+
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
+
+    VectorType targetType =
+        VectorType::get(*targetShape, resultType.getElementType());
+
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] =
+          (resultOffsets[lastDim] * resultElementBits) / sourceElementBits;
+
+      Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, bitCastOp.getSource(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+      Value bitcastSlice = rewriter.createOrFold<vector::BitCastOp>(
+          loc, targetType, sourceSlice);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, bitcastSlice, result, resultOffsets, resultStrides);
+    }
+
+    rewriter.replaceOp(bitCastOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+/// Pattern to unroll vector.interleave into smaller slice-sized operations.
+/// Decomposes a large interleave into slices by extracting slices from both
+/// input vectors, interleaving them, and inserting back into the result.
+///
+/// Example:
+///   Given an interleave Op:
+///
+///     vector.interleave %lhs, %rhs : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///     %slice_lhs_0 = vector.extract_strided_slice %lhs[0, 0] : vector<2x2xf32>
+///     %slice_rhs_0 = vector.extract_strided_slice %rhs[0, 0] : vector<2x2xf32>
+///     %slice_0 = vector.interleave %slice_lhs_0, %slice_rhs_0
+///       : vector<2x4xf32>
+///     %result = vector.insert_strided_slice %slice_0, %init[0, 0]
+///     // ... repeat for remaining slices
+struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
+  UnrollInterleavePattern(MLIRContext *context,
+                          const vector::UnrollVectorOptions &options,
+                          PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::InterleaveOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, interleaveOp);
+    if (!targetShape)
+      return rewriter.notifyMatchFailure(interleaveOp,
+                                         "failed to get target shape");
+
+    VectorType resultType = interleaveOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = interleaveOp.getLoc();
+
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          interleaveOp, "target shape rank must match result rank");
+
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+    sourceSliceShape[lastDim] = (*targetShape)[lastDim] / 2;
+
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
+
+    VectorType targetType =
+        VectorType::get(*targetShape, resultType.getElementType());
+
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] = resultOffsets[lastDim] / 2;
+
+      Value lhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, interleaveOp.getLhs(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+      Value rhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, interleaveOp.getRhs(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+      Value interleaveSlice = rewriter.createOrFold<vector::InterleaveOp>(
+          loc, targetType, lhsSlice, rhsSlice);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, interleaveSlice, result, resultOffsets, resultStrides);
+    }
+
+    rewriter.replaceOp(interleaveOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+/// Pattern to unroll vector.deinterleave into smaller slice-sized operations.
+/// Decomposes a large deinterleave (which splits a vector into even/odd halves)
+/// by extracting source slices, deinterleaving them, and inserting into two
+/// result vectors.
+///
+/// Example:
+///   Given a deinterleave Op:
+///
+///     vector.deinterleave %src : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///   %slice_0 = vector.extract_strided_slice %src[0, 0] : vector<2x4xf32>
+///   %slice_lhs_0, %slice_rhs_0 = vector.deinterleave %slice_0 :
+///   vector<2x4xf32> %result1 = vector.insert_strided_slice %slice_lhs_0,
+///   %init1[0, 0] %result2 = vector.insert_strided_slice %slice_rhs_0,
+///   %init2[0, 0]
+///   // ... repeat for remaining slices
+struct UnrollDeinterleavePattern
+    : public OpRewritePattern<vector::DeinterleaveOp> {
+  UnrollDeinterleavePattern(MLIRContext *context,
+                            const vector::UnrollVectorOptions &options,
+                            PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::DeinterleaveOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::DeinterleaveOp deinterleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, deinterleaveOp);
+    if (!targetShape)
+      return rewriter.notifyMatchFailure(deinterleaveOp,
+                                         "failed to get target shape");
+
+    VectorType resultType = deinterleaveOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = deinterleaveOp.getLoc();
+
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          deinterleaveOp, "target shape rank must match result rank");
+
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+    sourceSliceShape[lastDim] = (*targetShape)[lastDim] * 2;
+
+    Value resultOdd = arith::ConstantOp::create(
+        rewriter, loc, resultType, rewriter.getZeroAttr(resultType));
+    Value resultEven = arith::ConstantOp::create(
+        rewriter, loc, resultType, rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
+
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] = resultOffsets[lastDim] * 2;
+
+      Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, deinterleaveOp.getSource(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+
+      auto deinterleaveSlice =
+          vector::DeinterleaveOp::create(rewriter, loc, sourceSlice);
+
+      resultOdd = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes1(), resultOdd, resultOffsets,
+          resultStrides);
+      resultEven = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes2(), resultEven, resultOffsets,
+          resultStrides);
+    }
+
+    rewriter.replaceOp(deinterleaveOp, ValueRange{resultOdd, resultEven});
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -1400,8 +1634,10 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
                UnrollStorePattern, UnrollBroadcastPattern, UnrollFromElements,
                UnrollToElements, UnrollStepPattern, UnrollShapeCastPattern,
-               UnrollCreateMaskPattern, UnrollConstantMaskPattern>(
-      patterns.getContext(), options, benefit);
+               UnrollCreateMaskPattern, UnrollConstantMaskPattern,
+               UnrollBitCastPattern, UnrollInterleavePattern,
+               UnrollDeinterleavePattern>(patterns.getContext(), options,
+                                          benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(

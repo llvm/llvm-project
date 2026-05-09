@@ -3643,7 +3643,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
         SmallVector<SCEVUse, 4> Operands;
         for (const SCEV *Op : M->operands())
           Operands.push_back(getZeroExtendExpr(Op, ExtTy));
-        if (getZeroExtendExpr(M, ExtTy) == getMulExpr(Operands))
+        if (getZeroExtendExpr(M, ExtTy) == getMulExpr(Operands)) {
           // Find an operand that's safely divisible.
           for (unsigned i = 0, e = M->getNumOperands(); i != e; ++i) {
             const SCEV *Op = M->getOperand(i);
@@ -3654,6 +3654,21 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
               return getMulExpr(Operands);
             }
           }
+
+          // Even if it's not divisible, try to remove a common factor.
+          if (const auto *LHSC = dyn_cast<SCEVConstant>(M->getOperand(0))) {
+            APInt Factor = APIntOps::GreatestCommonDivisor(LHSC->getAPInt(),
+                                                           RHSC->getAPInt());
+            if (!Factor.isIntN(1)) {
+              SmallVector<SCEVUse, 2> NewOperands;
+              NewOperands.push_back(getConstant(LHSC->getAPInt().udiv(Factor)));
+              append_range(NewOperands, M->operands().drop_front());
+              const SCEV *NewMul = getMulExpr(NewOperands);
+              return getUDivExpr(NewMul,
+                                 getConstant(RHSC->getAPInt().udiv(Factor)));
+            }
+          }
+        }
       }
 
       // (A/B)/C --> A/(B*C) if safe and B*C can be folded.
@@ -3703,6 +3718,19 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       NegC->isNegative() && !NegC->isMinSignedValue() && *C == -*NegC)
     return getZero(LHS->getType());
 
+  // (%a * %b)<nuw> / %b -> %a
+  const auto *Mul = dyn_cast<SCEVMulExpr>(LHS);
+  if (Mul && Mul->hasNoUnsignedWrap()) {
+    for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
+      if (Mul->getOperand(i) == RHS) {
+        SmallVector<SCEVUse, 2> Operands;
+        append_range(Operands, Mul->operands().take_front(i));
+        append_range(Operands, Mul->operands().drop_front(i + 1));
+        return getMulExpr(Operands);
+      }
+    }
+  }
+
   // TODO: Generalize to handle any common factors.
   // udiv (mul nuw a, vscale), (mul nuw b, vscale) --> udiv a, b
   const SCEV *NewLHS, *NewRHS;
@@ -3738,55 +3766,9 @@ APInt gcd(const SCEVConstant *C1, const SCEVConstant *C2) {
 
 /// Get a canonical unsigned division expression, or something simpler if
 /// possible. There is no representation for an exact udiv in SCEV IR, but we
-/// can attempt to remove factors from the LHS and RHS.  We can't do this when
-/// it's not exact because the udiv may be clearing bits.
+/// can attempt to optimize it prior to construction.
 const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
-  // TODO: we could try to find factors in all sorts of things, but for now we
-  // just deal with u/exact (multiply, constant). See SCEVDivision towards the
-  // end of this file for inspiration.
-
-  const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(LHS);
-  if (!Mul || !Mul->hasNoUnsignedWrap())
-    return getUDivExpr(LHS, RHS);
-
-  if (const SCEVConstant *RHSCst = dyn_cast<SCEVConstant>(RHS)) {
-    // If the mulexpr multiplies by a constant, then that constant must be the
-    // first element of the mulexpr.
-    if (const auto *LHSCst = dyn_cast<SCEVConstant>(Mul->getOperand(0))) {
-      if (LHSCst == RHSCst) {
-        SmallVector<SCEVUse, 2> Operands(drop_begin(Mul->operands()));
-        return getMulExpr(Operands);
-      }
-
-      // We can't just assume that LHSCst divides RHSCst cleanly, it could be
-      // that there's a factor provided by one of the other terms. We need to
-      // check.
-      APInt Factor = gcd(LHSCst, RHSCst);
-      if (!Factor.isIntN(1)) {
-        LHSCst =
-            cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
-        RHSCst =
-            cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
-        SmallVector<SCEVUse, 2> Operands;
-        Operands.push_back(LHSCst);
-        append_range(Operands, Mul->operands().drop_front());
-        LHS = getMulExpr(Operands);
-        RHS = RHSCst;
-        Mul = dyn_cast<SCEVMulExpr>(LHS);
-        if (!Mul)
-          return getUDivExactExpr(LHS, RHS);
-      }
-    }
-  }
-
-  for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
-    if (Mul->getOperand(i) == RHS) {
-      SmallVector<SCEVUse, 2> Operands;
-      append_range(Operands, Mul->operands().take_front(i));
-      append_range(Operands, Mul->operands().drop_front(i + 1));
-      return getMulExpr(Operands);
-    }
-  }
+  // Currently there is no exact specific logic.
 
   return getUDivExpr(LHS, RHS);
 }
@@ -6558,7 +6540,9 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
         CtxI = I;
     }
     unsigned Known =
-        computeKnownBits(U->getValue(), getDataLayout(), &AC, CtxI, &DT)
+        computeKnownBits(U->getValue(),
+                         SimplifyQuery(getDataLayout(), &DT, &AC, CtxI)
+                             .allowEphemerals(true))
             .countMinTrailingZeros();
     return GetShiftedByZeros(Known);
   }
@@ -9361,7 +9345,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     bool ControlsOnlyExit, bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
   Value *Op0, *Op1;
-  bool IsAnd = false;
+  bool IsAnd;
   if (match(ExitCond, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
     IsAnd = true;
   else if (match(ExitCond, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
@@ -9369,23 +9353,25 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
   else
     return std::nullopt;
 
+  // Be robust against unsimplified IR for the form "op i1 X, NeutralElement".
+  const Constant *NeutralElement = ConstantInt::get(ExitCond->getType(), IsAnd);
+  if (Op0 == NeutralElement)
+    std::swap(Op0, Op1);
+  if (Op1 == NeutralElement)
+    return computeExitLimitFromCondCached(Cache, L, Op0, ExitIfTrue,
+                                          ControlsOnlyExit, AllowPredicates);
+
+  // A sub-condition of a non-trivial binop never solely controls the exit,
+  // whether we exit always depends on both conditions.
+  ExitLimit EL0 = computeExitLimitFromCondCached(
+      Cache, L, Op0, ExitIfTrue, /*ControlsOnlyExit=*/false, AllowPredicates);
+  ExitLimit EL1 = computeExitLimitFromCondCached(
+      Cache, L, Op1, ExitIfTrue, /*ControlsOnlyExit=*/false, AllowPredicates);
+
   // EitherMayExit is true in these two cases:
   //   br (and Op0 Op1), loop, exit
   //   br (or  Op0 Op1), exit, loop
   bool EitherMayExit = IsAnd ^ ExitIfTrue;
-  ExitLimit EL0 = computeExitLimitFromCondCached(
-      Cache, L, Op0, ExitIfTrue, ControlsOnlyExit && !EitherMayExit,
-      AllowPredicates);
-  ExitLimit EL1 = computeExitLimitFromCondCached(
-      Cache, L, Op1, ExitIfTrue, ControlsOnlyExit && !EitherMayExit,
-      AllowPredicates);
-
-  // Be robust against unsimplified IR for the form "op i1 X, NeutralElement"
-  const Constant *NeutralElement = ConstantInt::get(ExitCond->getType(), IsAnd);
-  if (isa<ConstantInt>(Op1))
-    return Op1 == NeutralElement ? EL0 : EL1;
-  if (isa<ConstantInt>(Op0))
-    return Op0 == NeutralElement ? EL1 : EL0;
 
   const SCEV *BECount = getCouldNotCompute();
   const SCEV *ConstantMaxBECount = getCouldNotCompute();

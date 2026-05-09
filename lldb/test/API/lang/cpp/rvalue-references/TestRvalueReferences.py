@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class RvalueReferencesTestCase(TestBase):
     # rdar://problem/11479676
     @expectedFailureAll(

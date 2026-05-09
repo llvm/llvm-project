@@ -562,6 +562,10 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() {
     return {};
