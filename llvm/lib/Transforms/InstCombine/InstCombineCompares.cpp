@@ -2188,19 +2188,52 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
   Type *MulTy = Mul->getType();
   Value *X = Mul->getOperand(0);
 
-  // If there's no overflow:
-  // X * X == 0 --> X == 0
-  // X * X != 0 --> X != 0
-  if (Cmp.isEquality() && C.isZero() && X == Mul->getOperand(1) &&
-      (Mul->hasNoUnsignedWrap() || Mul->hasNoSignedWrap()))
-    return new ICmpInst(Pred, X, ConstantInt::getNullValue(MulTy));
-
-  // If unsigned compare or equality comparison of self multiply and square,
-  // compare square roots
-  if (!Cmp.isSigned() && X == Mul->getOperand(1) && Mul->hasNoUnsignedWrap()) {
+  // If comparing a square with a constant, try simplifying to comparing square
+  // roots
+  if (X == Mul->getOperand(1)) {
     APInt R = C.sqrt();
-    if (C == R * R)
+    bool IsSqr = C == R * R;
+
+    // X * X eq/ne C
+    if (Cmp.isEquality() &&
+        (Mul->hasNoUnsignedWrap() || (Mul->hasNoSignedWrap() && C.isZero()))) {
+
+      // If constant is not a square, eq/ne is false/true respectively
+      if (!IsSqr)
+        return replaceInstUsesWith(
+            Cmp, ConstantInt::getBool(Cmp.getType(),
+                                      CmpInst::isFalseWhenEqual(Pred)));
+
       return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+    }
+
+    // If the multiply does not wrap
+    // X * X pred C --> X pred R
+    if (Cmp.isUnsigned() && Mul->hasNoUnsignedWrap()) {
+
+      if (IsSqr)
+        return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+
+      // If C is not a square, we use floor/ceil of sqrt(C)
+      //
+      // If LT or LE, we need R to be an overestimate of sqrt(C),
+      // then use the strict predicate (LT->LT, LE->LT).
+      //
+      // If GT or GE, we need R to be an underestimate of sqrt(C),
+      // then use the strict predicate (GT->GT, GE->GT).
+      bool NeedOverestimate = ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+
+      // Is R currently an underestimate or overestimate of sqrt(C)?
+      bool Overestimate = C.ult(R * R);
+
+      if (Overestimate && !NeedOverestimate)
+        --R;
+      if (!Overestimate && NeedOverestimate)
+        ++R;
+
+      return new ICmpInst(Cmp.getStrictPredicate(), X,
+                          ConstantInt::get(MulTy, R));
+    }
   }
 
   const APInt *MulC;

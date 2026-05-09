@@ -121,6 +121,15 @@ define i1 @squared_nuw_eq_negative_sqr(i8 %x) {
   ret i1 %r
 }
 
+define i1 @squared_eq_non_sqr(i8 %x) {
+; CHECK-LABEL: @squared_eq_non_sqr(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp eq i8 %m, 10
+  ret i1 %r
+}
+
 ; negative test - signed compare
 
 define i1 @squared_nuw_slt_sqr(i8 %x) {
@@ -144,6 +153,66 @@ define i1 @squared_ult_sqr(i8 %x) {
 ;
   %m = mul i8 %x, %x
   %r = icmp ult i8 %m, 9
+  ret i1 %r
+}
+
+define i1 @squared_ult_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ult_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ult i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_ule_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ule_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ule i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_ule_est_sqr2(i8 %x) {
+; CHECK-LABEL: @squared_ule_est_sqr2(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ule i8 %m, 15
+  ret i1 %r
+}
+
+define i1 @squared_ugt_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ugt_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ugt i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_uge_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_uge_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp uge i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_uge_est_sqr2(i8 %x) {
+; CHECK-LABEL: @squared_uge_est_sqr2(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp uge i8 %m, 15
   ret i1 %r
 }
 
