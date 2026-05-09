@@ -61,26 +61,6 @@ uint64x2_t test_vtstq_p64(poly64x2_t a, poly64x2_t b) {
   return vtstq_p64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vget_lane_p64(
-// CHECK-SAME: <1 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[V]], i32 0
-// CHECK-NEXT:    ret i64 [[VGET_LANE]]
-//
-poly64_t test_vget_lane_p64(poly64x1_t v) {
-  return vget_lane_p64(v, 0);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vgetq_lane_p64(
-// CHECK-SAME: <2 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <2 x i64> [[V]], i32 1
-// CHECK-NEXT:    ret i64 [[VGETQ_LANE]]
-//
-poly64_t test_vgetq_lane_p64(poly64x2_t v) {
-  return vgetq_lane_p64(v, 1);
-}
-
 // CHECK-LABEL: define dso_local <1 x i64> @test_vset_lane_p64(
 // CHECK-SAME: i64 noundef [[A:%.*]], <1 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
