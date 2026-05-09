@@ -126,6 +126,10 @@ struct TestLinalgTransforms
   Option<bool> testDecomposeWinogradOps{
       *this, "test-decompose-winograd-ops",
       llvm::cl::desc("Test decompose Winograd ops"), llvm::cl::init(false)};
+  Option<bool> testDecomposeLocalSoftmax{
+      *this, "test-decompose-local-softmax",
+      llvm::cl::desc("Test decompose local_softmax op"),
+      llvm::cl::init(false)};
   Option<bool> testFoldIntoPackAndUnpack{
       *this, "test-fold-into-pack-and-unpack",
       llvm::cl::desc("Test folding ops into linalg.pack and linalg.unpack"),
@@ -227,6 +231,17 @@ static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
   (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
+static void applyDecomposeLocalSoftmax(func::FuncOp funcOp) {
+  IRRewriter rewriter(funcOp.getContext());
+  funcOp.walk([&](linalg::LocalSoftmaxOp op) {
+    rewriter.setInsertionPoint(op);
+    FailureOr<SmallVector<Value>> result = op.decomposeOperation(rewriter);
+    if (succeeded(result)) {
+      rewriter.replaceOp(op, *result);
+    }
+  });
+}
+
 static void applyFoldIntoPackAndUnpackPatterns(
     Operation *rootOp,
     const linalg::ControlFoldIntoPackUnpackFn &controlFn = nullptr) {
@@ -267,6 +282,8 @@ void TestLinalgTransforms::runOnOperation() {
     return applyWinogradConv2D(getOperation());
   if (testDecomposeWinogradOps)
     return applyDecomposeWinogradOps(getOperation());
+  if (testDecomposeLocalSoftmax)
+    return applyDecomposeLocalSoftmax(getOperation());
   Operation *rootOp = getOperation();
   if (testFoldIntoPackAndUnpack)
     applyFoldIntoPackAndUnpackPatterns(rootOp);

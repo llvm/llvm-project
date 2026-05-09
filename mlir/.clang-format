@@ -1,3 +1,2 @@
 BasedOnStyle: LLVM
 AlwaysBreakTemplateDeclarations: Yes
-LineEnding: LF
