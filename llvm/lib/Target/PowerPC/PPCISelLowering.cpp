@@ -15797,8 +15797,14 @@ static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS) {
     if (Operand.getValueType() != MVT::i128)
       return false;
 
-    if (Operand.getOpcode() == ISD::Constant)
-      return true;
+    if (Operand.getOpcode() == ISD::Constant) {
+      auto *C = cast<ConstantSDNode>(Operand);
+      const APInt &Val = C->getAPIntValue();
+      if (Val.ult(1ULL << 16))
+        return false;
+      else
+        return true;
+    }
 
     auto *LoadNode = dyn_cast<LoadSDNode>(Operand);
     if (!LoadNode)
@@ -15849,10 +15855,19 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    SDValue NewLoad =
-        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
-    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    // Create a new MachineMemOperand without range metadata.
+    // Range metadata is only valid for integer scalar types, not vectors.
+    // The original i128 load may have range metadata, but when we convert
+    // to v16i8, that metadata is no longer semantically valid.
+    MachineMemOperand *MMO = LoadNode->getMemOperand();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *NewMMO = MF.getMachineMemOperand(
+        MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(),
+        MMO->getAlign(), MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
+        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+    SDValue NewLoad = DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                                   LoadNode->getBasePtr(), NewMMO);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LoadNode, 1), NewLoad.getValue(1));
     return NewLoad;
   };
 
