@@ -513,7 +513,8 @@ struct StringOwner {
 
 void InvalidatedGlobalPointerParam(std::vector<std::string> *strings) {
   GlobalView = *strings->begin();
-  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}} expected-note {{invalidated here}}
+  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+                           // expected-note@-1 {{invalidated here}}
 }
 
 void InvalidatedGlobalLocalContainer() {
@@ -525,13 +526,15 @@ void InvalidatedGlobalLocalContainer() {
 void InvalidatedGlobalReferenceAlias(std::vector<std::string> &strings) {
   std::vector<std::string> &alias = strings;
   GlobalViewFromReferenceAlias = *strings.begin();
-  alias.push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}} expected-note {{invalidated here}}
+  alias.push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+                        // expected-note@-1 {{invalidated here}}
 }
 
 void InvalidatedStaticLocal(std::vector<std::string> *strings) {
   static std::string_view StaticView; // expected-note {{this static storage dangles}}
   StaticView = *strings->begin();
-  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}} expected-note {{invalidated here}}
+  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+                           // expected-note@-1 {{invalidated here}}
 }
 
 void GlobalReassignedBeforeInvalidation(std::vector<std::string> *strings) {
@@ -550,13 +553,15 @@ void GlobalUnrelatedContainerInvalidated(std::vector<std::string> *strings1,
 void GlobalDifferentFieldInvalidatedIsOk(TwoVectors &s) {
   GlobalViewFromUnmodifiedField = *s.Strings2.begin();
   auto &strings1 = s.Strings1;
-  strings1.push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}} expected-note {{invalidated here}}
+  strings1.push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+                           // expected-note@-1 {{invalidated here}}
 }
 
 // FIXME: Distinguish owner-borrow from content-borrow.
 void GlobalPointerOwnerBorrowIsOk(std::string *dest) {
   GlobalDest = dest;
-  dest->clear(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}} expected-note {{invalidated here}}
+  dest->clear(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+                 // expected-note@-1 {{invalidated here}}
 }
 
 struct S {
@@ -570,7 +575,8 @@ struct S {
 
   void InvalidatedFieldPointerParam(std::vector<std::string> *strings) {
     Field = *strings->begin();
-    strings->push_back("1"); // expected-warning {{object whose reference is stored in a field is later invalidated}} expected-note {{invalidated here}}
+    strings->push_back("1"); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+                             // expected-note@-1 {{invalidated here}}
   }
 
   void InvalidatedFieldLocalContainer() {
@@ -582,7 +588,8 @@ struct S {
   void InvalidatedFieldReferenceAlias(std::vector<std::string> &strings) {
     std::vector<std::string> &alias = strings;
     FieldFromReferenceAlias = *strings.begin();
-    alias.push_back("1"); // expected-warning {{object whose reference is stored in a field is later invalidated}} expected-note {{invalidated here}}
+    alias.push_back("1"); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    // expected-note@-1 {{invalidated here}}
   }
 
   void FieldReassignedBeforeInvalidation(std::vector<std::string> *strings) {
@@ -600,13 +607,15 @@ struct S {
   // FIXME: Requires field-sensitive AccessPaths to fix.
   void MemberDestructorDifferentFieldIsOk(StringOwner &owner) {
     FieldCharPtr = owner.S.data();
-    owner.T.~basic_string(); // expected-warning {{object whose reference is stored in a field is later invalidated}} expected-note {{invalidated here}}
+    owner.T.~basic_string(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+                             // expected-note@-1 {{invalidated here}}
   }
 };
 
 void InvalidatedStaticDataMember(std::vector<std::string> *strings) {
   S::StaticField = *strings->begin();
-  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}} expected-note {{invalidated here}}
+  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+                           // expected-note@-1 {{invalidated here}}
 }
 
 struct Sink {
@@ -615,7 +624,8 @@ struct Sink {
   // FIXME: Distinguish owner-borrow from content-borrow.
   Sink(std::string *dest, int n) : Dest(dest) {
     if (n > 0)
-      dest->clear(); // expected-warning {{object whose reference is stored in a field is later invalidated}} expected-note {{invalidated here}}
+      dest->clear(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+                     // expected-note@-1 {{invalidated here}}
   }
 };
 } // namespace InvalidatedGlobalAndField
