@@ -2,7 +2,7 @@
 !RUN: %flang_fc1 -fopenmp -fopenmp-version=60 -fdebug-dump-symbols %s 2>&1 | FileCheck %s --check-prefix=NOIMPLICIT
 
 
-!IMPLICIT: k2 (OmpLinear, OmpPreDetermined): {{.*}}
+!IMPLICIT: k2 (OmpLinear, OmpLastPrivate, OmpPreDetermined): {{.*}}
 !NOIMPLICIT: k2 (OmpLastPrivate, OmpPreDetermined): {{.*}}
 subroutine implicit_linear
   integer :: k1, k2
