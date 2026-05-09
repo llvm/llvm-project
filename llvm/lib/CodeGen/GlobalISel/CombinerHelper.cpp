@@ -8642,7 +8642,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
 bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
                                BuildFnTy &MatchInfo) const {
   assert((CtlzMI.getOpcode() == TargetOpcode::G_CTLZ ||
-          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) &&
+          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_POISON) &&
          "Expected G_CTLZ variant");
 
   const Register Dst = CtlzMI.getOperand(0).getReg();

@@ -110,8 +110,8 @@ define <4 x i32> @freeze_abs_vec(<4 x i32> %a0) nounwind {
   ret <4 x i32> %r
 }
 
-define i32 @freeze_abs_undef(i32 %a0) nounwind {
-; X86-LABEL: freeze_abs_undef:
+define i32 @freeze_abs_poison(i32 %a0) nounwind {
+; X86-LABEL: freeze_abs_poison:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
@@ -119,7 +119,7 @@ define i32 @freeze_abs_undef(i32 %a0) nounwind {
 ; X86-NEXT:    cmovsl %ecx, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: freeze_abs_undef:
+; X64-LABEL: freeze_abs_poison:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negl %eax
@@ -131,8 +131,8 @@ define i32 @freeze_abs_undef(i32 %a0) nounwind {
   ret i32 %r
 }
 
-define <4 x i32> @freeze_abs_undef_vec(<4 x i32> %a0) nounwind {
-; X86-LABEL: freeze_abs_undef_vec:
+define <4 x i32> @freeze_abs_poison_vec(<4 x i32> %a0) nounwind {
+; X86-LABEL: freeze_abs_poison_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psrad $31, %xmm1
@@ -140,7 +140,7 @@ define <4 x i32> @freeze_abs_undef_vec(<4 x i32> %a0) nounwind {
 ; X86-NEXT:    psubd %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: freeze_abs_undef_vec:
+; X64-LABEL: freeze_abs_poison_vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pabsd %xmm0, %xmm0
 ; X64-NEXT:    retq
@@ -228,8 +228,8 @@ define i32 @freeze_ctlz(i32 %a0) nounwind {
   ret i32 %r
 }
 
-define i32 @freeze_ctlz_undef(i32 %a0) nounwind {
-; X86-LABEL: freeze_ctlz_undef:
+define i32 @freeze_ctlz_poison(i32 %a0) nounwind {
+; X86-LABEL: freeze_ctlz_poison:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bsrl %eax, %ecx
@@ -239,7 +239,7 @@ define i32 @freeze_ctlz_undef(i32 %a0) nounwind {
 ; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: freeze_ctlz_undef:
+; X64-LABEL: freeze_ctlz_poison:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bsrl %edi, %ecx
 ; X64-NEXT:    xorl $31, %ecx
@@ -254,8 +254,8 @@ define i32 @freeze_ctlz_undef(i32 %a0) nounwind {
   ret i32 %r
 }
 
-define i32 @freeze_ctlz_undef_nonzero(i32 %a0) nounwind {
-; X86-LABEL: freeze_ctlz_undef_nonzero:
+define i32 @freeze_ctlz_poison_nonzero(i32 %a0) nounwind {
+; X86-LABEL: freeze_ctlz_poison_nonzero:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl $1, %eax
@@ -263,7 +263,7 @@ define i32 @freeze_ctlz_undef_nonzero(i32 %a0) nounwind {
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: freeze_ctlz_undef_nonzero:
+; X64-LABEL: freeze_ctlz_poison_nonzero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    orl $1, %edi
 ; X64-NEXT:    bsrl %edi, %eax
@@ -297,8 +297,8 @@ define i32 @freeze_cttz(i32 %a0) nounwind {
   ret i32 %r
 }
 
-define i32 @freeze_cttz_undef(i32 %a0) nounwind {
-; X86-LABEL: freeze_cttz_undef:
+define i32 @freeze_cttz_poison(i32 %a0) nounwind {
+; X86-LABEL: freeze_cttz_poison:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bsfl %eax, %ecx
@@ -306,7 +306,7 @@ define i32 @freeze_cttz_undef(i32 %a0) nounwind {
 ; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: freeze_cttz_undef:
+; X64-LABEL: freeze_cttz_poison:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bsfl %edi, %ecx
 ; X64-NEXT:    movl $32, %eax
@@ -319,15 +319,15 @@ define i32 @freeze_cttz_undef(i32 %a0) nounwind {
   ret i32 %r
 }
 
-define i32 @freeze_cttz_undef_nonzero(i32 %a0) nounwind {
-; X86-LABEL: freeze_cttz_undef_nonzero:
+define i32 @freeze_cttz_poison_nonzero(i32 %a0) nounwind {
+; X86-LABEL: freeze_cttz_poison_nonzero:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: freeze_cttz_undef_nonzero:
+; X64-LABEL: freeze_cttz_poison_nonzero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    orl $1, %edi
 ; X64-NEXT:    rep bsfl %edi, %eax

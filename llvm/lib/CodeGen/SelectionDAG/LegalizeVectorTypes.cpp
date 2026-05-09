@@ -96,10 +96,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::FABS:
   case ISD::FACOS:
   case ISD::FASIN:
@@ -1412,10 +1412,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_CTLZ:
   case ISD::CTTZ:
   case ISD::VP_CTTZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
+  case ISD::VP_CTLZ_ZERO_POISON:
+  case ISD::CTTZ_ZERO_POISON:
+  case ISD::VP_CTTZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::FABS: case ISD::VP_FABS:
@@ -3841,7 +3841,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     Res = SplitVecOp_CttzElts(N);
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Res = SplitVecOp_VP_CttzElements(N);
     break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
@@ -4967,7 +4967,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_CttzElements(SDNode *N) {
   SDValue VLo = DAG.getZExtOrTrunc(EVLLo, DL, ResVT);
 
   // if VP_CTTZ_ELTS(Lo) != EVLLo => VP_CTTZ_ELTS(Lo).
-  // else => EVLLo + (VP_CTTZ_ELTS(Hi) or VP_CTTZ_ELTS_ZERO_UNDEF(Hi)).
+  // else => EVLLo + (VP_CTTZ_ELTS(Hi) or VP_CTTZ_ELTS_ZERO_POISON(Hi)).
   SDValue ResLo = DAG.getNode(ISD::VP_CTTZ_ELTS, DL, ResVT, Lo, MaskLo, EVLLo);
   SDValue ResLoNotEVL =
       DAG.getSetCC(DL, getSetCCResultType(ResVT), ResLo, VLo, ISD::SETNE);
@@ -5356,14 +5356,14 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_BSWAP:
   case ISD::CTLZ:
   case ISD::VP_CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
+  case ISD::VP_CTLZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::CTTZ:
   case ISD::VP_CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
+  case ISD::VP_CTTZ_ZERO_POISON:
   case ISD::FNEG: case ISD::VP_FNEG:
   case ISD::FABS: case ISD::VP_FABS:
   case ISD::VP_SQRT:
@@ -7500,7 +7500,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     Res = WidenVecOp_VP_REDUCE(N);
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Res = WidenVecOp_VP_CttzElements(N);
     break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
