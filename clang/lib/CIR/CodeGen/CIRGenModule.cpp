@@ -17,6 +17,7 @@
 #include "CIRGenFunction.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
+#include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attrs.inc"
@@ -56,10 +57,10 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::AppleARM64:
+  case TargetCXXABI::GenericARM:
     return CreateCIRGenItaniumCXXABI(cgm);
 
   case TargetCXXABI::Fuchsia:
-  case TargetCXXABI::GenericARM:
   case TargetCXXABI::iOS:
   case TargetCXXABI::WatchOS:
   case TargetCXXABI::GenericMIPS:
@@ -464,11 +465,19 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
+  // Weak references don't produce any output by themselves.
   if (global->hasAttr<WeakRefAttr>())
-    errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
+    return;
 
-  if (global->hasAttr<AliasAttr>())
-    errorNYI(global->getSourceRange(), "emitGlobal: AliasAttr");
+  // If this is an alias definition (which otherwise looks like a declaration)
+  // emit it now.
+  if (global->hasAttr<AliasAttr>()) {
+    // Classic codegen calls shouldSkipAliasEmission here to skip alias
+    // emission for OpenMP target device and CUDA configurations.
+    assert(!cir::MissingFeatures::shouldSkipAliasEmission());
+    emitAliasDefinition(gd);
+    return;
+  }
 
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted
@@ -1648,15 +1657,10 @@ void CIRGenModule::addReplacement(StringRef name, mlir::Operation *op) {
 }
 
 #ifndef NDEBUG
-static bool verifyPointerTypeArgs(mlir::ModuleOp modOp, cir::FuncOp oldF,
-                                  cir::FuncOp newF) {
-  std::optional<mlir::SymbolTable::UseRange> optionalUseRange =
-      oldF.getSymbolUses(modOp);
-  if (!optionalUseRange)
-    return true;
-
-  for (const mlir::SymbolTable::SymbolUse &u : *optionalUseRange) {
-    auto call = mlir::dyn_cast<cir::CallOp>(u.getUser());
+static bool verifyPointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF,
+                                  mlir::SymbolUserMap &userMap) {
+  for (mlir::Operation *user : userMap.getUsers(oldF)) {
+    auto call = mlir::dyn_cast<cir::CallOp>(user);
     if (!call)
       continue;
 
@@ -1672,6 +1676,15 @@ static bool verifyPointerTypeArgs(mlir::ModuleOp modOp, cir::FuncOp oldF,
 #endif // NDEBUG
 
 void CIRGenModule::applyReplacements() {
+  if (replacements.empty())
+    return;
+
+  // Build a symbol user map once — this walks the module O(M) one time.
+  // Previously, each replaceAllSymbolUses call walked the entire module,
+  // giving O(R × M) quadratic behavior for R replacements.
+  mlir::SymbolTableCollection symbolTableCollection;
+  mlir::SymbolUserMap userMap(symbolTableCollection, theModule);
+
   for (auto &i : replacements) {
     StringRef mangledName = i.first;
     mlir::Operation *replacement = i.second;
@@ -1687,17 +1700,15 @@ void CIRGenModule::applyReplacements() {
       continue;
     }
 
-    assert(verifyPointerTypeArgs(theModule, oldF, newF) &&
+    assert(verifyPointerTypeArgs(oldF, newF, userMap) &&
            "call argument types do not match replacement function");
 
-    // Replace old with new, but keep the old order.
-    if (oldF.replaceAllSymbolUses(newF.getSymNameAttr(), theModule).failed())
-      llvm_unreachable("internal error, cannot RAUW symbol");
-    if (newF) {
-      newF->moveBefore(oldF);
-      eraseGlobalSymbol(oldF);
-      oldF->erase();
-    }
+    // Replace old with new, but keep the old order.  Uses
+    // SymbolUserMap to touch only actual users, not the whole module.
+    userMap.replaceAllUsesWith(oldF, newF.getSymNameAttr());
+    newF->moveBefore(oldF);
+    eraseGlobalSymbol(oldF);
+    oldF->erase();
   }
 }
 
@@ -3371,8 +3382,88 @@ void CIRGenModule::release() {
 
   emitLLVMUsed();
 
+  // Classic codegen calls `checkAliases` here to validate any alias
+  // definitions emitted during codegen.
+  assert(!cir::MissingFeatures::checkAliases());
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
+}
+
+void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
+  const auto *d = cast<ValueDecl>(gd.getDecl());
+  const AliasAttr *aa = d->getAttr<AliasAttr>();
+  assert(aa && "Not an alias?");
+
+  StringRef mangledName = getMangledName(gd);
+
+  if (aa->getAliasee() == mangledName) {
+    diags.Report(aa->getLocation(), diag::err_cyclic_alias) << 0;
+    return;
+  }
+
+  // If there is a definition in the module, then it wins over the alias.
+  // This is dubious, but allow it to be safe. Just ignore the alias.
+  mlir::Operation *entry = getGlobalValue(mangledName);
+  if (entry) {
+    auto entryGV = mlir::dyn_cast<cir::CIRGlobalValueInterface>(entry);
+    if (entryGV && entryGV.isDefinition())
+      return;
+  }
+
+  // Classic codegen pushes the alias onto an `Aliases` list at this point so
+  // that `checkAliases` can later validate the alias and recover on error.
+  assert(!cir::MissingFeatures::checkAliases());
+
+  mlir::Location loc = getLoc(d->getSourceRange());
+  bool isFunction = isa<FunctionDecl>(d);
+
+  // Get the linkage and the type of the alias.
+  mlir::Type declTy;
+  cir::GlobalLinkageKind linkage;
+  if (isFunction) {
+    declTy = getTypes().getFunctionType(gd);
+    linkage = getFunctionLinkage(gd);
+  } else {
+    declTy = getTypes().convertTypeForMem(d->getType());
+    const auto *vd = cast<VarDecl>(d);
+    linkage = getCIRLinkageVarDefinition(vd);
+  }
+
+  // Aliases that target weak symbols must themselves be marked weak.
+  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
+      d->isWeakImported())
+    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
+
+  // Create the alias op. If there is an existing declaration with the same
+  // name, erase it: any references to it via flat symbol reference will
+  // automatically resolve to the new alias.
+  if (entry) {
+    eraseGlobalSymbol(entry);
+    entry->erase();
+  }
+
+  // Aliases are always definitions, so the MLIR visibility should match the
+  // linkage rather than defaulting to private.
+  mlir::SymbolTable::Visibility visibility =
+      getMLIRVisibilityFromCIRLinkage(linkage);
+
+  // TODO(cir): Make GlobalAlias a separate op.
+  cir::CIRGlobalValueInterface alias =
+      isFunction
+          ? mlir::cast<cir::CIRGlobalValueInterface>(
+                createCIRFunction(loc, mangledName,
+                                  mlir::cast<cir::FuncType>(declTy),
+                                  cast<FunctionDecl>(d))
+                    .getOperation())
+          : mlir::cast<cir::CIRGlobalValueInterface>(
+                createGlobalOp(*this, loc, mangledName, declTy).getOperation());
+  alias.setAliasee(aa->getAliasee());
+  alias.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(alias, visibility);
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  setCommonAttributes(gd, alias);
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
 void CIRGenModule::emitAliasForGlobal(StringRef mangledName,

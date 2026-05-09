@@ -1037,10 +1037,10 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
 
 /// Transform patterns such as (a > b) ? a - b : 0 into usub.sat(a, b).
 /// There are 8 commuted/swapped variants of this pattern.
-static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
-                                            const Value *TrueVal,
-                                            const Value *FalseVal,
-                                            InstCombiner::BuilderTy &Builder) {
+static Value *
+canonicalizeSaturatedSubtractUnsigned(const ICmpInst *ICI, const Value *TrueVal,
+                                      const Value *FalseVal,
+                                      InstCombiner::BuilderTy &Builder) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *A = ICI->getOperand(0);
   Value *B = ICI->getOperand(1);
@@ -1102,6 +1102,48 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   if (IsNegative)
     Result = Builder.CreateNeg(Result);
   return Result;
+}
+
+static Value *
+canonicalizeSaturatedSubtractSigned(const ICmpInst *ICI, const Value *TrueVal,
+                                    const Value *FalseVal,
+                                    InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+  Value *CmpLHS = ICI->getOperand(0);
+  Value *CmpRHS = ICI->getOperand(1);
+
+  // `A != B ? X : Y` --> `A == B ? Y : X`
+  // This canonicalization allows us to handle more patterns with fewer checks.
+  if (Pred == ICmpInst::ICMP_NE) {
+    Pred = ICmpInst::ICMP_EQ;
+    std::swap(TrueVal, FalseVal);
+  }
+
+  // `A == MIN_INT ? MAX_INT : 0 - A` --> `ssub_sat 0, A`
+  if (Pred == ICmpInst::ICMP_EQ && match(CmpRHS, m_SignMask()) &&
+      match(TrueVal, m_MaxSignedValue()) &&
+      match(FalseVal, m_Neg(m_Specific(CmpLHS)))) {
+    return Builder.CreateBinaryIntrinsic(
+        Intrinsic::ssub_sat, ConstantInt::getNullValue(CmpLHS->getType()),
+        CmpLHS);
+  }
+
+  return nullptr;
+}
+
+static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
+                                            const Value *TrueVal,
+                                            const Value *FalseVal,
+                                            InstCombiner::BuilderTy &Builder) {
+  if (Value *V = canonicalizeSaturatedSubtractUnsigned(ICI, TrueVal, FalseVal,
+                                                       Builder))
+    return V;
+
+  if (Value *V =
+          canonicalizeSaturatedSubtractSigned(ICI, TrueVal, FalseVal, Builder))
+    return V;
+
+  return nullptr;
 }
 
 static Value *
@@ -4390,6 +4432,16 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
+
+  // Fold: select (icmp ult X, 2), X, ctpop(X)  -->  ctpop(X)
+  // ctpop(0)==0 and ctpop(1)==1, so the guard is always redundant.
+  if (match(FalseVal, m_Ctpop(m_Specific(TrueVal))) &&
+      match(CondVal, m_SpecificICmp(ICmpInst::ICMP_ULT, m_Specific(TrueVal),
+                                    m_SpecificInt(2)))) {
+    cast<Instruction>(FalseVal)->dropPoisonGeneratingAnnotations();
+    addToWorklist(cast<Instruction>(FalseVal));
+    return replaceInstUsesWith(SI, FalseVal);
+  }
 
   // If the type of select is not an integer type or if the condition and
   // the selection type are not both scalar nor both vector types, there is no

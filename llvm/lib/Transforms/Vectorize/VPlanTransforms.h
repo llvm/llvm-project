@@ -291,15 +291,8 @@ struct VPlanTransforms {
   ///  * Contribute to the address computation of a recipe generating a widen
   ///    memory load/store (VPWidenMemoryInstructionRecipe or
   ///    VPInterleaveRecipe).
-  ///  * Such a widen memory load/store has at least one underlying Instruction
-  ///    that is in a basic block that needs predication and after vectorization
-  ///    the generated instruction won't be predicated.
-  /// Uses \p BlockNeedsPredication to check if a block needs predicating.
-  /// TODO: Replace BlockNeedsPredication callback with retrieving info from
-  ///       VPlan directly.
-  static void dropPoisonGeneratingRecipes(
-      VPlan &Plan,
-      const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
+  ///  * Such a widen memory load/store is masked, but not with the header mask.
+  static void dropPoisonGeneratingRecipes(VPlan &Plan);
 
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses of the canonical IV except for the canonical IV
@@ -539,6 +532,11 @@ struct VPlanTransforms {
   /// recipes. Non load/store input instructions are left unchanged.
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder);
+
+  /// Make VPlan-based scalarization decision prior to delegating to the ones
+  /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
+  /// enabled by prior widening of consecutive memory operations for now.
+  static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 };
 
 } // namespace llvm
