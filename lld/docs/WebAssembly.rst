@@ -108,9 +108,7 @@ WebAssembly-specific options:
      this means inputs should be compiled with `-fPIC` (i.e. `pic` or
      `dynamic-no-pic` relocation models).  This options is useful for linking
      binaries that are themselves static (non-relocatable) but whose undefined
-     symbols are resolved by a dynamic linker.  Since the dynamic linking API is
-     experimental, this option currently requires `--experimental-pic` to also
-     be specified.
+     symbols are resolved by a dynamic linker.
 
 .. option:: --import-memory
 

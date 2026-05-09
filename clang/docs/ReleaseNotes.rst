@@ -476,6 +476,8 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- Clang now explains why template deduction fails for explicit template arguments.
+
 - No longer emitting a ``-Wpre-c2y-compat`` or extension diagnostic about use
   of octal literals with a ``0o`` prefix, and no longer emitting a
   ``-Wdeprecated-octal-literals`` diagnostic for use of octal literals without

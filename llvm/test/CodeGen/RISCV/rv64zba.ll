@@ -2937,7 +2937,7 @@ define signext i16 @srliw_1_sh1add(ptr %0, i32 signext %1) {
 ; RV64XANDESPERF-LABEL: srliw_1_sh1add:
 ; RV64XANDESPERF:       # %bb.0:
 ; RV64XANDESPERF-NEXT:    srliw a1, a1, 1
-; RV64XANDESPERF-NEXT:    nds.lea.h.ze a0, a0, a1
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
 ; RV64XANDESPERF-NEXT:    lh a0, 0(a0)
 ; RV64XANDESPERF-NEXT:    ret
   %3 = lshr i32 %1, 1
@@ -3004,7 +3004,7 @@ define signext i32 @srliw_2_sh2add(ptr %0, i32 signext %1) {
 ; RV64XANDESPERF-LABEL: srliw_2_sh2add:
 ; RV64XANDESPERF:       # %bb.0:
 ; RV64XANDESPERF-NEXT:    srliw a1, a1, 2
-; RV64XANDESPERF-NEXT:    nds.lea.w.ze a0, a0, a1
+; RV64XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV64XANDESPERF-NEXT:    lw a0, 0(a0)
 ; RV64XANDESPERF-NEXT:    ret
   %3 = lshr i32 %1, 2
@@ -3033,7 +3033,7 @@ define i64 @srliw_3_sh3add(ptr %0, i32 signext %1) {
 ; RV64XANDESPERF-LABEL: srliw_3_sh3add:
 ; RV64XANDESPERF:       # %bb.0:
 ; RV64XANDESPERF-NEXT:    srliw a1, a1, 3
-; RV64XANDESPERF-NEXT:    nds.lea.d.ze a0, a0, a1
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ld a0, 0(a0)
 ; RV64XANDESPERF-NEXT:    ret
   %3 = lshr i32 %1, 3

@@ -1,0 +1,104 @@
+# RUN: dsymutil --linker=parallel -f -o %t.parallel.out \
+# RUN:   -oso-prepend-path=%p/../../Inputs -y %s
+# RUN: llvm-dwarfdump --debug-info %t.parallel.out | \
+# RUN:   FileCheck %s --check-prefix=PARALLEL \
+# RUN:                --implicit-check-not=DW_TAG_structure_type
+#
+# RUN: dsymutil --linker=classic -f -o %t.classic.out \
+# RUN:   -oso-prepend-path=%p/../../Inputs -y %s
+# RUN: llvm-dwarfdump --debug-info %t.classic.out | \
+# RUN:   FileCheck %s --check-prefix=CLASSIC
+
+# Two CUs share a class with an in-class static member declaration. The
+# out-of-line definition of the static lives in only one of them, so its
+# DW_AT_specification reference puts the class into the type table. The
+# in-class declaration was previously forced into PlainDwarf and dragged the
+# parent class along with it, producing a duplicate empty class DIE in each
+# CU alongside the artificial type unit copy.
+#
+# The classic linker is unaffected by the parallel linker bug; running it here
+# guards against regressions and confirms the inputs aren't pathological.
+#
+# Compiled from:
+#   h.h:
+#     struct S {
+#       const static int x = 42;
+#       int y;
+#     };
+#   a.cpp:
+#     #include "h.h"
+#     int useA(S *s) { return s->y + S::x; }
+#   b.cpp:
+#     #include "h.h"
+#     const int S::x;
+#     int useB(S *s) { return s->y - S::x; }
+#
+#   clang++ -target x86_64-apple-darwin -g -O0 -c a.cpp -o a.o
+#   clang++ -target x86_64-apple-darwin -g -O0 -c b.cpp -o b.o
+
+---
+triple: 'x86_64-apple-darwin'
+objects:
+  - filename: 'odr-static-member-decl/a.o'
+    timestamp: 0
+    symbols:
+      - { sym: __Z4useAP1S, objAddr: 0x0, binAddr: 0x100000000, size: 0x20 }
+  - filename: 'odr-static-member-decl/b.o'
+    timestamp: 0
+    symbols:
+      - { sym: __Z4useBP1S, objAddr: 0x0, binAddr: 0x100000100, size: 0x20 }
+      - { sym: __ZN1S1xE,   objAddr: 0x14, binAddr: 0x100000200, size: 0x4 }
+...
+
+# Parallel linker: struct S — with the in-class static x and the member y —
+# must appear exactly once, in the artificial type unit. The two source CUs
+# must not carry their own copy. The --implicit-check-not above enforces
+# "exactly one structure_type in the entire dump".
+
+# PARALLEL: DW_TAG_compile_unit
+# PARALLEL: DW_AT_name{{.*}}"__artificial_type_unit"
+# PARALLEL: DW_TAG_structure_type
+# PARALLEL: DW_AT_name{{.*}}"S"
+# PARALLEL: DW_TAG_member
+# PARALLEL: DW_AT_name{{.*}}"y"
+# PARALLEL: DW_TAG_variable
+# PARALLEL: DW_AT_name{{.*}}"x"
+# PARALLEL: DW_AT_declaration
+
+# PARALLEL: DW_TAG_compile_unit
+# PARALLEL: DW_AT_name{{.*}}"a.cpp"
+# PARALLEL: DW_TAG_subprogram
+# PARALLEL: DW_AT_name{{.*}}"useA"
+
+# PARALLEL: DW_TAG_compile_unit
+# PARALLEL: DW_AT_name{{.*}}"b.cpp"
+# PARALLEL: DW_TAG_subprogram
+# PARALLEL: DW_AT_name{{.*}}"useB"
+
+# Classic linker: there is no artificial type unit; each source CU keeps its
+# own struct S. Verify both copies are well-formed (member y, in-class static
+# decl x) and that each CU has its subprogram.
+
+# CLASSIC: DW_TAG_compile_unit
+# CLASSIC: DW_AT_name{{.*}}"a.cpp"
+# CLASSIC: DW_TAG_structure_type
+# CLASSIC: DW_AT_name{{.*}}"S"
+# CLASSIC: DW_TAG_variable
+# CLASSIC: DW_AT_name{{.*}}"x"
+# CLASSIC: DW_AT_declaration
+# CLASSIC: DW_TAG_member
+# CLASSIC: DW_AT_name{{.*}}"y"
+# CLASSIC: DW_TAG_subprogram
+# CLASSIC: DW_AT_name{{.*}}"useA"
+
+# CLASSIC: DW_TAG_compile_unit
+# CLASSIC: DW_AT_name{{.*}}"b.cpp"
+# CLASSIC: DW_TAG_structure_type
+# CLASSIC: DW_AT_name{{.*}}"S"
+# CLASSIC: DW_TAG_variable
+# CLASSIC: DW_AT_name{{.*}}"x"
+# CLASSIC: DW_AT_declaration
+# CLASSIC: DW_TAG_member
+# CLASSIC: DW_AT_name{{.*}}"y"
+# CLASSIC: DW_TAG_subprogram
+# CLASSIC: DW_AT_name{{.*}}"useB"

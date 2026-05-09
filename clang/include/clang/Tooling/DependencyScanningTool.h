@@ -47,6 +47,7 @@ public:
   /// dependency file contents otherwise.
   std::optional<std::string>
   getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD,
+                    dependencies::LookupModuleOutputCallback LookupModuleOutput,
                     DiagnosticConsumer &DiagConsumer);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.

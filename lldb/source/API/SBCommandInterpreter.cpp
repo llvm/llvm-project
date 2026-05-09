@@ -75,7 +75,13 @@ protected:
     SBCommandReturnObject sb_return(result);
     SBCommandInterpreter sb_interpreter(&m_interpreter);
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
-    m_backend->DoExecute(debugger_sb, command.GetArgumentVector(), sb_return);
+    bool success = m_backend->DoExecute(debugger_sb,
+                                        command.GetArgumentVector(), sb_return);
+    // If the plugin command did not set its own status, infer it from the
+    // boolean return value so that callers always see a defined status.
+    if (result.GetStatus() == eReturnStatusInvalid)
+      result.SetStatus(success ? eReturnStatusSuccessFinishResult
+                               : eReturnStatusFailed);
   }
   lldb::SBCommandPluginInterface *m_backend;
   std::optional<std::string> m_auto_repeat_command;

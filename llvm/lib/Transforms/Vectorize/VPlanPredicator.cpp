@@ -260,6 +260,9 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 }
 
 void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
+  // Nested loop regions (outer-loop vectorization) are not supported yet.
+  if (Plan.isOuterLoop())
+    return;
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.

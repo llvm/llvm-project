@@ -121,8 +121,14 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     break;
   }
   // Zksh
-  case RISCV::BI__builtin_riscv_sm3p0:
-  case RISCV::BI__builtin_riscv_sm3p1:
+  case RISCV::BI__builtin_riscv_sm3p0: {
+    intrinsicName = "riscv.sm3p0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sm3p1: {
+    intrinsicName = "riscv.sm3p1";
+    break;
+  }
   // Zbb
   case RISCV::BI__builtin_riscv_clz_32:
   case RISCV::BI__builtin_riscv_clz_64:

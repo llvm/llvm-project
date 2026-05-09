@@ -1559,10 +1559,12 @@ void CommandObjectTypeSummaryAdd::DoExecute(Args &command,
 #else
     result.AppendError("python is disabled");
 #endif
-    return;
+  } else {
+    Execute_StringSummary(command, result);
   }
 
-  Execute_StringSummary(command, result);
+  if (result.GetStatus() != eReturnStatusFailed)
+    result.SetStatus(eReturnStatusSuccessFinishResult);
 }
 
 static bool FixArrayTypeNameWithRegex(ConstString &type_name) {

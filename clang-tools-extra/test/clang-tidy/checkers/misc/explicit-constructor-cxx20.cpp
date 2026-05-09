@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s google-explicit-constructor %t -std=c++20-or-later
+// RUN: %check_clang_tidy %s misc-explicit-constructor %t -std=c++20-or-later
 
 namespace issue_81121
 {
@@ -20,7 +20,7 @@ struct C {
 
 struct D {
   explicit(ConstFalse) D(int);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: single-argument constructors explicit expression evaluates to 'false' [google-explicit-constructor]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: single-argument constructors explicit expression evaluates to 'false'
 };
 
 template <typename>
@@ -41,7 +41,7 @@ struct G {
 template <typename>
 struct H {
   explicit(ConstFalse) H(int);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: single-argument constructors explicit expression evaluates to 'false' [google-explicit-constructor]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: single-argument constructors explicit expression evaluates to 'false'
 };
 
 template <int Val>

@@ -613,6 +613,24 @@ define signext i16 @srliw_1_sh1add(ptr %0, i32 signext %1) {
   ret i16 %6
 }
 
+define i64 @srliw_1_sh1add_2(i64 %x, i64 %y) {
+; RV64I-LABEL: srliw_1_sh1add_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srliw_1_sh1add_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a0, a0, 1
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %a = and i64 %x, u0xfffffffe
+  %b = add i64 %a, %y
+  ret i64 %b
+}
+
 define i128 @slliuw_ptrdiff(i64 %diff, ptr %baseptr) {
 ; RV64I-LABEL: slliuw_ptrdiff:
 ; RV64I:       # %bb.0:
@@ -661,6 +679,24 @@ define signext i32 @srliw_2_sh2add(ptr %0, i32 signext %1) {
   ret i32 %6
 }
 
+define i64 @srliw_2_sh2add_2(i64 %x, i64 %y) {
+; RV64I-LABEL: srliw_2_sh2add_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a0, a0, 2
+; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srliw_2_sh2add_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a0, a0, 2
+; RV64ZBA-NEXT:    sh2add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %a = and i64 %x, u0xfffffffc
+  %b = add i64 %a, %y
+  ret i64 %b
+}
+
 define i64 @srliw_3_sh3add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_3_sh3add:
 ; RV64I:       # %bb.0:
@@ -681,6 +717,24 @@ define i64 @srliw_3_sh3add(ptr %0, i32 signext %1) {
   %5 = getelementptr inbounds i64, ptr %0, i64 %4
   %6 = load i64, ptr %5, align 8
   ret i64 %6
+}
+
+define i64 @srliw_3_sh3add_2(i64 %x, i64 %y) {
+; RV64I-LABEL: srliw_3_sh3add_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a0, a0, 3
+; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srliw_3_sh3add_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a0, a0, 3
+; RV64ZBA-NEXT:    sh3add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %a = and i64 %x, u0xfffffff8
+  %b = add i64 %a, %y
+  ret i64 %b
 }
 
 define signext i32 @srliw_1_sh2add(ptr %0, i32 signext %1) {

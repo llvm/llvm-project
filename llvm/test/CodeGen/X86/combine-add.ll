@@ -209,14 +209,14 @@ define <4 x i32> @combine_vec_add_sub_sub(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    paddd %xmm2, %xmm1
 ; SSE-NEXT:    psubd %xmm1, %xmm0
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_sub_sub:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,2,3]
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> %a, %b
   %2 = sub <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %d

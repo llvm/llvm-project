@@ -1,7 +1,6 @@
 ; RUN: not opt -passes='print<dxil-root-signature>' %s -S -o - 2>&1 | FileCheck %s
 
 ; CHECK: error: Function associated with Root Signature definition is null
-; CHECK-NOT: Root Signature Definitions
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 

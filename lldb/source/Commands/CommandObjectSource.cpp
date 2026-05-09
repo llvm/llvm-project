@@ -1199,6 +1199,8 @@ protected:
         }
       }
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   const SymbolContextList *GetBreakpointLocations() {

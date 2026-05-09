@@ -5231,14 +5231,14 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
     "candidate template ignored: deduced values %diff{"
     "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
     "%1 and %3 of conflicting types for parameter %0}2,4">;
-def note_ovl_candidate_explicit_arg_mismatch_named : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0">;
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;
-def note_ovl_candidate_explicit_arg_mismatch_unnamed : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for %ordinal0 template parameter">;
+def note_ovl_candidate_explicit_arg_mismatch : Note<
+    "candidate template ignored: %enum_select<ExplicitArgMismatchReasonKind>{"
+    "%Vague{invalid explicitly-specified argument}|"
+    "%Detailed{%3}}2 for %enum_select<ExplicitArgMismatchNameKind>{"
+    "%Named{template parameter %1}|"
+    "%Unnamed{%ordinal1 template parameter}}0">;
 def note_ovl_candidate_instantiation_depth : Note<
     "candidate template ignored: substitution exceeded maximum template "
     "instantiation depth">;

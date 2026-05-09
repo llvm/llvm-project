@@ -280,7 +280,7 @@
 "`LWG4259 <https://wg21.link/LWG4259>`__","P1148R0 changed the return values of searching functions of ``std::basic_string`` on some platforms","2026-03 (Croydon)","","","`#189822 <https://github.com/llvm/llvm-project/issues/189822>`__",""
 "`LWG4290 <https://wg21.link/LWG4290>`__","Missing *Mandates* clauses on ``is_sufficiently_aligned``","2026-03 (Croydon)","","","`#189823 <https://github.com/llvm/llvm-project/issues/189823>`__",""
 "`LWG4314 <https://wg21.link/LWG4314>`__","Missing move in ``mdspan`` layout ``mapping::operator()``","2026-03 (Croydon)","","","`#189824 <https://github.com/llvm/llvm-project/issues/189824>`__",""
-"`LWG4324 <https://wg21.link/LWG4324>`__","``unique_ptr<void>::operator*`` is not SFINAE-friendly","2026-03 (Croydon)","","","`#189825 <https://github.com/llvm/llvm-project/issues/189825>`__",""
+"`LWG4324 <https://wg21.link/LWG4324>`__","``unique_ptr<void>::operator*`` is not SFINAE-friendly","2026-03 (Croydon)","|Complete|","23","`#189825 <https://github.com/llvm/llvm-project/issues/189825>`__",""
 "`LWG4325 <https://wg21.link/LWG4325>`__","``std::indirect``'s ``operator==`` still does not support incomplete types","2026-03 (Croydon)","","","`#189826 <https://github.com/llvm/llvm-project/issues/189826>`__",""
 "`LWG4339 <https://wg21.link/LWG4339>`__","``task``'s coroutine frame may be released late","2026-03 (Croydon)","","","`#189827 <https://github.com/llvm/llvm-project/issues/189827>`__",""
 "`LWG4347 <https://wg21.link/LWG4347>`__","``task``'s stop source is always created","2026-03 (Croydon)","","","`#189828 <https://github.com/llvm/llvm-project/issues/189828>`__",""

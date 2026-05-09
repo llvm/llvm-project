@@ -19,7 +19,7 @@
 #include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
 #include "../cppcoreguidelines/ProTypeVarargCheck.h"
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
-#include "../google/ExplicitConstructorCheck.h"
+#include "../misc/ExplicitConstructorCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../modernize/AvoidCArraysCheck.h"
@@ -63,7 +63,7 @@ public:
         "hicpp-multiway-paths-covered");
     CheckFactories.registerCheck<bugprone::SignedBitwiseCheck>(
         "hicpp-signed-bitwise");
-    CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
+    CheckFactories.registerCheck<misc::ExplicitConstructorCheck>(
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(
         "hicpp-function-size");

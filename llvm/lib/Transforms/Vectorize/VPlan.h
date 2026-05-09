@@ -4616,6 +4616,10 @@ public:
   LLVM_ABI_FOR_TEST VPRegionBlock *getVectorLoopRegion();
   LLVM_ABI_FOR_TEST const VPRegionBlock *getVectorLoopRegion() const;
 
+  /// Returns true if this VPlan is for an outer loop, i.e., its vector
+  /// loop region contains a nested loop region.
+  LLVM_ABI_FOR_TEST bool isOuterLoop() const;
+
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch. If there is an early exit from the vector loop, the middle block

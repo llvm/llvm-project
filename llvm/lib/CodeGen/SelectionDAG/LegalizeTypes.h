@@ -806,6 +806,7 @@ private:
   SDValue SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N);
   SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
   SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_BR_CC(SDNode *N);
   SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo);

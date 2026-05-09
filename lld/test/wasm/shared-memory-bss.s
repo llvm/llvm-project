@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --experimental-pic -shared --shared-memory -o %t.so %t.o
+# RUN: wasm-ld -shared --shared-memory -o %t.so %t.o
 # RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.so | FileCheck %s
 # RUN: obj2yaml %t.so | FileCheck %s --check-prefix=YAML
 

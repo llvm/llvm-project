@@ -1749,13 +1749,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_cvt_sr_bf8_f32, amdgcn_cvt_sr_fp8_f32,
-                    amdgcn_cvt_pk_bf8_f32, amdgcn_cvt_pk_fp8_f32},
+                    amdgcn_cvt_sr_fp8_f32_e5m3, amdgcn_cvt_pk_bf8_f32,
+                    amdgcn_cvt_pk_fp8_f32, amdgcn_cvt_pk_fp8_f32_e5m3},
                    Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
-  addRulesForIOpcs(
-      {amdgcn_cvt_off_f32_i4, amdgcn_cvt_f32_bf8, amdgcn_cvt_f32_fp8}, Standard)
+  addRulesForIOpcs({amdgcn_cvt_off_f32_i4, amdgcn_cvt_f32_bf8,
+                    amdgcn_cvt_f32_fp8, amdgcn_cvt_f32_fp8_e5m3},
+                   Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
 
@@ -1874,6 +1876,25 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_global_store_async_from_lds_b64,
                     amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_cluster_load_b32})
+      .Any({{UniB32}, {{UniInVgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivB32, _, UniP1}, {{VgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any(
+          {{DivB32, _, DivP1}, {{VgprB32}, {IntrId, VgprP1, Imm, SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_cluster_load_b64})
+      .Any({{UniB64}, {{UniInVgprB64}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivB64, _, UniP1}, {{VgprB64}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any(
+          {{DivB64, _, DivP1}, {{VgprB64}, {IntrId, VgprP1, Imm, SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_cluster_load_b128})
+      .Any({{UniB128}, {{UniInVgprB128}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivB128, _, UniP1},
+            {{VgprB128}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivB128, _, DivP1},
+            {{VgprB128}, {IntrId, VgprP1, Imm, SgprB32_M0}}});
 
   addRulesForIOpcs({amdgcn_cluster_load_async_to_lds_b8,
                     amdgcn_cluster_load_async_to_lds_b32,

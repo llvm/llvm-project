@@ -1363,7 +1363,7 @@ CallInst *IRBuilderBase::CreateAlignmentAssumptionHelper(const DataLayout &DL,
 
 CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
                                                    Value *PtrValue,
-                                                   unsigned Alignment,
+                                                   uint64_t Alignment,
                                                    Value *OffsetValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");

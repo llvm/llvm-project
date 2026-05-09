@@ -186,8 +186,8 @@ Error DWARFLinkerImpl::link() {
       // Link object file.
       if (Error Err = Context->link(ArtificialTypeUnit.get()))
         GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
-
-      Context->InputDWARFFile.unload();
+      if (Error Err = Context->unloadInput())
+        GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
     }
   } else {
     DefaultThreadPool Pool(llvm::parallel::strategy);
@@ -196,8 +196,8 @@ Error DWARFLinkerImpl::link() {
         // Link object file.
         if (Error Err = Context->link(ArtificialTypeUnit.get()))
           GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
-
-        Context->InputDWARFFile.unload();
+        if (Error Err = Context->unloadInput())
+          GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
       });
 
     Pool.wait();
@@ -214,6 +214,25 @@ Error DWARFLinkerImpl::link() {
         ModuleUnit.Unit->mergeSwiftInterfaces(*SwiftInterfaces);
       for (std::unique_ptr<CompileUnit> &CU : Context->CompileUnits)
         CU->mergeSwiftInterfaces(*SwiftInterfaces);
+    }
+  }
+
+  // Build the linker-wide CIE registry, then emit each context's
+  // .debug_frame in parallel. See CIERegistry for the ownership rules.
+  if (!GlobalData.getOptions().UpdateIndexTablesOnly) {
+    LinkContext::CIERegistry CIEs;
+    for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
+      if (Context->FrameScan)
+        Context->registerCIEs(CIEs);
+
+    llvm::parallel::TaskGroup TGroup;
+    for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
+      if (!Context->FrameScan)
+        continue;
+      TGroup.spawn([&]() {
+        if (Error Err = Context->emitDebugFrame(CIEs))
+          GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
+      });
     }
   }
 
@@ -595,18 +614,6 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
     if (Error Err = emitInvariantSections())
       return Err;
-  } else if (!CompileUnits.empty()) {
-    // Emit .debug_frame section.
-
-    Error ResultErr = Error::success();
-    llvm::parallel::TaskGroup TGroup;
-    // We use task group here as PerThreadBumpPtrAllocator should be called from
-    // the threads created by ThreadPoolExecutor.
-    TGroup.spawn([&]() {
-      if (Error Err = cloneAndEmitDebugFrame())
-        ResultErr = std::move(Err);
-    });
-    return ResultErr;
   }
 
   return Error::success();
@@ -752,11 +759,15 @@ Error DWARFLinkerImpl::LinkContext::emitInvariantSections() {
   return Error::success();
 }
 
-Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
+Error DWARFLinkerImpl::LinkContext::scanFrameData() {
+  if (GlobalData.getOptions().UpdateIndexTablesOnly)
+    return Error::success();
   if (!GlobalData.getTargetTriple().has_value())
     return Error::success();
 
   if (InputDWARFFile.Dwarf == nullptr)
+    return Error::success();
+  if (CompileUnits.empty())
     return Error::success();
 
   const DWARFObject &InputDWARFObj = InputDWARFFile.Dwarf->getDWARFObj();
@@ -765,41 +776,50 @@ Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
   if (OrigFrameData.empty())
     return Error::success();
 
+  auto Scan = std::make_unique<FrameScanResult>();
+  Scan->FrameData = OrigFrameData;
+  Scan->AddressSize = InputDWARFObj.getAddressSize();
+
   RangesTy AllUnitsRanges;
   for (std::unique_ptr<CompileUnit> &Unit : CompileUnits) {
     for (auto CurRange : Unit->getFunctionRanges())
       AllUnitsRanges.insert(CurRange.Range, CurRange.Value);
   }
 
-  unsigned SrcAddrSize = InputDWARFObj.getAddressSize();
-
-  SectionDescriptor &OutSection =
-      getOrCreateSectionDescriptor(DebugSectionKind::DebugFrame);
-
-  DataExtractor Data(OrigFrameData, InputDWARFObj.isLittleEndian(), 0);
+  StringRef FrameBytes = Scan->FrameData;
+  DataExtractor Data(FrameBytes, InputDWARFObj.isLittleEndian(), 0);
   uint64_t InputOffset = 0;
+  const unsigned SrcAddrSize = Scan->AddressSize;
+  // Width of the CIE_pointer field at the start of every FDE (and of the
+  // CIE_id sentinel at the start of every CIE) in DWARF32 .debug_frame.
+  constexpr unsigned CIEPointerSize = 4;
 
-  // Store the data of the CIEs defined in this object, keyed by their
-  // offsets.
-  DenseMap<uint64_t, StringRef> LocalCIES;
-
-  /// The CIEs that have been emitted in the output section. The actual CIE
-  /// data serves a the key to this StringMap.
-  StringMap<uint32_t> EmittedCIEs;
+  // CIEs defined in this input, keyed by their input offsets.
+  DenseMap<uint64_t, StringRef> LocalCIEs;
+  DenseSet<uint64_t> AddedCIEs;
 
   while (Data.isValidOffset(InputOffset)) {
     uint64_t EntryOffset = InputOffset;
     uint32_t InitialLength = Data.getU32(&InputOffset);
     if (InitialLength == 0xFFFFFFFF)
-      return createFileError(InputDWARFObj.getFileName(),
+      return createFileError(InputDWARFFile.FileName,
                              createStringError(std::errc::invalid_argument,
-                                               "Dwarf64 bits no supported"));
+                                               "Dwarf64 bits not supported"));
+
+    // Reject lengths that don't fit in the input section. substr() saturates
+    // silently, which would otherwise let a malformed length poison the
+    // CIE bytes used as the registry key.
+    if (InitialLength > FrameBytes.size() - InputOffset)
+      return createFileError(
+          InputDWARFFile.FileName,
+          createStringError(std::errc::invalid_argument,
+                            "Truncated .debug_frame entry."));
 
     uint32_t CIEId = Data.getU32(&InputOffset);
     if (CIEId == 0xFFFFFFFF) {
       // This is a CIE, store it.
-      StringRef CIEData = OrigFrameData.substr(EntryOffset, InitialLength + 4);
-      LocalCIES[EntryOffset] = CIEData;
+      StringRef CIEData = FrameBytes.substr(EntryOffset, InitialLength + 4);
+      LocalCIEs[EntryOffset] = CIEData;
       // The -4 is to account for the CIEId we just read.
       InputOffset += InitialLength - 4;
       continue;
@@ -820,44 +840,103 @@ Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
     }
 
     // This is an FDE, and we have a mapping.
-    // Have we already emitted a corresponding CIE?
-    StringRef CIEData = LocalCIES[CIEId];
+    StringRef CIEData = LocalCIEs.lookup(CIEId);
     if (CIEData.empty())
       return createFileError(
-          InputDWARFObj.getFileName(),
+          InputDWARFFile.FileName,
           createStringError(std::errc::invalid_argument,
                             "Inconsistent debug_frame content. Dropping."));
 
-    uint64_t OffsetToCIERecord = OutSection.OS.tell();
+    // Reject FDEs whose length doesn't even cover the CIE_pointer and
+    // initial_location fields; otherwise the unsigned subtraction below
+    // would wrap and substr() would saturate to a giant garbage blob.
+    if (InitialLength < CIEPointerSize + SrcAddrSize)
+      return createFileError(InputDWARFFile.FileName,
+                             createStringError(std::errc::invalid_argument,
+                                               "Truncated .debug_frame FDE."));
 
-    // Look if we already emitted a CIE that corresponds to the
-    // referenced one (the CIE data is the key of that lookup).
-    auto IteratorInserted =
-        EmittedCIEs.insert(std::make_pair(CIEData, OffsetToCIERecord));
-    OffsetToCIERecord = IteratorInserted.first->getValue();
+    // Promote each CIE on first reference; CIEs no FDE references are
+    // dropped from the output.
+    if (AddedCIEs.insert(CIEId).second)
+      Scan->CIEs.push_back(CIEData);
 
-    // Emit CIE for this ID if it is not emitted yet.
-    if (IteratorInserted.second)
-      OutSection.OS << CIEData;
-
-    // Remember offset to the FDE record, so that we might update
-    // field referencing CIE record(containing OffsetToCIERecord),
-    // when final offsets are known. OffsetToCIERecord(which is written later)
-    // is local to the current .debug_frame section, it should be updated
-    // with final offset of the .debug_frame section.
-    OutSection.notePatch(
-        DebugOffsetPatch{OutSection.OS.tell() + 4, &OutSection, true});
-
-    // Emit the FDE with updated address and CIE pointer.
-    // (4 + AddrSize) is the size of the CIEId + initial_location
-    // fields that will get reconstructed by emitFDE().
-    unsigned FDERemainingBytes = InitialLength - (4 + SrcAddrSize);
-    emitFDE(OffsetToCIERecord, SrcAddrSize, Loc + Range->Value,
-            OrigFrameData.substr(InputOffset, FDERemainingBytes), OutSection);
+    unsigned FDERemainingBytes = InitialLength - (CIEPointerSize + SrcAddrSize);
+    Scan->FDEs.push_back({CIEData, Loc + Range->Value,
+                          FrameBytes.substr(InputOffset, FDERemainingBytes)});
     InputOffset += FDERemainingBytes;
   }
 
+  FrameScan = std::move(Scan);
   return Error::success();
+}
+
+void DWARFLinkerImpl::LinkContext::registerCIEs(CIERegistry &CIEs) {
+  assert(FrameScan && "registerCIEs called without FrameScan");
+  SectionDescriptor &OutSection =
+      getOrCreateSectionDescriptor(DebugSectionKind::DebugFrame);
+
+  uint32_t NextLocalOffset = 0;
+  for (StringRef CIEBytes : FrameScan->CIEs) {
+    auto [It, Inserted] =
+        CIEs.try_emplace(CIEBytes, CIELocation{&OutSection, NextLocalOffset});
+    if (Inserted) {
+      FrameScan->OwnedCIEs.push_back(CIEBytes);
+      NextLocalOffset += static_cast<uint32_t>(CIEBytes.size());
+    }
+  }
+}
+
+Error DWARFLinkerImpl::LinkContext::emitDebugFrame(const CIERegistry &CIEs) {
+  assert(FrameScan && "emitDebugFrame called without FrameScan");
+  SectionDescriptor &OutSection =
+      getSectionDescriptor(DebugSectionKind::DebugFrame);
+
+  // Emit owned CIEs at the offsets registerCIEs reserved for them.
+  for (StringRef CIEBytes : FrameScan->OwnedCIEs)
+    OutSection.OS << CIEBytes;
+
+  const dwarf::FormParams FP = OutSection.getFormParams();
+  const unsigned SrcAddrSize = FrameScan->AddressSize;
+
+  for (const FrameScanResult::FDE &FDE : FrameScan->FDEs) {
+    auto It = CIEs.find(FDE.CIEBytes);
+    assert(It != CIEs.end() && "CIE missing from registry");
+    SectionDescriptor *CIEOwnerSection = It->second.OwnerSection;
+    const uint32_t CIELocalOffset = It->second.LocalOffset;
+
+    const uint64_t FDEPos = OutSection.OS.tell();
+    // Note: this guards against a single context's section exceeding the
+    // DWARF32 limit. It does NOT catch the post-glue overflow that would
+    // happen if the concatenated .debug_frame across all contexts pushes
+    // past 4 GB; that case slips through silently because StartOffset is
+    // not yet assigned. A post-glue check would belong in the patch
+    // resolver in OutputSections.cpp.
+    if (FDEPos > FP.getDwarfMaxOffset())
+      return createFileError(
+          InputDWARFFile.FileName,
+          createStringError(".debug_frame section offset "
+                            "0x" +
+                            Twine::utohexstr(FDEPos) + " exceeds the " +
+                            dwarf::FormatString(FP.Format) + " limit"));
+
+    // CIE_pointer field follows the 4-byte initial_length.
+    OutSection.notePatch(DebugOffsetPatch{FDEPos + 4, CIEOwnerSection, true});
+
+    emitFDE(CIELocalOffset, SrcAddrSize, FDE.Address, FDE.Instructions,
+            OutSection);
+  }
+
+  FrameScan.reset();
+  return Error::success();
+}
+
+Error DWARFLinkerImpl::LinkContext::unloadInput() {
+  // Scan the input's .debug_frame now, while the DWARFContext is still
+  // loaded, so the later (post-pool) emission pass can run against the
+  // scan result alone.
+  Error ScanErr = scanFrameData();
+  InputDWARFFile.unload();
+  return ScanErr;
 }
 
 /// Emit a FDE into the debug_frame section. \p FDEBytes

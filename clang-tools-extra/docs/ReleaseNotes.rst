@@ -207,6 +207,18 @@ New check aliases
   to :doc:`bugprone-assignment-in-selection-statement
   <clang-tidy/checks/bugprone/assignment-in-selection-statement>`.
 
+- Renamed :doc:`cppcoreguidelines-explicit-constructor
+  <clang-tidy/checks/cppcoreguidelines/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `cppcoreguidelines-explicit-constructor` name is kept as an alias.
+
+- Renamed :doc:`google-explicit-constructor
+  <clang-tidy/checks/google/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `google-explicit-constructor` name is kept as an alias.
+
 - Renamed :doc:`hicpp-exception-baseclass
   <clang-tidy/checks/hicpp/exception-baseclass>`
   to :doc:`bugprone-std-exception-baseclass
@@ -439,6 +451,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on
   private deleted functions, if they do not have a public overload or are a
   special member function.
+
+- Improved :doc:`modernize-use-nodiscard
+  <clang-tidy/checks/modernize/use-nodiscard>` check by avoiding false
+  positives on functions returning specializations of class templates marked
+  ``[[nodiscard]]``.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
