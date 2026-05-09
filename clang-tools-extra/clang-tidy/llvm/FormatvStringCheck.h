@@ -39,7 +39,7 @@ public:
 
 private:
   llvm::StringSet<> Functions;
-  const std::string AdditionalFunctions;
+  const StringRef AdditionalFunctions;
 };
 
 } // namespace clang::tidy::llvm_check
