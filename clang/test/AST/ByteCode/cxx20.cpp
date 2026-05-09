@@ -775,8 +775,7 @@ namespace FailingDestructor {
     }
   };
   template<D d>
-  void f() {} // both-note {{invalid explicitly-specified argument}} \
-              // both-note {{non-type template argument is not a constant expression}}
+  void f() {} // both-note {{non-type template argument is not a constant expression}}
 
   void g() {
     f<D{0, false}>(); // both-error {{no matching function}}

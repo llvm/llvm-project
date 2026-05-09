@@ -33,6 +33,7 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"

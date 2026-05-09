@@ -45,7 +45,6 @@ template<typename T>
 constexpr T outer() {
   // FIXME: The C++11 error seems wrong
   return []<T x>() { return x; }.template operator()<123>(); // expected-error {{no matching member function}}  \
-                                                                expected-note {{candidate template ignored}}    \
         cxx11-note {{non-literal type '<dependent type>' cannot be used in a constant expression}} \
         cxx11-cxx14-note {{non-type template argument does not refer to any declaration}} \
         cxx17-cxx20-note {{value of type 'int' is not implicitly convertible to 'int *'}} \

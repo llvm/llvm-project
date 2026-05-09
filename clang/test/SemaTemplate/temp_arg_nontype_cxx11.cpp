@@ -42,9 +42,8 @@ template <int a, unsigned b, int c>
 void TempFunc() {}
 
 void Useage() {
-  //expected-error@+3 {{no matching function}}
-  //expected-note@-4 {{candidate template ignored: invalid explicitly-specified argument for template parameter 'b'}} \
-  //expected-note@-4 {{non-type template argument evaluates to -1, which cannot be narrowed to type 'unsigned int'}}
+  //expected-error@+2 {{no matching function}}
+  //expected-note@-4 {{candidate template ignored: non-type template argument evaluates to -1, which cannot be narrowed to type 'unsigned int' for template parameter 'b'}}
   TempFunc<1, -1, 1>();
 }
 }

@@ -60,8 +60,7 @@ constexpr void test8() {
   throw "bad";
 }
 
-template<int x> constexpr int f(int y) { // expected-note {{candidate template ignored}} \
-                                         // expected-note {{non-type template argument is not a constant expression}}
+template<int x> constexpr int f(int y) { // expected-note {{non-type template argument is not a constant expression}}
   return x * y;
 }
 constexpr int test9(int x) {
