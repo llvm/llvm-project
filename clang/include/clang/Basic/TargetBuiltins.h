@@ -442,7 +442,7 @@ namespace clang {
     };
   }
 
- /// XCore builtins
+  /// XCore builtins
   namespace XCore {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
@@ -452,7 +452,7 @@ namespace clang {
     LastTSBuiltin
   };
   }
-  
+
   /// SystemZ builtins
   namespace SystemZ {
     enum {
