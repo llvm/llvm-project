@@ -34,6 +34,12 @@ namespace include_cleaner {
 namespace {
 namespace cl = llvm::cl;
 
+llvm::SmallVector<Decl *> topLevelDecls(ASTContext &Ctx);
+std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag,
+                                                bool AnchorToSuffix);
+std::function<bool(const Header &)> headerFilter();
+std::function<bool(llvm::StringRef)> fragmentHeaderFilter();
+
 llvm::StringRef Overview = llvm::StringLiteral(R"(
 clang-include-cleaner analyzes the #include directives in source code.
 
@@ -69,6 +75,15 @@ cl::opt<std::string> IgnoreHeaders{
     "ignore-headers",
     cl::desc("A comma-separated list of regexes to match against suffix of a "
              "header, and disable analysis if matched."),
+    cl::init(""),
+    cl::cat(IncludeCleaner),
+};
+
+cl::opt<std::string> FragmentHeaders{
+    "fragment-headers",
+    cl::desc("A comma-separated list of regular expressions matched against "
+             "normalized include paths. Matching direct includes are treated "
+             "as fragments of the main file."),
     cl::init(""),
     cl::cat(IncludeCleaner),
 };
@@ -131,14 +146,18 @@ format::FormatStyle getStyle(llvm::StringRef Filename) {
 class Action : public clang::ASTFrontendAction {
 public:
   Action(std::function<bool(const Header &)> HeaderFilter,
+         std::function<bool(llvm::StringRef)> FragmentHeaderFilter,
          llvm::StringMap<std::string> &EditedFiles)
-      : HeaderFilter(std::move(HeaderFilter)), EditedFiles(EditedFiles) {}
+      : HeaderFilter(std::move(HeaderFilter)),
+        FragmentHeaderFilter(std::move(FragmentHeaderFilter)),
+        EditedFiles(EditedFiles) {}
 
 private:
   RecordedAST AST;
   RecordedPP PP;
   PragmaIncludes PI;
   std::function<bool(const Header &)> HeaderFilter;
+  std::function<bool(llvm::StringRef)> FragmentHeaderFilter;
   llvm::StringMap<std::string> &EditedFiles;
 
   bool BeginInvocation(CompilerInstance &CI) override {
@@ -192,9 +211,10 @@ private:
     SM.getFileManager().makeAbsolutePath(AbsPath);
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
-    AnalysisOptions AnalyzeOptions{HeaderFilter, {}};
+    AnalysisOptions AnalyzeOptions{HeaderFilter, FragmentHeaderFilter};
+    llvm::SmallVector<Decl *> RootDecls = topLevelDecls(*AST.Ctx);
     auto Results =
-        analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
+        analyze(RootDecls, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), AnalyzeOptions);
 
     if (!Insert) {
@@ -253,11 +273,14 @@ private:
 };
 class ActionFactory : public tooling::FrontendActionFactory {
 public:
-  ActionFactory(std::function<bool(const Header &)> HeaderFilter)
-      : HeaderFilter(std::move(HeaderFilter)) {}
+  ActionFactory(std::function<bool(const Header &)> HeaderFilter,
+                std::function<bool(llvm::StringRef)> FragmentHeaderFilter)
+      : HeaderFilter(std::move(HeaderFilter)),
+        FragmentHeaderFilter(std::move(FragmentHeaderFilter)) {}
 
   std::unique_ptr<clang::FrontendAction> create() override {
-    return std::make_unique<Action>(HeaderFilter, EditedFiles);
+    return std::make_unique<Action>(HeaderFilter, FragmentHeaderFilter,
+                                    EditedFiles);
   }
 
   const llvm::StringMap<std::string> &editedFiles() const {
@@ -266,18 +289,29 @@ public:
 
 private:
   std::function<bool(const Header &)> HeaderFilter;
+  std::function<bool(llvm::StringRef)> FragmentHeaderFilter;
   // Map from file name to final code with the include edits applied.
   llvm::StringMap<std::string> EditedFiles;
 };
 
+llvm::SmallVector<Decl *> topLevelDecls(ASTContext &Ctx) {
+  llvm::SmallVector<Decl *> Decls;
+  for (Decl *D : Ctx.getTranslationUnitDecl()->decls())
+    Decls.push_back(D);
+  return Decls;
+}
+
 // Compiles a regex list into a function that return true if any match a header.
 // Prints and returns nullptr if any regexes are invalid.
-std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag) {
+std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag,
+                                                bool AnchorToSuffix) {
   auto FilterRegs = std::make_shared<std::vector<llvm::Regex>>();
   llvm::SmallVector<llvm::StringRef> Headers;
   RegexFlag.split(Headers, ',', -1, /*KeepEmpty=*/false);
   for (auto HeaderPattern : Headers) {
-    std::string AnchoredPattern = "(" + HeaderPattern.str() + ")$";
+    std::string AnchoredPattern = HeaderPattern.str();
+    if (AnchorToSuffix)
+      AnchoredPattern = "(" + AnchoredPattern + ")$";
     llvm::Regex CompiledRegex(AnchoredPattern);
     std::string RegexError;
     if (!CompiledRegex.isValid(RegexError)) {
@@ -297,19 +331,23 @@ std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag) {
 }
 
 std::function<bool(const Header &)> headerFilter() {
-  auto OnlyMatches = matchesAny(OnlyHeaders);
-  auto IgnoreMatches = matchesAny(IgnoreHeaders);
+  auto OnlyMatches = matchesAny(OnlyHeaders, /*AnchorToSuffix=*/true);
+  auto IgnoreMatches = matchesAny(IgnoreHeaders, /*AnchorToSuffix=*/true);
   if (!OnlyMatches || !IgnoreMatches)
     return nullptr;
 
-  return [OnlyMatches, IgnoreMatches](const Header &H) {
-    llvm::StringRef Path = H.resolvedPath();
+  return [OnlyMatches, IgnoreMatches](const Header &Header) {
+    llvm::StringRef Path = Header.resolvedPath();
     if (!OnlyHeaders.empty() && !OnlyMatches(Path))
       return true;
     if (!IgnoreHeaders.empty() && IgnoreMatches(Path))
       return true;
     return false;
   };
+}
+
+std::function<bool(llvm::StringRef)> fragmentHeaderFilter() {
+  return matchesAny(FragmentHeaders, /*AnchorToSuffix=*/false);
 }
 
 // Maps absolute path of each files of each compilation commands to the
@@ -390,9 +428,10 @@ int main(int argc, const char **argv) {
   clang::tooling::ClangTool Tool(CDB, OptionsParser->getSourcePathList());
 
   auto HeaderFilter = headerFilter();
-  if (!HeaderFilter)
+  auto FragmentHeaderFilter = fragmentHeaderFilter();
+  if (!HeaderFilter || !FragmentHeaderFilter)
     return 1; // error already reported.
-  ActionFactory Factory(HeaderFilter);
+  ActionFactory Factory(HeaderFilter, FragmentHeaderFilter);
   auto ErrorCode = Tool.run(&Factory);
   if (Edit) {
     for (const auto &NameAndContent : Factory.editedFiles()) {
