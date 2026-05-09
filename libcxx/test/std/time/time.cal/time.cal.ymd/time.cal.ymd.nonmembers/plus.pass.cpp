@@ -25,9 +25,9 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
-#include <ratio>
 
 #include "test_macros.h"
 
@@ -70,10 +70,10 @@ constexpr bool test() {
 
   {
     year_month_day ym{year{1234}, std::chrono::January, day{12}};
-    for(unsigned int i = 0; i < 5; i++){
+    for (unsigned int i = 0; i < 5; i++) {
       months added_months = decamonths(i);
-      year_month_day ym1 = ym + decamonths(i);
-      year_month_day ym2 = decamonths(i) + ym;
+      year_month_day ym1  = ym + decamonths(i);
+      year_month_day ym2  = decamonths(i) + ym;
       assert(ym1.month() == ym.month() + decamonths(i));
       assert(ym2.month() == ym.month() + decamonths(i));
 

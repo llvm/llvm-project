@@ -15,9 +15,9 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
-#include <ratio>
 
 #include "test_macros.h"
 
@@ -40,9 +40,9 @@ constexpr bool test() {
     assert(static_cast<int>((ym).year()) == i + 1);
     assert(ym.month() == m);
   }
-  
+
   { // Ambiguity test
-    for(unsigned int i = 0; i < 10; i++){
+    for (unsigned int i = 0; i < 10; i++) {
       year y{2011};
       month m{i};
       year_month ym(y, m);

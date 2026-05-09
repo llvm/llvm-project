@@ -22,9 +22,9 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
-#include <ratio>
 
 #include "test_macros.h"
 
@@ -68,12 +68,12 @@ constexpr bool test() {
       assert(ym1.month() == month(11 - i + 12));
     }
 
-    for(unsigned int i = 0; i < 5; i++){
+    for (unsigned int i = 0; i < 5; i++) {
       months added_months = decamonths(i);
-      year_month ym1 = ym - decamonths(i);
+      year_month ym1      = ym - decamonths(i);
       assert(ym1.month() == ym.month() - decamonths(i));
-      int d = static_cast<int>(static_cast<unsigned>(ym.month())) - 1 - added_months.count();
-      int dy = (d >= 0 ? d : d - 11) / 12;
+      int d              = static_cast<int>(static_cast<unsigned>(ym.month())) - 1 - added_months.count();
+      int dy             = (d >= 0 ? d : d - 11) / 12;
       year expected_year = ym.year() + years{dy};
       assert(ym1.year() == expected_year);
     }

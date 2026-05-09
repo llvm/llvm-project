@@ -15,9 +15,9 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
-#include <ratio>
 
 #include "test_macros.h"
 
@@ -26,7 +26,6 @@ using months     = std::chrono::months;
 using year       = std::chrono::year;
 using years      = std::chrono::years;
 using year_month = std::chrono::year_month;
-using decamonths = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, months::period>>;
 
 constexpr bool test() {
   for (unsigned i = 0; i <= 10; ++i) {
@@ -53,7 +52,8 @@ constexpr bool test() {
   }
 
   { // Ambiguity test, defaults to year arithmetic
-    for(unsigned int i = 0; i < 10; i++){
+    using decamonths = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, months::period>>;
+    for (unsigned int i = 0; i < 10; i++) {
       year y{2011};
       month m{i};
       year_month ym(y, m);
