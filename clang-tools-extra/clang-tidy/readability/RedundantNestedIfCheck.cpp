@@ -9,6 +9,7 @@
 #include "RedundantNestedIfCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/Diagnostic.h"
@@ -155,7 +156,6 @@ static bool hasOnlyPayloadCommentsInNestedHeader(const IfStmt *Nested,
                                                  const SourceManager &SM,
                                                  const LangOptions &LangOpts) {
   assert(Nested);
-  assert(Nested->getThen());
 
   const CharSourceRange HeaderRange = CharSourceRange::getCharRange(
       Nested->getBeginLoc(), Nested->getThen()->getBeginLoc());
@@ -224,19 +224,22 @@ static bool isMergeCandidate(const IfStmt *If, bool AllowInitStorage,
                              const LangOptions &LangOpts) {
   assert(If);
 
-  const bool IsMergeableStructure =
-      If->getThen() && !If->isConsteval() && !If->getElse() &&
-      (AllowInitStorage || !If->hasInitStorage()) &&
-      If->isConstexpr() == RequireConstexpr;
-  if (!IsMergeableStructure)
-    return false;
+  const bool HasAllowedInitStorage = AllowInitStorage || !If->hasInitStorage();
+  const bool HasRequiredConstexpr = If->isConstexpr() == RequireConstexpr;
+  const bool IsMergeableStructure = If->getThen() && !If->isConsteval() &&
+                                    !If->getElse() && HasAllowedInitStorage &&
+                                    HasRequiredConstexpr;
 
-  if (If->hasVarStorage())
-    return AllowConditionVariable && LangOpts.CPlusPlus17 &&
-           canRewriteOuterConditionVariable(If, AllowUserDefinedBoolConversion);
+  const bool HasMergeableConditionVariable =
+      If->hasVarStorage() && AllowConditionVariable && LangOpts.CPlusPlus17 &&
+      canRewriteOuterConditionVariable(If, AllowUserDefinedBoolConversion);
+  const bool HasMergeableConditionExpression =
+      !If->hasVarStorage() && If->getCond() &&
+      isConditionExpressionMergeable(If->getCond(),
+                                     AllowUserDefinedBoolConversion);
 
-  return If->getCond() && isConditionExpressionMergeable(
-                              If->getCond(), AllowUserDefinedBoolConversion);
+  return IsMergeableStructure &&
+         (HasMergeableConditionVariable || HasMergeableConditionExpression);
 }
 
 // Statement attributes wrap the `if` in an `AttributedStmt`, so removing nested
@@ -250,6 +253,8 @@ static bool isAttributedIf(const IfStmt *If, ASTContext &Context) {
 
 static IfChain getMergeChain(const IfStmt *Root, ASTContext &Context,
                              bool AllowUserDefinedBoolConversion) {
+  assert(Root);
+
   IfChain Chain;
   const LangOptions &LangOpts = Context.getLangOpts();
   const bool RequireConstexpr = Root->isConstexpr();
@@ -289,24 +294,54 @@ static bool isConstantBooleanCondition(const Expr *Condition,
          EvaluatedValue == RequiredValue;
 }
 
+// Some instantiation-dependent conditions are safe to form even when an
+// earlier `if constexpr` condition is not known to be `true`. For example,
+// non-type template parameters and `requires` expressions do not depend on a
+// discarded branch to avoid hard substitution errors.
+static bool isAlwaysFormableDependentConstexprCondition(const Expr *Condition) {
+  assert(Condition);
+
+  Condition = Condition->IgnoreParenImpCasts();
+  if (isa<CXXBoolLiteralExpr, IntegerLiteral, RequiresExpr>(Condition))
+    return true;
+
+  if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Condition))
+    return isa<NonTypeTemplateParmDecl>(DeclRef->getDecl());
+
+  if (const auto *Unary = dyn_cast<UnaryOperator>(Condition))
+    return isAlwaysFormableDependentConstexprCondition(Unary->getSubExpr());
+
+  if (const auto *Binary = dyn_cast<BinaryOperator>(Condition)) {
+    if (Binary->isAssignmentOp() || Binary->getOpcode() == BO_Comma)
+      return false;
+
+    return isAlwaysFormableDependentConstexprCondition(Binary->getLHS()) &&
+           isAlwaysFormableDependentConstexprCondition(Binary->getRHS());
+  }
+
+  return false;
+}
+
 static bool
 isConstexprChainSemanticallySafe(llvm::ArrayRef<const IfStmt *> Chain,
                                  const ASTContext &Context) {
   if (Chain.empty() || !Chain.front()->isConstexpr())
     return true;
 
-  bool PreviousConditionsAreConstantTrue = true;
-  return llvm::all_of(Chain, [&](const IfStmt *If) {
+  bool AllPreviousConditionsAreConstantTrue = true;
+  for (const IfStmt *If : Chain) {
     const Expr *const Condition = If->getCond();
     if (Condition->isInstantiationDependent() &&
-        !PreviousConditionsAreConstantTrue)
+        !AllPreviousConditionsAreConstantTrue &&
+        !isAlwaysFormableDependentConstexprCondition(Condition))
       return false;
 
-    PreviousConditionsAreConstantTrue =
-        PreviousConditionsAreConstantTrue &&
+    AllPreviousConditionsAreConstantTrue =
+        AllPreviousConditionsAreConstantTrue &&
         isConstantBooleanCondition(Condition, Context, /*RequiredValue=*/true);
-    return true;
-  });
+  }
+
+  return true;
 }
 
 // A range is unsafe for text edits if it crosses macro expansions or

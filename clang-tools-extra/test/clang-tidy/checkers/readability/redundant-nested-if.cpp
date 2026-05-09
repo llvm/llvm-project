@@ -343,6 +343,17 @@ template <bool B> void dependent_constexpr_outer_with_nested_false_is_fixable() 
   // CHECK-FIXES-CXX17: sink();
 }
 
+template <bool B, bool C> void dependent_constexpr_bool_operands_are_fixable() {
+  // CHECK-MESSAGES-CXX17: :[[@LINE+1]]:3: warning: nested if statements can be merged
+  if constexpr (B) {
+    // CHECK-MESSAGES-CXX17: :[[@LINE+1]]:5: note: nested if statement to merge is here
+    if constexpr (C)
+      sink();
+  }
+  // CHECK-FIXES-CXX17: if constexpr ((B) && (C))
+  // CHECK-FIXES-CXX17: sink();
+}
+
 template <typename T> void dependent_constexpr_operand_after_true_is_fixable() {
   // CHECK-MESSAGES-CXX17: :[[@LINE+1]]:3: warning: nested if statements can be merged
   if constexpr (true) {
@@ -435,6 +446,17 @@ template <typename T> void dependent_requires_outer_is_fixable() {
       sink();
   }
   // CHECK-FIXES-CXX20: if constexpr ((requires { typename T::type; }) && (true))
+  // CHECK-FIXES-CXX20: sink();
+}
+
+template <bool B, typename T> void dependent_requires_after_bool_is_fixable() {
+  // CHECK-MESSAGES-CXX20: :[[@LINE+1]]:3: warning: nested if statements can be merged
+  if constexpr (B) {
+    // CHECK-MESSAGES-CXX20: :[[@LINE+1]]:5: note: nested if statement to merge is here
+    if constexpr (requires { typename T::type; })
+      sink();
+  }
+  // CHECK-FIXES-CXX20: if constexpr ((B) && (requires { typename T::type; }))
   // CHECK-FIXES-CXX20: sink();
 }
 
