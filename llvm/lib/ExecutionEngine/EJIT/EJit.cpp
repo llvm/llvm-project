@@ -133,7 +133,12 @@ EJitCache::Stats EJit::getStats() const {
 }
 
 const EJitError *EJit::getLastError() const {
-  if (logger_)
-    return logger_->getLastError();
+  if (!logger_)
+    return nullptr;
+  // Copy into stable storage so the caller gets a snapshot that won't be
+  // overwritten by concurrent log() calls on other threads.
+  static thread_local EJitError lastErr;
+  if (logger_->copyLastError(lastErr))
+    return &lastErr;
   return nullptr;
 }

@@ -4,6 +4,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
+#include <cstdio>
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -37,7 +38,7 @@ ejit_status_t ejit_init(const ejit_config_t *config) {
   Config cfg;
   parseConfig(config, cfg);
 
-  gEJIT = new EJit(cfg);
+  gEJIT = new (std::nothrow) EJit(cfg);
   if (!gEJIT)
     return EJIT_ERR_MEMORY;
 
@@ -158,14 +159,13 @@ ejit_status_t ejit_get_stats(ejit_stats_t *stats) {
 const ejit_error_t *ejit_get_last_error(void) {
   if (!gEJIT)
     return nullptr;
-  // Return a static buffer for C API
   static ejit_error_t err;
   const EJitError *last = gEJIT->getLastError();
   if (!last)
     return nullptr;
   err.code = static_cast<int>(last->code);
-  err.message = last->message.c_str();
-  err.funcName = last->funcName.c_str();
+  snprintf(err.message, sizeof(err.message), "%s", last->message.c_str());
+  snprintf(err.funcName, sizeof(err.funcName), "%s", last->funcName.c_str());
   return &err;
 }
 

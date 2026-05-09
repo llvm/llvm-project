@@ -30,6 +30,7 @@ EJitSyncCompiler::compile(EJitOrcEngine &engine,
     return result;
 
   result.funcPtr = *addrOrErr;
+  // NOTE: codeSize is bitcode size, not compiled machine code size.
   result.codeSize = bitcodeData.size();
 
   auto end = std::chrono::steady_clock::now();

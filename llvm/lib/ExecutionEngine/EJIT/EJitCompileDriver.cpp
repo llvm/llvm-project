@@ -102,7 +102,11 @@ void *EJitCompileDriver::getOrCompile(
   size_t compileTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                              end - start).count();
 
-  // Cache the result
+  // Cache the result.
+  // NOTE: codeSize is the bitcode size, not the compiled machine code size.
+  // Getting the actual machine code size from LLJIT/JITLink requires
+  // instrumenting the memory manager. For now, bitcode size serves as an
+  // approximation for cache eviction decisions.
   std::set<std::string> periodDeps;
   for (unsigned i = 0; i < count; ++i)
     periodDeps.insert(dims[i].first + "=" + std::to_string(dims[i].second));

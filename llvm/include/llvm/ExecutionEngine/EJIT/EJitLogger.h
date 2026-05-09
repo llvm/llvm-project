@@ -28,6 +28,8 @@ public:
            size_t attemptedMemUsage = 0);
 
   const EJitError *getLastError() const;
+  /// Copy the last error into the provided buffer. Thread-safe.
+  bool copyLastError(EJitError &out) const;
   std::vector<EJitError> getErrors(size_t limit = kMaxErrors) const;
   void clear();
 

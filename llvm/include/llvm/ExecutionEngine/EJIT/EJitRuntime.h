@@ -64,8 +64,8 @@ typedef struct {
 
 typedef struct {
   int code;
-  const char *message;
-  const char *funcName;
+  char message[256];
+  char funcName[128];
 } ejit_error_t;
 
 // Initialization

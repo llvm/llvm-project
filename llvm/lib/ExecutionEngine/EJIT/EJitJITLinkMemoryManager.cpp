@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <sys/mman.h>
 
 using namespace llvm;
@@ -39,10 +40,11 @@ void EJitJITLinkMemoryManager::allocate(
     const jitlink::JITLinkDylib *JD,
     jitlink::LinkGraph &G,
     OnAllocatedFunction OnAllocated) {
-  // TODO: Full implementation with InFlightAlloc subclass
-  OnAllocated(make_error<StringError>(
-      "EJitJITLinkMemoryManager not fully implemented yet",
-      inconvertibleErrorCode()));
+  // Stub: not yet integrated with LLJIT. The default LLJIT memory manager
+  // is used instead. If this is reached, the engine was misconfigured.
+  report_fatal_error(
+      "EJitJITLinkMemoryManager::allocate called but not yet implemented. "
+      "The default LLJIT memory manager should be used instead.");
 }
 
 void EJitJITLinkMemoryManager::deallocate(

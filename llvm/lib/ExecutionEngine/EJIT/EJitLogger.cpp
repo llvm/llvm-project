@@ -27,6 +27,15 @@ const EJitError *EJitLogger::getLastError() const {
   return &errors_[idx];
 }
 
+bool EJitLogger::copyLastError(EJitError &out) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (count_ == 0)
+    return false;
+  size_t idx = (writeIdx_ == 0) ? kMaxErrors - 1 : writeIdx_ - 1;
+  out = errors_[idx];
+  return true;
+}
+
 std::vector<EJitError> EJitLogger::getErrors(size_t limit) const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<EJitError> result;

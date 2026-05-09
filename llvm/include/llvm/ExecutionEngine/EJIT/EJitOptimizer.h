@@ -13,13 +13,18 @@
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Passes/PassBuilder.h"
 
 namespace llvm {
 namespace ejit {
 
 /// JIT optimization pipeline. Runs on the extracted bitcode module during
 /// JIT compilation to specialize the code for the current time-window values.
+/// Holds persistent AnalysisManagers to avoid re-registering analyses on
+/// every compilation.
 class EJitOptimizer {
 public:
   EJitOptimizer(PeriodArrayRegistry &reg);
@@ -36,8 +41,18 @@ public:
   /// Run the full optimization pipeline at the given level (L1/L2/L3).
   void runOptimizationPipeline(Module &M, OptimizationLevel level);
 
+  /// Return the FunctionAnalysisManager (for use by EJitStructFieldPass).
+  FunctionAnalysisManager &getFAM() { return FAM_; }
+
 private:
   PeriodArrayRegistry &registry_;
+
+  // Persistent analysis managers — registered once, reused across compilations.
+  // Invalidated per-function by the pass infrastructure as needed.
+  LoopAnalysisManager LAM_;
+  FunctionAnalysisManager FAM_;
+  CGSCCAnalysisManager CGAM_;
+  ModuleAnalysisManager MAM_;
 };
 
 } // namespace ejit

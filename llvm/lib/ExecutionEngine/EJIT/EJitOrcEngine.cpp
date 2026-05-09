@@ -109,14 +109,11 @@ EJitOrcEngine::Create(const Config &config,
           // 4. First EJitStructFieldPass: replace ejit_may_const loads
           //    before the optimization pipeline so SCCP/ADCE can propagate
           //    the resulting constants.
-          for (Function &F : M.functions()) {
-            if (!F.isDeclaration()) {
-              EJitStructFieldPass structField(periodReg);
-              FunctionAnalysisManager FAM;
-              PassBuilder PB;
-              PB.registerFunctionAnalyses(FAM);
-              structField.run(F, FAM);
-            }
+          {
+            EJitStructFieldPass structField(periodReg);
+            for (Function &F : M.functions())
+              if (!F.isDeclaration())
+                structField.run(F, opt.getFAM());
           }
 
           // 5. Run the standard optimization pipeline at the configured level.
@@ -125,14 +122,11 @@ EJitOrcEngine::Create(const Config &config,
 
           // 6. Second EJitStructFieldPass + InstCombine: catch loads that
           //    became constant-indexed after loop unrolling (L3) or inlining.
-          for (Function &F : M.functions()) {
-            if (!F.isDeclaration()) {
-              EJitStructFieldPass structField(periodReg);
-              FunctionAnalysisManager FAM;
-              PassBuilder PB;
-              PB.registerFunctionAnalyses(FAM);
-              structField.run(F, FAM);
-            }
+          {
+            EJitStructFieldPass structField(periodReg);
+            for (Function &F : M.functions())
+              if (!F.isDeclaration())
+                structField.run(F, opt.getFAM());
           }
           opt.runInstCombine(M);
         });
