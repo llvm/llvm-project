@@ -7987,6 +7987,15 @@ let Predicates = [HasAES] in {
                                 (i64 1),
                                 (v2i64 (PMULLv2i64 $Rn, $Rm)),
                                 (i64 0)))>;
+
+  def : Pat<(v1i64 (clmulh V64:$Rn, V64:$Rm)),
+            (EXTRACT_SUBREG (v2i64 (EXTv16i8 (v2i64 (PMULLv1i64 V64:$Rn, V64:$Rm)),
+                                             (v2i64 (PMULLv1i64 V64:$Rn, V64:$Rm)),
+                                             8)), dsub)>;
+  def : Pat<(v2i64 (clmulh V128:$Rn, V128:$Rm)),
+            (ZIP2v2i64 (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG V128:$Rn, dsub)),
+                                          (v1i64 (EXTRACT_SUBREG V128:$Rm, dsub)))),
+                       (v2i64 (PMULLv2i64 V128:$Rn, V128:$Rm)))>;
 }
 
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
