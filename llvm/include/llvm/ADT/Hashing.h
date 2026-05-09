@@ -33,11 +33,10 @@
 //      a single hash_code for their object. They should only logically be used
 //      within the implementation of a 'hash_value' routine or similar context.
 //
-// Note that 'hash_combine_range' contains very special logic for hashing
-// a contiguous array of integers or pointers. This logic is *extremely* fast,
-// on a modern Intel "Gainestown" Xeon (Nehalem uarch) @2.2 GHz, these were
-// benchmarked at over 6.5 GiB/s for large keys, and <20 cycles/hash for keys
-// under 32-bytes.
+// 'hash_combine_range' hashes the byte stream of the range via xxh3. The
+// contiguous-array overload hashes the range in place; the iterator overload
+// materializes the byte stream into a 256-byte on-stack buffer, falling back
+// to the heap for ranges that exceed it.
 //
 //===----------------------------------------------------------------------===//
 
