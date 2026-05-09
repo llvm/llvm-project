@@ -407,8 +407,8 @@ namespace cwg3088 { // cwg3088: partial
 #undef alignof
 #define alignof()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#define chat16_t
-// FIXME-error@-1 {{keyword is hidden by macro definition}}
+#define char16_t
+// since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #undef char16_t
 #define char16_t()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
