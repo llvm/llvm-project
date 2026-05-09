@@ -62,10 +62,32 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               const PragmaIncludes *PI, const Preprocessor &PP,
               UsedSymbolCB CB);
 
+/// A location kind where a symbol reference is observed.
+enum class SymbolReferenceOrigin {
+  MainFile,
+  Preamble,
+  Fragment,
+};
+
 /// A missing include insertion candidate.
 struct MissingInclude {
   std::string Spelling;
   Header Provider;
+};
+
+/// A missing include finding with per-reference provenance.
+struct MissingIncludeRef {
+  SymbolReference Ref;
+  llvm::SmallVector<Header> Providers;
+  SymbolReferenceOrigin Origin = SymbolReferenceOrigin::MainFile;
+  /// Null if the fragment file has multiple direct include sites.
+  const Include *FragmentInclude = nullptr;
+};
+
+/// An include kept alive only by fragment usage.
+struct FragmentDependency {
+  const Include *Preserved = nullptr;
+  llvm::SmallVector<const Include *> Fragments;
 };
 
 /// The result of include-cleaner analysis for one main file.
@@ -74,12 +96,19 @@ struct AnalysisResults {
   /// Deduplicated insertion plan, e.g. "<vector>" paired with the chosen
   /// provider Header.
   std::vector<MissingInclude> MissingIncludes;
+  /// Per-reference provenance for consumers that need richer diagnostics.
+  std::vector<MissingIncludeRef> MissingRefs;
+  /// Include-preservation provenance for fragment-only uses.
+  std::vector<FragmentDependency> FragmentDependencies;
 };
 
 /// Analysis configuration shared by include-cleaner consumers.
 struct AnalysisOptions {
   /// No analysis will be performed for headers that satisfy the predicate.
   std::function<bool(const Header &)> HeaderFilter;
+  /// A predicate matched against normalized resolved paths, and normalized
+  /// spelled paths as a fallback, to identify direct include fragments.
+  std::function<bool(llvm::StringRef)> FragmentHeaderFilter;
 };
 
 /// Determine which headers should be inserted or removed from the main file.

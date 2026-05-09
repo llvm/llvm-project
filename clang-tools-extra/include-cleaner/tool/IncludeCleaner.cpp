@@ -192,7 +192,7 @@ private:
     SM.getFileManager().makeAbsolutePath(AbsPath);
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
-    AnalysisOptions AnalyzeOptions{HeaderFilter};
+    AnalysisOptions AnalyzeOptions{HeaderFilter, {}};
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), AnalyzeOptions);
