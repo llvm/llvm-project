@@ -18,7 +18,7 @@ using namespace llvm::mcdxbc;
 template <typename StructT>
 static void writeStruct(raw_ostream &OS, StructT S) {
   static_assert(std::is_class<StructT>() &&
-                "This method must be used for writing structure types.");
+                "This method must be used for writing structure types");
   if (sys::IsBigEndianHost)
     S.swapBytes();
   OS.write(reinterpret_cast<const char *>(&S), sizeof(StructT));
