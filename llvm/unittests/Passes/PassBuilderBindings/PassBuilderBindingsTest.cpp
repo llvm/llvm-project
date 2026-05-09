@@ -98,8 +98,8 @@ TEST_F(PassBuilderCTest, Function) {
 #ifdef PASSBUILDER_HAS_BYE_PLUGIN
 TEST_F(PassBuilderCTest, StaticPassExtension) {
   LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
-  if (LLVMErrorRef E = LLVMRunPasses(Module, "function(goodbye)", TM,
-                                     Options)) {
+  if (LLVMErrorRef E =
+          LLVMRunPasses(Module, "function(goodbye)", TM, Options)) {
     char *Msg = LLVMGetErrorMessage(E);
     LLVMDisposePassBuilderOptions(Options);
     FAIL() << "Failed to run statically linked extension pass on module: "
