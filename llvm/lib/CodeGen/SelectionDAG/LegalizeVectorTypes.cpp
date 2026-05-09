@@ -4797,8 +4797,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
   EVT VT = N->getValueType(0);
-  EVT PartResVT = Lo0.getValueType().changeElementType(*DAG.getContext(),
-                                                       VT.getScalarType());
+  EVT PartResVT = getSetCCResultType(Lo0.getValueType());
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -4823,7 +4822,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
                         N->getOperand(2), MaskHi, EVLHi);
   }
 
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoRes, HiRes);
+  EVT ConcatVT = PartResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, LoRes, HiRes);
+  if (VT == ConcatVT)
+    return Con;
+
+  EVT OpVT = N->getOperand(0).getValueType();
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+  return DAG.getExtOrTrunc(Con, DL, VT, ExtendCode);
 }
 
 
@@ -8321,7 +8328,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
 
   unsigned Opc = N->getOpcode();
   unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
-  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+  SDValue NeutralElem = DAG.getIdentityElement(BaseOpc, dl, ElemVT, Flags);
   assert(NeutralElem && "Neutral element must exist");
 
   // Pad the vector with the neutral element.
@@ -8375,7 +8382,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
 
   unsigned Opc = N->getOpcode();
   unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
-  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+  SDValue NeutralElem = DAG.getIdentityElement(BaseOpc, dl, ElemVT, Flags);
 
   // Pad the vector with the neutral element.
   unsigned OrigElts = OrigVT.getVectorMinNumElements();

@@ -365,38 +365,24 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 DenormalMode Mode) {
   KnownFPClass Known;
 
-  // xor sign bit.
-  if ((KnownLHS.isKnownNever(fcNegative) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcNegative);
+  // +X * +Y or -X * -Y => +Q
+  // +X * -Y or -X * +Y => -Q
+  Known.propagateXorSign(KnownLHS, KnownRHS);
 
-  if ((KnownLHS.isKnownNever(fcPositive) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcPositive);
-
-  // inf * anything => inf or nan
+  // Inf * Y => Inf or NaN
   if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
       KnownRHS.isKnownAlways(fcInf | fcNan))
     Known.knownNot(fcNormal | fcSubnormal | fcZero);
 
-  // 0 * anything => 0 or nan
+  // 0 * Y => 0 or NaN
   if (KnownRHS.isKnownAlways(fcZero | fcNan) ||
       KnownLHS.isKnownAlways(fcZero | fcNan))
     Known.knownNot(fcNormal | fcSubnormal | fcInf);
 
-  // +/-0 * +/-inf = nan
-  if ((KnownLHS.isKnownAlways(fcZero | fcNan) &&
-       KnownRHS.isKnownAlways(fcInf | fcNan)) ||
-      (KnownLHS.isKnownAlways(fcInf | fcNan) &&
-       KnownRHS.isKnownAlways(fcZero | fcNan)))
-    Known.knownNot(~fcNan);
-
   if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
     return Known;
 
-  // If 0 * +/-inf produces NaN.
+  // 0 * +/-inf => NaN
   if ((KnownRHS.isKnownNeverInfinity() ||
        KnownLHS.isKnownNeverLogicalZero(Mode)) &&
       (KnownLHS.isKnownNeverInfinity() ||
@@ -448,24 +434,16 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
     Known.knownNot(fcNan);
   }
 
-  // xor sign bit.
-  // X / -0.0 is -Inf (or NaN).
-  // +X / +X is +X
-  if ((KnownLHS.isKnownNever(fcNegative) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcNegative);
+  //  X / -0.0 => -Inf (or NaN)
+  // +X / +Y or -X / -Y => +Q
+  // +X / -Y or -X / +Y => -Q
+  Known.propagateXorSign(KnownLHS, KnownRHS);
 
-  if ((KnownLHS.isKnownNever(fcPositive) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcPositive);
-
-  // 0 / x => 0 or nan
+  // 0 / X => 0 or NaN
   if (KnownLHS.isKnownAlways(fcZero))
     Known.knownNot(fcSubnormal | fcNormal | fcInf);
 
-  // x / 0 => nan or inf
+  // X / 0 => NaN or Inf
   if (KnownRHS.isKnownAlways(fcZero))
     Known.knownNot(fcFinite);
 

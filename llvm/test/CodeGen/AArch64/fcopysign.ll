@@ -154,16 +154,10 @@ define <3 x float> @copysign_v3f32(<3 x float> %a, <3 x float> %b) {
 ;
 ; CHECK-GI-LABEL: copysign_v3f32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-GI-NEXT:    mov w9, #2147483647 // =0x7fffffff
-; CHECK-GI-NEXT:    fmov s2, w9
-; CHECK-GI-NEXT:    fmov s3, w8
-; CHECK-GI-NEXT:    mov v2.s[1], w9
-; CHECK-GI-NEXT:    mov v3.s[1], w8
-; CHECK-GI-NEXT:    mov v2.s[2], w9
-; CHECK-GI-NEXT:    mov v3.s[2], w8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    movi v2.4s, #128, lsl #24
+; CHECK-GI-NEXT:    mvni v3.4s, #128, lsl #24
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -203,24 +197,10 @@ define <7 x half> @copysign_v7f16(<7 x half> %a, <7 x half> %b) {
 ;
 ; CHECK-GI-LABEL: copysign_v7f16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-GI-NEXT:    mov w9, #32767 // =0x7fff
-; CHECK-GI-NEXT:    fmov s2, w9
-; CHECK-GI-NEXT:    fmov s3, w8
-; CHECK-GI-NEXT:    mov v2.h[1], w9
-; CHECK-GI-NEXT:    mov v3.h[1], w8
-; CHECK-GI-NEXT:    mov v2.h[2], w9
-; CHECK-GI-NEXT:    mov v3.h[2], w8
-; CHECK-GI-NEXT:    mov v2.h[3], w9
-; CHECK-GI-NEXT:    mov v3.h[3], w8
-; CHECK-GI-NEXT:    mov v2.h[4], w9
-; CHECK-GI-NEXT:    mov v3.h[4], w8
-; CHECK-GI-NEXT:    mov v2.h[5], w9
-; CHECK-GI-NEXT:    mov v3.h[5], w8
-; CHECK-GI-NEXT:    mov v2.h[6], w9
-; CHECK-GI-NEXT:    mov v3.h[6], w8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    movi v2.8h, #128, lsl #8
+; CHECK-GI-NEXT:    mvni v3.8h, #128, lsl #8
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:

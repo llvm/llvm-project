@@ -39,15 +39,10 @@ define <4 x i8> @h(<4 x i8> %x, <4 x i8> %y) {
 
 define <4 x i8> @h_undef(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @h_undef(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i8> undef, i32 0
 ; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i8> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[Y1:%.*]] = extractelement <4 x i8> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[Y]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[X0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> undef, <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 poison, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[X3]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[Y1]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP5]], i8 [[Y2]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i8> [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i8> [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    ret <4 x i8> [[TMP3]]
 ;
   %x0 = extractelement <4 x i8> undef, i32 0

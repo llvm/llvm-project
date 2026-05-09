@@ -2262,6 +2262,21 @@ let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
             (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
 }
 
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach src_type = ["e4m3x2", "e5m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      foreach satfinite = ["", "_satfinite"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+        defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
+        defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+
+        def : Pat<(intrin i16:$a, i16:$b),
+                  (inst $a, $b, mode)>;
+      }
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
+
 let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_s2f6x2_rn_satfinite_scale_n2_ue8m0 f32:$a, f32:$b, i16:$scale),
             (CVT_s2f6x2_f32_sf_scale $a, $b, $scale, CvtRN)>;
@@ -2317,6 +2332,20 @@ let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
   }
 }
 
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach src_type = ["e2m3x2", "e3m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      foreach satfinite = ["", "_satfinite"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+        defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
+        defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+        def : Pat<(intrin i16:$a, i16:$b),
+                  (inst $a, $b, mode)>;
+      }
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
+
 let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
             (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>;
@@ -2339,6 +2368,18 @@ let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
     }
   }
 }
+
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach relu = ["", "_relu"] in {
+    foreach satfinite = ["", "_satfinite"] in {
+      defvar intrin = !cast<Intrinsic>("int_nvvm_e2m1x2_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+      defvar inst = !cast<NVPTXInst>("CVT_bf16x2_e2m1x2_scale");
+      defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+      def : Pat<(intrin i16:$a, i16:$b),
+                (inst $a, $b, mode)>;
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
 
 let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_ue8m0x2_rz f32:$a, f32:$b),

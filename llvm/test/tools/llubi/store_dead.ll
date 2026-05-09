@@ -14,5 +14,7 @@ define void @main() {
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc)
 ; CHECK-NEXT:   store i32 0, ptr %alloc, align 4
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %alloc)
-; CHECK-NEXT: Immediate UB detected: Try to access a dead memory object.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   store i32 0, ptr %alloc, align 4 at @main
+; CHECK-NEXT: Immediate UB detected: Try to access a dead memory object at address 0x8.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
