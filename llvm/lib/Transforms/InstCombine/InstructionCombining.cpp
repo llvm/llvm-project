@@ -2316,16 +2316,12 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
       // to be a both-constant select when the binop feeds a cast.
       bool MultiUse = false;
       if (IsOtherParamConst && !Sel->hasOneUser()) {
-        Value *TV = Sel->getTrueValue(), *FV = Sel->getFalseValue();
-        if (isa<Constant>(TV) && isa<Constant>(FV)) {
+        if (match(Sel, m_Select(m_Value(), m_Constant(), m_Constant())))
           MultiUse = true;
-        } else if (I.hasOneUse() && isa<CastInst>(*I.user_begin())) {
-          auto IsConstSel = [](Value *V) {
-            return match(V, m_Select(m_Value(), m_Constant(), m_Constant()));
-          };
-          MultiUse = (isa<Constant>(TV) && IsConstSel(FV)) ||
-                     (isa<Constant>(FV) && IsConstSel(TV));
-        }
+        else if (I.hasOneUse() && isa<CastInst>(*I.user_begin()))
+          MultiUse = match(
+              Sel, m_c_Select(m_Constant(),
+                              m_Select(m_Value(), m_Constant(), m_Constant())));
       }
       return FoldOpIntoSelect(I, Sel, /*FoldWithMultiUse=*/MultiUse,
                               !IsOtherParamConst);

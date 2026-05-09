@@ -27,8 +27,8 @@ define i32 @lshr_through_multi_use_nested_select(i1 %c1, i1 %c2, ptr %sink) {
 ; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[C1:%.*]], i64 4294967297, i64 8589934593
 ; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[C2:%.*]], i64 0, i64 [[INNER]]
 ; CHECK-NEXT:    store i64 [[OUTER]], ptr [[SINK:%.*]], align 4
-; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[OUTER]], 32
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[S]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; CHECK-NEXT:    [[T:%.*]] = select i1 [[C2]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %inner = select i1 %c1, i64 4294967297, i64 8589934593
@@ -89,8 +89,8 @@ define i32 @lshr_const_on_true_arm(i1 %c1, i1 %c2, ptr %sink) {
 ; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[C1:%.*]], i64 4294967297, i64 8589934593
 ; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[C2:%.*]], i64 [[INNER]], i64 0
 ; CHECK-NEXT:    store i64 [[OUTER]], ptr [[SINK:%.*]], align 4
-; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[OUTER]], 32
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[S]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; CHECK-NEXT:    [[T:%.*]] = select i1 [[C2]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %inner = select i1 %c1, i64 4294967297, i64 8589934593
@@ -105,7 +105,7 @@ define i64 @binop_both_arms_constant_multi_use(i1 %c, ptr %sink) {
 ; CHECK-LABEL: @binop_both_arms_constant_multi_use(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i64 100, i64 200
 ; CHECK-NEXT:    store i64 [[SEL]], ptr [[SINK:%.*]], align 4
-; CHECK-NEXT:    [[M:%.*]] = add nuw nsw i64 [[SEL]], 5
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i64 105, i64 205
 ; CHECK-NEXT:    ret i64 [[M]]
 ;
   %sel = select i1 %c, i64 100, i64 200
@@ -178,7 +178,7 @@ define <2 x i64> @vec_binop_both_arms_constant_multi_use(i1 %c, ptr %sink) {
 ; CHECK-LABEL: @vec_binop_both_arms_constant_multi_use(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <2 x i64> <i64 100, i64 200>, <2 x i64> <i64 300, i64 400>
 ; CHECK-NEXT:    store <2 x i64> [[SEL]], ptr [[SINK:%.*]], align 16
-; CHECK-NEXT:    [[M:%.*]] = add nuw nsw <2 x i64> [[SEL]], <i64 5, i64 10>
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], <2 x i64> <i64 105, i64 210>, <2 x i64> <i64 305, i64 410>
 ; CHECK-NEXT:    ret <2 x i64> [[M]]
 ;
   %sel = select i1 %c, <2 x i64> <i64 100, i64 200>, <2 x i64> <i64 300, i64 400>
@@ -192,8 +192,8 @@ define <2 x i32> @vec_lshr_through_multi_use_nested_select(i1 %c1, i1 %c2, ptr %
 ; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[C1:%.*]], <2 x i64> <i64 4294967297, i64 8589934593>, <2 x i64> <i64 12884901889, i64 17179869185>
 ; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[C2:%.*]], <2 x i64> zeroinitializer, <2 x i64> [[INNER]]
 ; CHECK-NEXT:    store <2 x i64> [[OUTER]], ptr [[SINK:%.*]], align 16
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[OUTER]], splat (i64 32)
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw nsw <2 x i64> [[S]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C1]], <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+; CHECK-NEXT:    [[T:%.*]] = select i1 [[C2]], <2 x i32> zeroinitializer, <2 x i32> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[T]]
 ;
   %inner = select i1 %c1, <2 x i64> <i64 4294967297, i64 8589934593>, <2 x i64> <i64 12884901889, i64 17179869185>
@@ -208,7 +208,7 @@ define <2 x i64> @vec_or_through_multi_use_both_const(i1 %c, ptr %sink) {
 ; CHECK-LABEL: @vec_or_through_multi_use_both_const(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <2 x i64> <i64 10, i64 20>, <2 x i64> <i64 30, i64 40>
 ; CHECK-NEXT:    store <2 x i64> [[SEL]], ptr [[SINK:%.*]], align 16
-; CHECK-NEXT:    [[M:%.*]] = or <2 x i64> [[SEL]], splat (i64 3)
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], <2 x i64> <i64 11, i64 23>, <2 x i64> <i64 31, i64 43>
 ; CHECK-NEXT:    ret <2 x i64> [[M]]
 ;
   %sel = select i1 %c, <2 x i64> <i64 10, i64 20>, <2 x i64> <i64 30, i64 40>
@@ -221,7 +221,7 @@ define <2 x i64> @vec_splat_cond_both_const(<2 x i1> %c, ptr %sink) {
 ; CHECK-LABEL: @vec_splat_cond_both_const(
 ; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i64> <i64 100, i64 200>, <2 x i64> <i64 300, i64 400>
 ; CHECK-NEXT:    store <2 x i64> [[SEL]], ptr [[SINK:%.*]], align 16
-; CHECK-NEXT:    [[M:%.*]] = add nuw nsw <2 x i64> [[SEL]], <i64 5, i64 10>
+; CHECK-NEXT:    [[M:%.*]] = select <2 x i1> [[C]], <2 x i64> <i64 105, i64 210>, <2 x i64> <i64 305, i64 410>
 ; CHECK-NEXT:    ret <2 x i64> [[M]]
 ;
   %sel = select <2 x i1> %c, <2 x i64> <i64 100, i64 200>, <2 x i64> <i64 300, i64 400>
