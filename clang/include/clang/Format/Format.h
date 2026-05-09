@@ -236,6 +236,16 @@ struct FormatStyle {
     ///   int (*f)();
     /// \endcode
     bool AlignFunctionPointers;
+    /// Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
+    /// aligned.
+    /// \code
+    ///   enum ValueKind {
+    ///     VK_Argument   = 1,
+    ///     VK_BasicBlock = 2,
+    ///     VK_Segment    = 8,
+    ///   };
+    /// \endcode
+    bool EnumAssignments;
     /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     /// operators are left-padded to the same length as long ones in order to
     /// put all assignment operators to the right of the left hand side.
@@ -259,6 +269,7 @@ struct FormatStyle {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
              AlignCompound == R.AlignCompound &&
+             EnumAssignments == R.EnumAssignments &&
              AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
              PadOperators == R.PadOperators;

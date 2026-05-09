@@ -139,6 +139,8 @@ private:
     case TT_StructLBrace:
     case TT_UnionLBrace:
       return ST_Class;
+    case TT_EnumLBrace:
+      return ST_Enum;
     case TT_CompoundRequirementLBrace:
       return ST_CompoundRequirement;
     default:
@@ -1232,6 +1234,7 @@ private:
         return false;
       updateParameterCount(&OpeningBrace, CurrentToken);
       if (CurrentToken->isOneOf(tok::colon, tok::l_brace, tok::less)) {
+        assert(!Scopes.empty());
         FormatToken *Previous = CurrentToken->getPreviousNonComment();
         if (Previous->is(TT_JsTypeOptionalQuestion))
           Previous = Previous->getPreviousNonComment();
@@ -1239,6 +1242,7 @@ private:
              (!Contexts.back().ColonIsDictLiteral || !IsCpp)) ||
             Style.isProto()) {
           OpeningBrace.setType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
           if (Previous->Tok.getIdentifierInfo() ||
               Previous->is(tok::string_literal)) {
             Previous->setType(TT_SelectorName);
@@ -1247,16 +1251,21 @@ private:
         if (CurrentToken->is(tok::colon) && OpeningBrace.is(TT_Unknown) &&
             !Style.isTableGen()) {
           OpeningBrace.setType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
         } else if (Style.isJavaScript()) {
           OpeningBrace.overwriteFixedType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
         }
       }
       bool IsBracedListComma = false;
       if (CurrentToken->is(tok::comma)) {
-        if (Style.isJavaScript())
+        assert(!Scopes.empty());
+        if (Style.isJavaScript()) {
           OpeningBrace.overwriteFixedType(TT_DictLiteral);
-        else
+          Scopes.back() = getScopeType(OpeningBrace);
+        } else {
           IsBracedListComma = OpeningBrace.is(BK_BracedInit);
+        }
         ++CommaCount;
       }
       if (!consumeToken())
@@ -1835,6 +1844,10 @@ private:
       // In TableGen, there must be a value after "=";
       if (Style.isTableGen() && !parseTableGenValue())
         return false;
+      if ((CurrentToken && CurrentToken->is(tok::numeric_constant)) &&
+          (!Scopes.empty() && Scopes.back() == ST_Enum)) {
+        Tok->setFinalizedType(TT_EnumEqual);
+      }
       break;
     default:
       break;
