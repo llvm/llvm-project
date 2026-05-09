@@ -14076,11 +14076,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateAsRValue(Info, E->getArg(0), LHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), RHS))
       return false;
-  
-    const APSInt& LHSInt = LHS.getInt();
-    const APSInt& RHSInt = RHS.getInt();
+
+    const APSInt &LHSInt = LHS.getInt();
+    const APSInt &RHSInt = RHS.getInt();
     APInt Result = llvm::APIntOps::clmul(LHSInt, RHSInt);
-    
+
     return Success(APValue(APSInt(Result, LHSInt.isUnsigned())), E);
   }
   case Builtin::BI__builtin_elementwise_fshl:
