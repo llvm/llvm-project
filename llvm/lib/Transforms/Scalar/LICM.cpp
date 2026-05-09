@@ -2319,9 +2319,7 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))
     return false;
 
-  // If there are interfering Uses (i.e. their defining access is in the
-  // loop), or ordered loads (stored as Defs!), don't move this store.
-  // Could do better here, but this is conservatively correct.
+  // If there are interfering Uses don't move this store.
   // TODO: Cache set of Uses on the first walk in runOnLoop, update when
   // moving accesses. Can also extend to dominating uses.
   for (auto *BB : CurLoop->getBlocks()) {
@@ -2329,45 +2327,16 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
     if (!Accesses)
       continue;
     for (const auto &MA : *Accesses) {
+      // Accesses are ordered. If we find one that I dominates we can stop.
       if (!Flags.getIsSink() && MSSA->dominates(IMD, &MA))
-        continue;
-      if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
-        auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
-                                             const_cast<MemoryUse *>(MU));
-        if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock()))
-          return false;
-        // Disable hoisting past potentially interfering loads. Optimized
-        // Uses may point to an access outside the loop, as getClobbering
-        // checks the previous iteration when walking the backedge.
-        // FIXME: More precise: no Uses that alias I.
-        if (!Flags.getIsSink() && !MSSA->dominates(IMD, MU))
-          return false;
-      } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
-        if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
-          (void)LI; // Silence warning.
-          assert(!LI->isUnordered() && "Expected unordered load");
-          return false;
-        }
-        // Any call, while it may not be clobbering I, it may be a use.
-        if (auto *CI = dyn_cast<CallInst>(MD->getMemoryInst())) {
-          // Check if the call may read from the memory location written
-          // to by I. Check CI's attributes and arguments; the number of
-          // such checks performed is limited above by NoOfMemAccTooLarge.
-          if (auto *SI = dyn_cast<StoreInst>(I)) {
-            ModRefInfo MRI = BAA.getModRefInfo(CI, MemoryLocation::get(SI));
-            if (isModOrRefSet(MRI))
-              return false;
-          } else {
-            auto *SCI = cast<CallInst>(I);
-            // If the instruction we are wanting to hoist is also a call
-            // instruction then we need not check mod/ref info with itself
-            if (SCI == CI)
-              continue;
-            ModRefInfo MRI = BAA.getModRefInfo(CI, SCI);
-            if (isModOrRefSet(MRI))
-              return false;
-          }
-        }
+        break;
+
+      if (const auto *MemUseOrDef = dyn_cast<MemoryUseOrDef>(&MA)) {
+        // Skip unrelated accesses.
+        if (isNoModRef(BAA.getModRefInfo(MemUseOrDef->getMemoryInst(), I)))
+          continue;
+
+        return false;
       }
     }
   }

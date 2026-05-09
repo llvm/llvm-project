@@ -168,6 +168,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
   AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
 
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::v2f32, Promote);
+  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v2f32, MVT::i64);
+
   setOperationAction(ISD::ATOMIC_STORE, MVT::f32, Promote);
   AddPromotedToType(ISD::ATOMIC_STORE, MVT::f32, MVT::i32);
 
@@ -179,6 +182,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
   AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::v2f32, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::v2f32, MVT::i64);
 
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
