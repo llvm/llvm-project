@@ -308,3 +308,19 @@ define i32 @load_word_twice_offset() nounwind optsize {
   %4 = or i32 %2, %3
   ret i32 %4
 }
+
+define zeroext i8 @load_unsigned_byte_optnone() nounwind optnone noinline {
+; NO-C-LABEL: load_unsigned_byte_optnone:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a0, global
+; NO-C-NEXT:    lbu a0, 0(a0)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: load_unsigned_byte_optnone:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a0, global
+; WITH-C-NEXT:    lbu a0, 0(a0)
+; WITH-C-NEXT:    ret
+  %1 = load i8, ptr @global, align 1
+  ret i8 %1
+}

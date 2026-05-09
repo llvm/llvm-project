@@ -145,6 +145,9 @@ static unsigned getQCMarkedOpcode(const MachineInstr &MI,
 }
 
 bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
   // This is only relevant for QC.E.LI with a symbol, which we only use in the
   // small code model.
   if (MF.getTarget().getCodeModel() != CodeModel::Small)
@@ -174,9 +177,6 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "Found QC_E_LI " << *MI);
       LLVM_DEBUG(dbgs() << "Followed by Load/Store " << *NextMI);
 
-      MachineOperand &OffsetOp = NextMI->getOperand(2);
-      if (OffsetOp.getImm() != 0)
-        continue;
       if (MI->getOperand(0).getReg() != NextMI->getOperand(1).getReg())
         continue;
       if (!NextMI->getOperand(1).isKill())
@@ -199,7 +199,7 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
           BuildMI(MBB, NextMI, NextMI->getDebugLoc(), TII->get(NewOpc))
               .add(NextMI->getOperand(0))
               .add(NextMI->getOperand(1))
-              .add(OffsetOp)
+              .add(NextMI->getOperand(2))
               .cloneMemRefs(*NextMI);
 
       if (SymOp.isSymbol()) {
