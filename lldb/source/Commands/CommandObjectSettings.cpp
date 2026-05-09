@@ -264,6 +264,9 @@ public:
       case 'd':
         m_include_defaults = true;
         break;
+      case 'c':
+        m_only_changed = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -272,6 +275,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_include_defaults = false;
+      m_only_changed = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -279,6 +283,7 @@ public:
     }
 
     bool m_include_defaults = false;
+    bool m_only_changed = false;
   };
 
 protected:
@@ -288,9 +293,20 @@ protected:
     uint32_t dump_mask = OptionValue::eDumpGroupValue;
     if (m_options.m_include_defaults)
       dump_mask |= OptionValue::eDumpOptionDefaultValue;
+    if (m_options.m_only_changed) {
+      dump_mask |= OptionValue::eDumpOptionOnlyChanged;
+      dump_mask |= OptionValue::eDumpOptionDefaultValue;
+    }
 
     if (!args.empty()) {
       for (const auto &arg : args) {
+        if (m_options.m_only_changed) {
+          Status lookup_error;
+          lldb::OptionValueSP value_sp = GetDebugger().GetPropertyValue(
+              &m_exe_ctx, arg.ref(), lookup_error);
+          if (value_sp && value_sp->IsDefault())
+            continue;
+        }
         Status error(GetDebugger().DumpPropertyValue(
             &m_exe_ctx, result.GetOutputStream(), arg.ref(), dump_mask));
         if (error.Success()) {
