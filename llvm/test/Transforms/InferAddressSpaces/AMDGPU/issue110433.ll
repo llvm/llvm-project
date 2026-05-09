@@ -18,7 +18,7 @@ define <8 x i1> @load_vector_of_flat_ptr_from_global(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define <8 x i1> @load_vector_of_flat_ptr_from_global(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[LD:%.*]] = load <8 x ptr>, ptr addrspace(1) [[PTR]], align 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x ptr> [[LD]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x ptr> [[LD]], splat (ptr null)
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %ld = load <8 x ptr>, ptr addrspace(1) %ptr, align 128
@@ -30,7 +30,7 @@ define <8 x i1> @load_vector_of_flat_ptr_from_global_invariant(ptr addrspace(1) 
 ; CHECK-LABEL: define <8 x i1> @load_vector_of_flat_ptr_from_global_invariant(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[LD:%.*]] = load <8 x ptr>, ptr addrspace(1) [[PTR]], align 128, !invariant [[META0:![0-9]+]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x ptr> [[LD]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x ptr> [[LD]], splat (ptr null)
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %ld = load <8 x ptr>, ptr addrspace(1) %ptr, align 128, !invariant !0

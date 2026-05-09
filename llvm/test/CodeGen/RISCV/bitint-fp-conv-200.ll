@@ -113,13 +113,12 @@ define void @test_bitint_200_add(ptr %a, ptr %b, ptr %out) nounwind {
 define void @test_bitint_200_to_float(ptr %in, ptr %out) nounwind {
 ; RV64-LABEL: test_bitint_200_to_float:
 ; RV64:       # %bb.0: # %itofp-entry
-; RV64-NEXT:    ld a5, 16(a0)
-; RV64-NEXT:    lbu a4, 24(a0)
 ; RV64-NEXT:    ld a3, 0(a0)
 ; RV64-NEXT:    ld a2, 8(a0)
-; RV64-NEXT:    zext.b a0, a4
+; RV64-NEXT:    lbu a4, 24(a0)
+; RV64-NEXT:    ld a5, 16(a0)
+; RV64-NEXT:    or a0, a2, a4
 ; RV64-NEXT:    or a6, a3, a5
-; RV64-NEXT:    or a0, a2, a0
 ; RV64-NEXT:    or a0, a6, a0
 ; RV64-NEXT:    beqz a0, .LBB1_20
 ; RV64-NEXT:  # %bb.1: # %itofp-if-end
@@ -446,14 +445,13 @@ define void @test_bitint_200_to_float(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:    lw a5, 16(a0)
 ; RV32-NEXT:    lw a3, 20(a0)
 ; RV32-NEXT:    lbu a2, 24(a0)
+; RV32-NEXT:    lw t3, 8(a0)
 ; RV32-NEXT:    lw a7, 0(a0)
 ; RV32-NEXT:    lw t5, 4(a0)
-; RV32-NEXT:    lw t3, 8(a0)
 ; RV32-NEXT:    lw t4, 12(a0)
-; RV32-NEXT:    zext.b a2, a2
-; RV32-NEXT:    or a0, a7, a5
-; RV32-NEXT:    or a4, t3, a2
-; RV32-NEXT:    or a0, a0, a4
+; RV32-NEXT:    or a0, t3, a2
+; RV32-NEXT:    or a4, a7, a5
+; RV32-NEXT:    or a0, a4, a0
 ; RV32-NEXT:    or a4, t5, a3
 ; RV32-NEXT:    or a4, a4, t4
 ; RV32-NEXT:    or a0, a0, a4

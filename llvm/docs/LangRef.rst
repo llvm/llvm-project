@@ -2414,11 +2414,12 @@ For example:
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
 ``nosync``
-    This function attribute indicates that the function does not communicate
-    (synchronize) with another thread through memory or other well-defined means.
-    Synchronization is considered possible in the presence of `atomic` accesses
-    that enforce an order, thus not "unordered" and "monotonic", `volatile` accesses,
-    as well as `convergent` function calls.
+    This function attribute indicates that the function does not introduce any
+    *synchronizes-with* edges in the sense of the memory model.
+
+    In particular, synchronization is considered possible in the presence of
+    `atomic` accesses that enforce an order, thus not "unordered" and
+    "monotonic", as well as `convergent` function calls.
 
     Note that `convergent` operations can involve communication that is
     considered to be not through memory and does not necessarily imply an
@@ -2501,6 +2502,17 @@ For example:
     This attribute by itself does not imply restrictions on
     inter-procedural optimizations.  All of the semantic effects the
     patching may have to be separately conveyed via the linkage type.
+``"patchable-function-prefix"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted before the function entry label.
+``"patchable-function-entry"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted after the function entry label.  These NOPs are emitted before the
+    function prologue.
+``"patchable-function-entry-section"``
+    This attribute specifies the section used to record the start of the
+    patchable function entry area when such a section is emitted.  If omitted,
+    the default section name is ``__patchable_function_entries``.
 ``"probe-stack"``
     This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
@@ -3151,7 +3163,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 
 * ``"align"`` operand bundles may specify a non-power-of-two alignment
   (including a zero alignment). If this is the case, then the pointer value
-  must be a null pointer, otherwise the behavior is undefined.
+  must be an all-zero pointer, otherwise the behavior is undefined.
 
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
@@ -3395,12 +3407,15 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. Additionally, the
+    null pointer bit representation can be specified: ``z`` indicates it is
+    all-zeros, and ``o`` indicates it is all-ones. At most one of ``z`` or
+    ``o`` may be specified. If neither ``z`` nor ``o`` is specified, the null
+    pointer bit representation defaults to all-zeros. The ``<name>`` is an
     optional name of that address space, surrounded by ``(`` and ``)``. If the
     name is specified, it must be unique to that address space and cannot be
     ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
     global, and program address space respectively.
-
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
@@ -3927,7 +3942,8 @@ Given that definition, R\ :sub:`byte` is defined as follows:
 -  Otherwise, if R is atomic, and all the writes R\ :sub:`byte` may
    see are atomic, it chooses one of the values written. See the :ref:`Atomic
    Memory Ordering Constraints <ordering>` section for additional
-   constraints on how the choice is made.
+   constraints on how the choice is made. Targets may impose additional
+   requirements on R and the writes it may see based on their ``syncscope``.
 -  Otherwise R\ :sub:`byte` returns ``undef``.
 
 R returns the value composed of the series of bytes it read. This
@@ -5759,10 +5775,13 @@ Clobber constraints
 A clobber constraint is indicated by a "``~``" prefix. A clobber does not
 consume an input operand, nor generate an output. Clobbers cannot use any of the
 general constraint code letters -- they may use only explicit register
-constraints, e.g., "``~{eax}``". The one exception is that a clobber string of
-"``~{memory}``" indicates that the assembly writes to arbitrary undeclared
-memory locations -- not only the memory pointed to by a declared indirect
-output.
+constraints, e.g., "``~{eax}``".
+
+The one exception is that a clobber string of "``~{memory}``" indicates that the
+assembly reads and writes to arbitrary undeclared memory locations -- not only
+the memory pointed to by a declared indirect output. Furthermore, the assembly
+may also cause synchronization with other threads, such as via release/acquire
+fences and atomic memory accesses.
 
 Note that clobbering named registers that are also present in output
 constraints is not legal.
@@ -7445,9 +7464,13 @@ does not carry useful data and need not be preserved.
 noalias memory-access sets. This means that some collection of memory access
 instructions (loads, stores, memory-accessing calls, etc.) that carry
 ``noalias`` metadata can specifically be specified not to alias with some other
-collection of memory access instructions that carry ``alias.scope`` metadata. If
-accesses from different collections alias, the behavior is undefined. Each type
-of metadata specifies a list of scopes where each scope has an id and a domain.
+collection of memory access instructions that carry ``alias.scope`` metadata.
+These metadata kinds may also be attached to ``fence`` instructions to indicate
+which scoped memory regions the fence does (or does not) concern; this allows
+alias analysis to prove that a fence cannot affect a particular memory location.
+If accesses from different collections alias, the behavior is undefined. Each
+type of metadata specifies a list of scopes where each scope has an id and a
+domain.
 
 When evaluating an aliasing query, if for some domain, the set
 of scopes with that domain in one instruction's ``alias.scope`` list is a
@@ -7964,6 +7987,48 @@ iterations that do not fill a complete set of vector lanes. See
 Attributes in the metadata will be added to both the vectorized and
 epilogue loop.
 See :ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.vectorize.body``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+vectorized loop body. It is used by subsequent optimization passes
+(such as the loop unroller and ``WarnMissedTransforms``) to emit more
+precise optimization remarks that identify the loop as a vector loop.
+
+The first operand is the string
+``llvm.loop.vectorize.body`` and the second operand is an
+integer. A value of 1 indicates this is a vectorized loop body:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.body", i32 1}
+
+'``llvm.loop.vectorize.epilogue``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+scalar remainder (epilogue) loop to identify it as such. It is used by
+subsequent optimization passes (such as the loop unroller and
+``WarnMissedTransforms``) to emit more precise optimization remarks
+that distinguish between the vectorized loop and its scalar remainder.
+
+Together these two attributes provide a four-way classification:
+
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar epilogue loop after vectorization
+- Both ``body`` and ``epilogue``: vectorized epilogue 
+  (a remainder loop that was itself vectorized during epilogue
+  vectorization)
+- Neither: a plain loop not produced by the vectorizer
+
+The first operand is the string
+``llvm.loop.vectorize.epilogue`` and the second operand is
+an integer. A value of 1 indicates the loop is a remainder loop:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.epilogue", i32 1}
 
 '``llvm.loop.unroll``'
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -8901,6 +8966,25 @@ function that has had all calls to it inlined.
 
     !0 = !{ptr @bar, null, ptr @baz}
 
+'``elf_section_properties``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The '``elf_section_properties``' metadata is attached to a function or
+global variable and is used when writing an object file in ELF format to
+specify the values of the global's section type (`sh_type`) and entry
+size (`sh_entsize`) fields. The first operand specifies the type, and
+the second operand specifies the entry size.
+
+Example:
+
+.. code-block:: llvm
+
+    @global = global i32 1, !elf_section_properties !{i32 1879002126, i32 8}
+
+This defines a global with type ``SHT_LLVM_CFI_JUMP_TABLE`` and entry
+size 8.
+
+
 Module Flags Metadata
 =====================
 
@@ -9179,6 +9263,16 @@ flags metadata, using the following key-value pairs:
          call to the checker function and then one to the target.
        * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
          function which both checks and then calls the target.
+
+Other Module Flags
+------------------
+
+``require-logical-pointer``
+    This flag indicates this module must only use logical pointer intrinsics
+    such as :ref:`@llvm.structured.gep <i_structured_gep>` or
+    :ref:`@llvm.structured.alloca <i_structured_alloca>`.
+    Using a normal :ref:`getelementptr <i_getelementptr>` or
+    :ref:`alloca <i_alloca>` is illegal.
 
 Embedded Objects Names Metadata
 ===============================
@@ -12176,7 +12270,7 @@ Syntax:
 
 ::
 
-      atomicrmw [volatile] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
+      atomicrmw [volatile] [elementwise] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
 
 Overview:
 """""""""
@@ -12214,14 +12308,12 @@ operation. The operation must be one of the following keywords:
 -  usub_cond
 -  usub_sat
 
-For most of these operations, the type of '<value>' must be an integer
-type whose bit width is a power of two greater than or equal to eight.
-For xchg, this
-may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
-or fixed vector of floating-point type.  The type of the '``<pointer>``'
-operand must be a pointer to that type. If the ``atomicrmw`` is marked
-as ``volatile``, then the optimizer is not allowed to modify the
+For all of these operations, the type of '<value>' must be a type whose bit width is a power of two greater than or equal to eight.
+For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type.
+For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
+For xchg, this must be an integer type, floating-point type, or pointer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
+The type of the '<pointer>' operand must be a pointer to the type of '<value>'.
+If the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not allowed to modify the
 number or order of execution of this ``atomicrmw`` with other
 :ref:`volatile operations <volatile>`.
 
@@ -12237,6 +12329,10 @@ isn't specified.
 
 An ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
+
+If the ``elementwise`` modifier is present, the instruction has per-element vector
+atomic semantics. It behaves as if it were expanded into one scalar ``atomicrmw`` per element, that are not ordered with respect to each other.
+Without ``elementwise``, vector ``atomicrmw`` keeps whole-value atomic semantics.
 
 Semantics:
 """"""""""
@@ -20995,11 +21091,12 @@ matches the element-type of the vector input.
 This instruction has the same comparison and ``nsz`` semantics as the
 '``llvm.maxnum.*``' intrinsic.
 
-If any of the vector elements is a signaling NaN, the intrinsic will
-non-deterministically either:
+The reduction is performed in a non-deterministic order. This is only observable
+if one of the inputs is a signaling NaN.
 
- * Return a :ref:`NaN <floatnan>`.
- * Treat the signaling NaN as a quiet NaN.
+For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+which order is picked.
 
 Arguments:
 """"""""""
@@ -21029,11 +21126,12 @@ matches the element-type of the vector input.
 This instruction has the same comparison and ``nsz`` semantics as the
 '``llvm.minnum.*``' intrinsic.
 
-If any of the vector elements is a signaling NaN, the intrinsic will
-non-deterministically either:
+The reduction is performed in a non-deterministic order. This is only observable
+if one of the inputs is a signaling NaN.
 
- * Return a :ref:`NaN <floatnan>`.
- * Treat the signaling NaN as a quiet NaN.
+For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+which order is picked.
 
 Arguments:
 """"""""""
