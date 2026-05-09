@@ -68,13 +68,14 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
-                           std::string &IncludedFile,
-                           bool RequiresNullTerminator) {
-  auto GetFile = [this, RequiresNullTerminator](StringRef Path) {
+                           std::string &IncludedFile) {
+  // Skip the NUL termination to enable mmap in more cases, reading only the
+  // touched pages instead of the whole file.
+  auto GetFile = [this](StringRef Path) {
     return FS ? FS->getBufferForFile(Path, /*FileSize=*/-1,
-                                     RequiresNullTerminator)
+                                     /*RequiresNullTerminator=*/false)
               : MemoryBuffer::getFile(Path, /*IsText=*/false,
-                                      RequiresNullTerminator);
+                                      /*RequiresNullTerminator=*/false);
   };
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = GetFile(Filename);
