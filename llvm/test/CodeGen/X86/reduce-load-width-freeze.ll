@@ -358,14 +358,15 @@ define i16 @srl_freeze_load_i64_to_i16(ptr %p) {
 @g6 = global i8 0
 @g1 = global i16 0
 
-; incorrect sext -> zext
+; no incorrect sext -> zext
 define i1 @issue196590() {
 ; CHECK-LABEL: issue196590:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq g6@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movzbl (%rax), %eax
-; CHECK-NEXT:    movq g1@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movw %ax, (%rcx)
+; CHECK-NEXT:    movsbl (%rax), %eax
+; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    movq g1@GOTPCREL(%rip), %rdx
+; CHECK-NEXT:    movw %cx, (%rdx)
 ; CHECK-NEXT:    leal (%rax,%rax), %ecx
 ; CHECK-NEXT:    cmpl %eax, %ecx
 ; CHECK-NEXT:    setg %al
