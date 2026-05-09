@@ -777,7 +777,12 @@ void OmpStructureChecker::CheckMultListItems() {
   for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_nontemporal)) {
     const auto &nontempClause{
         std::get<parser::OmpClause::Nontemporal>(clause->u)};
-    const auto &nontempNameList{nontempClause.v};
+    std::list<parser::Name> nontempNameList;
+    for (auto &ompObject : nontempClause.v.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        nontempNameList.push_back(*name);
+      }
+    }
     CheckMultipleOccurrence(
         listVars, nontempNameList, clause->source, "NONTEMPORAL");
   }

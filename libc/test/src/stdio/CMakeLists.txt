@@ -465,6 +465,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       remove_test.cpp
     DEPENDS
+      libc.hdr.sys_stat_macros
       libc.include.unistd
       libc.src.errno.errno
       libc.src.fcntl.open
@@ -482,6 +483,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       rename_test.cpp
     DEPENDS
+      libc.hdr.sys_stat_macros
       libc.src.errno.errno
       libc.src.fcntl.open
       libc.src.stdio.rename

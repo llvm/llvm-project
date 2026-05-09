@@ -1036,7 +1036,7 @@ entry:
   ret i128 %sel
 }
 
-; Should be folded: icmp eq + select with constant in true value
+; Should NOT be folded: icmp eq + select with constant in other position
 define i128 @icmp_select_no_fold_i128_other_pos(i128 %arg, i128 %other) {
 ; GFX900-LABEL: icmp_select_no_fold_i128_other_pos:
 ; GFX900:       ; %bb.0: ; %entry

@@ -11,6 +11,7 @@ import os
 import shlex
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
+from typing import List
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.debugger.DAP import DAP
@@ -317,6 +318,12 @@ class LLDB(DebuggerBase):
             stop_reason=reason,
             program_state=ProgramState(state_frames),
         )
+
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
+
+    def collect_watches(self, step: StepIR, watches: List[str]):
+        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
 
     @property
     def is_running(self):

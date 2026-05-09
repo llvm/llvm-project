@@ -1186,8 +1186,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!InstrInfo)
     reportError(Obj.getFileName(),
                 "no instruction info for target " + TripleName);
-  Context = std::make_shared<MCContext>(TheTriple, *AsmInfo, RegisterInfo.get(),
-                                        SubtargetInfo.get());
+  Context = std::make_shared<MCContext>(TheTriple, *AsmInfo, *RegisterInfo,
+                                        *SubtargetInfo);
 
   // FIXME: for now initialize MCObjectFileInfo with default values
   ObjectFileInfo.reset(
@@ -3691,6 +3691,8 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
 
   ChainedFixups = InputArgs.hasArg(OTOOL_chained_fixups);
   DyldInfo = InputArgs.hasArg(OTOOL_dyld_info);
+
+  UseMemberSyntax = !InputArgs.hasArg(OTOOL_m);
 
   InputFilenames = InputArgs.getAllArgValues(OTOOL_INPUT);
   if (InputFilenames.empty())
