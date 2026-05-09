@@ -450,7 +450,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasFP16, {f16, v4f16, v8f16})
       .libcallFor({f128})
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [=](const LegalityQuery &Q) {
+            return (!HasFP16 && Q.Types[0].getScalarType().isFloat16()) ||
+                   Q.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
@@ -872,9 +877,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customIf([](const LegalityQuery &Q) {
         LLT DstTy = Q.Types[0];
         LLT SrcTy = Q.Types[1];
-        return SrcTy.isFixedVector() && DstTy.isFixedVector() &&
-               SrcTy.getScalarType().isFloat64() &&
-               DstTy.getScalarType().isFloat16();
+        return SrcTy.getScalarSizeInBits() == 64 &&
+               DstTy.getScalarSizeInBits() == 16;
       })
       .lowerFor({{bf16, f32}, {v4bf16, v4f32}})
       // Clamp based on input
@@ -2659,6 +2663,20 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
                                            MachineIRBuilder &MIRBuilder,
                                            MachineRegisterInfo &MRI) const {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  // This function legalizes f64 -> bf16 and f64 -> f16 truncations via f64 ->
+  // f32 G_FPTRUNC_ODD and f32 -> [b]f16 G_FPTRUNC, which apparently avoids the
+  // usual double-rounding issue that could be present from using twin
+  // G_FPTRUNC.
+
+  if (DstTy.isBFloat16() && SrcTy.isFloat64()) {
+    auto Mid =
+        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()}, {Src});
+    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid});
+    MI.eraseFromParent();
+    return true;
+  }
+
   assert(SrcTy.isFixedVector() && isPowerOf2_32(SrcTy.getNumElements()) &&
          "Expected a power of 2 elements");
 
