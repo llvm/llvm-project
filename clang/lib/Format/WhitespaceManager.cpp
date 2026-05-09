@@ -1000,14 +1000,19 @@ void WhitespaceManager::alignTrailingComments() {
   bool BreakBeforeNext = false;
   bool IsInPP = Changes.front().Tok->Tok.is(tok::hash);
   int NewLineThreshold = 1;
+  const Change *LastChangeToCompare = nullptr;
+  const Change *LastNewlineChange = nullptr;
   if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Always)
     NewLineThreshold = Style.AlignTrailingComments.OverEmptyLines + 1;
 
   for (int I = 0, MaxColumn = INT_MAX, Newlines = 0; I < Size; ++I) {
     auto &C = Changes[I];
+    if (LastNewlineChange)
+      LastChangeToCompare = std::exchange(LastNewlineChange, nullptr);
     if (C.StartOfBlockComment)
       continue;
     if (C.NewlinesBefore != 0) {
+      LastNewlineChange = &C;
       Newlines += C.NewlinesBefore;
       const bool WasInPP = std::exchange(
           IsInPP, C.Tok->Tok.is(tok::hash) || (IsInPP && C.IsTrailingComment) ||
@@ -1036,7 +1041,19 @@ void WhitespaceManager::alignTrailingComments() {
       if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit > 0)
         break;
 
-      int Spaces =
+      const auto *NextChange = I + 1 < Size ? &Changes[I + 1] : nullptr;
+      assert(!NextChange || NextChange->NewlinesBefore > 0 ||
+             NextChange->Tok->is(tok::eof));
+      auto ChangeIsMoved = [&C](const Change *ChangeToCompare) {
+        return ChangeToCompare &&
+               C.Tok->OriginalColumn == ChangeToCompare->Tok->OriginalColumn &&
+               C.Spaces == ChangeToCompare->Spaces;
+      };
+      if (C.NewlinesBefore > 0 &&
+          (ChangeIsMoved(LastChangeToCompare) || ChangeIsMoved(NextChange))) {
+        continue;
+      }
+      const int Spaces =
           C.NewlinesBefore > 0 ? C.Tok->OriginalColumn : OriginalSpaces;
       setChangeSpaces(I, Spaces);
       continue;

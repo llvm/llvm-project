@@ -3060,6 +3060,42 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                "}",
                Style);
 
+  // Move comments along, when it appears, that the indentation changed when a
+  // scope has been added or removed.
+  verifyFormat("void func() {\n"
+               "  int i;\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "}",
+               "void func() {\n"
+               "    int i;\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "    int i;\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "     // not moved, was not at normal indentation\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "     // not moved, was not at normal indentation\n"
+               "    int i;\n"
+               "}",
+               Style);
+
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   verifyNoChange("#define FOO    \\\n"
                  "  /* foo(); */ \\\n"
