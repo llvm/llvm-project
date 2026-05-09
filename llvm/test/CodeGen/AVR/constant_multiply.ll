@@ -7,8 +7,9 @@
 define i8 @mul_i8_by_3(i8 %a) nounwind {
 ; CHECK-LABEL: mul_i8_by_3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, 3
-; CHECK-NEXT:    rcall __mulqi3
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    add r24, r25
 ; CHECK-NEXT:    ret
   %1 = mul i8 %a, 3
   ret i8 %1
@@ -17,8 +18,10 @@ define i8 @mul_i8_by_3(i8 %a) nounwind {
 define i8 @mul_i8_by_5(i8 %a) nounwind {
 ; CHECK-LABEL: mul_i8_by_5:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, 5
-; CHECK-NEXT:    rcall __mulqi3
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    add r24, r25
 ; CHECK-NEXT:    ret
   %1 = mul i8 %a, 5
   ret i8 %1
@@ -27,8 +30,12 @@ define i8 @mul_i8_by_5(i8 %a) nounwind {
 define i8 @mul_i8_by_7(i8 %a) nounwind {
 ; CHECK-LABEL: mul_i8_by_7:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, 7
-; CHECK-NEXT:    rcall __mulqi3
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    sub r25, r24
+; CHECK-NEXT:    mov r24, r25
 ; CHECK-NEXT:    ret
   %1 = mul i8 %a, 7
   ret i8 %1
@@ -37,8 +44,10 @@ define i8 @mul_i8_by_7(i8 %a) nounwind {
 define i8 @mul_i8_by_neg3(i8 %a) nounwind {
 ; CHECK-LABEL: mul_i8_by_neg3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, -3
-; CHECK-NEXT:    rcall __mulqi3
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    sub r24, r25
 ; CHECK-NEXT:    ret
   %1 = mul i8 %a, -3
   ret i8 %1
@@ -47,9 +56,11 @@ define i8 @mul_i8_by_neg3(i8 %a) nounwind {
 define i16 @mul_i16_by_3(i16 %a) nounwind {
 ; CHECK-LABEL: mul_i16_by_3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, 3
-; CHECK-NEXT:    ldi r23, 0
-; CHECK-NEXT:    rcall __mulhi3
+; CHECK-NEXT:    movw r18, r24
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    add r24, r18
+; CHECK-NEXT:    adc r25, r19
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 3
   ret i16 %1
@@ -58,9 +69,16 @@ define i16 @mul_i16_by_3(i16 %a) nounwind {
 define i16 @mul_i16_by_7(i16 %a) nounwind {
 ; CHECK-LABEL: mul_i16_by_7:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, 7
-; CHECK-NEXT:    ldi r23, 0
-; CHECK-NEXT:    rcall __mulhi3
+; CHECK-NEXT:    movw r18, r24
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    sub r18, r24
+; CHECK-NEXT:    sbc r19, r25
+; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 7
   ret i16 %1
@@ -69,9 +87,15 @@ define i16 @mul_i16_by_7(i16 %a) nounwind {
 define i16 @mul_i16_by_10(i16 %a) nounwind {
 ; CHECK-LABEL: mul_i16_by_10:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, 10
-; CHECK-NEXT:    ldi r23, 0
-; CHECK-NEXT:    rcall __mulhi3
+; CHECK-NEXT:    movw r18, r24
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    add r24, r18
+; CHECK-NEXT:    adc r25, r19
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    rol r25
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 10
   ret i16 %1
@@ -80,9 +104,15 @@ define i16 @mul_i16_by_10(i16 %a) nounwind {
 define i16 @mul_i16_by_neg7(i16 %a) nounwind {
 ; CHECK-LABEL: mul_i16_by_neg7:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldi r22, 249
-; CHECK-NEXT:    ldi r23, 255
-; CHECK-NEXT:    rcall __mulhi3
+; CHECK-NEXT:    movw r18, r24
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    sub r24, r18
+; CHECK-NEXT:    sbc r25, r19
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, -7
   ret i16 %1

@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMSelectionDAG
   DAGCombiner.cpp
+  ExpandMulByConstant.cpp
   FastISel.cpp
   FunctionLoweringInfo.cpp
   InstrEmitter.cpp

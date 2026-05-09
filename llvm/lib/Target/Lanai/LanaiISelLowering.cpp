@@ -872,80 +872,13 @@ SDValue LanaiTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   if (!C)
     return SDValue();
 
-  int64_t MulAmt = C->getSExtValue();
-  int32_t HighestOne = -1;
-  uint32_t NonzeroEntries = 0;
-  int SignedDigit[32] = {0};
-
-  // Convert to non-adjacent form (NAF) signed-digit representation.
-  // NAF is a signed-digit form where no adjacent digits are non-zero. It is the
-  // minimal Hamming weight representation of a number (on average 1/3 of the
-  // digits will be non-zero vs 1/2 for regular binary representation). And as
-  // the non-zero digits will be the only digits contributing to the instruction
-  // count, this is desirable. The next loop converts it to NAF (following the
-  // approach in 'Guide to Elliptic Curve Cryptography' [ISBN: 038795273X]) by
-  // choosing the non-zero coefficients such that the resulting quotient is
-  // divisible by 2 which will cause the next coefficient to be zero.
-  int64_t E = std::abs(MulAmt);
-  int S = (MulAmt < 0 ? -1 : 1);
-  int I = 0;
-  while (E > 0) {
-    int ZI = 0;
-    if (E % 2 == 1) {
-      ZI = 2 - (E % 4);
-      if (ZI != 0)
-        ++NonzeroEntries;
-    }
-    SignedDigit[I] = S * ZI;
-    if (SignedDigit[I] == 1)
-      HighestOne = I;
-    E = (E - ZI) / 2;
-    ++I;
-  }
-
-  // Compute number of instructions required. Due to differences in lowering
-  // between the different processors this count is not exact.
-  // Start by assuming a shift and a add/sub for every non-zero entry (hence
-  // every non-zero entry requires 1 shift and 1 add/sub except for the first
-  // entry).
-  int32_t InstrRequired = 2 * NonzeroEntries - 1;
-  // Correct possible over-adding due to shift by 0 (which is not emitted).
-  if (std::abs(MulAmt) % 2 == 1)
-    --InstrRequired;
-  // Return if the form generated would exceed the instruction threshold.
-  if (InstrRequired > LanaiLowerConstantMulThreshold)
+  unsigned InstrCount = 0;
+  SDValue Result =
+      buildMulByConstant(Op.getNode(), DAG, C->getAPIntValue(), &InstrCount);
+  if (!Result ||
+      InstrCount > static_cast<unsigned>(LanaiLowerConstantMulThreshold))
     return SDValue();
-
-  SDValue Res;
-  SDLoc DL(Op);
-  SDValue V = Op->getOperand(0);
-
-  // Initialize the running sum. Set the running sum to the maximal shifted
-  // positive value (i.e., largest i such that zi == 1 and MulAmt has V<<i as a
-  // term NAF).
-  if (HighestOne == -1)
-    Res = DAG.getConstant(0, DL, MVT::i32);
-  else {
-    Res = DAG.getNode(ISD::SHL, DL, VT, V,
-                      DAG.getConstant(HighestOne, DL, MVT::i32));
-    SignedDigit[HighestOne] = 0;
-  }
-
-  // Assemble multiplication from shift, add, sub using NAF form and running
-  // sum.
-  for (unsigned int I = 0; I < std::size(SignedDigit); ++I) {
-    if (SignedDigit[I] == 0)
-      continue;
-
-    // Shifted multiplicand (v<<i).
-    SDValue Op =
-        DAG.getNode(ISD::SHL, DL, VT, V, DAG.getConstant(I, DL, MVT::i32));
-    if (SignedDigit[I] == 1)
-      Res = DAG.getNode(ISD::ADD, DL, VT, Res, Op);
-    else if (SignedDigit[I] == -1)
-      Res = DAG.getNode(ISD::SUB, DL, VT, Res, Op);
-  }
-  return Res;
+  return Result;
 }
 
 SDValue LanaiTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {

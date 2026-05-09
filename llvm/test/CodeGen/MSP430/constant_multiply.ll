@@ -15,8 +15,9 @@ define i16 @mul_by_2(i16 %a) nounwind {
 define i16 @mul_by_3(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #3, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 3
   ret i16 %1
@@ -25,8 +26,10 @@ define i16 @mul_by_3(i16 %a) nounwind {
 define i16 @mul_by_5(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_5:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #5, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 5
   ret i16 %1
@@ -35,8 +38,13 @@ define i16 @mul_by_5(i16 %a) nounwind {
 define i16 @mul_by_6(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_6:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #6, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    sub r12, r13
+; CHECK-NEXT:    sub r12, r13
+; CHECK-NEXT:    mov r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 6
   ret i16 %1
@@ -45,8 +53,12 @@ define i16 @mul_by_6(i16 %a) nounwind {
 define i16 @mul_by_7(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_7:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #7, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    sub r12, r13
+; CHECK-NEXT:    mov r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 7
   ret i16 %1
@@ -66,8 +78,11 @@ define i16 @mul_by_8(i16 %a) nounwind {
 define i16 @mul_by_9(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_9:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #9, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 9
   ret i16 %1
@@ -76,8 +91,11 @@ define i16 @mul_by_9(i16 %a) nounwind {
 define i16 @mul_by_10(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_10:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #10, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r12
+; CHECK-NEXT:    add r12, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 10
   ret i16 %1
@@ -86,8 +104,13 @@ define i16 @mul_by_10(i16 %a) nounwind {
 define i16 @mul_by_15(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_15:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #15, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    sub r12, r13
+; CHECK-NEXT:    mov r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 15
   ret i16 %1
@@ -108,8 +131,12 @@ define i16 @mul_by_16(i16 %a) nounwind {
 define i16 @mul_by_17(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_17:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #17, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 17
   ret i16 %1
@@ -118,8 +145,10 @@ define i16 @mul_by_17(i16 %a) nounwind {
 define i16 @mul_by_neg3(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_neg3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #-3, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    sub r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, -3
   ret i16 %1
@@ -128,8 +157,11 @@ define i16 @mul_by_neg3(i16 %a) nounwind {
 define i16 @mul_by_neg7(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_neg7:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #-7, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    sub r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, -7
   ret i16 %1
@@ -138,8 +170,13 @@ define i16 @mul_by_neg7(i16 %a) nounwind {
 define i16 @mul_by_neg9(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_neg9:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #-9, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    clr r13
+; CHECK-NEXT:    sub r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    sub r12, r13
+; CHECK-NEXT:    mov r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, -9
   ret i16 %1
@@ -148,8 +185,20 @@ define i16 @mul_by_neg9(i16 %a) nounwind {
 define i16 @mul_by_12345(i16 %a) nounwind {
 ; CHECK-LABEL: mul_by_12345:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov #12345, r13
-; CHECK-NEXT:    call #__mspabi_mpyi
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov.b r13, r13
+; CHECK-NEXT:    swpb r13
+; CHECK-NEXT:    add r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r12, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    add r13, r13
+; CHECK-NEXT:    sub r12, r13
+; CHECK-NEXT:    mov r13, r12
+; CHECK-NEXT:    add r12, r12
+; CHECK-NEXT:    add r12, r12
+; CHECK-NEXT:    sub r13, r12
 ; CHECK-NEXT:    ret
   %1 = mul i16 %a, 12345
   ret i16 %1

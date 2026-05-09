@@ -12,9 +12,9 @@ define i32 @f6(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x3, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x3, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sub %r3, %r6, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -72,9 +72,9 @@ define i32 @f10(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x3, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x2, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x1, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -88,9 +88,9 @@ define i32 @f1280(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x8, %r3
-; CHECK-NEXT:    sh %r6, 0xa, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x2, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x8, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -104,9 +104,9 @@ define i32 @fm6(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x3, %r3
-; CHECK-NEXT:    sh %r6, 0x1, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x2, %r3
+; CHECK-NEXT:    sub %r6, %r3, %r3
+; CHECK-NEXT:    sh %r3, 0x1, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -150,9 +150,9 @@ define i32 @fm9(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x3, %r3
-; CHECK-NEXT:    add %r6, %r3, %r3
-; CHECK-NEXT:    sub %r0, %r3, %rv
+; CHECK-NEXT:    sub %r0, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x3, %r3
+; CHECK-NEXT:    sub %r3, %r6, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -166,10 +166,10 @@ define i32 @fm10(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x3, %r3
-; CHECK-NEXT:    sh %r6, 0x1, %r9
-; CHECK-NEXT:    add %r9, %r3, %r3
-; CHECK-NEXT:    sub %r0, %r3, %rv
+; CHECK-NEXT:    sub %r0, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x3, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sub %r3, %r6, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -183,11 +183,15 @@ define i32 @h1(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    mov 0xaaaa0000, %r3
-; CHECK-NEXT:    add %pc, 0x10, %rca
-; CHECK-NEXT:    st %rca, [--%sp]
-; CHECK-NEXT:    bt __mulsi3
-; CHECK-NEXT:    or %r3, 0xaaab, %r7
+; CHECK-NEXT:    sub %r0, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x10, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x8, %r9
+; CHECK-NEXT:    add %r9, %r3, %r3
+; CHECK-NEXT:    sh %r3, 0x4, %r9
+; CHECK-NEXT:    add %r9, %r3, %r3
+; CHECK-NEXT:    sh %r3, 0x2, %r9
+; CHECK-NEXT:    add %r9, %r3, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -201,9 +205,9 @@ define i32 @muli32_p10(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x3, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x2, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x1, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -217,9 +221,9 @@ define i32 @muli32_p14(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x4, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x4, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sub %r3, %r6, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -233,9 +237,9 @@ define i32 @muli32_p18(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x4, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x3, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x1, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -249,9 +253,9 @@ define i32 @muli32_p28(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x2, %r3
-; CHECK-NEXT:    sh %r6, 0x5, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x3, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x2, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -265,9 +269,9 @@ define i32 @muli32_p30(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x5, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x5, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sub %r3, %r6, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -281,9 +285,9 @@ define i32 @muli32_p34(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x5, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x4, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x1, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -297,9 +301,9 @@ define i32 @muli32_p36(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x2, %r3
-; CHECK-NEXT:    sh %r6, 0x5, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x3, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x2, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -314,8 +318,8 @@ define i32 @muli32_p56(i32 inreg %a) #0 {
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
 ; CHECK-NEXT:    sh %r6, 0x3, %r3
-; CHECK-NEXT:    sh %r6, 0x6, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x3, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -329,9 +333,9 @@ define i32 @muli32_p60(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x2, %r3
-; CHECK-NEXT:    sh %r6, 0x6, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x4, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x2, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -345,9 +349,9 @@ define i32 @muli32_p62(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x6, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x6, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sub %r3, %r6, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -391,9 +395,9 @@ define i32 @muli32_p66(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x1, %r3
-; CHECK-NEXT:    sh %r6, 0x6, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x5, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x1, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -422,9 +426,9 @@ define i32 @muli32_m65(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x6, %r3
-; CHECK-NEXT:    add %r6, %r3, %r3
-; CHECK-NEXT:    sub %r0, %r3, %rv
+; CHECK-NEXT:    sub %r0, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x6, %r3
+; CHECK-NEXT:    sub %r3, %r6, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -438,9 +442,9 @@ define i32 @muli32_p384(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x7, %r3
-; CHECK-NEXT:    sh %r6, 0x9, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x1, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x7, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -454,9 +458,9 @@ define i32 @muli32_p12288(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0xc, %r3
-; CHECK-NEXT:    sh %r6, 0xe, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x1, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0xc, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -470,9 +474,9 @@ define i32 @muli32_p4352(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x8, %r3
-; CHECK-NEXT:    sh %r6, 0xc, %r9
-; CHECK-NEXT:    add %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x4, %r3
+; CHECK-NEXT:    add %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x8, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -486,9 +490,9 @@ define i32 @muli32_p3840(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0x8, %r3
-; CHECK-NEXT:    sh %r6, 0xc, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x4, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x8, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -502,9 +506,9 @@ define i32 @muli32_m3840(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0xc, %r3
-; CHECK-NEXT:    sh %r6, 0x8, %r9
-; CHECK-NEXT:    sub %r9, %r3, %rv
+; CHECK-NEXT:    sh %r6, 0x4, %r3
+; CHECK-NEXT:    sub %r6, %r3, %r3
+; CHECK-NEXT:    sh %r3, 0x8, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -518,10 +522,10 @@ define i32 @muli32_m4352(i32 inreg %a) #0 {
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sh %r6, 0xc, %r3
-; CHECK-NEXT:    sh %r6, 0x8, %r9
-; CHECK-NEXT:    add %r9, %r3, %r3
-; CHECK-NEXT:    sub %r0, %r3, %rv
+; CHECK-NEXT:    sub %r0, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x4, %r3
+; CHECK-NEXT:    sub %r3, %r6, %r3
+; CHECK-NEXT:    sh %r3, 0x8, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp

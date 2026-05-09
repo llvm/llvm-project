@@ -1886,14 +1886,16 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Expands to [SU]MUL_LOHI.
   setOperationAction(ISD::MULHU,     MVT::i32, Expand);
   setOperationAction(ISD::MULHS,     MVT::i32, Expand);
-  setOperationAction(ISD::MUL,       MVT::i32, Expand);
 
   if (Subtarget->useSoftMulDiv()) {
+    setOperationAction(ISD::MUL,       MVT::i32, Custom);
     // .umul works for both signed and unsigned
     setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
     setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
+  } else {
+    setOperationAction(ISD::MUL,  MVT::i32, Expand);
   }
 
   if (Subtarget->is64Bit()) {
@@ -3136,6 +3138,18 @@ SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 }
 
+SDValue SparcTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op->getValueType(0);
+  if (VT != MVT::i32)
+    return SDValue();
+
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+  if (!C)
+    return SDValue();
+
+  return buildMulByConstant(Op.getNode(), DAG, C->getAPIntValue());
+}
+
 SDValue SparcTargetLowering::
 LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
@@ -3146,6 +3160,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Should not custom lower this!");
 
+  case ISD::MUL:                return LowerMUL(Op, DAG);
   case ISD::RETURNADDR:         return LowerRETURNADDR(Op, DAG, *this,
                                                        Subtarget);
   case ISD::FRAMEADDR:          return LowerFRAMEADDR(Op, DAG,

@@ -6,12 +6,9 @@
 define i32 @mul_by_3(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_3:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 3, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 1, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    add %o1, %o0, %o0
   %1 = mul i32 %a, 3
   ret i32 %1
 }
@@ -19,12 +16,9 @@ define i32 @mul_by_3(i32 %a) nounwind {
 define i32 @mul_by_5(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_5:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 5, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 2, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    add %o1, %o0, %o0
   %1 = mul i32 %a, 5
   ret i32 %1
 }
@@ -32,12 +26,9 @@ define i32 @mul_by_5(i32 %a) nounwind {
 define i32 @mul_by_7(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_7:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 7, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 3, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    sub %o1, %o0, %o0
   %1 = mul i32 %a, 7
   ret i32 %1
 }
@@ -45,12 +36,9 @@ define i32 @mul_by_7(i32 %a) nounwind {
 define i32 @mul_by_9(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_9:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 9, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 3, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    add %o1, %o0, %o0
   %1 = mul i32 %a, 9
   ret i32 %1
 }
@@ -58,12 +46,10 @@ define i32 @mul_by_9(i32 %a) nounwind {
 define i32 @mul_by_10(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_10:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 10, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 2, %o1
+; CHECK-NEXT:    add %o1, %o0, %o0
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    sll %o0, 1, %o0
   %1 = mul i32 %a, 10
   ret i32 %1
 }
@@ -71,12 +57,9 @@ define i32 @mul_by_10(i32 %a) nounwind {
 define i32 @mul_by_15(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_15:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 15, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 4, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    sub %o1, %o0, %o0
   %1 = mul i32 %a, 15
   ret i32 %1
 }
@@ -84,12 +67,9 @@ define i32 @mul_by_15(i32 %a) nounwind {
 define i32 @mul_by_neg7(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_neg7:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov -7, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 3, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    sub %o0, %o1, %o0
   %1 = mul i32 %a, -7
   ret i32 %1
 }
@@ -97,12 +77,10 @@ define i32 @mul_by_neg7(i32 %a) nounwind {
 define i32 @mul_by_neg9(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_neg9:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov -9, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sub %g0, %o0, %o1
+; CHECK-NEXT:    sll %o1, 3, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    sub %o1, %o0, %o0
   %1 = mul i32 %a, -9
   ret i32 %1
 }
@@ -110,12 +88,9 @@ define i32 @mul_by_neg9(i32 %a) nounwind {
 define i32 @mul_by_65(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_65:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 65, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 6, %o1
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    add %o1, %o0, %o0
   %1 = mul i32 %a, 65
   ret i32 %1
 }
@@ -123,12 +98,10 @@ define i32 @mul_by_65(i32 %a) nounwind {
 define i32 @mul_by_384(i32 %a) nounwind {
 ; CHECK-LABEL: mul_by_384:
 ; CHECK:       ! %bb.0:
-; CHECK-NEXT:    save %sp, -96, %sp
-; CHECK-NEXT:    mov %i0, %o0
-; CHECK-NEXT:    call .umul
-; CHECK-NEXT:    mov 384, %o1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore %g0, %o0, %o0
+; CHECK-NEXT:    sll %o0, 1, %o1
+; CHECK-NEXT:    add %o1, %o0, %o0
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    sll %o0, 7, %o0
   %1 = mul i32 %a, 384
   ret i32 %1
 }

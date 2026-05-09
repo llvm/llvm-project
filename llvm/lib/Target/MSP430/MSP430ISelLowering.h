@@ -36,6 +36,7 @@ namespace llvm {
     /// LowerOperation - Provide custom lowering hooks for some operations.
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+    SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShifts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;

@@ -11,27 +11,19 @@ define i32 @vscale_known_nonzero() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    slli a2, a0, 1
-; CHECK-NEXT:    slli a3, a0, 3
-; CHECK-NEXT:    slli a4, a0, 5
-; CHECK-NEXT:    slli a5, a0, 7
-; CHECK-NEXT:    sub a1, a1, a2
-; CHECK-NEXT:    slli a2, a0, 9
-; CHECK-NEXT:    add a3, a3, a4
-; CHECK-NEXT:    slli a4, a0, 13
-; CHECK-NEXT:    sub a5, a5, a2
-; CHECK-NEXT:    slli a2, a0, 15
-; CHECK-NEXT:    sub a4, a4, a2
-; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    slli a2, a0, 11
-; CHECK-NEXT:    sub a5, a5, a2
-; CHECK-NEXT:    slli a2, a0, 20
-; CHECK-NEXT:    sub a4, a4, a2
-; CHECK-NEXT:    slli a0, a0, 24
-; CHECK-NEXT:    add a1, a1, a5
-; CHECK-NEXT:    add a0, a4, a0
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    srliw a0, a0, 27
+; CHECK-NEXT:    slli a0, a0, 6
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    slli a0, a0, 5
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    slli a2, a0, 4
+; CHECK-NEXT:    sub a2, a2, a0
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    srliw a0, a1, 27
 ; CHECK-NEXT:    lui a1, %hi(.LCPI0_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI0_0)
 ; CHECK-NEXT:    add a0, a1, a0
