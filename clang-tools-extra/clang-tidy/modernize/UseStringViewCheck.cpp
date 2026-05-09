@@ -22,9 +22,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
-AST_MATCHER_P(FunctionDecl, isOverloaded, bool, CheckOverloadedFunctions) {
-  if (CheckOverloadedFunctions)
-    return false;
+AST_MATCHER(FunctionDecl, isOverloaded) {
   const DeclarationName Name = Node.getDeclName();
   // Sanity check
   if (Name.isEmpty())
@@ -83,8 +81,7 @@ UseStringViewCheck::UseStringViewCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoredFunctions(utils::options::parseStringList(
-          Options.get("IgnoredFunctions", "toString$;ToString$;to_string$"))),
-      CheckOverloadedFunctions(Options.get("CheckOverloadedFunctions", false)) {
+          Options.get("IgnoredFunctions", "toString$;ToString$;to_string$"))) {
   parseReplacementStringViewClass(
       Options.get("ReplacementStringViewClass", ""));
 }
@@ -92,7 +89,6 @@ UseStringViewCheck::UseStringViewCheck(StringRef Name,
 void UseStringViewCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoredFunctions",
                 utils::options::serializeStringList(IgnoredFunctions));
-  Options.store(Opts, "CheckOverloadedFunctions", CheckOverloadedFunctions);
   Options.store(Opts, "ReplacementStringViewClass",
                 (Twine("") + StringViewClassKey + "=" + StringViewClass + ";" +
                  WStringViewClassKey + "=" + WStringViewClass + ";" +
@@ -117,7 +113,7 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
       functionDecl(
           isDefinition(),
           unless(anyOf(VirtualOrOperator, IgnoredFunctionsMatcher,
-                       isOverloaded(CheckOverloadedFunctions),
+                       isOverloaded(),
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(
