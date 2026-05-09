@@ -429,6 +429,8 @@ StringRef Triple::getOSTypeName(OSType Kind) {
     return "hermit";
   case Hurd:
     return "hurd";
+  case Illumos:
+    return "illumos";
   case IOS:
     return "ios";
   case KFreeBSD:
@@ -968,6 +970,7 @@ static Triple::OSType parseOS(StringRef OSName) {
       .StartsWith("firmware", Triple::Firmware)
       .StartsWith("qurt", Triple::QURT)
       .StartsWith("h2", Triple::H2)
+      .StartsWith("illumos", Triple::Illumos)
       .Default(Triple::UnknownOS);
 }
 

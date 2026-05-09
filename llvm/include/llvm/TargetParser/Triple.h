@@ -225,6 +225,7 @@ public:
     NetBSD,
     OpenBSD,
     Solaris,
+    Illumos,
     UEFI,
     Win32,
     ZOS,
@@ -674,6 +675,8 @@ public:
   bool isOSDragonFly() const { return getOS() == Triple::DragonFly; }
 
   bool isOSSolaris() const { return getOS() == Triple::Solaris; }
+
+  bool isOSIllumos() const { return getOS() == Triple::Illumos; }
 
   bool isOSIAMCU() const { return getOS() == Triple::ELFIAMCU; }
 

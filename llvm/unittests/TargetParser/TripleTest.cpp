@@ -1475,6 +1475,36 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::spirv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ChipStar, T.getOS());
+
+  T = Triple("x86_64-pc-solaris2.11");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Solaris, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+
+  T = Triple("sparcv9-sun-solaris2.11");
+  EXPECT_EQ(Triple::sparcv9, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Solaris, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+
+  T = Triple("x86_64-pc-illumos");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Illumos, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+  EXPECT_EQ(T.getOSName(), "illumos");
+
+  T = Triple("x86_64-sun-illumos");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Illumos, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+  EXPECT_EQ(T.getOSName(), "illumos");
 }
 
 TEST(TripleTest, EnumConstructor) {
@@ -1582,6 +1612,17 @@ TEST(TripleTest, EnumConstructor) {
     EXPECT_EQ(T.getEnvironment(), Triple::MSVC);
     EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
     EXPECT_EQ(T.str(), "i386-pc-windows-msvc");
+  }
+
+  {
+    Triple T(Triple::x86_64, Triple::NoSubArch, Triple::PC, Triple::Illumos);
+    EXPECT_EQ(T.getArch(), Triple::x86_64);
+    EXPECT_EQ(T.getVendor(), Triple::PC);
+    EXPECT_EQ(T.getOS(), Triple::Illumos);
+    EXPECT_EQ(T.getOSName(), "illumos");
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "x86_64-pc-illumos");
   }
 }
 
@@ -1769,6 +1810,10 @@ TEST(TripleTest, Normalization) {
   EXPECT_EQ(
       "x86_64-unknown-linux-gnu-unknown",
       Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-pc-illumos-unknown-unknown",
+      Triple::normalize("x86_64-pc-illumos", Triple::CanonicalForm::FIVE_IDENT));
 
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
@@ -3152,7 +3197,13 @@ TEST(TripleTest, DefaultExceptionHandling) {
             Triple("aarch64-pc-windows-msvc").getDefaultExceptionHandling());
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("aarch64-pc-windows-elf").getDefaultExceptionHandling());
-}
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-solaris2.11").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-illumos").getDefaultExceptionHandling());
+ }
 
 TEST(TripleTest, NormalizeWindows) {
   EXPECT_EQ("i686-pc-windows-msvc", Triple::normalize("i686-pc-win32"));
@@ -3540,6 +3591,13 @@ TEST(DataLayoutTest, CheriRISCV32) {
               testing::HasSubstr("pe200:64:64:64:32"));
   EXPECT_THAT(TT.computeDataLayout("cheriot"),
               testing::HasSubstr("A200-P200-G200"));
+}
+
+TEST(DataLayoutTest, SolarisIllumosSameLayoutOnX86_64) {
+  Triple T_Illumos = Triple("x86_64-pc-illumos");
+  Triple T_Solaris = Triple("x86_64-pc-solaris2.11");
+
+  EXPECT_EQ(T_Illumos.computeDataLayout(), T_Solaris.computeDataLayout());
 }
 
 } // end anonymous namespace
