@@ -99,7 +99,7 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
   Functions.insert("llvm::createStringErrorV");
 
   // Parse semicolon-separated function names from AdditionalFunctions.
-  const llvm::StringRef Input(AdditionalFunctions);
+  const StringRef Input(AdditionalFunctions);
   llvm::SmallVector<llvm::StringRef, 8> Entries;
   Input.split(Entries, ';', -1, false);
   for (llvm::StringRef Entry : Entries) {
