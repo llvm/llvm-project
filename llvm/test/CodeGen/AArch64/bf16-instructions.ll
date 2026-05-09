@@ -38,7 +38,6 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32_fadd
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32_fadd
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptrunc_double
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fpext_double
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrt
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_powi
@@ -63,7 +62,6 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fneg
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_minnum
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_maxnum
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_copysign_f64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_floor
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_ceil
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_trunc
@@ -107,7 +105,6 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32_fadd
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32_fadd
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptrunc_double
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fpext_double
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrt
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_powi
@@ -132,7 +129,6 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fneg
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_minnum
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_maxnum
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_copysign_f64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_floor
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_ceil
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_trunc
@@ -1119,24 +1115,40 @@ define bfloat @test_fptrunc_float(float %a) #0 {
 }
 
 define bfloat @test_fptrunc_double(double %a) #0 {
-; CHECK-CVT-LABEL: test_fptrunc_double:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    fcvtxn s0, d0
-; CHECK-CVT-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-CVT-NEXT:    fmov w9, s0
-; CHECK-CVT-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-NEXT:    add w8, w9, w8
-; CHECK-CVT-NEXT:    add w8, w10, w8
-; CHECK-CVT-NEXT:    lsr w8, w8, #16
-; CHECK-CVT-NEXT:    fmov s0, w8
-; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptrunc_double:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    fcvtxn s0, d0
+; CHECK-CVT-SD-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
+; CHECK-CVT-SD-NEXT:    fmov s0, w8
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: test_fptrunc_double:
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    fcvtxn s0, d0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptrunc_double:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    fcvtxn s0, d0
+; CHECK-CVT-GI-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-CVT-GI-NEXT:    fmov w9, s0
+; CHECK-CVT-GI-NEXT:    fcmp s0, #0.0
+; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-CVT-GI-NEXT:    add w8, w9, w8
+; CHECK-CVT-GI-NEXT:    orr w9, w9, #0x400000
+; CHECK-CVT-GI-NEXT:    add w8, w8, w10
+; CHECK-CVT-GI-NEXT:    csel w8, w9, w8, vs
+; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16
+; CHECK-CVT-GI-NEXT:    fmov s0, w8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-GI-NEXT:    ret
   %r = fptrunc double %a to bfloat
   ret bfloat %r
 }
@@ -2025,28 +2037,57 @@ define bfloat @test_copysign_f32(bfloat %a, float %b) #0 {
 }
 
 define bfloat @test_copysign_f64(bfloat %a, double %b) #0 {
-; CHECK-CVT-LABEL: test_copysign_f64:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-CVT-NEXT:    fcvt s1, d1
-; CHECK-CVT-NEXT:    mvni v2.4s, #128, lsl #24
-; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-CVT-NEXT:    fmov w8, s0
-; CHECK-CVT-NEXT:    lsr w8, w8, #16
-; CHECK-CVT-NEXT:    fmov s0, w8
-; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_copysign_f64:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    fcvt s1, d1
+; CHECK-CVT-SD-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
+; CHECK-CVT-SD-NEXT:    fmov s0, w8
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-BF16-LABEL: test_copysign_f64:
-; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-BF16-NEXT:    fcvt s1, d1
-; CHECK-BF16-NEXT:    mvni v2.4s, #128, lsl #24
-; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-BF16-NEXT:    bfcvt h0, s0
-; CHECK-BF16-NEXT:    ret
+; CHECK-BF16-SD-LABEL: test_copysign_f64:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    fcvt s1, d1
+; CHECK-BF16-SD-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-BF16-SD-NEXT:    bfcvt h0, s0
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_copysign_f64:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    fcvtxn s1, d1
+; CHECK-CVT-GI-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    fmov w9, s1
+; CHECK-CVT-GI-NEXT:    fcmp s1, #0.0
+; CHECK-CVT-GI-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-CVT-GI-NEXT:    add w8, w9, w8
+; CHECK-CVT-GI-NEXT:    orr w9, w9, #0x400000
+; CHECK-CVT-GI-NEXT:    add w8, w8, w10
+; CHECK-CVT-GI-NEXT:    csel w8, w9, w8, vs
+; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16
+; CHECK-CVT-GI-NEXT:    fmov s2, w8
+; CHECK-CVT-GI-NEXT:    bif v0.8b, v2.8b, v1.8b
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_copysign_f64:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    fcvtxn s1, d1
+; CHECK-BF16-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    bfcvt h1, s1
+; CHECK-BF16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; CHECK-BF16-GI-NEXT:    ret
   %tb = fptrunc double %b to bfloat
   %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %tb)
   ret bfloat %r
