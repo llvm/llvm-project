@@ -1,4 +1,5 @@
-//===- ArithToLUT.h - Arith FP8 extf to LUT conversion -------*- C++ -*-===//
+//===- ArithToLUT.h - Arith narrow-float extf to LUT conversion --*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +16,7 @@
 namespace mlir {
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTARITHFP8EXTFTOLUT
+#define GEN_PASS_DECL_CONVERTARITHEXTFTOLUT
 #include "mlir/Conversion/Passes.h.inc"
 
 } // namespace mlir

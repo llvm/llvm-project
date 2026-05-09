@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// For every supported f8 format, iterate all 256 bit patterns, run each
-// through the LUT-lowered extf function via the MLIR JIT, and compare the
+// For every supported narrow-float format, iterate all 2^N bit patterns, run
+// each through the LUT-lowered extf function via the MLIR JIT, and compare the
 // result bit-for-bit against the APFloat reference value computed the same
 // way buildExtFLUT does at compile time.
 //
@@ -59,7 +59,7 @@ static struct LLVMInitializer {
 
 static LogicalResult lowerToLLVM(ModuleOp module) {
   PassManager pm(module->getName());
-  pm.addPass(createConvertArithFP8ExtFToLUT());
+  pm.addPass(createConvertArithExtFToLUT());
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createArithToLLVMConversionPass());
   pm.addPass(createConvertFuncToLLVMPass());
@@ -68,24 +68,28 @@ static LogicalResult lowerToLLVM(ModuleOp module) {
 }
 
 // Builds a module with function:
-// func @test(%arg0: i32) -> f32 { trunci i32 to i8; bitcast i8 to f8; extf f8 to f32 }
-static std::string makeModule(const char *f8TypeName) {
+// func @test(%arg0: i32) -> f32 { trunci i32 to iN; bitcast iN to fN; extf fN
+// to f32 }
+static std::string makeModule(const char *floatTypeName, unsigned bitWidth) {
+  std::string iN = "i" + std::to_string(bitWidth);
   std::string s;
   s += "func.func @test(%arg0: i32) -> f32 "
        "attributes { llvm.emit_c_interface } {\n";
-  s += "  %i8  = arith.trunci %arg0 : i32 to i8\n";
-  s += std::string("  %f8  = arith.bitcast %i8 : i8 to ") + f8TypeName + "\n";
-  s += std::string("  %f32 = arith.extf %f8 : ") + f8TypeName + " to f32\n";
+  s += "  %" + iN + "  = arith.trunci %arg0 : i32 to " + iN + "\n";
+  s += "  %fp  = arith.bitcast %" + iN + " : " + iN + " to " + floatTypeName +
+       "\n";
+  s += std::string("  %f32 = arith.extf %fp : ") + floatTypeName + " to f32\n";
   s += "  return %f32 : f32\n}\n";
   return s;
 }
 
-struct F8Format {
+struct NarrowFPFormat {
   const char *mlirName;
+  unsigned bitWidth;
   std::function<FloatType(MLIRContext *)> getType;
 };
 
-static void runExhaustiveTest(const F8Format &fmt) {
+static void runExhaustiveTest(const NarrowFPFormat &fmt) {
   DialectRegistry registry;
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
@@ -93,7 +97,7 @@ static void runExhaustiveTest(const F8Format &fmt) {
   MLIRContext ctx(registry);
 
   OwningOpRef<ModuleOp> module =
-      parseSourceString<ModuleOp>(makeModule(fmt.mlirName), &ctx);
+      parseSourceString<ModuleOp>(makeModule(fmt.mlirName, fmt.bitWidth), &ctx);
   ASSERT_TRUE(!!module) << "parse failed for " << fmt.mlirName;
   ASSERT_TRUE(succeeded(lowerToLLVM(*module)))
       << "lowering failed for " << fmt.mlirName;
@@ -103,73 +107,79 @@ static void runExhaustiveTest(const F8Format &fmt) {
   auto jit = std::move(jitOrError.get());
 
   const llvm::fltSemantics &sem = fmt.getType(&ctx).getFloatSemantics();
+  unsigned numEntries = 1u << fmt.bitWidth;
 
-  for (int i = 0; i < 256; ++i) {
+  for (unsigned i = 0; i < numEntries; ++i) {
     float got = 0.0f;
-    int32_t input = i;
+    int32_t input = static_cast<int32_t>(i);
     llvm::Error err =
         jit->invoke("test", input, ExecutionEngine::Result<float>(got));
     ASSERT_FALSE(err) << llvm::toString(std::move(err));
 
-    llvm::APFloat ref(sem, llvm::APInt(8, static_cast<uint64_t>(i)));
+    llvm::APFloat ref(sem, llvm::APInt(fmt.bitWidth, static_cast<uint64_t>(i)));
     bool lossy = false;
-    ref.convert(llvm::APFloat::IEEEsingle(),
-                llvm::APFloat::rmNearestTiesToEven, &lossy);
+    ref.convert(llvm::APFloat::IEEEsingle(), llvm::APFloat::rmNearestTiesToEven,
+                &lossy);
     float expected = ref.convertToFloat();
 
     if (std::isnan(expected)) {
       EXPECT_TRUE(std::isnan(got))
-          << fmt.mlirName << " pattern " << i
-          << ": expected NaN, got " << got;
+          << fmt.mlirName << " pattern " << i << ": expected NaN, got " << got;
     } else {
       uint32_t gotBits = 0, expBits = 0;
       std::memcpy(&gotBits, &got, 4);
       std::memcpy(&expBits, &expected, 4);
       EXPECT_EQ(gotBits, expBits)
-          << fmt.mlirName << " pattern " << i
-          << ": expected " << expected << ", got " << got;
+          << fmt.mlirName << " pattern " << i << ": expected " << expected
+          << ", got " << got;
     }
   }
 }
 
+TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF4E2M1FN)) {
+  runExhaustiveTest({"f4E2M1FN", 4, [](MLIRContext *ctx) -> FloatType {
+                       return Float4E2M1FNType::get(ctx);
+                     }});
+}
+
 TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF8E4M3FN)) {
-  runExhaustiveTest({"f8E4M3FN", [](MLIRContext *ctx) -> FloatType {
+  runExhaustiveTest({"f8E4M3FN", 8, [](MLIRContext *ctx) -> FloatType {
                        return Float8E4M3FNType::get(ctx);
                      }});
 }
 
 TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF8E5M2)) {
-  runExhaustiveTest({"f8E5M2", [](MLIRContext *ctx) -> FloatType {
+  runExhaustiveTest({"f8E5M2", 8, [](MLIRContext *ctx) -> FloatType {
                        return Float8E5M2Type::get(ctx);
                      }});
 }
 
 TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF8E4M3FNUZ)) {
-  runExhaustiveTest({"f8E4M3FNUZ", [](MLIRContext *ctx) -> FloatType {
+  runExhaustiveTest({"f8E4M3FNUZ", 8, [](MLIRContext *ctx) -> FloatType {
                        return Float8E4M3FNUZType::get(ctx);
                      }});
 }
 
 TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF8E5M2FNUZ)) {
-  runExhaustiveTest({"f8E5M2FNUZ", [](MLIRContext *ctx) -> FloatType {
+  runExhaustiveTest({"f8E5M2FNUZ", 8, [](MLIRContext *ctx) -> FloatType {
                        return Float8E5M2FNUZType::get(ctx);
                      }});
 }
 
 TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF8E4M3B11FNUZ)) {
-  runExhaustiveTest({"f8E4M3B11FNUZ", [](MLIRContext *ctx) -> FloatType {
+  runExhaustiveTest({"f8E4M3B11FNUZ", 8, [](MLIRContext *ctx) -> FloatType {
                        return Float8E4M3B11FNUZType::get(ctx);
                      }});
 }
 
 TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF8E3M4)) {
-  runExhaustiveTest({"f8E3M4", [](MLIRContext *ctx) -> FloatType {
+  runExhaustiveTest({"f8E3M4", 8, [](MLIRContext *ctx) -> FloatType {
                        return Float8E3M4Type::get(ctx);
                      }});
 }
 
 TEST(ArithToLUT, SKIP_WITHOUT_JIT(ExtFAllPatternsF8E4M3)) {
-  runExhaustiveTest({"f8E4M3", [](MLIRContext *ctx) -> FloatType {
+  runExhaustiveTest({"f8E4M3", 8, [](MLIRContext *ctx) -> FloatType {
                        return Float8E4M3Type::get(ctx);
                      }});
 }

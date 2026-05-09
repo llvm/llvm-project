@@ -2,7 +2,7 @@
 // value for a selection of well-known bit patterns.
 
 // RUN: mlir-opt %s \
-// RUN:     --convert-arith-fp8-extf-to-lut \
+// RUN:     --convert-arith-extf-to-lut \
 // RUN:     --finalize-memref-to-llvm \
 // RUN:     --convert-arith-to-llvm \
 // RUN:     --convert-vector-to-llvm \
