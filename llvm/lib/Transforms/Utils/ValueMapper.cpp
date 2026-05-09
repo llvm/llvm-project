@@ -539,7 +539,7 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<ConstantTargetNone>(C))
     return getVM()[V] = Constant::getNullValue(NewTy);
   assert(isa<ConstantPointerNull>(C));
-  return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
+  return getVM()[V] = ConstantPointerNull::get(NewTy);
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {

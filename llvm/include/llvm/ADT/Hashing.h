@@ -51,6 +51,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/type_traits.h"
 #include "llvm/Support/xxhash.h"
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstring>
@@ -173,6 +174,10 @@ inline uint64_t get_execution_seed() {
 /// Hash a contiguous byte buffer to a hash_code. The execution seed is XORed
 /// into the result (not propagated through the avalanche), so a given byte
 /// stream produces the same xxh3 output modulo the per-process seed.
+//
+// TODO: post-XOR allows `hash_combine(x) ^ hash_combine(y)` to cancel the
+// process seed. Follow-up: add a seeded xxh3 entry in
+// llvm/lib/Support/xxhash.cpp.
 inline hash_code combine_bytes(const char *data, size_t len) {
   return xxh3_64bits(reinterpret_cast<const uint8_t *>(data), len) ^
          get_execution_seed();
@@ -226,12 +231,13 @@ template <typename T> auto get_hashable_data(const T &value) {
 /// combining them, this (as an optimization) directly combines the integers.
 ///
 /// xxh3 has no streaming entry point in libLLVMSupport, so the byte stream is
-/// flattened to a buffer and hashed in one shot. A 64-byte on-stack buffer
-/// covers the common cases; longer non-contiguous ranges (the prior chunked
-/// CityHash impl was streaming and never allocated) fall back to the heap.
+/// flattened to a buffer and hashed in one shot. The 256-byte on-stack buffer
+/// holds 32 pointer-sized values, which covers virtually all in-tree
+/// non-contiguous callers. The prior chunked CityHash impl streamed and never
+/// allocated.
 template <typename InputIteratorT>
 hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
-  alignas(uint64_t) char stack_buf[64];
+  alignas(uint64_t) char stack_buf[256];
   std::unique_ptr<char[]> heap_buf;
   char *buf = stack_buf;
   size_t cap = sizeof(stack_buf);
@@ -242,6 +248,9 @@ hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
       size_t new_cap = cap * 2;
       while (new_cap < len + sizeof(data))
         new_cap *= 2;
+      // `new char[]` default-initializes (no zero-fill); make_unique would
+      // value-initialize, which is wasted work for a buffer about to be
+      // overwritten.
       std::unique_ptr<char[]> new_buf(new char[new_cap]);
       std::memcpy(new_buf.get(), buf, len);
       heap_buf = std::move(new_buf);
@@ -318,7 +327,7 @@ template <typename... Ts> hash_code hash_combine(const Ts &...args) {
   constexpr size_t Total = hashing::detail::total_hashable_size<Ts...>();
   // Round up so `data()` is non-null when Total == 0; combine_bytes won't
   // read the buffer in that case (len=0 short-circuits in xxh3_64bits).
-  std::array<char, Total == 0 ? 1 : Total> buf;
+  std::array<char, std::max<size_t>(1, Total)> buf;
   size_t off = 0;
   (hashing::detail::store_hashable_data(buf.data(), off, args), ...);
   return hashing::detail::combine_bytes(buf.data(), Total);

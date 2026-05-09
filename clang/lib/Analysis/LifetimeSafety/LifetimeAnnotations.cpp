@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang::lifetimes {
@@ -139,9 +140,19 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       isReferenceOrPointerLikeType(Callee->getReturnType())) {
-    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
-        Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow)
+    // Propagate origins through GSL pointer arithmetic and dereference
+    // operators.
+    switch (Callee->getOverloadedOperator()) {
+    case OO_Arrow:
+    case OO_Star:
+    case OO_Plus:
+    case OO_Minus:
+    case OO_PlusPlus:
+    case OO_MinusMinus:
       return true;
+    default:
+      break;
+    }
     if (Callee->getIdentifier() &&
         (IteratorMembers.contains(Callee->getName()) ||
          InnerPointerGetters.contains(Callee->getName())))
@@ -230,6 +241,22 @@ bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   return false;
 }
 
+bool shouldTrackSecondArgument(const FunctionDecl *FD) {
+  if (FD->getNumParams() < 2)
+    return false;
+  const auto *RD = FD->getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // For free-standing `+`/`-` operators annotated with `gsl::Pointer`, track
+  // the second parameter when its type matches the return type.
+  return RD->hasAttr<PointerAttr>() &&
+         (FD->getOverloadedOperator() == OO_Plus ||
+          FD->getOverloadedOperator() == OO_Minus) &&
+         ASTContext::hasSameUnqualifiedType(FD->getParamDecl(1)->getType(),
+                                            FD->getReturnType()) &&
+         !isa<CXXMethodDecl>(FD);
+}
+
 template <typename T> static bool isRecordWithAttr(QualType Type) {
   auto *RD = Type->getAsCXXRecordDecl();
   if (!RD)
@@ -268,6 +295,12 @@ static StringRef getName(const CXXRecordDecl &RD) {
   return "";
 }
 
+static StringRef getName(const FunctionDecl &FD) {
+  if (FD.getIdentifier())
+    return FD.getName();
+  return "";
+}
+
 static bool isStdUniquePtr(const CXXRecordDecl &RD) {
   return RD.isInStdNamespace() && getName(RD) == "unique_ptr";
 }
@@ -277,7 +310,7 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
          MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
 }
 
-bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
+bool isInvalidationMethod(const CXXMethodDecl &MD) {
   const CXXRecordDecl *RD = MD.getParent();
   if (!isInStlNamespace(RD))
     return false;
@@ -342,11 +375,14 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                          // Assignment
                                          "replace"};
 
-  const StringRef ContainerName = getName(*RD);
+  static const llvm::StringSet<> UniquePtr = {// Reallocation
+                                              "reset"};
+
+  const StringRef RecordName = getName(*RD);
   // TODO: Consider caching this lookup by CXXMethodDecl pointer if this
   // StringSwitch becomes a performance bottleneck.
   const llvm::StringSet<> *InvalidatingMethods =
-      llvm::StringSwitch<const llvm::StringSet<> *>(ContainerName)
+      llvm::StringSwitch<const llvm::StringSet<> *>(RecordName)
           .Case("vector", &Vector)
           .Case("basic_string", &String)
           .Case("deque", &Deque)
@@ -356,6 +392,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                  &NodeBased)
           .Cases({"flat_map", "flat_set", "flat_multimap", "flat_multiset"},
                  &Flat)
+          .Case("unique_ptr", &UniquePtr)
           .Default(nullptr);
 
   if (!InvalidatingMethods)
@@ -371,7 +408,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
     case OO_Subscript: // operator[] : Invalidation only for
                        // `flat_map` (Insert-or-access).
                        // `map` and `unordered_map` are excluded.
-      return ContainerName == "flat_map";
+      return RecordName == "flat_map";
     default:
       return false;
     }
@@ -381,6 +418,12 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
     return false;
 
   return InvalidatingMethods->contains(MD.getName());
+}
+
+bool destructsFirstArg(const FunctionDecl &FD) {
+  if (isa<CXXDestructorDecl>(FD))
+    return true;
+  return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {

@@ -89,6 +89,13 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
           RTLIB::impl_armpl_vcbrtq_f32, RTLIB::impl_armpl_vcbrtq_f64})
       setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
     break;
+  case VectorLibrary::AMDLIBM:
+    for (RTLIB::LibcallImpl Impl :
+         {RTLIB::impl_amd_vrd2_sincos, RTLIB::impl_amd_vrd4_sincos,
+          RTLIB::impl_amd_vrd8_sincos, RTLIB::impl_amd_vrs4_sincosf,
+          RTLIB::impl_amd_vrs8_sincosf, RTLIB::impl_amd_vrs16_sincosf})
+      setAvailable(Impl);
+    break;
   default:
     break;
   }

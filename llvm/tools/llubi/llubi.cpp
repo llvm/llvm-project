@@ -79,6 +79,11 @@ static cl::opt<unsigned>
          cl::desc("Random seed for non-deterministic behavior (default = 0)"),
          cl::value_desc("N"), cl::init(0), cl::cat(InterpreterCategory));
 
+static cl::opt<bool>
+    Deterministic("deterministic",
+                  cl::desc("Disable interpreter-introduced non-determinism."),
+                  cl::init(false), cl::cat(InterpreterCategory));
+
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
     "", cl::desc("Choose undef value behavior:"),
     cl::values(clEnumVal(ubi::UndefValueBehavior::NonDeterministic,
@@ -86,6 +91,28 @@ cl::opt<ubi::UndefValueBehavior> UndefBehavior(
                          "random value."),
                clEnumVal(ubi::UndefValueBehavior::Zero,
                          "All uses of an uninitialized byte yield zero.")));
+
+cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
+    "", cl::desc("Choose NaN propagation behavior:"),
+    cl::values(
+        clEnumValN(ubi::NaNPropagationBehavior::NonDeterministic, "nan-nodet",
+                   "Non-deterministically choose from valid NaN results as "
+                   "specified by language reference."),
+        clEnumValN(ubi::NaNPropagationBehavior::PreferredNaN, "nan-preferred",
+                   "The quiet bit is set and the payload is all-zero."),
+        clEnumValN(
+            ubi::NaNPropagationBehavior::QuietingNaN, "nan-quieting",
+            "The quiet bit is set and the payload is copied from any input"
+            "operand that is a NaN."),
+        clEnumValN(ubi::NaNPropagationBehavior::UnchangedNaN, "nan-unchanged",
+                   "The quiet bit and payload are copied from any input operand"
+                   "that is a NaN"),
+        clEnumValN(ubi::NaNPropagationBehavior::TargetSpecificNaN,
+                   "nan-target-specific",
+                   "The quiet bit is set and the payload is picked from a "
+                   "known target-specific set of \"extra\" possible NaN "
+                   "payloads.")),
+    cl::init(ubi::NaNPropagationBehavior::NonDeterministic));
 
 class VerboseEventHandler : public ubi::EventHandler {
 public:
@@ -166,6 +193,16 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (VScale == 0) {
+    WithColor::error() << "--vscale value must be positive\n";
+    return 1;
+  }
+
+  if (!isPowerOf2_32(VScale)) {
+    WithColor::error() << "--vscale value must be a power of 2\n";
+    return 1;
+  }
+
   LLVMContext Context;
 
   // Load the bitcode...
@@ -197,7 +234,9 @@ int main(int argc, char **argv) {
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+  Ctx.setDeterministic(Deterministic);
   Ctx.setUndefValueBehavior(UndefBehavior);
+  Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);
   Ctx.reseed(Seed);
 
   if (!Ctx.initGlobalValues()) {

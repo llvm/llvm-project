@@ -128,8 +128,7 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
     return false;
 
   // LoResult: cttz(trunc(SrcVal), _),  must use same truncated value
-  if (!match(LoResult, m_OneUse(m_Intrinsic<Intrinsic::cttz>(
-                           m_Specific(LoTrunc), m_Value()))))
+  if (!match(LoResult, m_OneUse(m_Cttz(m_Specific(LoTrunc), m_Value()))))
     return false;
 
   // HiResult: add/or_disjoint(cttz(trunc(lshr(SrcVal, N/2)), _), N/2)
@@ -139,8 +138,7 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
     return false;
 
   Value *HiCttzArg;
-  if (!match(CttzHiCall, m_OneUse(m_Intrinsic<Intrinsic::cttz>(
-                             m_Value(HiCttzArg), m_Value()))))
+  if (!match(CttzHiCall, m_OneUse(m_Cttz(m_Value(HiCttzArg), m_Value()))))
     return false;
 
   if (!match(HiCttzArg,
@@ -223,8 +221,7 @@ static bool foldSelectSplitCTLZ(Instruction &I) {
 
   // HiResult: ctlz(trunc(lshr(SrcVal, N/2)), _)
   Value *HiCtlzArg;
-  if (!match(HiResult, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(m_Value(HiCtlzArg),
-                                                             m_Value()))))
+  if (!match(HiResult, m_OneUse(m_Ctlz(m_Value(HiCtlzArg), m_Value()))))
     return false;
 
   if (!match(HiCtlzArg,
@@ -238,8 +235,7 @@ static bool foldSelectSplitCTLZ(Instruction &I) {
     return false;
 
   Value *LoCtlzArg;
-  if (!match(CtlzLoCall, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(
-                             m_Value(LoCtlzArg), m_Value()))))
+  if (!match(CtlzLoCall, m_OneUse(m_Ctlz(m_Value(LoCtlzArg), m_Value()))))
     return false;
 
   if (!match(LoCtlzArg, m_Trunc(m_Specific(SrcVal))))

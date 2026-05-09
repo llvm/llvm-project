@@ -230,6 +230,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  byteswap
+  ../libc/include/byteswap.yaml
+  byteswap.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.byteswap_macros
+)
+
+add_header_macro(
   complex
   ../libc/include/complex.yaml
   complex.h
@@ -477,10 +486,12 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
       .llvm-libc-types.stack_t
   )
 
-  add_header(
+  add_header_macro(
     sys_ucontext
-    HDR
-      sys/ucontext.h
+    ../libc/include/sys/ucontext.yaml
+    sys/ucontext.h
+    DEPENDS
+      .ucontext
   )
 endif()
 
@@ -635,6 +646,15 @@ add_header_macro(
     .llvm-libc-types.off_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_personality
+  ../libc/include/sys/personality.yaml
+  sys/personality.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_personality_macros
 )
 
 add_header_macro(
