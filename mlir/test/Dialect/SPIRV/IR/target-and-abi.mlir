@@ -353,7 +353,7 @@ func.func @vce() attributes {
 // spirv.selection_control
 //===----------------------------------------------------------------------===//
 
-// expected-error @+1 {{'spirv.selection_control' must be a spirv::SelectionControlAttr}}
+// expected-error@+1 {{'spirv.selection_control' must be a spirv::SelectionControlAttr}}
 func.func @selection_control_wrong_attr() attributes {
   spirv.selection_control = 64
 } { return }
