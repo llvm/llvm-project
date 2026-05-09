@@ -142,7 +142,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   // If this is a non-scalar-integer type, we don't care enough to try.
   if (!E->getType()->isIntegralOrEnumerationType()) return false;
 
-  // i have inserted this patch ....
+  // [Fix]
   if (!Semantic)
   if (const auto *BIT = E->getType()->getAs<BitIntType>())
     if (BIT->isUnsigned() && BIT->getNumBits() == 1)
