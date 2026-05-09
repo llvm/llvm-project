@@ -680,7 +680,7 @@ const llvm::StringSet<>
     BreakableBlockComment::ContentIndentingJavadocAnnotations = {
         "@param", "@return",     "@returns", "@throws",  "@type", "@template",
         "@see",   "@deprecated", "@define",  "@exports", "@mods", "@private",
-};
+    };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
   if (!Style.isJava() && !Style.isJavaScript())
@@ -1120,7 +1120,7 @@ void BreakableLineCommentSection::adaptStartOfLine(
         /*Spaces=*/LineColumn,
         /*StartOfTokenColumn=*/LineColumn,
         /*AlignedTo=*/tokenAt(0).NewlinesBefore == 0 ? &tokenAt(0) : nullptr,
-        /*InPPDirective=*/false);
+        /*InPPDirective=*/false, /*IndentedFromColumn=*/StartColumn);
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
     // Adjust the prefix if necessary.
