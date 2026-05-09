@@ -96,13 +96,12 @@ public:
 };
 
 class PhysicalRegisterUsageInfoPrinterPass
-    : public PassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
+    : public RequiredPassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit PhysicalRegisterUsageInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

@@ -35,7 +35,7 @@ class Value;
 class ModulePass;
 
 /// Pass to remove unused function declarations.
-class GlobalDCEPass : public PassInfoMixin<GlobalDCEPass> {
+class GlobalDCEPass : public OptionalPassInfoMixin<GlobalDCEPass> {
 public:
   GlobalDCEPass(bool InLTOPostLink = false) : InLTOPostLink(InLTOPostLink) {}
 

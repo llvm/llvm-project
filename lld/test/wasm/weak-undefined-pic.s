@@ -74,7 +74,7 @@ _start:
 # With `-pie` or `-shared` the resolution should be deferred to the dynamic
 # linker and the function address should be imported as GOT.func.foo.
 #
-# RUN: wasm-ld --experimental-pic -pie %t.o -o %t3.wasm
+# RUN: wasm-ld -pie %t.o -o %t3.wasm
 # RUN: obj2yaml %t3.wasm | FileCheck %s --check-prefix=IMPORT
 
 #      IMPORT:  - Type:            IMPORT

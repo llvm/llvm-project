@@ -5864,6 +5864,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       break;
 
+    // The non-saturating versions are handled by visitFPTo[US]IInst().
+    //
+    // N.B. some platform-specific intrinsics, such as AArch64 fcvtz[us], are
+    //      lowered to these cross-platform intrinsics.
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat:
+      handleShadowOr(I);
+      break;
+
     default:
       return false;
     }

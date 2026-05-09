@@ -882,6 +882,10 @@ you to input a Python script as a summary:
   LLDB will emit a warning if it is unable to find the function you passed, but
   will still register the binding.
 
+- using the ``@lldb.summary`` decorator on a function definition. This combines
+  the definition and registration into a single step. See
+  :ref:`decorator-formatters` for details.
+
 Regular Expression Typenames
 ----------------------------
 
@@ -1146,6 +1150,10 @@ children provider in LLDB:
       y = "Hello world"
    }
 
+As an alternative to the two-step import-then-register pattern above, you can
+use the ``@lldb.synthetic`` decorator to combine both steps. See
+:ref:`decorator-formatters` for details.
+
 LLDB has synthetic children providers for a core subset of STL classes, both in
 the version provided by libstdcpp and by libcxx, as well as for several
 Foundation classes.
@@ -1211,6 +1219,100 @@ The reason for this is that classes might have an overloaded ``operator []``,
 or other special provisions and the expression command chooses to ignore
 synthetic children in the interest of equivalency with code you asked to have
 compiled from source.
+
+.. _decorator-formatters:
+
+Decorator-Based Formatter Registration
+---------------------------------------
+
+Beginning in version 23, LLDB provides Python decorators that combine the
+definition and registration of formatters into a single step. When a module
+using these decorators is loaded via ``command script import``, the formatters
+are automatically registered.
+
+``@lldb.summary``
++++++++++++++++++
+
+The ``@lldb.summary`` decorator registers a Python function as a type summary
+provider:
+
+.. code-block:: python
+
+   import lldb
+
+   @lldb.summary("Person")
+   def PersonSummary(valobj: lldb.SBValue, _) -> str:
+       name = valobj.GetChildMemberWithName("name").GetSummary()
+       age = valobj.GetChildMemberWithName("age").GetValueAsUnsigned()
+       return f"name={name}, age={age}"
+
+This is equivalent to defining the function and then running:
+
+::
+
+   (lldb) type summary add --python-function module.PersonSummary Person
+
+``@lldb.synthetic``
++++++++++++++++++++
+
+The ``@lldb.synthetic`` decorator registers a Python class as a synthetic child
+provider:
+
+.. code-block:: python
+
+   import lldb
+
+   @lldb.synthetic("Person")
+   class PersonChildren:
+       def __init__(self, valobj: lldb.SBValue, _) -> None:
+           self.valobj = valobj
+
+       def update(self) -> bool:
+           self.name = self.valobj.GetChildMemberWithName("name")
+           self.age = self.valobj.GetChildMemberWithName("age")
+           return True
+
+       def num_children(self) -> int:
+           return 2
+
+       def get_child_at_index(self, index) -> lldb.SBValue:
+           if index == 0:
+               return self.name
+           if index == 1:
+               return self.age
+           return lldb.SBValue()
+
+This is equivalent to defining the class and then running:
+
+::
+
+   (lldb) type synthetic add --python-class module.PersonChildren Person
+
+Passing Options
++++++++++++++++
+
+Both decorators accept keyword arguments that map to command-line flags of the
+corresponding ``type summary add`` or ``type synthetic add`` commands.
+Underscores in keyword names are converted to hyphens. A value of ``True``
+produces a bare flag; any other value is passed as the flag's argument.
+
+For example, to register a summary for a regex type pattern with the expand
+flag:
+
+.. code-block:: python
+
+   @lldb.summary("^std::vector<.+>$", regex=True, expand=True)
+   def VectorSummary(valobj, internal_dict):
+       ...
+
+This is equivalent to:
+
+::
+
+   (lldb) type summary add --python-function module.VectorSummary --regex --expand "^std::vector<.+>$"
+
+Other commonly used options include ``category`` to place the formatter in a
+specific category.
 
 Filters
 -------

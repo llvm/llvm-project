@@ -23,7 +23,7 @@
 
 namespace clang::ssaf {
 
-inline constexpr llvm::StringLiteral UnsafeBufferUsageAnalysisResultName =
+constexpr llvm::StringLiteral UnsafeBufferUsageAnalysisResultName =
     "UnsafeBufferUsageAnalysisResult";
 
 struct UnsafeBufferUsageAnalysisResult final : AnalysisResult {
@@ -33,6 +33,9 @@ struct UnsafeBufferUsageAnalysisResult final : AnalysisResult {
 
   /// Whole-program set of unsafe buffer pointers:
   std::map<EntityId, EntityPointerLevelSet> UnsafeBuffers;
+
+  auto begin() const { return UnsafeBuffers.begin(); }
+  auto end() const { return UnsafeBuffers.end(); }
 };
 
 } // namespace clang::ssaf

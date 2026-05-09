@@ -1,4 +1,5 @@
 // RUN: fir-opt --split-input-file --cuf-add-constructor %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-add-constructor="cuda-unified=true" %s | FileCheck %s --check-prefixes=CHECK,UNIFIED
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (https://github.com/llvm/llvm-project.git cae351f3453a0a26ec8eb2ddaf773c24a29d929e)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
@@ -201,3 +202,58 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: cuf.register_module @cuda_device_mod -> !llvm.ptr 
 // CHECK: fir.address_of(@_QMkernels_mEdev_var) : !fir.ref<f32> 
 // CHECK: fir.call @_FortranACUFRegisterVariable(%3, %4, %5, %6) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> () 
+
+// -----
+
+// Under -gpu=mem:unified, a non-allocatable host module global referenced from
+// device code (mirrored as an external-linkage clone in the GPU module by the
+// CUFDeviceGlobal pass) must be registered with
+// _FortranACUFRegisterExternalVariable so the device-side `.extern` symbol
+// resolves to the host pointer at module-load time.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  fir.global @_QMmtestsEm(dense<[1, 2, 3, 4, 5]> : tensor<5xi32>) : !fir.array<5xi32>
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMmtestsPg1() kernel {
+      gpu.return
+    }
+    // External declaration: no body, no init value -- lowers to PTX
+    // `.extern .global ...`. CUFAddConstructor must register it so the
+    // CUDA runtime maps it to the host pointer at module-load time.
+    fir.global @_QMmtestsEm : !fir.array<5xi32>
+  }
+}
+
+// UNIFIED: llvm.func internal @__cudaFortranConstructor()
+// UNIFIED: cuf.register_module @cuda_device_mod -> !llvm.ptr
+// UNIFIED: fir.address_of(@_QMmtestsEm) : !fir.ref<!fir.array<5xi32>>
+// UNIFIED: fir.call @_FortranACUFRegisterExternalVariable
+// UNIFIED-NOT: fir.call @_FortranACUFInitModule
+
+// -----
+
+// Under -gpu=mem:unified, an allocatable host module global also gets
+// registered via _FortranACUFRegisterExternalVariable; the registered symbol
+// is the descriptor (fir.box<fir.heap<...>>). The host runtime allocates the
+// data buffer in HMM/ATS-accessible memory.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  fir.global @_QMmtestsEma : !fir.box<!fir.heap<!fir.array<?xi32>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+    %1 = fircg.ext_embox %0(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+    fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
+  }
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMmtestsPg1() kernel {
+      gpu.return
+    }
+    fir.global @_QMmtestsEma : !fir.box<!fir.heap<!fir.array<?xi32>>>
+  }
+}
+
+// UNIFIED: llvm.func internal @__cudaFortranConstructor()
+// UNIFIED: cuf.register_module @cuda_device_mod -> !llvm.ptr
+// UNIFIED: fir.address_of(@_QMmtestsEma) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+// UNIFIED: fir.call @_FortranACUFRegisterExternalVariable
+// UNIFIED-NOT: fir.call @_FortranACUFInitModule

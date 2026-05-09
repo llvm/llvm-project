@@ -2215,9 +2215,8 @@ define amdgpu_ps i48 @s_fshl_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX11-NEXT:    s_lshl_b32 s3, s3, 8
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xff
 ; GFX11-NEXT:    s_or_b32 s3, s12, s3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_nc_u32_e32 v1, v0, v1
-; GFX11-NEXT:    v_mov_b32_e32 v0, s4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_add_nc_u32 v1, v0, v1
 ; GFX11-NEXT:    v_mul_hi_u32 v4, s4, v1
 ; GFX11-NEXT:    v_mul_hi_u32 v5, s5, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s5

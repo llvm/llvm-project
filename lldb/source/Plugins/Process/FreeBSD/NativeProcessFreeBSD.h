@@ -101,7 +101,6 @@ private:
   ArchSpec m_arch;
   MainLoop &m_main_loop;
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
-  std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
   // Private Instance Methods
   NativeProcessFreeBSD(::pid_t pid, int terminal_fd, NativeDelegate &delegate,

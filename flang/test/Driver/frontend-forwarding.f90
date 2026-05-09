@@ -20,7 +20,6 @@
 ! RUN:     -fomit-frame-pointer \
 ! RUN:     -fpass-plugin=Bye%pluginext \
 ! RUN:     -fversion-loops-for-stride \
-! RUN:     -flang-experimental-hlfir \
 ! RUN:     -fno-ppc-native-vector-element-order \
 ! RUN:     -fppc-native-vector-element-order \
 ! RUN:     -mllvm -print-before-all \
@@ -52,7 +51,6 @@
 ! CHECK: "-fconvert=little-endian"
 ! CHECK: "-fpass-plugin=Bye
 ! CHECK: "-fversion-loops-for-stride"
-! CHECK: "-flang-experimental-hlfir"
 ! CHECK: "-fno-ppc-native-vector-element-order"
 ! CHECK: "-fppc-native-vector-element-order"
 ! CHECK: "-Rpass"

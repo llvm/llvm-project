@@ -6676,6 +6676,24 @@ defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
 
+// ssub_sat(0, R) -> sqneg(R)
+def : Pat<(v16i8 (ssubsat immAllZerosV, V128:$reg)),
+          (v16i8 (SQNEGv16i8 V128:$reg))>;
+def : Pat<(v8i16 (ssubsat immAllZerosV, V128:$reg)),
+          (v8i16 (SQNEGv8i16 V128:$reg))>;
+def : Pat<(v4i32 (ssubsat immAllZerosV, V128:$reg)),
+          (v4i32 (SQNEGv4i32 V128:$reg))>;
+def : Pat<(v2i64 (ssubsat immAllZerosV, V128:$reg)),
+          (v2i64 (SQNEGv2i64 V128:$reg))>;
+def : Pat<(v8i8 (ssubsat immAllZerosV, V64:$reg)),
+          (v8i8 (SQNEGv8i8 V64:$reg))>;
+def : Pat<(v4i16 (ssubsat immAllZerosV, V64:$reg)),
+          (v4i16 (SQNEGv4i16 V64:$reg))>;
+def : Pat<(v2i32 (ssubsat immAllZerosV, V64:$reg)),
+          (v2i32 (SQNEGv2i32 V64:$reg))>;
+def : Pat<(v1i64 (ssubsat immAllZerosV, V64:$reg)),
+          (v1i64 (SQNEGv1i64 V64:$reg))>;
+
 // Floating-point conversion patterns.
 multiclass IntegerToFPSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
   let Predicates = [HasFPRCVT] in {
@@ -11363,12 +11381,10 @@ foreach i = 0-7 in {
 }
 
 let Predicates = [HasLS64] in {
-  let mayLoad = 1 in
-  def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
-                                          (outs GPR64x8:$Rt)>;
-  let mayStore = 1 in
-  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
-                                          (outs)>;
+  defm LD64B: LoadStore64B<0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
+                                           (outs GPR64x8:$Rt)>;
+  defm ST64B: LoadStore64B<0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
+                                           (outs)>;
   def ST64BV:   Store64BV<0b011, "st64bv">;
   def ST64BV0:  Store64BV<0b010, "st64bv0">;
 

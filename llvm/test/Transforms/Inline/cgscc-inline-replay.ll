@@ -59,7 +59,7 @@
 ; REPLAY-FUNCTION-NEVER: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
 ; REPLAY-FUNCTION-NEVER-NOT: '_Z3sumii' inlined into 'main'
 
-; REPLAY-ERROR: error: Could not open remarks file:
+; REPLAY-ERROR: LLVM ERROR: could not open remarks file:
 ; REPLAY-ERROR-SCOPE: for the --cgscc-inline-replay-scope option: Cannot find option named 'function'!
 ; REPLAY-ERROR-FALLBACK: for the --cgscc-inline-replay-fallback option: Cannot find option named 'original'!
 ; REPLAY-ERROR-FORMAT: for the --cgscc-inline-replay-format option: Cannot find option named 'line'!

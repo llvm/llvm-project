@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_tgamma() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_tgamma() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH3C00
+; CHECK-NEXT:    ret half 1.000000e+00
 ;
 entry:
   %c = call half @_Z6tgammaDh(half 1.000000e+00)
@@ -34,7 +34,7 @@ entry:
 define <4 x half> @test_tdo_v2_f16_tgamma() {
 ; CHECK-LABEL: define <4 x half> @test_tdo_v2_f16_tgamma() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH4000, half 0xH4600>
+; CHECK-NEXT:    ret <4 x half> <half 1.000000e+00, half 1.000000e+00, half 2.000000e+00, half 6.000000e+00>
 ;
 entry:
   %c = call <4 x half> @_Z6tgammaDv4_Dh(<4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>)

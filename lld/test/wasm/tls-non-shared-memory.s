@@ -46,13 +46,13 @@ tls1:
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump --disassemble-symbols=get_tls1 --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 
-# RUN: wasm-ld --experimental-pic -shared -o %t.so %t.o
+# RUN: wasm-ld -shared -o %t.so %t.o
 # RUN: obj2yaml %t.so | FileCheck %s --check-prefixes=SHARED,PIC
 
-# RUN: wasm-ld --experimental-pic --no-gc-sections --no-entry -pie -o %t-pie.wasm %t.o
+# RUN: wasm-ld --no-gc-sections --no-entry -pie -o %t-pie.wasm %t.o
 # RUN: obj2yaml %t-pie.wasm | FileCheck %s --check-prefixes=PIE,PIC
 
-# RUN: wasm-ld --experimental-pic --features=atomics,bulk-memory,extended-const --no-gc-sections --no-entry -pie -o %t-extended-const.wasm %t.o
+# RUN: wasm-ld --features=atomics,bulk-memory,extended-const --no-gc-sections --no-entry -pie -o %t-extended-const.wasm %t.o
 # RUN: obj2yaml %t-extended-const.wasm | FileCheck %s --check-prefixes=EXT-CONST
 
 #      CHECK:   - Type:            GLOBAL

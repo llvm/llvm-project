@@ -311,16 +311,6 @@ bool llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
   return Changed;
 }
 
-AssumeInst *
-llvm::buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
-                               Instruction *CtxI, AssumptionCache *AC,
-                               DominatorTree *DT) {
-  AssumeBuilderState Builder(CtxI->getModule(), CtxI, AC, DT);
-  for (const RetainedKnowledge &RK : Knowledge)
-    Builder.addKnowledge(RK);
-  return Builder.build();
-}
-
 RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,
                                                   RetainedKnowledge RK,
                                                   AssumptionCache *AC,

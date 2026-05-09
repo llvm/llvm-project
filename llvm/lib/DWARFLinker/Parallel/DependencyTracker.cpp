@@ -397,6 +397,32 @@ getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
     return CompileUnit::PlainDwarf;
 
   if (Entry.DieEntry->getTag() == dwarf::DW_TAG_variable) {
+    // In-class static member declarations (e.g. "static constexpr int x = 1;")
+    // are DW_TAG_variable children of a DW_TAG_class_type /
+    // DW_TAG_structure_type / DW_TAG_union_type with DW_AT_declaration set.
+    // They are part of the class type and belong in the TypeTable together with
+    // the class. Forcing them into PlainDwarf would also drag the parent class
+    // into PlainDwarf (via markParentsAsKeepingChildren), producing a duplicate
+    // empty class declaration DIE alongside the full class definition emitted
+    // in another CU.
+    bool IsDeclaration = dwarf::toUnsigned(
+        Entry.CU->find(Entry.DieEntry, dwarf::DW_AT_declaration), 0);
+    bool ParentIsType = false;
+    if (IsDeclaration) {
+      if (std::optional<uint32_t> ParentIdx = Entry.DieEntry->getParentIdx()) {
+        dwarf::Tag ParentTag =
+            Entry.CU->getDebugInfoEntry(*ParentIdx)->getTag();
+        ParentIsType = ParentTag == dwarf::DW_TAG_class_type ||
+                       ParentTag == dwarf::DW_TAG_structure_type ||
+                       ParentTag == dwarf::DW_TAG_union_type;
+      }
+    }
+    if (IsDeclaration && ParentIsType) {
+      // Pure declarations have no runtime address; they belong with the class
+      // type. Always place in TypeTable regardless of how they were reached.
+      return CompileUnit::TypeTable;
+    }
+
     // Do not put variable into the "TypeTable" and "PlainDwarf" at the same
     // time.
     if (EntryInfo.getPlacement() == CompileUnit::PlainDwarf ||

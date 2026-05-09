@@ -210,8 +210,8 @@ LLVM_ABI Error extractOffloadBundleFatBinary(
 
 /// Extract code object memory from the given \p Source object file at \p Offset
 /// and of \p Size, and copy into \p OutputFileName.
-LLVM_ABI Error extractCodeObject(const ObjectFile &Source, int64_t Offset,
-                                 int64_t Size, StringRef OutputFileName);
+LLVM_ABI Error extractCodeObject(const ObjectFile &Source, size_t Offset,
+                                 size_t Size, StringRef OutputFileName);
 
 /// Extract code object memory from the given \p Source object file at \p Offset
 /// and of \p Size, and copy into \p OutputFileName.

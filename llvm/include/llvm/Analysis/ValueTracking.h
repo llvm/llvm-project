@@ -629,6 +629,11 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
+inline bool isValidAssumeForContext(const Instruction *I,
+                                    const SimplifyQuery &Q) {
+  return isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.AllowEphemerals);
+}
+
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
 /// memory and the function is marked as NoSync. The latter ensures the current
 /// function cannot arrange for another thread to free on its behalf.

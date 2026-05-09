@@ -58,7 +58,7 @@ namespace llvm {
 
 class Function;
 
-class TailCallElimPass : public PassInfoMixin<TailCallElimPass> {
+class TailCallElimPass : public OptionalPassInfoMixin<TailCallElimPass> {
   const bool UpdateFunctionEntryCount;
 
 public:

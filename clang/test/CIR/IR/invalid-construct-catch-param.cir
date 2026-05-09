@@ -40,8 +40,43 @@ module {
 
 cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
 
+// copy_fn has the right signature but is not tagged as a catch-copy thunk.
+cir.func private @plain_copy_fn(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
+
+cir.func @copy_fn_missing_thunk_attr() {
+  cir.scope {
+    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{catch-init copy_fn must be tagged with the cir.eh.catch_copy_thunk attribute}}
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @plain_copy_fn
+        : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
 // copy_fn takes only one argument (should be two).
 cir.func private @bad_copy_fn_arity(!cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk}
 
 cir.func @copy_fn_wrong_arity() {
   cir.scope {
@@ -78,6 +113,7 @@ cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
 // copy_fn returns a non-void type.
 cir.func private @bad_copy_fn_ret(
     !cir.ptr<!rec_E>, !cir.ptr<!rec_E>) -> !s32i
+    attributes {cir.eh.catch_copy_thunk}
 
 cir.func @copy_fn_non_void_return() {
   cir.scope {
@@ -115,6 +151,7 @@ cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
 // type (!cir.ptr<!s32i> vs !cir.ptr<!rec_E>).
 cir.func private @bad_copy_fn_first_arg(
     !cir.ptr<!s32i>, !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk}
 
 cir.func @copy_fn_first_arg_mismatch() {
   cir.scope {
@@ -152,6 +189,7 @@ cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
 // type (the source argument must also be !cir.ptr<!rec_E>).
 cir.func private @bad_copy_fn_second_arg(
     !cir.ptr<!rec_E>, !cir.ptr<!s32i>)
+    attributes {cir.eh.catch_copy_thunk}
 
 cir.func @copy_fn_second_arg_mismatch() {
   cir.scope {
@@ -185,7 +223,8 @@ module {
 cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
 
 cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
-    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>) {
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk} {
   cir.return
 }
 

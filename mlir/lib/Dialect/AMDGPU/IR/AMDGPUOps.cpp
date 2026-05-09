@@ -38,6 +38,19 @@
 using namespace mlir;
 using namespace mlir::amdgpu;
 
+/// Verifies that the number of indices matches the rank of the indexed memref,
+/// emitting an op error mentioning `indexName` on mismatch.
+template <typename OpTy>
+static LogicalResult verifyIndexCount(OpTy op, StringRef indexName,
+                                      MemRefType memrefType,
+                                      int64_t numIndices) {
+  int64_t rank = memrefType.getRank();
+  if (rank != numIndices)
+    return op.emitOpError("expected ")
+           << rank << " " << indexName << " indices, got " << numIndices;
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // 8-bit float ops
 //===----------------------------------------------------------------------===//
@@ -177,14 +190,11 @@ static LogicalResult verifyRawBufferOp(T &op) {
 
   if (!isGlobal)
     return op.emitOpError(
-        "Buffer ops must operate on a memref in global memory");
+        "buffer ops must operate on a memref in global memory");
   if (!bufferType.hasRank())
     return op.emitOpError(
-        "Cannot meaningfully buffer_store to an unranked memref");
-  if (static_cast<int64_t>(op.getIndices().size()) != bufferType.getRank())
-    return op.emitOpError("Expected " + Twine(bufferType.getRank()) +
-                          " indices to memref");
-  return success();
+        "cannot meaningfully buffer_store to an unranked memref");
+  return verifyIndexCount(op, "buffer", bufferType, op.getIndices().size());
 }
 
 LogicalResult RawBufferLoadOp::verify() { return verifyRawBufferOp(*this); }
@@ -948,6 +958,12 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())) ||
+      failed(verifyIndexCount(*this, "destination", dstType,
+                              getDstIndices().size())))
+    return failure();
+
   if (dstType.getRank() > 0 && !dstType.areTrailingDimsContiguous(1))
     return emitOpError("destination type inner most dim must be contiguous");
 
@@ -1020,6 +1036,12 @@ LogicalResult GlobalLoadAsyncToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())) ||
+      failed(verifyIndexCount(*this, "destination", dstType,
+                              getDstIndices().size())))
+    return failure();
+
   if (srcType.getElementType() != dstType.getElementType())
     return emitOpError("source and destination element types must match");
 
@@ -1049,6 +1071,10 @@ LogicalResult GlobalLoadAsyncToLDSOp::verify() {
 
 LogicalResult TransposeLoadOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())))
+    return failure();
 
   if (!hasWorkgroupMemorySpace(srcType.getMemorySpace()))
     return emitOpError("source memory address space must be Workgroup");
@@ -1085,6 +1111,10 @@ LogicalResult TransposeLoadOp::verify() {
 
 LogicalResult GlobalTransposeLoadOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (failed(
+          verifyIndexCount(*this, "source", srcType, getSrcIndices().size())))
+    return failure();
 
   if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
     return emitOpError("source memory address space must be Global");
@@ -1124,6 +1154,11 @@ template <typename BaseOp>
 static LogicalResult verifyBase(BaseOp op) {
   auto ldsType = cast<MemRefType>(op.getLds().getType());
   auto globalType = cast<MemRefType>(op.getGlobal().getType());
+  if (failed(verifyIndexCount(op, "global", globalType,
+                              op.getGlobalIndices().size())) ||
+      failed(verifyIndexCount(op, "lds", ldsType, op.getLdsIndices().size())))
+    return failure();
+
   if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
     return op.emitOpError(
         "lds memref must have workgroup address space attribute.");
@@ -1196,9 +1231,17 @@ static LogicalResult verifyDescriptorOp(DescriptorOp op) {
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";
 
+  if (!op.getAtomicBarrierAddress() && !op.getAtomicBarrierIndices().empty())
+    return op.emitOpError(
+        "atomic barrier indices require an atomic barrier address");
+
   if (Value atomicBarrierAddress = op.getAtomicBarrierAddress()) {
     auto atomicBarrierAddressType =
         cast<MemRefType>(atomicBarrierAddress.getType());
+    if (failed(verifyIndexCount(op, "atomic barrier", atomicBarrierAddressType,
+                                op.getAtomicBarrierIndices().size())))
+      return failure();
+
     bool barrierInLDS =
         hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
     if (!barrierInLDS)
@@ -1417,6 +1460,10 @@ void ScaledMFMAOp::getCanonicalizationPatterns(RewritePatternSet &results,
 template <typename T>
 static LogicalResult verifyDsBarrierOpCommon(T &op) {
   MemRefType memrefType = llvm::cast<MemRefType>(op.getBase().getType());
+  if (failed(
+          verifyIndexCount(op, "barrier", memrefType, op.getIndices().size())))
+    return failure();
+
   if (!hasWorkgroupMemorySpace(memrefType.getMemorySpace()))
     return op.emitOpError("barrier must be in workgroup (LDS) memory");
 
@@ -1446,17 +1493,14 @@ LogicalResult DsBarrierArriveOp::verify() {
 LogicalResult GlobalPrefetchOp::verify() {
   auto src = cast<MemRefType>(getSrc().getType());
 
+  if (failed(verifyIndexCount(*this, "source", src, getIndices().size())))
+    return failure();
+
   Attribute memSpace = src.getMemorySpace();
   if (!memSpace)
     return this->emitOpError("the source must have address space attribute");
   if (!hasGlobalMemorySpace(memSpace))
     return this->emitOpError("the source must reside in global address space");
-
-  ArrayRef<int64_t> srcShape = src.getShape();
-  const size_t numIndices = getIndices().size();
-  if (srcShape.size() != numIndices)
-    return this->emitOpError(
-        "the number of indices must match the source shape size");
 
   const LoadTemporalHint temporalHint = getTemporalHint();
   const Scope scope = getCacheScope();

@@ -51,7 +51,7 @@ void test(Dtor *ptr) {
 // CIR:         %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
 // CIR:         %[[PREV:.*]] = cir.ptr_stride %[[CUR]], %[[NEG_ONE]] : (!cir.ptr<!rec_Dtor>, !s64i) -> !cir.ptr<!rec_Dtor>
 // CIR:         cir.store %[[PREV]], %[[ARR_IDX]]
-// CIR:         cir.call @_ZN4DtorD1Ev(%[[PREV]]) : (!cir.ptr<!rec_Dtor>) -> ()
+// CIR:         cir.call @_ZN4DtorD1Ev(%[[PREV]]) nothrow : (!cir.ptr<!rec_Dtor>) -> ()
 // CIR:         cir.yield
 // CIR:       } while {
 // CIR:         %[[CUR2:.*]] = cir.load %[[ARR_IDX]]
@@ -61,7 +61,7 @@ void test(Dtor *ptr) {
 // CIR:     }
 //
 // Call unsized operator delete[] with just the pointer.
-// CIR:     cir.call @_ZdaPv(%[[VOID_PTR]]) : (!cir.ptr<!void>) -> ()
+// CIR:     cir.call @_ZdaPv(%[[VOID_PTR]]) nothrow : (!cir.ptr<!void>) -> ()
 // CIR:   }
 
 // LLVM: define {{.*}} void @_Z4testP4Dtor

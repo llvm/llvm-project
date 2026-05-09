@@ -19,7 +19,8 @@ namespace llvm {
 
 /// Splits the module M into N linkable partitions. The function ModuleCallback
 /// is called N times passing each individual partition as the MPart argument.
-class AMDGPUSplitModulePass : public PassInfoMixin<AMDGPUSplitModulePass> {
+class AMDGPUSplitModulePass
+    : public OptionalPassInfoMixin<AMDGPUSplitModulePass> {
 public:
   using ModuleCreationCallback =
       function_ref<void(std::unique_ptr<Module> MPart)>;

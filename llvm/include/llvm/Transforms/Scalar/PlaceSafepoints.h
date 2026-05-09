@@ -56,7 +56,7 @@ namespace llvm {
 
 class TargetLibraryInfo;
 
-class PlaceSafepointsPass : public PassInfoMixin<PlaceSafepointsPass> {
+class PlaceSafepointsPass : public OptionalPassInfoMixin<PlaceSafepointsPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

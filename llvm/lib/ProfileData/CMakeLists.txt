@@ -51,12 +51,13 @@ set(LLVM_HAVE_OPENCSD OFF CACHE BOOL "Is OpenCSD available" FORCE)
 set(LLVM_OPENCSD_MIN_VERSION "1.5.4")
 
 if(NOT LLVM_ENABLE_OPENCSD STREQUAL "OFF")
-  find_library(OPENCSD_LIB NAMES opencsd_c_api opencsd)
-  find_path(OPENCSD_INCLUDE NAMES opencsd/ocsd_if_types.h)
+  find_library(OPENCSD_C_LIB NAMES opencsd_c_api_static opencsd_c_api HINTS ${OPENCSD_ROOT} PATH_SUFFIXES lib lib64)
+  find_library(OPENCSD_CPP_LIB NAMES opencsd_static opencsd HINTS ${OPENCSD_ROOT} PATH_SUFFIXES lib lib64)
+  find_path(OPENCSD_INCLUDE NAMES opencsd/ocsd_if_types.h HINTS ${OPENCSD_ROOT} PATH_SUFFIXES include)
 
   set(OPENCSD_VERSION "")
   set(OPENCSD_VERSION_OK OFF)
-  if(OPENCSD_LIB AND OPENCSD_INCLUDE)
+  if(OPENCSD_C_LIB AND OPENCSD_INCLUDE)
     # The header exposes an OCSD_VER_STRING macro of the form "M.m.p"
     # which we extract for a robust version comparison.
     file(READ "${OPENCSD_INCLUDE}/opencsd/ocsd_if_version.h" _opencsd_ver_h)
@@ -69,16 +70,19 @@ if(NOT LLVM_ENABLE_OPENCSD STREQUAL "OFF")
     endif()
   endif()
 
-  if(OPENCSD_LIB AND OPENCSD_INCLUDE AND OPENCSD_VERSION_OK)
+  if(OPENCSD_C_LIB AND OPENCSD_CPP_LIB AND OPENCSD_INCLUDE AND OPENCSD_VERSION_OK)
     target_compile_definitions(LLVMProfileData PRIVATE HAVE_OPENCSD)
+    if(WIN32)
+      target_compile_definitions(LLVMProfileData PRIVATE OCSD_USE_STATIC_C_API)
+    endif()
     target_include_directories(LLVMProfileData PRIVATE ${OPENCSD_INCLUDE})
-    target_link_libraries(LLVMProfileData PRIVATE ${OPENCSD_LIB})
+    target_link_libraries(LLVMProfileData PUBLIC ${OPENCSD_C_LIB} ${OPENCSD_CPP_LIB})
     message(STATUS "LLVMProfileData: OpenCSD support enabled (found ${OPENCSD_VERSION}).")
     set(LLVM_HAVE_OPENCSD ON CACHE BOOL "Is OpenCSD available" FORCE)
-  elseif(OPENCSD_LIB AND OPENCSD_INCLUDE)
+  elseif(OPENCSD_C_LIB AND OPENCSD_INCLUDE)
     if(LLVM_ENABLE_OPENCSD STREQUAL "FORCE_ON")
       message(FATAL_ERROR
-        "OpenCSD found at ${OPENCSD_LIB} but its version "
+        "OpenCSD found at ${OPENCSD_C_LIB} but its version "
         "(${OPENCSD_VERSION}) is older than the required "
         "${LLVM_OPENCSD_MIN_VERSION}. Install a newer OpenCSD or "
         "configure with -DLLVM_ENABLE_OPENCSD=OFF.")

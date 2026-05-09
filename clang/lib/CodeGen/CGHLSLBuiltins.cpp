@@ -571,12 +571,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_resource_getpointer:
   case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    bool IsIndexed =
+        BuiltinID == Builtin::BI__builtin_hlsl_resource_getpointer_typed ||
+        E->getNumArgs() > 1;
 
     llvm::Type *RetTy = ConvertType(E->getType());
+    if (IsIndexed) {
+      Value *IndexOp = EmitScalarExpr(E->getArg(1));
+      return Builder.CreateIntrinsic(
+          RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+          ArrayRef<Value *>{HandleOp, IndexOp});
+    }
     return Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-        ArrayRef<Value *>{HandleOp, IndexOp});
+        RetTy, CGM.getHLSLRuntime().getCreateResourceGetBasePointerIntrinsic(),
+        ArrayRef<Value *>{HandleOp});
   }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));

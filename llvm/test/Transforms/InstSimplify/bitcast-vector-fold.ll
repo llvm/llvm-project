@@ -27,10 +27,10 @@ define <4 x i32> @test2() {
 
 define <2 x double> @test3() {
 ; LE-LABEL: @test3(
-; LE-NEXT:    ret <2 x double> <double 0x100000000, double 0x300000002>
+; LE-NEXT:    ret <2 x double> <double f0x0000000100000000, double f0x0000000300000002>
 ;
 ; BE-LABEL: @test3(
-; BE-NEXT:    ret <2 x double> <double 4.940660e-324, double 0x200000003>
+; BE-NEXT:    ret <2 x double> <double 4.940660e-324, double f0x0000000200000003>
 ;
   %tmp3 = bitcast <4 x i32> < i32 0, i32 1, i32 2, i32 3 > to <2 x double>
   ret <2 x double> %tmp3
@@ -38,10 +38,10 @@ define <2 x double> @test3() {
 
 define <4 x float> @test4() {
 ; LE-LABEL: @test4(
-; LE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000, float 0.000000e+00>
+; LE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 1.401300e-45, float 0.000000e+00>
 ;
 ; BE-LABEL: @test4(
-; BE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000>
+; BE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.401300e-45>
 ;
   %tmp3 = bitcast <2 x i64> < i64 0, i64 1 > to <4 x float>
   ret <4 x float> %tmp3
@@ -151,7 +151,7 @@ define <3 x i64> @test14() {
 ; from MultiSource/Benchmarks/Bullet
 define <2 x float> @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    ret <2 x float> splat (float 0xFFFFFFFFE0000000)
+; CHECK-NEXT:    ret <2 x float> splat (float -nan(0x3FFFFF))
 ;
   %cast = bitcast i64 -1 to <2 x float>
   ret <2 x float> %cast
@@ -160,7 +160,7 @@ define <2 x float> @foo() {
 
 define <2 x double> @foo2() {
 ; CHECK-LABEL: @foo2(
-; CHECK-NEXT:    ret <2 x double> splat (double 0xFFFFFFFFFFFFFFFF)
+; CHECK-NEXT:    ret <2 x double> splat (double -nan(0x7FFFFFFFFFFFF))
 ;
   %cast = bitcast i128 -1 to <2 x double>
   ret <2 x double> %cast
@@ -168,7 +168,7 @@ define <2 x double> @foo2() {
 
 define <1 x float> @foo3() {
 ; CHECK-LABEL: @foo3(
-; CHECK-NEXT:    ret <1 x float> splat (float 0xFFFFFFFFE0000000)
+; CHECK-NEXT:    ret <1 x float> splat (float -nan(0x3FFFFF))
 ;
   %cast = bitcast i32 -1 to <1 x float>
   ret <1 x float> %cast
@@ -176,7 +176,7 @@ define <1 x float> @foo3() {
 
 define float @foo4() {
 ; CHECK-LABEL: @foo4(
-; CHECK-NEXT:    ret float 0xFFFFFFFFE0000000
+; CHECK-NEXT:    ret float -nan(0x3FFFFF)
 ;
   %cast = bitcast <1 x i32 ><i32 -1> to float
   ret float %cast
@@ -184,7 +184,7 @@ define float @foo4() {
 
 define double @foo5() {
 ; CHECK-LABEL: @foo5(
-; CHECK-NEXT:    ret double 0xFFFFFFFFFFFFFFFF
+; CHECK-NEXT:    ret double -nan(0x7FFFFFFFFFFFF)
 ;
   %cast = bitcast <2 x i32 ><i32 -1, i32 -1> to double
   ret double %cast
@@ -192,7 +192,7 @@ define double @foo5() {
 
 define <2 x double> @foo6() {
 ; CHECK-LABEL: @foo6(
-; CHECK-NEXT:    ret <2 x double> splat (double 0xFFFFFFFFFFFFFFFF)
+; CHECK-NEXT:    ret <2 x double> splat (double -nan(0x7FFFFFFFFFFFF))
 ;
   %cast = bitcast <4 x i32><i32 -1, i32 -1, i32 -1, i32 -1> to <2 x double>
   ret <2 x double> %cast
@@ -548,10 +548,10 @@ define <2 x b64> @bitcast_constexpr_4f32_2b64() {
 
 define <4 x float> @bitcast_constexpr_2b64_4f32() {
 ; LE-LABEL: @bitcast_constexpr_2b64_4f32(
-; LE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000, float 0.000000e+00>
+; LE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 1.401300e-45, float 0.000000e+00>
 ;
 ; BE-LABEL: @bitcast_constexpr_2b64_4f32(
-; BE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000>
+; BE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.401300e-45>
 ;
   %res = bitcast <2 x b64> <b64 0, b64 1> to <4 x float>
   ret <4 x float> %res
@@ -686,10 +686,10 @@ define <4 x i32> @bitcast_constexpr_2b64_4i32_poison() {
 
 define <2 x double> @bitcast_constexpr_4b32_2f64_poison() {
 ; LE-LABEL: @bitcast_constexpr_4b32_2f64_poison(
-; LE-NEXT:    ret <2 x double> <double poison, double 0x300000002>
+; LE-NEXT:    ret <2 x double> <double poison, double f0x0000000300000002>
 ;
 ; BE-LABEL: @bitcast_constexpr_4b32_2f64_poison(
-; BE-NEXT:    ret <2 x double> <double poison, double 0x200000003>
+; BE-NEXT:    ret <2 x double> <double poison, double f0x0000000200000003>
 ;
   %res = bitcast <4 x b32> <b32 poison, b32 1, b32 2, b32 3> to <2 x double>
   ret <2 x double> %res
@@ -697,10 +697,10 @@ define <2 x double> @bitcast_constexpr_4b32_2f64_poison() {
 
 define <4 x float> @bitcast_constexpr_2b64_4f32_poison() {
 ; LE-LABEL: @bitcast_constexpr_2b64_4f32_poison(
-; LE-NEXT:    ret <4 x float> <float poison, float poison, float 0x36A0000000000000, float 0.000000e+00>
+; LE-NEXT:    ret <4 x float> <float poison, float poison, float 1.401300e-45, float 0.000000e+00>
 ;
 ; BE-LABEL: @bitcast_constexpr_2b64_4f32_poison(
-; BE-NEXT:    ret <4 x float> <float poison, float poison, float 0.000000e+00, float 0x36A0000000000000>
+; BE-NEXT:    ret <4 x float> <float poison, float poison, float 0.000000e+00, float 1.401300e-45>
 ;
   %res = bitcast <2 x b64> <b64 poison, b64 1> to <4 x float>
   ret <4 x float> %res
@@ -727,10 +727,10 @@ define i128 @bitcast_constexpr_2b64_i128_poison() {
 
 define double @bitcast_constexpr_2b32_f64() {
 ; LE-LABEL: @bitcast_constexpr_2b32_f64(
-; LE-NEXT:    ret double 0x100000002
+; LE-NEXT:    ret double f0x0000000100000002
 ;
 ; BE-LABEL: @bitcast_constexpr_2b32_f64(
-; BE-NEXT:    ret double 0x200000001
+; BE-NEXT:    ret double f0x0000000200000001
 ;
   %res = bitcast <2 x b32> <b32 2, b32 1> to double
   ret double %res

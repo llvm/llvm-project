@@ -13,6 +13,9 @@ test_shared:
   jmp test_shared
 
 #--- a.s
+.weak __start_cident
+.weak __stop_cident
+
 ## Simple live section
 .globl _start
 .section ._start,"ax",@progbits
@@ -22,6 +25,10 @@ _start:
   .quad .Lanonymous_within_symbol
   jmp test_shared
   .quad test_local
+  .quad __start_cident - .
+  .quad __stop_cident - .
+  call test_group
+  call test_eh
 .size _start, .-_start
 
 .globl test_simple
@@ -160,6 +167,58 @@ test_local:
 # MULTIPLE-DAG: live symbol: a.o:(test_section_offset)
 # MULTIPLE-DAG: live symbol: a.o:(test_section_offset_within_symbol)
 # MULTIPLE-NOT: live symbol
+
+.section cident,"a",@progbits
+.globl test_atexit
+test_atexit:
+  .quad 0
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_atexit -z nostart-stop-gc | FileCheck %s --check-prefix=ATEXIT
+
+# ATEXIT:      live symbol: a.o:(test_atexit)
+# ATEXIT-NEXT: >>> in live section: a.o:(cident)
+# ATEXIT-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# ATEXIT-EMPTY:
+
+## A live section's nextInSectionGroup is enqueued from the non-parallel mark().
+.section .text.test_group,"axG",@progbits,test_group_signature,comdat
+.globl test_group
+test_group:
+  ret
+
+.section .data.test_group,"awG",@progbits,test_group_signature,comdat
+.globl test_group_data
+test_group_data:
+  .quad 0
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=test_group_data | FileCheck %s --check-prefix=GROUP
+
+# GROUP:      live symbol: a.o:(test_group_data)
+# GROUP-NEXT: >>> in live section: a.o:(.data.test_group)
+# GROUP-NEXT: >>> in section group with: a.o:(.text.test_group)
+# GROUP-NEXT: >>> contained live symbol: a.o:(test_group)
+# GROUP-NEXT: >>> referenced by: a.o:(_start) (entry point)
+# GROUP-EMPTY:
+
+## CIE personality relocation traced through scanEhFrameSection.
+.section .text.personality,"ax",@progbits
+.globl personality
+personality:
+  ret
+
+.section .text.test_eh,"ax",@progbits
+.globl test_eh
+test_eh:
+  .cfi_startproc
+  .cfi_personality 3, personality
+  ret
+  .cfi_endproc
+
+# RUN: ld.lld a.o a.so --gc-sections --why-live=personality | FileCheck %s --check-prefix=PERSONALITY
+
+# PERSONALITY:      live symbol: a.o:(personality)
+# PERSONALITY-NEXT: >>> referenced by: a.o:(.eh_frame) (exception handling frame)
+# PERSONALITY-EMPTY:
 
 #--- b.s
 ## --why-live='*' skips symbol at index 0 and section symbols.

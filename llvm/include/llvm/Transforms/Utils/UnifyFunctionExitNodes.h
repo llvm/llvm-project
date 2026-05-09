@@ -20,7 +20,7 @@
 namespace llvm {
 
 class UnifyFunctionExitNodesPass
-    : public PassInfoMixin<UnifyFunctionExitNodesPass> {
+    : public OptionalPassInfoMixin<UnifyFunctionExitNodesPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

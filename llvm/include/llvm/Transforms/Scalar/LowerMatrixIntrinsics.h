@@ -17,7 +17,7 @@
 
 namespace llvm {
 class LowerMatrixIntrinsicsPass
-    : public PassInfoMixin<LowerMatrixIntrinsicsPass> {
+    : public RequiredPassInfoMixin<LowerMatrixIntrinsicsPass> {
   bool Minimal;
 
 public:
@@ -25,7 +25,6 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
-  static bool isRequired() { return true; }
 };
 } // namespace llvm
 

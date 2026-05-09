@@ -11138,8 +11138,18 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     // Let the ASTConsumer know that this function has been explicitly
     // instantiated now, and its linkage might have changed.
     Consumer.HandleTopLevelDecl(DeclGroupRef(Specialization));
-  } else if (TSK == TSK_ExplicitInstantiationDefinition)
+  } else if (TSK == TSK_ExplicitInstantiationDefinition) {
+    // C++2c [expr.prim.lambda.closure]/19 A member of a closure type shall not
+    // be explicitly instantiated.
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Specialization->getParent());
+        RD && RD->isLambda()) {
+      Diag(D.getBeginLoc(), diag::err_lambda_explicit_temp_spec)
+          << /*instantiation*/ 1;
+      Diag(RD->getLocation(), diag::note_defined_here) << RD;
+      return (Decl *)nullptr;
+    }
     InstantiateFunctionDefinition(D.getIdentifierLoc(), Specialization);
+  }
 
   // C++0x [temp.explicit]p2:
   //   If the explicit instantiation is for a member function, a member class

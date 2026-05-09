@@ -20,7 +20,7 @@
 namespace llvm {
 
 /// Optimize scalar/vector interactions in IR using target cost models.
-class VectorCombinePass : public PassInfoMixin<VectorCombinePass> {
+class VectorCombinePass : public OptionalPassInfoMixin<VectorCombinePass> {
   /// If true, only perform beneficial early IR transforms. Do not introduce new
   /// vector operations.
   bool TryEarlyFoldsOnly;

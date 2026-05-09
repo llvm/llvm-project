@@ -960,8 +960,8 @@ func.func @insert_strided_slice_with_slice_layout(%arg0: memref<8x16xf32>) {
   %cst_small8 = vector.extract_strided_slice %cst_large_new {offsets = [0], sizes = [8], strides = [1]} : vector<16xf32> to vector<8xf32>
   %cst_small16x8 = vector.broadcast %cst_small8 : vector<8xf32> to vector<16x8xf32>
   %cst_small8x16 = vector.transpose %cst_small16x8, [1, 0] : vector<16x8xf32> to vector<8x16xf32>
-  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-  xegpu.store_nd %cst_small8x16, %tdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>: vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  xegpu.store_nd %cst_small8x16, %tdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>: vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
   return
 }
 }

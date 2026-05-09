@@ -131,6 +131,7 @@ expand_template(
         "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 0",
         # Only used if LLDB_EMBED_PYTHON_HOME is true
         "#cmakedefine LLDB_PYTHON_HOME R\"(${LLDB_PYTHON_HOME})\"": "#define LLDB_PYTHON_HOME \"\"",
+        "#cmakedefine01 LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS": "#define LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS 0",
 
         # Unsupported
         "#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H": "#define CURSES_HAVE_NCURSES_CURSES_H 0",

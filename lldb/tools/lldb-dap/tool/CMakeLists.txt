@@ -2,16 +2,18 @@ set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBDAPOptionsTableGen)
 
-set(LLDB_DAP_LINK_LIBS lldbDAP)
+set(LLDB_DAP_LINK_LIBS lldbDAP liblldb lldbHost)
 
 if(WIN32)
   list(APPEND LLDB_DAP_LINK_LIBS lldbHostPythonPathSetup)
-  list(APPEND LLDB_DAP_LINK_LIBS liblldb)
 endif()
 
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
 
+  LINK_COMPONENTS
+    Option
+    Support
   LINK_LIBS
     ${LLDB_DAP_LINK_LIBS}
   )

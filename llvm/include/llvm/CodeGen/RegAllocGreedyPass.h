@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-class RAGreedyPass : public PassInfoMixin<RAGreedyPass> {
+class RAGreedyPass : public RequiredPassInfoMixin<RAGreedyPass> {
 public:
   struct Options {
     RegAllocFilterFunc Filter;
@@ -38,7 +38,6 @@ public:
   void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName) const;
-  static bool isRequired() { return true; }
 
 private:
   Options Opts;

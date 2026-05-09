@@ -161,10 +161,9 @@ bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                 SmallVectorImpl<const SCEV *> &Sizes);
 
 struct DelinearizationPrinterPass
-    : public PassInfoMixin<DelinearizationPrinterPass> {
+    : public RequiredPassInfoMixin<DelinearizationPrinterPass> {
   explicit DelinearizationPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

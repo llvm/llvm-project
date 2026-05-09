@@ -255,3 +255,9 @@
 // CHECK-QURT: #define __hexagon__ 1
 // CHECK-QURT: #define __qurt__ 1
 // CHECK-QURT-NOT: #define __linux__
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-h2 %s | FileCheck \
+// RUN: %s -check-prefix CHECK-H2
+// CHECK-H2: #define __h2__ 1
+// CHECK-H2: #define __hexagon__ 1
+// CHECK-H2-NOT: #define __linux__

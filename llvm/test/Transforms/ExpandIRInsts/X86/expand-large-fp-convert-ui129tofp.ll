@@ -81,7 +81,7 @@ define half @ui129tohalf(i129 %a) {
 ; CHECK-NEXT:    [[TMP52:%.*]] = fptrunc float [[TMP51]] to half
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
-; CHECK-NEXT:    [[TMP53:%.*]] = phi half [ [[TMP52]], [[ITOFP_IF_END26]] ], [ 0xH0000, [[ITOFP_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP53:%.*]] = phi half [ [[TMP52]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret half [[TMP53]]
 ;
   %conv = uitofp i129 %a to half
@@ -341,7 +341,7 @@ define x86_fp80 @ui129tox86_fp80(i129 %a) {
 ; CHECK-NEXT:    [[TMP50:%.*]] = fptrunc fp128 [[TMP49]] to x86_fp80
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
-; CHECK-NEXT:    [[TMP51:%.*]] = phi x86_fp80 [ [[TMP50]], [[ITOFP_IF_END26]] ], [ 0xK00000000000000000000, [[ITOFP_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP51:%.*]] = phi x86_fp80 [ [[TMP50]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret x86_fp80 [[TMP51]]
 ;
   %conv = uitofp i129 %a to x86_fp80
@@ -425,7 +425,7 @@ define fp128 @ui129tofp128(i129 %a) {
 ; CHECK-NEXT:    [[TMP49:%.*]] = bitcast i128 [[TMP48]] to fp128
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
-; CHECK-NEXT:    [[TMP50:%.*]] = phi fp128 [ [[TMP49]], [[ITOFP_IF_END26]] ], [ 0xL00000000000000000000000000000000, [[ITOFP_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP50:%.*]] = phi fp128 [ [[TMP49]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret fp128 [[TMP50]]
 ;
   %conv = uitofp i129 %a to fp128

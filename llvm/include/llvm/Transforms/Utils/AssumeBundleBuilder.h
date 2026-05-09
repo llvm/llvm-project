@@ -47,22 +47,15 @@ LLVM_ABI AssumeInst *buildAssumeFromInst(Instruction *I);
 LLVM_ABI bool salvageKnowledge(Instruction *I, AssumptionCache *AC = nullptr,
                                DominatorTree *DT = nullptr);
 
-/// Build and return a new assume created from the provided knowledge
-/// if the knowledge in the assume is fully redundant this will return nullptr
-LLVM_ABI AssumeInst *
-buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
-                         Instruction *CtxI, AssumptionCache *AC = nullptr,
-                         DominatorTree *DT = nullptr);
-
 /// This pass attempts to minimize the number of assume without loosing any
 /// information.
-struct AssumeSimplifyPass : public PassInfoMixin<AssumeSimplifyPass> {
+struct AssumeSimplifyPass : public OptionalPassInfoMixin<AssumeSimplifyPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// This pass will try to build an llvm.assume for every instruction in the
 /// function. Its main purpose is testing.
-struct AssumeBuilderPass : public PassInfoMixin<AssumeBuilderPass> {
+struct AssumeBuilderPass : public OptionalPassInfoMixin<AssumeBuilderPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

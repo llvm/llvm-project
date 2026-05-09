@@ -123,7 +123,8 @@ struct ConstantInfo {
 
 } // end namespace consthoist
 
-class ConstantHoistingPass : public PassInfoMixin<ConstantHoistingPass> {
+class ConstantHoistingPass
+    : public OptionalPassInfoMixin<ConstantHoistingPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

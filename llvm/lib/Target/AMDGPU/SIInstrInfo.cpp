@@ -150,46 +150,23 @@ bool SIInstrInfo::isReMaterializableImpl(
   return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
-// Returns true if the scalar result of a VALU instruction depends on exec.
+// Returns true if the result of a VALU instruction depends on exec.
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
-  // Ignore comparisons which are only used masked with exec.
-  // This allows some hoisting/sinking of VALU comparisons.
-  if (MI.isCompare()) {
-    const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::sdst);
-    if (!Dst)
-      return true;
+  assert(isVALU(MI));
 
-    Register DstReg = Dst->getReg();
-    if (!DstReg.isVirtual())
-      return true;
-
-    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
-      switch (Use.getOpcode()) {
-      case AMDGPU::S_AND_SAVEEXEC_B32:
-      case AMDGPU::S_AND_SAVEEXEC_B64:
-        break;
-      case AMDGPU::S_AND_B32:
-      case AMDGPU::S_AND_B64:
-        if (!Use.readsRegister(AMDGPU::EXEC, /*TRI=*/nullptr))
-          return true;
-        break;
-      default:
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // If it is not convergent it does not depend on EXEC.
-  if (!MI.isConvergent())
-    return false;
-
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  case AMDGPU::V_READFIRSTLANE_B32:
+  // If it is convergent it depends on EXEC.
+  if (MI.isConvergent())
     return true;
+
+  // If it defines SGPR it depends on EXEC
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  for (const MachineOperand &Def : MI.defs()) {
+    if (!Def.isReg())
+      continue;
+
+    Register Reg = Def.getReg();
+    if (Reg && RI.isSGPRReg(MRI, Reg))
+      return true;
   }
 
   return false;
@@ -10751,6 +10728,23 @@ MachineInstr *SIInstrInfo::createPHISourceCopy(
 }
 
 bool llvm::SIInstrInfo::isWave32() const { return ST.isWave32(); }
+
+bool SIInstrInfo::hasRAWDependency(const MachineInstr &FirstMI,
+                                   const MachineInstr &SecondMI) const {
+  for (const auto &Use : SecondMI.all_uses()) {
+    if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg(), &RI))
+      return true;
+  }
+  return false;
+}
+
+/// If OpX is multicycle, anti-dependencies are not allowed.
+/// isDPMACCInstruction was not designed for VOPD, but it is fit for the
+/// purpose.
+bool llvm::SIInstrInfo::isVOPDAntidependencyAllowed(
+    const MachineInstr &OpX) const {
+  return !AMDGPU::isDPMACCInstruction(OpX.getOpcode());
+}
 
 MachineInstr *
 SIInstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,

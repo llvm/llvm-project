@@ -74,7 +74,7 @@ endfunction()
 function(link_libclc_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "ARCH;TRIPLE;FOLDER;OUTPUT_FILENAME"
+    "ARCH;TRIPLE;TARGET_TRIPLE;FOLDER;OUTPUT_FILENAME"
     "LIBRARIES;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
@@ -86,7 +86,7 @@ function(link_libclc_builtin_library target_name)
     message(FATAL_ERROR "LIBRARIES is required for link_libclc_builtin_library")
   endif()
 
-  set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE})
+  set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TARGET_TRIPLE})
   file(MAKE_DIRECTORY ${library_dir})
 
   set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
@@ -111,7 +111,9 @@ function(link_libclc_builtin_library target_name)
     DEPENDS ${link_deps}
   )
 
-  if(ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64)
+  string(REPLACE "-" ";" triple_parts "${ARG_TRIPLE}")
+  list(GET triple_parts 2 triple_os)
+  if((ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv32 OR ARG_ARCH STREQUAL spirv64) AND NOT triple_os STREQUAL vulkan)
     # SPIR-V targets produce a .spv file from the linked bitcode.
     set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.spv)
     if(LIBCLC_USE_SPIRV_BACKEND)
@@ -179,6 +181,7 @@ function(add_libclc_library target_name)
   link_libclc_builtin_library(${target_name}
     ARCH ${ARG_ARCH}
     TRIPLE ${ARG_TRIPLE}
+    TARGET_TRIPLE ${ARG_TARGET_TRIPLE}
     LIBRARIES ${builtins_target}
     INTERNALIZE_LIBRARIES ${ARG_INTERNALIZE_LIBRARIES}
     OPT_FLAGS ${ARG_OPT_FLAGS}
@@ -190,7 +193,7 @@ function(add_libclc_library target_name)
   set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
 
   install(FILES ${builtins_file}
-    DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
+    DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TARGET_TRIPLE}
     COMPONENT ${ARG_PARENT_TARGET}
   )
 endfunction()

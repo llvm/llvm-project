@@ -84,15 +84,15 @@ void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
 void initializeNVPTXIRPeepholePass(PassRegistry &);
 void initializeNVPTXPrologEpilogPassPass(PassRegistry &);
 
-struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
+struct NVVMIntrRangePass : OptionalPassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXIRPeepholePass : PassInfoMixin<NVPTXIRPeepholePass> {
+struct NVPTXIRPeepholePass : OptionalPassInfoMixin<NVPTXIRPeepholePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
+struct NVVMReflectPass : OptionalPassInfoMixin<NVVMReflectPass> {
   NVVMReflectPass() : SmVersion(0) {}
   NVVMReflectPass(unsigned SmVersion) : SmVersion(SmVersion) {}
   PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
@@ -101,20 +101,20 @@ private:
   unsigned SmVersion;
 };
 
-struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
+struct GenericToNVVMPass : OptionalPassInfoMixin<GenericToNVVMPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct NVPTXCopyByValArgsPass : PassInfoMixin<NVPTXCopyByValArgsPass> {
+struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 struct NVPTXSetByValParamAlignPass
-    : PassInfoMixin<NVPTXSetByValParamAlignPass> {
+    : OptionalPassInfoMixin<NVPTXSetByValParamAlignPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXLowerArgsPass : PassInfoMixin<NVPTXLowerArgsPass> {
+struct NVPTXLowerArgsPass : OptionalPassInfoMixin<NVPTXLowerArgsPass> {
 private:
   TargetMachine &TM;
 
@@ -124,11 +124,12 @@ public:
 };
 
 struct NVPTXMarkKernelPtrsGlobalPass
-    : PassInfoMixin<NVPTXMarkKernelPtrsGlobalPass> {
+    : OptionalPassInfoMixin<NVPTXMarkKernelPtrsGlobalPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXTagInvariantLoadsPass : PassInfoMixin<NVPTXTagInvariantLoadsPass> {
+struct NVPTXTagInvariantLoadsPass
+    : OptionalPassInfoMixin<NVPTXTagInvariantLoadsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

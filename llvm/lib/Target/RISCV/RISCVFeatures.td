@@ -116,6 +116,10 @@ def FeatureStdExtZiccif
     : RISCVExtension<1, 0,
                      "Main Memory Supports Instruction Fetch with Atomicity Requirement">;
 
+def FeatureStdExtZiccid
+    : RISCVExtension<1, 0,
+                     "Instruction/Data Coherence and Consistency", [FeatureStdExtZiccif]>;
+
 def FeatureStdExtZicclsm
     : RISCVExtension<1, 0, "Main Memory Supports Misaligned Loads/Stores">;
 
@@ -884,6 +888,14 @@ def FeatureStdExtZvzip
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
                          "'Zvzip' (Vector Reordering Structured Data)">;
+
+// Integrated Matrix Extension integer matrix multiply-accumulate
+def FeatureStdExtZvvmm
+    : RISCVExperimentalExtension<0, 1, "Integer Matrix Multiply-Accumulate",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvvmm : Predicate<"Subtarget->hasStdExtZvvmm()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvvmm),
+                         "'Zvvmm' (Integer Matrix Multiply-Accumulate)">;
 
 // Vector instruction predicates
 

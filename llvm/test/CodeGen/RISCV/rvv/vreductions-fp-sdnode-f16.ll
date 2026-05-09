@@ -212,3 +212,87 @@ define half @vreduce_fmaximum_nnan_nxv4f16(<vscale x 4 x half> %val) {
   ret half %s
 }
 
+
+define half @vreduce_fadd_nxv1f16(<vscale x 1 x half> %v, half %s) {
+; ZVFH-LABEL: vreduce_fadd_nxv1f16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfmv.s.f v9, fa0
+; ZVFH-NEXT:    vfredusum.vs v8, v8, v9
+; ZVFH-NEXT:    vfmv.f.s fa0, v8
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: vreduce_fadd_nxv1f16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    lui a0, 524288
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; ZVFHMIN-NEXT:    vfredusum.vs v8, v9, v8
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
+; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; ZVFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; ZVFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZVFHMIN-NEXT:    ret
+  %red = call reassoc half @llvm.vector.reduce.fadd.nxv1f16(half %s, <vscale x 1 x half> %v)
+  ret half %red
+}
+
+define half @vreduce_fadd_nxv2f16(<vscale x 2 x half> %v, half %s) {
+; ZVFH-LABEL: vreduce_fadd_nxv2f16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfmv.s.f v9, fa0
+; ZVFH-NEXT:    vfredusum.vs v8, v8, v9
+; ZVFH-NEXT:    vfmv.f.s fa0, v8
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: vreduce_fadd_nxv2f16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 524288
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; ZVFHMIN-NEXT:    vfredusum.vs v8, v9, v8
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
+; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; ZVFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; ZVFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZVFHMIN-NEXT:    ret
+  %red = call reassoc half @llvm.vector.reduce.fadd.nxv2f16(half %s, <vscale x 2 x half> %v)
+  ret half %red
+}
+
+define half @vreduce_fadd_nxv4f16(<vscale x 4 x half> %v, half %s) {
+; ZVFH-LABEL: vreduce_fadd_nxv4f16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVFH-NEXT:    vfmv.s.f v9, fa0
+; ZVFH-NEXT:    vfredusum.vs v8, v8, v9
+; ZVFH-NEXT:    vfmv.f.s fa0, v8
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: vreduce_fadd_nxv4f16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 524288
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; ZVFHMIN-NEXT:    vfredusum.vs v8, v10, v8
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
+; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; ZVFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; ZVFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZVFHMIN-NEXT:    ret
+  %red = call reassoc half @llvm.vector.reduce.fadd.nxv4f16(half %s, <vscale x 4 x half> %v)
+  ret half %red
+}

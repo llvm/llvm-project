@@ -27,6 +27,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __locale {
 
 using __lconv_t _LIBCPP_NODEBUG = std::lconv;
@@ -304,6 +305,7 @@ struct __locale_guard {
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_WINDOWS_H

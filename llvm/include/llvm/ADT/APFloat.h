@@ -677,6 +677,8 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  APInt getNaNPayload() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -922,6 +924,8 @@ public:
   LLVM_ABI bool isSmallestNormalized() const;
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
+
+  APInt getNaNPayload() const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
@@ -1552,6 +1556,14 @@ public:
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
+  }
+
+  /// If the value is a NaN value, return an integer containing the payload of
+  /// this value. This payload will include the quiet bit as part of the
+  /// returned integer.
+  APInt getNaNPayload() const {
+    assert(isNaN() && "Can only call this on a NaN value");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getNaNPayload());
   }
 
   /// Return the FPClassTest which will return true for the value.

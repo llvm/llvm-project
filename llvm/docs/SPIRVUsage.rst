@@ -213,6 +213,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Allows to allocate local arrays whose number of elements is unknown at compile time.
    * - ``SPV_INTEL_joint_matrix``
      - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multiply-add instruction.
+   * - ``SPV_KHR_abort``
+     - Adds a function-termination instruction that signals an abnormal error to the client API. Currently supported in OpenCL environments only.
    * - ``SPV_KHR_bit_instructions``
      - Enables bit instructions to be used by SPIR-V modules without requiring the Shader capability.
    * - ``SPV_KHR_expect_assume``

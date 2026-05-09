@@ -1,7 +1,7 @@
 ! Test lowering of derived type descriptor for types with
 ! a default initialized character component.
 
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
 subroutine test()
   type t

@@ -225,6 +225,18 @@ func.func @compute_region_launch_only() {
 
 // -----
 
+// CHECK-LABEL: func @compute_region_empty
+func.func @compute_region_empty() {
+  acc.compute_region {
+  } {origin = "acc.parallel"}
+  return
+}
+// CHECK: acc.compute_region {
+// CHECK:   acc.yield
+// CHECK: } {origin = "acc.parallel"}
+
+// -----
+
 // CHECK-LABEL: func @compute_region_all_fields
 // CHECK-SAME: (%{{.*}}: memref<1024xf32>, %[[STREAM:.*]]: !gpu.async.token)
 func.func @compute_region_all_fields(%data: memref<1024xf32>,

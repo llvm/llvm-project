@@ -516,5 +516,26 @@ TEST(VerifierTest, GetElementPtrInst) {
       << Error;
 }
 
+TEST(VerifierTest, DeeplyNested) {
+  LLVMContext Ctx;
+  Module M("M", Ctx);
+
+  // Construct an extremely deeply nested metadata node that should cause
+  // a stack overflow on most platforms if recursion through the entire
+  // chain is performed.
+  Metadata *CurrentMetadataNode =
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
+  for (int i = 0; i < 100000; ++i) {
+    CurrentMetadataNode = MDTuple::get(Ctx, {CurrentMetadataNode});
+  }
+
+  NamedMDNode *NamedMetadataNode = M.getOrInsertNamedMetadata("foo");
+  NamedMetadataNode->addOperand(cast<MDNode>(CurrentMetadataNode));
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_FALSE(verifyModule(M, &ErrorOS));
+}
+
 } // end anonymous namespace
 } // end namespace llvm

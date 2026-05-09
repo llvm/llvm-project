@@ -8,7 +8,16 @@ define amdgpu_kernel void @extract_insert_chain_to_shuffles(<16 x i8> %in, <16 x
 ; OPT-LABEL: define amdgpu_kernel void @extract_insert_chain_to_shuffles(
 ; OPT-SAME: <16 x i8> [[IN:%.*]], <16 x i8> [[ADD:%.*]], ptr addrspace(3) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[SUM:%.*]] = add <16 x i8> [[IN]], [[ADD]]
+; OPT-NEXT:    [[I168:%.*]] = extractelement <16 x i8> [[IN]], i64 4
+; OPT-NEXT:    [[I176:%.*]] = extractelement <16 x i8> [[IN]], i64 8
+; OPT-NEXT:    [[I184:%.*]] = extractelement <16 x i8> [[IN]], i64 12
+; OPT-NEXT:    [[I260:%.*]] = insertelement <16 x i8> [[IN]], i8 [[I168]], i64 4
+; OPT-NEXT:    [[I263:%.*]] = shufflevector <16 x i8> [[I260]], <16 x i8> [[IN]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; OPT-NEXT:    [[I264:%.*]] = insertelement <16 x i8> [[I263]], i8 [[I176]], i64 8
+; OPT-NEXT:    [[I267:%.*]] = shufflevector <16 x i8> [[I264]], <16 x i8> [[IN]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 25, i32 26, i32 27, i32 12, i32 13, i32 14, i32 15>
+; OPT-NEXT:    [[I268:%.*]] = insertelement <16 x i8> [[I267]], i8 [[I184]], i64 12
+; OPT-NEXT:    [[I271:%.*]] = shufflevector <16 x i8> [[I268]], <16 x i8> [[IN]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 29, i32 30, i32 31>
+; OPT-NEXT:    [[SUM:%.*]] = add <16 x i8> [[I271]], [[ADD]]
 ; OPT-NEXT:    store <16 x i8> [[SUM]], ptr addrspace(3) [[OUT]], align 16
 ; OPT-NEXT:    ret void
 ;

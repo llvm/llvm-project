@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include <memory>
 
 using namespace clang;
@@ -21,7 +22,7 @@ bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
   return false;
 }
 
-std::unique_ptr<ASTConsumer>
+std::unique_ptr<TUSummaryExtractor>
 ssaf::makeTUSummaryExtractor(llvm::StringRef SummaryName,
                              TUSummaryBuilder &Builder) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries())

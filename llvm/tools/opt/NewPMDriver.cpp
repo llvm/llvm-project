@@ -573,6 +573,13 @@ bool llvm::runPassPipeline(
   // Now that we have all of the passes ready, run them.
   MPM.run(M, MAM);
 
+  // If a pass reported an error via LLVMContext::emitError, fail without
+  // writing the output module.
+  if (auto *DH = M.getContext().getDiagHandlerPtr()) {
+    if (DH->HasErrors)
+      return false;
+  }
+
   // Declare success.
   if (OK != OK_NoOutput) {
     Out->keep();

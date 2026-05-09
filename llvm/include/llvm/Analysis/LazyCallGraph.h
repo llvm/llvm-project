@@ -1283,30 +1283,26 @@ public:
 ///
 /// This is primarily useful for testing the analysis.
 class LazyCallGraphPrinterPass
-    : public PassInfoMixin<LazyCallGraphPrinterPass> {
+    : public RequiredPassInfoMixin<LazyCallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit LazyCallGraphPrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// A pass which prints the call graph as a DOT file to a \c raw_ostream.
 ///
 /// This is primarily useful for visualization purposes.
 class LazyCallGraphDOTPrinterPass
-    : public PassInfoMixin<LazyCallGraphDOTPrinterPass> {
+    : public RequiredPassInfoMixin<LazyCallGraphDOTPrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit LazyCallGraphDOTPrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 extern template struct LLVM_TEMPLATE_ABI

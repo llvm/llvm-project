@@ -1779,6 +1779,54 @@ for.cond.cleanup:
   ret void
 }
 
+; ======================= erfinv ============================
+define void @erfinv_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @erfinv_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_erfinv(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_erfinv(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_erfinv(<8 x double> [[TMP4:%.*]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @erfinv(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= erfcinv ============================
+define void @erfcinv_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @erfcinv_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_erfcinv(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_erfcinv(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_erfcinv(<8 x double> [[TMP4:%.*]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @erfcinv(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 
 ; ======================= erfc ============================
 define void @erfc_f64(ptr nocapture %varray) {
@@ -1795,6 +1843,33 @@ for.body:
   %tmp = trunc i64 %iv to i32
   %conv = sitofp i32 %tmp to double
   %call = tail call double @erfc(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= cdfnorminv ============================
+define void @cdfnorminv_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @cdfnorminv_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cdfnorminv(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_cdfnorminv(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_cdfnorminv(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   {{.*}} = tail call double @cdfnorminv(double {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @cdfnorminv(double %conv)
   %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
   store double %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
@@ -2024,9 +2099,12 @@ declare double @exp10(double) #0
 declare float @exp10f(float) #0
 declare void @sincos(double, ptr, ptr)
 declare void @sincosf(float, ptr, ptr)
+declare double @erfinv(double) #0
+declare double @erfcinv(double) #0
 declare double @erfc(double) #0
 declare float @erfcf(float) #0
 declare double @cdfnorm(double) #0
+declare double @cdfnorminv(double) #0
 declare double @round(double) #0
 declare float @roundf(float) #0
 declare double @expm1(double) #0

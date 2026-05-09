@@ -157,6 +157,10 @@ As a result, alignment is mandatory for atomic loads and stores.
 Other Things to Consider
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+#. Avoid emitting extremely wide integer types. The optimizer is not designed
+   for types exceeding a few thousand bits; several passes have super-linear
+   complexity, and the generated code is often sub-par as well.
+
 #. Use ptrtoint/inttoptr sparingly (they interfere with pointer aliasing
    analysis), prefer GEPs
 

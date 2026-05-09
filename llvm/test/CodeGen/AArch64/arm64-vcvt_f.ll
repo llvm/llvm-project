@@ -3,7 +3,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -O0 -fast-isel | FileCheck %s --check-prefixes=CHECK,CHECK-FI
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple  -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for test_vcvt_bf16_f64
 
 define <2 x double> @test_vcvt_f64_f32(<2 x float> %x) nounwind readnone ssp {
 ; CHECK-LABEL: test_vcvt_f64_f32:
@@ -172,13 +171,15 @@ define <2 x bfloat> @test_vcvt_bf16_f64(<2 x double> %v) nounwind readnone ssp {
 ; CHECK-GI-NEXT:    fcvtxn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    movi.4s v1, #1
 ; CHECK-GI-NEXT:    movi.4s v2, #127, msl #8
+; CHECK-GI-NEXT:    movi.4s v5, #64, lsl #16
 ; CHECK-GI-NEXT:    ushr.4s v3, v0, #16
+; CHECK-GI-NEXT:    fcmeq.4s v4, v0, v0
 ; CHECK-GI-NEXT:    add.4s v2, v0, v2
+; CHECK-GI-NEXT:    orr.16b v0, v0, v5
 ; CHECK-GI-NEXT:    and.16b v1, v3, v1
-; CHECK-GI-NEXT:    fcmeq.4s v3, v0, v0
-; CHECK-GI-NEXT:    orr.4s v0, #64, lsl #16
-; CHECK-GI-NEXT:    add.4s v1, v1, v2
-; CHECK-GI-NEXT:    bit.16b v0, v1, v3
+; CHECK-GI-NEXT:    mvn.16b v3, v4
+; CHECK-GI-NEXT:    add.4s v1, v2, v1
+; CHECK-GI-NEXT:    bif.16b v0, v1, v3
 ; CHECK-GI-NEXT:    shrn.4h v0, v0, #16
 ; CHECK-GI-NEXT:    ret
   %vcvt1.i = fptrunc <2 x double> %v to <2 x bfloat>

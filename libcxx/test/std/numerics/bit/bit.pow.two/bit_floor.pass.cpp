@@ -139,5 +139,68 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+    // bit_floor uses numeric_limits::digits via __bit_log2, so only
+    // byte-aligned widths are safe.
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      assert(std::bit_floor(T32(0)) == T32(0));
+      assert(std::bit_floor(T32(1)) == T32(1));
+      assert(std::bit_floor(T32(2)) == T32(2));
+      assert(std::bit_floor(T32(3)) == T32(2));
+      assert(std::bit_floor(T32(4)) == T32(4));
+      assert(std::bit_floor(T32(5)) == T32(4));
+      assert(std::bit_floor(T32(7)) == T32(4));
+      assert(std::bit_floor(T32(8)) == T32(8));
+      assert(std::bit_floor(T32(9)) == T32(8));
+      assert(std::bit_floor(T32(127)) == T32(64));
+      assert(std::bit_floor(T32(128)) == T32(128));
+      assert(std::bit_floor(T32(129)) == T32(128));
+      assert(std::bit_floor(T32(255)) == T32(128));
+      assert(std::bit_floor(T32(~T32(0))) == T32(T32(1) << 31));
+      assert(std::bit_floor(T64(0)) == T64(0));
+      assert(std::bit_floor(T64(1)) == T64(1));
+      assert(std::bit_floor(T64(127)) == T64(64));
+      assert(std::bit_floor(T64(128)) == T64(128));
+      assert(std::bit_floor(T64(~T64(0))) == T64(T64(1) << 63));
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T128 = unsigned _BitInt(128);
+      assert(std::bit_floor(T128(0)) == T128(0));
+      assert(std::bit_floor(T128(1)) == T128(1));
+      // Boundary: values at and above 64-bit limb.
+      assert(std::bit_floor(T128(1) << 64) == T128(1) << 64);
+      assert(std::bit_floor((T128(1) << 64) - 1) == T128(1) << 63);
+      assert(std::bit_floor((T128(1) << 64) + 1) == T128(1) << 64);
+      assert(std::bit_floor(T128(~T128(0))) == T128(T128(1) << 127));
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::bit_floor(T256(0)) == T256(0));
+      assert(std::bit_floor(T256(1)) == T256(1));
+      assert(std::bit_floor(T256(2)) == T256(2));
+      assert(std::bit_floor(T256(3)) == T256(2));
+      assert(std::bit_floor(T256(7)) == T256(4));
+      assert(std::bit_floor(T256(127)) == T256(64));
+      assert(std::bit_floor(T256(128)) == T256(128));
+      assert(std::bit_floor(T256(129)) == T256(128));
+      // Boundary at 128-bit limb.
+      assert(std::bit_floor((T256(1) << 128) - 1) == T256(1) << 127);
+      assert(std::bit_floor(T256(1) << 128) == T256(1) << 128);
+      assert(std::bit_floor((T256(1) << 128) + 1) == T256(1) << 128);
+      // Bits near the top.
+      assert(std::bit_floor(T256(1) << 200) == T256(1) << 200);
+      assert(std::bit_floor((T256(1) << 200) - 1) == T256(1) << 199);
+      assert(std::bit_floor(T256(~T256(0))) == T256(T256(1) << 255));
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
+
     return 0;
 }

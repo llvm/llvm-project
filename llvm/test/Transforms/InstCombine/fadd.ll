@@ -946,7 +946,7 @@ define float @fadd_reduce_sqr_sum_varA_invalid2(float %a, float %b) {
 define float @fadd_reduce_sqr_sum_varA_invalid3(float %a, float %b) {
 ; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_invalid3(
 ; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[NOT_TWO_A:%.*]] = fmul float [[A]], 0x4000CCCCC0000000
+; CHECK-NEXT:    [[NOT_TWO_A:%.*]] = fmul float [[A]], 2.100000e+00
 ; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[NOT_TWO_A]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TWO_A_PLUS_B]], [[B]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[A_SQ]]
@@ -1034,7 +1034,7 @@ define float @fadd_reduce_sqr_sum_varB_invalid2(float %a, float %b) {
 define float @fadd_reduce_sqr_sum_varB_invalid3(float %a, float %b) {
 ; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_invalid3(
 ; CHECK-NEXT:    [[A_B:%.*]] = fmul float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[NOT_A_B_2:%.*]] = fmul float [[A_B]], 0x4000CCCCC0000000
+; CHECK-NEXT:    [[NOT_A_B_2:%.*]] = fmul float [[A_B]], 2.100000e+00
 ; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
 ; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
 ; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
@@ -1109,7 +1109,7 @@ define float @fadd_reduce_sqr_sum_varB2_invalid1(float %a, float %b) {
 
 define float @fadd_reduce_sqr_sum_varB2_invalid2(float %a, float %b) {
 ; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_invalid2(
-; CHECK-NEXT:    [[NOT_A_2:%.*]] = fmul float [[A:%.*]], 0x4000CCCCC0000000
+; CHECK-NEXT:    [[NOT_A_2:%.*]] = fmul float [[A:%.*]], 2.100000e+00
 ; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[NOT_A_2]], [[B:%.*]]
 ; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
 ; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]

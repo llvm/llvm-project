@@ -3075,7 +3075,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[TMP11]] = add i32 [[VEC_PHI1]], [[TMP7]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; UNROLL-NO-VF:       [[PRED_STORE_IF]]:
-; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[VEC_IV]]
+; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[INDEX]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[OFFSET_IDX]], ptr [[TMP12]], align 4
 ; UNROLL-NO-VF-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; UNROLL-NO-VF:       [[PRED_STORE_CONTINUE]]:

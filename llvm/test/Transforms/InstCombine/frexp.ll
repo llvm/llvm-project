@@ -183,7 +183,7 @@ define { float, i32 } @frexp_negtwo() {
 
 define { float, i32 } @frexp_inf() {
 ; CHECK-LABEL: define { float, i32 } @frexp_inf() {
-; CHECK-NEXT:    ret { float, i32 } { float 0x7FF0000000000000, i32 0 }
+; CHECK-NEXT:    ret { float, i32 } { float +inf, i32 0 }
 ;
   %ret = call { float, i32 } @llvm.frexp.f32.i32(float 0x7FF0000000000000)
   ret { float, i32 } %ret
@@ -191,7 +191,7 @@ define { float, i32 } @frexp_inf() {
 
 define { float, i32 } @frexp_neginf() {
 ; CHECK-LABEL: define { float, i32 } @frexp_neginf() {
-; CHECK-NEXT:    ret { float, i32 } { float 0xFFF0000000000000, i32 0 }
+; CHECK-NEXT:    ret { float, i32 } { float -inf, i32 0 }
 ;
   %ret = call { float, i32 } @llvm.frexp.f32.i32(float 0xFFF0000000000000)
   ret { float, i32 } %ret
@@ -199,7 +199,7 @@ define { float, i32 } @frexp_neginf() {
 
 define { float, i32 } @frexp_qnan() {
 ; CHECK-LABEL: define { float, i32 } @frexp_qnan() {
-; CHECK-NEXT:    ret { float, i32 } { float 0x7FF8000000000000, i32 0 }
+; CHECK-NEXT:    ret { float, i32 } { float +qnan, i32 0 }
 ;
   %ret = call { float, i32 } @llvm.frexp.f32.i32(float 0x7FF8000000000000)
   ret { float, i32 } %ret
@@ -207,7 +207,7 @@ define { float, i32 } @frexp_qnan() {
 
 define { float, i32 } @frexp_snan() {
 ; CHECK-LABEL: define { float, i32 } @frexp_snan() {
-; CHECK-NEXT:    ret { float, i32 } { float 0x7FF8000020000000, i32 0 }
+; CHECK-NEXT:    ret { float, i32 } { float +nan(0x1), i32 0 }
 ;
   %ret = call { float, i32 } @llvm.frexp.f32.i32(float bitcast (i32 2139095041 to float))
   ret { float, i32 } %ret
@@ -215,7 +215,7 @@ define { float, i32 } @frexp_snan() {
 
 define { float, i32 } @frexp_pos_denorm() {
 ; CHECK-LABEL: define { float, i32 } @frexp_pos_denorm() {
-; CHECK-NEXT:    ret { float, i32 } { float 0x3FEFFFFFC0000000, i32 -126 }
+; CHECK-NEXT:    ret { float, i32 } { float f0x3F7FFFFE, i32 -126 }
 ;
   %ret = call { float, i32 } @llvm.frexp.f32.i32(float bitcast (i32 8388607 to float))
   ret { float, i32 } %ret
@@ -223,7 +223,7 @@ define { float, i32 } @frexp_pos_denorm() {
 
 define { float, i32 } @frexp_neg_denorm() {
 ; CHECK-LABEL: define { float, i32 } @frexp_neg_denorm() {
-; CHECK-NEXT:    ret { float, i32 } { float 0xBFEFFFFFC0000000, i32 -126 }
+; CHECK-NEXT:    ret { float, i32 } { float f0xBF7FFFFE, i32 -126 }
 ;
   %ret = call { float, i32 } @llvm.frexp.f32.i32(float bitcast (i32 -2139095041 to float))
   ret { float, i32 } %ret
@@ -231,7 +231,7 @@ define { float, i32 } @frexp_neg_denorm() {
 
 define { ppc_fp128, i32 } @frexp_one_ppcf128() {
 ; CHECK-LABEL: define { ppc_fp128, i32 } @frexp_one_ppcf128() {
-; CHECK-NEXT:    ret { ppc_fp128, i32 } { ppc_fp128 0xM3FE00000000000000000000000000000, i32 1 }
+; CHECK-NEXT:    ret { ppc_fp128, i32 } { ppc_fp128 5.000000e-01, i32 1 }
 ;
   %ret = call { ppc_fp128, i32 } @llvm.frexp.ppcf128.i32(ppc_fp128 0xM3FF00000000000000000000000000000)
   ret { ppc_fp128, i32 } %ret
@@ -239,7 +239,7 @@ define { ppc_fp128, i32 } @frexp_one_ppcf128() {
 
 define { ppc_fp128, i32 } @frexp_negone_ppcf128() {
 ; CHECK-LABEL: define { ppc_fp128, i32 } @frexp_negone_ppcf128() {
-; CHECK-NEXT:    ret { ppc_fp128, i32 } { ppc_fp128 0xMBFE00000000000000000000000000000, i32 1 }
+; CHECK-NEXT:    ret { ppc_fp128, i32 } { ppc_fp128 -5.000000e-01, i32 1 }
 ;
   %ret = call { ppc_fp128, i32 } @llvm.frexp.ppcf128.i32(ppc_fp128 0xMBFF00000000000000000000000000000)
   ret { ppc_fp128, i32 } %ret
@@ -247,7 +247,7 @@ define { ppc_fp128, i32 } @frexp_negone_ppcf128() {
 
 define { ppc_fp128, i32} @canonicalize_noncanonical_zero_1_ppcf128() {
 ; CHECK-LABEL: define { ppc_fp128, i32 } @canonicalize_noncanonical_zero_1_ppcf128() {
-; CHECK-NEXT:    ret { ppc_fp128, i32 } { ppc_fp128 0xM00000000000000000000000000000001, i32 0 }
+; CHECK-NEXT:    ret { ppc_fp128, i32 } { ppc_fp128 f0x00000000000000010000000000000000, i32 0 }
 ;
   %ret = call { ppc_fp128, i32 } @llvm.frexp.ppcf128.i32(ppc_fp128 0xM00000000000000000000000000000001)
   ret { ppc_fp128, i32 } %ret
@@ -263,7 +263,7 @@ define { <2 x float>, <2 x i32> } @frexp_splat_4() {
 
 define { <2 x float>, <2 x i32> } @frexp_splat_qnan() {
 ; CHECK-LABEL: define { <2 x float>, <2 x i32> } @frexp_splat_qnan() {
-; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } { <2 x float> splat (float 0x7FF8000000000000), <2 x i32> zeroinitializer }
+; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } { <2 x float> splat (float +qnan), <2 x i32> zeroinitializer }
 ;
   %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
   ret { <2 x float>, <2 x i32> } %ret
@@ -271,7 +271,7 @@ define { <2 x float>, <2 x i32> } @frexp_splat_qnan() {
 
 define { <2 x float>, <2 x i32> } @frexp_splat_inf() {
 ; CHECK-LABEL: define { <2 x float>, <2 x i32> } @frexp_splat_inf() {
-; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } { <2 x float> splat (float 0x7FF0000000000000), <2 x i32> zeroinitializer }
+; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } { <2 x float> splat (float +inf), <2 x i32> zeroinitializer }
 ;
   %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>)
   ret { <2 x float>, <2 x i32> } %ret
@@ -279,7 +279,7 @@ define { <2 x float>, <2 x i32> } @frexp_splat_inf() {
 
 define { <2 x float>, <2 x i32> } @frexp_splat_neginf() {
 ; CHECK-LABEL: define { <2 x float>, <2 x i32> } @frexp_splat_neginf() {
-; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } { <2 x float> splat (float 0xFFF0000000000000), <2 x i32> zeroinitializer }
+; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } { <2 x float> splat (float -inf), <2 x i32> zeroinitializer }
 ;
   %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000>)
   ret { <2 x float>, <2 x i32> } %ret
@@ -287,7 +287,7 @@ define { <2 x float>, <2 x i32> } @frexp_splat_neginf() {
 
 define { <2 x float>, <2 x i32> } @frexp_splat_undef_inf() {
 ; CHECK-LABEL: define { <2 x float>, <2 x i32> } @frexp_splat_undef_inf() {
-; CHECK-NEXT:    [[RET:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float undef, float 0x7FF0000000000000>)
+; CHECK-NEXT:    [[RET:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float undef, float +inf>)
 ; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } [[RET]]
 ;
   %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float undef, float 0x7FF0000000000000>)

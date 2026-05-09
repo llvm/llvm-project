@@ -202,7 +202,7 @@ define internal void @infer_arg_from_constants(float %a, <2 x half> %b, float %c
 define void @call_infer_arg_from_constants() {
 ; CHECK-LABEL: define void @call_infer_arg_from_constants(
 ; CHECK-SAME: ) #[[ATTR2]] {
-; CHECK-NEXT:    call void @infer_arg_from_constants(float 0.000000e+00, <2 x half> <half 0xH3C00, half 0xHBC00>, float poison, float 0x7FF8000000000000)
+; CHECK-NEXT:    call void @infer_arg_from_constants(float 0.000000e+00, <2 x half> <half 1.000000e+00, half -1.000000e+00>, float poison, float +qnan)
 ; CHECK-NEXT:    ret void
 ;
   call void @infer_arg_from_constants(float 0.0, <2 x half> <half 1.0, half -1.0>, float poison, float 0x7FF8000000000000)

@@ -1,0 +1,1287 @@
+# RUN: rm -rf %t && split-file %s %t && cd %t
+#
+# RUN: yaml2obj a.yaml -o a.o
+# RUN: yaml2obj ptr_b.yaml -o ptr_b.o
+# RUN: yaml2obj deep.yaml -o deep.o
+#
+# RUN: dsymutil --linker=classic -f -oso-prepend-path=%t -y debug-map.yaml -o out-classic.dwarf
+# RUN: llvm-dwarfdump out-classic.dwarf | FileCheck %s
+#
+# RUN: dsymutil --linker=parallel -f -oso-prepend-path=%t -y debug-map.yaml -o out-parallel.dwarf
+# RUN: llvm-dwarfdump out-parallel.dwarf | FileCheck %s
+
+# Three CUs each have a typedef "MyType" declared at the same file and line
+# (via a macro header), but pointing to different underlying types. The classic
+# linker must not merge them into one DeclContext, otherwise ODR deduplication
+# would make some typedefs point to the wrong underlying type, or produce
+# self-referencing typedef cycles (as seen with std::string and preferred_name).
+#
+# The test exercises:
+#   - Direct type:            MyType -> FooA
+#   - Pointer wrapper:        MyType -> FooB *  (1 unnamed wrapper)
+#   - Deep qualifier chain:   MyType -> FooC *volatile const *const *volatile const
+#                              (8 unnamed wrappers before reaching FooC)
+
+# Verify all three typedefs survive with correct underlying types.
+# Use CHECK-DAG since the classic and parallel linkers emit in different order.
+# CHECK-DAG: DW_AT_type ({{.*}} "FooA")
+# CHECK-DAG: DW_AT_type ({{.*}} "FooB *")
+# CHECK-DAG: DW_AT_type ({{.*}} "FooC *const volatile *const *const volatile")
+
+#--- debug-map.yaml
+---
+triple:          'arm64-apple-darwin'
+objects:
+  - filename:        'a.o'
+    timestamp:       0
+    symbols:
+      - { sym: _globalG, objAddr: 0x29C, binAddr: 0x100001000, size: 0x4 }
+  - filename:        'ptr_b.o'
+    timestamp:       0
+    symbols:
+      - { sym: _globalPB, objAddr: 0x2B8, binAddr: 0x100001008, size: 0x8 }
+  - filename:        'deep.o'
+    timestamp:       0
+    symbols:
+      - { sym: _globalDeep, objAddr: 0x0, binAddr: 0x100001010, size: 0x8 }
+...
+
+#--- header.h
+typedef UNDERLYING_TYPE MyType;
+
+#--- a.cpp
+struct FooA { int x; };
+#define UNDERLYING_TYPE FooA
+#include "header.h"
+MyType globalA;
+
+#--- ptr_b.cpp
+struct FooB { double y; };
+#define UNDERLYING_TYPE FooB*
+#include "header.h"
+MyType globalPB;
+
+#--- deep.cpp
+struct FooC { char z; };
+#define UNDERLYING_TYPE FooC *volatile const *const *volatile const
+#include "header.h"
+MyType globalDeep = nullptr;
+
+#--- gen
+clang++ --target=arm64-apple-darwin -g -O0 -c a.cpp -o a.o && obj2yaml a.o
+clang++ --target=arm64-apple-darwin -g -O0 -c ptr_b.cpp -o ptr_b.o && obj2yaml ptr_b.o
+clang++ --target=arm64-apple-darwin -g -O0 -c deep.cpp -o deep.o && obj2yaml deep.o
+
+#--- a.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      1000
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         872
+    segname:         ''
+    vmaddr:          0
+    vmsize:          672
+    fileoff:         1032
+    filesize:        665
+    maxprot:         7
+    initprot:        7
+    nsects:          10
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0
+        offset:          0x408
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+      - sectname:        __common
+        segname:         __DATA
+        addr:            0x29C
+        size:            4
+        offset:          0x0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x1
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x0
+        size:            90
+        offset:          0x408
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x5A
+        size:            96
+        offset:          0x462
+        align:           0
+        reloff:          0x6A8
+        nreloc:          1
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        relocations:
+          - address:         0x2F
+            symbolnum:       2
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0xBA
+        size:            154
+        offset:          0x4C2
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x154
+        size:            60
+        offset:          0x55C
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000010000000C00000000000000010000000100060000000000DD3A6B002C00000080000000010000002200000000000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x190
+        size:            36
+        offset:          0x598
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x1B4
+        size:            36
+        offset:          0x5BC
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x1D8
+        size:            133
+        offset:          0x5E0
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000300000003000000140000000000000003000000010006000300050004000B00FFFFFFFF0000000002000000CA58857C8DF339C43080880B4C0000005F000000720000008F0000000100000042000000130000000000008800000001000000370000001600000000000096000000010000005800000024000000000000
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x25D
+        size:            60
+        offset:          0x665
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           720896
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          1712
+    nsyms:           3
+    stroff:          1760
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      1
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          16
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          10
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         668
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         668
+  StringTable:
+    - ''
+    - _globalG
+    - ltmp1
+    - ltmp0
+    - ''
+    - ''
+DWARF:
+  debug_str:
+    - 'clang version 23.0.0git (/home/peterrong/llvm-project/clang 07707707f21a5b65f6b0ddf08c9df1f22f4fe006)'
+    - g.cpp
+    - '/'
+    - '/tmp/typedef-test'
+    - globalG
+    - MyType
+    - FooA
+    - x
+    - int
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+        - Code:            0x3
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x4
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_calling_convention
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x5
+          Tag:             DW_TAG_member
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_data_member_location
+              Form:            DW_FORM_data1
+        - Code:            0x6
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Length:          0x5C
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0
+            - Value:           0x21
+            - Value:           0x66
+            - Value:           0x6C
+            - Value:           0x0
+            - Value:           0x6E
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x80
+            - Value:           0x37
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0x9
+              BlockData:       [ 0x3, 0x9C, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                 0x0 ]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x42
+            - Value:           0x88
+            - Value:           0x2
+            - Value:           0x1
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x5
+            - Value:           0x8F
+            - Value:           0x4
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x94
+            - Value:           0x58
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x96
+            - Value:           0x5
+            - Value:           0x4
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          56
+      Version:         4
+      PrologueLength:  50
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - .
+      Files:
+        - Name:            g.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+        - Name:            typedef_macro.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+...
+
+#--- ptr_b.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      1000
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         872
+    segname:         ''
+    vmaddr:          0
+    vmsize:          704
+    fileoff:         1032
+    filesize:        689
+    maxprot:         7
+    initprot:        7
+    nsects:          10
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0
+        offset:          0x408
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+      - sectname:        __common
+        segname:         __DATA
+        addr:            0x2B8
+        size:            8
+        offset:          0x0
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x1
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x0
+        size:            97
+        offset:          0x408
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x61
+        size:            101
+        offset:          0x469
+        align:           0
+        reloff:          0x6C0
+        nreloc:          1
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        relocations:
+          - address:         0x2F
+            symbolnum:       2
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0xC6
+        size:            162
+        offset:          0x4CE
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x168
+        size:            60
+        offset:          0x570
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000010000000C00000000000000010000000100060000000000E897D20D2C00000084000000010000002200000000000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x1A4
+        size:            36
+        offset:          0x5AC
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x1C8
+        size:            36
+        offset:          0x5D0
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x1EC
+        size:            133
+        offset:          0x5F4
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000300000003000000140000000000000003000000010006000300050004000B00FFFFFFFF00000000020000008DF339C4205B3DF9CB58857C4C0000005F000000720000008D0000000100000037000000160000000000009B000000010000005D0000002400000000000094000000010000004700000013000000000000
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x271
+        size:            64
+        offset:          0x679
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           720896
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          1736
+    nsyms:           3
+    stroff:          1784
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      1
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          17
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          11
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         696
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         696
+  StringTable:
+    - ''
+    - _globalPB
+    - ltmp1
+    - ltmp0
+    - ''
+DWARF:
+  debug_str:
+    - 'clang version 23.0.0git (/home/peterrong/llvm-project/clang 07707707f21a5b65f6b0ddf08c9df1f22f4fe006)'
+    - ptr_b.cpp
+    - '/'
+    - '/tmp/typedef-test'
+    - globalPB
+    - MyType
+    - FooB
+    - y
+    - double
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+        - Code:            0x3
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x4
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_calling_convention
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x6
+          Tag:             DW_TAG_member
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_data_member_location
+              Form:            DW_FORM_data1
+        - Code:            0x7
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Length:          0x61
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0
+            - Value:           0x21
+            - Value:           0x66
+            - Value:           0x70
+            - Value:           0x0
+            - Value:           0x72
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x84
+            - Value:           0x37
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0x9
+              BlockData:       [ 0x3, 0xB8, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                 0x0 ]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x42
+            - Value:           0x8D
+            - Value:           0x2
+            - Value:           0x1
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x47
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x5
+            - Value:           0x94
+            - Value:           0x8
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x99
+            - Value:           0x5D
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x9B
+            - Value:           0x4
+            - Value:           0x8
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          60
+      Version:         4
+      PrologueLength:  54
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - .
+      Files:
+        - Name:            ptr_b.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+        - Name:            typedef_macro.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+...
+
+#--- deep.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      1000
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         872
+    segname:         ''
+    vmaddr:          0
+    vmsize:          744
+    fileoff:         1032
+    filesize:        744
+    maxprot:         7
+    initprot:        7
+    nsects:          10
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0
+        offset:          0x408
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x0
+        size:            8
+        offset:          0x408
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000'
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x8
+        size:            111
+        offset:          0x410
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x77
+        size:            136
+        offset:          0x47F
+        align:           0
+        reloff:          0x6F0
+        nreloc:          1
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        relocations:
+          - address:         0x2F
+            symbolnum:       2
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0xFF
+        size:            161
+        offset:          0x507
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x1A0
+        size:            60
+        offset:          0x5A8
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000010000000C00000000000000010000000100060000000000B43FD2CC2C00000083000000010000002200000000000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x1DC
+        size:            36
+        offset:          0x5E4
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x200
+        size:            36
+        offset:          0x608
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x224
+        size:            133
+        offset:          0x62C
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000300000003000000140000000000000003000000010006000300050004000B00000000000100000002000000CC58857C8DF339C46320957C4C0000005F0000007200000095000000010000006A000000130000000000008E0000000100000037000000160000000000009C000000010000008000000024000000000000
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x2A9
+        size:            63
+        offset:          0x6B1
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           720896
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          1784
+    nsyms:           3
+    stroff:          1832
+    strsize:         32
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      1
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          19
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          13
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _globalDeep
+    - ltmp1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+DWARF:
+  debug_str:
+    - 'clang version 23.0.0git (/home/peterrong/llvm-project/clang 07707707f21a5b65f6b0ddf08c9df1f22f4fe006)'
+    - deep.cpp
+    - '/'
+    - '/tmp/typedef-test'
+    - globalDeep
+    - MyType
+    - FooC
+    - z
+    - char
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+        - Code:            0x3
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x4
+          Tag:             DW_TAG_const_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_volatile_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x6
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x7
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_calling_convention
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x8
+          Tag:             DW_TAG_member
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_data_member_location
+              Form:            DW_FORM_data1
+        - Code:            0x9
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Length:          0x84
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0
+            - Value:           0x21
+            - Value:           0x66
+            - Value:           0x6F
+            - Value:           0x0
+            - Value:           0x71
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x83
+            - Value:           0x37
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0x9
+              BlockData:       [ 0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                 0x0 ]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x42
+            - Value:           0x8E
+            - Value:           0x2
+            - Value:           0x1
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x47
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x4C
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x51
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x56
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x5B
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x60
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x65
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x6A
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x5
+            - Value:           0x95
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x8
+          Values:
+            - Value:           0x9A
+            - Value:           0x80
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0x9C
+            - Value:           0x6
+            - Value:           0x1
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          59
+      Version:         4
+      PrologueLength:  53
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - .
+      Files:
+        - Name:            deep.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+        - Name:            typedef_macro.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+...

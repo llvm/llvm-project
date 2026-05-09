@@ -144,10 +144,9 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
       if (chunk > 0) {
         // round up to make sure the chunk is enough to cover all iterations
         T tripCount = ub - lb + 1; // +1 because ub is inclusive
-        T span = (tripCount + numberOfActiveOMPThreads - 1) /
-                 numberOfActiveOMPThreads;
+        T span = utils::roundUp(tripCount, numberOfActiveOMPThreads);
         // perform chunk adjustment
-        chunk = (span + chunk - 1) & ~(chunk - 1);
+        chunk = utils::alignUp(span, chunk);
 
         ASSERT0(LT_FUSSY, ub >= lb, "ub must be >= lb.");
         T oldUb = ub;
@@ -290,9 +289,9 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
       ST stride;
       int lastiter = 0;
       // round up to make sure the chunk is enough to cover all iterations
-      T span = (tripCount + tnum - 1) / tnum;
+      T span = utils::roundUp(tripCount, tnum);
       // perform chunk adjustment
-      chunk = (span + chunk - 1) & ~(chunk - 1);
+      chunk = utils::alignUp(span, chunk);
 
       T oldUb = ub;
       ForStaticChunk(lastiter, lb, ub, stride, chunk, threadId, tnum);

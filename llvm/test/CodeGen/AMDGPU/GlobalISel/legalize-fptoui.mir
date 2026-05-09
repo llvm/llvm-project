@@ -213,11 +213,11 @@ body: |
     ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[COPY]], [[SELECT]]
-    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
-    ; SI-NEXT: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
+    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3DF0000000000000
+    ; SI-NEXT: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double f0xC1F0000000000000
     ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[SELECT1]], [[C8]]
     ; SI-NEXT: [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s64)
-    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT1]], [[C10]]
     ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[FMUL]](s64), [[FMUL]]
     ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[FMUL]], [[FMINNUM_IEEE]]
@@ -233,8 +233,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3DF0000000000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double f0xC1F0000000000000
     ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s64) = G_FFLOOR [[FMUL]]
     ; VI-NEXT: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -277,11 +277,11 @@ body: |
     ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[COPY]], [[SELECT]]
-    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
-    ; SI-NEXT: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
+    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3DF0000000000000
+    ; SI-NEXT: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double f0xC1F0000000000000
     ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s64) = nnan G_FMUL [[SELECT1]], [[C8]]
     ; SI-NEXT: [[INT1:%[0-9]+]]:_(s64) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s64)
-    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = nnan G_FMINNUM_IEEE [[INT1]], [[C10]]
     ; SI-NEXT: [[FNEG:%[0-9]+]]:_(s64) = nnan G_FNEG [[FMINNUM_IEEE]]
     ; SI-NEXT: [[FADD:%[0-9]+]]:_(s64) = nnan G_FADD [[FMUL]], [[FNEG]]
@@ -295,8 +295,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = nnan G_INTRINSIC_TRUNC [[COPY]]
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3DF0000000000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double f0xC1F0000000000000
     ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s64) = nnan G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s64) = nnan G_FFLOOR [[FMUL]]
     ; VI-NEXT: [[FMA:%[0-9]+]]:_(s64) = nnan G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -340,11 +340,11 @@ body: |
     ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[UV]], [[SELECT]]
-    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
-    ; SI-NEXT: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
+    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3DF0000000000000
+    ; SI-NEXT: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double f0xC1F0000000000000
     ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[SELECT1]], [[C8]]
     ; SI-NEXT: [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s64)
-    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT1]], [[C10]]
     ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[FMUL]](s64), [[FMUL]]
     ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[FMUL]], [[FMINNUM_IEEE]]
@@ -385,8 +385,8 @@ body: |
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV]]
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3DF0000000000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double f0xC1F0000000000000
     ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s64) = G_FFLOOR [[FMUL]]
     ; VI-NEXT: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -418,8 +418,8 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x2F800000
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xCF800000
     ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
     ; SI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -432,8 +432,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x2F800000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xCF800000
     ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
     ; VI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -458,8 +458,8 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x2F800000
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xCF800000
     ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
     ; SI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -481,8 +481,8 @@ body: |
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x2F800000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xCF800000
     ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
     ; VI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -667,8 +667,8 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x2F800000
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xCF800000
     ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
     ; SI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
@@ -681,8 +681,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x2F800000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xCF800000
     ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
     ; VI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]

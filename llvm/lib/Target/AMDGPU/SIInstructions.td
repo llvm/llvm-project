@@ -3668,7 +3668,12 @@ def : GCNPat<
   (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
   (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
 >;
-}
+
+def : GCNPat<
+  (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+  (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+>;
+} // End SubtargetPredicate = HasPackedFP32Ops
 
 // TODO: Handle fneg like other types.
 let SubtargetPredicate = isNotGFX12Plus in {

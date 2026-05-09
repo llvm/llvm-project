@@ -72,3 +72,27 @@ module m
   end subroutine
 
 end
+
+module assumed_type_cuda_buffers
+  interface generic_recv
+    module procedure recv_assumed_size
+  end interface
+
+contains
+  subroutine recv_assumed_size(buf, count)
+    type(*) :: buf(1_8:*)
+    integer, intent(in) :: count
+  end subroutine
+
+  subroutine recv_assumed_rank(buf, count)
+    type(*) :: buf(..)
+    integer, intent(in) :: count
+  end subroutine
+
+  subroutine test
+    real, device :: d(10)
+    call recv_assumed_size(d, 10)
+    call recv_assumed_rank(d, 10)
+    call generic_recv(d, 10)
+  end subroutine
+end module

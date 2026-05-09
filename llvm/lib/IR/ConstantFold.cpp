@@ -442,7 +442,7 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 
   // Inserting null into all zeros is still all zeros.
   // TODO: This is true for undef and poison splats too.
-  if (isa<ConstantAggregateZero>(Val) && Elt->isNullValue())
+  if (Val->isNullValue() && Elt->isNullValue())
     return Val;
 
   ConstantInt *CIdx = dyn_cast<ConstantInt>(Idx);

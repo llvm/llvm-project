@@ -275,6 +275,9 @@ public:
   constexpr bool isPointerOrPointerVector() const {
     return isPointer() || isPointerVector();
   }
+  constexpr bool isFloatOrFloatVector() const {
+    return isFloat() || isFloatVector();
+  }
 
   constexpr bool isScalar() const {
     return Info == Kind::ANY_SCALAR || Info == Kind::INTEGER ||

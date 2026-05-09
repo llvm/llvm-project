@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-class RegAllocFastPass : public PassInfoMixin<RegAllocFastPass> {
+class RegAllocFastPass : public RequiredPassInfoMixin<RegAllocFastPass> {
 public:
   struct Options {
     RegAllocFilterFunc Filter;
@@ -47,8 +47,6 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
-
-  static bool isRequired() { return true; }
 
 private:
   Options Opts;

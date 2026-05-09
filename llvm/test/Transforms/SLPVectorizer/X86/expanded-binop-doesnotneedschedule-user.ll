@@ -8,13 +8,13 @@ define void @test() {
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP5:%.*]], %[[BB1]] ], [ zeroinitializer, %[[BB]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], %[[BB1]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP6:%.*]], %[[BB1]] ], [ zeroinitializer, %[[BB]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i32> [[TMP1]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP5]] = add <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP7]] = add <2 x i32> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[ADD6:%.*]] = add i32 0, 1
+; CHECK-NEXT:    [[TMP6]] = insertelement <2 x i32> [[TMP5]], i32 [[ADD6]], i32 0
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

@@ -169,6 +169,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
 
   RootSignatureBindingInfo &RSDMap = AM.getResult<RootSignatureAnalysis>(M);
+  if (RSDMap.empty())
+    return PreservedAnalyses::all();
 
   OS << "Root Signature Definitions"
      << "\n";

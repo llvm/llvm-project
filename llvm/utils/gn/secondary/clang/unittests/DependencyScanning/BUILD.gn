@@ -8,5 +8,8 @@ unittest("ClangDependencyScanningTests") {
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
-  sources = [ "DependencyScanningFilesystemTest.cpp" ]
+  sources = [
+    "DependencyScanningFilesystemTest.cpp",
+    "InProcessModuleCacheTest.cpp",
+  ]
 }

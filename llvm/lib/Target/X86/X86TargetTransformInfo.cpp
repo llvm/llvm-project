@@ -1576,8 +1576,41 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     LT.first = 1;
 
     // If we're broadcasting a load then AVX/AVX2 can do this for free.
+    // If many-used-load whose every use is one of a small set of operations
+    // that SLP can rewrite into a single vector lane, codegen can fold it into
+    // the free broadcast.
     using namespace PatternMatch;
-    if (!Args.empty() && match(Args[0], m_OneUse(m_Load(m_Value()))) &&
+    auto IsBroadcastLoadFoldUser = [&](const User *U) {
+      if (isa<InsertElementInst>(U) && U->getOperand(1) == Args[0])
+        return true;
+      if (U->getType()->isVectorTy())
+        return false;
+      // Terminators (return/branch/switch/indirectbr/resume/invoke EH)
+      // and phis carry the value across control flow.
+      if (const auto *I = dyn_cast<Instruction>(U))
+        if (I->isTerminator() ||
+            isa<PHINode, AtomicRMWInst, AtomicCmpXchgInst>(I))
+          return false;
+      // Only pure calls can be folded.
+      if (const auto *CB = dyn_cast<CallBase>(U))
+        return CB->doesNotAccessMemory() && !CB->mayHaveSideEffects();
+      return true;
+    };
+    auto IsFoldableSLPBroadcastLoad = [&]() {
+      if (!match(Args[0], m_Load(m_Value())))
+        return false;
+      auto *FVT = dyn_cast<FixedVectorType>(DstTy);
+      if (!FVT)
+        return false;
+      // getNumUses() counts each Use, matching the per-lane broadcast
+      // accounting (a use like `op %x, %x` consumes two broadcast lanes).
+      if (Args[0]->getNumUses() != FVT->getNumElements())
+        return false;
+      return all_of(Args[0]->users(), IsBroadcastLoadFoldUser);
+    };
+    if (!Args.empty() &&
+        (match(Args[0], m_OneUse(m_Load(m_Value()))) ||
+         IsFoldableSLPBroadcastLoad()) &&
         (ST->hasAVX2() ||
          (ST->hasAVX() && LT.second.getScalarSizeInBits() >= 32)))
       return TTI::TCC_Free;

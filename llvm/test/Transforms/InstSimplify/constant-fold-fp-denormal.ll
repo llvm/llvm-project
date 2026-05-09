@@ -15,7 +15,7 @@
 
 define float @test_float_fadd_ieee() #0 {
 ; CHECK-LABEL: @test_float_fadd_ieee(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fadd float 0xB810000000000000, 0x3800000000000000
@@ -24,7 +24,7 @@ define float @test_float_fadd_ieee() #0 {
 
 define <4 x float> @test_float_fadd_ieee_vector() #0 {
 ; CHECK-LABEL: @test_float_fadd_ieee_vector(
-; CHECK-NEXT:    ret <4 x float> splat (float 0xB800000000000000)
+; CHECK-NEXT:    ret <4 x float> splat (float f0x80400000)
 ;
 ; default ieee mode leaves result as a denormal
   %result = fadd <4 x float> splat(float 0xB810000000000000), splat(float 0x3800000000000000)
@@ -69,7 +69,7 @@ define <4 x float> @test_float_fadd_psign_out_vector() #2 {
 
 define float @test_float_fadd_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_fadd_pzero_in(
-; CHECK-NEXT:    ret float 0xB810000000000000
+; CHECK-NEXT:    ret float f0x80800000
 ;
 ; denormal operand is treated as zero
 ; normal operand added to zero results in the same operand as a result
@@ -79,7 +79,7 @@ define float @test_float_fadd_pzero_in() #3 {
 
 define float @test_float_fadd_psign_in() #4 {
 ; CHECK-LABEL: @test_float_fadd_psign_in(
-; CHECK-NEXT:    ret float 0xB810000000000000
+; CHECK-NEXT:    ret float f0x80800000
 ;
 ; denormal operand is treated as zero
 ; normal operand added to zero results in the same operand as a result
@@ -99,7 +99,7 @@ define float @test_float_fadd_pzero_f32_out() #5 {
 
 define double @test_double_fadd_ieee() #0 {
 ; CHECK-LABEL: @test_double_fadd_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fadd double 0x8010000000000000, 0x0008000000000000
@@ -108,7 +108,7 @@ define double @test_double_fadd_ieee() #0 {
 
 define <2 x double> @test_double_fadd_ieee_vector() #0 {
 ; CHECK-LABEL: @test_double_fadd_ieee_vector(
-; CHECK-NEXT:    ret <2 x double> splat (double 0x8008000000000000)
+; CHECK-NEXT:    ret <2 x double> splat (double f0x8008000000000000)
 ;
 ; default ieee mode leaves result as a denormal
   %result = fadd <2 x double> splat(double 0x8010000000000000), splat(double 0x0008000000000000)
@@ -153,7 +153,7 @@ define <2 x double> @test_double_fadd_psign_out_vector() #2 {
 
 define double @test_double_fadd_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_fadd_pzero_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
+; CHECK-NEXT:    ret double f0x8010000000000000
 ;
 ; denormal operand is treated as zero
 ; normal operand added to zero results in the same operand as a result
@@ -163,7 +163,7 @@ define double @test_double_fadd_pzero_in() #3 {
 
 define double @test_double_fadd_psign_in() #4 {
 ; CHECK-LABEL: @test_double_fadd_psign_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
+; CHECK-NEXT:    ret double f0x8010000000000000
 ;
 ; denormal operand is treated as zero
 ; normal operand added to zero results in the same operand as a result
@@ -173,7 +173,7 @@ define double @test_double_fadd_psign_in() #4 {
 
 define double @test_double_fadd_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fadd_f32_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
@@ -191,7 +191,7 @@ define double @test_double_fadd_f32_ieee() #5 {
 
 define float @test_float_fsub_ieee() #0 {
 ; CHECK-LABEL: @test_float_fsub_ieee(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fsub float 0x3800000000000000, 0x3810000000000000
@@ -218,7 +218,7 @@ define float @test_float_fsub_psign_out() #2 {
 
 define float @test_float_fsub_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_fsub_pzero_in(
-; CHECK-NEXT:    ret float 0xB810000000000000
+; CHECK-NEXT:    ret float f0x80800000
 ;
 ; denormal operand is treated as zero
 ; normal operand subtracted from zero produces the same operand, negated
@@ -228,7 +228,7 @@ define float @test_float_fsub_pzero_in() #3 {
 
 define float @test_float_fsub_psign_in() #4 {
 ; CHECK-LABEL: @test_float_fsub_psign_in(
-; CHECK-NEXT:    ret float 0xB810000000000000
+; CHECK-NEXT:    ret float f0x80800000
 ;
 ; denormal operand is treated as zero
 ; normal operand subtracted from zero produces the same operand, negated
@@ -248,7 +248,7 @@ define float @test_float_fsub_pzero_f32_out() #5 {
 
 define double @test_double_fsub_ieee() #0 {
 ; CHECK-LABEL: @test_double_fsub_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fsub double 0x0008000000000000, 0x0010000000000000
@@ -275,7 +275,7 @@ define double @test_double_fsub_psign_out() #2 {
 
 define double @test_double_fsub_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_fsub_pzero_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
+; CHECK-NEXT:    ret double f0x8010000000000000
 ;
 ; denormal operand is treated as zero
 ; normal operand subtracted from zero produces the same operand, negated
@@ -285,7 +285,7 @@ define double @test_double_fsub_pzero_in() #3 {
 
 define double @test_double_fsub_psign_in() #4 {
 ; CHECK-LABEL: @test_double_fsub_psign_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
+; CHECK-NEXT:    ret double f0x8010000000000000
 ;
 ; denormal operand is treated as zero
 ; normal operand subtracted from zero produces the same operand, negated
@@ -295,7 +295,7 @@ define double @test_double_fsub_psign_in() #4 {
 
 define double @test_double_fsub_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fsub_f32_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
@@ -315,7 +315,7 @@ define double @test_double_fsub_f32_ieee() #5 {
 
 define float @test_float_fmul_ieee() #0 {
 ; CHECK-LABEL: @test_float_fmul_ieee(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fmul float 0x3810000000000000, -5.000000e-01
@@ -372,7 +372,7 @@ define float @test_float_fmul_pzero_f32_out() #1 {
 
 define double @test_double_fmul_ieee() #0 {
 ; CHECK-LABEL: @test_double_fmul_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fmul double 0x00010000000000000, -5.000000e-01
@@ -419,7 +419,7 @@ define double @test_double_fmul_psign_in() #4 {
 
 define double @test_double_fmul_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fmul_f32_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
@@ -439,7 +439,7 @@ define double @test_double_fmul_f32_ieee() #5 {
 
 define float @test_float_fdiv_ieee() #0 {
 ; CHECK-LABEL: @test_float_fdiv_ieee(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fdiv float 0x3810000000000000, -2.000000e-00
@@ -496,7 +496,7 @@ define float @test_float_fdiv_pzero_f32_out() #1 {
 
 define double @test_double_fdiv_ieee() #0 {
 ; CHECK-LABEL: @test_double_fdiv_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; default ieee mode leaves result as a denormal
   %result = fdiv double 0x0010000000000000, -2.000000e-00
@@ -543,7 +543,7 @@ define double @test_double_fdiv_psign_in() #4 {
 
 define double @test_double_fdiv_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fdiv_f32_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
@@ -563,7 +563,7 @@ define double @test_double_fdiv_f32_ieee() #5 {
 
 define float @test_float_frem_ieee_out() #0 {
 ; CHECK-LABEL: @test_float_frem_ieee_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
 ; default ieee mode leaves result as a denormal
   %result = frem float 0xB818000000000000, 0x3810000000000000
@@ -590,7 +590,7 @@ define float @test_float_frem_psign_out() #2 {
 
 define float @test_float_frem_ieee_in() #0 {
 ; CHECK-LABEL: @test_float_frem_ieee_in(
-; CHECK-NEXT:    ret float 0x3800000000000000
+; CHECK-NEXT:    ret float f0x00400000
 ;
 ; default ieee mode leaves result same as input
   %result = frem float 0x3800000000000000, 2.000000e+00
@@ -629,7 +629,7 @@ define float @test_float_frem_pzero_f32_out() #1 {
 
 define double @test_double_frem_ieee_out() #0 {
 ; CHECK-LABEL: @test_double_frem_ieee_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; default ieee mode leaves result as a denormal
   %result = frem double 0x8018000000000000, 0x0010000000000000
@@ -656,7 +656,7 @@ define double @test_double_frem_psign_out() #2 {
 
 define double @test_double_frem_ieee_in() #0 {
 ; CHECK-LABEL: @test_double_frem_ieee_in(
-; CHECK-NEXT:    ret double 0x8000000000000
+; CHECK-NEXT:    ret double f0x0008000000000000
 ;
 ; default ieee mode leaves result same as input
   %result = frem double 0x0008000000000000, 2.000000e+00
@@ -685,7 +685,7 @@ define double @test_double_frem_psign_in() #4 {
 
 define double @test_double_frem_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_frem_f32_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
 ; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
@@ -701,7 +701,7 @@ define double @test_double_frem_f32_ieee() #5 {
 
 define float @test_float_fneg_ieee() #0 {
 ; CHECK-LABEL: @test_float_fneg_ieee(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
   %result = fneg float 0x3800000000000000
   ret float %result
@@ -709,7 +709,7 @@ define float @test_float_fneg_ieee() #0 {
 
 define float @test_float_fneg_pzero_out() #0 {
 ; CHECK-LABEL: @test_float_fneg_pzero_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
   %result = fneg float 0x3800000000000000
   ret float %result
@@ -717,7 +717,7 @@ define float @test_float_fneg_pzero_out() #0 {
 
 define float @test_float_fneg_psign_out() #0 {
 ; CHECK-LABEL: @test_float_fneg_psign_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
   %result = fneg float 0x3800000000000000
   ret float %result
@@ -725,7 +725,7 @@ define float @test_float_fneg_psign_out() #0 {
 
 define float @test_float_fneg_pzero_in() #0 {
 ; CHECK-LABEL: @test_float_fneg_pzero_in(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
   %result = fneg float 0x3800000000000000
   ret float %result
@@ -733,7 +733,7 @@ define float @test_float_fneg_pzero_in() #0 {
 
 define float @test_float_fneg_psign_in() #0 {
 ; CHECK-LABEL: @test_float_fneg_psign_in(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
   %result = fneg float 0x3800000000000000
   ret float %result
@@ -741,7 +741,7 @@ define float @test_float_fneg_psign_in() #0 {
 
 define float @test_float_fneg_pzero_f32_out() #5 {
 ; CHECK-LABEL: @test_float_fneg_pzero_f32_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float f0x80400000
 ;
   %result = fneg float 0x3800000000000000
   ret float %result
@@ -749,7 +749,7 @@ define float @test_float_fneg_pzero_f32_out() #5 {
 
 define double @test_double_fneg_ieee() #0 {
 ; CHECK-LABEL: @test_double_fneg_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
   %result = fneg double 0x0008000000000000
   ret double %result
@@ -757,7 +757,7 @@ define double @test_double_fneg_ieee() #0 {
 
 define double @test_double_fneg_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_fneg_pzero_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
   %result = fneg double 0x0008000000000000
   ret double %result
@@ -765,7 +765,7 @@ define double @test_double_fneg_pzero_out() #1 {
 
 define double @test_double_fneg_psign_out() #2 {
 ; CHECK-LABEL: @test_double_fneg_psign_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
   %result = fneg double 0x0008000000000000
   ret double %result
@@ -773,7 +773,7 @@ define double @test_double_fneg_psign_out() #2 {
 
 define double @test_double_fneg_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_fneg_pzero_in(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
   %result = fneg double 0x0008000000000000
   ret double %result
@@ -781,7 +781,7 @@ define double @test_double_fneg_pzero_in() #3 {
 
 define double @test_double_fneg_psign_in() #4 {
 ; CHECK-LABEL: @test_double_fneg_psign_in(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
   %result = fneg double 0x0008000000000000
   ret double %result
@@ -789,7 +789,7 @@ define double @test_double_fneg_psign_in() #4 {
 
 define double @test_double_fneg_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fneg_f32_ieee(
-; CHECK-NEXT:    ret double 0x8008000000000000
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
   %result = fneg double 0x0008000000000000
   ret double %result
@@ -1161,7 +1161,7 @@ entry:
 
 define float @test_float_fadd_dynamic_ieee() #9 {
 ; CHECK-LABEL: @test_float_fadd_dynamic_ieee(
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0xB810000000000000, 0x3800000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float f0x80800000, f0x00400000
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = fadd float 0xB810000000000000, 0x3800000000000000
@@ -1170,7 +1170,7 @@ define float @test_float_fadd_dynamic_ieee() #9 {
 
 define float @test_float_fadd_ieee_dynamic() #10 {
 ; CHECK-LABEL: @test_float_fadd_ieee_dynamic(
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0xB810000000000000, 0x3800000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float f0x80800000, f0x00400000
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = fadd float 0xB810000000000000, 0x3800000000000000
@@ -1179,7 +1179,7 @@ define float @test_float_fadd_ieee_dynamic() #10 {
 
 define float @test_float_fadd_dynamic_dynamic() #11 {
 ; CHECK-LABEL: @test_float_fadd_dynamic_dynamic(
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0xB810000000000000, 0x3800000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float f0x80800000, f0x00400000
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = fadd float 0xB810000000000000, 0x3800000000000000
@@ -1189,7 +1189,7 @@ define float @test_float_fadd_dynamic_dynamic() #11 {
 ; Check for failed to fold on each operand
 define float @test_float_fadd_dynamic_dynamic_commute() #11 {
 ; CHECK-LABEL: @test_float_fadd_dynamic_dynamic_commute(
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0x3800000000000000, 0xB810000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float f0x00400000, f0x80800000
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = fadd float 0x3800000000000000, 0xB810000000000000
@@ -1214,7 +1214,7 @@ define <2 x i1> @fcmp_double_dynamic_ieee_vector() #9 {
 
 define i1 @fcmp_double_ieee_dynamic() #10 {
 ; CHECK-LABEL: @fcmp_double_ieee_dynamic(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0x8000000000000, 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double f0x0008000000000000, 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp une double 0x0008000000000000, 0x0
@@ -1223,7 +1223,7 @@ define i1 @fcmp_double_ieee_dynamic() #10 {
 
 define <2 x i1> @fcmp_double_ieee_dynamic_vector() #10 {
 ; CHECK-LABEL: @fcmp_double_ieee_dynamic_vector(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> splat (double 0x8000000000000), zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> splat (double f0x0008000000000000), zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %cmp = fcmp une <2 x double> splat(double 0x0008000000000000), zeroinitializer
@@ -1232,7 +1232,7 @@ define <2 x i1> @fcmp_double_ieee_dynamic_vector() #10 {
 
 define i1 @fcmp_double_dynamic_dynamic() #11 {
 ; CHECK-LABEL: @fcmp_double_dynamic_dynamic(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0x8000000000000, 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double f0x0008000000000000, 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp une double 0x0008000000000000, 0x0
@@ -1241,7 +1241,7 @@ define i1 @fcmp_double_dynamic_dynamic() #11 {
 
 define i1 @fcmp_double_dynamic_dynamic_commute() #11 {
 ; CHECK-LABEL: @fcmp_double_dynamic_dynamic_commute(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0.000000e+00, 0x8000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0.000000e+00, f0x0008000000000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp une double 0x0, 0x0008000000000000

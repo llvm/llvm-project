@@ -124,7 +124,8 @@ public:
   LiveStacks run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };
 
-class LiveStacksPrinterPass : public PassInfoMixin<LiveStacksPrinterPass> {
+class LiveStacksPrinterPass
+    : public RequiredPassInfoMixin<LiveStacksPrinterPass> {
   raw_ostream &OS;
 
 public:

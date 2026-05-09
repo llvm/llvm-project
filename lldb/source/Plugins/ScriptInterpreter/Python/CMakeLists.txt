@@ -18,7 +18,7 @@ if (LLDB_ENABLE_LIBEDIT)
   list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
 endif()
 
-add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
+set(python_plugin_sources
   PythonDataObjects.cpp
   PythonReadline.cpp
   ScriptInterpreterPython.cpp
@@ -35,21 +35,57 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   Interfaces/ScriptedBreakpointPythonInterface.cpp
   Interfaces/ScriptedThreadPlanPythonInterface.cpp
   Interfaces/ScriptedThreadPythonInterface.cpp
+)
 
-  LINK_COMPONENTS
-    Support
-  LINK_LIBS
-    lldbBreakpoint
-    lldbCore
-    lldbDataFormatters
-    lldbHost
-    lldbInterpreter
-    lldbTarget
-    lldbValueObject
-    ${Python3_LIBRARIES}
-    ${LLDB_LIBEDIT_LIBS}
+if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  # Shared library loaded at runtime by PluginManager. Private lldb symbols are
+  # resolved via liblldb's re-exports, so lldb_private libs aren't linked here.
+  add_lldb_library(lldbPluginScriptInterpreterPython SHARED
+    ${python_plugin_sources}
+    LINK_LIBS
+      liblldb
+      ${Python3_LIBRARIES}
+      ${LLDB_LIBEDIT_LIBS}
   )
+  add_python_wrapper(lldbPluginScriptInterpreterPython)
 
+  # Static variant linked directly by unit tests. Separate compilation is
+  # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
+  # shared between the test binary and the plugin code.
+  add_lldb_library(lldbStaticScriptInterpreterPython
+    ${python_plugin_sources}
+    LINK_COMPONENTS
+      Support
+    LINK_LIBS
+      lldbBreakpoint
+      lldbCore
+      lldbDataFormatters
+      lldbHost
+      lldbInterpreter
+      lldbTarget
+      lldbValueObject
+      ${Python3_LIBRARIES}
+      ${LLDB_LIBEDIT_LIBS}
+  )
+  target_include_directories(lldbStaticScriptInterpreterPython
+    PUBLIC ${Python3_INCLUDE_DIRS})
+else()
+  add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
+    ${python_plugin_sources}
+    LINK_COMPONENTS
+      Support
+    LINK_LIBS
+      lldbBreakpoint
+      lldbCore
+      lldbDataFormatters
+      lldbHost
+      lldbInterpreter
+      lldbTarget
+      lldbValueObject
+      ${Python3_LIBRARIES}
+      ${LLDB_LIBEDIT_LIBS}
+  )
+endif()
 
 target_include_directories(lldbPluginScriptInterpreterPython
   PUBLIC ${Python3_INCLUDE_DIRS})

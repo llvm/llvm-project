@@ -47,7 +47,7 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](s64)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT]], [[C]]
     ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[COPY]](s64), [[COPY]]
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[COPY]], [[FMINNUM_IEEE]]
@@ -85,7 +85,7 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[INT:%[0-9]+]]:_(s64) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](s64)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = nnan G_FMINNUM_IEEE [[INT]], [[C]]
     ; SI-NEXT: [[FNEG:%[0-9]+]]:_(s64) = nnan G_FNEG [[FMINNUM_IEEE]]
     ; SI-NEXT: [[FADD:%[0-9]+]]:_(s64) = nnan G_FADD [[COPY]], [[FNEG]]
@@ -121,7 +121,7 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[INT:%[0-9]+]]:_(s64) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](s64)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = nsz G_FMINNUM_IEEE [[INT]], [[C]]
     ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = nsz G_FCMP floatpred(ord), [[COPY]](s64), [[COPY]]
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = nsz G_SELECT [[FCMP]](s1), [[COPY]], [[FMINNUM_IEEE]]
@@ -284,7 +284,7 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; SI-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[UV]](s64)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT]], [[C]]
     ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[UV]](s64), [[UV]]
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[UV]], [[FMINNUM_IEEE]]

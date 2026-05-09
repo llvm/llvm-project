@@ -632,6 +632,513 @@ TEST(DWARFExpression, DW_OP_unknown) {
           "unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
 }
 
+TEST(DWARFExpression, DW_OP_addr) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_addr, 0x10, 0x20, 0x30, 0x40, DW_OP_stack_value}),
+      ExpectScalar(uint32_t{0x40302010}));
+}
+
+TEST(DWARFExpression, DW_OP_addr_big_endian) {
+  // Same operand bytes, big-endian extractor: the address must be read in
+  // target byte order.
+  uint8_t expr[] = {DW_OP_addr, 0x10, 0x20, 0x30, 0x40, DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderBig,
+                          /*addr_size*/ 4);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(/*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr,
+                                /*module_sp=*/{}, extractor,
+                                /*dwarf_cu=*/nullptr, lldb::eRegisterKindLLDB,
+                                /*initial_value_ptr=*/nullptr,
+                                /*object_address_ptr=*/nullptr),
+      ExpectScalar(uint32_t{0x10203040}));
+}
+
+TEST(DWARFExpression, DW_OP_nop) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_nop}), ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_neg) {
+  // neg interprets the operand as signed.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_neg}),
+                       ExpectScalar(static_cast<int32_t>(-5)));
+}
+
+TEST(DWARFExpression, DW_OP_abs) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-5), DW_OP_abs}),
+      ExpectScalar(5));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_abs}), ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_div_int_min_by_neg_one) {
+  // INT32_MIN / -1 is C++ UB; the evaluator must not crash.
+  auto result = Evaluate({DW_OP_const4s, 0x00, 0x00, 0x00, 0x80, DW_OP_const1s,
+                          static_cast<uint8_t>(-1), DW_OP_div});
+  if (!result)
+    llvm::consumeError(result.takeError());
+  SUCCEED();
+}
+
+TEST(DWARFExpression, DW_OP_div) {
+  // Signed division: -10 / 3 = -3 (truncation toward zero).
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-10),
+                                 DW_OP_const1s, 3, DW_OP_div}),
+                       ExpectScalar(static_cast<int32_t>(-3)));
+}
+
+TEST(DWARFExpression, DW_OP_mod) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-7),
+                                 DW_OP_const1s, 3, DW_OP_mod}),
+                       ExpectScalar(static_cast<int32_t>(-1)));
+}
+
+TEST(DWARFExpression, DW_OP_minus) {
+  // Generic arithmetic wraps modulo address-size: 0 - 1 = 0xFFFFFFFF.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_lit1, DW_OP_minus}),
+                       ExpectScalar(uint32_t{0xFFFFFFFF}));
+}
+
+TEST(DWARFExpression, DW_OP_plus) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_plus}),
+                       ExpectScalar(8));
+}
+
+TEST(DWARFExpression, DW_OP_mul) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_mul}),
+                       ExpectScalar(15));
+}
+
+TEST(DWARFExpression, DW_OP_plus_uconst) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-10),
+                                 DW_OP_plus_uconst, 5}),
+                       ExpectScalar(static_cast<int32_t>(-5)));
+}
+
+TEST(DWARFExpression, DW_OP_and) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0F, DW_OP_const1u, 0x33, DW_OP_and}),
+      ExpectScalar(0x03));
+}
+
+TEST(DWARFExpression, DW_OP_or) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0F, DW_OP_const1u, 0x30, DW_OP_or}),
+      ExpectScalar(0x3F));
+}
+
+TEST(DWARFExpression, DW_OP_xor) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0F, DW_OP_const1u, 0x33, DW_OP_xor}),
+      ExpectScalar(0x3C));
+}
+
+TEST(DWARFExpression, DW_OP_not) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_not}),
+                       ExpectScalar(uint32_t{0xFFFFFFFF}));
+}
+
+TEST(DWARFExpression, DW_OP_lt) {
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_lt}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_lt}),
+                       ExpectScalar(0));
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lt}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_gt) {
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_gt}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_gt}),
+                       ExpectScalar(0));
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_gt}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_le) {
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_le}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_le}),
+                       ExpectScalar(1));
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_le}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_ge) {
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_ge}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_ge}),
+                       ExpectScalar(1));
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_ge}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_eq) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_eq}),
+                       ExpectScalar(1));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_eq}),
+                       ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_ne) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_ne}),
+                       ExpectScalar(1));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_ne}),
+                       ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_swap) {
+  // After swap, top is the value pushed first (lit1).
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit2, DW_OP_swap}),
+                       ExpectScalar(1));
+}
+
+TEST(DWARFExpression, DW_OP_rot) {
+  // Stack pre-rot (top last): [1, 2, 3]. Post-rot: [2, 3, 1]. Top = 2.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_rot}),
+      ExpectScalar(2));
+}
+
+TEST(DWARFExpression, DW_OP_over) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit2, DW_OP_over}),
+                       ExpectScalar(1));
+}
+
+TEST(DWARFExpression, DW_OP_dup) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_dup}), ExpectScalar(5));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_dup}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_drop) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit3, DW_OP_lit5, DW_OP_drop}),
+                       ExpectScalar(3));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_drop}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_skip_backward) {
+  // Layout (offsets):
+  //   0: skip +5  → end_offset=3, target=8
+  //   3: const1u 0x42  ← target of backward branch
+  //   5: skip +3  → end_offset=8, target=11 (== expr.size, exits)
+  //   8: skip -8  → end_offset=11, target=3
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_skip, 0x05, 0x00, DW_OP_const1u, 0x42, DW_OP_skip, 0x03,
+                0x00, DW_OP_skip, 0xF8, 0xFF}),
+      ExpectScalar(0x42));
+}
+
+TEST(DWARFExpression, DW_OP_skip_to_end) {
+  // skip 0 from end-of-skip lands at end-of-expression and terminates cleanly.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_skip, 0x00, 0x00}),
+                       ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_bra_branches) {
+  // Top is non-zero → branch is taken, skip past the trailing const1u 0xff and
+  // return the previously-pushed 0x42.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0x42, DW_OP_lit1, DW_OP_bra,
+                                 0x02, 0x00, DW_OP_const1u, 0xff}),
+                       ExpectScalar(0x42));
+  // Top is 0 → no branch, fall through to next opcode.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit5, DW_OP_lit0, DW_OP_bra, 0x63, 0x00}),
+      ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_lit_all) {
+  for (uint8_t n = 0; n <= 31; ++n) {
+    uint8_t opcode = DW_OP_lit0 + n;
+    EXPECT_THAT_EXPECTED(Evaluate({opcode}), ExpectScalar(n))
+        << "DW_OP_lit" << static_cast<int>(n) << " failed";
+  }
+}
+
+TEST(DWARFExpression, DW_OP_shl) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit1, DW_OP_shl}),
+                       ExpectScalar(10));
+}
+
+TEST(DWARFExpression, DW_OP_shr) {
+  // Logical right shift: -1 >> 1 = 0x7FFFFFFF on 32-bit.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1),
+                                 DW_OP_lit1, DW_OP_shr}),
+                       ExpectScalar(0x7FFFFFFF));
+}
+
+TEST(DWARFExpression, DW_OP_shra) {
+  // Arithmetic right shift sign-fills: -8 >> 1 = -4.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-8),
+                                 DW_OP_lit1, DW_OP_shra}),
+                       ExpectScalar(static_cast<int32_t>(-4)));
+}
+
+TEST(DWARFExpression, DW_OP_shl_overflow_count) {
+  // Shift count exceeding scalar bit width must not crash.
+  auto result = Evaluate({DW_OP_lit1, DW_OP_const1u, 99, DW_OP_shl});
+  if (!result)
+    llvm::consumeError(result.takeError());
+  SUCCEED();
+}
+
+TEST(DWARFExpression, DW_OP_push_object_address_no_object) {
+  // Without an object_address_ptr, must fail cleanly.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_push_object_address}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_fbreg_no_frame) {
+  // Without a stack frame, fbreg fails cleanly.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_fbreg, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_call_frame_cfa_no_frame) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_call_frame_cfa}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_form_tls_address_no_process) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_form_tls_address}),
+                       llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_push_tls_address_no_process) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_GNU_push_tls_address}),
+                       llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_entry_value_no_context) {
+  // entry_value with empty sub-expression and no execution context.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_entry_value, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_entry_value_no_context) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_entry_value, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_addrx_no_unit) {
+  // addrx requires a compile unit delegate.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_addrx, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_addr_index_no_unit) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_addr_index, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_const_index_no_unit) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_const_index, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_overflow) {
+  // bit_piece extracting more bits than the underlying scalar holds: the
+  // implementation silently zero-extends-then-truncates back to the scalar's
+  // original width. This locks in the current behavior.
+  // ULEB128(99) = 0x63 (single byte; 99 < 128).
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit5, DW_OP_stack_value, DW_OP_bit_piece, 0x63, 0x00}),
+      ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_empty_stack) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 0x08, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_deref_size_exceeds_address_size) {
+  // DWARF 5: deref_size operand may not be larger than the address size.
+  // address_size = 4 (default Evaluate). size operand = 8 (> addr_size).
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_deref_size, 0x08}),
+      llvm::FailedWithMessage(
+          "DW_OP_deref_size size (8) exceeds address size (4)"));
+}
+
+TEST(DWARFExpression, DW_OP_deref_size_too_large) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref_size, 0x09}),
+                       llvm::Failed());
+}
+
+// Status-locking tests for opcodes that today return a clean error. These
+// catch any change in implemented/unimplemented status.
+
+TEST(DWARFExpression, DW_OP_xderef_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef}),
+      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef"));
+}
+
+TEST(DWARFExpression, DW_OP_xderef_size_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_size, 4}),
+      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef_size"));
+}
+
+TEST(DWARFExpression, DW_OP_call2_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_call2, 0x00, 0x00}),
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_call2"));
+}
+
+TEST(DWARFExpression, DW_OP_call4_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_call4, 0x00, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_call4"));
+}
+
+TEST(DWARFExpression, DW_OP_call_ref_unhandled) {
+  // call_ref has stack arity 1 in LLVM's table, so push a value first.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_call_ref, 0x00, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_call_ref in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_implicit_pointer_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
+      llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_implicit_pointer_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_GNU_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_GNU_implicit_pointer in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_const_type_unhandled) {
+  // const_type: ULEB128 type DIE offset, 1-byte size, N-byte value block.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const_type, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_const_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_regval_type_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_regval_type, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_regval_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_deref_type_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_deref_type, 0x04, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_deref_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_xderef_type_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_type, 0x04, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_xderef_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_constx_unhandled) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_constx, 0x00}),
+                       llvm::FailedWithMessage(
+                           "unhandled opcode DW_OP_constx in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_reinterpret_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_reinterpret, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_reinterpret in DWARFExpression"));
+}
+
+// Register-based tests need a register context. MockRegisterContext returns the
+// same value for every register query.
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_reg0) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0xCAFE})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_reg0}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+      ExpectScalar(0xCAFE, Value::ContextType::RegisterInfo));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_reg_all) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0xABCD})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  for (uint8_t n = 0; n <= 31; ++n) {
+    uint8_t opcode = DW_OP_reg0 + n;
+    EXPECT_THAT_EXPECTED(
+        Evaluate({opcode}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+        ExpectScalar(0xABCD, Value::ContextType::RegisterInfo))
+        << "DW_OP_reg" << static_cast<int>(n) << " failed";
+  }
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_regx) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0xBEEF})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  // ULEB128(64) for register 64.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_regx, 0x40}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+      ExpectScalar(0xBEEF, Value::ContextType::RegisterInfo));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg0) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x1000})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  // breg0 + 0x10 = 0x1010 (load address).
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_breg0, 0x10}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+      ExpectLoadAddress(0x1010));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg_all) {
+  TestContext ctx;
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", RegisterValue(uint32_t{0x100})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  for (uint8_t n = 0; n <= 31; ++n) {
+    uint8_t opcode = DW_OP_breg0 + n;
+    EXPECT_THAT_EXPECTED(
+        Evaluate({opcode, 0x05}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+        ExpectLoadAddress(0x105))
+        << "DW_OP_breg" << static_cast<int>(n) << " failed";
+  }
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x2000})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  // bregx reg=64 (ULEB128 0x40), offset=+16 (SLEB128 0x10).
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bregx, 0x40, 0x10}, {}, {}, &exe_ctx,
+                                ctx.reg_ctx_sp.get()),
+                       ExpectLoadAddress(0x2010));
+}
+
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 

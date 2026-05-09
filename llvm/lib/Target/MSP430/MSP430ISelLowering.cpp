@@ -889,7 +889,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_LO;
       break;
     }
@@ -903,7 +904,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_HS;
       break;
     }
@@ -917,7 +919,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_L;
       break;
     }
@@ -931,7 +934,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_GE;
       break;
     }

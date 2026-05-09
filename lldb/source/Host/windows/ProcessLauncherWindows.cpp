@@ -198,14 +198,18 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     startupinfoex.StartupInfo.wShowWindow = SW_HIDE;
   }
 
-  DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT |
-                EXTENDED_STARTUPINFO_PRESENT;
+  DWORD flags = CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT;
+  const bool stdio_redirected = launch_info.IsFDRedirected(STDIN_FILENO) &&
+                                launch_info.IsFDRedirected(STDOUT_FILENO) &&
+                                launch_info.IsFDRedirected(STDERR_FILENO);
+  if (stdio_redirected)
+    flags |= CREATE_NO_WINDOW;
+  else if (!launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) &&
+           pty_mode == PseudoConsole::Mode::None)
+    flags |= CREATE_NEW_CONSOLE;
+
   if (launch_info.GetFlags().Test(eLaunchFlagDebug))
     flags |= DEBUG_ONLY_THIS_PROCESS;
-
-  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) ||
-      pty_mode != PseudoConsole::Mode::None)
-    flags &= ~CREATE_NEW_CONSOLE;
 
   std::vector<wchar_t> environment =
       CreateEnvironmentBufferW(launch_info.GetEnvironment());
@@ -264,19 +268,38 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
     HANDLE stdout_handle, HANDLE stderr_handle, HANDLE stdin_handle) {
   std::vector<HANDLE> inherited_handles;
 
-  startupinfoex.StartupInfo.hStdError =
-      stderr_handle ? stderr_handle : GetStdHandle(STD_ERROR_HANDLE);
   startupinfoex.StartupInfo.hStdInput =
       stdin_handle ? stdin_handle : GetStdHandle(STD_INPUT_HANDLE);
   startupinfoex.StartupInfo.hStdOutput =
       stdout_handle ? stdout_handle : GetStdHandle(STD_OUTPUT_HANDLE);
 
-  if (startupinfoex.StartupInfo.hStdError)
-    inherited_handles.push_back(startupinfoex.StartupInfo.hStdError);
-  if (startupinfoex.StartupInfo.hStdInput)
-    inherited_handles.push_back(startupinfoex.StartupInfo.hStdInput);
-  if (startupinfoex.StartupInfo.hStdOutput)
-    inherited_handles.push_back(startupinfoex.StartupInfo.hStdOutput);
+  // eFileActionDuplicate stores the source fd in m_fd and the destination in
+  // m_arg. GetFileActionForFD searches by m_fd (source), so a
+  // AppendDuplicateFileAction(STDOUT, STDERR) won't be found when looking up
+  // STDERR. Scan for duplicate actions that target stderr explicitly.
+  HANDLE effective_stderr = stderr_handle;
+  if (!effective_stderr && launch_info) {
+    for (size_t i = 0; i < launch_info->GetNumFileActions(); ++i) {
+      const FileAction *act = launch_info->GetFileActionAtIndex(i);
+      if (act->GetAction() == FileAction::eFileActionDuplicate &&
+          act->GetActionArgument() == STDERR_FILENO) {
+        effective_stderr = startupinfoex.StartupInfo.hStdOutput;
+        break;
+      }
+    }
+  }
+  startupinfoex.StartupInfo.hStdError =
+      effective_stderr ? effective_stderr : GetStdHandle(STD_ERROR_HANDLE);
+
+  // PROC_THREAD_ATTRIBUTE_HANDLE_LIST requires unique entries.
+  auto push_if_new = [&](HANDLE h) {
+    if (h && std::find(inherited_handles.begin(), inherited_handles.end(), h) ==
+                 inherited_handles.end())
+      inherited_handles.push_back(h);
+  };
+  push_if_new(startupinfoex.StartupInfo.hStdError);
+  push_if_new(startupinfoex.StartupInfo.hStdInput);
+  push_if_new(startupinfoex.StartupInfo.hStdOutput);
 
   if (launch_info) {
     for (size_t i = 0; i < launch_info->GetNumFileActions(); ++i) {

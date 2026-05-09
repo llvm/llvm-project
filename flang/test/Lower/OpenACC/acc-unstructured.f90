@@ -222,3 +222,91 @@ end subroutine
 ! CHECK: fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: arith.cmpi eq
 ! CHECK: cf.cond_br
+
+! Test that `acc parallel loop collapse(N)` whose body has an early-exit
+! (here, `if (cond) then ... cycle ... end if`) lowers cleanly. The
+! corresponding acc.loop must privatize all N induction variables, carry
+! both `collapse = [N]` and `unstructured` attributes, and emit the
+! iteration mechanics for all N levels as explicit cf inside the body.
+! Reproducer derived from lorado issue #2856.
+subroutine test_unstructured_collapse_cycle(a)
+  integer :: i, j, jdiag
+  real(8) :: a(:,:)
+  jdiag = 4
+  !$acc parallel loop collapse(2) copy(a)
+  do j = 1, 8
+    do i = 1, 8
+      if (i == jdiag) then
+        a(i, j) = 0.0d0
+        cycle
+      end if
+      a(i, j) = real(i + j, 8)
+    end do
+  end do
+  !$acc end parallel loop
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_cycle
+! CHECK: acc.parallel combined(loop)
+! Both induction variables (j and i) are privatized:
+! CHECK: %[[PRIVJ:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
+! CHECK: %[[PRIVI:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! No control(...) on acc.loop — bounds are not on the op:
+! CHECK: acc.loop combined(parallel) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) {
+! Outer loop trip-count test (j) emitted as cf:
+! CHECK: arith.cmpi sgt
+! CHECK: cf.cond_br
+! Inner loop trip-count test (i) emitted as cf:
+! CHECK: arith.cmpi sgt
+! CHECK: cf.cond_br
+! The if/cycle is a structured cf branch in the body:
+! CHECK: arith.cmpi eq
+! CHECK: cf.cond_br
+! CHECK: acc.yield
+! CHECK: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}
+
+! Test that `acc parallel loop collapse(N)` lowers cleanly when the early-exit
+! is a STOP (the form already covered for collapse=1 by test_unstructured2).
+subroutine test_unstructured_collapse_stop(a)
+  integer :: i, j, k
+  real :: a(:,:,:)
+  !$acc parallel loop collapse(3)
+  do i = 1, 10
+    do j = 1, 10
+      do k = 1, 10
+        if (a(1,2,3) > 10) stop 'just to be unstructured'
+      end do
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_stop
+! All three IVs privatized:
+! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
+! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "k"}
+! CHECK: acc.loop combined(parallel) private(%{{.*}}, %{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
+! CHECK: fir.call @_FortranAStopStatementText
+! CHECK: } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}
+
+! Test orphaned `acc loop collapse(N)`
+subroutine test_unstructured_collapse_loop_only(a)
+  integer :: i, j, jdiag
+  real(8) :: a(:,:)
+  jdiag = 4
+  !$acc loop collapse(2)
+  do j = 1, 8
+    do i = 1, 8
+      if (i == jdiag) then
+        a(i, j) = 0.0d0
+        cycle
+      end if
+      a(i, j) = real(i + j, 8)
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_loop_only
+! Standalone acc.loop (no `combined(...)`):
+! CHECK: acc.loop private(%{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) {
+! CHECK: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}

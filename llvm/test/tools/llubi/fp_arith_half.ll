@@ -19,15 +19,15 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %add = fadd half 0xH3E00, 0xH4100 => half 4.000000e+00
-; CHECK-NEXT:   %sub = fsub half 0xH4500, 0xH3C00 => half 4.000000e+00
-; CHECK-NEXT:   %mul = fmul half 0xH4000, 0xH4200 => half 6.000000e+00
-; CHECK-NEXT:   %div = fdiv half 0xH3C00, 0xH4000 => half 5.000000e-01
-; CHECK-NEXT:   %neg = fneg half 0xHBE00 => half 1.500000e+00
-; CHECK-NEXT:   %vadd = fadd <2 x half> <half 0xH3C00, half 0xH4000>, <half 0xH4200, half 0xH4400> => { half 4.000000e+00, half 6.000000e+00 }
-; CHECK-NEXT:   %p1 = fadd half 0xH3C00, poison => poison
+; CHECK-NEXT:   %add = fadd half 1.500000e+00, 2.500000e+00 => half 4.000000e+00
+; CHECK-NEXT:   %sub = fsub half 5.000000e+00, 1.000000e+00 => half 4.000000e+00
+; CHECK-NEXT:   %mul = fmul half 2.000000e+00, 3.000000e+00 => half 6.000000e+00
+; CHECK-NEXT:   %div = fdiv half 1.000000e+00, 2.000000e+00 => half 5.000000e-01
+; CHECK-NEXT:   %neg = fneg half -1.500000e+00 => half 1.500000e+00
+; CHECK-NEXT:   %vadd = fadd <2 x half> <half 1.000000e+00, half 2.000000e+00>, <half 3.000000e+00, half 4.000000e+00> => { half 4.000000e+00, half 6.000000e+00 }
+; CHECK-NEXT:   %p1 = fadd half 1.000000e+00, poison => poison
 ; CHECK-NEXT:   %p2 = fneg half poison => poison
-; CHECK-NEXT:   %inf = fdiv half 0xH3C00, 0xH0000 => half +Inf
-; CHECK-NEXT:   %nan = fdiv half 0xH0000, 0xH0000 => half NaN
+; CHECK-NEXT:   %inf = fdiv half 1.000000e+00, 0.000000e+00 => half +Inf
+; CHECK-NEXT:   %nan = fdiv half 0.000000e+00, 0.000000e+00 => half NaN
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

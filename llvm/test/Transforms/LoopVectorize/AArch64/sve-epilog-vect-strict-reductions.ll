@@ -23,7 +23,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0xFFFFFFFFE0000000, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ -nan(0x3FFFFF), [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP12]], align 4
@@ -41,7 +41,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP19]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0xFFFFFFFFE0000000, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP19]], [[VEC_EPILOG_ITER_CHECK]] ], [ -nan(0x3FFFFF), [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[N]], 2
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[N]], [[N_MOD_VF3]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -59,7 +59,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX10:%.*]] = phi float [ [[TMP24]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP19]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0xFFFFFFFFE0000000, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX10:%.*]] = phi float [ [[TMP24]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP19]], [[VEC_EPILOG_ITER_CHECK]] ], [ -nan(0x3FFFFF), [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ;

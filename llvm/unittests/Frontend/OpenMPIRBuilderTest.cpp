@@ -210,8 +210,7 @@ protected:
     BB = BasicBlock::Create(Ctx, "", F);
 
     DIBuilder DIB(*M);
-    auto File = DIB.createFile("test.dbg", "/src", std::nullopt,
-                               std::optional<StringRef>("/src/test.dbg"));
+    auto File = DIB.createFile("test.dbg", "/");
     auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C),
                                     File, "llvm-C", true, "", 0);
     auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
@@ -625,7 +624,7 @@ TEST_F(OpenMPIRBuilderTest, DbgLoc) {
       dyn_cast<ConstantDataArray>(SrcStrGlob->getInitializer());
   if (!SrcSrc)
     return;
-  EXPECT_EQ(SrcSrc->getAsCString(), ";/src/test.dbg;foo;3;7;;");
+  EXPECT_EQ(SrcSrc->getAsCString(), ";test.dbg;foo;3;7;;");
 }
 
 TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {

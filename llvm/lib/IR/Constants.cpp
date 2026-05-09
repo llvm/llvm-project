@@ -1674,10 +1674,11 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
       if (isa<ConstantByte>(V))
         return ConstantByte::get(V->getContext(), EC,
                                  cast<ConstantByte>(V)->getValue());
-      if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
-        return ConstantFP::get(V->getContext(), EC,
-                               cast<ConstantFP>(V)->getValue());
     }
+
+    if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
+      return ConstantFP::get(V->getContext(), EC,
+                             cast<ConstantFP>(V)->getValue());
 
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
@@ -1697,10 +1698,11 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
     if (isa<ConstantByte>(V))
       return ConstantByte::get(V->getContext(), EC,
                                cast<ConstantByte>(V)->getValue());
-    if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
-      return ConstantFP::get(V->getContext(), EC,
-                             cast<ConstantFP>(V)->getValue());
   }
+
+  if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
+    return ConstantFP::get(V->getContext(), EC,
+                           cast<ConstantFP>(V)->getValue());
 
   Type *VTy = VectorType::get(V->getType(), EC);
 
@@ -2028,7 +2030,7 @@ ConstantRange Constant::toConstantRange() const {
       auto *CB = dyn_cast<ConstantByte>(Elem);
       if (!CI && !CB)
         return ConstantRange::getFull(BitWidth);
-      CR = CR.unionWith(CI->getValue());
+      CR = CR.unionWith(CI ? CI->getValue() : CB->getValue());
     }
     return CR;
   }

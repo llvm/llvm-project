@@ -617,7 +617,7 @@ bool LTOCodeGenerator::optimize() {
   TargetMach = createTargetMachine();
   if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
            /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-           /*CmdArgs*/ std::vector<uint8_t>())) {
+           /*CmdArgs*/ std::vector<uint8_t>(), /*BitcodeLibFuncs=*/{})) {
     emitError("LTO middle-end optimizations failed");
     return false;
   }
@@ -642,7 +642,7 @@ bool LTOCodeGenerator::compileOptimized(AddStreamFn AddStream,
 
   Config.CodeGenOnly = true;
   Error Err = backend(Config, AddStream, ParallelismLevel, *MergedModule,
-                      CombinedIndex);
+                      CombinedIndex, /*BitcodeLibFuncs=*/{});
   assert(!Err && "unexpected code-generation failure");
   (void)Err;
 

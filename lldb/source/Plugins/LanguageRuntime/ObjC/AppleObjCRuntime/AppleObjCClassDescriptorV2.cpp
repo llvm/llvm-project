@@ -457,8 +457,7 @@ bool ClassDescriptorV2::relative_list_list_t::Read(Process *process,
   // FIXME: Propagate this error up
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
-    LLDB_LOG(log, "Failed to read relative_list_list_t at address 0x" PRIx64,
-             addr);
+    LLDB_LOG(log, "Failed to read relative_list_list_t at address {:x+}", addr);
     return false;
   }
 
@@ -482,8 +481,8 @@ ClassDescriptorV2::GetMethodList(Process *process,
   const size_t method_size = method_t::GetSize(process, method_list.m_is_small);
   if (method_list.m_entsize != method_size) {
     LLDB_LOG(log,
-             "method_list_t at address 0x" PRIx64 " has an entsize of " PRIu16
-             " but method size should be " PRIu64,
+             "method_list_t at address {:x+} has an entsize of {:x+} but "
+             "method size should be {:x+}",
              method_list_ptr, method_list.m_entsize, method_size);
     return std::nullopt;
   }

@@ -14,7 +14,6 @@ void ballot(_Bool c) {
 
 void shuffle() {
   int x = 0;
-  long long l = 0;
   float f = 0;
   int [[clang::ext_vector_type(1)]] v;
   (void)__builtin_spirv_subgroup_shuffle(x, x);

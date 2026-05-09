@@ -10,6 +10,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -894,6 +895,28 @@ TEST(ConstantsTest, Float128Test) {
   EXPECT_TRUE(val7 != nullptr);
   LLVMDisposeBuilder(Builder);
   LLVMContextDispose(C);
+}
+
+TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
+  LLVMContext Context;
+  // Use 7-bit ByteType so the vector is not folded into ConstantDataVector
+  // (ConstantDataSequential only supports 8/16/32/64-bit element types).
+  ByteType *B7Ty = Type::getByteNTy(Context, 7);
+
+  ConstantByte *CB1 = ConstantByte::get(B7Ty, 10);
+  ConstantByte *CB2 = ConstantByte::get(B7Ty, 20);
+  Constant *Elts[] = {CB1, CB2};
+  Constant *CV = ConstantVector::get(Elts);
+  ASSERT_TRUE(isa<ConstantVector>(CV));
+
+  ConstantRange CR = CV->toConstantRange();
+  EXPECT_EQ(CR, ConstantRange(APInt(7, 10), APInt(7, 21)));
+
+  Constant *CVWithPoison =
+      ConstantVector::get({CB1, PoisonValue::get(B7Ty), CB2});
+  ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
+  ConstantRange CRPoison = CVWithPoison->toConstantRange();
+  EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
 }
 
 } // end anonymous namespace

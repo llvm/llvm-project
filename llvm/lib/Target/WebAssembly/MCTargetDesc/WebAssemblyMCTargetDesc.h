@@ -84,6 +84,8 @@ enum OperandType {
   OPERAND_CATCH_LIST,
   /// Memory ordering immediate for atomic instructions.
   OPERAND_MEMORDER,
+  /// A vector of value types for select t*.
+  OPERAND_VALTYPE_LIST,
 };
 } // end namespace WebAssembly
 

@@ -265,10 +265,11 @@ def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
 // clean this up in PPCMIPeephole with calls to
 // PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
 // in the first place.
-foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
-              "umin"] in {
-  defvar pat = !cast<PatFrag>("atomic_load_"#op#"_i64");
-  defvar pseudo = "ATOMIC_LOAD_"#!toupper(op)#"_I64";
+foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
+              "load_nand", "load_min", "load_max", "load_umax", "load_umin",
+              "swap"] in {
+  defvar pat = !cast<PatFrag>("atomic_"#op#"_i64");
+  defvar pseudo = "ATOMIC_"#!toupper(op)#"_I64";
   let Defs = [CR0] in
     def pseudo : PPCCustomInserterPseudo<
         (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$incr),
@@ -277,20 +278,13 @@ foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
           (!cast<Instruction>(pseudo) memrr:$ptr, 8, g8rc:$incr)>;
 }
 
-let Defs = [CR0] in {
+let Defs = [CR0] in
   def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new),
     "#" # NAME, []>;
 
-  def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$new),
-    "#" # NAME, []>;
-}
-
 def : Pat<(i64 (atomic_cmp_swap_i64 ForceXForm:$ptr, g8rc:$old, g8rc:$new)),
           (ATOMIC_CMP_SWAP_I64 memrr:$ptr, i64:$old, i64:$new)>;
-def : Pat<(i64 (atomic_swap_i64 ForceXForm:$ptr, g8rc:$new)),
-          (ATOMIC_SWAP_I64 memrr:$ptr, 8, i64:$new)>;
 
 // Instructions to support atomic operations
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
@@ -320,9 +314,9 @@ def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            RegConstraint<"$RSTi = $RST">;
 
 let hasExtraSrcRegAllocReq = 1, mayStore = 1,
-      isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
-def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
-                         "ldat $RST, $RA, $RB", IIC_LdStLoad>,
+      isCodeGenOnly = 1, hasNoSchedulingInfo = 1, RB = 16 in
+def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
+                         "ldat $RST, $RA, 16", IIC_LdStLoad>,
            Requires<[IsISA3_0]>;
 }
 

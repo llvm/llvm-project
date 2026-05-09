@@ -28,6 +28,7 @@
 #endif
 
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI nested_exception {
   exception_ptr __ptr_;
@@ -95,6 +96,7 @@ inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep& __e) {
 template <class _Ep, __enable_if_t<!__can_dynamic_cast<_Ep, nested_exception>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep&) {}
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H

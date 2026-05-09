@@ -15,7 +15,8 @@
 namespace llvm {
 enum class LoopIdiomVectorizeStyle { Masked, Predicated };
 
-class LoopIdiomVectorizePass : public PassInfoMixin<LoopIdiomVectorizePass> {
+class LoopIdiomVectorizePass
+    : public OptionalPassInfoMixin<LoopIdiomVectorizePass> {
   LoopIdiomVectorizeStyle VectorizeStyle = LoopIdiomVectorizeStyle::Masked;
 
   // The VF used in vectorizing the byte compare pattern.

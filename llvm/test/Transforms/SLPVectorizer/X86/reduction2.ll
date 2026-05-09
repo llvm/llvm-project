@@ -91,8 +91,8 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv double [[ADD]], [[MUL]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[FNEG]], [[C]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fdiv double [[SUB]], [[MUL]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], 0x3EB0C6F7A0B5ED8D
-; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], f0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], f0x3EB0C6F7A0B5ED8D
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP4]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
@@ -133,8 +133,8 @@ define i1 @fcmp_lt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[ADD]], [[MUL]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[FNEG]], [[C]]
 ; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[SUB]], [[MUL]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fcmp uge double [[DIV]], 0x3EB0C6F7A0B5ED8D
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp uge double [[DIV3]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP11:%.*]] = fcmp uge double [[DIV]], f0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp uge double [[DIV3]], f0x3EB0C6F7A0B5ED8D
 ; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = or i1 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    ret i1 [[NOT_OR_COND]]
 ;

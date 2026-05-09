@@ -939,7 +939,7 @@ define float @convphi2_ten(ptr %s, ptr %d, i32 %n) {
 ; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ 0x36D4000000000000, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ 1.401300e-44, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[PHI_TC]]
 ;
 entry:

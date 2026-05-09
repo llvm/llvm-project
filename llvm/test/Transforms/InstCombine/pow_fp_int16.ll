@@ -223,7 +223,7 @@ define double @powf_exp_const2_int_fast(double %base) {
 define double @pow_uitofp_const_base_fast_i16(i16 %x) {
 ; CHECK-LABEL: @pow_uitofp_const_base_fast_i16(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i16 [[X:%.*]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757{{.*}}
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], f0x4033ABB{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]

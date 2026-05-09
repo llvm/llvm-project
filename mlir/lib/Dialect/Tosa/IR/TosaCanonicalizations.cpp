@@ -245,6 +245,36 @@ void DepthwiseConv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
       context);
 }
 
+struct AvgPool2dAdaptiveToAvgPool2d
+    : public OpRewritePattern<tosa::AvgPool2dAdaptiveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::AvgPool2dAdaptiveOp op,
+                                PatternRewriter &rewriter) const override {
+    llvm::SmallVector<int64_t> kernel;
+    llvm::SmallVector<int64_t> stride;
+    llvm::SmallVector<int64_t> pad;
+    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
+        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
+        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
+      return rewriter.notifyMatchFailure(
+          op, "expected constant kernel, stride, and pad operands");
+
+    auto replacement = tosa::AvgPool2dOp::create(
+        rewriter, op.getLoc(), op.getType(), op.getInput(), op.getInputZp(),
+        op.getOutputZp(), rewriter.getDenseI64ArrayAttr(kernel),
+        rewriter.getDenseI64ArrayAttr(stride),
+        rewriter.getDenseI64ArrayAttr(pad), op.getAccTypeAttr());
+    rewriter.replaceOp(op, replacement.getOutput());
+    return success();
+  }
+};
+
+void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<AvgPool2dAdaptiveToAvgPool2d>(context);
+}
+
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -281,6 +311,36 @@ void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
               FoldPadToTensorOp<tosa::MaxPool2dOp,
                                 PoolPadFoldAdaptor<tosa::MaxPool2dOp>>>(
       context);
+}
+
+struct MaxPool2dAdaptiveToMaxPool2d
+    : public OpRewritePattern<tosa::MaxPool2dAdaptiveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MaxPool2dAdaptiveOp op,
+                                PatternRewriter &rewriter) const override {
+    llvm::SmallVector<int64_t> kernel;
+    llvm::SmallVector<int64_t> stride;
+    llvm::SmallVector<int64_t> pad;
+    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
+        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
+        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
+      return rewriter.notifyMatchFailure(
+          op, "expected constant kernel, stride, and pad operands");
+
+    auto replacement = tosa::MaxPool2dOp::create(
+        rewriter, op.getLoc(), op.getType(), op.getInput(),
+        rewriter.getDenseI64ArrayAttr(kernel),
+        rewriter.getDenseI64ArrayAttr(stride),
+        rewriter.getDenseI64ArrayAttr(pad), op.getNanModeAttr());
+    rewriter.replaceOp(op, replacement.getOutput());
+    return success();
+  }
+};
+
+void MaxPool2dAdaptiveOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<MaxPool2dAdaptiveToMaxPool2d>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -907,38 +967,96 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
 
     const Value innerCastInput = innerCastOp.getInput();
 
-    const auto innerInputType =
+    const ShapedType innerInputType =
         llvm::cast<ShapedType>(innerCastInput.getType());
-    const auto innerOutputType = llvm::cast<ShapedType>(innerCastOp.getType());
-    const auto outerOutputType = llvm::cast<ShapedType>(castOp.getType());
+    const ShapedType innerOutputType =
+        llvm::cast<ShapedType>(innerCastOp.getType());
+    const ShapedType outerOutputType = llvm::cast<ShapedType>(castOp.getType());
 
-    const SmallVector<ShapedType, 3> types = {innerInputType, innerOutputType,
-                                              outerOutputType};
+    const Type innerInputElemType = innerInputType.getElementType();
+    const Type innerOutputElemType = innerOutputType.getElementType();
+    const Type outerOutputElemType = outerOutputType.getElementType();
 
-    if (llvm::any_of(types, [](const ShapedType type) {
-          const auto elemTy = type.getElementType();
+    const SmallVector<Type, 3> types = {innerInputElemType, innerOutputElemType,
+                                        outerOutputElemType};
+
+    if (llvm::any_of(types, [](const Type type) {
           // Support a specific set of floating point types since we need to be
           // careful in not introducing unsupported type combinations
-          return !(elemTy.isInteger() ||
+          return !(type.isInteger() ||
                    llvm::isa<Float8E4M3FNType, Float8E5M2Type, BFloat16Type,
-                             Float16Type, Float32Type>(elemTy));
+                             Float16Type, Float32Type>(type));
         }))
       return rewriter.notifyMatchFailure(
           castOp, "only integer and f32, f16, bf16, f8E4M3FN, f8E5M2 types are "
                   "supported");
 
-    if (llvm::isa<Float8E5M2Type>(innerInputType.getElementType()) &&
-        llvm::isa<Float8E4M3FNType>(outerOutputType.getElementType())) {
+    if (llvm::isa<Float8E5M2Type>(innerInputElemType) &&
+        llvm::isa<Float8E4M3FNType>(outerOutputElemType)) {
       return rewriter.notifyMatchFailure(
           castOp, "avoid introducing f8E5M2 -> f8E4M3FN casts which are not "
                   "legal in TOSA");
     }
 
-    if (llvm::isa<Float8E4M3FNType>(innerInputType.getElementType()) &&
-        llvm::isa<Float8E5M2Type>(outerOutputType.getElementType())) {
+    if (llvm::isa<Float8E4M3FNType>(innerInputElemType) &&
+        llvm::isa<Float8E5M2Type>(outerOutputElemType)) {
       return rewriter.notifyMatchFailure(
           castOp, "avoid introducing f8E4M3FN -> f8E5M2 casts which are not "
                   "legal in TOSA");
+    }
+
+    if (llvm::isa<Float8E5M2Type, Float8E4M3FNType>(innerInputElemType) &&
+        outerOutputElemType.isInteger()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing fp8 -> integer casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (innerInputElemType.isInteger() &&
+        llvm::isa<Float8E5M2Type, Float8E4M3FNType>(outerOutputElemType)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing integer -> fp8 casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (llvm::isa<Float16Type>(innerInputElemType) &&
+        llvm::isa<BFloat16Type>(outerOutputElemType)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing fp16 -> bf16 casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (llvm::isa<BFloat16Type>(innerInputElemType) &&
+        llvm::isa<Float16Type>(outerOutputElemType)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing bf16 -> fp16 casts which are not "
+                  "legal in TOSA");
+    }
+
+    const auto isIntegerOneOfWidth = [](Type type, size_t bitwidth1,
+                                        size_t bitwidth2) {
+      return type.isInteger(bitwidth1) || type.isInteger(bitwidth2);
+    };
+
+    if (isIntegerOneOfWidth(innerInputElemType, 8, 16) &&
+        outerOutputElemType.isInteger(64)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing i8/i16 -> i64 casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (isIntegerOneOfWidth(innerInputElemType, 1, 64) &&
+        !outerOutputElemType.isInteger()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing bool/i64 to float casts which are not "
+                  "supported in all versions of TOSA");
+    }
+
+    if (!innerInputElemType.isInteger() &&
+        isIntegerOneOfWidth(outerOutputElemType, 1, 64)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing float to bool/i64 casts which are not "
+                  "supported in all versions of TOSA");
     }
 
     // Check that the cast we're considering for removal is non-narrowing

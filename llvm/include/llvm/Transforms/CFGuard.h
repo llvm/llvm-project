@@ -20,7 +20,7 @@ class CallBase;
 class FunctionPass;
 class GlobalValue;
 
-class CFGuardPass : public PassInfoMixin<CFGuardPass> {
+class CFGuardPass : public OptionalPassInfoMixin<CFGuardPass> {
 public:
   enum class Mechanism { Check, Dispatch };
 

@@ -22,21 +22,25 @@ symbols:
 # CHECK-NEXT:arch            gfx908
 # CHECK-NEXT:triple          amdgcn-amd-amdhsa
 # CHECK-NEXT:producer        openmp
+# CHECK-NEXT:image size      0 bytes
 # CHECK-EMPTY:
 # CHECK-NEXT:OFFLOADING IMAGE [1]:
 # CHECK-NEXT:kind            llvm ir
 # CHECK-NEXT:arch            gfx90a
 # CHECK-NEXT:triple          amdgcn-amd-amdhsa
 # CHECK-NEXT:producer        openmp
+# CHECK-NEXT:image size      0 bytes
 # CHECK-EMPTY:
 # CHECK-NEXT:OFFLOADING IMAGE [2]:
 # CHECK-NEXT:kind            cubin
 # CHECK-NEXT:arch            sm_52
 # CHECK-NEXT:triple          nvptx64-nvidia-cuda
 # CHECK-NEXT:producer        openmp
+# CHECK-NEXT:image size      0 bytes
 # CHECK-EMPTY:
 # CHECK-NEXT:OFFLOADING IMAGE [3]:
 # CHECK-NEXT:kind            <none>
 # CHECK-NEXT:arch            sm_70
 # CHECK-NEXT:triple          nvptx64-nvidia-cuda
 # CHECK-NEXT:producer        none
+# CHECK-NEXT:image size      0 bytes

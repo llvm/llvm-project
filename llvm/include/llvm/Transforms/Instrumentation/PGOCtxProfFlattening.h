@@ -16,7 +16,7 @@
 namespace llvm {
 
 class PGOCtxProfFlatteningPass
-    : public PassInfoMixin<PGOCtxProfFlatteningPass> {
+    : public OptionalPassInfoMixin<PGOCtxProfFlatteningPass> {
   const bool IsPreThinlink;
 
 public:

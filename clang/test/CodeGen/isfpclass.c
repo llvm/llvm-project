@@ -5,7 +5,7 @@
 // CHECK-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-// CHECK-NEXT:    [[TMP1:%.*]] = fcmp one float [[TMP0]], 0x7FF0000000000000
+// CHECK-NEXT:    [[TMP1:%.*]] = fcmp one float [[TMP0]], +inf
 // CHECK-NEXT:    ret i1 [[TMP1]]
 //
 _Bool check_isfpclass_finite(float x) {
@@ -68,7 +68,7 @@ _Bool check_isfpclass_snan_f64_strict(double x) {
 // CHECK-LABEL: define dso_local noundef i1 @check_isfpclass_zero_f16(
 // CHECK-SAME: half noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq half [[X]], 0xH0000
+// CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq half [[X]], 0.000000e+00
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isfpclass_zero_f16(_Float16 x) {

@@ -528,14 +528,13 @@ public:
 };
 
 class LiveIntervalsPrinterPass
-    : public PassInfoMixin<LiveIntervalsPrinterPass> {
+    : public RequiredPassInfoMixin<LiveIntervalsPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LiveIntervalsPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI LiveIntervalsWrapperPass : public MachineFunctionPass {

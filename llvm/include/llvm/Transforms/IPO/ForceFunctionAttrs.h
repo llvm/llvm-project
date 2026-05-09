@@ -20,10 +20,9 @@ class Module;
 
 /// Pass which forces specific function attributes into the IR, primarily as
 /// a debugging tool.
-struct ForceFunctionAttrsPass : PassInfoMixin<ForceFunctionAttrsPass> {
+struct ForceFunctionAttrsPass : OptionalPassInfoMixin<ForceFunctionAttrsPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
-
 }
 
 #endif // LLVM_TRANSFORMS_IPO_FORCEFUNCTIONATTRS_H

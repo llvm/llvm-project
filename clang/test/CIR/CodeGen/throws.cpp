@@ -133,14 +133,14 @@ void throw_complex_expr() {
 // CIR: cir.unreachable
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
-// LLVM: store { float, float } { float 0x3FF19999A0000000, float 0x40019999A0000000 }, ptr %[[EXCEPTION_ADDR]], align 16
+// LLVM: store { float, float } { float 1.100000e+00, float 2.200000e+00 }, ptr %[[EXCEPTION_ADDR]], align 16
 // LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTICf, ptr null)
 
 // OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 8)
 // OGCG: %[[EXCEPTION_REAL:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[EXCEPTION_ADDR]], i32 0, i32 0
 // OGCG: %[[EXCEPTION_IMAG:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[EXCEPTION_ADDR]], i32 0, i32 1
-// OGCG: store float 0x3FF19999A0000000, ptr %[[EXCEPTION_REAL]], align 16
-// OGCG: store float 0x40019999A0000000, ptr %[[EXCEPTION_IMAG]], align 4
+// OGCG: store float 1.100000e+00, ptr %[[EXCEPTION_REAL]], align 16
+// OGCG: store float 2.200000e+00, ptr %[[EXCEPTION_IMAG]], align 4
 // OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTICf, ptr null)
 
 void throw_vector_type() {

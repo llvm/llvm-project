@@ -19,7 +19,8 @@
 #include <andes_vector.h>
 #include <sifive_vector.h>
 
-// CHECK-INTRINSIC-EXTS: #define __riscv_intrinsic_v 1
+// CHECK-INTRINSIC-EXTS: #define __riscv_intrinsic_b 1
+// CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_v 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xandesbfhcvt 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xandesperf 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xandesvbfhcvt 1
@@ -28,6 +29,7 @@
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xandesvsintload 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xcvalu 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xmipsexectl 1
+// CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xsfmm32a 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xsfmm32a16f 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xsfmm32a32f 1
 // CHECK-INTRINSIC-EXTS-NEXT: #define __riscv_intrinsic_xsfmm32a8f 1
