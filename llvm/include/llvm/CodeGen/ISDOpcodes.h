@@ -783,7 +783,7 @@ enum NodeType {
   BITREVERSE,
   PARITY,
 
-  /// Bit counting operators with an poisoned result for zero inputs.
+  /// Bit counting operators with a poisoned result for zero inputs.
   CTTZ_ZERO_POISON,
   CTLZ_ZERO_POISON,
 
