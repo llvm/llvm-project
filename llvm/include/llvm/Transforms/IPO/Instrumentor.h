@@ -689,6 +689,102 @@ struct UnreachableIO final : public InstructionIO<Instruction::Unreachable> {
   }
 };
 
+// Module instrumentation opportunity.
+struct ModuleIO final : public InstrumentationOpportunity {
+  ModuleIO(bool IsPRE)
+      : InstrumentationOpportunity(InstrumentationLocation(
+            IsPRE ? InstrumentationLocation::MODULE_PRE
+                  : InstrumentationLocation::MODULE_POST)) {}
+
+  enum ConfigKind {
+    PassId,
+    PassName,
+    PassTargetTriple,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  StringRef getName() const override { return "module"; }
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static Value *getModuleName(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB);
+  static Value *getTargetTriple(Value &V, Type &Ty,
+                                InstrumentationConfig &IConf,
+                                InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO = IConf.allocate<ModuleIO>(true);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO = IConf.allocate<ModuleIO>(false);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
+// Global variable instrumentation opportunity.
+struct GlobalVarIO final : public InstrumentationOpportunity {
+  GlobalVarIO(bool IsPRE)
+      : InstrumentationOpportunity(InstrumentationLocation(
+            IsPRE ? InstrumentationLocation::GLOBAL_PRE
+                  : InstrumentationLocation::GLOBAL_POST)) {}
+
+  enum ConfigKind {
+    PassAddress = 0,
+    ReplaceAddress,
+    PassAS,
+    PassDeclaredSize,
+    PassAlignment,
+    PassName,
+    PassInitialValue,
+    PassIsConstant,
+    PassIsDefinition,
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  StringRef getName() const override { return "global"; }
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static Value *getAddress(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB);
+  static Value *setAddress(Value &V, Value &NewV, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB);
+  static Value *getAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                      InstrumentorIRBuilderTy &IIRB);
+  static Value *getDeclaredSize(Value &V, Type &Ty,
+                                InstrumentationConfig &IConf,
+                                InstrumentorIRBuilderTy &IIRB);
+  static Value *getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB);
+  static Value *getSymbolName(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB);
+  static Value *getInitialValue(Value &V, Type &Ty,
+                                InstrumentationConfig &IConf,
+                                InstrumentorIRBuilderTy &IIRB);
+  static Value *isConstant(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB);
+  static Value *isDefinition(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO = IConf.allocate<GlobalVarIO>(true);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO = IConf.allocate<GlobalVarIO>(false);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
 /// The instrumentation opportunity for store instructions.
 struct StoreIO : public InstructionIO<Instruction::Store> {
   virtual ~StoreIO() {};
