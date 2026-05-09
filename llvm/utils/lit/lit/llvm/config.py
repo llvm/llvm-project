@@ -890,19 +890,24 @@ class LLVMConfig(object):
         )
 
         was_found = ld_lld and lld_link and ld64_lld and wasm_ld
+
+        lld_tools = [
+            ("ld.lld", ld_lld),
+            ("lld-link", lld_link),
+            ("ld64.lld", ld64_lld),
+            ("wasm-ld", wasm_ld),
+        ]
+
         tool_substitutions = []
-        if ld_lld:
-            tool_substitutions.append(ToolSubst(r"ld\.lld", command=ld_lld))
-            self.config.available_features.add("ld.lld")
-        if lld_link:
-            tool_substitutions.append(ToolSubst("lld-link", command=lld_link))
-            self.config.available_features.add("lld-link")
-        if ld64_lld:
-            tool_substitutions.append(ToolSubst(r"ld64\.lld", command=ld64_lld))
-            self.config.available_features.add("ld64.lld")
-        if wasm_ld:
-            tool_substitutions.append(ToolSubst("wasm-ld", command=wasm_ld))
-            self.config.available_features.add("wasm-ld")
+        for name, path in lld_tools:
+            if path:
+                escaped_name = re.escape(name)
+                # Matches standalone name only, Avoid matching -flavor name, var=name cases.
+                # Must match expr in subst.py to be accepted by add_tool_substitutions.
+                regex = rf"\b(?<![\.\-\^\/\\<])(?<!-flavor\s)(?<!=){escaped_name}\b(?![\.\-])"
+                tool_substitutions.append(ToolSubst(regex, command=path, verbatim=True))
+                self.config.available_features.add(name)
+
         self.add_tool_substitutions(tool_substitutions)
 
         return was_found

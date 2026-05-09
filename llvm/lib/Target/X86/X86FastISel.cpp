@@ -21,6 +21,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -2635,7 +2636,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     return false;
   case Intrinsic::frameaddress: {
     MachineFunction *MF = FuncInfo.MF;
-    if (MF->getTarget().getMCAsmInfo()->usesWindowsCFI())
+    if (MF->getTarget().getMCAsmInfo().usesWindowsCFI())
       return false;
 
     Type *RetTy = II->getCalledFunction()->getReturnType();
@@ -3208,18 +3209,22 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // the value from FuncInfo.ValueMap.
   // However, i1 is promoted to i8 and return i8 defined by ABI, so FastISel can
   // lower it without switching to DAGISel.
-  MVT RetVT = MVT::Other;
-  if (!isTypeLegal(CLI.RetTy, RetVT) && !CLI.RetTy->isVoidTy()) {
-    if (RetVT == MVT::Other)
-      return false; // Unknown type, let DAG ISel handle it.
+  SmallVector<Type *> RetTys;
+  ComputeValueTypes(DL, CLI.RetTy, RetTys);
+  for (Type *RetTy : RetTys) {
+    MVT RetVT = MVT::Other;
+    if (!isTypeLegal(RetTy, RetVT)) {
+      if (RetVT == MVT::Other)
+        return false; // Unknown type, let DAG ISel handle it.
 
-    // RetVT is not MVT::Other, it must be simple now. It is something rely on
-    // the logic of isTypeLegal().
-    MVT ABIVT = TLI.getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
-                                                  CLI.CallConv, RetVT);
-    MVT RegVT = TLI.getRegisterType(CLI.RetTy->getContext(), RetVT);
-    if (ABIVT != RegVT)
-      return false;
+      // RetVT is not MVT::Other, it must be simple now. It is something rely on
+      // the logic of isTypeLegal().
+      MVT ABIVT = TLI.getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
+                                                    CLI.CallConv, RetVT);
+      MVT RegVT = TLI.getRegisterType(CLI.RetTy->getContext(), RetVT);
+      if (ABIVT != RegVT)
+        return false;
+    }
   }
 
   // Call / invoke instructions with NoCfCheck attribute require special
@@ -3992,9 +3997,10 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   SmallVector<MachineOperand, 8> AddrOps;
   AM.getFullAddress(AddrOps);
 
+  MachineInstr *CopyMI = nullptr;
   MachineInstr *Result = XII.foldMemoryOperandImpl(
       *FuncInfo.MF, *MI, OpNo, AddrOps, FuncInfo.InsertPt, Size, LI->getAlign(),
-      /*AllowCommute=*/true);
+      /*AllowCommute=*/true, CopyMI);
   if (!Result)
     return false;
 

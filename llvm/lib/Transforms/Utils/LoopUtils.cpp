@@ -353,6 +353,18 @@ bool llvm::hasDisableLICMTransformsHint(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopDisableLICM);
 }
 
+StringRef llvm::getLoopVectorizeKindPrefix(const Loop *L) {
+  bool IsVectorBody = getBooleanLoopAttribute(L, "llvm.loop.vectorize.body");
+  bool IsEpilogue = getBooleanLoopAttribute(L, "llvm.loop.vectorize.epilogue");
+  if (IsVectorBody && IsEpilogue)
+    return "vectorized epilogue ";
+  if (IsVectorBody)
+    return "vectorized ";
+  if (IsEpilogue)
+    return "epilogue ";
+  return "";
+}
+
 TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;
@@ -926,13 +938,14 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // historically assume that llvm::getLoopEstimatedTripCount always returns a
   // positive count or std::nullopt.  Thus, return std::nullopt when
   // llvm.loop.estimated_trip_count is 0.
-  if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
+  if (std::optional<unsigned> TC =
+          getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
                       << "count of " << *TC
                       << (*TC == 0 ? " (returning std::nullopt)" : "")
                       << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : std::optional(*TC);
+    return *TC == 0 ? std::nullopt : TC;
   }
 
   // Estimate the trip count from latch branch weights.
@@ -1323,6 +1336,67 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
   }
 
   return Result;
+}
+
+Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
+                                    unsigned RdxOpcode, Value *Acc,
+                                    DominatorTree *DT, LoopInfo *LI) {
+  auto *VTy = cast<VectorType>(Vec->getType());
+  Type *EltTy = VTy->getElementType();
+  Function *F = Builder.GetInsertBlock()->getParent();
+
+  const DataLayout &DL = F->getDataLayout();
+  Type *IdxTy = DL.getIndexType(EltTy->getContext(), 0);
+  unsigned MinElts = VTy->getElementCount().getKnownMinValue();
+  Value *NumElts = Builder.CreateVScale(IdxTy);
+  NumElts = Builder.CreateMul(NumElts, ConstantInt::get(IdxTy, MinElts));
+
+  BasicBlock *EntryBB = Builder.GetInsertBlock();
+  BasicBlock *LoopBB = BasicBlock::Create(F->getContext(), "rdx.loop", F);
+  BasicBlock *ExitBB = SplitBlock(EntryBB, Builder.GetInsertPoint(), DT, LI,
+                                  nullptr, "rdx.exit");
+
+  EntryBB->getTerminator()->eraseFromParent();
+  Builder.SetInsertPoint(EntryBB);
+  Builder.CreateBr(LoopBB);
+
+  Builder.SetInsertPoint(LoopBB);
+  PHINode *IV = Builder.CreatePHI(IdxTy, 2, "rdx.iv");
+  PHINode *AccPhi = Builder.CreatePHI(EltTy, 2, "rdx.acc");
+  IV->addIncoming(ConstantInt::get(IdxTy, 0), EntryBB);
+  AccPhi->addIncoming(Acc, EntryBB);
+
+  Value *Elt = Builder.CreateExtractElement(Vec, IV);
+  Value *Res = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, AccPhi,
+                                   Elt, "rdx.op");
+
+  Value *NextIV =
+      Builder.CreateNUWAdd(IV, ConstantInt::get(IdxTy, 1), "rdx.next");
+  IV->addIncoming(NextIV, LoopBB);
+  AccPhi->addIncoming(Res, LoopBB);
+
+  Value *Done = Builder.CreateICmpEQ(NextIV, NumElts, "rdx.done");
+  Builder.CreateCondBr(Done, ExitBB, LoopBB);
+
+  // SplitBlock above updated DT/LI for EntryBB -> ExitBB. Now update
+  // for replacing that edge with EntryBB -> LoopBB -> {ExitBB, LoopBB}.
+  if (DT)
+    DT->applyUpdates({{DominatorTree::Insert, EntryBB, LoopBB},
+                      {DominatorTree::Insert, LoopBB, LoopBB},
+                      {DominatorTree::Insert, LoopBB, ExitBB},
+                      {DominatorTree::Delete, EntryBB, ExitBB}});
+
+  if (LI) {
+    Loop *NewLoop = LI->AllocateLoop();
+    if (Loop *ParentLoop = LI->getLoopFor(EntryBB))
+      ParentLoop->addChildLoop(NewLoop);
+    else
+      LI->addTopLevelLoop(NewLoop);
+    NewLoop->addBasicBlockToLoop(LoopBB, *LI);
+  }
+
+  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  return Res;
 }
 
 // Helper to generate a log2 shuffle reduction.
@@ -1733,7 +1807,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 SmallVector<WeakTrackingVH, 16> &DeadInsts) {
   // Check a pre-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
-         "Indvars did not preserve LCSSA!");
+         "Caller did not preserve LCSSA!");
 
   SmallVector<BasicBlock*, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);

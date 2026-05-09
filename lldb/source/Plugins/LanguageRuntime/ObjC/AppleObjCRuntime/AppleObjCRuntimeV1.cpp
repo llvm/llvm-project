@@ -100,7 +100,7 @@ AppleObjCRuntimeV1::CreateExceptionResolver(const BreakpointSP &bkpt,
 
   if (throw_bp)
     resolver_sp = std::make_shared<BreakpointResolverName>(
-        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
+        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(nullptr),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
         /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: don't do catch yet.

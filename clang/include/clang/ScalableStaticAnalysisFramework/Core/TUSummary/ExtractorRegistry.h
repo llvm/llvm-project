@@ -41,8 +41,8 @@ bool isTUSummaryExtractorRegistered(llvm::StringRef SummaryName);
 /// This might return null if the construction of the desired TUSummaryExtractor
 /// failed.
 /// It's a fatal error if there is no extractor registered with the name.
-std::unique_ptr<ASTConsumer> makeTUSummaryExtractor(llvm::StringRef SummaryName,
-                                                    TUSummaryBuilder &Builder);
+std::unique_ptr<TUSummaryExtractor>
+makeTUSummaryExtractor(llvm::StringRef SummaryName, TUSummaryBuilder &Builder);
 
 /// Print the list of available TUSummaryExtractors.
 void printAvailableTUSummaryExtractors(llvm::raw_ostream &OS);
@@ -53,9 +53,6 @@ using TUSummaryExtractorRegistry =
 
 } // namespace clang::ssaf
 
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::TUSummaryExtractor, clang::ssaf::TUSummaryBuilder &>;
-} // namespace llvm
+LLVM_DECLARE_REGISTRY(clang::ssaf::TUSummaryExtractorRegistry)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_TUSUMMARY_EXTRACTORREGISTRY_H
