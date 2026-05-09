@@ -246,9 +246,8 @@ public:
 
 private:
   template <typename VectorT, typename LookupKeyT>
-  [[nodiscard]] static auto findInVector(VectorT &Vector,
-                                         const LookupKeyT &Key) {
-    return find_if(Vector, [&Key](const auto &P) { return P.first == Key; });
+  [[nodiscard]] static auto findInVector(VectorT &Vec, const LookupKeyT &Key) {
+    return find_if(Vec, [&Key](const auto &P) { return P.first == Key; });
   }
 
   [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
