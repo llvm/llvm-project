@@ -1668,14 +1668,13 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
     MPM.addPass(EJitRegisterBitcodePass());
 
   // EmbeddedJIT PASS2-4: Register periods, generate wrapper, handle
-  // lifecycle callbacks. Must run before the optimization pipeline so
-  // PASS3 operates on clean IR (before optimizations introduce PHI
-  // nodes that reference the entry block, which would be broken by
-  // the entry block replacement).
+  // lifecycle callbacks. Runs before the optimization pipeline so that
+  // the wrapper IR (jit_entry/jit_dispatch/jit_fallback blocks) is
+  // optimized by O2. The noinline attribute added by PASS3 also takes
+  // effect before the inliner runs.
   if (!isLTOPreLink(Phase))
     if (EnableEJITAOT)
-      if (EnableEJITAOT)
-        MPM.addPass(EJitAotModulePass());
+      MPM.addPass(EJitAotModulePass());
 
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, Phase));
@@ -1740,8 +1739,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
         buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
     // EmbeddedJIT AOT module pass (PASS2-4).
     if (EnableEJITAOT)
-      if (EnableEJITAOT)
-        MPM.addPass(EJitAotModulePass());
+      MPM.addPass(EJitAotModulePass());
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
   }
@@ -1856,8 +1854,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     MPM.addPass(GlobalDCEPass());
     // EmbeddedJIT AOT module pass (PASS2-4).
     if (EnableEJITAOT)
-      if (EnableEJITAOT)
-        MPM.addPass(EJitAotModulePass());
+      MPM.addPass(EJitAotModulePass());
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
@@ -1914,8 +1911,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     // EmbeddedJIT AOT module pass for FullLTO post-link (O0 path).
     if (EnableEJITAOT)
-      if (EnableEJITAOT)
-        MPM.addPass(EJitAotModulePass());
+      MPM.addPass(EJitAotModulePass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2005,8 +2001,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     // EmbeddedJIT AOT module pass (PASS2-4).
     if (EnableEJITAOT)
-      if (EnableEJITAOT)
-        MPM.addPass(EJitAotModulePass());
+      MPM.addPass(EJitAotModulePass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
@@ -2292,8 +2287,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   // operates on clean IR without optimization-introduced PHI nodes.
   if (!isLTOPreLink(Phase))
     if (EnableEJITAOT)
-      if (EnableEJITAOT)
-        MPM.addPass(EJitAotModulePass());
+      MPM.addPass(EJitAotModulePass());
 
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
