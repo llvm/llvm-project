@@ -32,6 +32,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   TypeTraitsCheck.cpp
   UnaryStaticAssertCheck.cpp
   UseAutoCheck.cpp
+  UseBitCastCheck.cpp
   UseBoolLiteralsCheck.cpp
   UseConstraintsCheck.cpp
   UseDefaultMemberInitCheck.cpp

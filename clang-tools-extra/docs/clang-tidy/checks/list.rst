@@ -311,6 +311,7 @@ Clang-Tidy Checks
    :doc:`modernize-type-traits <modernize/type-traits>`, "Yes"
    :doc:`modernize-unary-static-assert <modernize/unary-static-assert>`, "Yes"
    :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
+   :doc:`modernize-use-bit-cast <modernize/use-bit-cast>`, "Yes"
    :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
    :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
