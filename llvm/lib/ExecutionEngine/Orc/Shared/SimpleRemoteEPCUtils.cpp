@@ -20,6 +20,9 @@
 #else
 #include <io.h>
 #endif
+#ifndef _WIN32
+#include <sys/socket.h>
+#endif
 
 namespace {
 
@@ -114,12 +117,23 @@ void FDSimpleRemoteEPCTransport::disconnect(Error Err) {
     bool CloseOutFD = InFD != OutFD;
 
     // Close InFD.
+#ifndef _WIN32
+    // We need to shutdown the socket to wake up (and terminate) any ongoing
+    // blocking read on this FD. If the FD is not a socket, shutdown will just
+    // complain through errno (instead of crashing).
+    // FIXME: what about Windows?
+    ::shutdown(InFD, SHUT_RD);
+#endif
     while (close(InFD) == -1) {
       if (errno == EBADF)
         break;
     }
 
     // Close OutFD.
+#ifndef _WIN32
+    // FIXME: what about Windows?
+    ::shutdown(OutFD, SHUT_WR);
+#endif
     if (CloseOutFD) {
       while (close(OutFD) == -1) {
         if (errno == EBADF)
