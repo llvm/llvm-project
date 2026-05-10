@@ -77,6 +77,7 @@ public:
       case Triple::FreeBSD:
         return ELF::ELFOSABI_FREEBSD;
       case Triple::Solaris:
+      case Triple::Illumos:
         return ELF::ELFOSABI_SOLARIS;
       case Triple::OpenBSD:
         return ELF::ELFOSABI_OPENBSD;

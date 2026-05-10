@@ -1462,6 +1462,10 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   }
 }
 
+// The EI_OSABI field cannot always be used to uniquely identify the OS.
+// For instance, PS4 and FreeBSD share ELFOSABI_FREEBSD.
+// Moreover, some toolchains on Linux set this field to OSABI_NONE, rather
+// than ELFOSABI_LINUX.
 template <class ELFT> Triple::OSType ELFObjectFile<ELFT>::getOS() const {
   switch (EF.getHeader().e_ident[ELF::EI_OSABI]) {
   case ELF::ELFOSABI_NETBSD:
