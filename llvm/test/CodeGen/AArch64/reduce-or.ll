@@ -295,7 +295,7 @@ define i8 @test_redor_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_redor_v16i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
@@ -333,7 +333,7 @@ define i8 @test_redor_v32i8(<32 x i8> %a) {
 ; CHECK-GI-LABEL: test_redor_v32i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
@@ -392,7 +392,7 @@ define i16 @test_redor_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: test_redor_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
@@ -421,7 +421,7 @@ define i16 @test_redor_v16i16(<16 x i16> %a) {
 ; CHECK-GI-LABEL: test_redor_v16i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
@@ -466,7 +466,7 @@ define i32 @test_redor_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: test_redor_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w9, s0
@@ -490,7 +490,7 @@ define i32 @test_redor_v8i32(<8 x i32> %a) {
 ; CHECK-GI-LABEL: test_redor_v8i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w9, s0

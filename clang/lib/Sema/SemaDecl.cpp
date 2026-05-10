@@ -7926,7 +7926,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (CurContext->isRecord()) {
       if (SC == SC_Static) {
-        if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
           // Walk up the enclosing DeclContexts to check for any that are
           // incompatible with static data members.
           const DeclContext *FunctionOrMethod = nullptr;
@@ -7948,8 +7948,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             Diag(D.getIdentifierLoc(),
                  diag::err_static_data_member_not_allowed_in_local_class)
                 << Name << RD->getDeclName() << RD->getTagKind();
-            Invalid = true;
-            RD->setInvalidDecl();
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
@@ -16318,10 +16316,13 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // have the LSI properly restored.
   if (isGenericLambdaCallOperatorSpecialization(FD)) {
     // C++2c 7.5.5.2p17 A member of a closure type shall not be explicitly
-    // instantiated, explicitly specialized.
-    if (FD->getTemplateSpecializationInfo()
-            ->isExplicitInstantiationOrSpecialization()) {
-      Diag(FD->getLocation(), diag::err_lambda_explicit_spec);
+    // specialized.
+    if (FD->getTemplateSpecializationInfo()->isExplicitSpecialization()) {
+      Diag(FD->getLocation(), diag::err_lambda_explicit_temp_spec)
+          << /*specialization*/ 0;
+      CXXRecordDecl *RD = cast<CXXRecordDecl>(FD->getParent());
+      Diag(RD->getLocation(), diag::note_defined_here) << RD;
+
       FD->setInvalidDecl();
       PushFunctionScope();
     } else {

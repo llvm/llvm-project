@@ -13,7 +13,7 @@
 
 namespace llvm {
 class DeclareRuntimeLibcallsPass
-    : public PassInfoMixin<DeclareRuntimeLibcallsPass> {
+    : public OptionalPassInfoMixin<DeclareRuntimeLibcallsPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

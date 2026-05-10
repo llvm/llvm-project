@@ -37,6 +37,14 @@
 
 using namespace llvm;
 
+// Forward declaration of static functions.
+static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                              bool Consume);
+static bool isSignatureValid(FunctionType *FTy,
+                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             SmallVectorImpl<Type *> &OverloadTys,
+                             raw_ostream &OS);
+
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
@@ -546,22 +554,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Overloaded:
   case IITDescriptor::VecOfAnyPtrsToElt:
     return OverloadTys[D.getOverloadIndex()];
-  case IITDescriptor::Extend: {
-    Type *Ty = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-      return VectorType::getExtendedElementVectorType(VTy);
-
-    return IntegerType::get(Context, 2 * cast<IntegerType>(Ty)->getBitWidth());
-  }
-  case IITDescriptor::Trunc: {
-    Type *Ty = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-      return VectorType::getTruncatedElementVectorType(VTy);
-
-    IntegerType *ITy = cast<IntegerType>(Ty);
-    assert(ITy->getBitWidth() % 2 == 0);
-    return IntegerType::get(Context, ITy->getBitWidth() / 2);
-  }
+  case IITDescriptor::Extend:
+    return OverloadTys[D.getOverloadIndex()]->getExtendedType();
+  case IITDescriptor::Trunc:
+    return OverloadTys[D.getOverloadIndex()]->getTruncatedType();
   case IITDescriptor::Subdivide2:
   case IITDescriptor::Subdivide4: {
     Type *Ty = OverloadTys[D.getOverloadIndex()];
@@ -601,21 +597,15 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
                                  ArrayRef<Type *> OverloadTys) {
   SmallVector<IITDescriptor, 8> Table;
   getIntrinsicInfoTableEntries(id, Table);
-
   ArrayRef<IITDescriptor> TableRef = Table;
+
+  bool IsVarArg = isIntrinsicVarArg(TableRef, /*Consume=*/true);
+
   Type *ResultTy = DecodeFixedType(TableRef, OverloadTys, Context);
 
   SmallVector<Type *, 8> ArgTys;
   while (!TableRef.empty())
     ArgTys.push_back(DecodeFixedType(TableRef, OverloadTys, Context));
-
-  // VarArg intrinsics encode a void type as the last argument type. Detect that
-  // and then drop the void argument.
-  bool IsVarArg = false;
-  if (!ArgTys.empty() && ArgTys.back()->isVoidTy()) {
-    ArgTys.pop_back();
-    IsVarArg = true;
-  }
   return FunctionType::get(ResultTy, ArgTys, IsVarArg);
 }
 
@@ -778,13 +768,6 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
   FunctionType *FT = getType(M->getContext(), id, OverloadTys);
   return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FT);
 }
-
-static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                              bool Consume);
-static bool isSignatureValid(FunctionType *FTy,
-                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                             SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS);
 
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
                                             ArrayRef<Type *> ArgTys) {
@@ -965,14 +948,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
-      NewTy = VectorType::getExtendedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
-      NewTy = IntegerType::get(ITy->getContext(), 2 * ITy->getBitWidth());
-    else
-      return true;
-
+    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getExtendedType();
     return Ty != NewTy;
   }
   case IITDescriptor::Trunc: {
@@ -980,14 +956,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (D.getOverloadIndex() >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
-      NewTy = VectorType::getTruncatedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
-      NewTy = IntegerType::get(ITy->getContext(), ITy->getBitWidth() / 2);
-    else
-      return true;
-
+    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getTruncatedType();
     return Ty != NewTy;
   }
   case IITDescriptor::OneNthEltsVec: {
