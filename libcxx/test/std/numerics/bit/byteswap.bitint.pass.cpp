@@ -8,14 +8,17 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// __builtin_bswapg was added in Clang 22. The libc++ implementation of
+// std::byteswap for _BitInt(N) defers to that builtin, so this test is
+// only meaningful on compilers that have it. Skip on Clang 21.
+// UNSUPPORTED: clang-21
+
 // <bit>
 
-// std::byteswap for _BitInt(N).
-//
-// Byte-aligned widths (N % CHAR_BIT == 0) work via the existing builtins
-// for sizeof <= 16 and via the new generic loop for sizeof > 16. Non-byte-
-// aligned widths are rejected by static_assert; that case is covered in
-// byteswap.bitint.verify.cpp.
+// std::byteswap for _BitInt(N) routes through __builtin_bswapg, which
+// supports any width that is a multiple of 16 bits (or sizeof == 1, the
+// identity case). Non-multiple-of-16 widths are rejected by Clang with a
+// clear diagnostic; see byteswap.bitint.verify.cpp.
 
 #include <bit>
 #include <cassert>
