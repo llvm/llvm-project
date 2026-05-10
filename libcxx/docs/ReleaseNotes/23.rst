@@ -101,5 +101,9 @@ ABI Affecting Changes
   map is never modified via an ``iterator``. This is necessary for reducing undefined behavior and for adding
   ``constexpr`` support for ``deque`` in C++26, so we do not provide any way to opt-out of that behavior.
 
+- ``std::set_new_handler`` and ``std::get_new_handler`` are now implemented by libc++ on Windows using ``VCRuntime``
+  directly instead of implicitly relying on ``msvcprt`` to implement them, therefore the global state of the handler
+  is no longer shared with ``msvcprt`` since libc++ now maintains its own internal state of the handler.
+
 Build System Changes
 --------------------
