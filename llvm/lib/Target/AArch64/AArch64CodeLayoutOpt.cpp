@@ -22,6 +22,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/CommandLine.h"
@@ -79,8 +80,10 @@ public:
 private:
   const AArch64InstrInfo *TII = nullptr;
 
-  /// \returns true iff MBB contains at least one layout-sensitive pattern.
-  bool detectLayoutSensitivePattern(MachineBasicBlock *MBB);
+  /// Align each fusible CMP/CMN-CSEL or FCMP-FCSEL pair in \p MBB by emitting
+  /// .p2align before the lead instruction (splitting the block if needed).
+  /// \returns true iff at least one pair was found and aligned.
+  bool alignLayoutSensitivePatterns(MachineBasicBlock *MBB);
 
   /// Emit .p2align before MI. Splits the block if MI is not at its start.
   void emitP2Align(MachineInstr &MI, Align DesiredAlign,
@@ -196,10 +199,12 @@ void AArch64CodeLayoutOpt::emitP2Align(MachineInstr &MI, Align DesiredAlign,
   MBB->setMaxBytesForAlignment(MaxSkipBytes);
 }
 
-// Returns true if MBB contains at least one layout-sensitive pair.
+// Align each fusible CMP/CMN-CSEL or FCMP-FCSEL pair in MBB by emitting
+// .p2align before the lead instruction (splitting the block if needed).
 // A pair is: a qualifying lead instruction immediately followed by its
 // consumer (CMP/CMN→CSEL or FCMP→FCSEL), with no intervening instructions.
-bool AArch64CodeLayoutOpt::detectLayoutSensitivePattern(
+// Returns true iff at least one pair was found and aligned.
+bool AArch64CodeLayoutOpt::alignLayoutSensitivePatterns(
     MachineBasicBlock *MBB) {
   auto End = MBB->instr_end();
   SmallVector<std::pair<MachineInstr *, bool>, 4> Pairs;
@@ -239,11 +244,8 @@ bool AArch64CodeLayoutOpt::optimizeForCodeLayout(MachineFunction &MF) {
   DBG("optimizeForCodeLayout: " << MF.getName() << "\n");
 
   bool Changed = false;
-  for (auto &MBB : MF) {
-    if (!detectLayoutSensitivePattern(&MBB))
-      continue;
-    Changed = true;
-  }
+  for (auto &MBB : MF)
+    Changed |= alignLayoutSensitivePatterns(&MBB);
 
   if (!Changed)
     return false;
