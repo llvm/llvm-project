@@ -42,6 +42,10 @@ config.substitutions.append(
 config.substitutions.append(("%clang_xray ", build_invocation(clang_xray_cflags)))
 config.substitutions.append(("%clangxx_xray", build_invocation(clang_xray_cxxflags)))
 config.substitutions.append(("%llvm_xray", llvm_xray))
+if config.target_os == "Darwin":
+    config.substitutions.append(
+        ("%xray_rt_path", os.path.join(config.compiler_rt_libdir, "libclang_rt.xray_osx.a"))
+    )
 config.substitutions.append(
     (
         "%xraylib",
