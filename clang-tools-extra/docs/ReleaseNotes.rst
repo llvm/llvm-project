@@ -55,6 +55,30 @@ Potentially Breaking Changes
   <clang-tidy/checks/performance/prefer-single-char-overloads>`.
   The original check will be removed in the 25th release.
 
+- Removed the :program:`clang-tidy` ``hicpp`` module. All checks have been moved
+  to the other modules. Use the replacement checks instead:
+
+  ================================== =========================================================
+  Removed check                      Replacement check
+  ================================== =========================================================
+  ``hicpp-avoid-c-arrays``           :doc:`modernize-avoid-c-arrays
+                                     <clang-tidy/checks/modernize/avoid-c-arrays>`
+  ``hicpp-avoid-goto``               :doc:`cppcoreguidelines-avoid-goto
+                                     <clang-tidy/checks/cppcoreguidelines/avoid-goto>`
+  ``hicpp-braces-around-statements`` :doc:`readability-braces-around-statements
+                                     <clang-tidy/checks/readability/braces-around-statements>`
+  ``hicpp-deprecated-headers``       :doc:`modernize-deprecated-headers
+                                     <clang-tidy/checks/modernize/deprecated-headers>`
+  ``hicpp-exception-baseclass``      :doc:`bugprone-std-exception-baseclass
+                                     <clang-tidy/checks/bugprone/std-exception-baseclass>`
+  ``hicpp-explicit-conversions``     :doc:`misc-explicit-constructor
+                                     <clang-tidy/checks/misc/explicit-constructor>`
+  ``hicpp-function-size``            :doc:`readability-function-size
+                                     <clang-tidy/checks/readability/function-size>`
+  ``hicpp-ignored-remove-result``    :doc:`bugprone-unused-return-value
+                                     <clang-tidy/checks/bugprone/unused-return-value>`
+  ================================== =========================================================
+
 Improvements to clangd
 ----------------------
 
@@ -78,6 +102,10 @@ Code completion
 
 - Now also provides include files without extension, if they are in a directory
   only called ``include``.
+
+- Added support for ``InsertReplaceEdit`` in code completion (LSP 3.16),
+  allowing clients that advertise ``insertReplaceSupport`` to receive both
+  insert and replace ranges for completion items.
 
 - Changed completion-style default to ``detailed``. This means function
   overloads will no longer be bundled together, but instead each have
@@ -203,21 +231,27 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
-- New alias :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
+- Renamed :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
   to :doc:`bugprone-assignment-in-selection-statement
   <clang-tidy/checks/bugprone/assignment-in-selection-statement>`.
 
-- Renamed :doc:`hicpp-exception-baseclass
-  <clang-tidy/checks/hicpp/exception-baseclass>`
-  to :doc:`bugprone-std-exception-baseclass
-  <clang-tidy/checks/bugprone/std-exception-baseclass>`.
-  The `hicpp-exception-baseclass` name is kept as an alias.
+- Renamed :doc:`cppcoreguidelines-explicit-constructor
+  <clang-tidy/checks/cppcoreguidelines/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `cppcoreguidelines-explicit-constructor` name is kept as an alias.
 
-- Renamed :doc:`hicpp-ignored-remove-result
-  <clang-tidy/checks/hicpp/ignored-remove-result>`
-  to :doc:`bugprone-unused-return-value
-  <clang-tidy/checks/bugprone/unused-return-value>`.
-  The `hicpp-ignored-remove-result` name is kept as an alias.
+- Renamed :doc:`google-explicit-constructor
+  <clang-tidy/checks/google/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `google-explicit-constructor` name is kept as an alias.
+
+- Renamed :doc:`hicpp-multiway-paths-covered
+  <clang-tidy/checks/hicpp/multiway-paths-covered>`
+  to :doc:`bugprone-unhandled-code-paths
+  <clang-tidy/checks/bugprone/unhandled-code-paths>`.
+  The `hicpp-multiway-paths-covered` name is kept as an alias.
 
 - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
   to :doc:`portability-no-assembler
@@ -446,6 +480,11 @@ Changes in existing checks
   private deleted functions, if they do not have a public overload or are a
   special member function.
 
+- Improved :doc:`modernize-use-nodiscard
+  <clang-tidy/checks/modernize/use-nodiscard>` check by avoiding false
+  positives on functions returning specializations of class templates marked
+  ``[[nodiscard]]``.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
 
@@ -513,6 +552,9 @@ Changes in existing checks
 
   - Reduce verbosity by removing the note indicating source location of the
     ``empty`` function.
+
+  - Fixed a false positive with suggesting ``empty`` when comparing a container
+    to a default-constructed object of an unrelated type.
 
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check:

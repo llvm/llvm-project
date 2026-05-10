@@ -176,6 +176,8 @@ protected:
     ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(), options);
     if (llvm::Error error = printer.PrintValueObject())
       result.AppendError(toString(std::move(error)));
+    else
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;

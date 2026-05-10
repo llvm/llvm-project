@@ -476,6 +476,8 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- Clang now explains why template deduction fails for explicit template arguments.
+
 - No longer emitting a ``-Wpre-c2y-compat`` or extension diagnostic about use
   of octal literals with a ``0o`` prefix, and no longer emitting a
   ``-Wdeprecated-octal-literals`` diagnostic for use of octal literals without
@@ -570,7 +572,6 @@ Bug Fixes to C++ Support
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
-- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
@@ -746,6 +747,8 @@ clang-format
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with
   per-operator break rules and minimum chain length gating via ``PerOperator``.
 - Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
+- Add ``BreakFunctionDeclarationParameters`` option to always break before function
+  declaration parameters.
 
 libclang
 --------
