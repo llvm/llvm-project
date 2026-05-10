@@ -12,13 +12,10 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <climits>
 #include <cstdint>
-
-#if !__has_builtin(__builtin_bswapg)
-#  include <__cstddef/size_t.h>
-#  include <climits>
-#  include <limits>
-#endif
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
