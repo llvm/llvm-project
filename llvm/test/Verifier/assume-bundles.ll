@@ -36,5 +36,9 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
   call void @llvm.assume(i1 %cond) ["nonnull"(ptr %P)]
 ; CHECK: Attribute 'nonnull' applied to incompatible type!
   call void @llvm.assume(i1 true) ["nonnull"(i1 true)]
+; CHECK: Attribute 'align' applied to incompatible type!
+  call void @llvm.assume(i1 true) ["align"(i1 true)]
+; CHECK: Attribute 'dereferenceable' applied to incompatible type!
+  call void @llvm.assume(i1 true) ["dereferenceable"(i1 true)]
   ret void
 }
