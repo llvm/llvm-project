@@ -386,7 +386,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     CHECK_PARSE_NESTED_BOOL(FIELD, EnumAssignments);                           \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
   } while (false)
-  // @todo
 
   CHECK_ALIGN_CONSECUTIVE(AlignConsecutiveAssignments);
   CHECK_ALIGN_CONSECUTIVE(AlignConsecutiveBitFields);

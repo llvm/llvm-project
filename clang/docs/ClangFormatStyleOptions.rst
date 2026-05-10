@@ -402,16 +402,10 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
-  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
-    aligned.
-
-    .. code-block:: c++
-
-      enum ValueKind {
-        VK_Argument   = 1,
-        VK_BasicBlock = 2,
-        VK_Segment    = 8,
-      };
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -571,16 +565,10 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
-  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
-    aligned.
-
-    .. code-block:: c++
-
-      enum ValueKind {
-        VK_Argument   = 1,
-        VK_BasicBlock = 2,
-        VK_Segment    = 8,
-      };
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -740,16 +728,10 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
-  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
-    aligned.
-
-    .. code-block:: c++
-
-      enum ValueKind {
-        VK_Argument   = 1,
-        VK_BasicBlock = 2,
-        VK_Segment    = 8,
-      };
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -910,16 +892,10 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
-  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
-    aligned.
-
-    .. code-block:: c++
-
-      enum ValueKind {
-        VK_Argument   = 1,
-        VK_BasicBlock = 2,
-        VK_Segment    = 8,
-      };
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1199,16 +1175,10 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
-  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
-    aligned.
-
-    .. code-block:: c++
-
-      enum ValueKind {
-        VK_Argument   = 1,
-        VK_BasicBlock = 2,
-        VK_Segment    = 8,
-      };
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1366,16 +1336,10 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
-  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
-    aligned.
-
-    .. code-block:: c++
-
-      enum ValueKind {
-        VK_Argument   = 1,
-        VK_BasicBlock = 2,
-        VK_Segment    = 8,
-      };
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1533,16 +1497,10 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
-  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``. Whether enum assignments are
-    aligned.
-
-    .. code-block:: c++
-
-      enum ValueKind {
-        VK_Argument   = 1,
-        VK_BasicBlock = 2,
-        VK_Segment    = 8,
-      };
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
