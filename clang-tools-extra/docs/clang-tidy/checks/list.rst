@@ -174,6 +174,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
+   :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
@@ -230,7 +231,6 @@ Clang-Tidy Checks
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
    :doc:`google-build-using-namespace <google/build-using-namespace>`,
    :doc:`google-default-arguments <google/default-arguments>`,
-   :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`google-global-names-in-headers <google/global-names-in-headers>`,
    :doc:`google-objc-avoid-nsobject-new <google/objc-avoid-nsobject-new>`,
    :doc:`google-objc-avoid-throwing-exception <google/objc-avoid-throwing-exception>`,
@@ -242,7 +242,6 @@ Clang-Tidy Checks
    :doc:`google-runtime-int <google/runtime-int>`,
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
-   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
@@ -265,6 +264,7 @@ Clang-Tidy Checks
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
    :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
+   :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
    :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
@@ -586,6 +586,7 @@ Check aliases
    :doc:`cppcoreguidelines-avoid-c-arrays <cppcoreguidelines/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`cppcoreguidelines-avoid-magic-numbers <cppcoreguidelines/avoid-magic-numbers>`, :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`cppcoreguidelines-c-copy-assignment-signature <cppcoreguidelines/c-copy-assignment-signature>`, :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,
+   :doc:`cppcoreguidelines-explicit-constructor <cppcoreguidelines/explicit-constructor>`, :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`cppcoreguidelines-explicit-virtual-functions <cppcoreguidelines/explicit-virtual-functions>`, :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`cppcoreguidelines-macro-to-enum <cppcoreguidelines/macro-to-enum>`, :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
    :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`, :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,
@@ -597,21 +598,15 @@ Check aliases
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`, :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`google-build-namespaces <google/build-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
+   :doc:`google-explicit-constructor <google/explicit-constructor>`, :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
-   :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
-   :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
-   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
-   :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
-   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`, :doc:`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>`,
-   :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
-   :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,
-   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`hicpp-invalid-access-moved <hicpp/invalid-access-moved>`, :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`hicpp-member-init <hicpp/member-init>`, :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes"
    :doc:`hicpp-move-const-arg <hicpp/move-const-arg>`, :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
+   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`, :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
    :doc:`hicpp-named-parameter <hicpp/named-parameter>`, :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
    :doc:`hicpp-new-delete-operators <hicpp/new-delete-operators>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`hicpp-no-array-decay <hicpp/no-array-decay>`, :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,

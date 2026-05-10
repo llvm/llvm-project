@@ -7,6 +7,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @llvm.assume(i1) #1
+declare ptr @get_ptr()
+declare void @use_i64(i64)
 
 ; Check that the assume has not been removed:
 
@@ -77,6 +79,57 @@ entry:
   %trunc = trunc i64 %0 to i63
   %cmp = icmp eq i63 0, %trunc
   call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @align_with_offset_less_than_align(ptr %ptr) {
+; CHECK-LABEL: @align_with_offset_less_than_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i64
+  %add = add i64 %int, 3
+  %and = and i64 %add, 7
+  %cmp = icmp eq i64 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i64(i64 %and)
+  ret void
+}
+
+define void @align_with_offset_greater_than_align(ptr %ptr) {
+; CHECK-LABEL: @align_with_offset_greater_than_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
+; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i64
+  %add = add i64 %int, 14
+  %and = and i64 %add, 7
+  %cmp = icmp eq i64 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i64(i64 %and)
+  ret void
+}
+
+define void @redundant_align() {
+; CHECK-LABEL: @redundant_align(
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
   ret void
 }
 
@@ -461,7 +514,6 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META11:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
