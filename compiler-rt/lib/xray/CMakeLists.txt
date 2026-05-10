@@ -4,6 +4,7 @@
 set(XRAY_SOURCES
   xray_buffer_queue.cpp
   xray_init.cpp
+  xray_darwin.cpp
   xray_flags.cpp
   xray_interface.cpp
   xray_log_interface.cpp
@@ -12,6 +13,7 @@ set(XRAY_SOURCES
 
 set(XRAY_DSO_SOURCES
   xray_dso_init.cpp
+  xray_darwin.cpp
   )
 
 # Implementation files for all XRay modes.
@@ -113,8 +115,18 @@ set(riscv64_SOURCES
 # Enable vector instructions in the assembly file.
 set_source_files_properties(xray_trampoline_s390x.S PROPERTIES COMPILE_FLAGS -march=z13)
 
+set(arm64_SOURCES
+  xray_AArch64.cpp
+  xray_trampoline_AArch64.S
+  )
+
+set(arm64_DSO_SOURCES
+  xray_trampoline_AArch64.S
+  )
+
 set(XRAY_SOURCE_ARCHS
   arm
+  arm64
   armhf
   aarch64
   hexagon

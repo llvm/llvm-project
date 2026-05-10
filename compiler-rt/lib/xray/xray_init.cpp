@@ -24,20 +24,23 @@
 
 extern "C" {
 void __xray_init();
+#if !SANITIZER_APPLE
 extern const XRaySledEntry __start_xray_instr_map[] __attribute__((weak));
 extern const XRaySledEntry __stop_xray_instr_map[] __attribute__((weak));
 extern const XRayFunctionSledIndex __start_xray_fn_idx[] __attribute__((weak));
 extern const XRayFunctionSledIndex __stop_xray_fn_idx[] __attribute__((weak));
-
-#if SANITIZER_APPLE
-// HACK: This is a temporary workaround to make XRay build on
-// Darwin, but it will probably not work at runtime.
-const XRaySledEntry __start_xray_instr_map[] = {};
-extern const XRaySledEntry __stop_xray_instr_map[] = {};
-extern const XRayFunctionSledIndex __start_xray_fn_idx[] = {};
-extern const XRayFunctionSledIndex __stop_xray_fn_idx[] = {};
 #endif
 }
+
+#if SANITIZER_APPLE
+namespace __xray {
+bool FindXRaySledSectionInImage(const void *Addr,
+                                const XRaySledEntry **SledsBegin,
+                                const XRaySledEntry **SledsEnd,
+                                const XRayFunctionSledIndex **FnIdxBegin,
+                                const XRayFunctionSledIndex **FnIdxEnd);
+} // namespace __xray
+#endif
 
 using namespace __xray;
 
@@ -135,20 +138,39 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
     atomic_store(&XRayFlagsInitialized, true, memory_order_release);
   }
 
+#if SANITIZER_APPLE
+  const XRaySledEntry *SledsBegin = nullptr;
+  const XRaySledEntry *SledsEnd = nullptr;
+  const XRayFunctionSledIndex *FnIdxBegin = nullptr;
+  const XRayFunctionSledIndex *FnIdxEnd = nullptr;
+
+  if (!__xray::FindXRaySledSectionInImage(
+          reinterpret_cast<const void *>(&__xray_init), &SledsBegin, &SledsEnd,
+          &FnIdxBegin, &FnIdxEnd)) {
+    if (Verbosity())
+      Report("XRay instrumentation map missing. Not initializing XRay.\n");
+    return;
+  }
+#else
   if (__start_xray_instr_map == nullptr) {
     if (Verbosity())
       Report("XRay instrumentation map missing. Not initializing XRay.\n");
     return;
   }
 
+  const auto *SledsBegin = __start_xray_instr_map;
+  const auto *SledsEnd = __stop_xray_instr_map;
+  const auto *FnIdxBegin = __start_xray_fn_idx;
+  const auto *FnIdxEnd = __stop_xray_fn_idx;
+#endif
+
   atomic_store(&XRayNumObjects, 0, memory_order_release);
 
   // Pre-allocation takes up approx. 5kB for XRayMaxObjects=64.
   XRayInstrMaps = allocateBuffer<XRaySledMap>(XRayMaxObjects);
 
-  int MainBinaryId =
-      __xray_register_sleds(__start_xray_instr_map, __stop_xray_instr_map,
-                            __start_xray_fn_idx, __stop_xray_fn_idx, false, {});
+  int MainBinaryId = __xray_register_sleds(SledsBegin, SledsEnd, FnIdxBegin,
+                                           FnIdxEnd, false, {});
 
   // The executable should always get ID 0.
   if (MainBinaryId != 0) {

@@ -56,7 +56,7 @@ config.substitutions.append(
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-if config.target_os not in ["FreeBSD", "Linux", "NetBSD", "OpenBSD"]:
+if config.target_os not in ["Darwin", "FreeBSD", "Linux", "NetBSD", "OpenBSD"]:
     config.unsupported = True
 elif "64" not in config.host_arch:
     if "arm" in config.host_arch:
