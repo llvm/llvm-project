@@ -55,6 +55,7 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
+
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
