@@ -1552,13 +1552,13 @@ void UnwrappedLineParser::parseStructuralElement(
     nextToken();
     if (FormatTok->is(tok::colon)) {
       FormatTok->setFinalizedType(TT_CaseLabelColon);
-      parseLabel();
+      parseCaseLabel();
       return;
     }
     if (FormatTok->is(tok::arrow)) {
       FormatTok->setFinalizedType(TT_CaseLabelArrow);
       Default->setFinalizedType(TT_SwitchExpressionLabel);
-      parseLabel();
+      parseCaseLabel();
       return;
     }
     // e.g. "default void f() {}" in a Java interface.
@@ -1580,7 +1580,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       break;
     }
-    parseCaseLabel();
+    parseCase();
     return;
   case tok::kw_goto:
     nextToken();
@@ -1714,9 +1714,32 @@ void UnwrappedLineParser::parseStructuralElement(
       if (!Line->InMacroBody || CurrentLines->size() > 1)
         Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(Style.IndentGotoLabels);
+      const auto OldLineLevel = Line->Level;
+      switch (Style.IndentGotoLabels) {
+      case FormatStyle::IGLS_NoIndent:
+        Line->Level = 0;
+        break;
+      case FormatStyle::IGLS_OuterIndent:
+        if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
+          --Line->Level;
+        break;
+      case FormatStyle::IGLS_HalfIndent:
+      case FormatStyle::IGLS_InnerIndent:
+        break;
+      }
+      nextToken();
+      if (FormatTok->is(tok::semi))
+        nextToken();
+      addUnwrappedLine();
+      Line->Level = OldLineLevel;
       if (HasLabel)
         *HasLabel = true;
+
+      if (FormatTok->isNot(tok::l_brace)) {
+        // "Rerun" this function, this is e.g. for unbraced control statements.
+        parseStructuralElement();
+        addUnwrappedLine();
+      }
       return;
     }
     if (Style.isJava() && FormatTok->is(Keywords.kw_record)) {
@@ -2149,7 +2172,7 @@ void UnwrappedLineParser::parseStructuralElement(
         nextToken();
         break;
       }
-      parseCaseLabel();
+      parseCase();
       break;
     case tok::kw_default:
       nextToken();
@@ -3372,27 +3395,15 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel(
-    FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
-  const bool IsGotoLabel = FormatTok->is(TT_GotoLabelColon);
+void UnwrappedLineParser::parseCaseLabel() {
   nextToken();
   unsigned OldLineLevel = Line->Level;
 
-  switch (IndentGotoLabels) {
-  case FormatStyle::IGLS_NoIndent:
-    Line->Level = 0;
-    break;
-  case FormatStyle::IGLS_OuterIndent:
-    if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-      --Line->Level;
-    break;
-  case FormatStyle::IGLS_HalfIndent:
-  case FormatStyle::IGLS_InnerIndent:
-    break;
-  }
+  if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
+    --Line->Level;
 
-  if (!IsGotoLabel && !Style.IndentCaseBlocks &&
-      CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
+  if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
+      FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Line->Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
@@ -3421,7 +3432,7 @@ void UnwrappedLineParser::parseLabel(
   }
 }
 
-void UnwrappedLineParser::parseCaseLabel() {
+void UnwrappedLineParser::parseCase() {
   assert(FormatTok->is(tok::kw_case) && "'case' expected");
   auto *Case = FormatTok;
 
@@ -3438,7 +3449,7 @@ void UnwrappedLineParser::parseCaseLabel() {
       break;
     }
   } while (!eof());
-  parseLabel();
+  parseCaseLabel();
 }
 
 void UnwrappedLineParser::parseSwitch(bool IsExpr) {
