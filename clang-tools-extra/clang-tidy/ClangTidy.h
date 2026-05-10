@@ -64,8 +64,9 @@ struct ChecksAndOptions {
   llvm::StringSet<> Options;
 };
 
-ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
-                                        bool ExperimentalCustomChecks);
+ChecksAndOptions getAllChecksAndOptions(
+    bool AllowEnablingAnalyzerAlphaCheckers, bool ExperimentalCustomChecks,
+    std::optional<ClangTidyOptions::CustomCheckValueList> &&AllCustomChecks);
 
 /// Returns the effective check-specific options.
 ///

@@ -36,3 +36,11 @@
 // RUN: echo -e 'Checks: "-*,clang-analyzer-optin.cplusplus.UninitializedObject"\nCheckOptions:\n clang-analyzer-optin.cplusplus.UninitializedObject.Pedantic: true' > %t.MyClangTidyConfigCSABad
 // RUN: not clang-tidy --verify-config --config-file=%t.MyClangTidyConfigCSABad 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-CSA-BAD -implicit-check-not='{{warnings|error}}'
 // CHECK-VERIFY-CSA-BAD: command-line option '-config': warning: unknown check option 'clang-analyzer-optin.cplusplus.UninitializedObject.Pedantic'; did you mean 'clang-analyzer-optin.cplusplus.UninitializedObject:Pedantic' [-verify-config]
+
+// RUN: echo -e 'Checks: "-*,custom-no-auto-usage-c"\nCustomChecks:\n - Name: no-auto-usage-c\n   Query: match varDecl(hasType(autoType())).bind("decl")\n   Diagnostic:\n      - BindName: decl\n        Message: Don''t use auto in C\n        Level: Warning' > %t.MyClangTidyConfigCustomChecksBad
+// RUN: not clang-tidy --verify-config --config-file=%t.MyClangTidyConfigCustomChecksBad 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-CUSTOM-CHECK-BAD -implicit-check-not='{{warnings|error}}'
+// CHECK-VERIFY-CUSTOM-CHECK-BAD: command-line option '-config': warning: unknown check 'custom-no-auto-usage-c' [-verify-config]
+
+// RUN: echo -e 'Checks: "-*,custom-no-auto-usage-c"\nCustomChecks:\n - Name: no-auto-usage-c\n   Query: match varDecl(hasType(autoType())).bind("decl")\n   Diagnostic:\n      - BindName: decl\n        Message: Don''t use auto in C\n        Level: Warning' > %t.MyClangTidyConfigCustomChecksOk
+// RUN: clang-tidy --experimental-custom-checks --verify-config --config-file=%t.MyClangTidyConfigCustomChecksOk 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-CUSTOM-CHECK-OK -implicit-check-not='{{warnings|error}}'
+// CHECK-VERIFY-CUSTOM-CHECK-OK: No config errors detected.
