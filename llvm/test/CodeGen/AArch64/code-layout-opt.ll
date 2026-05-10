@@ -5,15 +5,16 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4 | FileCheck %s
 
 ; Test coverage for optimizeForCodeLayout function:
-; 1. Basic FCMP-FCSEL instruction pair detection and function alignment (single/double precision)
-; 2. Multiple instruction pairs in same function (also tests different predicates)
-; 3. FCMP with immediate operand (#0.0) is excluded from optimization
-; 4. Instruction pairs with function calls
-; 5. Negative tests (no false positives)
-; 6. Basic CMP-CSEL and CMN-CSEL instruction pair detection and function alignment
-; 7. CMP/CMN with immediate <=15 qualifies; immediate >15 is excluded
+; * Basic FCMP-FCSEL instruction pair detection and function alignment (single/double precision)
+; * Multiple FCMP-FCSEL pairs in same function (also tests different predicates)
+; * Mixed single and double precision in same function
+; * FCMP with immediate operand (#0.0) is excluded from optimization
+; * Instruction pairs with function calls
+; * Negative tests (no false positives)
+; * Basic CMP-CSEL and CMN-CSEL instruction pair detection and function alignment
+; * CMP/CMN with immediate <=15 qualifies; immediate >15 is excluded
 
-; Test 1: Basic single-precision FCMP-FCSEL instruction pair
+; * Basic single-precision FCMP-FCSEL instruction pair
 ; CHECK: .globl _test_basic_fcmp_fcsel_single
 ; CHECK-NEXT: .p2align 6
 define float @test_basic_fcmp_fcsel_single(float %a, float %b, float %c, float %d) {
@@ -29,7 +30,7 @@ entry:
   ret float %sel
 }
 
-; Test 2: Basic double-precision FCMP-FCSEL instruction pair
+; * Basic double-precision FCMP-FCSEL instruction pair
 ; CHECK: .globl _test_basic_fcmp_fcsel_double
 ; CHECK-NEXT: .p2align 6
 define double @test_basic_fcmp_fcsel_double(double %a, double %b, double %c, double %d) {
@@ -45,7 +46,7 @@ entry:
   ret double %sel
 }
 
-; Test 3: Multiple FCMP-FCSEL instruction pairs in same function
+; * Multiple FCMP-FCSEL instruction pairs in same function
 ; CHECK: .globl _test_multiple_patterns
 ; CHECK-NEXT: .p2align 6
 define float @test_multiple_patterns(float %a, float %b, float %c, float %d, float %e, float %f) {
@@ -67,7 +68,7 @@ entry:
   ret float %sel2
 }
 
-; Test 4: FCMP with comparison to zero (immediate) - excluded from optimization
+; * FCMP with comparison to zero (immediate) - excluded from optimization
 ; FCMP #0.0 uses the ri-form opcode which is not in the detection list
 ; CHECK: .globl _test_fcmp_immediate
 ; CHECK-NEXT: .p2align 2
@@ -83,7 +84,7 @@ entry:
   ret float %sel
 }
 
-; Test 5: Mixed single and double precision in same function
+; * Mixed single and double precision in same function
 ; CHECK: .globl _test_mixed_precision
 ; CHECK-NEXT: .p2align 6
 define float @test_mixed_precision(float %a, float %b, double %c, double %d) {
@@ -109,7 +110,7 @@ entry:
   ret float %final
 }
 
-; Test 6: FCMP-FCSEL instruction pair with a function call present
+; * FCMP-FCSEL instruction pair with a function call present
 ; CHECK: .globl _test_with_function_calls
 ; CHECK-NEXT: .p2align 6
 declare float @external_func(float)
@@ -134,7 +135,7 @@ entry:
   ret float %result
 }
 
-; Test 7: Verify no false positives - FCMP without FCSEL
+; * Verify no false positives - FCMP without FCSEL
 ; CHECK: .globl _test_fcmp_without_fcsel
 ; CHECK-NEXT: .p2align 2
 define i32 @test_fcmp_without_fcsel(float %a, float %b) {
@@ -149,7 +150,7 @@ entry:
   ret i32 %result
 }
 
-; Test 8: Verify no false positives - FCSEL without preceding FCMP
+; * Verify no false positives - FCSEL without preceding FCMP
 ; CHECK: .globl _test_fcsel_without_fcmp
 ; CHECK-NEXT: .p2align 2
 define float @test_fcsel_without_fcmp(i1 %cond, float %a, float %b) {
@@ -167,7 +168,7 @@ entry:
 ; CMP/CMN-CSEL tests (cmp-csel flag of -aarch64-code-layout-opt)
 ;------------------------------------------------------------------------------
 
-; Test 9: Basic CMP-CSEL instruction pair (integer register comparison)
+; * Basic CMP-CSEL instruction pair (integer register comparison)
 ; CHECK: .globl _test_basic_cmp_csel
 ; CHECK-NEXT: .p2align 6
 define i32 @test_basic_cmp_csel(i32 %a, i32 %b, i32 %c, i32 %d) {
@@ -183,7 +184,7 @@ entry:
   ret i32 %sel
 }
 
-; Test 10: CMP-CSEL instruction pair with small immediate (<=15, qualifies for optimization)
+; * CMP-CSEL instruction pair with small immediate (<=15, qualifies for optimization)
 ; CHECK: .globl _test_cmp_small_imm_csel
 ; CHECK-NEXT: .p2align 6
 define i32 @test_cmp_small_imm_csel(i32 %a, i32 %b, i32 %c) {
@@ -199,7 +200,7 @@ entry:
   ret i32 %sel
 }
 
-; Test 11: CMP-CSEL with immediate > 15 - excluded from optimization
+; * CMP-CSEL with immediate > 15 - excluded from optimization
 ; CHECK: .globl _test_cmp_large_imm_csel
 ; CHECK-NEXT: .p2align 2
 define i32 @test_cmp_large_imm_csel(i32 %a, i32 %b, i32 %c) {
@@ -214,7 +215,7 @@ entry:
   ret i32 %sel
 }
 
-; Test 12: Basic CMN-CSEL instruction pair (ADDSWrr with WZR destination)
+; * Basic CMN-CSEL instruction pair (ADDSWrr with WZR destination)
 ; CHECK: .globl _test_basic_cmn_csel
 ; CHECK-NEXT: .p2align 6
 define i32 @test_basic_cmn_csel(i32 %a, i32 %b, i32 %c, i32 %d) {
@@ -231,7 +232,7 @@ entry:
   ret i32 %sel
 }
 
-; Test 13: CMN-CSEL instruction pair with small immediate (ADDSWri imm=7, qualifies)
+; * CMN-CSEL instruction pair with small immediate (ADDSWri imm=7, qualifies)
 ; CHECK: .globl _test_cmn_small_imm_csel
 ; CHECK-NEXT: .p2align 6
 define i32 @test_cmn_small_imm_csel(i32 %a, i32 %b, i32 %c) {
@@ -247,7 +248,7 @@ entry:
   ret i32 %sel
 }
 
-; Test 14: CMP without CSEL - no false positive
+; * CMP without CSEL - no false positive
 ; CHECK: .globl _test_cmp_without_csel
 ; CHECK-NEXT: .p2align 2
 define i32 @test_cmp_without_csel(i32 %a, i32 %b) {
