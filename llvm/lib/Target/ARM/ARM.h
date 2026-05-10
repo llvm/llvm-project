@@ -30,8 +30,10 @@ class FunctionPass;
 class InstructionSelector;
 class MCInst;
 class MachineInstr;
+class ModulePass;
 class PassRegistry;
 
+ModulePass *createARMPromoteConstantPass();
 Pass *createMVETailPredicationPass();
 FunctionPass *createARMLowOverheadLoopsPass();
 FunctionPass *createARMBlockPlacementPass();
@@ -63,6 +65,7 @@ void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
 
 void initializeARMAsmPrinterPass(PassRegistry &);
+void initializeARMPromoteConstantPass(PassRegistry &);
 void initializeARMBlockPlacementPass(PassRegistry &);
 void initializeARMBranchTargetsPass(PassRegistry &);
 void initializeARMConstantIslandsPass(PassRegistry &);

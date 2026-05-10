@@ -77,8 +77,13 @@ EnableARMLoadStoreOpt("arm-load-store-opt", cl::Hidden,
 
 // FIXME: Unify control over GlobalMerge.
 static cl::opt<cl::boolOrDefault>
-EnableGlobalMerge("arm-global-merge", cl::Hidden,
-                  cl::desc("Enable the global merge pass"));
+    EnableGlobalMerge("arm-global-merge", cl::Hidden,
+                      cl::desc("Enable the global merge pass"));
+
+static cl::opt<bool>
+    EnablePromoteConstant("arm-enable-promote-const",
+                          cl::desc("Enable the promote constant pass"),
+                          cl::init(true), cl::Hidden);
 
 namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
@@ -100,6 +105,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
   initializeARMExecutionDomainFixPass(Registry);
+  initializeARMPromoteConstantPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
@@ -403,6 +409,10 @@ void ARMPassConfig::addCodeGenPrepare() {
 }
 
 bool ARMPassConfig::addPreISel() {
+  // Run promote constant before global merge, so that the promoted constants
+  // get a chance to be merged (matches AArch64 pipeline ordering).
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnablePromoteConstant)
+    addPass(createARMPromoteConstantPass());
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
        EnableGlobalMerge == cl::BOU_UNSET) ||
       EnableGlobalMerge == cl::BOU_TRUE) {
