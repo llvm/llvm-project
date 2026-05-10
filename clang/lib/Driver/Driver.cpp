@@ -7091,6 +7091,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = std::make_unique<toolchains::Serenity>(*this, Target, Args);
       break;
     case llvm::Triple::Solaris:
+    case llvm::Triple::Illumos:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);
       break;
     case llvm::Triple::CUDA:
