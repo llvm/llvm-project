@@ -9,7 +9,7 @@
 // This pass runs after instruction scheduling and employs code layout
 // optimizations for certain patterns.
 //
-// Option -aarch64-code-layout-opt selects instruction pairs to optimize:
+// Option -aarch64-code-layout-opt-enable selects instruction pairs to optimize:
 //   cmp-csel:   Enable CMP/CMN-CSEL code layout optimization
 //   fcmp-fcsel: Enable FCMP-FCSEL code layout optimization
 //
@@ -42,7 +42,7 @@ enum CodeLayoutOpt {
 };
 
 static cl::bits<CodeLayoutOpt> EnableCodeAlignment(
-    "aarch64-code-layout-opt", cl::Hidden, cl::CommaSeparated,
+    "aarch64-code-layout-opt-enable", cl::Hidden, cl::CommaSeparated,
     cl::desc("Enable code alignment optimization for instruction pairs"),
     cl::values(
         clEnumValN(CmpCsel, "cmp-csel", "CMP/CMN-CSEL pair alignment (32-bit)"),
