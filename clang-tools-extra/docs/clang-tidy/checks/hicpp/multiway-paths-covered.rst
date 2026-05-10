@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-multiway-paths-covered
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/unhandled-code-paths.html
 
 hicpp-multiway-paths-covered
 ============================
