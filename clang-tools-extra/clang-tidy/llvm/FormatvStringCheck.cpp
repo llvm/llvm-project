@@ -59,15 +59,7 @@ static Expected<ParseResult> parseFormatvString(StringRef Fmt) {
 
     // Parse the replacement field: [index] ["," layout] [":" format]
     // Strip the format part first, since it may contain commas (e.g. {0:$[,]}).
-    StringRef IndexStr = Content;
-
-    const size_t ColonPos = Content.find(':');
-    if (ColonPos != StringRef::npos)
-      IndexStr = Content.substr(0, ColonPos);
-
-    const size_t CommaPos = IndexStr.find(',');
-    if (CommaPos != StringRef::npos)
-      IndexStr = IndexStr.substr(0, CommaPos);
+    const StringRef IndexStr = Content.substr(0, Content.find_first_of(",:");
 
     IndexStr = IndexStr.trim();
 
