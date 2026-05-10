@@ -17,11 +17,11 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %fmax_1 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 6.000000e+00
 ; CHECK-NEXT:   %fmax_2 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 0x7F800042
-; CHECK-NEXT:   %fmax_3 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 4.000000e+00
-; CHECK-NEXT:   %fmax_4 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 6.000000e+00
-; CHECK-NEXT:   %fmin_1 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 0xFF800042
-; CHECK-NEXT:   %fmin_2 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 4.000000e+00
-; CHECK-NEXT:   %fmin_3 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 0xFFC00000
-; CHECK-NEXT:   %fmin_4 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 0xFFC00042
+; CHECK-NEXT:   %fmax_3 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 0x7FC00042
+; CHECK-NEXT:   %fmax_4 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 4.000000e+00
+; CHECK-NEXT:   %fmin_1 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 1.000000e+00
+; CHECK-NEXT:   %fmin_2 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 1.000000e+00
+; CHECK-NEXT:   %fmin_3 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 1.000000e+00
+; CHECK-NEXT:   %fmin_4 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float +snan(0x42), float 4.000000e+00, float 6.000000e+00>) => float 1.000000e+00
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -260,6 +260,20 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Res;
   }
 
+  APFloat maybeQuietSNaN(APFloat Val) const {
+    if (Val.isSignaling() && Ctx.getRandomBool())
+      return Val.makeQuiet();
+    return Val;
+  }
+
+  APFloat maxnumWithSNaNQuieting(const APFloat &LHS, const APFloat &RHS) {
+    return maxnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
+  }
+
+  APFloat minnumWithSNaNQuieting(const APFloat &LHS, const APFloat &RHS) {
+    return minnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
+  }
+
   void addPropagatedNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
                                   ArrayRef<const APFloat *> Inputs,
                                   const fltSemantics &DstSem, bool QuietingMode,
@@ -1479,9 +1493,10 @@ public:
             ++RHSIdx;
         }
 
-        APFloat Res = IID == Intrinsic::vector_reduce_fmax
-                          ? maxnum(Worklist[LHSIdx], Worklist[RHSIdx])
-                          : minnum(Worklist[LHSIdx], Worklist[RHSIdx]);
+        APFloat Res =
+            IID == Intrinsic::vector_reduce_fmax
+                ? maxnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx])
+                : minnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx]);
         if (LHSIdx < RHSIdx)
           std::swap(LHSIdx, RHSIdx);
         Worklist.erase(Worklist.begin() + LHSIdx);
@@ -1555,69 +1570,14 @@ public:
           });
     }
     case Intrinsic::maxnum:
-    case Intrinsic::minnum: {
-      DenormalMode DenormMode = getCurrentDenormalMode(RetTy);
-
-      if (!Ctx.isDefaultFPEnv())
-        reportImmediateUB()
-            << "Non-constrained floating-point operation assumes default "
-               "floating-point environment";
-
-      return computeBinOp(
-          RetTy, Args[0], Args[1],
-          [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-            if (LHS.isPoison() || RHS.isPoison())
-              return AnyValue::poison();
-            AnyValue ValidatedLHS = handleFMFFlags(LHS, FMF, /*IsInput=*/true);
-            AnyValue ValidatedRHS = handleFMFFlags(RHS, FMF, /*IsInput=*/true);
-            if (ValidatedLHS.isPoison())
-              return ValidatedLHS;
-            if (ValidatedRHS.isPoison())
-              return ValidatedRHS;
-
-            APFloat FLHS = handleDenormal(ValidatedLHS.asFloat(),
-                                          DenormMode.Input, /*IsInput=*/true);
-            APFloat FRHS = handleDenormal(ValidatedRHS.asFloat(),
-                                          DenormMode.Input, /*IsInput=*/true);
-
-            APFloat RawResult = IID == Intrinsic::maxnum ? maxnum(FLHS, FRHS)
-                                                         : minnum(FLHS, FRHS);
-            APFloat Result = handleDenormal(RawResult, DenormMode.Output,
-                                            /*IsInput=*/false);
-            AnyValue FResult = handleFMFFlags(Result, FMF, /*IsInput=*/false);
-            if (FResult.isPoison())
-              return FResult;
-            Result = FResult.asFloat();
-
-            if ((FLHS.isSignaling() || FRHS.isSignaling()) &&
-                Ctx.getRandomBool()) {
-              APFloat QuietLHS = propagateInputNaN(FLHS, FLHS.getSemantics(),
-                                                   /*QuietingMode=*/true,
-                                                   /*FlipSign=*/false);
-              APFloat QuietRHS = propagateInputNaN(FRHS, FRHS.getSemantics(),
-                                                   /*QuietingMode=*/true,
-                                                   /*FlipSign=*/false);
-              APFloat QuietResult = IID == Intrinsic::maxnum
-                                        ? maxnum(QuietLHS, QuietRHS)
-                                        : minnum(QuietLHS, QuietRHS);
-              QuietResult = handleDenormal(QuietResult, DenormMode.Output,
-                                           /*IsInput=*/false);
-              AnyValue FinalResult =
-                  handleFMFFlags(QuietResult, FMF, /*IsInput=*/false);
-              if (FinalResult.isPoison())
-                return FinalResult;
-              Result = FinalResult.asFloat();
-            }
-            return applyNaNPropagation(Result, {&FLHS, &FRHS});
-          });
-    }
+    case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
     case Intrinsic::minimumnum: {
       return visitFPBinOpWithResult(
           RetTy, FMF, Args[0], Args[1],
-          [IID](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+          [&](const APFloat &LHS, const APFloat &RHS) -> APFloat {
             switch (IID) {
             case Intrinsic::maximum:
               return maximum(LHS, RHS);
@@ -1627,6 +1587,10 @@ public:
               return maximumnum(LHS, RHS);
             case Intrinsic::minimumnum:
               return minimumnum(LHS, RHS);
+            case Intrinsic::maxnum:
+              return maxnumWithSNaNQuieting(LHS, RHS);
+            case Intrinsic::minnum:
+              return minnumWithSNaNQuieting(LHS, RHS);
             default:
               llvm_unreachable("Unexpected intrinsic ID");
             }
