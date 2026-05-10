@@ -53,13 +53,58 @@ start:
   ret <2 x i64> %4
 }
 
+define <8 x i16> @vpaddlq_or_v16i8(<16 x i8> %a) {
+; CHECK-LABEL: vpaddlq_or_v16i8:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ret
+start:
+  %0 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %2 = zext <8 x i8> %0 to <8 x i16>
+  %3 = zext <8 x i8> %1 to <8 x i16>
+  %4 = or disjoint <8 x i16> %2, %3
+  ret <8 x i16> %4
+}
+
+define <4 x i32> @vpaddlq_or_v8i16(<8 x i16> %a) {
+; CHECK-LABEL: vpaddlq_or_v8i16:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+start:
+  %0 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %1 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %2 = zext <4 x i16> %0 to <4 x i32>
+  %3 = zext <4 x i16> %1 to <4 x i32>
+  %4 = or disjoint <4 x i32> %2, %3
+  ret <4 x i32> %4
+}
+
+define <2 x i64> @vpaddlq_or_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: vpaddlq_or_v4i32:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ret
+start:
+  %0 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %1 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+  %2 = zext <2 x i32> %0 to <2 x i64>
+  %3 = zext <2 x i32> %1 to <2 x i64>
+  %4 = or disjoint <2 x i64> %2, %3
+  ret <2 x i64> %4
+}
+
 define <8 x i16> @vpaddlq_v16i8_neg(<16 x i8> %a) {
 ; CHECK-LABEL: vpaddlq_v16i8_neg:
 ; CHECK:       // %bb.0: // %start
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    adrp x9, .LCPI4_1
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    ldr d2, [x9, :lo12:.LCPI4_1]
+; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    adrp x9, .LCPI7_1
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    ldr d2, [x9, :lo12:.LCPI7_1]
 ; CHECK-NEXT:    tbl v1.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
 ; CHECK-NEXT:    uaddl v0.8h, v1.8b, v0.8b
