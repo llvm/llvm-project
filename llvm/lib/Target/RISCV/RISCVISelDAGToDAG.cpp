@@ -1117,6 +1117,10 @@ bool RISCVDAGToDAGISel::tryCVBitManipExtractU(SDNode *Node) {
   assert(Node->getOpcode() == ISD::AND);
   SDLoc DL(Node);
 
+  // Bail out if the AND result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
 
@@ -1127,6 +1131,11 @@ bool RISCVDAGToDAGISel::tryCVBitManipExtractU(SDNode *Node) {
     MaskC = dyn_cast<ConstantSDNode>(RHS);
   }
   if (!MaskC)
+    return false;
+
+  // Heuristic: if LHS is (srl X, c) and the shift is reused, folding into
+  // cv.extractu recomputes the shift, so keep the generic SRLI + ANDI instead.
+  if (LHS.getOpcode() == ISD::SRL && !LHS.hasOneUse())
     return false;
 
   uint32_t Mask = MaskC->getZExtValue();
@@ -1183,9 +1192,17 @@ bool RISCVDAGToDAGISel::tryCVBitManipExtract(SDNode *Node) {
   assert(Node->getOpcode() == ISD::SRA);
   SDLoc DL(Node);
 
+  // Bail out if the SRA result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
   // Check: (sra (shl X, C1), C2)
   SDValue ShlNode = Node->getOperand(0);
   if (ShlNode.getOpcode() != ISD::SHL)
+    return false;
+
+  // Do not steal the SHL value from other users.
+  if (!ShlNode.hasOneUse())
     return false;
 
   auto *C2Node = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -1237,6 +1254,10 @@ bool RISCVDAGToDAGISel::tryCVBitManipBClr(SDNode *Node) {
 
   assert(Node->getOpcode() == ISD::AND);
   SDLoc DL(Node);
+
+  // Bail out if the AND result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
 
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
@@ -1299,6 +1320,10 @@ bool RISCVDAGToDAGISel::tryCVBitManipBSet(SDNode *Node) {
   assert(Node->getOpcode() == ISD::OR);
   SDLoc DL(Node);
 
+  // Bail out if the OR result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
 
@@ -1360,6 +1385,10 @@ bool RISCVDAGToDAGISel::tryCVBitManipInsert(SDNode *Node) {
 
   assert(Node->getOpcode() == ISD::OR);
   SDLoc DL(Node);
+
+  // Bail out if the OR result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
 
   // Try both orderings of the OR operands since OR is commutative.
   // One side must be (and rd, ClearMask), the other provides the value.
@@ -1447,6 +1476,12 @@ bool RISCVDAGToDAGISel::tryCVBitManipInsert(SDNode *Node) {
     }
 
     if (!RS1)
+      continue;
+
+    // Heuristic: require single use of the OR inputs (ClearSide/ValueSide and
+    // the AND inside ClearSide); otherwise the tied CV_INSERT forces a copy
+    // of rd and saves nothing.
+    if (!ClearSide.hasOneUse() || !ValueSide.hasOneUse())
       continue;
 
     // Emit: CV_INSERT rd, rs1, IS3=width, IS2=offset
