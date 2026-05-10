@@ -229,7 +229,7 @@ static cl::opt<bool>
                 cl::desc("Display the SLP trees with Graphviz"));
 
 static cl::opt<bool> VectorizeNonPowerOf2(
-    "slp-vectorize-non-power-of-2", cl::init(false), cl::Hidden,
+    "slp-vectorize-non-power-of-2", cl::init(true), cl::Hidden,
     cl::desc("Try to vectorize with non-power-of-2 number of elements."));
 
 static cl::opt<bool> ForcePostProcessStoresOperands(
@@ -242,10 +242,14 @@ static cl::opt<bool> NonVectReductions(
         "Use  non-vectorizable instructions as potential reduction roots."));
 
 /// True when \p slp-vectorize-non-power-of-2 is enabled and \p NumElts is a
-/// supported non-power-of-2 width: \p NumElts + 1 must be a power of two
-/// (e.g. 3 or 7 lanes, i.e. almost a full power-of-2 register).
-static bool isAllowedNonPowerOf2VF(unsigned NumElts) {
-  return VectorizeNonPowerOf2 && has_single_bit(NumElts + 1);
+/// supported non-power-of-2 width. The width is supported if \p NumElts is not
+/// a power of two and either it is small (<= 5, e.g. 3 or 5 lanes), or
+/// \p NumElts - 1 is also not a power of two (e.g. 6, 7, 10..15 lanes), or
+/// the elements being vectorized are themselves vectors (REVEC).
+static bool isAllowedNonPowerOf2VF(unsigned NumElts, bool IsVectorElement) {
+  return VectorizeNonPowerOf2 && !has_single_bit(NumElts) &&
+         ((SLPReVec && IsVectorElement) || NumElts <= 5 ||
+          !has_single_bit(NumElts - 1));
 }
 
 /// Enables vectorization of copyable elements.
@@ -9984,8 +9988,13 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
     unsigned StartIdx = 0;
     SmallVector<int> CandidateVFs;
-    if (isAllowedNonPowerOf2VF(MaxVF))
-      CandidateVFs.push_back(MaxVF);
+    if (isAllowedNonPowerOf2VF(
+            MaxVF, isa<FixedVectorType>(Loads.front()->getType()))) {
+      const unsigned FullVectorNumElements = getFullVectorNumberOfElements(
+          *TTI, Loads.front()->getType(), MaxVF - 1);
+      if (MaxVF >= 3 && FullVectorNumElements != MaxVF - 1)
+        CandidateVFs.push_back(MaxVF);
+    }
     for (int NumElts = getFloorFullVectorNumberOfElements(
              *TTI, Loads.front()->getType(), MaxVF);
          NumElts > 1; NumElts = getFloorFullVectorNumberOfElements(
@@ -26711,9 +26720,11 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
       Analysis.buildInstructionsState(ValOps.getArrayRef(), R);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
-    bool IsAllowedSize = hasFullVectorsOrPowerOf2(
-                             *TTI, ValOps.front()->getType(), ValOps.size()) ||
-                         isAllowedNonPowerOf2VF(ValOps.size());
+    bool IsAllowedSize =
+        hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(),
+                                 ValOps.size()) ||
+        isAllowedNonPowerOf2VF(ValOps.size(),
+                               isa<FixedVectorType>(ValOps.front()->getType()));
     if ((!IsAllowedSize && S && S.getOpcode() != Instruction::Load &&
          (!S.getMainOp()->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -26996,7 +27007,7 @@ bool StoreChainContext::initializeContext(
   // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF).
   unsigned NonPowerOf2VF = 0;
   unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
-  if (isAllowedNonPowerOf2VF(CandVF)) {
+  if (isAllowedNonPowerOf2VF(CandVF, isa<FixedVectorType>(StoreTy))) {
     NonPowerOf2VF = CandVF;
     assert(NonPowerOf2VF != MaxVF &&
            "Non-power-of-2 VF should not be equal to MaxVF");
@@ -27013,7 +27024,7 @@ bool StoreChainContext::initializeContext(
   }
 
   for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
-       VF = divideCeil(VF, 2))
+       VF = getFullVectorNumberOfElements(TTI, StoreTy, divideCeil(VF, 2)))
     CandidateVFs.push(VF);
 
   End = Operands.size();
@@ -28520,6 +28531,8 @@ public:
     // Try merge consecutive reduced values into a single vectorizable group and
     // check, if they can be vectorized as copyables.
     const bool TwoGroupsOnly = ReducedVals.size() == 2;
+    const bool LastOfTwoGroupsIsSingle =
+        TwoGroupsOnly && ReducedVals.back().size() == 1;
     const bool TwoGroupsOfSameSmallSize =
         TwoGroupsOnly &&
         ReducedVals.front().size() == ReducedVals.back().size() &&
@@ -28739,8 +28752,46 @@ public:
           ReduxWidth = bit_floor(ReduxWidth);
         return ReduxWidth;
       };
-      if (!isAllowedNonPowerOf2VF(ReduxWidth))
-        ReduxWidth = GetVectorFactor(ReduxWidth);
+      const unsigned FullRegReduxWidth = GetVectorFactor(ReduxWidth);
+      bool AllowNoPowerOf2 = false;
+      if (isAllowedNonPowerOf2VF(
+              ReduxWidth,
+              isa<FixedVectorType>(Candidates.front()->getType()))) {
+        // For a 5-wide reduction merged from two groups (4 elements plus a
+        // single trailing value) via copyable analysis, refuse the non-power
+        // of-2 width when the lone trailing value does not fit the main-op
+        // operand pattern. Such a mismatch makes a 5-wide vector wasteful
+        // compared to a 4-wide + scalar tail.
+        const unsigned SmallReductionNonPowerOf2 = 5;
+        auto LoneValueMismatchesMainOpOperands = [&]() {
+          Value *LastVal = ReducedVals.back().back();
+          if (!isa<Instruction>(LastVal))
+            return any_of(S.getMainOp()->operand_values(),
+                          IsaPred<Instruction>);
+          unsigned LastOpcode = cast<Instruction>(LastVal)->getOpcode();
+          return none_of(S.getMainOp()->operand_values(), [&](Value *Op) {
+            auto *I = dyn_cast<Instruction>(Op);
+            return I && I->getOpcode() == LastOpcode;
+          });
+        };
+        if (ReduxWidth == ReductionLimit) {
+          AllowNoPowerOf2 = true;
+        } else if (ReduxWidth == SmallReductionNonPowerOf2 && TwoGroupsOnly &&
+                   LastOfTwoGroupsIsSingle && S &&
+                   S.areInstructionsWithCopyableElements() &&
+                   LoneValueMismatchesMainOpOperands()) {
+          AllowNoPowerOf2 = false;
+        } else if (S && !S.isAltShuffle()) {
+          AllowNoPowerOf2 = true;
+        } else {
+          InstructionsState OpS =
+              getSameOpcode(ArrayRef(Candidates).slice(FullRegReduxWidth), TLI);
+          if (!OpS || OpS.isAltShuffle())
+            AllowNoPowerOf2 = true;
+        }
+      }
+      if (!AllowNoPowerOf2)
+        ReduxWidth = FullRegReduxWidth;
       ReduxWidth = std::min(ReduxWidth, MaxElts);
 
       unsigned Start = 0;
