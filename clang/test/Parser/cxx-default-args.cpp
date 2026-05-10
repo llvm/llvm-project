@@ -41,8 +41,8 @@ struct U {
   typedef int *fp(int x = ); // expected-error{{default arguments can only be specified for parameters in a function declaration}}
 };
 
-namespace {
-void f<>(int = []{;}) {} // expected-error{{no viable conversion from}} \
-                         // expected-error{{template specialization requires 'template<>'}} \
-                         // expected-note 2{{}}
+namespace GH196725 {
+template <class T> void f();
+template <> void f<int>(int = []{ ; return 0; }()) {} // expected-error{{no function template matches function template specialization 'f'}} \
+                                                      // expected-note@-1{{candidate template ignored}}
 }
