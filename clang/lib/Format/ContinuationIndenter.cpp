@@ -1109,8 +1109,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None)
       CurrentState.LastSpace = State.Column;
   } else if (Previous.is(TT_InheritanceColon)) {
-    CurrentState.Indent = State.Column;
-    CurrentState.LastSpace = State.Column;
+    // Indent relative to the inheritance colon if the inheritance list
+    // is being broken into separate lines.
+    if (Style.BreakInheritanceList != FormatStyle::BILS_No) {
+      CurrentState.Indent = State.Column;
+      CurrentState.LastSpace = State.Column;
+    }
   } else if (Current.is(TT_CSharpGenericTypeConstraintColon)) {
     CurrentState.ColonPos = State.Column;
   } else if (Previous.opensScope()) {
@@ -1237,6 +1241,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   switch (Style.BreakInheritanceList) {
+  case FormatStyle::BILS_No:
+    break;
   case FormatStyle::BILS_BeforeColon:
   case FormatStyle::BILS_AfterComma:
     if (Current.is(TT_InheritanceColon) || Previous.is(TT_InheritanceComma)) {
@@ -1859,7 +1865,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     else
       CurrentState.BreakBeforeParameter = false;
   }
-  if (Current.is(TT_InheritanceColon)) {
+  if (Current.is(TT_InheritanceColon) &&
+      Style.BreakInheritanceList != FormatStyle::BILS_No) {
     CurrentState.Indent =
         State.FirstIndent + Style.ConstructorInitializerIndentWidth;
   }

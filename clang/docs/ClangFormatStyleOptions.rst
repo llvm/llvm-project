@@ -3895,6 +3895,15 @@ the configuration (without a prefix: ``Auto``).
 
   Possible values:
 
+  * ``BILS_No`` (in configuration: ``No``)
+    Do not break inheritance list. If the line is too long, the wrapped
+    lines are indented ContinuationIndentWidth spaces.
+
+    .. code-block:: c++
+
+       class Foo : Base1, Base2
+       {};
+
   * ``BILS_BeforeColon`` (in configuration: ``BeforeColon``)
     Break inheritance list before the colon and after the commas.
 

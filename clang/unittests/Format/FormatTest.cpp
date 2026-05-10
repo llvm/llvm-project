@@ -3815,6 +3815,20 @@ TEST_F(FormatTest, FormatsClasses) {
 }
 
 TEST_F(FormatTest, BreakInheritanceStyle) {
+  FormatStyle StyleWithInheritanceBreakNo = getLLVMStyle();
+  StyleWithInheritanceBreakNo.BreakInheritanceList = FormatStyle::BILS_No;
+  verifyFormat("class MyClass : public X {};", StyleWithInheritanceBreakNo);
+  verifyFormat("class MyClass : public X, public Y {};",
+               StyleWithInheritanceBreakNo);
+  verifyFormat(
+      "class AAAAAAAAAAAAAAAAAAAAAA : public BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB,\n"
+      "    public CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC {};",
+      StyleWithInheritanceBreakNo);
+  verifyFormat("class MyOuterClass {\n"
+               "  class MyClass : public BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB,\n"
+               "      public CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC {};",
+               StyleWithInheritanceBreakNo);
+
   FormatStyle StyleWithInheritanceBreakBeforeComma = getLLVMStyle();
   StyleWithInheritanceBreakBeforeComma.BreakInheritanceList =
       FormatStyle::BILS_BeforeComma;

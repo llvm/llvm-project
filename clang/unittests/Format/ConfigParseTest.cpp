@@ -524,6 +524,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
 
   Style.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
+  CHECK_PARSE("BreakInheritanceList: No", BreakInheritanceList,
+              FormatStyle::BILS_No);
   CHECK_PARSE("BreakInheritanceList: AfterComma", BreakInheritanceList,
               FormatStyle::BILS_AfterComma);
   CHECK_PARSE("BreakInheritanceList: BeforeComma", BreakInheritanceList,

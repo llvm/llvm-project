@@ -744,6 +744,8 @@ clang-format
   line if they exceed the specified count.
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
   constructor initializers after commas, keeping the colon on the same line.
+- Add ``No`` value to ``BreakInheritanceList`` to disable breaking of the inheritance
+  list. If the list is too long, standard line breaking rules apply.
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with
   per-operator break rules and minimum chain length gating via ``PerOperator``.
 - Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
