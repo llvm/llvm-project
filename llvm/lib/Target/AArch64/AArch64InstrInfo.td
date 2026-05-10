@@ -10326,6 +10326,14 @@ def : Pat<(v8i16 (AArch64sqdmulh (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
 def : Pat<(v4i32 (AArch64sqdmulh (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
           (SQDMULHv4i32 V128:$Rn, V128:$Rm)>;
 
+def : Pat<(v8i8 (clmulh V64:$Rn, V64:$Rm)),
+          (v8i8 (SHRNv8i8_shift (v16i8 (PMULLv8i8 V64:$Rn, V64:$Rm)), (i32 8)))>;
+def : Pat<(v16i8 (clmulh V128:$Rn, V128:$Rm)),
+          (v16i8 (UZP2v16i8
+                  (v16i8 (PMULLv8i8 (v8i8 (EXTRACT_SUBREG V128:$Rn, dsub)),
+                                    (v8i8 (EXTRACT_SUBREG V128:$Rm, dsub)))),
+                  (v16i8 (PMULLv16i8 V128:$Rn, V128:$Rm))))>;
+
 // Conversions within AdvSIMD types in the same register size are free.
 // But because we need a consistent lane ordering, in big endian many
 // conversions require one or more REV instructions.
