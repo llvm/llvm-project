@@ -184,8 +184,13 @@ static void DumpCommandLine(int argc, char **argv) {
 }
 
 struct MarkerStyle {
-  /// The starting char (before tildes) for marking the line.
-  char Lead;
+  /// The first char for marking the input line.
+  char Head;
+  /// Every character for marking the input line between \c Head and \c Tail.
+  /// Normally it is a tilde.
+  char Mid;
+  /// The final char for marking the input line.  Normally it is a tilde.
+  char Tail;
   /// What color to use for this annotation.
   raw_ostream::Colors Color;
   /// A note to follow the marker, or empty string if none.
@@ -207,7 +212,12 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
   // used instead.
   MarkerStyle Res;
   bool IsError = Diag.isError() || Diag.getMatchResultDiag().isError();
-  Res.Lead = !Diag.getMatchRange() ? ' ' : IsError ? '!' : '^';
+  if (Diag.getMatchRange()) {
+    Res.Head = IsError ? '!' : '^';
+    Res.Mid = Res.Tail = '~';
+  } else {
+    Res.Head = Res.Mid = Res.Tail = ' ';
+  }
   Res.Color = IsError ? raw_ostream::RED : raw_ostream::GREEN;
   Res.FiltersAsError = IsError;
 
@@ -224,14 +234,15 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
       Res.Note = "match on wrong line";
       break;
     case MatchFoundDiag::Discarded:
-      Res.Lead = '!'; // Not an error, but not a successful match either.
+      Res.Head = '!'; // Not an error, but not a successful match either.
       Res.Color = raw_ostream::CYAN;
       Res.Note = "discard: overlaps earlier match";
       break;
     }
     break;
   case FileCheckDiag::MatchNoneDiag:
-    Res.Lead = 'X';
+    Res.Head = 'X';
+    Res.Mid = Res.Tail = '~';
     switch (cast<MatchNoneDiag>(Diag).getStatus()) {
     case MatchNoneDiag::Success:
       break;
@@ -244,7 +255,7 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
     }
     break;
   case FileCheckDiag::MatchFuzzyDiag:
-    Res.Lead = '?';
+    Res.Head = '?';
     Res.Color = raw_ostream::MAGENTA;
     Res.Note = "possible intended match";
     break;
@@ -359,8 +370,8 @@ struct InputAnnotation {
   /// !IsFirstLine.
   unsigned InputLine;
   /// The column range (one-origin indexing, open end) in which to mark the
-  /// input line.  If InputEndCol is UINT_MAX, treat it as the last column
-  /// before the newline.
+  /// input line.  If \c InputEndCol is \c UINT_MAX, the rest of the input line
+  /// should be marked.
   unsigned InputStartCol, InputEndCol;
   /// The marker to use.
   MarkerStyle Marker;
@@ -537,6 +548,13 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         SM.getLineAndColumn(InputRange.Start);
     auto [InputEndLine, InputEndCol] = SM.getLineAndColumn(InputRange.End);
 
+    // If a range ends before the first column on a line, then it has no
+    // characters on that line, so there is nothing to render there.
+    if (InputStartLine < InputEndLine && InputEndCol == 1) {
+      --InputEndLine;
+      InputEndCol = UINT_MAX;
+    }
+
     // Compute the marker location, and break annotation into multiple
     // annotations if it spans multiple lines.
     A.IsFirstLine = true;
@@ -552,25 +570,21 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       assert(InputStartLine < InputEndLine &&
              "expected input range not to be inverted");
       A.InputEndCol = UINT_MAX;
+      char MarkerTail = A.Marker.Tail;
+      A.Marker.Tail = A.Marker.Mid;
       Annotations.push_back(A);
       for (unsigned L = InputStartLine + 1, E = InputEndLine; L <= E; ++L) {
-        // If a range ends before the first column on a line, then it has no
-        // characters on that line, so there's nothing to render.
-        if (InputEndCol == 1 && L == E)
-          break;
         InputAnnotation B;
         B.LabelIndexGlobal = A.LabelIndexGlobal;
         B.Label = A.Label;
         B.IsFirstLine = false;
         B.InputLine = L;
         B.Marker = A.Marker;
-        B.Marker.Lead = '~';
+        B.Marker.Head = B.Marker.Mid = A.Marker.Mid;
+        B.Marker.Tail = L != E ? A.Marker.Mid : MarkerTail;
         B.Marker.Note = "";
         B.InputStartCol = 1;
-        if (L != E)
-          B.InputEndCol = UINT_MAX;
-        else
-          B.InputEndCol = InputEndCol;
+        B.InputEndCol = L != E ? UINT_MAX : InputEndCol;
         B.FoundAndExpectedMatch = A.FoundAndExpectedMatch;
         Annotations.push_back(B);
       }
@@ -797,11 +811,15 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       unsigned Col;
       for (Col = 1; Col < AnnotationItr->InputStartCol; ++Col)
         COS << ' ';
-      COS << AnnotationItr->Marker.Lead;
+      COS << AnnotationItr->Marker.Head;
       // If InputEndCol=UINT_MAX, stop at InputLineWidth.
-      for (++Col; Col < AnnotationItr->InputEndCol && Col <= InputLineWidth;
+      for (++Col; Col < AnnotationItr->InputEndCol - 1 && Col <= InputLineWidth;
            ++Col)
-        COS << '~';
+        COS << AnnotationItr->Marker.Mid;
+      if (Col < AnnotationItr->InputEndCol && Col <= InputLineWidth) {
+        COS << AnnotationItr->Marker.Tail;
+        ++Col;
+      }
       const std::string &Note = AnnotationItr->Marker.Note;
       if (!Note.empty()) {
         // Put the note at the end of the input line.  If we were to instead
