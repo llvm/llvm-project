@@ -1416,10 +1416,12 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
   }
 
   // Check greater comparison
-  ConstantInt *Zero =
-      ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), 0);
+  unsigned int OldElementWidth = OldVecType->getScalarSizeInBits();
+  ConstantInt *Zero = ConstantInt::get(
+      IntegerType::getIntNTy(I.getContext(), OldElementWidth), 0);
   ConstantInt *MsbFlip =
-      ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), 0x80000000);
+      ConstantInt::get(IntegerType::getIntNTy(I.getContext(), OldElementWidth),
+                       1ll << (OldElementWidth - 1));
   Value *MsbFlipLower1 = nullptr, *MsbFlipLower2 = nullptr;
   CmpPredicate PredGt;
 
@@ -1458,7 +1460,6 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
                     << '\n');
 
   // Perform folding
-  unsigned int OldElementWidth = OldVecType->getScalarSizeInBits();
   Type *NewElementType = IntegerType::get(I.getContext(), OldElementWidth * 2);
   Type *NewVecType =
       VectorType::get(NewElementType, OldElementCount / 2, false);
