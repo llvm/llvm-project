@@ -3543,6 +3543,8 @@ static SDValue combineSmallMaskReduction(SDNode *N, EVT FromVT,
                                          SelectionDAG &DAG) {
   EVT VecVT = FromVT.changeVectorElementType(*DAG.getContext(),
                                              MVT::getIntegerVT(128 / NumElts));
+  assert(VecVT.getSizeInBits() == 128 &&
+         "mask reduction should be widened to a 128-bit vector");
 
   switch (Info.Kind) {
   case MaskReduceKind::AnyTrue:
