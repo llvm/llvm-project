@@ -1,0 +1,57 @@
+# Merges PR's with title 'merge main into amd-staging'
+# #aits for all required checks to be successful
+# Merge strategy: always a merge commit (--merge), not squash or rebase
+
+name: Auto-merge (main → amd-staging sync PRs)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - amd-staging
+
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+  statuses: read
+
+concurrency:
+  group: automerge-amd-staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enable-auto-merge:
+    name: Enable auto-merge when checks pass
+    runs-on: ubuntu-latest
+    # Only PRs into amd-staging from this repo, non-draft; title must contain this substring (case-sensitive).
+    if: |
+      github.event.pull_request.base.ref == 'amd-staging' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.draft == false &&
+      contains(github.event.pull_request.title, 'merge main into amd-staging')
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: rocm-cciapp
+        if: ${{ vars.ROCM_CCIAPP_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.ROCM_CCIAPP_APP_ID }}
+          private-key: ${{ secrets.ROCM_CCIAPP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Enable auto-merge (merge commit on branch)
+        env:
+          ROCM_CCIAPP_TOKEN: ${{ steps.rocm-cciapp.outputs.token }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ROCM_CCIAPP_TOKEN:-}" ]; then
+            echo "::error::Set repo Variable ROCM_CCIAPP_APP_ID (and Secret ROCM_CCIAPP_PRIVATE_KEY). GITHUB_TOKEN is read-only here and cannot merge."
+            exit 1
+          fi
+          export GH_TOKEN="$ROCM_CCIAPP_TOKEN"
+          # --merge = merge commit preserving branch history (not --squash / --rebase)
+          gh pr merge "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --merge \
+            --auto
