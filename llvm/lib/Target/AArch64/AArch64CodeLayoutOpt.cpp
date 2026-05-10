@@ -82,7 +82,7 @@ private:
   /// \returns true iff MBB contains at least one layout-sensitive pattern.
   bool detectLayoutSensitivePattern(MachineBasicBlock *MBB);
 
-  // Emit .p2align before MI. Splits the block if MI is not at its start.
+  /// Emit .p2align before MI. Splits the block if MI is not at its start.
   void emitP2Align(MachineInstr &MI, Align DesiredAlign,
                    unsigned MaxSkipBytes = 4);
 
