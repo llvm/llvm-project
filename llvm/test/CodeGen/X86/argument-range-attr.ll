@@ -6,8 +6,8 @@
 define i64 @arg_range_top3(i64 range(i64 0, 2305843009213693952) %n) {
 ; CHECK-LABEL: arg_range_top3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $2305843009213693944, %rax # imm = 0x1FFFFFFFFFFFFFF8
-; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    andq $-8, %rax
 ; CHECK-NEXT:    retq
   %r = and i64 %n, 2305843009213693944
   ret i64 %r
@@ -19,7 +19,7 @@ define i64 @arg_range_byte(i64 range(i64 0, 256) %n) {
 ; CHECK-LABEL: arg_range_byte:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andl $248, %eax
+; CHECK-NEXT:    andl $-8, %eax
 ; CHECK-NEXT:    retq
   %r = and i64 %n, 248
   ret i64 %r
@@ -28,8 +28,8 @@ define i64 @arg_range_byte(i64 range(i64 0, 256) %n) {
 define i64 @arg_range_nonzero_lo(i64 range(i64 1, 2305843009213693952) %n) {
 ; CHECK-LABEL: arg_range_nonzero_lo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $2305843009213693944, %rax # imm = 0x1FFFFFFFFFFFFFF8
-; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    andq $-8, %rax
 ; CHECK-NEXT:    retq
   %r = and i64 %n, 2305843009213693944
   ret i64 %r
@@ -39,7 +39,7 @@ define i64 @arg_range_byte_nonzero_lo(i64 range(i64 1, 256) %n) {
 ; CHECK-LABEL: arg_range_byte_nonzero_lo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andl $248, %eax
+; CHECK-NEXT:    andl $-8, %eax
 ; CHECK-NEXT:    retq
   %r = and i64 %n, 248
   ret i64 %r
@@ -49,7 +49,7 @@ define i32 @arg_range_i32_byte(i32 range(i32 0, 256) %n) {
 ; CHECK-LABEL: arg_range_i32_byte:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $248, %eax
+; CHECK-NEXT:    andl $-8, %eax
 ; CHECK-NEXT:    retq
   %r = and i32 %n, 248
   ret i32 %r
@@ -58,8 +58,7 @@ define i32 @arg_range_i32_byte(i32 range(i32 0, 256) %n) {
 define i64 @arg_range_top1(i64 range(i64 0, 9223372036854775808) %n) {
 ; CHECK-LABEL: arg_range_top1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $63, %rax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = lshr i64 %n, 63
   ret i64 %r
@@ -68,10 +67,9 @@ define i64 @arg_range_top1(i64 range(i64 0, 9223372036854775808) %n) {
 define i64 @arg_range_two_args(i64 range(i64 0, 256) %a, i64 range(i64 0, 65536) %b) {
 ; CHECK-LABEL: arg_range_two_args:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    andl $248, %edi
-; CHECK-NEXT:    andl $65528, %eax # imm = 0xFFF8
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    andl $-8, %eax
 ; CHECK-NEXT:    retq
   %ra = and i64 %a, 248
   %rb = and i64 %b, 65528
@@ -83,7 +81,7 @@ define i32 @arg_range_zeroext(i8 zeroext range(i8 0, 16) %n) {
 ; CHECK-LABEL: arg_range_zeroext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $14, %eax
+; CHECK-NEXT:    andl $-2, %eax
 ; CHECK-NEXT:    retq
   %z = zext i8 %n to i32
   %r = and i32 %z, 14
