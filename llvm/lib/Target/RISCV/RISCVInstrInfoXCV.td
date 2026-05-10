@@ -48,6 +48,23 @@ def trailing1sPlus1 : SDNodeXForm<imm, [{
                           SDLoc(N), N->getValueType(0));
 }]>;
 
+// Type-safe simm12 predicates for XCVmem post-increment stores.
+// The hardware accepts any simm12 byte offset, but emitting an unaligned
+// post-increment for a half/word store leaves the next access misaligned
+// and traps on CV32E40P. Restrict to multiples of the access size.
+
+def simm12_postinc_b : Operand<i32>, ImmLeaf<i32, [{
+  return isInt<12>(Imm);
+}]>;
+
+def simm12_postinc_h : Operand<i32>, ImmLeaf<i32, [{
+  return isInt<12>(Imm) && (Imm & 0x1) == 0;
+}]>;
+
+def simm12_postinc_w : Operand<i32>, ImmLeaf<i32, [{
+  return isInt<12>(Imm) && (Imm & 0x3) == 0;
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -674,9 +691,17 @@ class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
     : Pat<(i32 (LoadOp CVrr:$regreg)),
           (Inst CVrr:$regreg)>;
 
-class CVStriPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_lo:$imm12),
-          (Inst GPR:$rs2, GPR:$rs1, simm12_lo:$imm12)>;
+class CVStriPatB<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_postinc_b:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12_postinc_b:$imm12)>;
+
+class CVStriPatH<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_postinc_h:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12_postinc_h:$imm12)>;
+
+class CVStriPatW<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_postinc_w:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12_postinc_w:$imm12)>;
 
 class CVStrriPat<PatFrag StoreOp, RVInst Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, GPR:$rs3),
@@ -695,9 +720,9 @@ let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
   def : CVLdrrPat<extloadi16, CV_LHU_rr>;
   def : CVLdrrPat<load, CV_LW_rr>;
 
-  def : CVStriPat<post_truncsti8, CV_SB_ri_inc>;
-  def : CVStriPat<post_truncsti16, CV_SH_ri_inc>;
-  def : CVStriPat<post_store, CV_SW_ri_inc>;
+  def : CVStriPatB<post_truncsti8, CV_SB_ri_inc>;
+  def : CVStriPatH<post_truncsti16, CV_SH_ri_inc>;
+  def : CVStriPatW<post_store, CV_SW_ri_inc>;
 
   def : CVStrriPat<post_truncsti8, CV_SB_rr_inc>;
   def : CVStrriPat<post_truncsti16, CV_SH_rr_inc>;
