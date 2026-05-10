@@ -375,8 +375,8 @@
 // RUN: %clang_cl -c -### /std:clatest -- %s 2>&1 | FileCheck -check-prefix CHECK-CLATEST %s
 // CHECK-CLATEST: -std=c23
 
-// RUN: %clang_cl -c -### /Zc:preprocessor- -- %s 2>&1 | FileCheck -check-prefix CHECK-ZC-PREPROCESSOR-NO %s
-// CHECK-ZC-PREPROCESSOR-NO: -fms-preprocessor-compat
+// RUN: %clang_cl -c -### /Zc:preprocessor- -- %s 2>&1 | FileCheck -check-prefix CHECK-ZC-PREPROCESSOR_ %s
+// CHECK-ZC-PREPROCESSOR_: -fms-preprocessor-compat
 
 // RUN: %clang_cl -c -### /Zc:preprocessor -- %s 2>&1 | FileCheck -check-prefix CHECK-ZC-PREPROCESSOR %s
 // CHECK-ZC-PREPROCESSOR-NOT: -fms-preprocessor-compat
