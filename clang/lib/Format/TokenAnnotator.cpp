@@ -1215,8 +1215,8 @@ private:
     unsigned CommaCount = 0;
     while (CurrentToken) {
       assert(!Scopes.empty());
-      Scopes.back() = getScopeType(OpeningBrace);
       if (CurrentToken->is(tok::r_brace)) {
+        assert(Scopes.back() == getScopeType(OpeningBrace));
         Scopes.pop_back();
         assert(OpeningBrace.Optional == CurrentToken->Optional);
         OpeningBrace.MatchingParen = CurrentToken;
@@ -1241,6 +1241,7 @@ private:
              (!Contexts.back().ColonIsDictLiteral || !IsCpp)) ||
             Style.isProto()) {
           OpeningBrace.setType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
           if (Previous->Tok.getIdentifierInfo() ||
               Previous->is(tok::string_literal)) {
             Previous->setType(TT_SelectorName);
@@ -1249,16 +1250,20 @@ private:
         if (CurrentToken->is(tok::colon) && OpeningBrace.is(TT_Unknown) &&
             !Style.isTableGen()) {
           OpeningBrace.setType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
         } else if (Style.isJavaScript()) {
           OpeningBrace.overwriteFixedType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
         }
       }
       bool IsBracedListComma = false;
       if (CurrentToken->is(tok::comma)) {
-        if (Style.isJavaScript())
+        if (Style.isJavaScript()) {
           OpeningBrace.overwriteFixedType(TT_DictLiteral);
-        else
+          Scopes.back() = getScopeType(OpeningBrace);
+        } else {
           IsBracedListComma = OpeningBrace.is(BK_BracedInit);
+        }
         ++CommaCount;
       }
       if (!consumeToken())
