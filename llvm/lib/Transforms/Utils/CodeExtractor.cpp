@@ -2124,12 +2124,34 @@ void CodeExtractor::insertReplacerCall(
     }
   }
 
-  if (FuncRetVal)
+  if (FuncRetVal) {
     for (User *U : FuncRetVal->users()) {
       Instruction *inst = cast<Instruction>(U);
       if (inst->getParent()->getParent() == oldFunction)
         inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
     }
+
+    Use *U = ReplacerCall->getSingleUndroppableUse();
+    AttrBuilder RetAttrs(oldFunction->getContext(),
+                         oldFunction->getAttributes().getRetAttrs());
+    if (RetAttrs.hasAttributes()) {
+      // Update the return attributes for the extracted function and the
+      // replacer call if the result of the call is immediately followed by
+      // return instruction.
+      while (U) {
+        Value *User = U->getUser();
+        if (isa<PHINode>(User)) {
+          U = User->getSingleUndroppableUse();
+          continue;
+        }
+        if (isa<ReturnInst>(User)) {
+          ReplacerCall->addRetAttrs(RetAttrs);
+          ReplacerCall->getCalledFunction()->addRetAttrs(RetAttrs);
+        }
+        break;
+      }
+    }
+  }
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)
