@@ -13,10 +13,11 @@ potential dangling pointer defects in code. The analysis aims to detect
 when a pointer, reference or view type (such as ``std::string_view``) refers to an object
 that is no longer alive, a condition that leads to use-after-free bugs and
 security vulnerabilities. Common examples include pointers to stack variables
-that have gone out of scope, fields holding views to stack-allocated objects
-(dangling-field), returning pointers/references to stack variables 
-(return stack address) or iterators into container elements invalidated by
-container operations (e.g., ``std::vector::push_back``)
+that have gone out of scope, pointers to heap objects that have been
+freed, fields holding views to stack-allocated objects (dangling-field),
+returning pointers/references to stack variables (return stack address) or
+iterators into container elements invalidated by container operations (e.g.,
+``std::vector::push_back``)
 
 The analysis design is inspired by `Polonius, the Rust borrow checker <https://github.com/rust-lang/polonius>`_,
 but adapted to C++ idioms and constraints, such as the lack of exclusivity enforcement (alias-xor-mutability). 
@@ -265,7 +266,74 @@ it refers to has gone out of scope.
              p = &i; // OK!
            }
            (void)*p;
+          }
+
+The analysis also covers pointer arithmetic. If the result of pointer
+arithmetic refers to an object whose lifetime has ended, the analysis diagnoses
+the later use.
+
+.. code-block:: c++
+
+  void pointer_arithmetic() {
+    int *p;
+    {
+      int data[4] = {};
+      p = data + 1; // warning: object whose reference is captured does not live long enough
+    }               // note: destroyed here
+    (void)*p;       // note: later used here
+  }
+
+Use after free
+--------------
+
+This check warns when a pointer or reference is used after the object it refers
+to has been freed with ``delete`` or ``delete[]``. Heap allocations created with
+``new`` are checked so that pointers, references and views to the allocation are
+not used after the object is deleted.
+
+.. list-table::
+   :widths: 50 50
+   :header-rows: 1
+   :class: colored-code-table
+
+   * - Use after free
+     - Correct
+   * -
+       .. code-block:: c++
+
+         void foo() {
+           int *p = new int(0); // warning: allocated object does not live long enough
+           delete p;            // note: freed here
+           (void)*p;            // note: later used here
          }
+     -
+       .. code-block:: c++
+
+         void foo() {
+           int *p = new int(0);
+           (void)*p;
+           delete p; // OK!
+         }
+
+The same check applies when a heap-allocated object stores a reference to
+another object. For example, a heap-allocated view object constructed from a
+stack object is diagnosed if the view outlives the object it refers to.
+
+.. code-block:: c++
+
+  struct View {
+    View(const int &i [[clang::lifetimebound]]);
+    void use() const;
+  };
+
+  void bar() {
+    View *v;
+    {
+      int i = 0;
+      v = new View(i); // warning: object whose reference is captured does not live long enough
+    }                  // note: destroyed here
+    v->use();          // note: later used here
+  }
 
 Return of stack address
 -----------------------
@@ -356,15 +424,15 @@ stack-allocated variable or temporary to a field of the class.
 Use after invalidation (experimental)
 -------------------------------------
 
-This check warns when a reference to a container element (such as an iterator,
-pointer or reference) is used after a container operation that may have
-invalidated it. For example, adding elements to ``std::vector`` may cause
-reallocation, invalidating all existing iterators, pointers and references to
-its elements.
+This check warns when a pointer, reference or view is used after an operation
+that may have invalidated it. This includes references to container elements
+used after a container operation, and pointers to objects managed by owners such
+as ``std::unique_ptr`` after operations like ``reset``. For example, adding
+elements to ``std::vector`` may cause reallocation, invalidating all existing
+iterators, pointers and references to its elements.
 
 .. note::
-  Container invalidation checking is highly experimental and may produce false
-  positives.
+  Invalidation checking is highly experimental and may produce false positives.
 
 .. list-table::
    :widths: 50 50
@@ -394,6 +462,57 @@ its elements.
           int* p = &v[0]; // OK!
           *p = 10;
         }
+
+The analysis also covers iterator arithmetic. An iterator produced from another
+iterator is still treated as referring to the same container.
+
+.. code-block:: c++
+
+  #include <vector>
+
+  void iterator_arithmetic(std::vector<int>& v) {
+    auto it = v.begin() + 1; // warning: 'v' is later invalidated
+    v.push_back(4);          // note: invalidated here
+    (void)*it;               // note: later used here
+  }
+
+The analysis also treats explicit destruction as invalidation. Explicit
+destructor calls and ``std::destroy_at`` invalidate pointers, references and
+views into the destroyed object. Placement ``new`` is checked against the
+lifetime of the storage passed to it, so the returned pointer must not outlive
+that storage.
+
+.. code-block:: c++
+
+  #include <memory>
+  #include <string>
+
+  void explicit_destruction() {
+    std::string s = "hello";
+    const char *p = s.data(); // warning: object whose reference is captured is later invalidated
+    std::destroy_at(&s);      // note: invalidated here
+    (void)*p;                 // note: later used here
+  }
+
+  void unique_ptr_reset() {
+    std::unique_ptr<int> u(new int(0));
+    int *p = u.get(); // warning: object whose reference is captured is later invalidated
+    u.reset();        // note: invalidated here
+    (void)*p;         // note: later used here
+  }
+
+.. code-block:: c++
+
+  #include <new>
+
+  void placement_new() {
+    int *p;
+    {
+      int storage;
+      p = new (&storage) int(0); // warning: object whose reference is captured does not live long enough
+    }                            // note: destroyed here
+    (void)*p;                    // note: later used here
+  }
 
 
 Annotation Inference and Suggestions
@@ -449,6 +568,7 @@ enables only the high-confidence subset of these checks.
   * ``-Wlifetime-safety-permissive``: Enables high-confidence checks for dangling pointers. **Recommended for initial adoption.**
 
     * ``-Wlifetime-safety-use-after-scope``: Warns when a pointer to a stack variable is used after the variable's lifetime has ended.
+    * ``-Wlifetime-safety-use-after-free``: Warns when a pointer to a heap allocation or freed parameter is used after ``delete`` or ``delete[]``.
     * ``-Wlifetime-safety-return-stack-addr``: Warns when a function returns a pointer or reference to one of its local stack variables.
     * ``-Wlifetime-safety-dangling-field``: Warns when a class field is assigned a pointer to a temporary or stack variable whose lifetime is shorter than the class instance.
   
@@ -457,7 +577,7 @@ enables only the high-confidence subset of these checks.
     *   ``-Wlifetime-safety-use-after-scope-moved``: Same as ``-Wlifetime-safety-use-after-scope`` but for cases where the variable may have been moved from before its destruction.
     *   ``-Wlifetime-safety-return-stack-addr-moved``: Same as ``-Wlifetime-safety-return-stack-addr`` but for cases where the variable may have been moved from.
     *   ``-Wlifetime-safety-dangling-field-moved``: Same as ``-Wlifetime-safety-dangling-field`` but for cases where the variable may have been moved from.
-    *   ``-Wlifetime-safety-invalidation``: Warns when a container iterator or reference to an element is used after an operation that may invalidate it (Experimental).
+    *   ``-Wlifetime-safety-invalidation``: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation, ``std::unique_ptr::reset``, explicit destruction or ``std::destroy_at`` (Experimental).
 
 *   ``-Wlifetime-safety-suggestions``: Enables suggestions to add ``[[clang::lifetimebound]]`` to function parameters and ``this`` parameters.
 
