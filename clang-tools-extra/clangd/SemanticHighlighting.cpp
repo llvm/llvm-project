@@ -583,10 +583,8 @@ public:
   }
 
   bool VisitTagDecl(TagDecl *D) {
-    for (unsigned i = 0; i < D->getNumTemplateParameterLists(); ++i) {
-      if (auto *TPL = D->getTemplateParameterList(i))
-        H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    }
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     return true;
   }
 
@@ -824,10 +822,8 @@ public:
   }
 
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
-    for (unsigned i = 0; i < D->getNumTemplateParameterLists(); ++i) {
-      if (auto *TPL = D->getTemplateParameterList(i))
-        H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    }
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
       return true;

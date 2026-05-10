@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-special-member-functions
-.. meta::
-   :http-equiv=refresh: 5;URL=../cppcoreguidelines/special-member-functions.html
 
 hicpp-special-member-functions
 ==============================

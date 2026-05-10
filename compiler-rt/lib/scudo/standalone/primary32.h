@@ -454,6 +454,8 @@ void SizeClassAllocator32<Config>::iterateOverBlocks(F Callback) {
 template <typename Config>
 void SizeClassAllocator32<Config>::getStats(ScopedString *Str) {
   // TODO(kostyak): get the RSS per region.
+  Str->append("\nConfig Stats Primary32: ");
+  Config::getConfigValues(Str);
   uptr TotalMapped = 0;
   uptr PoppedBlocks = 0;
   uptr PushedBlocks = 0;

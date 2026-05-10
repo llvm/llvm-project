@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <numeric>
@@ -940,11 +941,11 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
   return std::nullopt;
 }
 
-SmallVector<APInt> llvm::ConstantFoldCountOp(unsigned Opcode, LLT DstTy,
-                                             Register Src,
-                                             const MachineRegisterInfo &MRI) {
+SmallVector<APInt>
+llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
+                             const MachineRegisterInfo &MRI) {
   unsigned EltBits = DstTy.getScalarSizeInBits();
-  auto Count = [Opcode, EltBits](const APInt &V) -> APInt {
+  auto Fold = [Opcode, EltBits](const APInt &V) -> APInt {
     switch (Opcode) {
     case TargetOpcode::G_CTLZ:
     case TargetOpcode::G_CTLZ_ZERO_UNDEF:
@@ -954,13 +955,19 @@ SmallVector<APInt> llvm::ConstantFoldCountOp(unsigned Opcode, LLT DstTy,
       return APInt(EltBits, V.countr_zero());
     case TargetOpcode::G_CTPOP:
       return APInt(EltBits, V.popcount());
+    case TargetOpcode::G_ABS:
+      return V.abs();
+    case TargetOpcode::G_BSWAP:
+      return V.byteSwap();
+    case TargetOpcode::G_BITREVERSE:
+      return V.reverseBits();
     }
-    llvm_unreachable("unexpected opcode in ConstantFoldCountOp");
+    llvm_unreachable("unexpected opcode in ConstantFoldUnaryIntOp");
   };
 
   auto tryFoldScalar = [&](Register R) -> std::optional<APInt> {
     if (auto MaybeCst = getIConstantVRegVal(R, MRI))
-      return Count(*MaybeCst);
+      return Fold(*MaybeCst);
     return std::nullopt;
   };
   if (MRI.getType(Src).isVector()) {
@@ -1722,8 +1729,10 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPEXTLOAD:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPTRUNCSTORE:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSIN:
@@ -1777,22 +1786,6 @@ static bool shiftAmountKnownInRange(Register ShiftAmount,
   }
 
   return true;
-}
-
-namespace {
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-}
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
 static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,

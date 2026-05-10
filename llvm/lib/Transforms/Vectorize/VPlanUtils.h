@@ -62,7 +62,7 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
-bool isUniformAcrossVFsAndUFs(VPValue *V);
+bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
@@ -71,6 +71,10 @@ VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 /// Get the VF scaling factor applied to the recipe's output, if the recipe has
 /// one.
 unsigned getVFScaleFactor(VPRecipeBase *R);
+
+/// Return true if we do not know how to (mechanically) hoist or sink \p R.
+/// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
 
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
@@ -150,6 +154,14 @@ template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
 /// Find the canonical IV increment of \p Plan's vector loop region. Returns
 /// nullptr if not found.
 VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
+
+/// Returns the GEP nowrap flags for \p Ptr, looking through pointer casts
+/// mirroring Value::stripPointerCasts.
+GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
+
+/// Returns true if \p V is used as part of the address of another load or
+/// store.
+bool isUsedByLoadStoreAddress(const VPValue *V);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.
