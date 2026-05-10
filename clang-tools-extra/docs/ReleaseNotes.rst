@@ -504,11 +504,11 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check:
 
-    - Fixed a false positive on implicitly generated functions such as
-      inherited constructors.
+  - Fixed a false positive on implicitly generated functions such as
+    inherited constructors.
 
-    - Added `AllowImplicitMove` option to not warn when an rvalue reference
-      parameter is returned without an explicit ``std::move``.
+  - Added `AllowImplicitMove` option to not warn when an rvalue reference
+    parameter is returned without an explicit ``std::move``.
 
 - Improved :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
