@@ -55,6 +55,30 @@ Potentially Breaking Changes
   <clang-tidy/checks/performance/prefer-single-char-overloads>`.
   The original check will be removed in the 25th release.
 
+- Removed the :program:`clang-tidy` ``hicpp`` module. All checks have been moved
+  to the other modules. Use the replacement checks instead:
+
+  ================================== =========================================================
+  Removed check                      Replacement check
+  ================================== =========================================================
+  ``hicpp-avoid-c-arrays``           :doc:`modernize-avoid-c-arrays
+                                     <clang-tidy/checks/modernize/avoid-c-arrays>`
+  ``hicpp-avoid-goto``               :doc:`cppcoreguidelines-avoid-goto
+                                     <clang-tidy/checks/cppcoreguidelines/avoid-goto>`
+  ``hicpp-braces-around-statements`` :doc:`readability-braces-around-statements
+                                     <clang-tidy/checks/readability/braces-around-statements>`
+  ``hicpp-deprecated-headers``       :doc:`modernize-deprecated-headers
+                                     <clang-tidy/checks/modernize/deprecated-headers>`
+  ``hicpp-exception-baseclass``      :doc:`bugprone-std-exception-baseclass
+                                     <clang-tidy/checks/bugprone/std-exception-baseclass>`
+  ``hicpp-explicit-conversions``     :doc:`misc-explicit-constructor
+                                     <clang-tidy/checks/misc/explicit-constructor>`
+  ``hicpp-function-size``            :doc:`readability-function-size
+                                     <clang-tidy/checks/readability/function-size>`
+  ``hicpp-ignored-remove-result``    :doc:`bugprone-unused-return-value
+                                     <clang-tidy/checks/bugprone/unused-return-value>`
+  ================================== =========================================================
+
 Improvements to clangd
 ----------------------
 
