@@ -128,6 +128,8 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   Ibm128Align = 128;
   LargeArrayMinWidth = 0;
   LargeArrayAlign = 0;
+  LargeGlobalMinWidth = 0;
+  LargeGlobalAlign = 0;
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
   MaxVectorAlign = 0;
   MaxTLSAlign = 0;

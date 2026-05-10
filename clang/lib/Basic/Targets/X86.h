@@ -742,6 +742,8 @@ public:
     LongDoubleAlign = 128;
     LargeArrayMinWidth = 128;
     LargeArrayAlign = 128;
+    LargeGlobalMinWidth = 1024;
+    LargeGlobalAlign = 128;
     SuitableAlign = 128;
     SizeType = IsX32 ? UnsignedInt : UnsignedLong;
     PtrDiffType = IsX32 ? SignedInt : SignedLong;

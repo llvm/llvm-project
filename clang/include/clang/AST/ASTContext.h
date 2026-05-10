@@ -2822,6 +2822,9 @@ public:
   }
   unsigned getPreferredTypeAlign(const Type *T) const;
 
+  unsigned getLargeGlobalPreferredAlign(uint64_t TypeSize,
+                                        unsigned Align) const;
+
   /// Return the default alignment for __attribute__((aligned)) on
   /// this target, to be used if no alignment value is specified.
   unsigned getTargetDefaultAlignForAttributeAligned() const;

@@ -53,8 +53,8 @@ S x;
 typedef int v4si __attribute__ ((vector_size(16)));
 
 // CHECK-LABEL: define void @_Z14test_alignmentv()
-// CHECK: load <4 x i32>, ptr @x, align 1, !nontemporal
-// CHECK: store <4 x i32> %1, ptr @x, align 1, !nontemporal
+// CHECK: load <4 x i32>, ptr @x, align 8, !nontemporal
+// CHECK: store <4 x i32> %1, ptr @x, align 8, !nontemporal
 
 void test_alignment() {
  auto t =  __builtin_nontemporal_load((v4si*)x.c);

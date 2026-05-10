@@ -286,7 +286,7 @@ int i;
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @ci1, align 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr @i, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @i, align 4
-// CHECK-NEXT:    [[CS_REAL:%.*]] = load i16, ptr @cs, align 2
+// CHECK-NEXT:    [[CS_REAL:%.*]] = load i16, ptr @cs, align 4
 // CHECK-NEXT:    [[CS_IMAG:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[CS_REAL]] to i32
 // CHECK-NEXT:    [[CONV11:%.*]] = sext i16 [[CS_IMAG]] to i32
@@ -294,7 +294,7 @@ int i;
 // CHECK-NEXT:    [[ADD_I13:%.*]] = add i32 [[CONV11]], 0
 // CHECK-NEXT:    [[CONV14:%.*]] = trunc i32 [[ADD_R12]] to i16
 // CHECK-NEXT:    [[CONV15:%.*]] = trunc i32 [[ADD_I13]] to i16
-// CHECK-NEXT:    store i16 [[CONV14]], ptr @cs, align 2
+// CHECK-NEXT:    store i16 [[CONV14]], ptr @cs, align 4
 // CHECK-NEXT:    store i16 [[CONV15]], ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CF_REAL:%.*]] = load float, ptr @cf, align 4
 // CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
@@ -305,7 +305,7 @@ int i;
 // CHECK-NEXT:    store double [[ADD_R18]], ptr @D, align 8
 // CHECK-NEXT:    [[CI1_REAL19:%.*]] = load i32, ptr @ci1, align 4
 // CHECK-NEXT:    [[CI1_IMAG20:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
-// CHECK-NEXT:    [[CS_REAL21:%.*]] = load i16, ptr @cs, align 2
+// CHECK-NEXT:    [[CS_REAL21:%.*]] = load i16, ptr @cs, align 4
 // CHECK-NEXT:    [[CS_IMAG22:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CONV23:%.*]] = sext i16 [[CS_REAL21]] to i32
 // CHECK-NEXT:    [[CONV24:%.*]] = sext i16 [[CS_IMAG22]] to i32
@@ -322,7 +322,7 @@ int i;
 // CHECK-NEXT:    [[TMP13:%.*]] = sdiv i32 [[TMP11]], [[TMP8]]
 // CHECK-NEXT:    [[CONV25:%.*]] = trunc i32 [[TMP12]] to i16
 // CHECK-NEXT:    [[CONV26:%.*]] = trunc i32 [[TMP13]] to i16
-// CHECK-NEXT:    store i16 [[CONV25]], ptr @cs, align 2
+// CHECK-NEXT:    store i16 [[CONV25]], ptr @cs, align 4
 // CHECK-NEXT:    store i16 [[CONV26]], ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CI1_REAL27:%.*]] = load i32, ptr @ci1, align 4
 // CHECK-NEXT:    [[CI1_IMAG28:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4

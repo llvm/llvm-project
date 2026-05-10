@@ -97,6 +97,8 @@ struct TransferrableTargetInfo {
   unsigned char DoubleWidth, DoubleAlign;
   unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align, Ibm128Align;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
+  unsigned short LargeGlobalMinWidth;
+  unsigned char LargeGlobalAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
   unsigned char Int128Align;
@@ -850,6 +852,11 @@ public:
   // 'large' and its alignment.
   unsigned getLargeArrayMinWidth() const { return LargeArrayMinWidth; }
   unsigned getLargeArrayAlign() const { return LargeArrayAlign; }
+
+  // getLargeGlobalAlign/getLargeGlobalMinWidth - Return the minimum global size
+  // that is 'large' and its alignment.
+  unsigned getLargeGlobalMinWidth() const { return LargeGlobalMinWidth; }
+  unsigned getLargeGlobalAlign() const { return LargeGlobalAlign; }
 
   /// Return the maximum width lock-free atomic operation which will
   /// ever be supported for the given target

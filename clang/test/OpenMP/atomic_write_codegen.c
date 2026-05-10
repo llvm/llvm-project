@@ -300,17 +300,18 @@ int main(void) {
   bfx.a = ldv;
 // CHECK: load x86_fp80, ptr @{{.+}}
 // CHECK: [[NEW_VAL:%.+]] = fptosi x86_fp80 %{{.+}} to i32
-// CHECK: call void @__atomic_load(i64 noundef 4, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i32, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4) monotonic, align 4
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[OLD_BF_VALUE:%.+]] = load i32, ptr [[LDTEMP]],
-// CHECK: store i32 [[OLD_BF_VALUE]], ptr [[LDTEMP1:%.+]],
-// CHECK: [[OLD_BF_VALUE:%.+]] = load i32, ptr [[LDTEMP1]],
+// CHECK: [[OLD_BF_VALUE:%.+]] = phi i32 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
 // CHECK: [[BF_VALUE:%.+]] = and i32 [[NEW_VAL]], 2147483647
-// CHECK: [[BF_CLEAR:%.+]] = and i32 [[OLD_BF_VALUE]], -2147483648
+// CHECK: [[BF_CLEAR:%.+]] = and i32 %{{.+}}, -2147483648
 // CHECK: or i32 [[BF_CLEAR]], [[BF_VALUE]]
-// CHECK: store i32 %{{.+}}, ptr [[LDTEMP1]]
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 4, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP]], ptr noundef [[LDTEMP1]], i32 noundef 0, i32 noundef 0)
+// CHECK: store i32 %{{.+}}, ptr [[LDTEMP:%.+]]
+// CHECK: [[NEW_BF_VALUE:%.+]] = load i32, ptr [[LDTEMP]]
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), i32 [[OLD_BF_VALUE]], i32 [[NEW_BF_VALUE]] monotonic monotonic, align 4
+// CHECK: [[FAILED_OLD_VAL]] = extractvalue { i32, i1 } [[RES]], 0
+// CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i32, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 #pragma omp atomic write
@@ -336,20 +337,19 @@ int main(void) {
   bfx2.a = ldv;
 // CHECK: load x86_fp80, ptr @{{.+}}
 // CHECK: [[NEW_VAL:%.+]] = fptosi x86_fp80 %{{.+}} to i32
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 3) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i32, ptr @{{.+}} monotonic, align 4
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
-// CHECK: [[TRUNC:%.+]] = trunc i32 [[NEW_VAL]] to i8
-// CHECK: [[BF_AND:%.+]] = and i8 [[TRUNC]], 1
-// CHECK: [[BF_VALUE:%.+]] = shl i8 [[BF_AND]], 7
-// CHECK: [[BF_CLEAR:%.+]] = and i8 %{{.+}}, 127
-// CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
-// CHECK: store i8 %{{.+}}, ptr [[LDTEMP:%.+]]
-// CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[LDTEMP]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 3), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
-// CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
-// CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
+// CHECK: [[OLD_BF_VALUE:%.+]] = phi i32 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
+// CHECK: [[BF_AND:%.+]] = and i32 [[NEW_VAL]], 1
+// CHECK: [[BF_VALUE:%.+]] = shl i32 [[BF_AND]], 31
+// CHECK: [[BF_CLEAR:%.+]] = and i32 %{{.+}}, 2147483647
+// CHECK: or i32 [[BF_CLEAR]], [[BF_VALUE]]
+// CHECK: store i32 %{{.+}}, ptr [[LDTEMP:%.+]]
+// CHECK: [[NEW_BF_VALUE:%.+]] = load i32, ptr [[LDTEMP]]
+// CHECK: [[RES:%.+]] = cmpxchg ptr @{{.+}}, i32 [[OLD_BF_VALUE]], i32 [[NEW_BF_VALUE]] monotonic monotonic, align 4
+// CHECK: [[FAILED_OLD_VAL]] = extractvalue { i32, i1 } [[RES]], 0
+// CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i32, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 #pragma omp atomic write
@@ -375,18 +375,20 @@ int main(void) {
   bfx3.a = ldv;
 // CHECK: load x86_fp80, ptr @{{.+}}
 // CHECK: [[NEW_VAL:%.+]] = fptosi x86_fp80 %{{.+}} to i32
-// CHECK: call void @__atomic_load(i64 noundef 3, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 1), ptr noundef [[BITCAST:%.+]], i32 noundef 0)
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i32, ptr @{{.+}} monotonic, align 4
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[OLD_VAL:%.+]] = load i24, ptr %{{.+}},
-// CHECK: store i24 [[OLD_VAL]], ptr [[TEMP:%.+]],
-// CHECK: [[TRUNC:%.+]] = trunc i32 [[NEW_VAL]] to i24
-// CHECK: [[BF_AND:%.+]] = and i24 [[TRUNC]], 16383
-// CHECK: [[BF_VALUE:%.+]] = shl i24 [[BF_AND]], 3
-// CHECK: [[BF_CLEAR:%.+]] = and i24 %{{.+}}, -131065
-// CHECK: or i24 [[BF_CLEAR]], [[BF_VALUE]]
-// CHECK: store i24 %{{.+}}, ptr [[TEMP]]
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 3, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 1), ptr noundef [[LDTEMP:%.+]], ptr noundef [[TEMP]], i32 noundef 0, i32 noundef 0)
+// CHECK: [[OLD_VAL:%.+]] = phi i32 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
+// CHECK: store i32 [[OLD_VAL]], ptr [[TEMP:%.+]]
+// CHECK: [[BF_AND:%.+]] = and i32 [[NEW_VAL]], 16383
+// CHECK: [[BF_VALUE:%.+]] = shl i32 [[BF_AND]], 11
+// CHECK: [[BF_CLEAR:%.+]] = and i32 %{{.+}}, -33552385
+// CHECK: or i32 [[BF_CLEAR]], [[BF_VALUE]]
+// CHECK: store i32 %{{.+}}, ptr [[TEMP]]
+// CHECK: [[NEW_BF_VALUE:%.+]] = load i32, ptr [[TEMP]]
+// CHECK: [[RES:%.+]] = cmpxchg ptr @{{.+}}, i32 [[OLD_VAL]], i32 [[NEW_BF_VALUE]] monotonic monotonic, align 4
+// CHECK: [[FAILED_OLD_VAL]] = extractvalue { i32, i1 } [[RES]], 0
+// CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i32, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 #pragma omp atomic write

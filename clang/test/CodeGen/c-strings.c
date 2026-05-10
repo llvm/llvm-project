@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=ITANIUM
-// RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=MSABI
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=ITANIUM %if target={{x86_64.*}} %{ --check-prefix=X86_64 %} %else %{ --check-prefix=NONX86_64 %}
+// RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=MSABI %if target={{x86_64.*}} %{ --check-prefix=X86_64 %} %else %{ --check-prefix=NONX86_64 %}
 
 // Should be 3 hello strings, two global (of different sizes), the rest are
 // shared.
@@ -9,8 +9,12 @@
 // MSABI: @"??_C@_05CJBACGMB@hello?$AA@" = linkonce_odr dso_local unnamed_addr constant [6 x i8] c"hello\00", comdat, align 1
 // ITANIUM: @f1.x = internal global ptr @.str
 // MSABI: @f1.x = internal global ptr @"??_C@_05CJBACGMB@hello?$AA@"
-// CHECK: @f2.x = internal global [6 x i8] c"hello\00", align [[ALIGN]]
-// CHECK: @f3.x = internal global [8 x i8] c"hello\00\00\00", align [[ALIGN]]
+
+// On x86-64, large global in the same codege unit have increased alignment for better codegen.
+// X86_64: @f2.x = internal global [6 x i8] c"hello\00", align 4
+// X86_64: @f3.x = internal global [8 x i8] c"hello\00\00\00", align 4
+// NONX86_64: @f2.x = internal global [6 x i8] c"hello\00", align [[ALIGN]]
+// NONX86_64: @f3.x = internal global [8 x i8] c"hello\00\00\00", align [[ALIGN]]
 // ITANIUM: @f4.x = internal global %struct.s { ptr @.str }
 // MSABI: @f4.x = internal global %struct.s { ptr @"??_C@_05CJBACGMB@hello?$AA@" }
 // CHECK: @x = {{(dso_local )?}}global [3 x i8] c"ola", align [[ALIGN]]

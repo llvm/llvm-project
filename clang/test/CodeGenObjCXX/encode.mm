@@ -349,7 +349,7 @@ namespace GH71250 {
     long c;
   };
 
-  // CHECKCXX20: @_ZN7GH712501sE =  constant [7 x i8] c"{S=qq}\00", align 1
+  // CHECKCXX20: @_ZN7GH712501sE =  constant [7 x i8] c"{S=qq}\00", align 4
   extern const char s[] = @encode(S);
 }
 #endif

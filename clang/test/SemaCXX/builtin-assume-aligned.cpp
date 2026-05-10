@@ -26,7 +26,7 @@ constexpr void *q4 = __builtin_assume_aligned(&n, 4, -4);
 
 static char ar1[6];
 // expected-error@+2 {{must be initialized by a constant expression}}
-// expected-note@+1 {{alignment of the base pointee object (1 byte) is less than the asserted 16 bytes}}
+// expected-note@+1 {{alignment of the base pointee object (4 bytes) is less than the asserted 16 bytes}}
 constexpr void *r1 = __builtin_assume_aligned(&ar1[2], 16);
 
 static char ar2[6] __attribute__((aligned(32)));

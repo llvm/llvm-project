@@ -246,7 +246,8 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx.a;
-// CHECK: call void @__atomic_load(i64 noundef 4, ptr noundef getelementptr inbounds nuw (i8, ptr @bfx_packed, i64 4), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
+// CHECK: [[LD:%.+]] = load atomic i32, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4) monotonic, align 4
+// CHECK: store i32 [[LD]], ptr [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load i32, ptr [[LDTEMP]]
 // CHECK: [[SHL:%.+]] = shl i32 [[LD]], 1
 // CHECK: ashr i32 [[SHL]], 1
@@ -260,10 +261,10 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx2.a;
-// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @bfx2_packed, i64 3) monotonic, align 1
-// CHECK: store i8 [[LD]], ptr [[LDTEMP:%.+]]
-// CHECK: [[LD:%.+]] = load i8, ptr [[LDTEMP]]
-// CHECK: ashr i8 [[LD]], 7
+// CHECK: [[LD:%.+]] = load atomic i32, ptr @bfx2_packed monotonic, align 4
+// CHECK: store i32 [[LD]], ptr [[LDTEMP:%.+]]
+// CHECK: [[LD:%.+]] = load i32, ptr [[LDTEMP]]
+// CHECK: ashr i32 [[LD]], 31
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx2_packed.a;
@@ -275,11 +276,11 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx3.a;
-// CHECK: call void @__atomic_load(i64 noundef 3, ptr noundef getelementptr inbounds nuw (i8, ptr @bfx3_packed, i64 1), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
-// CHECK: [[LD:%.+]] = load i24, ptr [[LDTEMP]]
-// CHECK: [[SHL:%.+]] = shl i24 [[LD]], 7
-// CHECK: [[ASHR:%.+]] = ashr i24 [[SHL]], 10
-// CHECK: sext i24 [[ASHR]] to i32
+// CHECK: [[LD:%.+]] = load atomic i32, ptr @bfx3_packed monotonic, align 4
+// CHECK: store i32 [[LD]], ptr [[LDTEMP:%.+]]
+// CHECK: [[LD:%.+]] = load i32, ptr [[LDTEMP]]
+// CHECK: [[SHL:%.+]] = shl i32 [[LD]], 7
+// CHECK: [[ASHR:%.+]] = ashr i32 [[SHL]], 18
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx3_packed.a;

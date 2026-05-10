@@ -1853,6 +1853,26 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
         uint64_t TypeSize =
             !BaseT->isIncompleteType() ? getTypeSize(T.getTypePtr()) : 0;
         Align = std::max(Align, getMinGlobalAlignOfVar(TypeSize, VD));
+        // Only increase alignment if the compiler can safely control the
+        // variable's placement. This mirrors the conditions in
+        // GlobalObject::canIncreaseAlignment:
+        // - Must have a non-interposable definition (GVA_Internal or
+        //   GVA_StrongExternal). All other GVA linkages map to LLVM
+        //   linkages where canIncreaseAlignment returns false.
+        // - Must not have __attribute__((weak)), this is applied in
+        //   CodeGen and not reflected in GVA linkage.
+        // - Must not have a section attribute (may be densely packed)
+        // - On ELF with PIC (not PIE), default-visibility symbols may be
+        //   COPY-relocated, so the executable controls their alignment.
+        bool IsExactDef = VD->hasDefinition() && !VD->isWeak() &&
+                          isUniqueGVALinkage(GetGVALinkageForVariable(VD));
+        bool IsAlwaysLocal = IsExactDef && !VD->hasAttr<SectionAttr>();
+        bool IsELFCopyReloc = Target->getTriple().isOSBinFormatELF() &&
+                              LangOpts.PICLevel && !LangOpts.PIE &&
+                              VD->getVisibility() == DefaultVisibility;
+        if (IsAlwaysLocal && !IsELFCopyReloc)
+          Align =
+              std::max(Align, getLargeGlobalPreferredAlign(TypeSize, Align));
       }
 
     // Fields can be subject to extra alignment constraints, like if
@@ -2656,6 +2676,22 @@ CharUnits ASTContext::getTypeUnadjustedAlignInChars(QualType T) const {
 }
 CharUnits ASTContext::getTypeUnadjustedAlignInChars(const Type *T) const {
   return toCharUnitsFromBits(getTypeUnadjustedAlign(T));
+}
+
+/// getLargeGlobalPreferredAlign - Return the "preferred" alignment of the
+/// specified global variable in bits. Only variables larger than the specifed
+/// "LargeGlobalMinWidth" will be aligned using the "LargeGlobalAlign" alignment
+/// - typically 16 bytes
+unsigned ASTContext::getLargeGlobalPreferredAlign(uint64_t TypeSize,
+                                                  unsigned Align) const {
+  if (TypeSize >= Target->getLargeGlobalMinWidth())
+    return Target->getLargeGlobalAlign();
+  else if (TypeSize >= 128)
+    return (unsigned)64;
+  else if (TypeSize >= 32)
+    return (unsigned)32;
+  else
+    return Align;
 }
 
 /// getPreferredTypeAlign - Return the "preferred" alignment of the specified

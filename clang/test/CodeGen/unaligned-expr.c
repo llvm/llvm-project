@@ -5,8 +5,8 @@
 // -------------
 __unaligned int x;
 void test1(void) {
-  // CHECK: {{%.*}} = load i32, ptr @x, align 1
-  // CHECK: store i32 {{%.*}}, ptr @x, align 1
+  // CHECK: {{%.*}} = load i32, ptr @x, align 4
+  // CHECK: store i32 {{%.*}}, ptr @x, align 4
   x++;
 }
 
@@ -30,7 +30,7 @@ void test2_1(void) {
 int *__unaligned p1;
 void test3(void) {
 
-  // CHECK: {{%.*}} = load ptr, ptr @p1, align 1
+  // CHECK: {{%.*}} = load ptr, ptr @p1, align 4
   // CHECK: {{%.*}} = load i32, ptr {{%.*}}, align 4
   // CHECK: store i32 {{%.*}}, ptr {{%.*}}, align 4
   (*p1)++;
@@ -46,7 +46,7 @@ void test4(void) {
 
 int __unaligned *__unaligned p3;
 void test5(void) {
-  // CHECK: {{%.*}} = load ptr, ptr @p3, align 1
+  // CHECK: {{%.*}} = load ptr, ptr @p3, align 4
   // CHECK: {{%.*}} = load i32, ptr {{%.*}}, align 1
   // CHECK: store i32 {{%.*}}, ptr {{%.*}}, align 1
   (*p3)++;
@@ -87,8 +87,8 @@ void test8(void) {
 // -------------
 __unaligned int a[10];
 void test9(void) {
-  // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 1
-  // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 1
+  // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 4
+  // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 4
   (a[3])++;
 }
 
@@ -180,8 +180,8 @@ struct S1 {
 
 __unaligned S1 s1;
 void test20(void) {
-    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (i8, ptr @s1, i64 4), align 1
-    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (i8, ptr @s1, i64 4), align 1
+    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (i8, ptr @s1, i64 4), align 4
+    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (i8, ptr @s1, i64 4), align 4
     s1.x++;
 }
 

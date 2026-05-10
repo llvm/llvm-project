@@ -74,6 +74,6 @@ double __attribute__((vector_size(24), aligned(64))) v11;
 // ALL: @v11 {{.*}}, align 64
 double __attribute__((vector_size(80), aligned(16))) v12;
 // ALL: @v12 {{.*}}, align 16
-typedef __attribute__((ext_vector_type(248), aligned(4))) _Bool v12b_type;
+typedef __attribute__((ext_vector_type(248), aligned(8))) _Bool v12b_type;
 v12b_type v12b;
-// ALL: @v12b {{.*}}, align 4
+// ALL: @v12b {{.*}}, align 8

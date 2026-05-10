@@ -15,7 +15,7 @@ union ULP3 { struct LP3 l3; };
 // CHECK-LABEL: test1
 void test1(void)
 {
-  // CHECK: call void @llvm.memcpy{{.*}}ptr align 1 @g1, i64 6, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}ptr align 4 @g1, i64 6, i1 false)
   // CHECK: store i8 120, ptr %
 
   struct LP1 l = { .p1 = g1, .p1.x[2] = 'x' };
@@ -24,7 +24,7 @@ void test1(void)
 // CHECK-LABEL: test2
 void test2(void)
 {
-  // CHECK: call void @llvm.memcpy{{.*}}ptr align 1 @g1, i64 6, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}ptr align 4 @g1, i64 6, i1 false)
   // CHECK: store i8 114, ptr %
 
   struct LP1 l = { .p1 = g1, .p1.x[1] = 'r' };
@@ -75,10 +75,10 @@ void test4(void)
 void test5(void)
 {
   // .l3 = g3
-  // CHECK: call void @llvm.memcpy{{.*}}ptr align 1 @g3, i64 12, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}ptr align 4 @g3, i64 12, i1 false)
 
   // .l3.p1 = { [0] = g1 } implicitly sets [1] to zero
-  // CHECK: call void @llvm.memcpy{{.*}}ptr align 1 @g1, i64 6, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}}ptr align 4 @g1, i64 6, i1 false)
   // CHECK: getelementptr{{.*}}%struct.P1, ptr{{.*}}i64 1
   // CHECK: call void @llvm.memset{{.*}}i8 0, i64 6, i1 false)
 

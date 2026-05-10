@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++20 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK20 %s
 
 // CHECK: @_ZZ1hvE1i = internal global i32 0, align 4
-// CHECK: @base_req ={{.*}} global [4 x i8] c"foo\00", align 1
-// CHECK: @base_req_uchar ={{.*}} global [4 x i8] c"bar\00", align 1
+// CHECK: @base_req ={{.*}} global [4 x i8] c"foo\00", align 4
+// CHECK: @base_req_uchar ={{.*}} global [4 x i8] c"bar\00", align 4
 
 // CHECK: @_ZZN5test31BC1EvE1u = internal global { i8, [3 x i8] } { i8 97, [3 x i8] undef }, align 4
 

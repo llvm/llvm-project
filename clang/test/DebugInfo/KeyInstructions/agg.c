@@ -20,7 +20,7 @@ void fun(Struct a) {
 // CHECK: store <1 x i8> %vecins, ptr @c{{.*}}, !dbg [[G3R1:!.*]]
   c[0] = 0;
 
-// CHECK: %3 = load <25 x float>, ptr @m, align 4
+// CHECK: %3 = load <25 x float>, ptr @m, align 8
 // CHECK: %matins = insertelement <25 x float> %3, float 0.000000e+00, i64 0, !dbg [[G4R2:!.*]]
 // CHECK: store <25 x float> %matins, ptr @m{{.*}}, !dbg [[G4R1:!.*]]
   m[0][0] = 0;

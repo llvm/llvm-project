@@ -22,7 +22,7 @@ struct S {
   float c[3];
 };
 
-// CHECK: @s = global %struct.S zeroinitializer, align 4
+// CHECK: @s = global %struct.S zeroinitializer, align 8
 S s;
 // CHECK: @sp = constant ptr getelementptr (i8, ptr @s, i64 16), align 8
 float &sp = s.c[3];

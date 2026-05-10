@@ -97,7 +97,7 @@ void transpose_global(void) {
   // CHECK32-NEXT:    [[M_T_ADDR:%.*]] = alloca [25 x double], align 4
   // CHECK32-NEXT:    [[GLOBAL_MATRIX:%.*]] = load <25 x double>, ptr @global_matrix, align 4
   // CHECK64-NEXT:    [[M_T_ADDR:%.*]] = alloca [25 x double], align 8
-  // CHECK64-NEXT:    [[GLOBAL_MATRIX:%.*]] = load <25 x double>, ptr @global_matrix, align 8
+  // CHECK64-NEXT:    [[GLOBAL_MATRIX:%.*]] = load <25 x double>, ptr @global_matrix, align 16
   // COMMON-NEXT:    [[M_T:%.*]] = call <25 x double> @llvm.matrix.transpose.v25f64(<25 x double> [[GLOBAL_MATRIX]], i32 5, i32 5)
   // CHECK32-NEXT:    store <25 x double> [[M_T]], ptr [[M_T_ADDR]], align 4
   // CHECK64-NEXT:    store <25 x double> [[M_T]], ptr [[M_T_ADDR]], align 8

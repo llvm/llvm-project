@@ -52,9 +52,9 @@ void storeAtMatrixSubscriptExpr(int row, int col, float value) {
     // ROW-CHECK-NEXT: [[row_major_index:%.*]] = add i64 [[row_offset]], [[col_load:%.*]]
     // COL-CHECK: [[col_offset:%.*]] = mul i64 [[col_load:%.*]], 2
     // COL-CHECK-NEXT: [[col_major_index:%.*]] = add i64 [[col_offset]], [[row_load:%.*]]
-    // CHECK-NEXT: [[matrix_as_vec:%.*]] = load <6 x float>, ptr @gM, align 4
+    // CHECK-NEXT: [[matrix_as_vec:%.*]] = load <6 x float>, ptr @gM, align 8
     // ROW-CHECK-NEXT: [[matrix_after_insert:%.*]] = insertelement <6 x float> [[matrix_as_vec]], float [[value_load]], i64 [[row_major_index]]
     // COL-CHECK-NEXT: [[matrix_after_insert:%.*]] = insertelement <6 x float> [[matrix_as_vec]], float [[value_load]], i64 [[col_major_index]]
-    // CHECK-NEXT: store <6 x float> [[matrix_after_insert]], ptr @gM, align 4
+    // CHECK-NEXT: store <6 x float> [[matrix_after_insert]], ptr @gM, align 8
     gM[row][col] = value;
 }
