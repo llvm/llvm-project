@@ -32,9 +32,6 @@
    - xxHash source repository : https://github.com/Cyan4973/xxHash
 */
 
-/* based on revision d2df04efcbef7d7f6886d345861e5dfda4edacc1 Removed
- * everything but a simple interface for computing XXh64. */
-
 #ifndef LLVM_SUPPORT_XXHASH_H
 #define LLVM_SUPPORT_XXHASH_H
 
@@ -43,9 +40,6 @@
 #include <cstdint>
 
 namespace llvm {
-
-// Deprecated pre-xxh3 64-bit hash.
-LLVM_ABI uint64_t xxHash64(const uint8_t *data, size_t len);
 
 /// XXH3's 64-bit variant. Inline ArrayRef and StringRef overloads live in
 /// llvm/ADT/ArrayRef.h and llvm/ADT/StringRef.h.
