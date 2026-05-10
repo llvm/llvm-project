@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
+///
+/// \file
+/// The dl_iterate_phdr implementation.
+///
+//===----------------------------------------------------------------------===/
 
 #include "dl_iterate_phdr.h"
 
@@ -21,6 +26,7 @@ extern "C" void *__ehdr_start;
 namespace LIBC_NAMESPACE_DECL {
 
 struct dl_phdr_info create_executable_info(ElfW(Ehdr) * executable_header) {
+  // TODO: Calculate dlpi_addr in the PIE case and set dlpi_name for VDSO.
   struct dl_phdr_info to_return;
   to_return.dlpi_addr = 0;
   to_return.dlpi_name = "";

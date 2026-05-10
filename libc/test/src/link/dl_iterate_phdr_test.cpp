@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===/
+///
+/// \file
+/// Tests for the dl_iterate_phdr implementation.
+///
+//===----------------------------------------------------------------------===/
 
 #include "hdr/types/size_t.h"
 #include "src/link/dl_iterate_phdr.h"
