@@ -2,11 +2,10 @@
 
 template <class T> int f(T) {
   struct A {
-    static int B;
-    // expected-error@-1 {{static data member 'staticField' not allowed in local struct 'MyClass'}}
+    static int B; // expected-error {{static data member 'B' not allowed in local struct 'A'}}
   };
-  int A::B;
-  int A::B = 1;
+  int A::B; // expected-note {{previous definition is here}}
+  int A::B = 1; // expected-error {{redefinition of 'B'}}
   return 0;
 }
 
