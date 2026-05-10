@@ -98,11 +98,9 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AdditionalFunctions(Options.get("AdditionalFunctions", "")) {
-  Functions = {"llvm::formatv", "llvm::createStringErrorV"};
-
-  std::vector<StringRef> CustomFunctions =
-      utils::options::parseStringList(AdditionalFunctions);
-  copy(CustomFunctions, std::back_inserter(Functions));
+  Functions = utils::options::parseStringList(AdditionalFunctions);
+  Functions.emplace_back("::llvm::formatv");
+  Functions.emplace_back("::llvm::createStringErrorV");
 }
 
 void FormatvStringCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
