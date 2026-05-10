@@ -1704,24 +1704,16 @@ namespace cwg395 { // cwg395: 3.0
 
 namespace cwg396 { // cwg396: 3.0
   void f() {
-    auto int a();
-#if __cplusplus >= 201103L
-    // expected-error@-2 {{'auto' cannot be combined with a type specifier}}
-    // expected-warning@-3 {{empty parentheses interpreted as a function declaration}}
-    // expected-note@-4 {{replace parentheses with an initializer to declare a variable}}
-#else
-    // expected-error@-6 {{illegal storage class on function}}
-    // since-cxx11-error@-7 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
-#endif
+    auto int a(); // #cwg396-a
+    // cxx98-error@#cwg396-a {{illegal storage class on function}}
+    // since-cxx11-error@#cwg396-a {{'auto' cannot be combined with a type specifier}}
+    // since-cxx11-warning@#cwg396-a {{empty parentheses interpreted as a function declaration}}
+    // since-cxx11-note@#cwg396-a {{replace parentheses with an initializer to declare a variable}}
     int (i); // #cwg396-i
-    auto int (i);
-#if __cplusplus >= 201103L
-    // expected-error@-2 {{'auto' cannot be combined with a type specifier}}
-#else
-    // expected-error@-4 {{redefinition of 'i'}}
-    //   expected-note@#cwg396-i {{previous definition is here}}
-    // since-cxx11-error@-5 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
-#endif
+    auto int (i); // #cwg396-auto-i
+    // cxx98-error@#cwg396-auto-i {{redefinition of 'i'}}
+    // cxx98-note@#cwg396-i {{previous definition is here}}
+    // since-cxx11-error@#cwg396-auto-i {{'auto' cannot be combined with a type specifier}}
   }
 } // namespace cwg396
 
