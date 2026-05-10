@@ -369,10 +369,10 @@ struct InputAnnotation {
   /// be different from the starting line of the original diagnostic if
   /// !IsFirstLine.
   unsigned InputLine;
-  /// The column range (one-origin indexing, open end) in which to mark the
-  /// input line.  If \c InputEndCol is \c UINT_MAX, the rest of the input line
-  /// should be marked.
-  unsigned InputStartCol, InputEndCol;
+  /// The column range (one-origin indexing, inclusive boundaries) in which to
+  /// mark the input line.  If \c InputLastCol is \c UINT_MAX, the rest of the
+  /// input line should be marked.
+  unsigned InputFirstCol, InputLastCol;
   /// The marker to use.
   MarkerStyle Marker;
   /// Whether this annotation represents a good match for an expected pattern.
@@ -472,6 +472,87 @@ public:
         std::max((std::string::size_type)*LabelWidthGlobal, Label.size());
   }
 };
+
+/// A range representation with inclusive start and end bounds specifying where
+/// annotation markers are physically drawn in the input dump.
+///
+/// This class encapsulates the conversion of an \c SMRange to lines and columns
+/// for input annotation markers indicating the same range:
+/// - It handles adjustments to line numbers when a range boundary appears at a
+///   line boundary.
+/// - It avoids related mistakes in determining whether the range is contained
+///   within a single line.
+/// - It avoids the mistake of producing no marker in an input annotation for an
+///   empty range.
+///
+/// All lines and columns have index-origin one.
+struct MarkerRange {
+public:
+  struct Loc {
+    unsigned Line;
+    unsigned Col;
+    Loc() = default;
+    Loc(unsigned Line, unsigned Col) : Line(Line), Col(Col) {}
+    Loc(const std::pair<unsigned, unsigned> &LineAndCol)
+        : Line(LineAndCol.first), Col(LineAndCol.second) {}
+  };
+
+private:
+  /// Points to the first character included in the marker range.
+  Loc First;
+  /// Points to the last character included in the marker range.
+  Loc Last;
+  MarkerRange(Loc First, Loc Last) : First(First), Last(Last) {}
+
+public:
+  /// Make an invalid range to be overwritten before being used.
+  MarkerRange() = default;
+  /// Convert \p Range to a \c MarkerRange.
+  ///
+  /// \p Range's start must be inclusive, and its end must be exclusive.  It
+  /// specifies the \a logical input range to be depicted by annotation markers.
+  ///
+  /// The resulting \c MarkerRange's first and last locations are always both
+  /// inclusive.  It specifies exactly where markers should be physically
+  /// \a drawn in an input dump.  If \p Range is an empty range, then the
+  /// resulting \c MarkerRange is expanded to a single character.  This avoids a
+  /// missing marker for an empty range, but it means the markers for a
+  /// single-character range are indistinguishable from markers for an empty
+  /// range.
+  ///
+  /// Given an \c SMRange representing the range of text "range of text", the
+  /// following example compares how the \c SMRange and a \c MarkerRange
+  /// constructed from it encode their start (s) and end (e) bounds:
+  ///
+  ///     foo range of text bar
+  ///         s            e    SMRange
+  ///         s           e     MarkerRange
+  ///
+  MarkerRange(const SourceMgr &SM, SMRange Range) {
+    First = SM.getLineAndColumn(Range.Start);
+    // The SMRange has an exclusive end, but we want an inclusive end.
+    if (Range.Start == Range.End) {
+      // Convert the empty range to a one-character range so we do not end up
+      // with a missing marker.
+      Last.Line = First.Line;
+      Last.Col = First.Col;
+    } else {
+      // We cannot simply subtract one from the end column number because that
+      // might result in column 0, which does not exist and is thus incorrect
+      // for an inclusive boundary.
+      SMLoc EndLoc = SMLoc::getFromPointer(Range.End.getPointer() - 1);
+      Last = SM.getLineAndColumn(EndLoc);
+    }
+  }
+  /// Return true if the marker range is contained on a single line.
+  bool isSingleLine() const { return First.Line == Last.Line; }
+  /// Get the first location included in the marker range.
+  Loc getFirstLoc() const { return First; }
+  /// Get the last location included in the marker range.
+  Loc getLastLoc() const { return Last; }
+  /// Return a one-character range with the same start.
+  MarkerRange truncate() const { return {First, First}; }
+};
 } // namespace
 
 static void
@@ -529,51 +610,39 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
 
     // If Diag has a match range, position the marker there.  If it is a
     // MatchNoneDiag, position the marker at its search range.  Otherwise,
-    // position the marker at the start of the most recent MatchResultDiag with
+    // position the marker at the start of the most recent MatchResultDiag, with
     // which it is associated.
-    SMRange InputRange;
+    MarkerRange InputRange;
     if (Diag.getMatchRange()) {
-      InputRange = *Diag.getMatchRange();
+      InputRange = MarkerRange(SM, *Diag.getMatchRange());
     } else if (const MatchNoneDiag *MND = dyn_cast<MatchNoneDiag>(&Diag)) {
-      InputRange = MND->getSearchRange();
+      InputRange = MarkerRange(SM, MND->getSearchRange());
     } else {
       assert(isa<MatchNoteDiag>(Diag) &&
              "expected only MatchNoteDiag to have no input range");
       const MatchResultDiag &MRD = Diag.getMatchResultDiag();
-      InputRange =
-          MRD.getMatchRange() ? *MRD.getMatchRange() : MRD.getSearchRange();
-      InputRange.End = InputRange.Start;
-    }
-    auto [InputStartLine, InputStartCol] =
-        SM.getLineAndColumn(InputRange.Start);
-    auto [InputEndLine, InputEndCol] = SM.getLineAndColumn(InputRange.End);
-
-    // If a range ends before the first column on a line, then it has no
-    // characters on that line, so there is nothing to render there.
-    if (InputStartLine < InputEndLine && InputEndCol == 1) {
-      --InputEndLine;
-      InputEndCol = UINT_MAX;
+      InputRange = MRD.getMatchRange() ? MarkerRange(SM, *MRD.getMatchRange())
+                                       : MarkerRange(SM, MRD.getSearchRange());
+      InputRange = InputRange.truncate();
+      assert(A.Marker.Head == ' ' && "expected no marker for no match range");
     }
 
     // Compute the marker location, and break annotation into multiple
     // annotations if it spans multiple lines.
     A.IsFirstLine = true;
-    A.InputLine = InputStartLine;
-    A.InputStartCol = InputStartCol;
-    if (InputStartLine == InputEndLine) {
-      // Sometimes ranges are empty in order to indicate a specific point, but
-      // that would mean nothing would be marked, so adjust the range to
-      // include the following character.
-      A.InputEndCol = std::max(InputStartCol + 1, InputEndCol);
+    A.InputLine = InputRange.getFirstLoc().Line;
+    A.InputFirstCol = InputRange.getFirstLoc().Col;
+    if (InputRange.isSingleLine()) {
+      A.InputLastCol = InputRange.getLastLoc().Col;
       Annotations.push_back(A);
     } else {
-      assert(InputStartLine < InputEndLine &&
-             "expected input range not to be inverted");
-      A.InputEndCol = UINT_MAX;
+      A.InputLastCol = UINT_MAX;
       char MarkerTail = A.Marker.Tail;
       A.Marker.Tail = A.Marker.Mid;
       Annotations.push_back(A);
-      for (unsigned L = InputStartLine + 1, E = InputEndLine; L <= E; ++L) {
+      for (unsigned L = InputRange.getFirstLoc().Line + 1,
+                    E = InputRange.getLastLoc().Line;
+           L <= E; ++L) {
         InputAnnotation B;
         B.LabelIndexGlobal = A.LabelIndexGlobal;
         B.Label = A.Label;
@@ -583,8 +652,8 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         B.Marker.Head = B.Marker.Mid = A.Marker.Mid;
         B.Marker.Tail = L != E ? A.Marker.Mid : MarkerTail;
         B.Marker.Note = "";
-        B.InputStartCol = 1;
-        B.InputEndCol = L != E ? UINT_MAX : InputEndCol;
+        B.InputFirstCol = 1;
+        B.InputLastCol = L != E ? UINT_MAX : InputRange.getLastLoc().Col;
         B.FoundAndExpectedMatch = A.FoundAndExpectedMatch;
         Annotations.push_back(B);
       }
@@ -781,7 +850,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
         bool WasInMatch = InMatch;
         InMatch = false;
         for (const InputAnnotation &M : FoundAndExpectedMatches) {
-          if (M.InputStartCol <= Col && Col < M.InputEndCol) {
+          if (M.InputFirstCol <= Col && Col <= M.InputLastCol) {
             InMatch = true;
             break;
           }
@@ -809,14 +878,14 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       // The two spaces below are where the ": " appears on input lines.
       COS << left_justify(AnnotationItr->Label, LabelWidthGlobal) << "  ";
       unsigned Col;
-      for (Col = 1; Col < AnnotationItr->InputStartCol; ++Col)
+      for (Col = 1; Col < AnnotationItr->InputFirstCol; ++Col)
         COS << ' ';
       COS << AnnotationItr->Marker.Head;
-      // If InputEndCol=UINT_MAX, stop at InputLineWidth.
-      for (++Col; Col < AnnotationItr->InputEndCol - 1 && Col <= InputLineWidth;
+      // If InputLastCol==UINT_MAX, stop at InputLineWidth.
+      for (++Col; Col < AnnotationItr->InputLastCol && Col <= InputLineWidth;
            ++Col)
         COS << AnnotationItr->Marker.Mid;
-      if (Col < AnnotationItr->InputEndCol && Col <= InputLineWidth) {
+      if (Col <= AnnotationItr->InputLastCol && Col <= InputLineWidth) {
         COS << AnnotationItr->Marker.Tail;
         ++Col;
       }
