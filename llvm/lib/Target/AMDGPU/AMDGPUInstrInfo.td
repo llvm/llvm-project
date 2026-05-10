@@ -495,11 +495,11 @@ def AMDGPUdiv_fixup : PatFrags<(ops node:$src0, node:$src1, node:$src2),
 
 
 def AMDGPUffbh_u32 : PatFrags<(ops node:$src),
-  [(ctlz_zero_undef node:$src),
+  [(ctlz_zero_poison node:$src),
    (AMDGPUffbh_u32_impl node:$src)]>;
 
 def AMDGPUffbl_b32 : PatFrags<(ops node:$src),
-  [(cttz_zero_undef node:$src),
+  [(cttz_zero_poison node:$src),
    (AMDGPUffbl_b32_impl node:$src)]>;
 
 def AMDGPUpkrtz_f16_f32 : PatFrags<(ops node:$src0, node:$src1),

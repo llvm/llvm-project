@@ -60,6 +60,7 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
+  llvm::DenseSet<const ParmVarDecl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -101,6 +102,7 @@ public:
     issuePendingWarnings();
     suggestAnnotations();
     reportNoescapeViolations();
+    reportLifetimeboundViolations();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -129,9 +131,12 @@ public:
       // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
       if (IsMoved)
         return;
-      // Otherwise, suggest lifetimebound for parameter escaping through return
-      // or a field in constructor.
-      if (!PVD->hasAttr<LifetimeBoundAttr>()) {
+      if (PVD->hasAttr<LifetimeBoundAttr>()) {
+        // Track that this lifetimebound parameter correctly escapes.
+        VerifiedLiftimeboundEscapes.insert(PVD);
+      } else {
+        // Otherwise, suggest lifetimebound for parameter escaping through
+        // return or a field in constructor.
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
@@ -355,6 +360,22 @@ public:
         SemaHelper->reportNoescapeViolation(PVD, G);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
+    }
+  }
+
+  void reportLifetimeboundViolations() {
+    if (!isa<FunctionDecl>(FD))
+      return;
+    for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {
+      if (!PVD->hasAttr<LifetimeBoundAttr>())
+        continue;
+      bool isImplicit = PVD->getAttr<LifetimeBoundAttr>()->isImplicit();
+      bool Escapes = VerifiedLiftimeboundEscapes.contains(PVD);
+      assert((!isImplicit || Escapes || isInStlNamespace(FD)) &&
+             "Implicit lifetimebound parameters "
+             "should escape through return");
+      if (!isImplicit && !Escapes)
+        SemaHelper->reportLifetimeboundViolation(PVD);
     }
   }
 

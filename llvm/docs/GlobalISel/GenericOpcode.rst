@@ -486,20 +486,20 @@ Count leading zeros, trailing zeros, or number of set bits.
 
 .. code-block:: none
 
-  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
-  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTLZ_ZERO_POISON %1
+  %2:_(s33) = G_CTTZ_ZERO_POISON %1
   %2:_(s33) = G_CTPOP %1
 
-G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Count leading zeros or trailing zeros. If the value is zero then the result is
-undefined.
+poison.
 
 .. code-block:: none
 
-  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
-  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTLZ_ZERO_POISON %1
+  %2:_(s33) = G_CTTZ_ZERO_POISON %1
 
 G_CTLS
 ^^^^^^

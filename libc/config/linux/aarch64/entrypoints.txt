@@ -1243,6 +1243,9 @@ if(LLVM_LIBC_FULL_BUILD)
     # sys/select.h entrypoints
     libc.src.sys.select.select
 
+    # link.h entrypoints
+    libc.src.link.dl_iterate_phdr
+
     # wchar.h entrypoints
     # libc.src.wchar.fgetwc
     # libc.src.wchar.fgetws

@@ -2644,6 +2644,20 @@ struct FormatStyle {
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
 
+  /// If ``true``, clang-format will always break before function declaration
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDeclaration(
+  ///             int A, int B);
+  ///
+  ///    false:
+  ///    void functionDeclaration(int A, int B);
+  ///
+  /// \endcode
+  /// \version 23
+  bool BreakFunctionDeclarationParameters;
+
   /// If ``true``, clang-format will always break before function definition
   /// parameters.
   /// \code
@@ -6076,6 +6090,8 @@ struct FormatStyle {
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDeclarationParameters ==
+               R.BreakFunctionDeclarationParameters &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&

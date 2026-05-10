@@ -680,7 +680,7 @@ const llvm::StringSet<>
     BreakableBlockComment::ContentIndentingJavadocAnnotations = {
         "@param", "@return",     "@returns", "@throws",  "@type", "@template",
         "@see",   "@deprecated", "@define",  "@exports", "@mods", "@private",
-    };
+};
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
   if (!Style.isJava() && !Style.isJavaScript())

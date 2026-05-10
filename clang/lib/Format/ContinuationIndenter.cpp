@@ -1276,6 +1276,22 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     CurrentState.BreakBeforeParameter = false;
     CurrentState.AlignedTo = &Current;
   }
+  if (Style.AlignOperands != FormatStyle::OAS_DontAlign &&
+      Current.is(TT_ConditionalExpr)) {
+    switch (Style.AlignOperands) {
+    case FormatStyle::OAS_Align:
+      CurrentState.AlignedTo = Current.is(tok::question)
+                                   ? Current.getPrevious(tok::equal)
+                                   : Current.getPrevious(tok::question);
+      break;
+    case FormatStyle::OAS_AlignAfterOperator:
+      if (Current.is(tok::colon))
+        CurrentState.AlignedTo = Current.getPrevious(tok::question);
+      break;
+    case FormatStyle::OAS_DontAlign:
+      break;
+    }
+  }
 
   if (!DryRun) {
     unsigned MaxEmptyLinesToKeep = Style.MaxEmptyLinesToKeep + 1;

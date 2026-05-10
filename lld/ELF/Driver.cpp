@@ -210,8 +210,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      ctx.tar->append(relativeToRoot(check(c.getFullName())),
-                      mbref.getBuffer());
+      job.tarEntries.emplace_back(relativeToRoot(check(c.getFullName())),
+                                  mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
@@ -246,6 +246,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
                         /*asNeeded=*/false,
                         /*withLOption=*/false,
                         nextGroupId,
+                        {},
                         {},
                         {}});
   } else {
@@ -284,6 +285,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
                         ctx.arg.asNeeded,
                         withLOption,
                         nextGroupId,
+                        {},
                         {},
                         {}});
   }
@@ -2202,6 +2204,9 @@ void LinkerDriver::loadFiles() {
   for (auto &job : loadJobs) {
     if (job.kind == LoadJob::Archive)
       archiveFiles.emplace_back(job.path, (unsigned)job.out.size());
+    if (ctx.tar)
+      for (const auto &[path, data] : job.tarEntries)
+        ctx.tar->append(path, data);
     files.append(std::make_move_iterator(job.out.begin()),
                  std::make_move_iterator(job.out.end()));
     ctx.memoryBuffers.append(std::make_move_iterator(job.thinBufs.begin()),

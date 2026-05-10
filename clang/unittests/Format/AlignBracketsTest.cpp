@@ -731,6 +731,15 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
                "}",
                BreakAlways);
 
+  // Ensure BreakFunctionDeclarationParameters interacts correctly when
+  // PackParameters.BinPack is set to BPPS_AlwaysOnePerLine.
+  BreakAlways.BreakFunctionDeclarationParameters = true;
+  verifyFormat("void f(\n"
+               "    int a,\n"
+               "    int b);",
+               BreakAlways);
+  BreakAlways.BreakFunctionDeclarationParameters = false;
+
   // Ensure BreakFunctionDefinitionParameters interacts correctly when
   // PackParameters.BinPack is set to BPPS_AlwaysOnePerLine.
   BreakAlways.BreakFunctionDefinitionParameters = true;

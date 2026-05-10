@@ -1578,6 +1578,13 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
+  // Replace byte constants with integer constants in stores.
+  Constant *C;
+  if (Val->getType()->isByteOrByteVectorTy() && match(Val, m_ImmConstant(C)))
+    return replaceOperand(
+        SI, 0,
+        ConstantExpr::getBitCast(C, Type::getIntFromByteType(C->getType())));
+
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
       return replaceOperand(SI, 1, V);

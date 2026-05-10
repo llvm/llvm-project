@@ -386,23 +386,28 @@ public:
         Region.setEndLoc(EndLoc.value());
       }
 
-      // Replace Loc with FileLoc if it is expanded with system headers.
-      if (!SystemHeadersCoverage && SM.isInSystemMacro(Loc)) {
-        auto BeginLoc = SM.getSpellingLoc(Loc);
-        auto EndLoc = SM.getSpellingLoc(Region.getEndLoc());
-        if (SM.isWrittenInSameFile(BeginLoc, EndLoc)) {
-          Loc = SM.getFileLoc(Loc);
-          Region.setStartLoc(Loc);
-          Region.setEndLoc(SM.getFileLoc(Region.getEndLoc()));
+      // For regions whose spelling is in a system header, remap macro
+      // tokens to their user-code call site so coverage is attributed to
+      // the user expression. Drop anything still in a system header
+      // (e.g. a plain FileID into a -isystem .def file).
+      if (!SystemHeadersCoverage &&
+          SM.isInSystemHeader(SM.getSpellingLoc(Loc))) {
+        if (Loc.isMacroID()) {
+          auto BeginLoc = SM.getSpellingLoc(Loc);
+          auto EndLoc = SM.getSpellingLoc(Region.getEndLoc());
+          if (SM.isWrittenInSameFile(BeginLoc, EndLoc)) {
+            Loc = SM.getFileLoc(Loc);
+            Region.setStartLoc(Loc);
+            Region.setEndLoc(SM.getFileLoc(Region.getEndLoc()));
+          }
         }
+        if (SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
+          continue;
       }
 
       FileID File = SM.getFileID(Loc);
       if (!Visited.insert(File).second)
         continue;
-
-      assert(SystemHeadersCoverage ||
-             !SM.isInSystemHeader(SM.getSpellingLoc(Loc)));
 
       unsigned Depth = 0;
       for (SourceLocation Parent = getIncludeOrExpansionLoc(Loc);

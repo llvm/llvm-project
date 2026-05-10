@@ -188,6 +188,7 @@ struct LoadJob {
   uint32_t groupId;
   SmallVector<std::unique_ptr<InputFile>, 0> out;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> thinBufs;
+  SmallVector<std::pair<std::string, llvm::StringRef>, 0> tarEntries;
 };
 
 class LinkerDriver {

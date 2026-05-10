@@ -68,9 +68,13 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
-                           std::string &IncludedFile) {
-  auto GetFile = [this](StringRef Path) {
-    return FS ? FS->getBufferForFile(Path) : MemoryBuffer::getFile(Path);
+                           std::string &IncludedFile,
+                           bool RequiresNullTerminator) {
+  auto GetFile = [this, RequiresNullTerminator](StringRef Path) {
+    return FS ? FS->getBufferForFile(Path, /*FileSize=*/-1,
+                                     RequiresNullTerminator)
+              : MemoryBuffer::getFile(Path, /*IsText=*/false,
+                                      RequiresNullTerminator);
   };
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = GetFile(Filename);

@@ -467,6 +467,7 @@ enables only the high-confidence subset of these checks.
 * ``-Wlifetime-safety-validations``: Enables checks that validate existing lifetime annotations.
 
   * ``-Wlifetime-safety-noescape``: Warns when a parameter marked with ``[[clang::noescape]]`` escapes the function.
+  * ``-Wlifetime-safety-lifetimebound-violation``: Warns when the analysis cannot verify that the return value can be lifetime bound to a parameter marked with ``[[clang::lifetimebound]]``.
 
 Limitations
 ===========

@@ -2482,11 +2482,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::ctlz: {
     ConstantInt *Cst = cast<ConstantInt>(CI.getArgOperand(1));
     bool isTrailing = ID == Intrinsic::cttz;
-    unsigned Opcode = isTrailing
-                          ? Cst->isZero() ? TargetOpcode::G_CTTZ
-                                          : TargetOpcode::G_CTTZ_ZERO_UNDEF
-                          : Cst->isZero() ? TargetOpcode::G_CTLZ
-                                          : TargetOpcode::G_CTLZ_ZERO_UNDEF;
+    unsigned Opcode = isTrailing      ? Cst->isZero()
+                                            ? TargetOpcode::G_CTTZ
+                                            : TargetOpcode::G_CTTZ_ZERO_POISON
+                      : Cst->isZero() ? TargetOpcode::G_CTLZ
+                                      : TargetOpcode::G_CTLZ_ZERO_POISON;
     MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(CI)},
                           {getOrCreateVReg(*CI.getArgOperand(0))});
     return true;

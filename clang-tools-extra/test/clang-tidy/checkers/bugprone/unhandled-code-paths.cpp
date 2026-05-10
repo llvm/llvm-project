@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s hicpp-multiway-paths-covered %t
+// RUN: %check_clang_tidy %s bugprone-unhandled-code-paths %t
 
 enum OS { Mac,
           Windows,

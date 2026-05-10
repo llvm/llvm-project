@@ -3599,6 +3599,16 @@ TEST_F(AlignmentTest, ContinuedAligned) {
                "\t},\n"
                "\tvariant);",
                Style);
+
+  Style.ColumnLimit = 40;
+  Style.IndentWidth = Style.TabWidth = Style.ContinuationIndentWidth = 8;
+
+  verifyFormat("void f() {\n"
+               "\tint aaaaaaaaaaaaaaaaaaaa =\n"
+               "\t\t000000000000000001 ? 2\n"
+               "\t\t                   : 3;\n"
+               "}",
+               Style);
 }
 
 } // namespace

@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_MULTIWAYPATHSCOVEREDCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_MULTIWAYPATHSCOVEREDCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNHANDLEDCODEPATHSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNHANDLEDCODEPATHSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::bugprone {
 
 /// Find occasions where not all codepaths are explicitly covered in code.
 /// This includes 'switch' without a 'default'-branch and 'if'-'else if'-chains
 /// without a final 'else'-branch.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/multiway-paths-covered.html
-class MultiwayPathsCoveredCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unhandled-code-paths.html
+class UnhandledCodePathsCheck : public ClangTidyCheck {
 public:
-  MultiwayPathsCoveredCheck(StringRef Name, ClangTidyContext *Context)
+  UnhandledCodePathsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         WarnOnMissingElse(Options.get("WarnOnMissingElse", false)) {}
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
@@ -39,6 +39,6 @@ private:
   const bool WarnOnMissingElse;
 };
 
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_MULTIWAYPATHSCOVEREDCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNHANDLEDCODEPATHSCHECK_H

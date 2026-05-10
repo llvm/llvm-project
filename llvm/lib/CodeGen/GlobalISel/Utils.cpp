@@ -948,10 +948,10 @@ llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
   auto Fold = [Opcode, EltBits](const APInt &V) -> APInt {
     switch (Opcode) {
     case TargetOpcode::G_CTLZ:
-    case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTLZ_ZERO_POISON:
       return APInt(EltBits, V.countl_zero());
     case TargetOpcode::G_CTTZ:
-    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTTZ_ZERO_POISON:
       return APInt(EltBits, V.countr_zero());
     case TargetOpcode::G_CTPOP:
       return APInt(EltBits, V.popcount());

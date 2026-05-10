@@ -372,6 +372,14 @@ public:
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts);
 
+  /// Finds the end of an identifier-continuation sequence starting at \p Loc.
+  /// This consumes identifier continuation characters (letters, digits,
+  /// underscores, dollar signs if enabled, UCNs, and unicode), and returns
+  /// the source location immediately after the consumed sequence.
+  static SourceLocation
+  findEndOfIdentifierContinuation(SourceLocation Loc, const SourceManager &SM,
+                                  const LangOptions &LangOpts);
+
   /// Relex the token at the specified location.
   /// \returns true if there was a failure, false on success.
   static bool getRawToken(SourceLocation Loc, Token &Result,

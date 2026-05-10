@@ -8119,6 +8119,33 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
                Style);
 }
 
+TEST_F(FormatTest, BreakFunctionDeclarationParameters) {
+  StringRef Input = "void functionDecl(int A, int B, int C);\n"
+                    "void emptyFunctionDecl();\n"
+                    "void functionDefinition(int A, int B, int C) {}";
+  verifyFormat(Input);
+
+  FormatStyle Style = getLLVMStyle();
+  EXPECT_FALSE(Style.BreakFunctionDeclarationParameters);
+  Style.BreakFunctionDeclarationParameters = true;
+  verifyFormat("void functionDecl(\n"
+               "    int A, int B, int C);\n"
+               "void emptyFunctionDecl();\n"
+               "void functionDefinition(int A, int B, int C) {}",
+               Input, Style);
+
+  // Test the style where all parameters are on their own lines.
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
+  verifyFormat("void functionDecl(\n"
+               "    int A,\n"
+               "    int B,\n"
+               "    int C);\n"
+               "void emptyFunctionDecl();\n"
+               "void functionDefinition(int A, int B, int C) {}",
+               Input, Style);
+}
+
 TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
   StringRef Input = "void functionDecl(paramA, paramB, paramC);\n"
                     "void emptyFunctionDefinition() {}\n"

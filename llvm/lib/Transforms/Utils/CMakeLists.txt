@@ -40,6 +40,7 @@ add_llvm_component_library(LLVMTransformUtils
   Instrumentation.cpp
   IntegerDivision.cpp
   IRNormalizer.cpp
+  KCFIHash.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
   Local.cpp

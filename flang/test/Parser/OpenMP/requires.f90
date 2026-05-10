@@ -5,7 +5,7 @@
 
 !UNPARSE: !$OMP REQUIRES ATOMIC_DEFAULT_MEM_ORDER(SEQ_CST)
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpRequiresDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> AtomicDefaultMemOrder -> OmpAtomicDefaultMemOrderClause -> OmpMemoryOrderType = Seq_Cst
 !PARSE-TREE: | Flags = {}
@@ -14,7 +14,7 @@
 
 !UNPARSE: !$OMP REQUIRES UNIFIED_SHARED_MEMORY UNIFIED_ADDRESS
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpRequiresDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> UnifiedSharedMemory
 !PARSE-TREE: | OmpClause -> UnifiedAddress
@@ -24,7 +24,7 @@
 
 !UNPARSE: !$OMP REQUIRES DYNAMIC_ALLOCATORS REVERSE_OFFLOAD
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpRequiresDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> DynamicAllocators
 !PARSE-TREE: | OmpClause -> ReverseOffload
@@ -34,7 +34,7 @@
 
 !UNPARSE: !$OMP REQUIRES SELF_MAPS(.true._4) UNIFIED_ADDRESS(.false._4)
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpRequiresDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> SelfMaps -> OmpSelfMapsClause -> Scalar -> Logical -> Constant -> Expr = '.true._4'
 !PARSE-TREE: | | LiteralConstant -> LogicalLiteralConstant
@@ -48,7 +48,7 @@
 
 !UNPARSE: !$OMP REQUIRES DEVICE_SAFESYNC
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpRequiresDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceSafesync
 !PARSE-TREE: | Flags = {}

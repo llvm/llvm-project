@@ -399,34 +399,34 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Promote the i8 variants and force them on up to i32 which has a shorter
   // encoding.
-  setOperationPromotedToType(ISD::CTTZ           , MVT::i8   , MVT::i32);
-  setOperationPromotedToType(ISD::CTTZ_ZERO_UNDEF, MVT::i8   , MVT::i32);
+  setOperationPromotedToType(ISD::CTTZ, MVT::i8, MVT::i32);
+  setOperationPromotedToType(ISD::CTTZ_ZERO_POISON, MVT::i8, MVT::i32);
   // Promoted i16. tzcntw has a false dependency on Intel CPUs. For BSF, we emit
   // a REP prefix to encode it as TZCNT for modern CPUs so it makes sense to
   // promote that too.
-  setOperationPromotedToType(ISD::CTTZ           , MVT::i16  , MVT::i32);
-  setOperationPromotedToType(ISD::CTTZ_ZERO_UNDEF, MVT::i16  , MVT::i32);
+  setOperationPromotedToType(ISD::CTTZ, MVT::i16, MVT::i32);
+  setOperationPromotedToType(ISD::CTTZ_ZERO_POISON, MVT::i16, MVT::i32);
 
   if (!Subtarget.hasBMI()) {
-    setOperationAction(ISD::CTTZ           , MVT::i32  , Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32  , Legal);
+    setOperationAction(ISD::CTTZ, MVT::i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Legal);
     if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::CTTZ         , MVT::i64  , Custom);
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Legal);
+      setOperationAction(ISD::CTTZ, MVT::i64, Custom);
+      setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i64, Legal);
     }
   }
 
   if (Subtarget.hasLZCNT()) {
     // When promoting the i8 variants, force them to i32 for a shorter
     // encoding.
-    setOperationPromotedToType(ISD::CTLZ           , MVT::i8   , MVT::i32);
-    setOperationPromotedToType(ISD::CTLZ_ZERO_UNDEF, MVT::i8   , MVT::i32);
+    setOperationPromotedToType(ISD::CTLZ, MVT::i8, MVT::i32);
+    setOperationPromotedToType(ISD::CTLZ_ZERO_POISON, MVT::i8, MVT::i32);
   } else {
     for (auto VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
       if (VT == MVT::i64 && !Subtarget.is64Bit())
         continue;
-      setOperationAction(ISD::CTLZ           , VT, Custom);
-      setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
+      setOperationAction(ISD::CTLZ, VT, Custom);
+      setOperationAction(ISD::CTLZ_ZERO_POISON, VT, Custom);
     }
   }
 
@@ -2266,8 +2266,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           continue;
         setOperationAction(ISD::CTLZ, VT, Custom);
         setOperationAction(ISD::CTTZ, VT, Custom);
-        setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
-        setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
+        setOperationAction(ISD::CTLZ_ZERO_POISON, VT, Custom);
+        setOperationAction(ISD::CTTZ_ZERO_POISON, VT, Custom);
       }
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 }) {
         setOperationAction(ISD::CTLZ,            VT, Legal);
@@ -25832,12 +25832,12 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     unsigned CondCode = Cond.getConstantOperandVal(0);
 
     // Special handling for __builtin_ffs(X) - 1 pattern which looks like
-    // (select (seteq X, 0), -1, (cttz_zero_undef X)). Disable the special
+    // (select (seteq X, 0), -1, (cttz_zero_poison X)). Disable the special
     // handle to keep the CMP with 0. This should be removed by
     // optimizeCompareInst by using the flags from the BSR/TZCNT used for the
-    // cttz_zero_undef.
+    // cttz_zero_poison.
     auto MatchFFSMinus1 = [&](SDValue Op1, SDValue Op2) {
-      return (Op1.getOpcode() == ISD::CTTZ_ZERO_UNDEF && Op1.hasOneUse() &&
+      return (Op1.getOpcode() == ISD::CTTZ_ZERO_POISON && Op1.hasOneUse() &&
               Op1.getOperand(0) == CmpOp0 && isAllOnesConstant(Op2));
     };
     if (Subtarget.canUseCMOV() && (VT == MVT::i32 || VT == MVT::i64) &&
@@ -34485,9 +34485,9 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SET_FPENV_MEM:      return LowerSET_FPENV_MEM(Op, DAG);
   case ISD::RESET_FPENV:        return LowerRESET_FPENV(Op, DAG);
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:    return LowerCTLZ(Op, Subtarget, DAG);
+  case ISD::CTLZ_ZERO_POISON:   return LowerCTLZ(Op, Subtarget, DAG);
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:    return LowerCTTZ(Op, Subtarget, DAG);
+  case ISD::CTTZ_ZERO_POISON:   return LowerCTTZ(Op, Subtarget, DAG);
   case ISD::MUL:                return LowerMUL(Op, Subtarget, DAG);
   case ISD::MULHS:
   case ISD::MULHU:              return LowerMULH(Op, Subtarget, DAG);
@@ -34964,8 +34964,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::CTLZ:
   case ISD::CTTZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_POISON:
+  case ISD::CTTZ_ZERO_POISON: {
     // Fold i256/i512 CTLZ/CTTZ patterns to make use of AVX512
     // vXi64 CTLZ/CTTZ and VECTOR_COMPRESS.
     // Compute the CTLZ/CTTZ of each element, add the element's bit offset,
@@ -34994,7 +34994,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // CTLZ - reverse the elements as we want the top non-zero element at the
     // bottom for compression.
     unsigned VecOpc = ISD::CTTZ;
-    if (Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF) {
+    if (Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_POISON) {
       VecOpc = ISD::CTLZ;
       Vec = DAG.getVectorShuffle(VecVT, dl, Vec, Vec, RevMask);
     }
@@ -50200,7 +50200,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     // Ok, now make sure that Add is (add (cttz X), C2) and Const is a constant.
     if (isa<ConstantSDNode>(Const) && Add.getOpcode() == ISD::ADD &&
         Add.hasOneUse() && isa<ConstantSDNode>(Add.getOperand(1)) &&
-        (Add.getOperand(0).getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
+        (Add.getOperand(0).getOpcode() == ISD::CTTZ_ZERO_POISON ||
          Add.getOperand(0).getOpcode() == ISD::CTTZ) &&
         Add.getOperand(0).getOperand(0) == Cond.getOperand(0)) {
       // This should constant fold.
@@ -56273,14 +56273,14 @@ static SDValue combineXorSubCTLZ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  if (N0.getOpcode() != ISD::CTLZ_ZERO_UNDEF &&
-      N1.getOpcode() != ISD::CTLZ_ZERO_UNDEF)
+  if (N0.getOpcode() != ISD::CTLZ_ZERO_POISON &&
+      N1.getOpcode() != ISD::CTLZ_ZERO_POISON)
     return SDValue();
 
   SDValue OpCTLZ;
   SDValue OpSizeTM1;
 
-  if (N1.getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+  if (N1.getOpcode() == ISD::CTLZ_ZERO_POISON) {
     OpCTLZ = N1;
     OpSizeTM1 = N0;
   } else if (N->getOpcode() == ISD::SUB) {
@@ -60653,8 +60653,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::CTPOP:
     case ISD::CTTZ:
     case ISD::CTLZ:
-    case ISD::CTTZ_ZERO_UNDEF:
-    case ISD::CTLZ_ZERO_UNDEF:
+    case ISD::CTTZ_ZERO_POISON:
+    case ISD::CTLZ_ZERO_POISON:
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useBWIRegs()))) {
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0));

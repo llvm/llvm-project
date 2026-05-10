@@ -185,8 +185,8 @@ public:
   // Compute a deterministic hash value across processes that is suitable for
   // on-disk serialization.
   unsigned computeStableHash() const {
-    return static_cast<unsigned>(xxh3_64bits(ArrayRef(
-        reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size)));
+    return static_cast<unsigned>(xxh3_64bits(
+        reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size));
   }
 
   LLVM_ABI bool operator==(FoldingSetNodeIDRef) const;

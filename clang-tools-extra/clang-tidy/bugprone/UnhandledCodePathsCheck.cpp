@@ -6,21 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MultiwayPathsCoveredCheck.h"
+#include "UnhandledCodePathsCheck.h"
 #include "clang/AST/ASTContext.h"
 
 #include <limits>
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::bugprone {
 
-void MultiwayPathsCoveredCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
+void UnhandledCodePathsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnMissingElse", WarnOnMissingElse);
 }
 
-void MultiwayPathsCoveredCheck::registerMatchers(MatchFinder *Finder) {
+void UnhandledCodePathsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       switchStmt(
           hasCondition(expr(
@@ -87,7 +86,7 @@ static std::size_t getNumberOfPossibleValues(QualType T,
   return 1;
 }
 
-void MultiwayPathsCoveredCheck::check(const MatchFinder::MatchResult &Result) {
+void UnhandledCodePathsCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *ElseIfWithoutElse =
           Result.Nodes.getNodeAs<IfStmt>("else-if")) {
     diag(ElseIfWithoutElse->getBeginLoc(),
@@ -123,8 +122,8 @@ void MultiwayPathsCoveredCheck::check(const MatchFinder::MatchResult &Result) {
   llvm_unreachable("matched a case, that was not explicitly handled");
 }
 
-void MultiwayPathsCoveredCheck::handleSwitchWithDefault(
-    const SwitchStmt *Switch, std::size_t CaseCount) {
+void UnhandledCodePathsCheck::handleSwitchWithDefault(const SwitchStmt *Switch,
+                                                      std::size_t CaseCount) {
   assert(CaseCount > 0 && "Switch statement with supposedly one default "
                           "branch did not contain any case labels");
   if (CaseCount == 1 || CaseCount == 2)
@@ -134,7 +133,7 @@ void MultiwayPathsCoveredCheck::handleSwitchWithDefault(
              : "switch could be better written as an if/else statement");
 }
 
-void MultiwayPathsCoveredCheck::handleSwitchWithoutDefault(
+void UnhandledCodePathsCheck::handleSwitchWithoutDefault(
     const SwitchStmt *Switch, std::size_t CaseCount,
     const MatchFinder::MatchResult &Result) {
   // The matcher only works because some nodes are explicitly matched and
@@ -172,4 +171,4 @@ void MultiwayPathsCoveredCheck::handleSwitchWithoutDefault(
          CaseCount == 1 ? "switch with only one case; use an if statement"
                         : "potential uncovered code path; add a default label");
 }
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::bugprone

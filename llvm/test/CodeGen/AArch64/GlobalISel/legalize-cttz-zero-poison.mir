@@ -29,7 +29,7 @@ body:             |
     ; CHECK-CSSC-NEXT: $w0 = COPY [[CTTZ]](s32)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $w0
     %val:_(s8) = G_IMPLICIT_DEF
-    %cttz:_(s8) = G_CTTZ_ZERO_UNDEF %val(s8)
+    %cttz:_(s8) = G_CTTZ_ZERO_POISON %val(s8)
     %ext:_(s32) = G_ANYEXT %cttz(s8)
     $w0 = COPY %ext(s32)
     RET_ReallyLR implicit $w0
@@ -62,7 +62,7 @@ body:             |
     ; CHECK-CSSC-NEXT: $w0 = COPY [[CTTZ]](s32)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $w0
     %val:_(s16) = G_IMPLICIT_DEF
-    %cttz:_(s16) = G_CTTZ_ZERO_UNDEF %val(s16)
+    %cttz:_(s16) = G_CTTZ_ZERO_POISON %val(s16)
     %ext:_(s32) = G_ANYEXT %cttz(s16)
     $w0 = COPY %ext(s32)
     RET_ReallyLR implicit $w0
@@ -93,7 +93,7 @@ body:             |
     ; CHECK-CSSC-NEXT: $w0 = COPY [[CTTZ]](s32)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $w0
     %val:_(s32) = COPY $w0
-    %1:_(s32) = G_CTTZ_ZERO_UNDEF %val(s32)
+    %1:_(s32) = G_CTTZ_ZERO_POISON %val(s32)
     $w0 = COPY %1(s32)
     RET_ReallyLR implicit $w0
 
@@ -123,7 +123,7 @@ body:             |
     ; CHECK-CSSC-NEXT: $x0 = COPY [[CTTZ]](s64)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $x0
     %val:_(s64) = COPY $x0
-    %1:_(s64) = G_CTTZ_ZERO_UNDEF %val(s64)
+    %1:_(s64) = G_CTTZ_ZERO_POISON %val(s64)
     $x0 = COPY %1(s64)
     RET_ReallyLR implicit $x0
 

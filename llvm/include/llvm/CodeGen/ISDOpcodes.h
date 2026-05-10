@@ -783,9 +783,9 @@ enum NodeType {
   BITREVERSE,
   PARITY,
 
-  /// Bit counting operators with an undefined result for zero inputs.
-  CTTZ_ZERO_UNDEF,
-  CTLZ_ZERO_UNDEF,
+  /// Bit counting operators with a poisoned result for zero inputs.
+  CTTZ_ZERO_POISON,
+  CTLZ_ZERO_POISON,
 
   /// Count leading redundant sign bits. Equivalent to
   /// (sub (ctlz (x < 0 ? ~x : x)), 1).

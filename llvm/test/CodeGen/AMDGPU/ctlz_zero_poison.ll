@@ -26,8 +26,8 @@ declare <4 x i64> @llvm.ctlz.v4i64(<4 x i64>, i1) nounwind readnone
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, i32 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i32:
+define amdgpu_kernel void @s_ctlz_zero_poison_i32(ptr addrspace(1) noalias %out, i32 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
@@ -39,7 +39,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i32:
+; VI-LABEL: s_ctlz_zero_poison_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -51,7 +51,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i32:
+; EG-LABEL: s_ctlz_zero_poison_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
@@ -62,7 +62,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     FFBH_UINT * T1.X, KC0[2].Z,
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i32:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i32:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -77,8 +77,8 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -97,7 +97,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32:
+; VI-LABEL: v_ctlz_zero_poison_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -113,7 +113,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32:
+; EG-LABEL: v_ctlz_zero_poison_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -132,7 +132,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -151,8 +151,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32(ptr addrspace(1) noalias %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_v2i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_v2i32:
+define amdgpu_kernel void @v_ctlz_zero_poison_v2i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -172,7 +172,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v2i32(ptr addrspace(1) noalias %out
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_v2i32:
+; VI-LABEL: v_ctlz_zero_poison_v2i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -189,7 +189,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v2i32(ptr addrspace(1) noalias %out
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_v2i32:
+; EG-LABEL: v_ctlz_zero_poison_v2i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -209,7 +209,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v2i32(ptr addrspace(1) noalias %out
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v2i32:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v2i32:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -229,8 +229,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v2i32(ptr addrspace(1) noalias %out
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_v4i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_v4i32:
+define amdgpu_kernel void @v_ctlz_zero_poison_v4i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -252,7 +252,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v4i32(ptr addrspace(1) noalias %out
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_v4i32:
+; VI-LABEL: v_ctlz_zero_poison_v4i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
@@ -271,7 +271,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v4i32(ptr addrspace(1) noalias %out
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_v4i32:
+; EG-LABEL: v_ctlz_zero_poison_v4i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -293,7 +293,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v4i32(ptr addrspace(1) noalias %out
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v4i32:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v4i32:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
@@ -315,8 +315,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_v4i32(ptr addrspace(1) noalias %out
   ret void
 }
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noalias %out, i8 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i8_with_select:
+define amdgpu_kernel void @s_ctlz_zero_poison_i8_with_select(ptr addrspace(1) noalias %out, i8 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i8_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
@@ -329,7 +329,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i8_with_select:
+; VI-LABEL: s_ctlz_zero_poison_i8_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -342,7 +342,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i8_with_select:
+; EG-LABEL: s_ctlz_zero_poison_i8_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -371,7 +371,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i8_with_select:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i8_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -389,8 +389,8 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
   ret void
 }
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i16_with_select(ptr addrspace(1) noalias %out, i16 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i16_with_select:
+define amdgpu_kernel void @s_ctlz_zero_poison_i16_with_select(ptr addrspace(1) noalias %out, i16 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i16_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
@@ -403,7 +403,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i16_with_select:
+; VI-LABEL: s_ctlz_zero_poison_i16_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -416,7 +416,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i16_with_select:
+; EG-LABEL: s_ctlz_zero_poison_i16_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -445,7 +445,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i16_with_select:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i16_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -463,8 +463,8 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i32_with_select(ptr addrspace(1) noalias %out, i32 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i32_with_select:
+define amdgpu_kernel void @s_ctlz_zero_poison_i32_with_select(ptr addrspace(1) noalias %out, i32 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i32_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
@@ -476,7 +476,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i32_with_select:
+; VI-LABEL: s_ctlz_zero_poison_i32_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -488,7 +488,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i32_with_select:
+; EG-LABEL: s_ctlz_zero_poison_i32_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
@@ -499,7 +499,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     FFBH_UINT * T1.X, KC0[2].Z,
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i32_with_select:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i32_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -516,8 +516,8 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i64_with_select(ptr addrspace(1) noalias %out, i64 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i64_with_select:
+define amdgpu_kernel void @s_ctlz_zero_poison_i64_with_select(ptr addrspace(1) noalias %out, i64 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i64_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -531,7 +531,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i64_with_select:
+; VI-LABEL: s_ctlz_zero_poison_i64_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v3, 0
@@ -543,7 +543,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i64_with_select:
+; EG-LABEL: s_ctlz_zero_poison_i64_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
@@ -559,7 +559,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i64_with_select:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i64_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0
@@ -577,8 +577,8 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i8_with_select:
+define amdgpu_kernel void @v_ctlz_zero_poison_i8_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i8_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -599,7 +599,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i8_with_select:
+; VI-LABEL: v_ctlz_zero_poison_i8_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -617,7 +617,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i8_with_select:
+; EG-LABEL: v_ctlz_zero_poison_i8_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -648,7 +648,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i8_with_select:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i8_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
@@ -671,8 +671,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i16_with_select:
+define amdgpu_kernel void @v_ctlz_zero_poison_i16_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i16_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -697,7 +697,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i16_with_select:
+; VI-LABEL: v_ctlz_zero_poison_i16_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -725,7 +725,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i16_with_select:
+; EG-LABEL: v_ctlz_zero_poison_i16_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -756,7 +756,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i16_with_select:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i16_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
@@ -784,8 +784,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_with_select:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -816,7 +816,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_with_select:
+; VI-LABEL: v_ctlz_zero_poison_i32_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -854,7 +854,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_with_select:
+; EG-LABEL: v_ctlz_zero_poison_i32_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
@@ -876,7 +876,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    32(4.484155e-44), 2(2.802597e-45)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_with_select:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
@@ -912,8 +912,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_with_select(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i64_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i64_with_select:
+define amdgpu_kernel void @v_ctlz_zero_poison_i64_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i64_with_select:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -958,7 +958,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i64_with_select:
+; VI-LABEL: v_ctlz_zero_poison_i64_with_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1029,7 +1029,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i64_with_select:
+; EG-LABEL: v_ctlz_zero_poison_i64_with_select:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
@@ -1062,7 +1062,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i64_with_select:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i64_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
@@ -1119,8 +1119,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i8(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i8:
+define amdgpu_kernel void @v_ctlz_zero_poison_i8(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1139,7 +1139,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8(ptr addrspace(1) noalias %out, p
 ; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i8:
+; VI-LABEL: v_ctlz_zero_poison_i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1155,7 +1155,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8(ptr addrspace(1) noalias %out, p
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i8:
+; EG-LABEL: v_ctlz_zero_poison_i8:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1184,7 +1184,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8(ptr addrspace(1) noalias %out, p
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i8:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i8:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
@@ -1208,8 +1208,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8(ptr addrspace(1) noalias %out, p
   ret void
 }
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, [8 x i32], i64 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i64:
+define amdgpu_kernel void @s_ctlz_zero_poison_i64(ptr addrspace(1) noalias %out, [8 x i32], i64 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
@@ -1222,7 +1222,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i64:
+; VI-LABEL: s_ctlz_zero_poison_i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x4c
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
@@ -1235,7 +1235,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i64:
+; EG-LABEL: s_ctlz_zero_poison_i64:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
@@ -1251,7 +1251,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i64:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i64:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x4c
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
@@ -1268,8 +1268,8 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
   ret void
 }
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias %out, i64 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i64_trunc:
+define amdgpu_kernel void @s_ctlz_zero_poison_i64_trunc(ptr addrspace(1) noalias %out, i64 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i64_trunc:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1282,7 +1282,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i64_trunc:
+; VI-LABEL: s_ctlz_zero_poison_i64_trunc:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1293,7 +1293,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i64_trunc:
+; EG-LABEL: s_ctlz_zero_poison_i64_trunc:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 6, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
@@ -1308,7 +1308,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i64_trunc:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i64_trunc:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -1323,8 +1323,8 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i64:
+define amdgpu_kernel void @v_ctlz_zero_poison_i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1344,7 +1344,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
 ; SI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i64:
+; VI-LABEL: v_ctlz_zero_poison_i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
@@ -1365,7 +1365,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
 ; VI-NEXT:    flat_store_dwordx2 v[3:4], v[1:2]
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i64:
+; EG-LABEL: v_ctlz_zero_poison_i64:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1390,7 +1390,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
 ; EG-NEXT:     LSHR * T1.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i64:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i64:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
@@ -1413,8 +1413,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64(ptr addrspace(1) noalias %out, 
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i64_trunc:
+define amdgpu_kernel void @v_ctlz_zero_poison_i64_trunc(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i64_trunc:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1434,7 +1434,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
 ; SI-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i64_trunc:
+; VI-LABEL: v_ctlz_zero_poison_i64_trunc:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
@@ -1455,7 +1455,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
 ; VI-NEXT:    flat_store_dword v[3:4], v0
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i64_trunc:
+; EG-LABEL: v_ctlz_zero_poison_i64_trunc:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1480,7 +1480,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
 ; EG-NEXT:     LSHR * T1.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i64_trunc:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i64_trunc:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
@@ -1504,8 +1504,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_trunc(ptr addrspace(1) noalias 
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1524,7 +1524,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1:
+; VI-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1540,7 +1540,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1:
+; EG-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1560,7 +1560,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1(ptr addrspace(1) no
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    -1(nan), 2(2.802597e-45)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1583,8 +1583,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_sel_ne_neg1:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_sel_ne_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_sel_ne_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1603,7 +1603,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_neg1(ptr addrspace(1) no
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_sel_ne_neg1:
+; VI-LABEL: v_ctlz_zero_poison_i32_sel_ne_neg1:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1619,7 +1619,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_neg1(ptr addrspace(1) no
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_sel_ne_neg1:
+; EG-LABEL: v_ctlz_zero_poison_i32_sel_ne_neg1:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1639,7 +1639,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_neg1(ptr addrspace(1) no
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    -1(nan), 2(2.802597e-45)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_sel_ne_neg1:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_sel_ne_neg1:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1662,8 +1662,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_neg1(ptr addrspace(1) no
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i8_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i8_sel_eq_neg1:
+define amdgpu_kernel void @v_ctlz_zero_poison_i8_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i8_sel_eq_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1681,7 +1681,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_sel_eq_neg1(ptr addrspace(1) noa
 ; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i8_sel_eq_neg1:
+; VI-LABEL: v_ctlz_zero_poison_i8_sel_eq_neg1:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1696,7 +1696,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_sel_eq_neg1(ptr addrspace(1) noa
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i8_sel_eq_neg1:
+; EG-LABEL: v_ctlz_zero_poison_i8_sel_eq_neg1:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1723,7 +1723,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_sel_eq_neg1(ptr addrspace(1) noa
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i8_sel_eq_neg1:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i8_sel_eq_neg1:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
@@ -1752,8 +1752,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_sel_eq_neg1(ptr addrspace(1) noa
   ret void
 }
 
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1_two_use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1_two_use:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_sel_eq_neg1_two_use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1_two_use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1777,7 +1777,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1_two_use(ptr addrspa
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1_two_use:
+; VI-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1_two_use:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1798,7 +1798,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1_two_use(ptr addrspa
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1_two_use:
+; EG-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1_two_use:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1826,7 +1826,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1_two_use(ptr addrspa
 ; EG-NEXT:     LSHR * T3.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    -1(nan), 2(2.802597e-45)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_sel_eq_neg1_two_use:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_sel_eq_neg1_two_use:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1855,8 +1855,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1_two_use(ptr addrspa
 }
 
 ; Selected on wrong constant
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_sel_eq_0:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_sel_eq_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_sel_eq_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1877,7 +1877,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_0(ptr addrspace(1) noali
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_sel_eq_0:
+; VI-LABEL: v_ctlz_zero_poison_i32_sel_eq_0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1895,7 +1895,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_0(ptr addrspace(1) noali
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_sel_eq_0:
+; EG-LABEL: v_ctlz_zero_poison_i32_sel_eq_0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1915,7 +1915,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_0(ptr addrspace(1) noali
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_sel_eq_0:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_sel_eq_0:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1939,8 +1939,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_0(ptr addrspace(1) noali
 }
 
 ; Selected on wrong constant
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_sel_ne_0:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_sel_ne_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_sel_ne_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -1961,7 +1961,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_0(ptr addrspace(1) noali
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_sel_ne_0:
+; VI-LABEL: v_ctlz_zero_poison_i32_sel_ne_0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1979,7 +1979,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_0(ptr addrspace(1) noali
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_sel_ne_0:
+; EG-LABEL: v_ctlz_zero_poison_i32_sel_ne_0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -1999,7 +1999,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_0(ptr addrspace(1) noali
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_sel_ne_0:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_sel_ne_0:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -2023,8 +2023,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_0(ptr addrspace(1) noali
 }
 
 ; Compare on wrong constant
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_cmp_non0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_sel_eq_cmp_non0:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_sel_eq_cmp_non0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_sel_eq_cmp_non0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -2045,7 +2045,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_cmp_non0(ptr addrspace(1
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_sel_eq_cmp_non0:
+; VI-LABEL: v_ctlz_zero_poison_i32_sel_eq_cmp_non0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -2063,7 +2063,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_cmp_non0(ptr addrspace(1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_sel_eq_cmp_non0:
+; EG-LABEL: v_ctlz_zero_poison_i32_sel_eq_cmp_non0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -2084,7 +2084,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_cmp_non0(ptr addrspace(1
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_sel_eq_cmp_non0:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_sel_eq_cmp_non0:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -2108,8 +2108,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_cmp_non0(ptr addrspace(1
 }
 
 ; Selected on wrong constant
-define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_cmp_non0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
-; SI-LABEL: v_ctlz_zero_undef_i32_sel_ne_cmp_non0:
+define amdgpu_kernel void @v_ctlz_zero_poison_i32_sel_ne_cmp_non0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
+; SI-LABEL: v_ctlz_zero_poison_i32_sel_ne_cmp_non0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
@@ -2130,7 +2130,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_cmp_non0(ptr addrspace(1
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: v_ctlz_zero_undef_i32_sel_ne_cmp_non0:
+; VI-LABEL: v_ctlz_zero_poison_i32_sel_ne_cmp_non0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -2148,7 +2148,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_cmp_non0(ptr addrspace(1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: v_ctlz_zero_undef_i32_sel_ne_cmp_non0:
+; EG-LABEL: v_ctlz_zero_poison_i32_sel_ne_cmp_non0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
@@ -2169,7 +2169,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_cmp_non0(ptr addrspace(1
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i32_sel_ne_cmp_non0:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i32_sel_ne_cmp_non0:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -2192,27 +2192,27 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_ne_cmp_non0(ptr addrspace(1
   ret void
 }
 
-define i7 @v_ctlz_zero_undef_i7(i7 %val) {
-; SI-LABEL: v_ctlz_zero_undef_i7:
+define i7 @v_ctlz_zero_poison_i7(i7 %val) {
+; SI-LABEL: v_ctlz_zero_poison_i7:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 25, v0
 ; SI-NEXT:    v_ffbh_u32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_i7:
+; VI-LABEL: v_ctlz_zero_poison_i7:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 25, v0
 ; VI-NEXT:    v_ffbh_u32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_i7:
+; EG-LABEL: v_ctlz_zero_poison_i7:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i7:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i7:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 25, v0
@@ -2222,8 +2222,8 @@ define i7 @v_ctlz_zero_undef_i7(i7 %val) {
   ret i7 %ctlz
 }
 
-define amdgpu_kernel void @s_ctlz_zero_undef_i18(ptr addrspace(1) noalias %out, i18 %val) nounwind {
-; SI-LABEL: s_ctlz_zero_undef_i18:
+define amdgpu_kernel void @s_ctlz_zero_poison_i18(ptr addrspace(1) noalias %out, i18 %val) nounwind {
+; SI-LABEL: s_ctlz_zero_poison_i18:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
@@ -2240,7 +2240,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i18(ptr addrspace(1) noalias %out, 
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: s_ctlz_zero_undef_i18:
+; VI-LABEL: s_ctlz_zero_poison_i18:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -2260,7 +2260,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i18(ptr addrspace(1) noalias %out, 
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
-; EG-LABEL: s_ctlz_zero_undef_i18:
+; EG-LABEL: s_ctlz_zero_poison_i18:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 28, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T1.XW, T3.X
@@ -2297,7 +2297,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i18(ptr addrspace(1) noalias %out, 
 ; EG-NEXT:     LSHR * T3.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX9-GISEL-LABEL: s_ctlz_zero_undef_i18:
+; GFX9-GISEL-LABEL: s_ctlz_zero_poison_i18:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -2317,27 +2317,27 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i18(ptr addrspace(1) noalias %out, 
   ret void
 }
 
-define i18 @v_ctlz_zero_undef_i18(i18 %val) {
-; SI-LABEL: v_ctlz_zero_undef_i18:
+define i18 @v_ctlz_zero_poison_i18(i18 %val) {
+; SI-LABEL: v_ctlz_zero_poison_i18:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 14, v0
 ; SI-NEXT:    v_ffbh_u32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_i18:
+; VI-LABEL: v_ctlz_zero_poison_i18:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 14, v0
 ; VI-NEXT:    v_ffbh_u32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_i18:
+; EG-LABEL: v_ctlz_zero_poison_i18:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_i18:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i18:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 14, v0
@@ -2347,8 +2347,8 @@ define i18 @v_ctlz_zero_undef_i18(i18 %val) {
   ret i18 %ctlz
 }
 
-define <2 x i18> @v_ctlz_zero_undef_v2i18(<2 x i18> %val) {
-; SI-LABEL: v_ctlz_zero_undef_v2i18:
+define <2 x i18> @v_ctlz_zero_poison_v2i18(<2 x i18> %val) {
+; SI-LABEL: v_ctlz_zero_poison_v2i18:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 14, v0
@@ -2357,7 +2357,7 @@ define <2 x i18> @v_ctlz_zero_undef_v2i18(<2 x i18> %val) {
 ; SI-NEXT:    v_ffbh_u32_e32 v1, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_v2i18:
+; VI-LABEL: v_ctlz_zero_poison_v2i18:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 14, v0
@@ -2366,12 +2366,12 @@ define <2 x i18> @v_ctlz_zero_undef_v2i18(<2 x i18> %val) {
 ; VI-NEXT:    v_ffbh_u32_e32 v1, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_v2i18:
+; EG-LABEL: v_ctlz_zero_poison_v2i18:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v2i18:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v2i18:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 14, v0
@@ -2383,8 +2383,8 @@ define <2 x i18> @v_ctlz_zero_undef_v2i18(<2 x i18> %val) {
   ret <2 x i18> %ctlz
 }
 
-define <2 x i16> @v_ctlz_zero_undef_v2i16(<2 x i16> %val) {
-; SI-LABEL: v_ctlz_zero_undef_v2i16:
+define <2 x i16> @v_ctlz_zero_poison_v2i16(<2 x i16> %val) {
+; SI-LABEL: v_ctlz_zero_poison_v2i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
@@ -2395,7 +2395,7 @@ define <2 x i16> @v_ctlz_zero_undef_v2i16(<2 x i16> %val) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_v2i16:
+; VI-LABEL: v_ctlz_zero_poison_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
@@ -2405,12 +2405,12 @@ define <2 x i16> @v_ctlz_zero_undef_v2i16(<2 x i16> %val) {
 ; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_v2i16:
+; EG-LABEL: v_ctlz_zero_poison_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v2i16:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v2i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -2425,8 +2425,8 @@ define <2 x i16> @v_ctlz_zero_undef_v2i16(<2 x i16> %val) {
   ret <2 x i16> %ctlz
 }
 
-define <3 x i16> @v_ctlz_zero_undef_v3i16(<3 x i16> %val) {
-; SI-LABEL: v_ctlz_zero_undef_v3i16:
+define <3 x i16> @v_ctlz_zero_poison_v3i16(<3 x i16> %val) {
+; SI-LABEL: v_ctlz_zero_poison_v3i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
@@ -2439,7 +2439,7 @@ define <3 x i16> @v_ctlz_zero_undef_v3i16(<3 x i16> %val) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_v3i16:
+; VI-LABEL: v_ctlz_zero_poison_v3i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
@@ -2451,12 +2451,12 @@ define <3 x i16> @v_ctlz_zero_undef_v3i16(<3 x i16> %val) {
 ; VI-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_v3i16:
+; EG-LABEL: v_ctlz_zero_poison_v3i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v3i16:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v3i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
@@ -2475,8 +2475,8 @@ define <3 x i16> @v_ctlz_zero_undef_v3i16(<3 x i16> %val) {
   ret <3 x i16> %ctlz
 }
 
-define <4 x i16> @v_ctlz_zero_undef_v4i16(<4 x i16> %val) {
-; SI-LABEL: v_ctlz_zero_undef_v4i16:
+define <4 x i16> @v_ctlz_zero_poison_v4i16(<4 x i16> %val) {
+; SI-LABEL: v_ctlz_zero_poison_v4i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v1
@@ -2494,7 +2494,7 @@ define <4 x i16> @v_ctlz_zero_undef_v4i16(<4 x i16> %val) {
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_v4i16:
+; VI-LABEL: v_ctlz_zero_poison_v4i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
@@ -2509,12 +2509,12 @@ define <4 x i16> @v_ctlz_zero_undef_v4i16(<4 x i16> %val) {
 ; VI-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_v4i16:
+; EG-LABEL: v_ctlz_zero_poison_v4i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v4i16:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v4i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
@@ -2536,8 +2536,8 @@ define <4 x i16> @v_ctlz_zero_undef_v4i16(<4 x i16> %val) {
   ret <4 x i16> %ctlz
 }
 
-define <2 x i8> @v_ctlz_zero_undef_v2i8(<2 x i8> %val) {
-; SI-LABEL: v_ctlz_zero_undef_v2i8:
+define <2 x i8> @v_ctlz_zero_poison_v2i8(<2 x i8> %val) {
+; SI-LABEL: v_ctlz_zero_poison_v2i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
@@ -2548,7 +2548,7 @@ define <2 x i8> @v_ctlz_zero_undef_v2i8(<2 x i8> %val) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_v2i8:
+; VI-LABEL: v_ctlz_zero_poison_v2i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
@@ -2560,12 +2560,12 @@ define <2 x i8> @v_ctlz_zero_undef_v2i8(<2 x i8> %val) {
 ; VI-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_v2i8:
+; EG-LABEL: v_ctlz_zero_poison_v2i8:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v2i8:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v2i8:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
@@ -2577,8 +2577,8 @@ define <2 x i8> @v_ctlz_zero_undef_v2i8(<2 x i8> %val) {
   ret <2 x i8> %ctlz
 }
 
-define <2 x i7> @v_ctlz_zero_undef_v2i7(<2 x i7> %val) {
-; SI-LABEL: v_ctlz_zero_undef_v2i7:
+define <2 x i7> @v_ctlz_zero_poison_v2i7(<2 x i7> %val) {
+; SI-LABEL: v_ctlz_zero_poison_v2i7:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 25, v0
@@ -2587,7 +2587,7 @@ define <2 x i7> @v_ctlz_zero_undef_v2i7(<2 x i7> %val) {
 ; SI-NEXT:    v_ffbh_u32_e32 v1, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_ctlz_zero_undef_v2i7:
+; VI-LABEL: v_ctlz_zero_poison_v2i7:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 25, v0
@@ -2596,12 +2596,12 @@ define <2 x i7> @v_ctlz_zero_undef_v2i7(<2 x i7> %val) {
 ; VI-NEXT:    v_ffbh_u32_e32 v1, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; EG-LABEL: v_ctlz_zero_undef_v2i7:
+; EG-LABEL: v_ctlz_zero_poison_v2i7:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ;
-; GFX9-GISEL-LABEL: v_ctlz_zero_undef_v2i7:
+; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v2i7:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 25, v0

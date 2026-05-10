@@ -85,8 +85,8 @@ define i32 @ctls_i32_xor_commuted(i32 %x) {
   ret i32 %d
 }
 
-define i32 @ctls_i32_zero_undef(i32 %x) {
-; GFX6-LABEL: ctls_i32_zero_undef:
+define i32 @ctls_i32_zero_poison(i32 %x) {
+; GFX6-LABEL: ctls_i32_zero_poison:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_ffbh_i32_e32 v0, v0
@@ -94,7 +94,7 @@ define i32 @ctls_i32_zero_undef(i32 %x) {
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: ctls_i32_zero_undef:
+; GFX11-LABEL: ctls_i32_zero_poison:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cls_i32_e32 v0, v0
@@ -104,7 +104,7 @@ define i32 @ctls_i32_zero_undef(i32 %x) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a = ashr i32 %x, 31
   %b = xor i32 %x, %a
-  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 true)  ; zero_undef = true
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 true)  ; zero_poison = true
   %d = sub i32 %c, 1
   ret i32 %d
 }
@@ -362,9 +362,9 @@ define <2 x i32> @ctls_v2i32_known_mixed_bits(<2 x i32> %x) {
   ret <2 x i32> %d
 }
 
-; Vector with ctlz_zero_undef.
-define <2 x i32> @ctls_v2i32_zero_undef(<2 x i32> %x) {
-; GFX6-LABEL: ctls_v2i32_zero_undef:
+; Vector with ctlz_zero_poison.
+define <2 x i32> @ctls_v2i32_zero_poison(<2 x i32> %x) {
+; GFX6-LABEL: ctls_v2i32_zero_poison:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
@@ -377,7 +377,7 @@ define <2 x i32> @ctls_v2i32_zero_undef(<2 x i32> %x) {
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: ctls_v2i32_zero_undef:
+; GFX11-LABEL: ctls_v2i32_zero_poison:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v2, 31, v0

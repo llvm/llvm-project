@@ -4442,12 +4442,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::i32,     {  1,  2,  3,  3 } }, // MOV+BSR+XOR
     { ISD::CTLZ,       MVT::i16,     {  2,  2,  3,  3 } }, // MOV+BSR+XOR
     { ISD::CTLZ,       MVT::i8,      {  2,  2,  4,  3 } }, // MOV+BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i64,     {  1,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ,       MVT::i32,     {  1,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ,       MVT::i16,     {  2,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ,       MVT::i8,      {  2,  2,  2,  2 } }, // MOV+BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i64,{  1,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i64,     {  2,  3,  1,  3 } },
@@ -4478,15 +4478,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::i32,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i16,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i8,      {  2,  2,  5,  6 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  2,  2,  2 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  2,  2 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i32,{  1,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i16,{  2,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i32,     {  2,  2,  3,  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i16,     {  2,  2,  2,  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i8,      {  2,  2,  2,  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1,  2,  1,  2 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2,  2,  1,  2 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i32,{  1,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i16,{  2,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i8, {  2,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
     { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
     { ISD::CTPOP,      MVT::i8,      {  7,  6,  6,  6 } },
@@ -4694,14 +4694,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(OpTy);
     MVT MTy = LT.second;
 
-    // Without BMI/LZCNT see if we're only looking for a *_ZERO_UNDEF cost.
+    // Without BMI/LZCNT see if we're only looking for a *_ZERO_POISON cost.
     if (((ISD == ISD::CTTZ && !ST->hasBMI()) ||
          (ISD == ISD::CTLZ && !ST->hasLZCNT())) &&
         !MTy.isVector() && !ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
       if (auto *Cst = dyn_cast<ConstantInt>(Args[1]))
         if (Cst->isAllOnesValue())
-          ISD = ISD == ISD::CTTZ ? ISD::CTTZ_ZERO_UNDEF : ISD::CTLZ_ZERO_UNDEF;
+          ISD =
+              ISD == ISD::CTTZ ? ISD::CTTZ_ZERO_POISON : ISD::CTLZ_ZERO_POISON;
     }
 
     // FSQRT is a single instruction.

@@ -140,6 +140,20 @@ func.func @float32_binary_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) {
   return
 }
 
+// CHECK-LABEL: @fpowi_scalar
+func.func @fpowi_scalar(%base: f32, %power: i32) -> f32 {
+  // CHECK: spirv.CL.pown %{{.*}}, %{{.*}} : f32, i32 -> f32
+  %0 = math.fpowi %base, %power : f32, i32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @fpowi_vector
+func.func @fpowi_vector(%base: vector<4xf32>, %power: vector<4xi32>) -> vector<4xf32> {
+  // CHECK: spirv.CL.pown %{{.*}}, %{{.*}} : vector<4xf32>, vector<4xi32> -> vector<4xf32>
+  %0 = math.fpowi %base, %power : vector<4xf32>, vector<4xi32>
+  return %0 : vector<4xf32>
+}
+
 // CHECK-LABEL: @float32_ternary_scalar
 func.func @float32_ternary_scalar(%a: f32, %b: f32, %c: f32) {
   // CHECK: spirv.CL.fma %{{.*}}: f32

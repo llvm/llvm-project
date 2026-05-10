@@ -896,11 +896,11 @@ public:
 
   /// Create an assume intrinsic call that allows the optimizer to
   /// assume that the provided condition will be true.
-  ///
-  /// The optional argument \p OpBundles specifies operand bundles that are
-  /// added to the call instruction.
-  LLVM_ABI CallInst *
-  CreateAssumption(Value *Cond, ArrayRef<OperandBundleDef> OpBundles = {});
+  LLVM_ABI CallInst *CreateAssumption(Value *Cond);
+
+  /// Create an assume intrinsic call that allows the optimizer to
+  /// assume that the provided operand bundles hold.
+  LLVM_ABI CallInst *CreateAssumption(ArrayRef<OperandBundleDef> OpBundles);
 
   /// Create a llvm.experimental.noalias.scope.decl intrinsic call.
   LLVM_ABI Instruction *CreateNoAliasScopeDeclaration(Value *Scope);
@@ -1025,7 +1025,8 @@ public:
                                      ArrayRef<Type *> OverloadTypes,
                                      ArrayRef<Value *> Args,
                                      FMFSource FMFSource = {},
-                                     const Twine &Name = "");
+                                     const Twine &Name = "",
+                                     ArrayRef<OperandBundleDef> OpBundles = {});
 
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to

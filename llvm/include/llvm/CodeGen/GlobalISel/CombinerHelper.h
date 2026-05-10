@@ -410,7 +410,7 @@ public:
                                        const ConstantFP *Cst) const;
 
   /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
-  /// _ZERO_UNDEF variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
+  /// _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
   /// a scalar constant or a G_BUILD_VECTOR of constants.
   bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
                                    BuildFnTy &MatchInfo) const;
