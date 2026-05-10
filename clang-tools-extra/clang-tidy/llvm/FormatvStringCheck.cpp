@@ -171,12 +171,11 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Check for unused arguments.
   if (!Parsed.Indices.empty()) {
-    llvm::SmallBitVector UsedIndices(NumRequiredArgs);
+    llvm::SmallBitVector UnusedIndices(NumRequiredArgs, true);
     for (const unsigned Index : Parsed.Indices)
-      UsedIndices.set(Index);
+      UsedIndices.reset(Index);
 
-    auto UnusedIndices = UsedIndices.flip();
-    for (auto UnusedIndex : UnusedIndices.set_bits()) {
+    for (const auto UnusedIndex : UnusedIndices.set_bits()) {
       // Point to unused arguments.
       const Expr *UnusedArg = Call->getArg(PackParamIndex + UnusedIndex);
       diag(UnusedArg->getBeginLoc(), "argument unused in format string");
