@@ -4898,7 +4898,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       VarDecl *Def = Old->getDefinition();
       if (Def && checkVarDeclRedefinition(Def, New))
         return;
-      if(Old->isInvalidDecl())
+      if (Old->isInvalidDecl())
         New->setInvalidDecl();
     }
   } else {
