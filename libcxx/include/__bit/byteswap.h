@@ -27,27 +27,30 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <integral _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp byteswap(_Tp __val) noexcept {
-#  if __has_builtin(__builtin_bswapg)
-  // __builtin_bswapg handles all standard integer types as well as
-  // _BitInt(N) with N a multiple of 16 (or N == 8 for identity). Padding-bit
-  // and unsupported-width cases are rejected by Clang with a clear
-  // diagnostic, so no static_assert is needed here.
-  return __builtin_bswapg(__val);
-#  else
-  // Fallback for compilers that do not provide __builtin_bswapg
-  // (added in Clang 22; libc++ supports Clang 21+).
+  // Identity for size-1 types: no bytes move and no padding gets shuffled
+  // into significant positions. bool, char, and _BitInt(N <= CHAR_BIT) all
+  // land here. Handled before the __builtin_bswapg path because some
+  // Clang 22 builds have a constexpr-eval bug on the 1-bit (bool) case
+  // (fixed in commit f5410565137c, post-22.1.0).
   if constexpr (sizeof(_Tp) == 1) {
-    // Identity for size-1 types: no bytes move and no padding gets shuffled
-    // into significant positions. bool, char, and _BitInt(N <= CHAR_BIT)
-    // all land here.
     return __val;
+#  if __has_builtin(__builtin_bswapg)
   } else {
+    // __builtin_bswapg handles all standard integer types as well as
+    // _BitInt(N) with N a multiple of 16. Padding-bit and unsupported-
+    // width cases are rejected by Clang with a clear diagnostic, so no
+    // static_assert is needed here.
+    return __builtin_bswapg(__val);
+#  else
+  } else {
+    // Fallback for compilers that do not provide __builtin_bswapg
+    // (added in Clang 22; libc++ supports Clang 21+).
+    //
     // Reject types whose value bits do not fill the entire object
     // representation (e.g. _BitInt(13) has 3 padding bits in 2 bytes of
     // storage). The byte-level builtins below would swap those padding
     // bits into significant positions, and the resulting value's meaning
-    // is unspecified. The size-1 case above is exempt because no bytes
-    // move.
+    // is unspecified.
     static_assert(numeric_limits<_Tp>::digits + numeric_limits<_Tp>::is_signed == sizeof(_Tp) * CHAR_BIT,
                   "std::byteswap requires a type whose value bits fill the entire "
                   "object representation; types like _BitInt(N) where N is not a "
@@ -79,8 +82,8 @@ template <integral _Tp>
       }
       return __result;
     }
-  }
 #  endif     // __has_builtin(__builtin_bswapg)
+  }
 }
 
 #endif // _LIBCPP_STD_VER >= 23
