@@ -2972,6 +2972,20 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
           name->symbol = func;
         }
       }
+      // OMP 5.2 §7.8.2 ¶10: If a name appears in a declare target directive
+      // and has not been explicitly typed as a variable or procedure, and
+      // no other declaration gives it a procedure property, treat it as an
+      // external subroutine.
+      if (symbol->has<EntityDetails>() &&
+          !symbol->attrs().test(Attr::EXTERNAL) &&
+          !symbol->test(Symbol::Flag::Function) &&
+          !symbol->test(Symbol::Flag::Subroutine)) {
+        // Symbol is still unspecialized EntityDetails - promote to external
+        // proc
+        symbol->attrs().set(Attr::EXTERNAL);
+        symbol->set_details(ProcEntityDetails{});
+        symbol->set(Symbol::Flag::Subroutine);
+      }
     }
     if (directive == llvm::omp::Directive::OMPD_target_data) {
       checkExclusivelists(symbol, Symbol::Flag::OmpUseDevicePtr, symbol,

@@ -1297,11 +1297,13 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   llvm::omp::Directive directive{GetContext().directive};
 
   if (name->symbol->GetUltimate().IsSubprogram()) {
-    if (directive == llvm::omp::Directive::OMPD_threadprivate)
+    if (directive == llvm::omp::Directive::OMPD_threadprivate) {
       context_.Say(name->source,
           "The procedure name cannot be in a %s directive"_err_en_US,
           ContextDirectiveAsFortran());
-    // TODO: Check for procedure name in declare target directive.
+    }
+    // OMP 5.2 7.8.2 p10: a procedure name in DECLARE TARGET is valid
+    // (treated as external subroutine if not otherwise specified).
   } else if (name->symbol->attrs().test(Attr::PARAMETER)) {
     if (directive == llvm::omp::Directive::OMPD_threadprivate)
       context_.Say(name->source,

@@ -190,7 +190,9 @@ bool IsVariableListItem(const Symbol &sym) {
 }
 
 bool IsExtendedListItem(const Symbol &sym) {
-  return IsVariableListItem(sym) || sym.IsSubprogram();
+  // Extended-list item: variable, procedure, or procedure pointer
+  return IsVariableListItem(sym) || sym.IsSubprogram() ||
+      sym.has<ProcEntityDetails>();
 }
 
 bool IsTypeParamInquiry(const Symbol &sym) {
