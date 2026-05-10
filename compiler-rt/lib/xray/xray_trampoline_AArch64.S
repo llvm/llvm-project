@@ -27,7 +27,11 @@
 .endm
 
 .macro LOAD_HANDLER_ADDR reg handler
-#if !defined(XRAY_PIC)
+#if defined(__APPLE__)
+    adrp \reg, ASM_SYMBOL(\handler)@GOTPAGE
+    ldr \reg, [\reg, ASM_SYMBOL(\handler)@GOTPAGEOFF]
+    ldr \reg, [\reg]
+#elif !defined(XRAY_PIC)
     adrp \reg, ASM_SYMBOL(\handler)
     ldr \reg, [\reg, :lo12:ASM_SYMBOL(\handler)]
 #else
