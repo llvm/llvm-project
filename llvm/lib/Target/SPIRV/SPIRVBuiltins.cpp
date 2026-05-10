@@ -1462,7 +1462,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     unsigned VecLen = Call->Arguments.size() - 1;
     VecReg = MRI->createGenericVirtualRegister(
         LLT::fixed_vector(VecLen, MRI->getType(ElemReg)));
-    MRI->setRegClass(VecReg, &SPIRV::vIDRegClass);
+    MRI->setRegClass(VecReg, &SPIRV::viIDRegClass);
     SPIRVTypeInst VecType =
         GR->getOrCreateSPIRVVectorType(ElemType, VecLen, MIRBuilder, true);
     GR->assignSPIRVTypeToVReg(VecType, VecReg, MIRBuilder.getMF());
@@ -1830,6 +1830,10 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicXor:
   case SPIRV::OpAtomicAnd:
   case SPIRV::OpAtomicExchange:
+  case SPIRV::OpAtomicSMax:
+  case SPIRV::OpAtomicSMin:
+  case SPIRV::OpAtomicUMax:
+  case SPIRV::OpAtomicUMin:
     return buildAtomicRMWInst(Call, Opcode, MIRBuilder, GR);
   case SPIRV::OpMemoryBarrier:
     return buildBarrierInst(Call, SPIRV::OpMemoryBarrier, MIRBuilder, GR);
@@ -2171,7 +2175,7 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
                             : 32;
     QueryResult = MIRBuilder.getMRI()->createGenericVirtualRegister(
         LLT::fixed_vector(NumActualRetComponents, Bitwidth));
-    MIRBuilder.getMRI()->setRegClass(QueryResult, &SPIRV::vIDRegClass);
+    MIRBuilder.getMRI()->setRegClass(QueryResult, &SPIRV::viIDRegClass);
     SPIRVTypeInst IntTy = GR->getOrCreateSPIRVIntegerType(Bitwidth, MIRBuilder);
     QueryResultType = GR->getOrCreateSPIRVVectorType(
         IntTy, NumActualRetComponents, MIRBuilder, true);

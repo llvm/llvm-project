@@ -1350,6 +1350,12 @@ cc_binary(
     ],
 )
 
+td_library(
+    name = "PythonBindingsTdFiles",
+    srcs = ["include/mlir/Bindings/Python/PythonBindings.td"],
+    includes = ["include"],
+)
+
 ##---------------------------------------------------------------------------##
 
 td_library(
@@ -5904,18 +5910,6 @@ cc_library(
     ],
 )
 
-gentbl_cc_library(
-    name = "GPUToNVVMGen",
-    strip_include_prefix = "lib/Conversion/GPUToNVVM",
-    tbl_outs = {"lib/Conversion/GPUToNVVM/GPUToNVVM.cpp.inc": ["-gen-rewriters"]},
-    tblgen = ":mlir-tblgen",
-    td_file = "lib/Conversion/GPUToNVVM/GPUToNVVM.td",
-    deps = [
-        ":GPUOpsTdFiles",
-        ":NVVMOpsTdFiles",
-    ],
-)
-
 cc_library(
     name = "GPUToLLVMSPVTransforms",
     srcs = glob([
@@ -5959,7 +5953,6 @@ cc_library(
         ":GPUCommonTransforms",
         ":GPUDialect",
         ":GPUToGPURuntimeTransforms",
-        ":GPUToNVVMGen",
         ":GPUTransforms",
         ":IR",
         ":LLVMCommonConversion",
@@ -9228,6 +9221,7 @@ cc_library(
         ":LLVMDialect",
         ":OpenMPCommon",
         ":OpenMPDialect",
+        ":OpenMPUtils",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -9991,6 +9985,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":SparseTensorEnums",
+        ":Support",
         ":mlir_float16_utils",
     ],
 )
@@ -10677,6 +10672,22 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "OpenMPUtils",
+    srcs = glob(["lib/Dialect/OpenMP/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/OpenMP/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AtomicInterfaces",
+        ":CallOpInterfaces",
+        ":IR",
+        ":LLVMDialect",
+        ":OpenMPDialect",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenMPTransforms",
     srcs = glob(
         [
@@ -10687,12 +10698,15 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":AtomicInterfaces",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
+        ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPDialect",
         ":OpenMPPassIncGen",
+        ":OpenMPUtils",
         ":Pass",
         ":Support",
         ":Transforms",

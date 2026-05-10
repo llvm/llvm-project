@@ -41,6 +41,10 @@ public:
     m_value_was_set = false;
   }
 
+  bool IsDefault() const override {
+    return m_regex.GetText() == m_default_regex_str;
+  }
+
   // Subclass specific functions
   const RegularExpression *GetCurrentValue() const {
     return (m_regex.IsValid() ? &m_regex : nullptr);

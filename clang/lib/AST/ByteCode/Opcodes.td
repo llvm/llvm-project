@@ -325,6 +325,9 @@ def GetPtrLocal : OffsetOpcode {
 def GetRefLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+
+def CheckRefInit : Opcode {}
+
 // [] -> [Pointer]
 def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]
@@ -433,7 +436,8 @@ def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 def EndLifetimePop : Opcode;
 def EndLifetime : Opcode;
 def MarkDestroyed : Opcode;
-def StartLifetime : Opcode;
+def StartThisLifetime : Opcode;
+def StartThisLifetime1 : Opcode;
 
 def CheckDecl : Opcode {
   let Args = [ArgVarDecl];
@@ -869,6 +873,9 @@ def GetMemberPtr : Opcode {
 }
 def GetMemberPtrBase : Opcode;
 def GetMemberPtrDecl : Opcode;
+def CopyMemberPtrPath : Opcode {
+  let Args = [ArgRecordDecl, ArgBool];
+}
 
 //===----------------------------------------------------------------------===//
 // Debugging.

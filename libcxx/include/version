@@ -246,7 +246,6 @@ __cpp_lib_smart_ptr_owner_equality                      202306L <memory>
 __cpp_lib_source_location                               201907L <source_location>
 __cpp_lib_span                                          202002L <span>
 __cpp_lib_span_at                                       202311L <span>
-__cpp_lib_span_initializer_list                         202311L <span>
 __cpp_lib_spanstream                                    202106L <spanstream>
 __cpp_lib_ssize                                         201902L <iterator>
 __cpp_lib_sstream_from_string_view                      202306L <sstream>
@@ -622,7 +621,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_senders                              202406L
 // # define __cpp_lib_smart_ptr_owner_equality             202306L
 # define __cpp_lib_span_at                              202311L
-# define __cpp_lib_span_initializer_list                202311L
 # define __cpp_lib_sstream_from_string_view             202306L
 # define __cpp_lib_string_subview                       202506L
 # undef  __cpp_lib_string_view

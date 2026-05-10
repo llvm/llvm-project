@@ -29,6 +29,8 @@ class raw_ostream;
 
 namespace dxil {
 
+class DXILDebugInfoMap;
+
 class BitcodeWriter {
   SmallVectorImpl<char> &Buffer;
   std::unique_ptr<BitstreamWriter> Stream;
@@ -50,14 +52,15 @@ public:
   ~BitcodeWriter();
 
   /// Write the specified module to the buffer specified at construction time.
-  void writeModule(const Module &M);
+  void writeModule(const Module &M, const DXILDebugInfoMap &DebugInfo);
 };
 
 /// Write the specified module to the specified raw output stream.
 ///
 /// For streams where it matters, the given stream should be in "binary"
 /// mode.
-void WriteDXILToFile(const Module &M, raw_ostream &Out);
+void WriteDXILToFile(const Module &M, raw_ostream &Out,
+                     const DXILDebugInfoMap &DebugInfo);
 
 } // namespace dxil
 

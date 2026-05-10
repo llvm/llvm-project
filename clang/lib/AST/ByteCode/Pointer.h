@@ -830,6 +830,12 @@ public:
   bool pointsToStringLiteral() const;
   /// Whether this points to a block created for an AddrLabelExpr.
   bool pointsToLabel() const;
+  /// Returns the AddrLabelExpr the Pointer points to, if any.
+  const AddrLabelExpr *getPointedToLabel() const {
+    if (const Descriptor *Desc = getDeclDesc())
+      return dyn_cast_if_present<AddrLabelExpr>(Desc->asExpr());
+    return nullptr;
+  }
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

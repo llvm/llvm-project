@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,msvc %s -triple x86_64-pc-windows-msvc -fms-compatibility
 
 // GH#58229 - rejects-valid
 __attribute__((__visibility__("default"))) [[nodiscard]] int f();
@@ -39,6 +40,15 @@ void fn() {
   int i[5];
   int (*__attribute__((attr(i[1]))) pi);  // expected-warning{{unknown attribute 'attr' ignored}}
   pi = &i[0];
+}
+
+namespace GH184954 {
+  struct S {
+    int a __attribute__((packed)) : 4;       // msvc-error {{expected ';' at end of declaration list}} \
+                                             // msvc-error {{expected member name or ';' after declaration specifiers}}
+    int b __attribute__((aligned(16))) : 4;  // msvc-error {{expected ';' at end of declaration list}} \
+                                             // msvc-error {{expected member name or ';' after declaration specifiers}}
+  };
 }
 
 [[deprecated([""])]] int WrongArgs; // expected-error {{expected string literal as argument of 'deprecated' attribute}}

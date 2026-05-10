@@ -1947,8 +1947,7 @@ the configuration (without a prefix: ``Auto``).
   * ``InlineOnly``
     Only merge functions defined inside a class. Same as ``inline``,
     except it does not implies ``empty``: i.e. top level empty functions
-    are not merged either. This option is **deprecated** and is retained
-    for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+    are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1962,9 +1961,7 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Empty``
-    Only merge empty functions. This option is **deprecated** and is
-    retained for backwards compatibility. See ``Empty`` of
-    ``ShortFunctionStyle``.
+    Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1974,9 +1971,8 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Inline``
-    Only merge functions defined inside a class. Implies ``empty``. This
-    option is **deprecated** and is retained for backwards compatibility.
-    See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+    Only merge functions defined inside a class. Implies ``empty``. See
+    ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -3896,6 +3892,21 @@ the configuration (without a prefix: ``Auto``).
                        initializer2()
 
 
+
+.. _BreakFunctionDeclarationParameters:
+
+**BreakFunctionDeclarationParameters** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <BreakFunctionDeclarationParameters>`
+  If ``true``, clang-format will always break before function declaration
+  parameters.
+
+  .. code-block:: c++
+
+     true:
+     void functionDeclaration(
+              int A, int B);
+
+     false:
+     void functionDeclaration(int A, int B);
 
 .. _BreakFunctionDefinitionParameters:
 

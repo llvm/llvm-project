@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
 
@@ -23,7 +24,6 @@ class VPBlendRecipe;
 class VPInstruction;
 class VPWidenRecipe;
 class VPWidenCallRecipe;
-class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryRecipe;
 class VPReplicateRecipe;
 class VPRecipeBase;
@@ -56,7 +56,6 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
   Type *inferScalarTypeForRecipe(const VPWidenCallRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPWidenIntOrFpInductionRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R);
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
@@ -87,7 +86,8 @@ struct VPRegisterUsage {
   /// Calculate the estimated cost of any spills due to using more registers
   /// than the number available for the target. If non-zero, OverrideMaxNumRegs
   /// is used in place of the target's number of registers.
-  InstructionCost spillCost(VPCostContext &Ctx,
+  InstructionCost spillCost(const TargetTransformInfo &TTI,
+                            TargetTransformInfo::TargetCostKind CostKind,
                             unsigned OverrideMaxNumRegs = 0) const;
 };
 
