@@ -1,4 +1,4 @@
-//===- llvm/Support/Hash.h - Hash functions --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides hash functions.
+// Helpers for computing the 32-bit KCFI type ID from a mangled type name.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_HASH_H
-#define LLVM_SUPPORT_HASH_H
+#ifndef LLVM_TRANSFORMS_UTILS_KCFIHASH_H
+#define LLVM_TRANSFORMS_UTILS_KCFIHASH_H
 
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
@@ -34,4 +34,4 @@ LLVM_ABI uint32_t getKCFITypeID(StringRef MangledTypeName,
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_HASH_H
+#endif // LLVM_TRANSFORMS_UTILS_KCFIHASH_H
