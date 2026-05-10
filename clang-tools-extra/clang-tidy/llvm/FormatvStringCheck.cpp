@@ -152,7 +152,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
   const ParseResult &Parsed = *ParsedOrErr;
   const int NumRequiredArgs = Parsed.Indices.empty() ? 0 : Parsed.MaxIndex + 1;
 
-  if (NumRequiredArgs != NumFmtArgs) {
+  if (NumRequiredArgs > NumFmtArgs) {
     diag(FmtLiteral->getBeginLoc(),
          "format string requires %0 argument%s0, but %1 argument%s1 "
          "%plural{1:was|:were}1 provided")
@@ -160,13 +160,13 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  // Check for unused arguments.
-  llvm::SmallBitVector UnusedIndices(NumRequiredArgs, true);
+  // Check for unused arguments: both indices not referenced by the format
+  // string, and trailing arguments beyond what the format string requires.
+  llvm::SmallBitVector UnusedIndices(NumFmtArgs, true);
   for (const unsigned Index : Parsed.Indices)
     UnusedIndices.reset(Index);
 
   for (const auto UnusedIndex : UnusedIndices.set_bits()) {
-    // Point to unused arguments.
     const Expr *UnusedArg = Call->getArg(PackParamIndex + UnusedIndex);
     diag(UnusedArg->getBeginLoc(), "argument unused in format string");
   }
