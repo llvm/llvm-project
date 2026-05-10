@@ -1851,7 +1851,6 @@ namespace GH191016 {
   void test(){ S<int> s; }
 }
 
-
 namespace GH188640 {
 
 namespace Ex1 {
@@ -2002,3 +2001,21 @@ namespace GH196375 {
   static_assert(f<4>());
   // expected-error@-1 {{no matching function for call to 'f'}}
 } // namespace GHGH196375
+
+namespace GH175831 {
+
+template<class>
+struct reference {};
+template<class Q>
+consteval Q get_spec(reference<Q>) { return {}; }
+
+template<class T>
+concept repr_impl = sizeof(T) > 0;
+template<class, auto V>
+concept representation_of = repr_impl<decltype(V)>;
+template<auto V, representation_of<get_spec(V)>>
+struct quantity {};
+
+auto x = quantity<reference<int>{}, int>{};
+
+} // namespace GH175831
