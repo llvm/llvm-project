@@ -1452,11 +1452,15 @@ getLayoutSuccessorProbThreshold(const MachineBasicBlock *BB) {
        *   So the threshold T in the calculation below
        *   (1-T) * Prob(BB->Succ) > T * Prob(BB->Pred)
        *   So T / (1 - T) = 2, Yielding T = 2/3
-       * Also adding user specified branch bias, we have
-       *   T = (2/3)*(ProfileLikelyProb/50)
-       *     = (2*ProfileLikelyProb)/150)
+       *
+       * Then remap the user-controlled ProfileLikelyProb into
+       * a triangle-specific threshold T.
+       *   T = (2/3) * (ProfileLikelyProb / 50)
+       *     = (2 * ProfileLikelyProb) / 150
+       * This preserves T = 2/3 at ProfileLikelyProb = 50.
+       * The result is capped at 1.
        */
-      return BranchProbability(2 * ProfileLikelyProb, 150);
+      return BranchProbability(ProfileLikelyProb, 150) * 2;
     }
   }
   return BranchProbability(ProfileLikelyProb, 100);

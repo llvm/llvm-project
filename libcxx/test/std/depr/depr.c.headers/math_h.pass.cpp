@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <math.h>
 
 // GCC warns about signbit comparing `bool_v < 0`, which we're testing

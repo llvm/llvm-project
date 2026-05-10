@@ -179,6 +179,7 @@ protected:
         }
         history.Dump(result.GetOutputStream(), start_idx.second,
                      stop_idx.second);
+        result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
       }
     }
   }

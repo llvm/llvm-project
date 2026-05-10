@@ -190,7 +190,7 @@ Platform::LocateExecutableScriptingResourcesFromSafePaths(
           ->GetSanitizedScriptingModuleName(
               module_spec.GetFileNameStrippingExtension().GetStringRef());
 
-  FileSpecList paths = Debugger::GetSafeAutoLoadPaths();
+  FileSpecList paths = target.GetSafeAutoLoadPaths();
 
   // Iterate in reverse so we consider the latest appended path first.
   for (FileSpec path : llvm::reverse(paths)) {

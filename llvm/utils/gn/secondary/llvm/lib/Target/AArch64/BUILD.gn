@@ -29,7 +29,10 @@ tablegen("AArch64GenO0PreLegalizeGICombiner") {
 
 tablegen("AArch64GenGlobalISel") {
   visibility = [ ":LLVMAArch64CodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "AArch64.td"
 }
 

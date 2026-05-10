@@ -570,157 +570,75 @@ define bfloat @from_f8e5m2_to_bf16() {
 define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-LABEL: fp4_to_f32_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
-; CHECK-NEXT:    movd %xmm1, %esi
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $22, %eax
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    andl $-8, %edx
-; CHECK-NEXT:    shll $28, %edx
-; CHECK-NEXT:    shrl %esi
-; CHECK-NEXT:    andl $3, %esi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shll $23, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    leal 1056964608(%rax,%rcx), %r8d
-; CHECK-NEXT:    bsrl %edi, %r9d
-; CHECK-NEXT:    movl %edi, %r10d
-; CHECK-NEXT:    btcl %r9d, %r10d
-; CHECK-NEXT:    xorl $31, %r9d
-; CHECK-NEXT:    leal -8(%r9), %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %r10d
-; CHECK-NEXT:    movl $157, %eax
-; CHECK-NEXT:    movl $157, %ecx
-; CHECK-NEXT:    subl %r9d, %ecx
-; CHECK-NEXT:    shll $23, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    orl %r10d, %ecx
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %dil
-; CHECK-NEXT:    setne %r9b
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    testb %r9b, %sil
-; CHECK-NEXT:    cmovel %r8d, %ecx
-; CHECK-NEXT:    testb %dil, %sil
-; CHECK-NEXT:    cmovnel %edx, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; CHECK-NEXT:    movd %xmm2, %esi
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    shll $22, %ecx
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    andl $-8, %edx
-; CHECK-NEXT:    shll $28, %edx
-; CHECK-NEXT:    shrl %esi
-; CHECK-NEXT:    andl $3, %esi
-; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    shll $23, %r8d
-; CHECK-NEXT:    orl %edx, %r8d
-; CHECK-NEXT:    leal 1056964608(%rcx,%r8), %r8d
-; CHECK-NEXT:    bsrl %edi, %r9d
-; CHECK-NEXT:    movl %edi, %r10d
-; CHECK-NEXT:    btcl %r9d, %r10d
-; CHECK-NEXT:    xorl $31, %r9d
-; CHECK-NEXT:    leal -8(%r9), %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %r10d
-; CHECK-NEXT:    movl $157, %ecx
-; CHECK-NEXT:    subl %r9d, %ecx
-; CHECK-NEXT:    shll $23, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    orl %r10d, %ecx
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %dil
-; CHECK-NEXT:    setne %r9b
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    testb %r9b, %sil
-; CHECK-NEXT:    cmovel %r8d, %ecx
-; CHECK-NEXT:    testb %dil, %sil
-; CHECK-NEXT:    cmovnel %edx, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm2
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; CHECK-NEXT:    movd %xmm0, %esi
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    shll $22, %ecx
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    andl $-8, %edx
-; CHECK-NEXT:    shll $28, %edx
-; CHECK-NEXT:    shrl %esi
-; CHECK-NEXT:    andl $3, %esi
-; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    shll $23, %r8d
-; CHECK-NEXT:    orl %edx, %r8d
-; CHECK-NEXT:    leal 1056964608(%rcx,%r8), %r8d
-; CHECK-NEXT:    bsrl %edi, %r9d
-; CHECK-NEXT:    movl %edi, %r10d
-; CHECK-NEXT:    btcl %r9d, %r10d
-; CHECK-NEXT:    xorl $31, %r9d
-; CHECK-NEXT:    leal -8(%r9), %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %r10d
-; CHECK-NEXT:    movl $157, %ecx
-; CHECK-NEXT:    subl %r9d, %ecx
-; CHECK-NEXT:    shll $23, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    orl %r10d, %ecx
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %dil
-; CHECK-NEXT:    setne %r9b
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    testb %r9b, %sil
-; CHECK-NEXT:    cmovel %r8d, %ecx
-; CHECK-NEXT:    testb %dil, %sil
-; CHECK-NEXT:    cmovnel %edx, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    movd %xmm0, %esi
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    shll $22, %ecx
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    andl $-8, %edx
-; CHECK-NEXT:    shll $28, %edx
-; CHECK-NEXT:    shrl %esi
-; CHECK-NEXT:    andl $3, %esi
-; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    shll $23, %r8d
-; CHECK-NEXT:    orl %edx, %r8d
-; CHECK-NEXT:    leal 1056964608(%rcx,%r8), %r8d
-; CHECK-NEXT:    bsrl %edi, %r9d
-; CHECK-NEXT:    movl %edi, %r10d
-; CHECK-NEXT:    btcl %r9d, %r10d
-; CHECK-NEXT:    xorl $31, %r9d
-; CHECK-NEXT:    leal -8(%r9), %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %r10d
-; CHECK-NEXT:    subl %r9d, %eax
-; CHECK-NEXT:    shll $23, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    orl %r10d, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    setne %dil
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    testb %dil, %sil
-; CHECK-NEXT:    cmovel %r8d, %eax
-; CHECK-NEXT:    testb %cl, %sil
-; CHECK-NEXT:    cmovnel %edx, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
+; CHECK-NEXT:    pxor %xmm0, %xmm3
+; CHECK-NEXT:    psubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; CHECK-NEXT:    movdqa %xmm3, %xmm5
+; CHECK-NEXT:    pand %xmm4, %xmm5
+; CHECK-NEXT:    psrlw $2, %xmm3
+; CHECK-NEXT:    pand %xmm4, %xmm3
+; CHECK-NEXT:    paddb %xmm5, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, %xmm5
+; CHECK-NEXT:    psrlw $4, %xmm5
+; CHECK-NEXT:    paddb %xmm3, %xmm5
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
+; CHECK-NEXT:    pxor %xmm3, %xmm3
+; CHECK-NEXT:    movdqa %xmm5, %xmm4
+; CHECK-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    psadbw %xmm3, %xmm4
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
+; CHECK-NEXT:    psadbw %xmm3, %xmm5
+; CHECK-NEXT:    packuswb %xmm4, %xmm5
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [31,31,31,31]
+; CHECK-NEXT:    psubd %xmm5, %xmm4
+; CHECK-NEXT:    pslld $23, %xmm4
+; CHECK-NEXT:    movdqa {{.*#+}} xmm6 = [1065353216,1065353216,1065353216,1065353216]
+; CHECK-NEXT:    paddd %xmm6, %xmm4
+; CHECK-NEXT:    cvttps2dq %xmm4, %xmm7
+; CHECK-NEXT:    pxor %xmm0, %xmm7
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [157,157,157,157]
+; CHECK-NEXT:    psubd %xmm5, %xmm4
+; CHECK-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
+; CHECK-NEXT:    pslld $23, %xmm5
+; CHECK-NEXT:    paddd %xmm6, %xmm5
+; CHECK-NEXT:    cvttps2dq %xmm5, %xmm5
+; CHECK-NEXT:    pshufd {{.*#+}} xmm6 = xmm7[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm5, %xmm7
+; CHECK-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,2,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm6, %xmm5
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1]
+; CHECK-NEXT:    pslld $23, %xmm4
+; CHECK-NEXT:    movdqa %xmm1, %xmm5
+; CHECK-NEXT:    psrld $3, %xmm5
+; CHECK-NEXT:    pslld $31, %xmm5
+; CHECK-NEXT:    por %xmm5, %xmm4
+; CHECK-NEXT:    por %xmm7, %xmm4
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm2
+; CHECK-NEXT:    psrld $1, %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm6
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm6
+; CHECK-NEXT:    pand %xmm6, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm4
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [126,126,126,126]
+; CHECK-NEXT:    pslld $23, %xmm1
+; CHECK-NEXT:    movdqa %xmm0, %xmm7
+; CHECK-NEXT:    pslld $22, %xmm7
+; CHECK-NEXT:    por %xmm5, %xmm7
+; CHECK-NEXT:    por %xmm1, %xmm7
+; CHECK-NEXT:    pandn %xmm7, %xmm2
+; CHECK-NEXT:    por %xmm4, %xmm2
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm0
+; CHECK-NEXT:    pand %xmm6, %xmm0
+; CHECK-NEXT:    pand %xmm0, %xmm5
+; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    por %xmm5, %xmm0
 ; CHECK-NEXT:    retq
   %r = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i4(<4 x i4> %x, metadata !"Float4E2M1FN")
   ret <4 x float> %r

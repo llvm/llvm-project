@@ -1461,6 +1461,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fcvtzu_i32f64:
   case Intrinsic::aarch64_sve_fcvtzu_i64f16:
   case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw:
+  case Intrinsic::aarch64_sve_revd:
   case Intrinsic::aarch64_sve_scvtf:
   case Intrinsic::aarch64_sve_scvtf_f16i32:
   case Intrinsic::aarch64_sve_scvtf_f16i64:
@@ -4886,6 +4890,7 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
+  case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
@@ -4915,6 +4920,15 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
+  InstructionCost MemOpCost = LT.first;
+  if (MICA.getID() == Intrinsic::masked_expandload) {
+    if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
+      return InstructionCost::getInvalid();
+
+    // Operation will be split into expand of masked.load
+    MemOpCost *= 2;
+  }
+
   // If we need to split the memory operation, we will also need to split the
   // mask. This will likely lead to overestimating the cost in some cases if
   // multiple memory operations use the same mask, but we often don't have
@@ -4924,9 +4938,9 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // since the number of bits in a P register matches the number of bytes in a
   // Z register.
   if (LT.first > 1 && LT.second.getScalarSizeInBits() > 8)
-    return LT.first * 2;
+    return MemOpCost * 2;
 
-  return LT.first;
+  return MemOpCost;
 }
 
 // This function returns gather/scatter overhead either from
@@ -5148,6 +5162,18 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
   return Cost;
+}
+
+bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
+                                             Align Alignment) const {
+  // Neon types should be scalarised when we are not choosing to use SVE.
+  if (useNeonVector(DataTy))
+    return false;
+
+  // Return true only if we are able to lower using the SVE2p2/SME2p2
+  // expand instruction.
+  return (ST->isSVEAvailable() && ST->hasSVE2p2()) ||
+         (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
@@ -6021,26 +6047,32 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   bool IsSub = Opcode == Instruction::Sub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
+  // Integer partial sub-reductions that don't map to a specific instruction,
+  // carry an extra cost for implementing a double negation:
+  //      partial_reduce_umls  acc, lhs, rhs
+  // <=> -partial_reduce_umla -acc, lhs, rhs
+  InstructionCost INegCost = IsSub ? 2 * InputLT.first * TTI::TCC_Basic : 0;
 
   if (AccumLT.second.getScalarType() == MVT::i32 &&
-      InputLT.second.getScalarType() == MVT::i8 && !IsSub) {
+      InputLT.second.getScalarType() == MVT::i8) {
     // i8 -> i32 is natively supported with udot/sdot for both NEON and SVE.
     if (!IsUSDot && IsSupported(true, ST->hasDotProd()))
-      return Cost;
+      return Cost + INegCost;
     // i8 -> i32 usdot requires +i8mm
     if (IsUSDot && IsSupported(ST->hasMatMulInt8(), ST->hasMatMulInt8()))
-      return Cost;
+      return Cost + INegCost;
   }
 
-  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot && !IsSub) {
+  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {
     // i16 -> i64 is natively supported for udot/sdot
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
-      return Cost;
-    // i16 -> i32 is natively supported with SVE2p1
+      return Cost + INegCost;
+    // i16 -> i32 is natively supported with SVE2p1 udot/sdot.
+    // For sub-reductions, we prefer using the *mlslb/t instructions.
     if (AccumLT.second.getScalarType() == MVT::i32 &&
         InputLT.second.getScalarType() == MVT::i16 &&
-        (ST->hasSVE2p1() || ST->hasSME2()))
+        (ST->hasSVE2p1() || ST->hasSME2()) && !IsSub)
       return Cost;
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
@@ -6050,11 +6082,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // that now, a regular reduction would be cheaper because the costs of
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
-      return Cost;
-    // i8 -> i16 is natively supported with SVE2p3
+      return Cost + INegCost;
+    // i8 -> i16 is natively supported with SVE2p3 udot/sdot
+    // For sub-reductions, we prefer using the *mlslb/t instructions.
     if (AccumLT.second.getScalarType() == MVT::i16 &&
         InputLT.second.getScalarType() == MVT::i8 &&
-        (ST->hasSVE2p3() || ST->hasSME2p3()))
+        (ST->hasSVE2p3() || ST->hasSME2p3()) && !IsSub)
       return Cost;
   }
 
@@ -6066,11 +6099,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       InputLT.second.getScalarType() == MVT::f16)
     return Cost;
 
-  // For a ratio of 2, we can use *mlal top/bottom instructions.
-  if (Ratio == 2 && !IsSub) {
+  // For a ratio of 2, we can use *mlal and *mlsl top/bottom instructions.
+  if (Ratio == 2 && !IsUSDot) {
     MVT InVT = InputLT.second.getScalarType();
 
-    // SVE2 [us]mlalb/t and NEON [us]mlal(2)
+    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
     if (IsSupported(ST->hasSVE2(), true) &&
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
       return Cost * 2;
@@ -6084,14 +6117,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost * 2;
   }
 
-  InstructionCost ExpandCost = BaseT::getPartialReductionCost(
-      Opcode, InputTypeA, InputTypeB, AccumType, VF, OpAExtend, OpBExtend,
-      BinOp, CostKind, FMF);
-
-  // Slightly lower the cost of a sub reduction so that it can be considered
-  // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
-  // because we don't yet model these operations directly.
-  return ExpandCost.isValid() && IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
+  return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                        AccumType, VF, OpAExtend, OpBExtend,
+                                        BinOp, CostKind, FMF);
 }
 
 InstructionCost

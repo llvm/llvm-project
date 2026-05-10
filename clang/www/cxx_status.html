@@ -330,15 +330,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
    <td>Preprocessing is never undefined</td>
    <td><a href="https://wg21.link/P2843">P2843R3</a></td>
-   <td class="partial" align="center">
-     <details>
-       <summary>Partial</summary>
-       Clang diagnoses macro expansions producing <tt>defined</tt> in
-       conditional expressions in C++26, but embedded directives in macro
-       arguments and other constructs made ill-formed by this paper are not
-       yet fully implemented.
-     </details>
-   </td>
+   <td class="none" align="center">No</td>
  </tr>
  <!-- Kona, Fall 2025-->
  <tr>
@@ -446,7 +438,12 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>C++ identifier syntax using UAX 31</td>
       <td><a href="https://wg21.link/P1949R7">P1949R7</a> (<a href="#dr">DR</a>)</td>
-      <td class="full" align="center">Clang 14</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 14 (Partial)</summary>
+          Clang supports Unicode identifiers but does not check that they are NFC-normalized.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Mixed string literal concatenation</td>
@@ -1002,8 +999,9 @@ C++23, informally referred to as C++26.</p>
       <td><a href="https://wg21.link/p0912r5">P0912R5</a></td>
       <td class="partial" align="center">
         <details><summary>Partial</summary>
-          Fully supported on all targets except Windows, which
-          still has some stability and ABI issues.
+          Fully supported on all targets except Windows, which still has some stability and ABI issues.
+          On 32-bit x86 Windows, the <code>__cpp_impl_coroutine</code> feature macro is not defined,
+          and a warning is emitted when using coroutines.
         </details></td>
     </tr>
     <!-- Cologne 2019 papers -->
@@ -1086,7 +1084,7 @@ C++23, informally referred to as C++26.</p>
 You can use Clang in C++17 mode with the <code>-std=c++17</code> option
 (use <code>-std=c++1z</code> in Clang 4 and earlier).</p>
 
-<details>
+<details open>
 <summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
@@ -1350,7 +1348,7 @@ In Clang 21, the flag was removed altogether.
 <p>You can use Clang in C++14 mode with the <code>-std=c++14</code> option
 (use <code>-std=c++1y</code> in Clang 3.4 and earlier).</p>
 
-<details>
+<details open>
 <summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
@@ -1445,7 +1443,7 @@ In Clang 21, the flag was removed altogether.
 option. Clang's C++11 mode can be used with
 <a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.</p>
 
-<details>
+<details open>
 <summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">

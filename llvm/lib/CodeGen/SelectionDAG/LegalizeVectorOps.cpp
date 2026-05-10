@@ -389,8 +389,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::BITREVERSE:
   case ISD::CTLZ:
   case ISD::CTTZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::CLMUL:
   case ISD::CLMULH:
@@ -1088,8 +1088,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     // mess with the vector, fall back.
     EVT VT = Node->getValueType(0);
     EVT EltVT = VT.getVectorElementType();
-    if (TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
-        TargetLowering::Expand)
+    if (!VT.isScalableVector() &&
+        TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
+            TargetLowering::Expand)
       break;
     // Otherwise canonicalize the whole vector.
     SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
@@ -1150,28 +1151,28 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     }
     break;
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandCTLZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::VP_CTLZ:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
+  case ISD::VP_CTLZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandVPCTLZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandCTTZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::VP_CTTZ:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandVPCTTZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
@@ -1410,6 +1411,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    if (SDValue Expanded = TLI.expandCONVERT_FROM_ARBITRARY_FP(Node, DAG))
+      Results.push_back(Expanded);
+    else
+      Results.push_back(DAG.getPOISON(Node->getValueType(0)));
+    return;
   case ISD::MASKED_UDIV:
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
@@ -1905,42 +1912,7 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
 }
 
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SDValue SourceValue = N->getOperand(0);
-  SDValue SinkValue = N->getOperand(1);
-  SDValue EltSizeInBytes = N->getOperand(2);
-
-  // Note: The lane offset is scalable if the mask is scalable.
-  ElementCount LaneOffsetEC =
-      ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
-
-  EVT PtrVT = SourceValue->getValueType(0);
-  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-
-  // Take the difference between the pointers and divided by the element size,
-  // to see how many lanes separate them.
-  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
-  if (IsReadAfterWrite)
-    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
-  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
-
-  // The pointers do not alias if:
-  //  * Diff <= 0 (WAR_MASK)
-  //  * Diff == 0 (RAW_MASK)
-  EVT CmpVT =
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), PtrVT);
-  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
-
-  // The pointers do not alias if:
-  // Lane + LaneOffset < Diff (WAR/RAW_MASK)
-  SDValue LaneOffset = DAG.getElementCount(DL, PtrVT, LaneOffsetEC);
-  SDValue MaskN =
-      DAG.getSelect(DL, PtrVT, Cmp, DAG.getConstant(-1, DL, PtrVT), Diff);
-
-  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
+  return TLI.expandLoopDependenceMask(N, DAG);
 }
 
 SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {

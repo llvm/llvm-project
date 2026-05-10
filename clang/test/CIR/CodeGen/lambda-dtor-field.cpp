@@ -30,14 +30,14 @@ void capture_one(S s) {
 
 // LLVM-LABEL: define internal void @"_ZZ11capture_one1SEN3$_0D2Ev"(
 // LLVM:   %[[THIS1:.*]] = load ptr, ptr
-// LLVM:   %[[FIELD1:.*]] = getelementptr %[[LAM_TY_1:.*]], ptr %[[THIS1]], i32 0, i32 0
+// LLVM:   %[[FIELD1:.*]] = getelementptr inbounds nuw %[[LAM_TY_1:.*]], ptr %[[THIS1]], i32 0, i32 0
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FIELD1]])
 // LLVM:   ret void
 
 // LLVM-LABEL: define dso_local void @_Z11capture_one1S(
 // LLVM:   %[[S_ALLOCA:.*]] = alloca %struct.S
 // LLVM:   %[[LAM1:.*]] = alloca %[[LAM_TY_1]]
-// LLVM:   %[[F1:.*]] = getelementptr %[[LAM_TY_1]], ptr %[[LAM1]], i32 0, i32 0
+// LLVM:   %[[F1:.*]] = getelementptr inbounds nuw %[[LAM_TY_1]], ptr %[[LAM1]], i32 0, i32 0
 // LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[F1]], ptr {{.*}} %[[S_ALLOCA]])
 // LLVM:   call void @"_ZZ11capture_one1SEN3$_0D1Ev"(ptr {{.*}} %[[LAM1]])
 // LLVM:   ret void
@@ -74,9 +74,9 @@ void capture_two(S a, S b) {
 
 // LLVM-LABEL: define internal void @"_ZZ11capture_two1SS_EN3$_0D2Ev"(
 // LLVM:   %[[THIS2:.*]] = load ptr, ptr
-// LLVM:   %[[FB_D:.*]] = getelementptr %[[LAM_TY_2:.*]], ptr %[[THIS2]], i32 0, i32 1
+// LLVM:   %[[FB_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_2:.*]], ptr %[[THIS2]], i32 0, i32 1
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FB_D]])
-// LLVM:   %[[FA_D:.*]] = getelementptr %[[LAM_TY_2]], ptr %[[THIS2]], i32 0, i32 0
+// LLVM:   %[[FA_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[THIS2]], i32 0, i32 0
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA_D]])
 // LLVM:   ret void
 
@@ -84,9 +84,9 @@ void capture_two(S a, S b) {
 // LLVM:   %[[A_ALLOCA:.*]] = alloca %struct.S
 // LLVM:   %[[B_ALLOCA:.*]] = alloca %struct.S
 // LLVM:   %[[LAM2:.*]] = alloca %[[LAM_TY_2]]
-// LLVM:   %[[FA:.*]] = getelementptr %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 0
+// LLVM:   %[[FA:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 0
 // LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FA]], ptr {{.*}} %[[A_ALLOCA]])
-// LLVM:   %[[FB:.*]] = getelementptr %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 1
+// LLVM:   %[[FB:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 1
 // LLVM:   invoke void @_ZN1SC1ERKS_(ptr {{.*}} %[[FB]], ptr {{.*}} %[[B_ALLOCA]])
 // LLVM:           to label %{{.*}} unwind label %{{.*}}
 // LLVM:   call void @"_ZZ11capture_two1SS_EN3$_0D1Ev"(ptr {{.*}} %[[LAM2]])
@@ -122,7 +122,7 @@ void capture_mixed(int n, S s) {
 
 // LLVM-LABEL: define internal void @"_ZZ13capture_mixedi1SEN3$_0D2Ev"(
 // LLVM:   %[[THIS3:.*]] = load ptr, ptr
-// LLVM:   %[[FS_D:.*]] = getelementptr %[[LAM_TY_3:.*]], ptr %[[THIS3]], i32 0, i32 1
+// LLVM:   %[[FS_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_3:.*]], ptr %[[THIS3]], i32 0, i32 1
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FS_D]])
 // LLVM:   ret void
 
@@ -130,10 +130,10 @@ void capture_mixed(int n, S s) {
 // LLVM:   %[[N_ALLOCA:.*]] = alloca i32
 // LLVM:   %[[S_ALLOCA2:.*]] = alloca %struct.S
 // LLVM:   %[[LAM3:.*]] = alloca %[[LAM_TY_3]]
-// LLVM:   %[[FN:.*]] = getelementptr %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 0
+// LLVM:   %[[FN:.*]] = getelementptr inbounds nuw %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 0
 // LLVM:   %[[NVAL:.*]] = load i32, ptr %[[N_ALLOCA]]
 // LLVM:   store i32 %[[NVAL]], ptr %[[FN]]
-// LLVM:   %[[FS:.*]] = getelementptr %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 1
+// LLVM:   %[[FS:.*]] = getelementptr inbounds nuw %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 1
 // LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FS]], ptr {{.*}} %[[S_ALLOCA2]])
 // LLVM:   call void @"_ZZ13capture_mixedi1SEN3$_0D1Ev"(ptr {{.*}} %[[LAM3]])
 // LLVM:   ret void
@@ -174,7 +174,7 @@ void capture_local() {
 
 // LLVM-LABEL: define internal void @"_ZZ13capture_localvEN3$_0D2Ev"(
 // LLVM:   %[[THIS4:.*]] = load ptr, ptr
-// LLVM:   %[[FL_D:.*]] = getelementptr %[[LAM_TY_4:.*]], ptr %[[THIS4]], i32 0, i32 0
+// LLVM:   %[[FL_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_4:.*]], ptr %[[THIS4]], i32 0, i32 0
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FL_D]])
 // LLVM:   ret void
 
@@ -182,7 +182,7 @@ void capture_local() {
 // LLVM:   %[[S_LOCAL:.*]] = alloca %struct.S
 // LLVM:   %[[LAM4:.*]] = alloca %[[LAM_TY_4]]
 // LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[S_LOCAL]])
-// LLVM:   %[[FL:.*]] = getelementptr %[[LAM_TY_4]], ptr %[[LAM4]], i32 0, i32 0
+// LLVM:   %[[FL:.*]] = getelementptr inbounds nuw %[[LAM_TY_4]], ptr %[[LAM4]], i32 0, i32 0
 // LLVM:   invoke void @_ZN1SC1ERKS_(ptr {{.*}} %[[FL]], ptr {{.*}} %[[S_LOCAL]])
 // LLVM:           to label %{{.*}} unwind label %{{.*}}
 // LLVM:   call void @"_ZZ13capture_localvEN3$_0D1Ev"(ptr {{.*}} %[[LAM4]])
@@ -244,19 +244,19 @@ void stmt_expr_return(bool cond) {
 
 // LLVM-LABEL: define internal void @"_ZZ16stmt_expr_returnbEN3$_0D2Ev"(
 // LLVM:   %[[THIS5:.*]] = load ptr, ptr
-// LLVM:   %[[FB5_D:.*]] = getelementptr %[[LAM_TY_5:.*]], ptr %[[THIS5]], i32 0, i32 1
+// LLVM:   %[[FB5_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_5:.*]], ptr %[[THIS5]], i32 0, i32 1
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FB5_D]])
-// LLVM:   %[[FA5_D:.*]] = getelementptr %[[LAM_TY_5]], ptr %[[THIS5]], i32 0, i32 0
+// LLVM:   %[[FA5_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[THIS5]], i32 0, i32 0
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5_D]])
 // LLVM:   ret void
 
 // LLVM-LABEL: define dso_local void @_Z16stmt_expr_returnb({{.*}}) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[LAM5:.*]] = alloca %[[LAM_TY_5]]
 // LLVM:   %[[ACTIVE_ALLOCA:.*]] = alloca i8
-// LLVM:   %[[FA5:.*]] = getelementptr %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0
+// LLVM:   %[[FA5:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0
 // LLVM:   call void @_ZN1SC1Ei(ptr {{.*}} %[[FA5]], i32 {{.*}} 0)
 // LLVM:   store i8 1, ptr %[[ACTIVE_ALLOCA]]
-// LLVM:   %[[FB5:.*]] = getelementptr %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 1
+// LLVM:   %[[FB5:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 1
 // LLVM:   br i1 %{{.*}},
 // The early return path — the active flag is still true, so the cleanup fires.
 // LLVM:   invoke void @_ZN1SC1Ei(ptr {{.*}} %[[FB5]],

@@ -47,7 +47,7 @@ class WPASuite {
 public:
   /// Returns the EntityIdTable that maps EntityId values to their symbolic
   /// names.
-  const EntityIdTable &idTable() const { return IdTable; }
+  const EntityIdTable &getIdTable() const { return IdTable; }
 
   /// Returns true if a result for \p ResultT is present.
   template <typename ResultT> [[nodiscard]] bool contains() const {

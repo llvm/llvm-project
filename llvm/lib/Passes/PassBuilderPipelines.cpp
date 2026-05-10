@@ -64,6 +64,7 @@
 #include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Inliner.h"
+#include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
@@ -222,6 +223,10 @@ static cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
                                        cl::desc("Enable the LoopFlatten Pass"));
 
 static cl::opt<bool>
+    EnableInstrumentor("enable-instrumentor", cl::init(false), cl::Hidden,
+                       cl::desc("Enable the Instrumentor Pass"));
+
+static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
@@ -252,8 +257,8 @@ static cl::opt<bool>
                   cl::desc("Enable the GVN sinking pass (default = off)"));
 
 static cl::opt<bool> EnableJumpTableToSwitch(
-    "enable-jump-table-to-switch",
-    cl::desc("Enable JumpTableToSwitch pass (default = off)"));
+    "enable-jump-table-to-switch", cl::init(true),
+    cl::desc("Enable JumpTableToSwitch pass (default = true)"));
 
 // This option is used in simplifying testing SampleFDO optimizations for
 // profile loading.
@@ -413,19 +418,15 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
     C(MPM, Level, Phase);
 }
 
-// Get IR stats with InstCount and FunctionPropertiesAnalysis.
-static void instructionCountersPass(ModulePassManager &MPM,
-                                    bool IsPreOptimization) {
-  if (AreStatisticsEnabled()) {
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(InstCountPass(IsPreOptimization)));
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        FunctionPropertiesStatisticsPass(IsPreOptimization)));
-  }
-}
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+  // Count the stats for InstCount and FunctionPropertiesAnalysis
+  if (AreStatisticsEnabled()) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
+  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
@@ -1181,8 +1182,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // post link pipeline after ICP. This is to enable usage of the type
   // tests in ICP sequences.
   if (Phase == ThinOrFullLTOPhase::ThinLTOPostLink)
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
-                                   lowertypetests::DropTestKind::Assume));
+    MPM.addPass(DropTypeTestsPass());
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 
@@ -1646,6 +1646,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   invokeOptimizerLastEPCallbacks(MPM, Level, LTOPhase);
 
+  // Run the Instrumentor pass late.
+  if (EnableInstrumentor)
+    MPM.addPass(InstrumentorPass());
+
   // Split out cold code. Splitting is done late to avoid hiding context from
   // other optimizations and inadvertently regressing performance. The tradeoff
   // is that this has a higher code size cost than splitting early.
@@ -1687,8 +1691,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
         /*ExportSummary*/ nullptr,
         /*ImportSummary*/ nullptr,
         /*DevirtSpeculatively*/ PTO.DevirtualizeSpeculatively));
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
-                                   lowertypetests::DropTestKind::Assume));
+    MPM.addPass(DropTypeTestsPass());
     // Given that the devirtualization creates more opportunities for inlining,
     // we run the Inliner again here to maximize the optimization gain we
     // get from devirtualization.
@@ -1716,7 +1719,6 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
     return buildO0DefaultPipeline(Level, Phase);
 
   ModulePassManager MPM;
-  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
 
   // Currently this pipeline is only invoked in an LTO pre link pass or when we
   // are not running LTO. If that changes the below checks may need updating.
@@ -1755,9 +1757,6 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
-
   return MPM;
 }
 
@@ -1765,9 +1764,6 @@ ModulePassManager
 PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
                                         bool EmitSummary) {
   ModulePassManager MPM;
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
-
   if (ThinLTO)
     MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
   else
@@ -1776,7 +1772,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
 
   // Perform any cleanups to the IR that aren't suitable for per TU compilation,
   // like removing CFI/WPD related instructions. Note, we reuse
-  // LowerTypeTestsPass to clean up type tests rather than duplicate that logic
+  // DropTypeTestsPass to clean up type tests rather than duplicate that logic
   // in FatLtoCleanup.
   MPM.addPass(FatLtoCleanup());
 
@@ -1784,8 +1780,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   // object code, only in the bitcode section, so drop it before we run
   // module optimization and generate machine code. If llvm.type.test() isn't in
   // the IR, this won't do anything.
-  MPM.addPass(
-      LowerTypeTestsPass(nullptr, nullptr, lowertypetests::DropTestKind::All));
+  MPM.addPass(DropTypeTestsPass(lowertypetests::DropTestKind::All));
 
   // Use the ThinLTO post-link pipeline with sample profiling
   if (ThinLTO && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
@@ -1810,9 +1805,6 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
   }
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
-
   return MPM;
 }
 
@@ -1822,8 +1814,6 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
     return buildO0DefaultPipeline(Level, ThinOrFullLTOPhase::ThinLTOPreLink);
 
   ModulePassManager MPM;
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
 
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());
@@ -1877,16 +1867,12 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   addRequiredLTOPreLinkPasses(MPM);
 
-  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
-
   return MPM;
 }
 
 ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
 
   // If we are invoking this without a summary index noting that we are linking
   // with a library containing the necessary APIs, remove any MemProf related
@@ -1923,8 +1909,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   if (Level == OptimizationLevel::O0) {
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
-                                   lowertypetests::DropTestKind::Assume));
+    MPM.addPass(DropTypeTestsPass());
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::ThinLTOPostLink));
 
     // AllocToken transforms heap allocation calls; this needs to run late after
@@ -1936,8 +1921,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // globals in the object file.
     MPM.addPass(EliminateAvailableExternallyPass());
     MPM.addPass(GlobalDCEPass());
-
-    instructionCountersPass(MPM, /*IsPreOptimization=*/false);
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
@@ -1955,8 +1938,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
-
   return MPM;
 }
 
@@ -1971,8 +1952,6 @@ ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                      ModuleSummaryIndex *ExportSummary) {
   ModulePassManager MPM;
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
@@ -1993,8 +1972,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
-                                   lowertypetests::DropTestKind::Assume));
+    MPM.addPass(DropTypeTestsPass());
 
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
 
@@ -2082,8 +2060,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP (which is performed earlier than this in the regular LTO
     // pipeline).
-    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
-                                   lowertypetests::DropTestKind::Assume));
+    MPM.addPass(DropTypeTestsPass());
 
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
 
@@ -2280,8 +2257,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
   // Run a second time to clean up any type tests left behind by WPD for use
   // in ICP (which is performed earlier than this in the regular LTO pipeline).
-  MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
-                                 lowertypetests::DropTestKind::Assume));
+  MPM.addPass(DropTypeTestsPass());
 
   // Enable splitting late in the FullLTO post-link pipeline.
   if (EnableHotColdSplit)
@@ -2334,8 +2310,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
-
   return MPM;
 }
 
@@ -2346,8 +2320,6 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
          "buildO0DefaultPipeline should only be used with O0");
 
   ModulePassManager MPM;
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
 
   // Perform pseudo probe instrumentation in O0 mode. This is for the
   // consistency between different build modes. For example, a LTO build can be
@@ -2456,13 +2428,14 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
 
+  if (EnableInstrumentor)
+    MPM.addPass(InstrumentorPass());
+
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
-
-  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
 
   return MPM;
 }

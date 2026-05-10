@@ -282,7 +282,7 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
   unsigned PCBytes;
   if (Value > 60000) {
-    unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
+    unsigned PtrSize = C.getAsmInfo().getCodePointerSize();
     assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
     PCBytes = PtrSize;
     OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PtrSize + 1)
@@ -319,7 +319,7 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F) const {
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
-  assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+  assert(getContext().getAsmInfo().getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
     F.clearVarContents();

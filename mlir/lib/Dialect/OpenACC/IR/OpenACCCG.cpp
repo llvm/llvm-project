@@ -23,6 +23,7 @@
 #include "mlir/IR/Region.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -481,6 +482,23 @@ BlockArgument ComputeRegionOp::appendInputArg(Value value) {
   return getBody()->addArgument(value.getType(), getLoc());
 }
 
+std::optional<BlockArgument>
+ComputeRegionOp::wireHoistedValueThroughIns(Value value) {
+  Region &region = getRegion();
+
+  auto useIsInRegion = [&](OpOperand &use) -> bool {
+    return region.isAncestor(use.getOwner()->getParentRegion());
+  };
+
+  if (!areValuesDefinedAbove(ValueRange(value), region) ||
+      !llvm::any_of(value.getUses(), useIsInRegion))
+    return std::nullopt;
+
+  BlockArgument arg = appendInputArg(value);
+  replaceAllUsesInRegionWith(value, arg, region);
+  return arg;
+}
+
 bool ComputeRegionOp::isEffectivelySerial() {
   auto *ctx = getContext();
 
@@ -666,6 +684,8 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, regionArgs))
     return failure();
+  ComputeRegionOp::ensureTerminator(*body, parser.getBuilder(),
+                                    result.location);
 
   const size_t numLaunchOperands = launchOperands.size();
   const size_t numInputOperands = inputOperands.size();
