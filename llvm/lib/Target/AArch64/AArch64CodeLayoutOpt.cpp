@@ -132,7 +132,7 @@ static bool isFloatingPointConditionalSelect(unsigned Opc) {
   }
 }
 
-/// Returns true if MI is a qualifying 32-bit CMP or CMN instruction.
+/// \returns true if MI is a qualifying 32-bit CMP or CMN instruction.
 /// CMP is encoded as SUBS with WZR destination, CMN as ADDS with WZR.
 /// Only simple variants (no shifted/extended reg) qualify, and immediate
 /// variants require no LSL shift and small immediates (<=15).
