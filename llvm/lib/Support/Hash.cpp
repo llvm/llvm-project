@@ -38,7 +38,9 @@ uint32_t llvm::getKCFITypeID(StringRef MangledTypeName,
   switch (Algorithm) {
   case KCFIHashAlgorithm::xxHash64:
     // Use lower 32 bits of xxHash64
-    return static_cast<uint32_t>(xxHash64(MangledTypeName));
+    return static_cast<uint32_t>(
+        xxHash64(reinterpret_cast<const uint8_t *>(MangledTypeName.data()),
+                 MangledTypeName.size()));
   case KCFIHashAlgorithm::FNV1a:
     // FNV-1a hash (32-bit)
     uint32_t Hash = 2166136261u; // FNV offset basis

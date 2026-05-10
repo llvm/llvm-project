@@ -9,21 +9,15 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../bugprone/SignedBitwiseCheck.h"
-#include "../bugprone/StdExceptionBaseclassCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
-#include "../bugprone/UnusedReturnValueCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
-#include "../cppcoreguidelines/AvoidGotoCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
 #include "../cppcoreguidelines/ProBoundsArrayToPointerDecayCheck.h"
 #include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
 #include "../cppcoreguidelines/ProTypeVarargCheck.h"
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
-#include "../misc/ExplicitConstructorCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
-#include "../modernize/AvoidCArraysCheck.h"
-#include "../modernize/DeprecatedHeadersCheck.h"
 #include "../modernize/UseAutoCheck.h"
 #include "../modernize/UseEmplaceCheck.h"
 #include "../modernize/UseEqualsDefaultCheck.h"
@@ -34,8 +28,6 @@
 #include "../performance/MoveConstArgCheck.h"
 #include "../performance/NoexceptMoveConstructorCheck.h"
 #include "../portability/NoAssemblerCheck.h"
-#include "../readability/BracesAroundStatementsCheck.h"
-#include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
@@ -47,26 +39,10 @@ namespace {
 class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
-        "hicpp-avoid-c-arrays");
-    CheckFactories.registerCheck<cppcoreguidelines::AvoidGotoCheck>(
-        "hicpp-avoid-goto");
-    CheckFactories.registerCheck<readability::BracesAroundStatementsCheck>(
-        "hicpp-braces-around-statements");
-    CheckFactories.registerCheck<modernize::DeprecatedHeadersCheck>(
-        "hicpp-deprecated-headers");
-    CheckFactories.registerCheck<bugprone::StdExceptionBaseclassCheck>(
-        "hicpp-exception-baseclass");
-    CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
-        "hicpp-ignored-remove-result");
     CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
         "hicpp-multiway-paths-covered");
     CheckFactories.registerCheck<bugprone::SignedBitwiseCheck>(
         "hicpp-signed-bitwise");
-    CheckFactories.registerCheck<misc::ExplicitConstructorCheck>(
-        "hicpp-explicit-conversions");
-    CheckFactories.registerCheck<readability::FunctionSizeCheck>(
-        "hicpp-function-size");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "hicpp-named-parameter");
     CheckFactories.registerCheck<bugprone::UseAfterMoveCheck>(
@@ -110,16 +86,6 @@ public:
         "hicpp-uppercase-literal-suffix");
     CheckFactories.registerCheck<cppcoreguidelines::ProTypeVarargCheck>(
         "hicpp-vararg");
-  }
-
-  ClangTidyOptions getModuleOptions() override {
-    ClangTidyOptions Options;
-    ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
-    Opts["hicpp-ignored-remove-result.CheckedFunctions"] =
-        "^::std::remove$;^::std::remove_if$;^::std::unique$";
-    Opts["hicpp-ignored-remove-result.CheckedReturnTypes"] = "";
-    Opts["hicpp-ignored-remove-result.AllowCastToVoid"] = "true";
-    return Options;
   }
 };
 
