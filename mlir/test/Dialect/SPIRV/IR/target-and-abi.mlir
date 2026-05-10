@@ -346,3 +346,14 @@ func.func @vce() attributes {
   // CHECK: #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>
   vce = #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>
 } { return }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.selection_control
+//===----------------------------------------------------------------------===//
+
+// expected-error@+1 {{'spirv.selection_control' must be a spirv::SelectionControlAttr}}
+func.func @selection_control_wrong_attr() attributes {
+  spirv.selection_control = 64
+} { return }

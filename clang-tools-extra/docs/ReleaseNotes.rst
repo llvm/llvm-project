@@ -79,6 +79,10 @@ Code completion
 - Now also provides include files without extension, if they are in a directory
   only called ``include``.
 
+- Added support for ``InsertReplaceEdit`` in code completion (LSP 3.16),
+  allowing clients that advertise ``insertReplaceSupport`` to receive both
+  insert and replace ranges for completion items.
+
 - Changed completion-style default to ``detailed``. This means function
   overloads will no longer be bundled together, but instead each have
   their own completion item. This gives the user a better overview of the
@@ -206,6 +210,18 @@ New check aliases
 - Renamed :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
   to :doc:`bugprone-assignment-in-selection-statement
   <clang-tidy/checks/bugprone/assignment-in-selection-statement>`.
+
+- Renamed :doc:`cppcoreguidelines-explicit-constructor
+  <clang-tidy/checks/cppcoreguidelines/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `cppcoreguidelines-explicit-constructor` name is kept as an alias.
+
+- Renamed :doc:`google-explicit-constructor
+  <clang-tidy/checks/google/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `google-explicit-constructor` name is kept as an alias.
 
 - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
   to :doc:`portability-no-assembler
