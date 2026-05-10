@@ -1,5 +1,5 @@
 # Merges PR's with title 'merge main into amd-staging'
-# #aits for all required checks to be successful
+# Waits for all required checks to be successful
 # Merge strategy: always a merge commit (--merge), not squash or rebase
 
 name: Auto-merge (main → amd-staging sync PRs)
