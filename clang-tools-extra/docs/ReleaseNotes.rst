@@ -79,6 +79,10 @@ Code completion
 - Now also provides include files without extension, if they are in a directory
   only called ``include``.
 
+- Added support for ``InsertReplaceEdit`` in code completion (LSP 3.16),
+  allowing clients that advertise ``insertReplaceSupport`` to receive both
+  insert and replace ranges for completion items.
+
 - Changed completion-style default to ``detailed``. This means function
   overloads will no longer be bundled together, but instead each have
   their own completion item. This gives the user a better overview of the
