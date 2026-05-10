@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -939,6 +940,17 @@ inline std::string &operator+=(std::string &buffer, StringRef string) {
 
 /// Compute a hash_code for a StringRef.
 [[nodiscard]] LLVM_ABI hash_code hash_value(StringRef S);
+
+/// Inline StringRef overloads of the xxhash entry points declared out-of-line
+/// in llvm/Support/xxhash.h. They live here so xxhash.h can stay free of ADT
+/// dependencies.
+inline uint64_t xxHash64(StringRef data) {
+  return xxHash64(reinterpret_cast<const uint8_t *>(data.data()), data.size());
+}
+inline uint64_t xxh3_64bits(StringRef data) {
+  return xxh3_64bits(reinterpret_cast<const uint8_t *>(data.data()),
+                     data.size());
+}
 
 // Provide DenseMapInfo for StringRefs.
 template <> struct DenseMapInfo<StringRef, void> {
