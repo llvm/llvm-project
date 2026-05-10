@@ -16545,7 +16545,9 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   // the freeze can depend on the full load value. But its still safe to change
   // the extension type from anyext to zext.
   if (FreezeNode && !FreezeNode.hasOneUse() &&
-      (LN0->getMemoryVT().bitsGT(ExtVT) || ExtType != ISD::ZEXTLOAD))
+      (LN0->getMemoryVT().bitsGT(ExtVT) || ExtType != ISD::ZEXTLOAD ||
+       (LN0->getExtensionType() != ISD::EXTLOAD &&
+        LN0->getExtensionType() != ISD::ZEXTLOAD)))
     return SDValue();
 
   auto AdjustBigEndianShift = [&](unsigned ShAmt) {
