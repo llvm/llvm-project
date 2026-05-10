@@ -555,9 +555,6 @@ template <typename T> hash_code hash_value(ArrayRef<T> S) {
 /// Inline ArrayRef overloads of the xxhash entry points declared
 /// out-of-line in llvm/Support/xxhash.h. They live here so xxhash.h can stay
 /// free of ADT dependencies.
-inline uint64_t xxHash64(ArrayRef<uint8_t> data) {
-  return xxHash64(data.data(), data.size());
-}
 inline uint64_t xxh3_64bits(ArrayRef<uint8_t> data) {
   return xxh3_64bits(data.data(), data.size());
 }

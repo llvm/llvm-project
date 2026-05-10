@@ -944,9 +944,6 @@ inline std::string &operator+=(std::string &buffer, StringRef string) {
 /// Inline StringRef overloads of the xxhash entry points declared out-of-line
 /// in llvm/Support/xxhash.h. They live here so xxhash.h can stay free of ADT
 /// dependencies.
-inline uint64_t xxHash64(StringRef data) {
-  return xxHash64(reinterpret_cast<const uint8_t *>(data.data()), data.size());
-}
 inline uint64_t xxh3_64bits(StringRef data) {
   return xxh3_64bits(reinterpret_cast<const uint8_t *>(data.data()),
                      data.size());
