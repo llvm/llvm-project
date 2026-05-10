@@ -1243,17 +1243,6 @@ if(LLVM_LIBC_FULL_BUILD)
     # sys/select.h entrypoints
     libc.src.sys.select.select
 
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.accept
-    libc.src.sys.socket.accept4
-    libc.src.sys.socket.bind
-    libc.src.sys.socket.connect
-    libc.src.sys.socket.getsockopt
-    libc.src.sys.socket.listen
-    libc.src.sys.socket.setsockopt
-    libc.src.sys.socket.shutdown
-    libc.src.sys.socket.socket
-
     # link.h entrypoints
     libc.src.link.dl_iterate_phdr
 
