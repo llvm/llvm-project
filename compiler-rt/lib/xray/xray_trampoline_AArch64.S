@@ -47,6 +47,7 @@ TEXT_SECTION
 ASM_HIDDEN(__xray_FunctionEntry)
 ASM_TYPE_FUNCTION(__xray_FunctionEntry)
 ASM_SYMBOL(__xray_FunctionEntry):
+  hint #34 // BTI c
     /* Move the return address beyond the end of sled data. The 12 bytes of
          data are inserted in the code of the runtime patch, between the call
          instruction and the instruction returned into. The data contains 32
@@ -74,6 +75,7 @@ ASM_SIZE(__xray_FunctionEntry)
 ASM_HIDDEN(__xray_FunctionExit)
 ASM_TYPE_FUNCTION(__xray_FunctionExit)
 ASM_SYMBOL(__xray_FunctionExit):
+  hint #34 // BTI c
     /* Move the return address beyond the end of sled data. The 12 bytes of
          data are inserted in the code of the runtime patch, between the call
          instruction and the instruction returned into. The data contains 32
@@ -100,6 +102,7 @@ ASM_SIZE(__xray_FunctionExit)
 ASM_HIDDEN(__xray_FunctionTailExit)
 ASM_TYPE_FUNCTION(__xray_FunctionTailExit)
 ASM_SYMBOL(__xray_FunctionTailExit):
+  hint #34 // BTI c
     /* Move the return address beyond the end of sled data. The 12 bytes of
          data are inserted in the code of the runtime patch, between the call
          instruction and the instruction returned into. The data contains 32
@@ -126,6 +129,7 @@ ASM_SIZE(__xray_FunctionTailExit)
 ASM_HIDDEN(__xray_ArgLoggerEntry)
 ASM_TYPE_FUNCTION(__xray_ArgLoggerEntry)
 ASM_SYMBOL(__xray_ArgLoggerEntry):
+  hint #34 // BTI c
   add x30, x30, #12
   // Push the registers which may be modified by the handler function.
   SAVE_REGISTERS
@@ -153,6 +157,7 @@ ASM_SIZE(__xray_ArgLoggerEntry)
 .global ASM_SYMBOL(__xray_CustomEvent)
 ASM_TYPE_FUNCTION(__xray_CustomEvent)
 ASM_SYMBOL(__xray_CustomEvent):
+  hint #34 // BTI c
   SAVE_REGISTERS
   LOAD_HANDLER_ADDR x8, _ZN6__xray22XRayPatchedCustomEventE
   cbz x8, 1f
@@ -165,6 +170,7 @@ ASM_SIZE(__xray_CustomEvent)
 .global ASM_SYMBOL(__xray_TypedEvent)
 ASM_TYPE_FUNCTION(__xray_TypedEvent)
 ASM_SYMBOL(__xray_TypedEvent):
+  hint #34 // BTI c
   SAVE_REGISTERS
   LOAD_HANDLER_ADDR x8, _ZN6__xray21XRayPatchedTypedEventE
   cbz x8, 1f
