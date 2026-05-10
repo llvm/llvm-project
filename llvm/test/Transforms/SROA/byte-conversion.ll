@@ -17,9 +17,7 @@ define i8 @bytetoint(b8 %x) {
 define ptr @bytetoptr(b64 %x) {
 ; CHECK-LABEL: define ptr @bytetoptr(
 ; CHECK-SAME: b64 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca b64, align 8
-; CHECK-NEXT:    store b64 [[X]], ptr [[A]], align 8
-; CHECK-NEXT:    [[A_0_V:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    [[A_0_V:%.*]] = bitcast b64 [[X]] to ptr
 ; CHECK-NEXT:    ret ptr [[A_0_V]]
 ;
   %a = alloca b64, align 8
@@ -31,16 +29,14 @@ define ptr @bytetoptr(b64 %x) {
 define i8 @extract_int_from_byte(b32 %x) {
 ; LE-LABEL: define i8 @extract_int_from_byte(
 ; LE-SAME: b32 [[X:%.*]]) {
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; LE-NEXT:    [[A_2_EXTRACT_SHIFT:%.*]] = lshr i32 [[TMP1]], 16
-; LE-NEXT:    [[A_2_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_2_EXTRACT_SHIFT]] to i8
+; LE-NEXT:    [[A_2_EXTRACT_EXTRACT:%.*]] = bitextract b8, b32 [[X]], i32 16
+; LE-NEXT:    [[A_2_EXTRACT_TRUNC:%.*]] = bitcast b8 [[A_2_EXTRACT_EXTRACT]] to i8
 ; LE-NEXT:    ret i8 [[A_2_EXTRACT_TRUNC]]
 ;
 ; BE-LABEL: define i8 @extract_int_from_byte(
 ; BE-SAME: b32 [[X:%.*]]) {
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; BE-NEXT:    [[A_2_EXTRACT_SHIFT:%.*]] = lshr i32 [[TMP1]], 8
-; BE-NEXT:    [[A_2_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_2_EXTRACT_SHIFT]] to i8
+; BE-NEXT:    [[A_2_EXTRACT_EXTRACT:%.*]] = bitextract b8, b32 [[X]], i32 8
+; BE-NEXT:    [[A_2_EXTRACT_TRUNC:%.*]] = bitcast b8 [[A_2_EXTRACT_EXTRACT]] to i8
 ; BE-NEXT:    ret i8 [[A_2_EXTRACT_TRUNC]]
 ;
   %a = alloca b32, align 4
@@ -51,13 +47,15 @@ define i8 @extract_int_from_byte(b32 %x) {
 }
 
 define b8 @extract_byte_from_byte(b32 %x) {
-; CHECK-LABEL: define b8 @extract_byte_from_byte(
-; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca b32, align 4
-; CHECK-NEXT:    store b32 [[X]], ptr [[A]], align 4
-; CHECK-NEXT:    [[A_2_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
-; CHECK-NEXT:    [[A_2_V:%.*]] = load b8, ptr [[A_2_P_SROA_IDX]], align 2
-; CHECK-NEXT:    ret b8 [[A_2_V]]
+; LE-LABEL: define b8 @extract_byte_from_byte(
+; LE-SAME: b32 [[X:%.*]]) {
+; LE-NEXT:    [[A_2_EXTRACT_EXTRACT:%.*]] = bitextract b8, b32 [[X]], i32 16
+; LE-NEXT:    ret b8 [[A_2_EXTRACT_EXTRACT]]
+;
+; BE-LABEL: define b8 @extract_byte_from_byte(
+; BE-SAME: b32 [[X:%.*]]) {
+; BE-NEXT:    [[A_2_EXTRACT_EXTRACT:%.*]] = bitextract b8, b32 [[X]], i32 8
+; BE-NEXT:    ret b8 [[A_2_EXTRACT_EXTRACT]]
 ;
   %a = alloca b32, align 4
   store b32 %x, ptr %a, align 4
@@ -69,22 +67,14 @@ define b8 @extract_byte_from_byte(b32 %x) {
 define b32 @insert_int_into_byte(b32 %old, i8 %x) {
 ; LE-LABEL: define b32 @insert_int_into_byte(
 ; LE-SAME: b32 [[OLD:%.*]], i8 [[X:%.*]]) {
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[OLD]] to i32
-; LE-NEXT:    [[A_2_INSERT_EXT:%.*]] = zext i8 [[X]] to i32
-; LE-NEXT:    [[A_2_INSERT_SHIFT:%.*]] = shl i32 [[A_2_INSERT_EXT]], 16
-; LE-NEXT:    [[A_2_INSERT_MASK:%.*]] = and i32 [[TMP1]], -16711681
-; LE-NEXT:    [[A_2_INSERT_INSERT:%.*]] = or i32 [[A_2_INSERT_MASK]], [[A_2_INSERT_SHIFT]]
-; LE-NEXT:    [[TMP2:%.*]] = bitcast i32 [[A_2_INSERT_INSERT]] to b32
+; LE-NEXT:    [[TMP1:%.*]] = bitcast i8 [[X]] to b8
+; LE-NEXT:    [[TMP2:%.*]] = bitinsert b32 [[OLD]], b8 [[TMP1]], i32 16
 ; LE-NEXT:    ret b32 [[TMP2]]
 ;
 ; BE-LABEL: define b32 @insert_int_into_byte(
 ; BE-SAME: b32 [[OLD:%.*]], i8 [[X:%.*]]) {
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[OLD]] to i32
-; BE-NEXT:    [[A_2_INSERT_EXT:%.*]] = zext i8 [[X]] to i32
-; BE-NEXT:    [[A_2_INSERT_SHIFT:%.*]] = shl i32 [[A_2_INSERT_EXT]], 8
-; BE-NEXT:    [[A_2_INSERT_MASK:%.*]] = and i32 [[TMP1]], -65281
-; BE-NEXT:    [[A_2_INSERT_INSERT:%.*]] = or i32 [[A_2_INSERT_MASK]], [[A_2_INSERT_SHIFT]]
-; BE-NEXT:    [[TMP2:%.*]] = bitcast i32 [[A_2_INSERT_INSERT]] to b32
+; BE-NEXT:    [[TMP1:%.*]] = bitcast i8 [[X]] to b8
+; BE-NEXT:    [[TMP2:%.*]] = bitinsert b32 [[OLD]], b8 [[TMP1]], i32 8
 ; BE-NEXT:    ret b32 [[TMP2]]
 ;
   %a = alloca b32, align 4
@@ -96,14 +86,15 @@ define b32 @insert_int_into_byte(b32 %old, i8 %x) {
 }
 
 define b32 @insert_byte_into_byte(b32 %old, b8 %x) {
-; CHECK-LABEL: define b32 @insert_byte_into_byte(
-; CHECK-SAME: b32 [[OLD:%.*]], b8 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca b32, align 4
-; CHECK-NEXT:    store b32 [[OLD]], ptr [[A]], align 4
-; CHECK-NEXT:    [[A_2_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
-; CHECK-NEXT:    store b8 [[X]], ptr [[A_2_P_SROA_IDX]], align 2
-; CHECK-NEXT:    [[A_0_V:%.*]] = load b32, ptr [[A]], align 4
-; CHECK-NEXT:    ret b32 [[A_0_V]]
+; LE-LABEL: define b32 @insert_byte_into_byte(
+; LE-SAME: b32 [[OLD:%.*]], b8 [[X:%.*]]) {
+; LE-NEXT:    [[A_2_INSERT_INSERT:%.*]] = bitinsert b32 [[OLD]], b8 [[X]], i32 16
+; LE-NEXT:    ret b32 [[A_2_INSERT_INSERT]]
+;
+; BE-LABEL: define b32 @insert_byte_into_byte(
+; BE-SAME: b32 [[OLD:%.*]], b8 [[X:%.*]]) {
+; BE-NEXT:    [[A_2_INSERT_INSERT:%.*]] = bitinsert b32 [[OLD]], b8 [[X]], i32 8
+; BE-NEXT:    ret b32 [[A_2_INSERT_INSERT]]
 ;
   %a = alloca b32, align 4
   store b32 %old, ptr %a, align 4
@@ -114,14 +105,17 @@ define b32 @insert_byte_into_byte(b32 %old, b8 %x) {
 }
 
 define b16 @insert_two_bytes(b8 %x, b8 %y) {
-; CHECK-LABEL: define b16 @insert_two_bytes(
-; CHECK-SAME: b8 [[X:%.*]], b8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca b16, align 2
-; CHECK-NEXT:    store b8 [[X]], ptr [[A]], align 2
-; CHECK-NEXT:    [[A_1_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 1
-; CHECK-NEXT:    store b8 [[Y]], ptr [[A_1_P_SROA_IDX]], align 1
-; CHECK-NEXT:    [[A_0_V:%.*]] = load b16, ptr [[A]], align 2
-; CHECK-NEXT:    ret b16 [[A_0_V]]
+; LE-LABEL: define b16 @insert_two_bytes(
+; LE-SAME: b8 [[X:%.*]], b8 [[Y:%.*]]) {
+; LE-NEXT:    [[A_0_INSERT_INSERT:%.*]] = bitinsert b16 undef, b8 [[X]], i32 0
+; LE-NEXT:    [[A_1_INSERT_INSERT:%.*]] = bitinsert b16 [[A_0_INSERT_INSERT]], b8 [[Y]], i32 8
+; LE-NEXT:    ret b16 [[A_1_INSERT_INSERT]]
+;
+; BE-LABEL: define b16 @insert_two_bytes(
+; BE-SAME: b8 [[X:%.*]], b8 [[Y:%.*]]) {
+; BE-NEXT:    [[A_0_INSERT_INSERT:%.*]] = bitinsert b16 undef, b8 [[X]], i32 8
+; BE-NEXT:    [[A_1_INSERT_INSERT:%.*]] = bitinsert b16 [[A_0_INSERT_INSERT]], b8 [[Y]], i32 0
+; BE-NEXT:    ret b16 [[A_1_INSERT_INSERT]]
 ;
   %a = alloca b16, align 2
   store b8 %x, ptr %a, align 2
@@ -146,9 +140,7 @@ define b32 @inttobyte(i32 %x) {
 define b64 @ptrtobyte(ptr %x) {
 ; CHECK-LABEL: define b64 @ptrtobyte(
 ; CHECK-SAME: ptr [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr [[X]], ptr [[A]], align 8
-; CHECK-NEXT:    [[A_0_V:%.*]] = load b64, ptr [[A]], align 8
+; CHECK-NEXT:    [[A_0_V:%.*]] = bitcast ptr [[X]] to b64
 ; CHECK-NEXT:    ret b64 [[A_0_V]]
 ;
   %a = alloca ptr, align 8
@@ -160,12 +152,15 @@ define b64 @ptrtobyte(ptr %x) {
 ; Byte types of different widths cannot be converted into one another, but a
 ; smaller byte can still be extracted from a larger one.
 define b16 @byte_width_mismatch(b32 %x) {
-; CHECK-LABEL: define b16 @byte_width_mismatch(
-; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca b32, align 4
-; CHECK-NEXT:    store b32 [[X]], ptr [[A]], align 4
-; CHECK-NEXT:    [[A_0_V:%.*]] = load b16, ptr [[A]], align 4
-; CHECK-NEXT:    ret b16 [[A_0_V]]
+; LE-LABEL: define b16 @byte_width_mismatch(
+; LE-SAME: b32 [[X:%.*]]) {
+; LE-NEXT:    [[A_0_EXTRACT_EXTRACT:%.*]] = bitextract b16, b32 [[X]], i32 0
+; LE-NEXT:    ret b16 [[A_0_EXTRACT_EXTRACT]]
+;
+; BE-LABEL: define b16 @byte_width_mismatch(
+; BE-SAME: b32 [[X:%.*]]) {
+; BE-NEXT:    [[A_0_EXTRACT_EXTRACT:%.*]] = bitextract b16, b32 [[X]], i32 16
+; BE-NEXT:    ret b16 [[A_0_EXTRACT_EXTRACT]]
 ;
   %a = alloca b32, align 4
   store b32 %x, ptr %a, align 4
@@ -206,16 +201,15 @@ define b8 @neg_store_sub_byte_width(b3 %x) {
 define i16 @int_load_past_end(b32 %x) {
 ; LE-LABEL: define i16 @int_load_past_end(
 ; LE-SAME: b32 [[X:%.*]]) {
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; LE-NEXT:    [[A_3_EXTRACT_SHIFT:%.*]] = lshr i32 [[TMP1]], 24
-; LE-NEXT:    [[A_3_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_3_EXTRACT_SHIFT]] to i8
+; LE-NEXT:    [[A_3_EXTRACT_EXTRACT:%.*]] = bitextract b8, b32 [[X]], i32 24
+; LE-NEXT:    [[A_3_EXTRACT_TRUNC:%.*]] = bitcast b8 [[A_3_EXTRACT_EXTRACT]] to i8
 ; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[A_3_EXTRACT_TRUNC]] to i16
 ; LE-NEXT:    ret i16 [[TMP2]]
 ;
 ; BE-LABEL: define i16 @int_load_past_end(
 ; BE-SAME: b32 [[X:%.*]]) {
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; BE-NEXT:    [[A_3_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP1]] to i8
+; BE-NEXT:    [[A_3_EXTRACT_EXTRACT:%.*]] = bitextract b8, b32 [[X]], i32 0
+; BE-NEXT:    [[A_3_EXTRACT_TRUNC:%.*]] = bitcast b8 [[A_3_EXTRACT_EXTRACT]] to i8
 ; BE-NEXT:    [[TMP2:%.*]] = zext i8 [[A_3_EXTRACT_TRUNC]] to i16
 ; BE-NEXT:    ret i16 [[TMP2]]
 ;

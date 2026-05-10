@@ -102,13 +102,14 @@ define <16 x i8> @vector_ptrtointbitcast_vector({<2 x ptr>, <2 x ptr>} %x) {
 
 define <4 x b64> @vector_ptrtobyte({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-LABEL: @vector_ptrtobyte(
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <4 x b64>, align 32
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X:%.*]], 0
-; CHECK-NEXT:    store <2 x ptr> [[X_FCA_0_EXTRACT]], ptr [[A_SROA_0]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x ptr> [[X_FCA_0_EXTRACT]] to <2 x b64>
+; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x b64> [[TMP1]], <2 x b64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x b64> [[A_SROA_0_0_VEC_EXPAND]], <4 x b64> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X]], 1
-; CHECK-NEXT:    [[A_SROA_0_16_X_FCA_1_GEP_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 16
-; CHECK-NEXT:    store <2 x ptr> [[X_FCA_1_EXTRACT]], ptr [[A_SROA_0_16_X_FCA_1_GEP_SROA_IDX1]], align 16
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = load <4 x b64>, ptr [[A_SROA_0]], align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x ptr> [[X_FCA_1_EXTRACT]] to <2 x b64>
+; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x b64> [[TMP2]], <2 x b64> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = shufflevector <4 x b64> [[A_SROA_0_16_VEC_EXPAND]], <4 x b64> [[A_SROA_0_0_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x b64> [[A_SROA_0_0_A_SROA_0_0_VEC]]
 ;
   %a = alloca {<2 x ptr>, <2 x ptr>}, align 32
@@ -122,13 +123,14 @@ define <4 x b64> @vector_ptrtobyte({<2 x ptr>, <2 x ptr>} %x) {
 
 define <4 x ptr> @vector_bytetoptr({<2 x b64>, <2 x b64>} %x) {
 ; CHECK-LABEL: @vector_bytetoptr(
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <4 x ptr>, align 32
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x b64>, <2 x b64> } [[X:%.*]], 0
-; CHECK-NEXT:    store <2 x b64> [[X_FCA_0_EXTRACT]], ptr [[A_SROA_0]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x b64> [[X_FCA_0_EXTRACT]] to <2 x ptr>
+; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x ptr> [[A_SROA_0_0_VEC_EXPAND]], <4 x ptr> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x b64>, <2 x b64> } [[X]], 1
-; CHECK-NEXT:    [[A_SROA_0_16_X_FCA_1_GEP_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 16
-; CHECK-NEXT:    store <2 x b64> [[X_FCA_1_EXTRACT]], ptr [[A_SROA_0_16_X_FCA_1_GEP_SROA_IDX1]], align 16
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = load <4 x ptr>, ptr [[A_SROA_0]], align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b64> [[X_FCA_1_EXTRACT]] to <2 x ptr>
+; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = shufflevector <4 x ptr> [[A_SROA_0_16_VEC_EXPAND]], <4 x ptr> [[A_SROA_0_0_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x ptr> [[A_SROA_0_0_A_SROA_0_0_VEC]]
 ;
   %a = alloca {<2 x b64>, <2 x b64>}, align 32
@@ -142,13 +144,12 @@ define <4 x ptr> @vector_bytetoptr({<2 x b64>, <2 x b64>} %x) {
 
 define <2 x b64> @vector_ptrtobytebitcast({<1 x ptr>, <1 x ptr>} %x) {
 ; CHECK-LABEL: @vector_ptrtobytebitcast(
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x b64>, align 16
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <1 x ptr>, <1 x ptr> } [[X:%.*]], 0
-; CHECK-NEXT:    store <1 x ptr> [[X_FCA_0_EXTRACT]], ptr [[A_SROA_0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x ptr> [[X_FCA_0_EXTRACT]] to b64
+; CHECK-NEXT:    [[A_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x b64> undef, b64 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <1 x ptr>, <1 x ptr> } [[X]], 1
-; CHECK-NEXT:    [[A_SROA_0_8_X_FCA_1_GEP_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 8
-; CHECK-NEXT:    store <1 x ptr> [[X_FCA_1_EXTRACT]], ptr [[A_SROA_0_8_X_FCA_1_GEP_SROA_IDX1]], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = load <2 x b64>, ptr [[A_SROA_0]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x ptr> [[X_FCA_1_EXTRACT]] to b64
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = insertelement <2 x b64> [[A_SROA_0_0_VEC_INSERT]], b64 [[TMP2]], i64 1
 ; CHECK-NEXT:    ret <2 x b64> [[A_SROA_0_0_A_SROA_0_0_VEC]]
 ;
   %a = alloca {<1 x ptr>, <1 x ptr>}, align 16
@@ -162,11 +163,9 @@ define <2 x b64> @vector_ptrtobytebitcast({<1 x ptr>, <1 x ptr>} %x) {
 
 define <2 x ptr> @vector_bytetoptrbitcast_vector({<16 x b8>, <16 x b8>} %x) {
 ; CHECK-LABEL: @vector_bytetoptrbitcast_vector(
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <16 x b8>, align 16
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x b8>, <16 x b8> } [[X:%.*]], 0
-; CHECK-NEXT:    store <16 x b8> [[X_FCA_0_EXTRACT]], ptr [[A_SROA_0]], align 16
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = bitcast <16 x b8> [[X_FCA_0_EXTRACT]] to <2 x ptr>
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x b8>, <16 x b8> } [[X]], 1
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = load <2 x ptr>, ptr [[A_SROA_0]], align 16
 ; CHECK-NEXT:    ret <2 x ptr> [[A_SROA_0_0_A_SROA_0_0_VEC]]
 ;
   %a = alloca {<16 x b8>, <16 x b8>}, align 16
@@ -180,11 +179,9 @@ define <2 x ptr> @vector_bytetoptrbitcast_vector({<16 x b8>, <16 x b8>} %x) {
 
 define <16 x b8> @vector_ptrtobytebitcast_vector({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-LABEL: @vector_ptrtobytebitcast_vector(
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x ptr>, align 16
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X:%.*]], 0
-; CHECK-NEXT:    store <2 x ptr> [[X_FCA_0_EXTRACT]], ptr [[A_SROA_0]], align 16
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X]], 1
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = load <16 x b8>, ptr [[A_SROA_0]], align 16
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VEC:%.*]] = bitcast <2 x ptr> [[X_FCA_0_EXTRACT]] to <16 x b8>
 ; CHECK-NEXT:    ret <16 x b8> [[A_SROA_0_0_A_SROA_0_0_VEC]]
 ;
   %a = alloca {<2 x ptr>, <2 x ptr>}, align 16
