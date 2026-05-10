@@ -10,15 +10,19 @@
 
 // <bit>
 
-// std::byteswap rejects _BitInt(N) where N is not a multiple of CHAR_BIT.
+// std::byteswap rejects _BitInt(N) where the bit width is not a multiple
+// of 16. The diagnostic comes from one of two paths depending on the
+// compiler version:
 //
-// The byte-level builtins (and the generic loop fallback) treat the
-// storage representation as the value, so for a type with padding bits
-// they would shuffle padding into significant positions and produce a
-// value whose semantic meaning is unspecified. The static_assert added
-// in [libc++] Reject byteswap of types with padding bits pins the
-// rejection so the diagnostic does not regress silently into a wrong
-// value.
+// - On Clang 22+ where __builtin_bswapg is available, byteswap defers to
+//   the builtin and the rejection diagnostic is Clang's "_BitInt type
+//   ... must be a multiple of 16 bits for byte swapping".
+// - On Clang 21 (the libc++ minimum) the fallback path runs, which uses
+//   a static_assert to reject types whose value bits do not fill the
+//   entire object representation.
+//
+// The regex below matches either spelling so the test is stable across
+// both paths.
 
 #include <bit>
 
@@ -28,31 +32,31 @@
 
 void f_unsigned_13() {
   unsigned _BitInt(13) v = 0;
-  // expected-error-re@*:* {{{{(static assertion|static_assert)}} failed{{.*}}"std::byteswap requires{{.*}}"}}
+  // expected-error-re@*:* {{{{(((static assertion|static_assert) failed.*"std::byteswap requires.*")|(_BitInt type.*must be a multiple of 16 bits))}}}}
   (void)std::byteswap(v);
 }
 
 void f_signed_13() {
   signed _BitInt(13) v = 0;
-  // expected-error-re@*:* {{{{(static assertion|static_assert)}} failed{{.*}}"std::byteswap requires{{.*}}"}}
+  // expected-error-re@*:* {{{{(((static assertion|static_assert) failed.*"std::byteswap requires.*")|(_BitInt type.*must be a multiple of 16 bits))}}}}
   (void)std::byteswap(v);
 }
 
 void f_unsigned_17() {
   unsigned _BitInt(17) v = 0;
-  // expected-error-re@*:* {{{{(static assertion|static_assert)}} failed{{.*}}"std::byteswap requires{{.*}}"}}
+  // expected-error-re@*:* {{{{(((static assertion|static_assert) failed.*"std::byteswap requires.*")|(_BitInt type.*must be a multiple of 16 bits))}}}}
   (void)std::byteswap(v);
 }
 
 void f_signed_33() {
   signed _BitInt(33) v = 0;
-  // expected-error-re@*:* {{{{(static assertion|static_assert)}} failed{{.*}}"std::byteswap requires{{.*}}"}}
+  // expected-error-re@*:* {{{{(((static assertion|static_assert) failed.*"std::byteswap requires.*")|(_BitInt type.*must be a multiple of 16 bits))}}}}
   (void)std::byteswap(v);
 }
 
 void f_unsigned_65() {
   unsigned _BitInt(65) v = 0;
-  // expected-error-re@*:* {{{{(static assertion|static_assert)}} failed{{.*}}"std::byteswap requires{{.*}}"}}
+  // expected-error-re@*:* {{{{(((static assertion|static_assert) failed.*"std::byteswap requires.*")|(_BitInt type.*must be a multiple of 16 bits))}}}}
   (void)std::byteswap(v);
 }
 
@@ -62,13 +66,13 @@ void f_unsigned_65() {
 // generic loop also relies on the rejection; cover it here.
 void f_unsigned_129() {
   unsigned _BitInt(129) v = 0;
-  // expected-error-re@*:* {{{{(static assertion|static_assert)}} failed{{.*}}"std::byteswap requires{{.*}}"}}
+  // expected-error-re@*:* {{{{(((static assertion|static_assert) failed.*"std::byteswap requires.*")|(_BitInt type.*must be a multiple of 16 bits))}}}}
   (void)std::byteswap(v);
 }
 
 void f_signed_255() {
   signed _BitInt(255) v = 0;
-  // expected-error-re@*:* {{{{(static assertion|static_assert)}} failed{{.*}}"std::byteswap requires{{.*}}"}}
+  // expected-error-re@*:* {{{{(((static assertion|static_assert) failed.*"std::byteswap requires.*")|(_BitInt type.*must be a multiple of 16 bits))}}}}
   (void)std::byteswap(v);
 }
 #  endif
