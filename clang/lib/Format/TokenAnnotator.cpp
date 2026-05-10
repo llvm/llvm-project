@@ -1217,7 +1217,6 @@ private:
       assert(!Scopes.empty());
       Scopes.back() = getScopeType(OpeningBrace);
       if (CurrentToken->is(tok::r_brace)) {
-        assert(Scopes.back() == getScopeType(OpeningBrace));
         Scopes.pop_back();
         assert(OpeningBrace.Optional == CurrentToken->Optional);
         OpeningBrace.MatchingParen = CurrentToken;
