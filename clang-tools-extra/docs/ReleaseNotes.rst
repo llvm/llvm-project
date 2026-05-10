@@ -247,6 +247,12 @@ New check aliases
   <clang-tidy/checks/misc/explicit-constructor>`. The
   `google-explicit-constructor` name is kept as an alias.
 
+- Renamed :doc:`hicpp-multiway-paths-covered
+  <clang-tidy/checks/hicpp/multiway-paths-covered>`
+  to :doc:`bugprone-unhandled-code-paths
+  <clang-tidy/checks/bugprone/unhandled-code-paths>`.
+  The `hicpp-multiway-paths-covered` name is kept as an alias.
+
 - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
   to :doc:`portability-no-assembler
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
@@ -540,6 +546,9 @@ Changes in existing checks
 
   - Reduce verbosity by removing the note indicating source location of the
     ``empty`` function.
+
+  - Fixed a false positive with suggesting ``empty`` when comparing a container
+    to a default-constructed object of an unrelated type.
 
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check:
