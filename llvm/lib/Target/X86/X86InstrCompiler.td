@@ -2284,13 +2284,13 @@ def : Pat<(mul (loadi32 addr:$src1), imm:$src2),
 def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),
           (IMUL64rmi32 addr:$src1, i64immSExt32:$src2)>;
 
-// Bit scan instruction patterns to match explicit zero-undef behavior.
-def : Pat<(cttz_zero_undef GR16:$src), (BSF16rr (i16 (IMPLICIT_DEF)), GR16:$src)>;
-def : Pat<(cttz_zero_undef GR32:$src), (BSF32rr (i32 (IMPLICIT_DEF)), GR32:$src)>;
-def : Pat<(cttz_zero_undef GR64:$src), (BSF64rr (i64 (IMPLICIT_DEF)), GR64:$src)>;
-def : Pat<(cttz_zero_undef (loadi16 addr:$src)), (BSF16rm (i16 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(cttz_zero_undef (loadi32 addr:$src)), (BSF32rm (i32 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(cttz_zero_undef (loadi64 addr:$src)), (BSF64rm (i64 (IMPLICIT_DEF)), addr:$src)>;
+// Bit scan instruction patterns to match explicit zero-poison behavior.
+def : Pat<(cttz_zero_poison GR16:$src), (BSF16rr (i16 (IMPLICIT_DEF)), GR16:$src)>;
+def : Pat<(cttz_zero_poison GR32:$src), (BSF32rr (i32 (IMPLICIT_DEF)), GR32:$src)>;
+def : Pat<(cttz_zero_poison GR64:$src), (BSF64rr (i64 (IMPLICIT_DEF)), GR64:$src)>;
+def : Pat<(cttz_zero_poison (loadi16 addr:$src)), (BSF16rm (i16 (IMPLICIT_DEF)), addr:$src)>;
+def : Pat<(cttz_zero_poison (loadi32 addr:$src)), (BSF32rm (i32 (IMPLICIT_DEF)), addr:$src)>;
+def : Pat<(cttz_zero_poison (loadi64 addr:$src)), (BSF64rm (i64 (IMPLICIT_DEF)), addr:$src)>;
 
 // When HasMOVBE is enabled it is possible to get a non-legalized
 // register-register 16 bit bswap. This maps it to a ROL instruction.
