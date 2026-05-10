@@ -6003,12 +6003,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
       // Reject assume bundles with incorrect types
       if (Elem.Begin != Elem.End) {
-        AttributeSet AS = AttributeSet().addAttribute(Context, Kind);
         AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
-            Call.getOperand(Elem.Begin)->getType(), AS);
-        if (auto AttrKind = AS.begin()->getKindAsEnum();
-            IncompatibleAttrs.contains(AttrKind)) {
-          CheckFailed("Attribute '" + Attribute::getNameFromAttrKind(AttrKind) +
+            Call.getOperand(Elem.Begin)->getType(),
+            AttributeSet().addAttribute(Context, Kind));
+        if (IncompatibleAttrs.contains(Kind)) {
+          CheckFailed("Attribute '" + Attribute::getNameFromAttrKind(Kind) +
                           "' applied to incompatible type!",
                       Call.getOperand(Elem.Begin));
         }
