@@ -338,6 +338,19 @@ public:
     return SM.getBufferName(SM.getSpellingLoc(Loc)) == "<built-in>";
   }
 
+  /// Return true if \p Region should be suppressed because its spelling
+  /// location is in a system header and system header coverage is disabled.
+  bool skipSystemHeaderRegion(const SourceMappingRegion &Region,
+                              SourceLocation Loc) {
+    if (SystemHeadersCoverage)
+      return false;
+    if (!SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
+      return false;
+    assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
+           "Don't suppress the condition in system headers");
+    return true;
+  }
+
   /// Check whether \c Loc is included or expanded from \c Parent.
   bool isNestedIn(SourceLocation Loc, FileID Parent) {
     do {
@@ -401,8 +414,8 @@ public:
       if (!Visited.insert(File).second)
         continue;
 
-      assert(SystemHeadersCoverage ||
-             !SM.isInSystemHeader(SM.getSpellingLoc(Loc)));
+      if (skipSystemHeaderRegion(Region, Loc))
+        continue;
 
       unsigned Depth = 0;
       for (SourceLocation Parent = getIncludeOrExpansionLoc(Loc);
@@ -515,14 +528,8 @@ public:
       SourceLocation LocStart = Region.getBeginLoc();
       assert(SM.getFileID(LocStart).isValid() && "region in invalid file");
 
-      // Ignore regions from system headers unless collecting coverage from
-      // system headers is explicitly enabled.
-      if (!SystemHeadersCoverage &&
-          SM.isInSystemHeader(SM.getSpellingLoc(LocStart))) {
-        assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
-               "Don't suppress the condition in system headers");
+      if (skipSystemHeaderRegion(Region, LocStart))
         continue;
-      }
 
       auto CovFileID = getCoverageFileID(LocStart);
       // Ignore regions that don't have a file, such as builtin macros.
