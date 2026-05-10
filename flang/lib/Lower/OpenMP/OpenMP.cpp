@@ -3926,7 +3926,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPUtilityConstruct &);
+                   const parser::OmpUtilityDirective &);
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
@@ -4215,6 +4215,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   assert(combinerExpr && "Expecting combiner expression");
   auto parserInstIt = combinerExpr->v.begin();
 
+  // Get the parser-level initializer expression (if present) so we can
+  // pass each parser::OmpStylizedInstance to processInitializer.
+  const parser::OmpInitializerExpression *initExpr = nullptr;
+  for (const auto &clause : construct.v.Clauses().v) {
+    initExpr = parser::omp::GetInitializerExpr(clause);
+    if (initExpr)
+      break;
+  }
+  auto parserInitInstIt =
+      initExpr ? initExpr->v.begin()
+               : std::list<parser::OmpStylizedInstance>::const_iterator{};
+
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
 
@@ -4257,7 +4269,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                  parserInst);
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
-    cp.processInitializer(symTable, genInitValueCB);
+    const parser::OmpStylizedInstance *parserInitInst = nullptr;
+    if (initExpr) {
+      assert(parserInitInstIt != initExpr->v.end() &&
+             "Mismatched initializer instance count");
+      parserInitInst = &*parserInitInstIt++;
+    }
+    cp.processInitializer(symTable, genInitValueCB, parserInitInst);
     mlir::Type redType =
         isByRef
             ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
@@ -4391,14 +4409,14 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPGroupprivate &directive) {
+                   const parser::OmpGroupprivateDirective &directive) {
   TODO(converter.getCurrentLocation(), "GROUPPRIVATE");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPRequiresConstruct &requiresConstruct) {
+                   const parser::OmpRequiresDirective &requiresConstruct) {
   // Requires directives are gathered and processed in semantics and
   // then combined in the lowering bridge before triggering codegen
   // just once. Hence, there is no need to lower each individual
@@ -4408,7 +4426,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPThreadprivate &threadprivate) {
+                   const parser::OmpThreadprivateDirective &threadprivate) {
   // The directive is lowered when instantiating the variable to
   // support the case of threadprivate variable declared in module.
 }
@@ -4674,9 +4692,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPUtilityConstruct &) {
+                   const parser::OmpUtilityDirective &) {
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPUtilityConstruct");
+    TODO(converter.getCurrentLocation(), "OmpUtilityDirective");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

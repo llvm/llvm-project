@@ -191,7 +191,7 @@ let SubtargetPredicate = HasLerpInst in
 let SchedRW = [WriteIntMul] in {
   let SubtargetPredicate = HasMadU32Inst in
     defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
-  let SubtargetPredicate = isGFX1250Plus in {
+  let SubtargetPredicate = HasMadNC64_32Insts in {
     defm V_MAD_NC_U64_U32 : VOP3Inst<"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
     defm V_MAD_NC_I64_I32 : VOP3Inst<"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
   }
@@ -232,12 +232,12 @@ defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 } // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1
 
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd] in {
+let SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd] in {
 defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
 defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
 defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
 defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
-} // End SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd]
+} // End SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd]
 
 } // End isReMaterializable = 1
 

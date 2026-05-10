@@ -215,6 +215,14 @@ add_object_library(
 )
 
 add_header_library(
+  scope
+  HDRS
+    scope.h
+  DEPENDS
+    .utility
+)
+
+add_header_library(
   tuple
   HDRS
     tuple.h
