@@ -3898,18 +3898,10 @@ void Parser::ParseDeclarationSpecifiers(
         goto DoneWithDeclSpec;
       }
 
-      // If 'auto' is set and this identifier is a type name, check if it's
-      // followed by declarator tokens (like '=', '(', '[', etc.). If so, this
-      // identifier is likely the variable name, not a type specifier, so we
-      // should stop parsing declaration specifiers.
-      // Also check for concept constraint syntax (C<T> auto param) where
-      // the identifier before 'auto' might be a concept, not a type conflict.
-      // Also check for template parameters (template<auto V>) and lambda
-      // parameters
-      // ([](auto c)) where the identifier is a parameter name, not a type
-      // conflict.
+      // If 'auto' is set and this identifier is a type name, stop parsing
+      // declaration specifiers when the next token indicates this is the
+      // declarator-id rather than another type specifier.
       if (DS.getTypeSpecType() == DeclSpec::TST_auto && TypeRep) {
-        // Check if the next token indicates this is a declarator
         Token Next = NextToken();
         if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::amp,
                          tok::ampamp, tok::star, tok::coloncolon, tok::comma,
@@ -3922,17 +3914,6 @@ void Parser::ParseDeclarationSpecifiers(
           // Note: ')' is for function/lambda parameters: [](auto c)
           // Note: '->' is for lambda return types: [](auto c) -> int
           goto DoneWithDeclSpec;
-        }
-        // Check for concept constraint syntax: C<T> auto param)
-        // If the identifier is followed by 'auto' and then an identifier that's
-        // followed by ')', this might be concept syntax, not a type conflict.
-        if (Next.is(tok::identifier)) {
-          // Look ahead to see if this is followed by ')' (function parameter)
-          Token AfterNext = GetLookAheadToken(2);
-          if (AfterNext.is(tok::r_paren)) {
-            // This might be concept constraint syntax, skip conflict detection
-            goto DoneWithDeclSpec;
-          }
         }
       }
 
