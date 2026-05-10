@@ -1317,8 +1317,16 @@ defm MadU32Inst : AMDGPUSubtargetFeature<"mad-u32-inst",
   "Has v_mad_u32 instruction"
 >;
 
+defm MadNC64_32Insts : AMDGPUSubtargetFeature<"mad-nc-64-32-insts",
+  "Has v_mad_nc_{u64_u32|i64_i32} instructions"
+>;
+
 defm AddMinMaxInsts : AMDGPUSubtargetFeature<"add-min-max-insts",
   "Has v_add_{min|max}_{i|u}32 instructions"
+>;
+
+defm MinMaxI64Insts : AMDGPUSubtargetFeature<"min-max-i64-insts",
+  "Has v_{min|max}_{i|u}64 instructions"
 >;
 
 defm PkAddMinMaxInsts : AMDGPUSubtargetFeature<"pk-add-min-max-insts",
@@ -2097,7 +2105,9 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureMadU32Inst,
+   FeatureMadNC64_32Insts,
    FeatureAddMinMaxInsts,
+   FeatureMinMaxI64Insts,
    FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,

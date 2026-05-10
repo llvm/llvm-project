@@ -12,6 +12,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -21,28 +22,6 @@
 #include <memory>
 
 namespace lldb_private::dil {
-
-lldb::ValueObjectSP
-GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
-                           lldb::DynamicValueType use_dynamic,
-                           bool use_synthetic) {
-  if (!value_sp)
-    return nullptr;
-
-  if (use_dynamic != lldb::eNoDynamicValues) {
-    lldb::ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(use_dynamic);
-    if (dynamic_sp)
-      value_sp = dynamic_sp;
-  }
-
-  if (use_synthetic) {
-    lldb::ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
-    if (synthetic_sp)
-      value_sp = synthetic_sp;
-  }
-
-  return value_sp;
-}
 
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
@@ -62,6 +41,16 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       name, addr, exe_ctx,
       valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
+}
+
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -94,7 +83,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       llvm::Expected<uint64_t> uint_bit_size =
           uint_type.GetBitSize(m_exe_ctx_scope.get());
       if (!uint_bit_size)
-        return int_bit_size.takeError();
+        return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
           (in_type.IsSigned() && bitfield_size == *int_bit_size))
         return valobj->CastToBasicType(int_type);
@@ -388,17 +377,17 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
 
   const bool check_ptr_vs_member =
       (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;
   const bool no_synth_child =
       (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
       (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
+  const bool disallow_globals =
+      (options & StackFrame::eExpressionPathOptionsDisallowGlobals) != 0;
 
   m_use_synthetic = !no_synth_child;
-  m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
+  m_allow_globals = !disallow_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -436,7 +425,7 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
-  if (!identifier)
+  if (!identifier && m_allow_globals)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
   if (!identifier) {
@@ -860,19 +849,6 @@ Interpreter::Visit(const MemberOfNode &node) {
 
   // Perform some basic type & correctness checking.
   if (node.GetIsArrow()) {
-    if (!m_fragile_ivar) {
-      // Make sure we aren't trying to deref an objective
-      // C ivar if this is not allowed
-      const uint32_t pointer_type_flags =
-          base->GetCompilerType().GetTypeInfo(nullptr);
-      if ((pointer_type_flags & lldb::eTypeIsObjC) &&
-          (pointer_type_flags & lldb::eTypeIsPointer)) {
-        // This was an objective C object pointer and it was requested we
-        // skip any fragile ivars so return nothing here
-        return lldb::ValueObjectSP();
-      }
-    }
-
     // If we have a non-pointer type with a synthetic value then lets check
     // if we have a synthetic dereference specified.
     if (!base->IsPointerType() && base->HasSyntheticValue()) {
@@ -1283,6 +1259,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          target_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           target_type.TypeDescription().length());
@@ -1293,6 +1271,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          source_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           source_type.TypeDescription().length());

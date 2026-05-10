@@ -1839,6 +1839,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 
   if (!N) {
     N = newSDNode<ConstantSDNode>(isT, isO, Elt, VTs);
+    if (!isT)
+      N->setDebugLoc(DL.getDebugLoc());
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
     NewSDValueDbgMsg(SDValue(N, 0), "Creating constant: ", this);
@@ -2568,8 +2570,8 @@ SDValue SelectionDAG::getFreeze(SDValue V) {
 }
 
 SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
-                                bool PoisonOnly) {
-  if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, PoisonOnly))
+                                UndefPoisonKind Kind) {
+  if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, Kind))
     return V;
   return getFreeze(V);
 }
@@ -3667,7 +3669,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     // TODO: SelfMultiply can be poison, but not undef.
     if (SelfMultiply)
       SelfMultiply &= isGuaranteedNotToBeUndefOrPoison(
-          Op.getOperand(0), DemandedElts, false, Depth + 1);
+          Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
+          Depth + 1);
     Known = KnownBits::mul(Known, Known2, SelfMultiply);
 
     // If the multiplication is known not to overflow, the product of a number
@@ -3867,16 +3870,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
       // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
       // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      const APInt ShAmt(BitWidth, Amt);
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-      if (Opcode == ISD::FSHL) {
-        Known <<= Amt;
-        Known2 >>= BitWidth - Amt;
-      } else {
-        Known <<= BitWidth - Amt;
-        Known2 >>= Amt;
-      }
-      Known = Known.unionWith(Known2);
+      Known = Opcode == ISD::FSHL ? KnownBits::fshl(Known, Known2, ShAmt)
+                                  : KnownBits::fshr(Known, Known2, ShAmt);
     }
     break;
   case ISD::SHL_PARTS:
@@ -3916,7 +3914,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF: {
+  case ISD::CTTZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we have a known 1, its position is our upper bound.
     unsigned PossibleTZ = Known2.countMaxTrailingZeros();
@@ -3925,7 +3923,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we have a known 1, its position is our upper bound.
     unsigned PossibleLZ = Known2.countMaxLeadingZeros();
@@ -4161,7 +4159,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     bool SelfAdd = Op.getOperand(0) == Op.getOperand(1) &&
                    isGuaranteedNotToBeUndefOrPoison(
-                       Op.getOperand(0), DemandedElts, false, Depth + 1);
+                       Op.getOperand(0), DemandedElts,
+                       UndefPoisonKind::UndefOrPoison, Depth + 1);
     Known = KnownBits::add(Known, Known2, Flags.hasNoSignedWrap(),
                            Flags.hasNoUnsignedWrap(), SelfAdd);
     break;
@@ -4938,7 +4937,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return VTBits-Tmp;
   case ISD::FREEZE:
     if (isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
-                                         /*PoisonOnly=*/false))
+                                         UndefPoisonKind::UndefOrPoison))
       return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     break;
   case ISD::MERGE_VALUES:
@@ -5612,19 +5611,20 @@ unsigned SelectionDAG::ComputeMaxSignificantBits(SDValue Op,
   return Op.getScalarValueSizeInBits() - SignBits + 1;
 }
 
-bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly,
+bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
+                                                    UndefPoisonKind Kind,
                                                     unsigned Depth) const {
   // Early out for FREEZE.
   if (Op.getOpcode() == ISD::FREEZE)
     return true;
 
   APInt DemandedElts = getDemandAllEltsMask(Op);
-  return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts, PoisonOnly, Depth);
+  return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts, Kind, Depth);
 }
 
 bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                                     const APInt &DemandedElts,
-                                                    bool PoisonOnly,
+                                                    UndefPoisonKind Kind,
                                                     unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
 
@@ -5647,10 +5647,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     return true;
 
   case ISD::POISON:
-    return false;
+    return !includesPoison(Kind);
 
   case ISD::UNDEF:
-    return PoisonOnly;
+    return !includesUndef(Kind);
 
   case ISD::BUILD_VECTOR:
     // NOTE: BUILD_VECTOR has implicit truncation of wider scalar elements -
@@ -5658,8 +5658,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     for (unsigned i = 0, e = Op.getNumOperands(); i < e; ++i) {
       if (!DemandedElts[i])
         continue;
-      if (!isGuaranteedNotToBeUndefOrPoison(Op.getOperand(i), PoisonOnly,
-                                            Depth + 1))
+      if (!isGuaranteedNotToBeUndefOrPoison(Op.getOperand(i), Kind, Depth + 1))
         return false;
     }
     return true;
@@ -5671,7 +5670,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     uint64_t Idx = Op.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
     APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
-    return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, PoisonOnly,
+    return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
                                             Depth + 1);
   }
 
@@ -5687,10 +5686,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
 
     if (!!DemandedSubElts && !isGuaranteedNotToBeUndefOrPoison(
-                                 Sub, DemandedSubElts, PoisonOnly, Depth + 1))
+                                 Sub, DemandedSubElts, Kind, Depth + 1))
       return false;
     if (!!DemandedSrcElts && !isGuaranteedNotToBeUndefOrPoison(
-                                 Src, DemandedSrcElts, PoisonOnly, Depth + 1))
+                                 Src, DemandedSrcElts, Kind, Depth + 1))
       return false;
     return true;
   }
@@ -5703,7 +5702,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
         IndexC->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
       APInt DemandedSrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(),
                                                   IndexC->getZExtValue());
-      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, PoisonOnly,
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
                                               Depth + 1);
     }
     break;
@@ -5718,14 +5717,14 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     if (IndexC && VT.isFixedLengthVector() &&
         IndexC->getAPIntValue().ult(VT.getVectorNumElements())) {
       if (DemandedElts[IndexC->getZExtValue()] &&
-          !isGuaranteedNotToBeUndefOrPoison(InVal, PoisonOnly, Depth + 1))
+          !isGuaranteedNotToBeUndefOrPoison(InVal, Kind, Depth + 1))
         return false;
       APInt InVecDemandedElts = DemandedElts;
       InVecDemandedElts.clearBit(IndexC->getZExtValue());
       if (!!InVecDemandedElts &&
           !isGuaranteedNotToBeUndefOrPoison(
               peekThroughInsertVectorElt(InVec, InVecDemandedElts),
-              InVecDemandedElts, PoisonOnly, Depth + 1))
+              InVecDemandedElts, Kind, Depth + 1))
         return false;
       return true;
     }
@@ -5734,17 +5733,16 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 
   case ISD::SCALAR_TO_VECTOR:
     // Check upper (known undef) elements.
-    if (DemandedElts.ugt(1) && !PoisonOnly)
+    if (DemandedElts.ugt(1) && includesUndef(Kind))
       return false;
     // Check element zero.
-    if (DemandedElts[0] && !isGuaranteedNotToBeUndefOrPoison(
-                               Op.getOperand(0), PoisonOnly, Depth + 1))
+    if (DemandedElts[0] &&
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind, Depth + 1))
       return false;
     return true;
 
   case ISD::SPLAT_VECTOR:
-    return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), PoisonOnly,
-                                            Depth + 1);
+    return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind, Depth + 1);
 
   case ISD::VECTOR_SHUFFLE: {
     APInt DemandedLHS, DemandedRHS;
@@ -5754,12 +5752,12 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                 /*AllowUndefElts=*/false))
       return false;
     if (!DemandedLHS.isZero() &&
-        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
-                                          PoisonOnly, Depth + 1))
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS, Kind,
+                                          Depth + 1))
       return false;
     if (!DemandedRHS.isZero() &&
-        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
-                                          PoisonOnly, Depth + 1))
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS, Kind,
+                                          Depth + 1))
       return false;
     return true;
   }
@@ -5769,10 +5767,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::SRA:
     // Shift amount operand is checked by canCreateUndefOrPoison. So it is
     // enough to check operand 0 if Op can't create undef/poison.
-    return !canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly,
+    return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
                                    /*ConsiderFlags*/ true, Depth) &&
            isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
-                                            PoisonOnly, Depth + 1);
+                                            Kind, Depth + 1);
 
   case ISD::BSWAP:
   case ISD::CTPOP:
@@ -5802,11 +5800,11 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     // then Op is never undef/poison. A difference from the more common check
     // below, outside the switch, is that we handle elementwise operations for
     // which the DemandedElts mask is valid for all operands here.
-    return !canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly,
+    return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
                                    /*ConsiderFlags*/ true, Depth) &&
            all_of(Op->ops(), [&](SDValue V) {
-             return isGuaranteedNotToBeUndefOrPoison(V, DemandedElts,
-                                                     PoisonOnly, Depth + 1);
+             return isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, Kind,
+                                                     Depth + 1);
            });
   }
 
@@ -5819,7 +5817,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
       return TLI->isGuaranteedNotToBeUndefOrPoisonForTargetNode(
-          Op, DemandedElts, *this, PoisonOnly, Depth);
+          Op, DemandedElts, *this, Kind, Depth);
     break;
   }
 
@@ -5828,25 +5826,24 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   // NOTE: TargetNodes can handle this in themselves in
   // isGuaranteedNotToBeUndefOrPoisonForTargetNode or let
   // TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode handle it.
-  return !canCreateUndefOrPoison(Op, PoisonOnly, /*ConsiderFlags*/ true,
-                                 Depth) &&
+  return !canCreateUndefOrPoison(Op, Kind, /*ConsiderFlags*/ true, Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
-           return isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly, Depth + 1);
+           return isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
          });
 }
 
-bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, bool PoisonOnly,
+bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, UndefPoisonKind Kind,
                                           bool ConsiderFlags,
                                           unsigned Depth) const {
   APInt DemandedElts = getDemandAllEltsMask(Op);
-  return canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly, ConsiderFlags,
-                                Depth);
+  return canCreateUndefOrPoison(Op, DemandedElts, Kind, ConsiderFlags, Depth);
 }
 
 bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
-                                          bool PoisonOnly, bool ConsiderFlags,
+                                          UndefPoisonKind Kind,
+                                          bool ConsiderFlags,
                                           unsigned Depth) const {
-  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+  if (ConsiderFlags && includesPoison(Kind) && Op->hasPoisonGeneratingFlags())
     return true;
 
   unsigned Opcode = Op.getOpcode();
@@ -5856,7 +5853,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertAlign:
   case ISD::AssertNoFPClass:
     // Assertion nodes can create poison if the assertion fails.
-    return true;
+    return includesPoison(Kind);
 
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
@@ -5903,6 +5900,13 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
   case ISD::FABS:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUND:
+  case ISD::FROUNDEVEN:
     return false;
 
   case ISD::ABS:
@@ -5973,25 +5977,30 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
     // If the max shift amount isn't in range, then the shift can
     // create poison.
-    return !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
+    return includesPoison(Kind) &&
+           !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
 
-  case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
+  case ISD::CTLZ_ZERO_POISON:
     // If the amount is zero then the result will be poison.
     // TODO: Add isKnownNeverZero DemandedElts handling.
-    return !isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return includesPoison(Kind) &&
+           !isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::SCALAR_TO_VECTOR:
     // Check if we demand any upper (undef) elements.
-    return !PoisonOnly && DemandedElts.ugt(1);
+    return includesUndef(Kind) && DemandedElts.ugt(1);
 
   case ISD::INSERT_VECTOR_ELT:
   case ISD::EXTRACT_VECTOR_ELT: {
     // Ensure that the element index is in bounds.
-    EVT VecVT = Op.getOperand(0).getValueType();
-    SDValue Idx = Op.getOperand(Opcode == ISD::INSERT_VECTOR_ELT ? 2 : 1);
-    KnownBits KnownIdx = computeKnownBits(Idx, Depth + 1);
-    return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+    if (includesPoison(Kind)) {
+      EVT VecVT = Op.getOperand(0).getValueType();
+      SDValue Idx = Op.getOperand(Opcode == ISD::INSERT_VECTOR_ELT ? 2 : 1);
+      KnownBits KnownIdx = computeKnownBits(Idx, Depth + 1);
+      return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+    }
+    return false;
   }
 
   case ISD::VECTOR_SHUFFLE: {
@@ -6011,7 +6020,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
       return TLI->canCreateUndefOrPoisonForTargetNode(
-          Op, DemandedElts, *this, PoisonOnly, ConsiderFlags, Depth);
+          Op, DemandedElts, *this, Kind, ConsiderFlags, Depth);
     break;
   }
 
@@ -6099,6 +6108,25 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     }
     break;
   }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue Src = Op.getOperand(0);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isFixedLengthVector() && CIdx) {
+      if (CIdx->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
+        APInt DemandedSrcElts = APInt::getOneBitSet(
+            SrcVT.getVectorNumElements(), CIdx->getZExtValue());
+        Known = computeKnownFPClass(Src, DemandedSrcElts, InterestedClasses,
+                                    Depth + 1);
+      } else {
+        // Out of bounds index is poison.
+        Known.KnownFPClasses = fcNone;
+      }
+    } else {
+      Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
+    }
+    break;
+  }
   case ISD::SPLAT_VECTOR: {
     Known = computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
     break;
@@ -6127,12 +6155,77 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known.fabs();
     break;
   }
+  case ISD::FCOPYSIGN: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    KnownFPClass KnownSign = computeKnownFPClass(Op.getOperand(1), DemandedElts,
+                                                 InterestedClasses, Depth + 1);
+    Known.copysign(KnownSign);
+    break;
+  }
   case ISD::AssertNoFPClass: {
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
     FPClassTest AssertedClasses =
         static_cast<FPClassTest>(Op->getConstantOperandVal(1));
     Known.KnownFPClasses &= ~AssertedClasses;
+    break;
+  }
+  case ISD::EXTRACT_SUBVECTOR: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(1);
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+
+      APInt DemandedSrcElts = DemandedElts.zextOrTrunc(NumSrcElts).shl(Idx);
+      Known = computeKnownFPClass(Src, DemandedSrcElts, InterestedClasses,
+                                  Depth + 1);
+    } else {
+      Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
+    }
+    break;
+  }
+  case ISD::INSERT_SUBVECTOR: {
+    SDValue BaseVector = Op.getOperand(0);
+    SDValue SubVector = Op.getOperand(1);
+    EVT BaseVT = BaseVector.getValueType();
+    if (BaseVT.isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(2);
+      unsigned NumBaseElts = BaseVT.getVectorNumElements();
+      unsigned NumSubElts = SubVector.getValueType().getVectorNumElements();
+
+      APInt DemandedMask =
+          APInt::getBitsSet(NumBaseElts, Idx, Idx + NumSubElts);
+      APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
+      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+
+      if (!DemandedSrcElts.isZero())
+        Known = computeKnownFPClass(BaseVector, DemandedSrcElts,
+                                    InterestedClasses, Depth + 1);
+      if (!DemandedSubElts.isZero()) {
+        KnownFPClass SubKnown = computeKnownFPClass(
+            SubVector, DemandedSubElts, InterestedClasses, Depth + 1);
+        Known = DemandedSrcElts.isZero() ? SubKnown : (Known | SubKnown);
+      }
+    } else {
+      Known = computeKnownFPClass(SubVector, InterestedClasses, Depth + 1);
+      if (!Known.isUnknown())
+        Known |= computeKnownFPClass(BaseVector, InterestedClasses, Depth + 1);
+    }
+    break;
+  }
+  case ISD::SELECT:
+  case ISD::VSELECT: {
+    // TODO: Add adjustKnownFPClassForSelectArm clamp recognition as in
+    // IR-level ValueTracking.
+    KnownFPClass KnownFalseClass = computeKnownFPClass(
+        Op.getOperand(2), DemandedElts, InterestedClasses, Depth + 1);
+    if (KnownFalseClass.isUnknown())
+      break;
+    KnownFPClass KnownTrueClass = computeKnownFPClass(
+        Op.getOperand(1), DemandedElts, InterestedClasses, Depth + 1);
+    Known = KnownTrueClass.intersectWith(KnownFalseClass);
     break;
   }
   default:
@@ -6925,9 +7018,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::CTLS:
   case ISD::STEP_VECTOR: {
@@ -6948,7 +7041,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::FREEZE:
     assert(VT == N1.getValueType() && "Unexpected VT!");
-    if (isGuaranteedNotToBeUndefOrPoison(N1, /*PoisonOnly=*/false))
+    if (isGuaranteedNotToBeUndefOrPoison(N1, UndefPoisonKind::UndefOrPoison))
       return N1;
     break;
   case ISD::TokenFactor:
@@ -7462,11 +7555,11 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLZ:
-      case ISD::CTLZ_ZERO_UNDEF:
+      case ISD::CTLZ_ZERO_POISON:
         return getConstant(Val.countl_zero(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTTZ:
-      case ISD::CTTZ_ZERO_UNDEF:
+      case ISD::CTTZ_ZERO_POISON:
         return getConstant(Val.countr_zero(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLS:
@@ -7752,6 +7845,13 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           return getBitcast(VT, getBuildVector(BVVT, DL, Ops));
         }
       }
+    }
+    // Logic ops can be folded from raw integer bits - mainly for AVX512 masks.
+    if (ISD::isBitwiseLogicOp(Opcode) && isa<ConstantSDNode>(N1) &&
+        isa<ConstantSDNode>(N2)) {
+      if (SDValue Res = FoldConstantArithmetic(Opcode, DL, N1.getValueType(),
+                                               {N1, N2}, Flags))
+        return getBitcast(VT, Res);
     }
   }
 
@@ -8307,6 +8407,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N1.getValueType().isFloatingPoint() &&
            "IS_FPCLASS is used for a non-floating type");
     assert(isa<ConstantSDNode>(N2) && "FPClassTest is not Constant");
+    // is.fpclass(poison, mask) -> poison
+    if (N1.getOpcode() == ISD::POISON)
+      return getPOISON(VT);
     FPClassTest Mask = static_cast<FPClassTest>(N2->getAsZExtVal());
     // If all tests are made, it doesn't matter what the value is.
     if ((Mask & fcAllFlags) == fcAllFlags)
@@ -8379,12 +8482,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.isUndef() || N2.isUndef())
       return getUNDEF(VT);
 
-    // EXTRACT_VECTOR_ELT of out-of-bounds element is an UNDEF for fixed length
+    // EXTRACT_VECTOR_ELT of out-of-bounds element is POISON for fixed length
     // vectors. For scalable vectors we will provide appropriate support for
     // dealing with arbitrary indices.
     if (N2C && N1.getValueType().isFixedLengthVector() &&
         N2C->getAPIntValue().uge(N1.getValueType().getVectorNumElements()))
-      return getUNDEF(VT);
+      return getPOISON(VT);
 
     // EXTRACT_VECTOR_ELT of CONCAT_VECTORS is often formed while lowering is
     // expanding copies of large vectors from registers. This only works for
@@ -13453,11 +13556,19 @@ bool llvm::isMinSignedConstant(SDValue V) {
   return Const != nullptr && Const->isMinSignedValue();
 }
 
-bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
-                             unsigned OperandNo) {
+bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
+                                     SDValue V, unsigned OperandNo,
+                                     unsigned Depth) const {
+  APInt DemandedElts = getDemandAllEltsMask(V);
+  return isIdentityElement(Opcode, Flags, V, DemandedElts, OperandNo, Depth);
+}
+
+bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
+                                     SDValue V, const APInt &DemandedElts,
+                                     unsigned OperandNo, unsigned Depth) const {
   // NOTE: The cases should match with IR's ConstantExpr::getBinOpIdentity().
   // TODO: Target-specific opcodes could be added.
-  if (auto *ConstV = isConstOrConstSplat(V, /*AllowUndefs*/ false,
+  if (auto *ConstV = isConstOrConstSplat(V, DemandedElts, /*AllowUndefs*/ false,
                                          /*AllowTruncation*/ true)) {
     APInt Const = ConstV->getAPIntValue().trunc(V.getScalarValueSizeInBits());
     switch (Opcode) {
@@ -13484,7 +13595,7 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
     case ISD::SDIV:
       return OperandNo == 1 && Const.isOne();
     }
-  } else if (auto *ConstFP = isConstOrConstSplatFP(V)) {
+  } else if (auto *ConstFP = isConstOrConstSplatFP(V, DemandedElts)) {
     switch (Opcode) {
     case ISD::FADD:
       return ConstFP->isZero() &&
@@ -13501,11 +13612,9 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
       // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
       EVT VT = V.getValueType();
       const fltSemantics &Semantics = VT.getFltSemantics();
-      APFloat NeutralAF = !Flags.hasNoNaNs()
-                              ? APFloat::getQNaN(Semantics)
-                              : !Flags.hasNoInfs()
-                                    ? APFloat::getInf(Semantics)
-                                    : APFloat::getLargest(Semantics);
+      APFloat NeutralAF = !Flags.hasNoNaNs()   ? APFloat::getQNaN(Semantics)
+                          : !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
+                                               : APFloat::getLargest(Semantics);
       if (Opcode == ISD::FMAXNUM)
         NeutralAF.changeSign();
 
@@ -14815,8 +14924,8 @@ SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
   return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
 }
 
-SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
-                                        EVT VT, SDNodeFlags Flags) {
+SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
+                                         EVT VT, SDNodeFlags Flags) {
   switch (Opcode) {
   default:
     return SDValue();
@@ -14865,6 +14974,22 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   }
 
   }
+}
+
+SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
+                                          SDValue Acc, SDValue LHS,
+                                          SDValue RHS) {
+  EVT AccVT = Acc.getValueType();
+  if (AccVT.isFloatingPoint()) {
+    assert(Opc == ISD::PARTIAL_REDUCE_FMLA && "Unexpected opcode");
+    SDValue NegRHS = getNode(ISD::FNEG, DL, RHS.getValueType(), RHS);
+    return getNode(Opc, DL, AccVT, Acc, LHS, NegRHS);
+  }
+  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA) &&
+         "Unexpected opcode");
+  SDValue NegAcc = getNegative(Acc, DL, AccVT);
+  SDValue MLA = getNode(Opc, DL, AccVT, NegAcc, LHS, RHS);
+  return getNegative(MLA, DL, AccVT);
 }
 
 /// Helper used to make a call to a library function that has one argument of

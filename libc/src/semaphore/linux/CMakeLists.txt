@@ -1,0 +1,38 @@
+add_header_library(
+  semaphore
+  HDRS
+    semaphore.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.error_or
+    libc.src.__support.threads.futex_utils
+)
+
+add_object_library(
+  named_semaphore
+  SRCS
+    named_semaphore.cpp
+  HDRS
+    semaphore.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.string_view
+    libc.src.__support.ctype_utils
+    libc.src.__support.error_or
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ftruncate
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.link
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.unlink
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.sys.mman.linux.shm_common
+)

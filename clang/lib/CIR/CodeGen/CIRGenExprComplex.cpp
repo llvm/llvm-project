@@ -86,8 +86,7 @@ public:
     return Visit(pe->getReplacement());
   }
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
-    cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoawaitExpr");
-    return {};
+    return cgf.emitCoawaitExpr(*s).getComplexValue();
   }
   mlir::Value VisitCoyieldExpr(CoyieldExpr *s) {
     cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoyieldExpr");
@@ -155,18 +154,10 @@ public:
     return emitCast(e->getCastKind(), e->getSubExpr(), e->getType());
   }
   mlir::Value VisitCastExpr(CastExpr *e) {
-    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e)) {
-      // Bind VLAs in the cast type.
-      if (ece->getType()->isVariablyModifiedType()) {
-        cgf.cgm.errorNYI(e->getExprLoc(),
-                         "VisitCastExpr Bind VLAs in the cast type");
-        return {};
-      }
-    }
-
+    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e))
+      cgf.cgm.emitExplicitCastExprType(ece);
     if (e->changesVolatileQualification())
       return emitLoadOfLValue(e);
-
     return emitCast(e->getCastKind(), e->getSubExpr(), e->getType());
   }
   mlir::Value VisitCallExpr(const CallExpr *e);

@@ -96,10 +96,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::FABS:
   case ISD::FACOS:
   case ISD::FASIN:
@@ -1412,10 +1412,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_CTLZ:
   case ISD::CTTZ:
   case ISD::VP_CTTZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
+  case ISD::VP_CTLZ_ZERO_POISON:
+  case ISD::CTTZ_ZERO_POISON:
+  case ISD::VP_CTTZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::FABS: case ISD::VP_FABS:
@@ -3841,7 +3841,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     Res = SplitVecOp_CttzElts(N);
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Res = SplitVecOp_VP_CttzElements(N);
     break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
@@ -4797,8 +4797,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
   EVT VT = N->getValueType(0);
-  EVT PartResVT = Lo0.getValueType().changeElementType(*DAG.getContext(),
-                                                       VT.getScalarType());
+  EVT PartResVT = getSetCCResultType(Lo0.getValueType());
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -4823,7 +4822,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
                         N->getOperand(2), MaskHi, EVLHi);
   }
 
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoRes, HiRes);
+  EVT ConcatVT = PartResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, LoRes, HiRes);
+  if (VT == ConcatVT)
+    return Con;
+
+  EVT OpVT = N->getOperand(0).getValueType();
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+  return DAG.getExtOrTrunc(Con, DL, VT, ExtendCode);
 }
 
 
@@ -4960,7 +4967,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_CttzElements(SDNode *N) {
   SDValue VLo = DAG.getZExtOrTrunc(EVLLo, DL, ResVT);
 
   // if VP_CTTZ_ELTS(Lo) != EVLLo => VP_CTTZ_ELTS(Lo).
-  // else => EVLLo + (VP_CTTZ_ELTS(Hi) or VP_CTTZ_ELTS_ZERO_UNDEF(Hi)).
+  // else => EVLLo + (VP_CTTZ_ELTS(Hi) or VP_CTTZ_ELTS_ZERO_POISON(Hi)).
   SDValue ResLo = DAG.getNode(ISD::VP_CTTZ_ELTS, DL, ResVT, Lo, MaskLo, EVLLo);
   SDValue ResLoNotEVL =
       DAG.getSetCC(DL, getSetCCResultType(ResVT), ResLo, VLo, ISD::SETNE);
@@ -5349,14 +5356,14 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_BSWAP:
   case ISD::CTLZ:
   case ISD::VP_CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
+  case ISD::VP_CTLZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::CTTZ:
   case ISD::VP_CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
+  case ISD::VP_CTTZ_ZERO_POISON:
   case ISD::FNEG: case ISD::VP_FNEG:
   case ISD::FABS: case ISD::VP_FABS:
   case ISD::VP_SQRT:
@@ -6798,7 +6805,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
       EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
                        WidenVT.getVectorElementCount());
 
-  if (ExtType == ISD::NON_EXTLOAD &&
+  if (ExtType == ISD::NON_EXTLOAD && !N->isExpandingLoad() &&
       TLI.isOperationLegalOrCustom(ISD::VP_LOAD, WidenVT) &&
       TLI.isTypeLegal(WideMaskVT) &&
       // If there is a passthru, we shouldn't use vp.load. However,
@@ -7493,7 +7500,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     Res = WidenVecOp_VP_REDUCE(N);
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Res = WidenVecOp_VP_CttzElements(N);
     break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
@@ -8107,7 +8114,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
   }
 
   if (TLI.isOperationLegalOrCustom(ISD::VP_STORE, WideVT) &&
-      TLI.isTypeLegal(WideMaskVT)) {
+      TLI.isTypeLegal(WideMaskVT) && !MST->isCompressingStore()) {
     Mask = DAG.getInsertSubvector(dl, DAG.getPOISON(WideMaskVT), Mask, 0);
     SDValue EVL = DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
                                       VT.getVectorElementCount());
@@ -8321,7 +8328,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
 
   unsigned Opc = N->getOpcode();
   unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
-  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+  SDValue NeutralElem = DAG.getIdentityElement(BaseOpc, dl, ElemVT, Flags);
   assert(NeutralElem && "Neutral element must exist");
 
   // Pad the vector with the neutral element.
@@ -8375,7 +8382,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
 
   unsigned Opc = N->getOpcode();
   unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
-  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+  SDValue NeutralElem = DAG.getIdentityElement(BaseOpc, dl, ElemVT, Flags);
 
   // Pad the vector with the neutral element.
   unsigned OrigElts = OrigVT.getVectorMinNumElements();

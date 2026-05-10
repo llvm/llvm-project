@@ -185,6 +185,13 @@ bool DwarfUnit::isShareableAcrossCUs(const DINode *D) const {
   // level already) but may be implementable for some value in projects
   // building multiple independent libraries with LTO and then linking those
   // together.
+
+  // Prevent generation of cross-CU references for DWARF v2 due to conflicts
+  // resulting from the FAQ recommendation: "If you are producing DWARF V2,
+  // please use the DWARF V3 definition of DW_FORM_ref_addr."
+  // (https://dwarfstd.org/faq.html)
+  if (DD->getDwarfVersion() == 2)
+    return false;
   if (isDwoUnit() && !DD->shareAcrossDWOCUs())
     return false;
   return (isa<DIType>(D) ||
@@ -2079,7 +2086,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     Asm->OutStreamer->AddComment("DWARF Unit Type");
     Asm->emitInt8(UT);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 
   // We share one abbreviations table across all units so it's always at the
@@ -2095,7 +2102,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 
   if (Version <= 4) {
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 }
 

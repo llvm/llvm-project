@@ -619,8 +619,7 @@ define i32 @select_icmp_truncated_unsigned_iv_range(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 2147483646, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i32 [[TMP3]], 3
@@ -1322,8 +1321,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i64 [[IV]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 4294967294, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
@@ -1420,7 +1418,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[TMP8]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1512,7 +1510,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[TMP8]])
 ; CHECK-VF4IC4-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP29]], <4 x i1> [[TMP25]], i32 [[TMP9]])
 ; CHECK-VF4IC4-NEXT:    [[TMP36:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP30]], <4 x i1> [[TMP26]], i32 [[TMP35]])
@@ -1912,7 +1910,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[TMP8]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
@@ -2010,7 +2008,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[TMP8]])
 ; CHECK-VF4IC4-NEXT:    [[TMP35:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP29]], <4 x i1> [[TMP25]], i16 [[TMP9]])
 ; CHECK-VF4IC4-NEXT:    [[TMP36:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP30]], <4 x i1> [[TMP26]], i16 [[TMP35]])
