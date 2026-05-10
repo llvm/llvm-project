@@ -105,7 +105,7 @@ FunctionPass *llvm::createAArch64CodeLayoutOptPass() {
   return new AArch64CodeLayoutOpt();
 }
 
-/// Returns true if Opc is a floating-point comparison (FCMP/FCMPE).
+/// \returns true iff Opc is a floating-point comparison (FCMP/FCMPE).
 static bool isFloatingPointCompare(unsigned Opc) {
   switch (Opc) {
   case AArch64::FCMPSrr:
