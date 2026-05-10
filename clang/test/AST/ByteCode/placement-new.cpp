@@ -142,6 +142,20 @@ consteval int array4() {
     return i[0];
 }
 static_assert(array4() == 12);
+consteval int array5() {
+    int i[2][2];
+    new (i) int[2][2]{12,13};
+    return i[0][0];
+}
+static_assert(array5() == 12);
+consteval int array6() {
+    int i[2][2];
+    // FIXME: Wrong diagnostic; see CheckNewTypeMismatch
+    new (i[1]) int[2]{12,13}; // expected-note {{placement new would change type of storage from 'int[2][2]' to 'int[2]'}}
+    return i[1][0];
+}
+static_assert(array6() == 12); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to}}
 constexpr int *intptr() {
   return new int;
 }
@@ -222,6 +236,26 @@ namespace records {
     return r.f.f == 42.0 && r.a == 12;
   }
   static_assert(record4());
+
+  constexpr bool record5() {
+    S ss[3][3];
+
+    new (ss) S[3][3]{1,2,3,4,5,6,7,8,9};
+
+    return ss[0][0].f == 1 && ss[0][1].f == 2 && ss[0][2].f == 3;
+  }
+  static_assert(record5());
+
+  constexpr bool record6() {
+    S ss[3][3];
+
+    // FIXME: Wrong diagnostic; see CheckNewTypeMismatch
+    new (ss[1]) S[3]{1,2,3}; // expected-note {{placement new would change type of storage from 'S[3][3]' to 'S[3]'}}
+
+    return ss[1][0].f == 1 && ss[1][1].f == 2 && ss[1][2].f == 3;
+  }
+  static_assert(record6()); // expected-error {{not an integral constant expression}} \
+                            // expected-note {{in call to}}
 
   /// Destructor is NOT called.
   struct A {
