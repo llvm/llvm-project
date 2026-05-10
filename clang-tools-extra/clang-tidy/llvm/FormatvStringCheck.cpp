@@ -177,12 +177,11 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
     for (const unsigned Index : Parsed.Indices)
       UsedIndices.set(Index);
 
-    const int UnusedIndex = UsedIndices.find_first_unset();
-    if (0 <= UnusedIndex && UnusedIndex < NumRequiredArgs) {
-      // Point to the unused argument.
+    auto UnusedIndices = UsedIndices.flip();
+    for (auto UnusedIndex : UnusedIndices.set_bits()) {
+      // Point to unused arguments.
       const Expr *UnusedArg = Call->getArg(PackParamIndex + UnusedIndex);
       diag(UnusedArg->getBeginLoc(), "argument unused in format string");
-      return;
     }
   }
 }

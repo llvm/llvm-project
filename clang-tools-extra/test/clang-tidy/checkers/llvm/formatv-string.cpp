@@ -53,6 +53,10 @@ void mixed_indices() {
 void holes_in_indices() {
   llvm::formatv("{0} {2}", 1, 2, 3);
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: argument unused in format string
+
+  llvm::formatv("{2}", 1, 2, 3);
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: argument unused in format string
+  // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: argument unused in format string
 }
 
 void non_literal_format_string(const char *fmt) {
