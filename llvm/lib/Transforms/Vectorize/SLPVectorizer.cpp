@@ -28209,6 +28209,7 @@ public:
     // individual operations are associative.
     RK = ReductionOrdering::Ordered;
     ReductionRoot = Root;
+    BasicBlock *BB = Root->getParent();
     unsigned FirstOpIdx = getFirstOperandIndex(Root);
     unsigned ChainOpIdx = MatchLHS ? FirstOpIdx : FirstOpIdx + 1;
     unsigned LeafOpIdx = MatchLHS ? FirstOpIdx + 1 : FirstOpIdx;
@@ -28227,6 +28228,8 @@ public:
       if (!Visited.insert(TreeN).second)
         break;
       if (getRdxKind(TreeN) != RdxKind)
+        break;
+      if (TreeN->getParent() != BB)
         break;
       addReductionOps(TreeN);
       Value *LeafVal = getRdxOperand(TreeN, LeafOpIdx);
@@ -29388,8 +29391,8 @@ public:
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for ordered reduction\n");
-      if (Cost > -SLPCostThreshold ||
-          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)) {
+      if (Cost > -SLPCostThreshold/* ||
+          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)*/) {
         if (Cost.isValid())
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",
