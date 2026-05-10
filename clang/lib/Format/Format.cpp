@@ -2447,10 +2447,7 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
                                    void *DiagHandlerCtxt, bool IsDotHFile) {
   assert(Style);
-  // Use the C style for .h files. If no C style is configured, the block down
-  // below will make the style fall back to the C++ one.
-  FormatStyle::LanguageKind Language =
-      IsDotHFile ? FormatStyle::LK_C : Style->Language;
+  FormatStyle::LanguageKind Language = Style->Language;
   assert(Language != FormatStyle::LK_None);
   if (Config.getBuffer().trim().empty())
     return make_error_code(ParseError::Success);
@@ -2495,7 +2492,9 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   // case Language is not found.
   for (unsigned I = 0; I < StyleCount; ++I) {
     const auto Lang = Styles[I].Language;
-    if (Lang == Language) {
+    // Use the C style for .h files. If no C style is configured, the block down
+    // below will make the style fall back to the C++ one.
+    if (Lang == (IsDotHFile ? FormatStyle::LK_C : Language)) {
       LanguagePos = I;
       break;
     }
