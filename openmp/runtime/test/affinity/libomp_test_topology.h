@@ -145,13 +145,144 @@ static int topology_using_full_mask() {
   return has_all;
 }
 
+// Read a single integer from a sysfs file. Returns 0 on success, -1 on error.
+static int topology_read_int_from_file(const char *path, int *value) {
+  FILE *f = fopen(path, "r");
+  if (!f)
+    return -1;
+  int n = fscanf(f, "%d", value);
+  fclose(f);
+  return (n == 1) ? 0 : -1;
+}
+
+// On non-x86 Linux, the OpenMP runtime reads core_id and physical_package_id
+// from sysfs to determine topology. Use the same method in the test so that
+// the test's view of the topology matches the runtime's view.
+// On x86/x86_64 (or when sysfs id files are unavailable), fall back to the
+// siblings-list approach.
+static int topology_use_sysfs_ids() {
+#if defined(__i386__) || defined(__x86_64__)
+  return 0;
+#else
+  // Check whether the sysfs id files exist for cpu0
+  int dummy;
+  if (topology_read_int_from_file(
+          "/sys/devices/system/cpu/cpu0/topology/core_id", &dummy) == 0 &&
+      topology_read_int_from_file(
+          "/sys/devices/system/cpu/cpu0/topology/physical_package_id",
+          &dummy) == 0)
+    return 1;
+  return 0;
+#endif
+}
+
+// Build place list using core_id / physical_package_id from sysfs,
+// matching what the OpenMP runtime does on non-x86 Linux.
+static place_list_t *topology_alloc_type_places_sysfs(topology_obj_type_t type,
+                                                      int num_cpus) {
+  char buf[1024];
+  int i, cpu, num_unique;
+  int *place_nums;
+  place_list_t *places = (place_list_t *)malloc(sizeof(place_list_t));
+  affinity_mask_t **masks =
+      (affinity_mask_t **)malloc(sizeof(affinity_mask_t *) * num_cpus);
+
+  // Read per-cpu core_id and physical_package_id
+  int *core_ids = (int *)malloc(sizeof(int) * num_cpus);
+  int *pkg_ids = (int *)malloc(sizeof(int) * num_cpus);
+  for (cpu = 0; cpu < num_cpus; ++cpu) {
+    snprintf(buf, sizeof(buf),
+             "/sys/devices/system/cpu/cpu%d/topology/core_id", cpu);
+    if (topology_read_int_from_file(buf, &core_ids[cpu]) != 0)
+      core_ids[cpu] = cpu;
+    snprintf(buf, sizeof(buf),
+             "/sys/devices/system/cpu/cpu%d/topology/physical_package_id", cpu);
+    if (topology_read_int_from_file(buf, &pkg_ids[cpu]) != 0)
+      pkg_ids[cpu] = 0;
+  }
+
+  num_unique = 0;
+  if (type == TOPOLOGY_OBJ_THREAD) {
+    for (cpu = 0; cpu < num_cpus; ++cpu) {
+      affinity_mask_t *mask = affinity_mask_alloc();
+      affinity_mask_set(mask, cpu);
+      masks[num_unique++] = mask;
+    }
+  } else if (type == TOPOLOGY_OBJ_CORE) {
+    // Group CPUs with same (physical_package_id, core_id) into one place
+    for (cpu = 0; cpu < num_cpus; ++cpu) {
+      int found = 0;
+      for (i = 0; i < num_unique; ++i) {
+        // Find a cpu already in this group to compare ids
+        int rep;
+        for (rep = 0; rep < num_cpus; ++rep) {
+          if (affinity_mask_isset(masks[i], rep))
+            break;
+        }
+        if (rep < num_cpus && pkg_ids[rep] == pkg_ids[cpu] &&
+            core_ids[rep] == core_ids[cpu]) {
+          affinity_mask_set(masks[i], cpu);
+          found = 1;
+          break;
+        }
+      }
+      if (!found) {
+        affinity_mask_t *mask = affinity_mask_alloc();
+        affinity_mask_set(mask, cpu);
+        masks[num_unique++] = mask;
+      }
+    }
+  } else if (type == TOPOLOGY_OBJ_SOCKET) {
+    // Group CPUs with same physical_package_id into one place
+    for (cpu = 0; cpu < num_cpus; ++cpu) {
+      int found = 0;
+      for (i = 0; i < num_unique; ++i) {
+        int rep;
+        for (rep = 0; rep < num_cpus; ++rep) {
+          if (affinity_mask_isset(masks[i], rep))
+            break;
+        }
+        if (rep < num_cpus && pkg_ids[rep] == pkg_ids[cpu]) {
+          affinity_mask_set(masks[i], cpu);
+          found = 1;
+          break;
+        }
+      }
+      if (!found) {
+        affinity_mask_t *mask = affinity_mask_alloc();
+        affinity_mask_set(mask, cpu);
+        masks[num_unique++] = mask;
+      }
+    }
+  } else {
+    fprintf(stderr, "Unknown topology type (%d)\n", (int)type);
+    exit(EXIT_FAILURE);
+  }
+
+  free(core_ids);
+  free(pkg_ids);
+  place_nums = (int *)malloc(sizeof(int) * num_unique);
+  for (i = 0; i < num_unique; ++i)
+    place_nums[i] = i;
+  places->num_places = num_unique;
+  places->masks = masks;
+  places->place_nums = place_nums;
+  places->current_place = -1;
+  return places;
+}
+
 // Return array of masks representing OMP_PLACES keyword (e.g., sockets, cores,
 // threads)
 static place_list_t *topology_alloc_type_places(topology_obj_type_t type) {
   char buf[1024];
-  int i, cpu, num_places, num_unique;
+  int i, cpu, num_unique;
   int *place_nums;
   int num_cpus = topology_get_num_cpus();
+
+  // On non-x86 Linux, use core_id/physical_package_id to match the runtime
+  if (topology_use_sysfs_ids())
+    return topology_alloc_type_places_sysfs(type, num_cpus);
+
   place_list_t *places = (place_list_t *)malloc(sizeof(place_list_t));
   affinity_mask_t **masks =
       (affinity_mask_t **)malloc(sizeof(affinity_mask_t *) * num_cpus);

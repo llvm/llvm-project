@@ -332,7 +332,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
     if (useJITLink) {
       // JITLink path
-      objectLayer = std::make_unique<llvm::orc::ObjectLinkingLayer>(session);
+      objectLayer = std::make_unique<llvm::orc::ObjectLinkingLayer>(session, IgnoredMemMgr);
 
       LLVM_DEBUG(llvm::dbgs() << "Using ObjectLinkingLayer (JITLink)\n");
 

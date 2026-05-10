@@ -290,14 +290,14 @@ static void print_ids(int level) {
 #elif KMP_ARCH_RISCV64
 #if __riscv_compressed
 // On RV64GC the C.NOP instruction is 2 byte long. In addition, the compiler
-// inserts a J instruction (targeting the successor basic block), which
-// accounts for another 4 bytes. Finally, an additional J instruction may
-// appear (adding 4 more bytes) when the C.NOP is referenced elsewhere (ie.
-// another branch).
+// may insert a J or C.J instruction (targeting the successor basic block),
+// which accounts for 4 or 2 bytes respectively. Finally, an additional jump
+// instruction may appear (adding 2 or 4 more bytes) when the C.NOP is
+// referenced elsewhere (ie. another branch).
 #define print_possible_return_addresses(addr)                                  \
-  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
-         ompt_get_thread_data()->value, ((char *)addr) - 6,                    \
-         ((char *)addr) - 10)
+  printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
+         ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
+         ((char *)addr) - 6, ((char *)addr) - 10)
 #else
 // On RV64G the NOP instruction is 4 byte long. In addition, the compiler
 // inserts a J instruction (targeting the successor basic block), which
