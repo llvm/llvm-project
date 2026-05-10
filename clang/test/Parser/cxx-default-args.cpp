@@ -40,3 +40,9 @@ struct U {
   void i(int x = ) {} // expected-error{{expected expression}}
   typedef int *fp(int x = ); // expected-error{{default arguments can only be specified for parameters in a function declaration}}
 };
+
+namespace {
+void f<>(int = []{;}) {} // expected-error{{no viable conversion from}} \
+                         // expected-error{{template specialization requires 'template<>'}} \
+                         // expected-note 2{{}}
+}
