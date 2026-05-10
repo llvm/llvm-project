@@ -344,12 +344,15 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
 
 /// An annotation for a single input line.
 struct InputAnnotation {
-  /// The index of the match result across all checks
-  unsigned DiagIndex;
-  /// The label for this annotation.
+  /// A globally unique index for this annotation before it was broken into
+  /// multiple lines.
+  unsigned LabelIndexGlobal;
+  /// The globally unique label for this annotation before it was broken into
+  /// multiple lines.  There is one \c Label per \c LabelIndexGlobal and
+  /// vice-versa.
   std::string Label;
-  /// Is this the initial fragment of a diagnostic that has been broken across
-  /// multiple lines?
+  /// Is this the initial (possibly only) fragment of an annotation, which has
+  /// been broken across multiple lines if necessary?
   bool IsFirstLine;
   /// What input line (one-origin indexing) this annotation marks.  This might
   /// be different from the starting line of the original diagnostic if
@@ -400,57 +403,108 @@ static std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
   llvm_unreachable("unknown FileCheckType");
 }
 
+namespace {
+/// Stores all information needed to generate \c InputAnnotation labels for a
+/// particular check pattern.  Multiple labelers might be constructed for the
+/// same pattern if the pattern has more than one \c MatchResultDiag (e.g., for
+/// a \c CHECK-COUNT-<N> directive or implicit pattern).
+class InputAnnotationLabeler {
+private:
+  unsigned *LabelWidthGlobal;
+  unsigned *LabelIndexPerPattern;
+  std::string LabelPrefix;
+
+public:
+  /// Make an invalid labeler to be overwritten by a valid one before calling
+  /// \c generateLabel.
+  InputAnnotationLabeler() {}
+  /// - \p CheckFileFileBufferID is the buffer ID for the check file.
+  /// - \p ImpPatBufferIDRange is the buffer ID range for all implicit patterns.
+  /// - \p LabelWidthGlobal is the widest label generated so far over all
+  ///   patterns.  It will be updated by each call to \c generateLabel.
+  /// - \p CheckTy and \p CheckLoc identify the pattern that produced all
+  ///   diagnostics for which this labeler will generate labels.
+  /// - \p LabelIndexPerPattern is either \c nullptr if only one label is
+  ///   required for the pattern for which this labeler will generate labels, or
+  ///   it points to the per-pattern index of the next label to be generated for
+  ///   that pattern.  In the latter case, the index will be incremented by each
+  ///   call to \c generateLabel.
+  InputAnnotationLabeler(const SourceMgr &SM, unsigned CheckFileBufferID,
+                         std::pair<unsigned, unsigned> ImpPatBufferIDRange,
+                         unsigned &LabelWidthGlobal,
+                         Check::FileCheckType CheckTy, SMLoc CheckLoc,
+                         unsigned *LabelIndexPerPattern)
+      : LabelWidthGlobal(&LabelWidthGlobal),
+        LabelIndexPerPattern(LabelIndexPerPattern) {
+    llvm::raw_string_ostream LabelStrm(LabelPrefix);
+    LabelStrm << GetCheckTypeAbbreviation(CheckTy) << ":";
+    unsigned CheckBufferID = SM.FindBufferContainingLoc(CheckLoc);
+    if (CheckBufferID == CheckFileBufferID)
+      LabelStrm << SM.getLineAndColumn(CheckLoc, CheckBufferID).first;
+    else if (ImpPatBufferIDRange.first <= CheckBufferID &&
+             CheckBufferID < ImpPatBufferIDRange.second)
+      LabelStrm << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
+    else
+      llvm_unreachable("expected check location to be either in the check file "
+                       "or for an implicit pattern");
+  }
+  /// Write a globally unique label into \p Label.
+  void generateLabel(std::string &Label) {
+    assert(!LabelPrefix.empty() &&
+           "unexpected generateLabel call on invalid labeler");
+    assert(Label.empty() && "expected empty string for writing label");
+    llvm::raw_string_ostream LabelStrm(Label);
+    LabelStrm << LabelPrefix;
+    if (LabelIndexPerPattern)
+      LabelStrm << "'" << (*LabelIndexPerPattern)++;
+    *LabelWidthGlobal =
+        std::max((std::string::size_type)*LabelWidthGlobal, Label.size());
+  }
+};
+} // namespace
+
 static void
 buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       const std::pair<unsigned, unsigned> &ImpPatBufferIDRange,
                       const FileCheckDiagList &Diags,
                       std::vector<InputAnnotation> &Annotations,
-                      unsigned &LabelWidth) {
+                      unsigned &LabelWidthGlobal) {
   struct CompareSMLoc {
     bool operator()(SMLoc LHS, SMLoc RHS) const {
       return LHS.getPointer() < RHS.getPointer();
     }
   };
-  // How many diagnostics does each pattern have?
-  std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
+
+  // How many unique input annotation labels does each check pattern need?  Each
+  // check pattern can have multiple MatchResultDiag's, each followed by a
+  // series of zero or more MatchNoteDiag's.  Each such MatchResultDiag and its
+  // MatchNoteDiag series can require multiple labels.
+  std::map<SMLoc, unsigned, CompareSMLoc> LabelCountPerPattern;
   for (const FileCheckDiag &Diag : Diags)
-    ++DiagCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
-  // How many diagnostics have we seen so far per pattern?
-  std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
-  // How many total diagnostics have we seen so far?
-  unsigned DiagIndex = 0;
-  // What's the widest label?
-  LabelWidth = 0;
-  // The label prefix that uniquely identifies the current MatchResultDiag and
-  // its MatchNoteDiag series.
-  std::string CurLabelPrefix;
+    ++LabelCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
+  // How many labels have we generated so far per check pattern?
+  std::map<SMLoc, unsigned, CompareSMLoc> LabelIndexPerPattern;
+  // How many total labels have we generated so far?
+  unsigned LabelIndexGlobal = 0;
+  // What's the widest label we've generated so far?
+  LabelWidthGlobal = 0;
+  // The labeler for the current MatchResultDiag and its MatchNoteDiag series.
+  InputAnnotationLabeler CurLabeler;
   for (const FileCheckDiag &Diag : Diags) {
-    InputAnnotation A;
-    A.DiagIndex = DiagIndex++;
     if (const MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(&Diag)) {
-      CurLabelPrefix.clear();
-      llvm::raw_string_ostream LabelStrm(CurLabelPrefix);
-      LabelStrm << GetCheckTypeAbbreviation(MRD->getCheckTy()) << ":";
-      unsigned CheckBufferID = SM.FindBufferContainingLoc(MRD->getCheckLoc());
-      if (CheckBufferID == CheckFileBufferID)
-        LabelStrm
-            << SM.getLineAndColumn(MRD->getCheckLoc(), CheckBufferID).first;
-      else if (ImpPatBufferIDRange.first <= CheckBufferID &&
-               CheckBufferID < ImpPatBufferIDRange.second)
-        LabelStrm << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
-      else
-        llvm_unreachable("expected diagnostic's check location to be either in "
-                         "the check file or for an implicit pattern");
+      CurLabeler = InputAnnotationLabeler(
+          SM, CheckFileBufferID, ImpPatBufferIDRange, LabelWidthGlobal,
+          MRD->getCheckTy(), MRD->getCheckLoc(),
+          LabelCountPerPattern[MRD->getCheckLoc()] > 1
+              ? &LabelIndexPerPattern[MRD->getCheckLoc()]
+              : nullptr);
     }
 
-    // Build label that uniquely identifies this FileCheckDiag.
-    llvm::raw_string_ostream LabelStrm(A.Label);
-    LabelStrm << CurLabelPrefix;
-    if (DiagCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()] > 1)
-      LabelStrm
-          << "'"
-          << DiagIndexPerPattern[Diag.getMatchResultDiag().getCheckLoc()]++;
-    LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
+    // Build label that is unique for this input annotation before it is
+    // potentially broken across multiple lines.
+    InputAnnotation A;
+    A.LabelIndexGlobal = LabelIndexGlobal++;
+    CurLabeler.generateLabel(A.Label);
 
     // Build the input marker.
     A.Marker = getMarker(Diag);
@@ -505,7 +559,7 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         if (InputEndCol == 1 && L == E)
           break;
         InputAnnotation B;
-        B.DiagIndex = A.DiagIndex;
+        B.LabelIndexGlobal = A.LabelIndexGlobal;
         B.Label = A.Label;
         B.IsFirstLine = false;
         B.InputLine = L;
@@ -551,18 +605,18 @@ static unsigned FindInputLineInFilter(
   return UINT_MAX;
 }
 
-/// To OS, print a vertical ellipsis (right-justified at LabelWidth) if it would
-/// occupy less lines than ElidedLines, but print ElidedLines otherwise.  Either
-/// way, clear ElidedLines.  Thus, if ElidedLines is empty, do nothing.
+/// To OS, print a vertical ellipsis (right-justified at LabelWidthGlobal) if it
+/// would occupy less lines than ElidedLines, but print ElidedLines otherwise.
+/// Either way, clear ElidedLines.  Thus, if ElidedLines is empty, do nothing.
 static void DumpEllipsisOrElidedLines(raw_ostream &OS, std::string &ElidedLines,
-                                      unsigned LabelWidth) {
+                                      unsigned LabelWidthGlobal) {
   if (ElidedLines.empty())
     return;
   unsigned EllipsisLines = 3;
   if (EllipsisLines < StringRef(ElidedLines).count('\n')) {
     for (unsigned i = 0; i < EllipsisLines; ++i) {
       WithColor(OS, raw_ostream::BLACK, /*Bold=*/true)
-          << right_justify(".", LabelWidth);
+          << right_justify(".", LabelWidthGlobal);
       OS << '\n';
     }
   } else
@@ -575,7 +629,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
                                unsigned DumpInputContext,
                                StringRef InputFileText,
                                std::vector<InputAnnotation> &Annotations,
-                               unsigned LabelWidth) {
+                               unsigned LabelWidthGlobal) {
   OS << "Input was:\n<<<<<<\n";
 
   // Sort annotations.
@@ -625,7 +679,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
                //    following: when comparing any two input lines, a
                //    diagnostic's annotations are sorted in the same position
                //    relative to all other diagnostics' annotations.
-               return A.DiagIndex < B.DiagIndex;
+               return A.LabelIndexGlobal < B.LabelIndexGlobal;
              });
 
   // Compute the width of the label column.
@@ -643,7 +697,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   // horizontally.  Those line numbers might not even be for the same file.
   // One space would be enough to achieve that, but more makes it even easier
   // to see.
-  LabelWidth = std::max(LabelWidth, LineNoWidth) + 3;
+  LabelWidthGlobal = std::max(LabelWidthGlobal, LineNoWidth) + 3;
 
   // Print annotated input lines.
   unsigned PrevLineInFilter = 0; // 0 means none so far
@@ -680,13 +734,13 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       LineOS = &ElidedLinesOS;
     else {
       LineOS = &OS;
-      DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
+      DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidthGlobal);
     }
 
     // Print right-aligned line number.
     WithColor(*LineOS, raw_ostream::BLACK, /*Bold=*/true, /*BF=*/false,
               TheColorMode)
-        << format_decimal(Line, LabelWidth) << ": ";
+        << format_decimal(Line, LabelWidthGlobal) << ": ";
 
     // For the case where -v and colors are enabled, find the annotations for
     // good matches for expected patterns in order to highlight everything
@@ -739,7 +793,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       WithColor COS(*LineOS, AnnotationItr->Marker.Color, /*Bold=*/true,
                     /*BG=*/false, TheColorMode);
       // The two spaces below are where the ": " appears on input lines.
-      COS << left_justify(AnnotationItr->Label, LabelWidth) << "  ";
+      COS << left_justify(AnnotationItr->Label, LabelWidthGlobal) << "  ";
       unsigned Col;
       for (Col = 1; Col < AnnotationItr->InputStartCol; ++Col)
         COS << ' ';
@@ -762,7 +816,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       ++AnnotationItr;
     }
   }
-  DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
+  DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidthGlobal);
 
   OS << ">>>>>>\n";
 }
@@ -907,11 +961,11 @@ int main(int argc, char **argv) {
            << "-dump-input=help explains the following input dump.\n"
            << "\n";
     std::vector<InputAnnotation> Annotations;
-    unsigned LabelWidth;
+    unsigned LabelWidthGlobal;
     buildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
-                          Annotations, LabelWidth);
+                          Annotations, LabelWidthGlobal);
     DumpAnnotatedInput(errs(), Req, DumpInputFilter, DumpInputContext,
-                       InputFileText, Annotations, LabelWidth);
+                       InputFileText, Annotations, LabelWidthGlobal);
   }
 
   return ExitCode;
