@@ -8,8 +8,7 @@ define i64 @call_range_nonzero_lo() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq returns_i64@PLT
-; CHECK-NEXT:    movabsq $2305843009213693944, %rcx # imm = 0x1FFFFFFFFFFFFFF8
-; CHECK-NEXT:    andq %rcx, %rax
+; CHECK-NEXT:    andq $-8, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
   %v = call range(i64 1, 2305843009213693952) i64 @returns_i64()
@@ -35,7 +34,7 @@ define i64 @call_range_narrow() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq returns_i64@PLT
-; CHECK-NEXT:    andl $248, %eax
+; CHECK-NEXT:    andl $-8, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
   %v = call range(i64 100, 256) i64 @returns_i64()
