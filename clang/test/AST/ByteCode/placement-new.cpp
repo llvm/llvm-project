@@ -517,9 +517,7 @@ namespace DirectBaseHasNoRecord {
       };
     };
     S s;
-    // FIXME: Pointer::getType() is returning the wrong type.
-    new (&s.storage[0][0]) int(1); // expected-note {{placement new would change type of storage from 'int[3]' to 'int'}} \
-                                   // ref-note {{construction of subobject of member 'storage' of union with no active member is not allowed in a constant expression}}
+    new (&s.storage[0][0]) int(1); // both-note {{construction of subobject of member 'storage' of union with no active member is not allowed in a constant expression}}
     return 13;
   }
   static_assert(test_multidim_single_start() == 13); // both-error {{not an integral constant expression}} \

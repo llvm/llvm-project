@@ -179,8 +179,9 @@ public:
              bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
-             bool IsConst, bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+             MetadataSize MD, size_t NumElems, bool IsConst, bool IsTemporary,
+             bool IsMutable, bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize, bool IsConst,
