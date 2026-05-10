@@ -27,6 +27,9 @@ void correct() {
 }
 
 void too_few_args() {
+  llvm::formatv("{0}");
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: format string requires 1 argument, but 0 arguments were provided
+
   llvm::formatv("{0} {1}", 1);
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: format string requires 2 arguments, but 1 argument was provided
 
