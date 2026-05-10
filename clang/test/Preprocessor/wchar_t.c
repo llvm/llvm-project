@@ -8,6 +8,11 @@
 // CHECK-SOLARIS64-DAG: #define __WCHAR_TYPE__ int
 // CHECK-SOLARIS64-NOT: #define __WCHAR_UNSIGNED__ 0
 
+// RUN: %clang_cc1 -triple x86_64-pc-solaris -dM -E %s -o - | FileCheck %s -check-prefix CHECK-ILLUMOS64
+// CHECK-ILLUMOS64-DAG: #define __WCHAR_MAX__ 2147483647
+// CHECK-ILLUMOS64-DAG: #define __WCHAR_TYPE__ int
+// CHECK-ILLUMOS64-NOT: #define __WCHAR_UNSIGNED__ 0
+
 // RUN: %clang_cc1 -triple avr-unknown-unknown -fwchar-type=int -fsigned-wchar -dM -E %s -o - | FileCheck %s -check-prefix CHECK-AVR
 // CHECK-AVR-DAG: #define __WCHAR_MAX__ 32767
 // CHECK-AVR-DAG: #define __WCHAR_TYPE__ int

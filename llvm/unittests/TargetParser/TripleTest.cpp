@@ -1811,9 +1811,9 @@ TEST(TripleTest, Normalization) {
       "x86_64-unknown-linux-gnu-unknown",
       Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FIVE_IDENT));
 
-  EXPECT_EQ(
-      "x86_64-pc-illumos-unknown-unknown",
-      Triple::normalize("x86_64-pc-illumos", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("x86_64-pc-illumos-unknown-unknown",
+            Triple::normalize("x86_64-pc-illumos",
+                              Triple::CanonicalForm::FIVE_IDENT));
 
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
@@ -3203,7 +3203,7 @@ TEST(TripleTest, DefaultExceptionHandling) {
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("x86_64-pc-illumos").getDefaultExceptionHandling());
- }
+}
 
 TEST(TripleTest, NormalizeWindows) {
   EXPECT_EQ("i686-pc-windows-msvc", Triple::normalize("i686-pc-win32"));
