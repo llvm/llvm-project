@@ -2162,10 +2162,11 @@ void RewriteInstance::relocateEHFrameSection() {
       return;
 
     // Only fix references that are relative to other locations.
-    if ((DwarfType & 0x70) != dwarf::DW_EH_PE_pcrel &&
-        (DwarfType & 0x70) != dwarf::DW_EH_PE_textrel &&
-        (DwarfType & 0x70) != dwarf::DW_EH_PE_funcrel &&
-        (DwarfType & 0x70) != dwarf::DW_EH_PE_datarel)
+    const uint64_t Mask = 0xf0 & ~dwarf::DW_EH_PE_indirect;
+    if ((DwarfType & Mask) != dwarf::DW_EH_PE_pcrel &&
+        (DwarfType & Mask) != dwarf::DW_EH_PE_textrel &&
+        (DwarfType & Mask) != dwarf::DW_EH_PE_funcrel &&
+        (DwarfType & Mask) != dwarf::DW_EH_PE_datarel)
       return;
 
     uint32_t RelType;
