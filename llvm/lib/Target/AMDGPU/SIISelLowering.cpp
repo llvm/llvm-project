@@ -5011,6 +5011,48 @@ SITargetLowering::splitKillBlock(MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
   MachineBasicBlock *SplitBB = BB->splitAt(MI, /*UpdateLiveIns=*/true);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+
+  if (SplitBB->isLiveIn(AMDGPU::SCC)) {
+    const GCNSubtarget &ST = BB->getParent()->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    DebugLoc DL = MI.getDebugLoc();
+
+    // Insert a COPY from SCC from the last instruction which defines SCC in
+    // `BB`
+    bool Inserted = false;
+    Register SCCCopy;
+    for (auto I = BB->rbegin(), E = BB->rend(); I != E; ++I) {
+      if (I->isDebugInstr())
+        continue;
+
+      if (I->isCall()) {
+        // $scc is caller saved register, so if it is clobbered, we ingore it
+        // since the value of $scc is not a useful one.
+        continue;
+      }
+      if (I->definesRegister(AMDGPU::SCC, TRI)) {
+        SCCCopy = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0_XEXECRegClass);
+        // const TargetRegisterClass *RC =
+        // TRI->getAllocatableClass(&AMDGPU::SCC_CLASSRegClass); SCCCopy =
+        // MRI.createVirtualRegister(RC);
+        BuildMI(*BB, std::next(I->getIterator()), DL,
+                TII->get(TargetOpcode::COPY), SCCCopy)
+            .addReg(AMDGPU::SCC);
+        Inserted = true;
+        break;
+      }
+    }
+
+    assert(Inserted);
+    // Copy back to $scc in the SplitBB
+    BuildMI(*SplitBB, SplitBB->getFirstNonPHI(), DL,
+            TII->get(TargetOpcode::COPY), AMDGPU::SCC)
+        .addReg(SCCCopy, RegState::Kill);
+    // Now remove the scc from the livein of splitBB
+    SplitBB->removeLiveIn(AMDGPU::SCC);
+  }
+
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
   return SplitBB;
 }

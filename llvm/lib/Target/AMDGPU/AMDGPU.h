@@ -55,7 +55,6 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
-FunctionPass *createSIFixPhysicalRegisterLiveInfoLegacyPass();
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
@@ -194,9 +193,6 @@ extern char &SIFixSGPRCopiesLegacyID;
 
 void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
-
-void initializeSIFixPhysicalRegisterLiveInfoLegacyPass(PassRegistry &);
-extern char &SIFixPhysicalRegisterLiveInfoLegacyID;
 
 void initializeAMDGPUNextUseAnalysisLegacyPassPass(PassRegistry &);
 extern char &AMDGPUNextUseAnalysisLegacyID;
