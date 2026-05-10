@@ -4215,6 +4215,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   assert(combinerExpr && "Expecting combiner expression");
   auto parserInstIt = combinerExpr->v.begin();
 
+  // Get the parser-level initializer expression (if present) so we can
+  // pass each parser::OmpStylizedInstance to processInitializer.
+  const parser::OmpInitializerExpression *initExpr = nullptr;
+  for (const auto &clause : construct.v.Clauses().v) {
+    initExpr = parser::omp::GetInitializerExpr(clause);
+    if (initExpr)
+      break;
+  }
+  auto parserInitInstIt =
+      initExpr ? initExpr->v.begin()
+               : std::list<parser::OmpStylizedInstance>::const_iterator{};
+
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
 
@@ -4257,7 +4269,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                  parserInst);
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
-    cp.processInitializer(symTable, genInitValueCB);
+    const parser::OmpStylizedInstance *parserInitInst = nullptr;
+    if (initExpr) {
+      assert(parserInitInstIt != initExpr->v.end() &&
+             "Mismatched initializer instance count");
+      parserInitInst = &*parserInitInstIt++;
+    }
+    cp.processInitializer(symTable, genInitValueCB, parserInitInst);
     mlir::Type redType =
         isByRef
             ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))

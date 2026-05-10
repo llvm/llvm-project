@@ -231,6 +231,20 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* Renamed ISD::CTLZ_ZERO_UNDEF to ISD::CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+### Changes to the GlobalISel infrastructure
+
+* Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed G_CTTZ_ZERO_UNDEF to G_CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
 ### Changes to the Metadata Info
 
 ### Changes to the Debug Info
@@ -256,7 +270,6 @@ Makes programs 10x faster by doing Special New Thing.
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
 * The `apropos` command now highlights matching keywords in its output when color is enabled.
-* The TUI mode (enabled with the `gui` command) now has a real-time console output pane. stdout / stderr messages get redirected to this pane when it is enabled.
 
 #### Deprecated APIs
 
