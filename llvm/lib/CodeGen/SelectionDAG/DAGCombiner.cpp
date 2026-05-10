@@ -16213,6 +16213,10 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
       AssertVT == cast<VTSDNode>(N0.getOperand(1))->getVT())
     return N0;
 
+  // fold (assert?ext c, vt) -> c
+  if (isa<ConstantSDNode>(N0))
+    return N0;
+
   if (N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse() &&
       N0.getOperand(0).getOpcode() == Opcode) {
     // We have an assert, truncate, assert sandwich. Make one stronger assert
