@@ -120,7 +120,7 @@ static bool isFloatingPointCompare(unsigned Opc) {
   }
 }
 
-/// Returns true if Opc is a floating-point conditional select (FCSEL).
+/// \returns true iff Opc is a floating-point conditional select (FCSEL).
 static bool isFloatingPointConditionalSelect(unsigned Opc) {
   switch (Opc) {
   case AArch64::FCSELSrrr:
