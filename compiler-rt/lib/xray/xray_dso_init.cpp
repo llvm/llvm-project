@@ -31,16 +31,6 @@ __attribute__((visibility("hidden")));
 #endif
 }
 
-#if SANITIZER_APPLE
-namespace __xray {
-bool FindXRaySledSectionInImage(const void *Addr,
-                                const XRaySledEntry **SledsBegin,
-                                const XRaySledEntry **SledsEnd,
-                                const XRayFunctionSledIndex **FnIdxBegin,
-                                const XRayFunctionSledIndex **FnIdxEnd);
-} // namespace __xray
-#endif
-
 // Handler functions to call in the patched entry/exit sled.
 extern atomic_uintptr_t XRayPatchedFunction;
 extern atomic_uintptr_t XRayArgLogger;

@@ -22,22 +22,16 @@
 #include <dlfcn.h>
 #include <mach-o/dyld.h>
 #include <mach-o/getsect.h>
+#include <mach-o/loader.h>
 
 namespace __xray {
 
-bool FindXRaySledSectionInImage(const void *Addr,
+static bool GetXRaySledSections(const struct mach_header_64 *MH,
                                 const XRaySledEntry **SledsBegin,
                                 const XRaySledEntry **SledsEnd,
                                 const XRayFunctionSledIndex **FnIdxBegin,
                                 const XRayFunctionSledIndex **FnIdxEnd)
     XRAY_NEVER_INSTRUMENT {
-  Dl_info Info;
-  if (!dladdr(Addr, &Info) || !Info.dli_fbase)
-    return false;
-
-  const auto *MH =
-      reinterpret_cast<const struct mach_header_64 *>(Info.dli_fbase);
-
   unsigned long SledSectionSize = 0;
   const auto *Sleds = reinterpret_cast<const XRaySledEntry *>(
       getsectiondata(MH, "__DATA", "xray_instr_map", &SledSectionSize));
@@ -52,15 +46,48 @@ bool FindXRaySledSectionInImage(const void *Addr,
   const auto *FnIdx = reinterpret_cast<const XRayFunctionSledIndex *>(
       getsectiondata(MH, "__DATA", "xray_fn_idx", &FnIdxSectionSize));
 
-  if (FnIdx && FnIdxSectionSize > 0) {
-    *FnIdxBegin = FnIdx;
-    *FnIdxEnd = FnIdx + (FnIdxSectionSize / sizeof(XRayFunctionSledIndex));
-  } else {
-    *FnIdxBegin = nullptr;
-    *FnIdxEnd = nullptr;
-  }
+  *FnIdxBegin = FnIdx;
+  *FnIdxEnd =
+      FnIdx ? FnIdx + (FnIdxSectionSize / sizeof(XRayFunctionSledIndex))
+            : nullptr;
 
   return true;
+}
+
+bool FindXRaySledSectionInImage(const void *Addr,
+                                const XRaySledEntry **SledsBegin,
+                                const XRaySledEntry **SledsEnd,
+                                const XRayFunctionSledIndex **FnIdxBegin,
+                                const XRayFunctionSledIndex **FnIdxEnd)
+    XRAY_NEVER_INSTRUMENT {
+  Dl_info Info;
+  if (!dladdr(Addr, &Info) || !Info.dli_fbase)
+    return false;
+
+  const auto *MH =
+      reinterpret_cast<const struct mach_header_64 *>(Info.dli_fbase);
+  return GetXRaySledSections(MH, SledsBegin, SledsEnd, FnIdxBegin, FnIdxEnd);
+}
+
+static void XRayDyldImageAdded(const struct mach_header *MH,
+                               intptr_t Slide) XRAY_NEVER_INSTRUMENT {
+  const auto *MH64 = reinterpret_cast<const struct mach_header_64 *>(MH);
+
+  const XRaySledEntry *SledsBegin = nullptr;
+  const XRaySledEntry *SledsEnd = nullptr;
+  const XRayFunctionSledIndex *FnIdxBegin = nullptr;
+  const XRayFunctionSledIndex *FnIdxEnd = nullptr;
+
+  if (!GetXRaySledSections(MH64, &SledsBegin, &SledsEnd, &FnIdxBegin,
+                           &FnIdxEnd))
+    return;
+
+  bool IsDSO = (MH64->filetype != MH_EXECUTE);
+  __xray_register_sleds(SledsBegin, SledsEnd, FnIdxBegin, FnIdxEnd, IsDSO, {});
+}
+
+void RegisterDyldImageCallback() XRAY_NEVER_INSTRUMENT {
+  _dyld_register_func_for_add_image(XRayDyldImageAdded);
 }
 
 } // namespace __xray

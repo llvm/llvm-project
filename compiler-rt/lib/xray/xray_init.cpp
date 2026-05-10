@@ -32,16 +32,6 @@ extern const XRayFunctionSledIndex __stop_xray_fn_idx[] __attribute__((weak));
 #endif
 }
 
-#if SANITIZER_APPLE
-namespace __xray {
-bool FindXRaySledSectionInImage(const void *Addr,
-                                const XRaySledEntry **SledsBegin,
-                                const XRaySledEntry **SledsEnd,
-                                const XRayFunctionSledIndex **FnIdxBegin,
-                                const XRayFunctionSledIndex **FnIdxEnd);
-} // namespace __xray
-#endif
-
 using namespace __xray;
 
 // When set to 'true' this means the XRay runtime has been initialised. We use
@@ -78,6 +68,20 @@ __xray_register_sleds(const XRaySledEntry *SledsBegin,
     Report("Invalid XRay sleds.\n");
     return -1;
   }
+
+#if SANITIZER_APPLE
+  // On Darwin, the dyld image callback and DSO constructors may both attempt
+  // to register the same sleds. Return the existing ID if already registered.
+  {
+    SpinMutexLock Guard(&XRayInstrMapMutex);
+    auto N = atomic_load(&XRayNumObjects, memory_order_acquire);
+    for (uint32_t I = 0; I < N; ++I) {
+      if (XRayInstrMaps[I].Sleds == SledsBegin)
+        return I;
+    }
+  }
+#endif
+
   XRaySledMap SledMap;
   SledMap.FromDSO = FromDSO;
   SledMap.Loaded = true;
@@ -122,8 +126,8 @@ __xray_register_sleds(const XRaySledEntry *SledsBegin,
   }
 }
 
-// __xray_init() will do the actual loading of the current process' memory map
-// and then proceed to look for the .xray_instr_map section/segment.
+// __xray_init() discovers XRay instrumentation sections and registers sleds
+// for runtime patching/unpatching.
 void __xray_init() XRAY_NEVER_INSTRUMENT {
   SpinMutexLock Guard(&XRayInitMutex);
   // Short-circuit if we've already initialized XRay before.
@@ -139,14 +143,15 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
   }
 
 #if SANITIZER_APPLE
-  const XRaySledEntry *SledsBegin = nullptr;
-  const XRaySledEntry *SledsEnd = nullptr;
-  const XRayFunctionSledIndex *FnIdxBegin = nullptr;
-  const XRayFunctionSledIndex *FnIdxEnd = nullptr;
+  // Use the dyld image callback to discover XRay sections in all loaded
+  // images. This handles both the normal case (runtime linked into the
+  // binary) and the DYLD_INSERT_LIBRARIES injection case (runtime in a
+  // separate dylib, sleds in the host binary).
+  atomic_store(&XRayNumObjects, 0, memory_order_release);
+  XRayInstrMaps = allocateBuffer<XRaySledMap>(XRayMaxObjects);
+  __xray::RegisterDyldImageCallback();
 
-  if (!__xray::FindXRaySledSectionInImage(
-          reinterpret_cast<const void *>(&__xray_init), &SledsBegin, &SledsEnd,
-          &FnIdxBegin, &FnIdxEnd)) {
+  if (atomic_load(&XRayNumObjects, memory_order_acquire) == 0) {
     if (Verbosity())
       Report("XRay instrumentation map missing. Not initializing XRay.\n");
     return;
@@ -162,7 +167,6 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
   const auto *SledsEnd = __stop_xray_instr_map;
   const auto *FnIdxBegin = __start_xray_fn_idx;
   const auto *FnIdxEnd = __stop_xray_fn_idx;
-#endif
 
   atomic_store(&XRayNumObjects, 0, memory_order_release);
 
@@ -177,6 +181,7 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
     Report("Registering XRay sleds failed.\n");
     return;
   }
+#endif
 
   atomic_store(&XRayInitialized, true, memory_order_release);
 
