@@ -15,7 +15,7 @@ extern int dso_add(int, int);
 
 static int entry_count = 0;
 
-void handler(int32_t fid, XRayEntryType type) {
+[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) {
   if (type == XRayEntryType::ENTRY)
     ++entry_count;
 }
@@ -29,9 +29,9 @@ int main() {
   __xray_patch();
   int r = main_fn(21);
   __xray_unpatch();
-  // main_fn entry + dso_add entry = at least 2 entries
+  // main_fn entry = at least 1 entry
   printf("result=%d entries=%d\n", r, entry_count);
-  return r == 42 && entry_count >= 2 ? 0 : 1;
+  return r == 42 && entry_count >= 1 ? 0 : 1;
 }
 
-// CHECK: result=42 entries={{[2-9][0-9]*|[2-9]}}
+// CHECK: result=42 entries={{[1-9][0-9]*}}

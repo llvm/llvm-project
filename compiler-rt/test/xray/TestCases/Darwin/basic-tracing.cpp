@@ -15,13 +15,15 @@
 
 [[clang::xray_always_instrument]] int instrumented_fn() { return 42; }
 
+[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) {
+  if (type == XRayEntryType::ENTRY)
+    printf("entry: %d\n", fid);
+  else if (type == XRayEntryType::EXIT)
+    printf("exit: %d\n", fid);
+}
+
 int main() {
-  __xray_set_handler([](int32_t fid, XRayEntryType type) {
-    if (type == XRayEntryType::ENTRY)
-      printf("entry: %d\n", fid);
-    else if (type == XRayEntryType::EXIT)
-      printf("exit: %d\n", fid);
-  });
+  __xray_set_handler(handler);
   __xray_patch();
   int r = instrumented_fn();
   __xray_unpatch();

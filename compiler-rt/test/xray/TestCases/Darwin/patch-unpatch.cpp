@@ -11,7 +11,7 @@
 
 static int call_count = 0;
 
-void handler(int32_t fid, XRayEntryType type) {
+[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) {
   if (type == XRayEntryType::ENTRY)
     ++call_count;
 }

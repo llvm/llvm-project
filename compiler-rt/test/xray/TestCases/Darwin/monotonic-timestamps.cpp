@@ -21,14 +21,14 @@ static uint64_t rdtsc() {
 }
 #else
 #include <time.h>
-static uint64_t rdtsc() {
+[[clang::xray_never_instrument]] static uint64_t rdtsc() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
   return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 #endif
 
-void handler(int32_t fid, XRayEntryType type) {
+[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) {
   uint64_t now = rdtsc();
   if (now < last_ts)
     ++monotonic_violations;

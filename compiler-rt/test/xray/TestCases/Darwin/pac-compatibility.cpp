@@ -13,7 +13,7 @@
 
 static int handler_calls = 0;
 
-void handler(int32_t fid, XRayEntryType type) { ++handler_calls; }
+[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) { ++handler_calls; }
 
 [[clang::xray_always_instrument]] int compute(int x) {
   return x * 2 + 1;

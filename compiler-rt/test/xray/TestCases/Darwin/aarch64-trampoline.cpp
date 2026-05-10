@@ -15,7 +15,7 @@
 static int entries = 0;
 static int exits = 0;
 
-void handler(int32_t fid, XRayEntryType type) {
+[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) {
   if (type == XRayEntryType::ENTRY)
     ++entries;
   else if (type == XRayEntryType::EXIT)
