@@ -79,7 +79,7 @@ public:
 private:
   const AArch64InstrInfo *TII = nullptr;
 
-  // Returns true if MBB contains at least one layout-sensitive pattern.
+  /// \returns true iff MBB contains at least one layout-sensitive pattern.
   bool detectLayoutSensitivePattern(MachineBasicBlock *MBB);
 
   // Emit .p2align before MI. Splits the block if MI is not at its start.
