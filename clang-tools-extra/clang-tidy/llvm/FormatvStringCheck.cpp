@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatvStringCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -14,6 +15,8 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
+#include <iterator>
+#include <vector>
 
 using namespace clang::ast_matchers;
 
@@ -95,18 +98,11 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AdditionalFunctions(Options.get("AdditionalFunctions", "")) {
-  Functions.insert("llvm::formatv");
-  Functions.insert("llvm::createStringErrorV");
+  Functions = {"llvm::formatv", "llvm::createStringErrorV"};
 
-  // Parse semicolon-separated function names from AdditionalFunctions.
-  const StringRef Input(AdditionalFunctions);
-  SmallVector<StringRef, 8> Entries;
-  Input.split(Entries, ';', -1, false);
-  for (StringRef Entry : Entries) {
-    Entry = Entry.trim();
-    if (!Entry.empty())
-      Functions.insert(Entry);
-  }
+  std::vector<StringRef> CustomFunctions =
+      utils::options::parseStringList(AdditionalFunctions);
+  copy(CustomFunctions, std::back_inserter(Functions));
 }
 
 void FormatvStringCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -115,12 +111,8 @@ void FormatvStringCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void FormatvStringCheck::registerMatchers(MatchFinder *Finder) {
   // Build a matcher for all configured function names.
-  std::vector<StringRef> Names;
-  Names.reserve(Functions.size());
-  copy(Functions.keys(), std::back_inserter(Names));
-
   Finder->addMatcher(
-      callExpr(callee(functionDecl(hasAnyName(Names),
+      callExpr(callee(functionDecl(hasAnyName(Functions),
                                    ast_matchers::isTemplateInstantiation())),
                argumentCountAtLeast(1))
           .bind("call"),

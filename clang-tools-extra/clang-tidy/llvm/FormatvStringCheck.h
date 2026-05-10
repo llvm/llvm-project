@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_FORMATVSTRINGCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "llvm/ADT/StringSet.h"
+#include <vector>
 
 namespace clang::tidy::llvm_check {
 
@@ -38,7 +38,7 @@ public:
   }
 
 private:
-  llvm::StringSet<> Functions;
+  std::vector<StringRef> Functions;
   const StringRef AdditionalFunctions;
 };
 
