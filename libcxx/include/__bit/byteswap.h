@@ -13,6 +13,7 @@
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <cstdint>
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,17 +24,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <integral _Tp>
+  requires(sizeof(_Tp) == 1 || (numeric_limits<_Tp>::digits + numeric_limits<_Tp>::is_signed) % 16 == 0)
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp byteswap(_Tp __val) noexcept {
   if constexpr (sizeof(_Tp) == 1) {
-    // Identity for size-1 types. Handled before the __builtin_bswapg path
-    // because some Clang 22 builds have a constexpr-eval bug on the 1-bit
-    // (bool) case (fixed in commit f5410565137c, post-22.1.0).
     return __val;
 #  if __has_builtin(__builtin_bswapg)
   } else {
-    // Clang 22 and later: defer to the generic bit-width builtin. Handles
-    // all standard integer types and _BitInt(N) where N is a multiple of
-    // 16 bits; other widths are rejected by Clang with a clear diagnostic.
     return __builtin_bswapg(__val);
   }
 #  else
