@@ -1799,14 +1799,6 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   if (SemaRef.getLangOpts().OpenCL)
     SemaRef.deduceOpenCLAddressSpace(Var);
 
-  if (D->getQualifierLoc()) {
-    if (D->getLexicalDeclContext()->isDependentContext() &&
-        DC->isFunctionOrMethod()) {
-      Var->setInvalidDecl();
-      return nullptr;
-    }
-  }
-
   // Substitute the nested name specifier, if any.
   if (SubstQualifier(D, Var))
     return nullptr;
