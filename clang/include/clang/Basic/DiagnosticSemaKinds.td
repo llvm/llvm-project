@@ -11007,6 +11007,11 @@ def warn_lifetime_safety_dangling_global_moved
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
 
+def warn_lifetime_safety_param_lifetimebound_violation
+    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'}0">,
+      InGroup<LifetimeSafetyLifetimeboundViolation>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;

@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../bugprone/SignedBitwiseCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
+#include "../bugprone/UnhandledCodePathsCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
 #include "../cppcoreguidelines/ProBoundsArrayToPointerDecayCheck.h"
@@ -30,7 +31,6 @@
 #include "../portability/NoAssemblerCheck.h"
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "MultiwayPathsCoveredCheck.h"
 
 namespace clang::tidy {
 namespace hicpp {
@@ -39,7 +39,7 @@ namespace {
 class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
+    CheckFactories.registerCheck<bugprone::UnhandledCodePathsCheck>(
         "hicpp-multiway-paths-covered");
     CheckFactories.registerCheck<bugprone::SignedBitwiseCheck>(
         "hicpp-signed-bitwise");
