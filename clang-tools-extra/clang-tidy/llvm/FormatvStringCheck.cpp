@@ -22,13 +22,13 @@ namespace clang::tidy::llvm_check {
 namespace {
 
 struct ParseResult {
-  llvm::SmallVector<unsigned, 4> Indices;
+  SmallVector<unsigned, 4> Indices;
   unsigned MaxIndex = 0;
 };
 
 } // namespace
 
-static llvm::Expected<ParseResult> parseFormatvString(llvm::StringRef Fmt) {
+static Expected<ParseResult> parseFormatvString(StringRef Fmt) {
   ParseResult Result;
   unsigned NextAutoIndex = 0;
   bool HasAutomatic = false;
@@ -36,7 +36,7 @@ static llvm::Expected<ParseResult> parseFormatvString(llvm::StringRef Fmt) {
 
   while (!Fmt.empty()) {
     const size_t OpenBrace = Fmt.find('{');
-    if (OpenBrace == llvm::StringRef::npos)
+    if (OpenBrace == StringRef::npos)
       break;
 
     Fmt = Fmt.drop_front(OpenBrace);
@@ -49,22 +49,22 @@ static llvm::Expected<ParseResult> parseFormatvString(llvm::StringRef Fmt) {
 
     // Find the closing '}'.
     const size_t CloseBrace = Fmt.find('}');
-    if (CloseBrace == llvm::StringRef::npos)
+    if (CloseBrace == StringRef::npos)
       return llvm::createStringError("unterminated brace in format string");
 
     // Extract the content between braces.
-    const llvm::StringRef Content = Fmt.substr(1, CloseBrace - 1);
+    const StringRef Content = Fmt.substr(1, CloseBrace - 1);
     Fmt = Fmt.drop_front(CloseBrace + 1);
 
     // Parse the replacement field: [index] ["," layout] [":" format]
-    llvm::StringRef IndexStr = Content;
+    StringRef IndexStr = Content;
 
     // Strip layout and format parts for index parsing.
     const size_t CommaPos = Content.find(',');
     const size_t ColonPos = Content.find(':');
-    if (CommaPos != llvm::StringRef::npos)
+    if (CommaPos != StringRef::npos)
       IndexStr = Content.substr(0, CommaPos);
-    else if (ColonPos != llvm::StringRef::npos)
+    else if (ColonPos != StringRef::npos)
       IndexStr = Content.substr(0, ColonPos);
 
     IndexStr = IndexStr.trim();
@@ -100,9 +100,9 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
 
   // Parse semicolon-separated function names from AdditionalFunctions.
   const StringRef Input(AdditionalFunctions);
-  llvm::SmallVector<llvm::StringRef, 8> Entries;
+  SmallVector<StringRef, 8> Entries;
   Input.split(Entries, ';', -1, false);
-  for (llvm::StringRef Entry : Entries) {
+  for (StringRef Entry : Entries) {
     Entry = Entry.trim();
     if (!Entry.empty())
       Functions.insert(Entry);
@@ -115,9 +115,9 @@ void FormatvStringCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void FormatvStringCheck::registerMatchers(MatchFinder *Finder) {
   // Build a matcher for all configured function names.
-  std::vector<llvm::StringRef> Names;
+  std::vector<StringRef> Names;
   Names.reserve(Functions.size());
-  llvm::copy(Functions.keys(), std::back_inserter(Names));
+  copy(Functions.keys(), std::back_inserter(Names));
 
   Finder->addMatcher(
       callExpr(callee(functionDecl(hasAnyName(Names),
@@ -159,12 +159,12 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
   if (!FmtLiteral)
     return;
 
-  const llvm::StringRef FmtString = FmtLiteral->getString();
+  const StringRef FmtString = FmtLiteral->getString();
   const int NumFmtArgs = Call->getNumArgs() - PackParamIndex;
 
   auto ParsedOrErr = parseFormatvString(FmtString);
   if (!ParsedOrErr) {
-    diag(FmtLiteral->getBeginLoc(), llvm::toString(ParsedOrErr.takeError()));
+    diag(FmtLiteral->getBeginLoc(), toString(ParsedOrErr.takeError()));
     return;
   }
 
