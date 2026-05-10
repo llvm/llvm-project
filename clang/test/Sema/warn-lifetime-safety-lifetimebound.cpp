@@ -103,6 +103,7 @@ struct GoodThisReturn {
   }
 };
 
+// FIXME: Wrong warning loc
 struct RedeclaredThis {
   MyObj data;
   View get() const [[clang::lifetimebound]];
