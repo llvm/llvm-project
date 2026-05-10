@@ -19,6 +19,7 @@ void correct() {
   llvm::formatv("{0,-10}", 1);
   llvm::formatv("{0:x}", 1);
   llvm::formatv("{0,10:x}", 1);
+  llvm::formatv("{0:$[,]}", 1);
   llvm::formatv("no replacements");
   llvm::formatv("escaped {{ braces }}");
   llvm::formatv("{}", 1);
