@@ -1020,3 +1020,101 @@ func.func @test_deep_nested_discovery(%arg0: !fir.shape<1>, %n: index, %cond: i1
 // CHECK-NOT: hlfir.apply
 // CHECK-NOT: hlfir.destroy
 // CHECK: arith.constant 1.000000e+02 : f32
+
+// Check an elemental is not inlined into a loop if a variable used by the
+// elemental is modified within the loop body before the apply site.
+// This ensures dataflow safety in the execution path.
+func.func @test_loop_body_conflict(%arg0: !fir.ref<f32>, %arg1: !fir.ref<!fir.array<10xf32>>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+
+  // Producer: Elemental depends on the value in %arg0.
+  %elemental = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+  ^bb0(%i: index):
+    %val = fir.load %arg0 : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+
+  // Consumer Loop: Modifies %arg0 before calling hlfir.apply.
+  %c1 = arith.constant 1 : index
+  fir.do_loop %i = %c1 to %c10 step %c1 {
+    // This store should trigger conflict check.
+    %new_val = arith.constant 1.0 : f32
+    fir.store %new_val to %arg0 : !fir.ref<f32>
+
+    // Apply site: Should not be inlined because of the store above.
+    %val_to_store = hlfir.apply %elemental, %i : (!hlfir.expr<10xf32>, index) -> f32
+    %addr = hlfir.designate %arg1 (%i)  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+    hlfir.assign %val_to_store to %addr : f32, !fir.ref<f32>
+  }
+
+  hlfir.destroy %elemental : !hlfir.expr<10xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_loop_body_conflict
+// CHECK: hlfir.elemental
+// CHECK: fir.do_loop
+// CHECK:   fir.store
+// CHECK:   hlfir.apply
+// CHECK: hlfir.destroy
+
+// Check sibling block conflict: apply is in then block, but the store is in
+// the else block where arg0 is modified. Inlining is not safe.
+func.func @test_sibling_block_conflict(%arg0: !fir.ref<f32>, %arg1: !fir.ref<!fir.array<10xf32>>, %cond: i1) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+
+  // Producer depends on %arg0.
+  %elemental = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+  ^bb0(%i: index):
+    %val = fir.load %arg0 : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+
+  %c1 = arith.constant 1 : index
+  fir.do_loop %i = %c1 to %c10 step %c1 {
+    fir.if %cond {
+      // Apply site.
+      %val_to_store = hlfir.apply %elemental, %i : (!hlfir.expr<10xf32>, index) -> f32
+      %addr = hlfir.designate %arg1 (%i)  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      hlfir.assign %val_to_store to %addr : f32, !fir.ref<f32>
+    } else {
+      // Conflict: Sibling block modifies the dependency.
+      %new_val = arith.constant 2.0 : f32
+      fir.store %new_val to %arg0 : !fir.ref<f32>
+    }
+  }
+
+  hlfir.destroy %elemental : !hlfir.expr<10xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_sibling_block_conflict
+// CHECK: hlfir.elemental
+// CHECK: hlfir.apply
+
+// Declare an external function with side effects.
+func.func private @opaque_call() -> f32
+// Check if inlining is blocked for fir.call inside the elemental block.
+func.func @test_opaque_call_conflict(%arg1: !fir.ref<!fir.array<10xf32>>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+
+  %elemental = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+  ^bb0(%i: index):
+    %val = fir.call @opaque_call() : () -> f32
+    hlfir.yield_element %val : f32
+  }
+
+  %c1 = arith.constant 1 : index
+  fir.do_loop %i = %c1 to %c10 step %c1 {
+    %val_to_store = hlfir.apply %elemental, %i : (!hlfir.expr<10xf32>, index) -> f32
+    %addr = hlfir.designate %arg1 (%i)  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+    hlfir.assign %val_to_store to %addr : f32, !fir.ref<f32>
+  }
+
+  hlfir.destroy %elemental : !hlfir.expr<10xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_opaque_call_conflict
+// CHECK: hlfir.elemental
+// CHECK: hlfir.apply
