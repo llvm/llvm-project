@@ -6017,8 +6017,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       if (Kind == Attribute::Alignment) {
         Check(ArgCount <= 3 && ArgCount >= 2,
               "alignment assumptions should have 2 or 3 arguments", Call);
-        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy(),
-              "first argument should be a pointer", Call);
         Check(Call.getOperand(Elem.Begin + 1)->getType()->isIntegerTy(),
               "second argument should be an integer", Call);
         if (ArgCount == 3)
@@ -6029,8 +6027,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       if (Kind == Attribute::Dereferenceable) {
         Check(ArgCount == 2,
               "dereferenceable assumptions should have 2 arguments", Call);
-        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy(),
-              "first argument should be a pointer", Call);
         Check(Call.getOperand(Elem.Begin + 1)->getType()->isIntegerTy(),
               "second argument should be an integer", Call);
         continue;
