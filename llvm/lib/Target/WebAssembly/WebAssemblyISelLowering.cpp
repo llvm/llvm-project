@@ -3527,13 +3527,8 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
-enum class MaskReduceKind {
-  AnyTrue,
-  AllTrue,
-};
-
 struct MaskReduceInfo {
-  MaskReduceKind Kind;
+  Intrinsic::ID IID;
   bool Invert;
 };
 
@@ -3546,23 +3541,23 @@ static SDValue combineSmallMaskReduction(SDNode *N, EVT FromVT,
   assert(VecVT.getSizeInBits() == 128 &&
          "mask reduction should be widened to a 128-bit vector");
 
-  switch (Info.Kind) {
-  case MaskReduceKind::AnyTrue:
+  switch (Info.IID) {
+  case Intrinsic::wasm_anytrue:
     if (!Info.Invert)
       return TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
           N, VecVT, DAG);
     return TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(N, VecVT,
                                                                       DAG);
 
-  case MaskReduceKind::AllTrue:
+  case Intrinsic::wasm_alltrue:
     if (!Info.Invert)
       return TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
           N, VecVT, DAG);
     return TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(N, VecVT,
                                                                        DAG);
+  default:
+    llvm_unreachable("unexpected mask reduction intrinsic");
   }
-
-  llvm_unreachable("unexpected mask reduction kind");
 }
 
 static SDValue combineWideMaskReduction(SDNode *N, SDValue Mask, EVT MaskVT,
@@ -3579,9 +3574,7 @@ static SDValue combineWideMaskReduction(SDNode *N, SDValue Mask, EVT MaskVT,
                                      ElementCount::getFixed(ChunkElts));
   EVT LegalVecVT = ChunkMaskVT.changeVectorElementType(
       *DAG.getContext(), MVT::getIntegerVT(128 / ChunkElts));
-  Intrinsic::ID IID = Info.Kind == MaskReduceKind::AnyTrue
-                          ? Intrinsic::wasm_anytrue
-                          : Intrinsic::wasm_alltrue;
+  Intrinsic::ID IID = Info.IID;
 
   SmallVector<SDValue, 4> ChunkResults;
   // Split the wide mask into v16i1 chunks and reduce each chunk separately.
@@ -3610,7 +3603,7 @@ static SDValue combineWideMaskReduction(SDNode *N, SDValue Mask, EVT MaskVT,
 
   SDValue Acc = ChunkResults[0];
   for (unsigned I = 1; I < ChunkResults.size(); ++I) {
-    unsigned Opc = Info.Kind == MaskReduceKind::AnyTrue ? ISD::OR : ISD::AND;
+    unsigned Opc = Info.IID == Intrinsic::wasm_anytrue ? ISD::OR : ISD::AND;
     Acc = DAG.getNode(Opc, DL, MVT::i32, Acc, ChunkResults[I]);
   }
 
@@ -3630,19 +3623,19 @@ static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
 
   // setcc (bitcast mask), 0, ne  -> any_true(mask)
   if (C->isZero() && CC == ISD::SETNE)
-    return MaskReduceInfo{MaskReduceKind::AnyTrue, false};
+    return MaskReduceInfo{Intrinsic::wasm_anytrue, false};
 
   // setcc (bitcast mask), 0, eq  -> !any_true(mask)
   if (C->isZero() && CC == ISD::SETEQ)
-    return MaskReduceInfo{MaskReduceKind::AnyTrue, true};
+    return MaskReduceInfo{Intrinsic::wasm_anytrue, true};
 
   // setcc (bitcast mask), -1, eq -> all_true(mask)
   if (C->isAllOnes() && CC == ISD::SETEQ)
-    return MaskReduceInfo{MaskReduceKind::AllTrue, false};
+    return MaskReduceInfo{Intrinsic::wasm_alltrue, false};
 
   // setcc (bitcast mask), -1, ne -> !all_true(mask)
   if (C->isAllOnes() && CC == ISD::SETNE)
-    return MaskReduceInfo{MaskReduceKind::AllTrue, true};
+    return MaskReduceInfo{Intrinsic::wasm_alltrue, true};
 
   return std::nullopt;
 }
