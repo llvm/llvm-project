@@ -703,6 +703,10 @@ public:
   /// for size, returning true here aborts vectorization.
   bool runtimeChecksRequired();
 
+  /// Returns a scalable VF to use for outer-loop vectorization if the target
+  /// supports it and a fixed VF otherwise.
+  FixedScalableVFPair computeVPlanOuterloopVF(ElementCount UserVF);
+
   /// Compute smallest bitwidth each instruction can be represented with.
   /// The vector equivalents of these instructions should be truncated to this
   /// type.
@@ -788,10 +792,6 @@ public:
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
   void plan(ElementCount UserVF, unsigned UserIC);
-
-  /// Use the VPlan-native path to plan how to best vectorize, return the best
-  /// VF and its cost.
-  VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
@@ -881,33 +881,21 @@ public:
       unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
       bool DisableRuntimeUnroll);
 
-protected:
+private:
+  /// Build a VPlan using VPRecipes according to the information gathered by
+  /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
+  /// conversion only. For inner loops, \p Range's largest included VF is
+  /// restricted to the maximum VF the returned VPlan is valid for. If no VPlan
+  /// can be built for the input range, set the largest included VF to the
+  /// maximum VF for which no plan could be built. Each VPlan is built starting
+  /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
+  /// original scalar loop.
+  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
+
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop.
   void buildVPlans(ElementCount MinVF, ElementCount MaxVF);
-
-private:
-  /// Build a VPlan according to the information gathered by Legal. \return a
-  /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End. If no VPlan can be built for
-  /// the input range, set the largest included VF to the maximum VF for which
-  /// no plan could be built.
-  VPlanPtr tryToBuildVPlan(VFRange &Range);
-
-  /// Build a VPlan using VPRecipes according to the information gather by
-  /// Legal. This method is only used for the legacy inner loop vectorizer.
-  /// \p Range's largest included VF is restricted to the maximum VF the
-  /// returned VPlan is valid for. If no VPlan can be built for the input range,
-  /// set the largest included VF to the maximum VF for which no plan could be
-  /// built. Each VPlan is built starting from a copy of \p InitialPlan, which
-  /// is a plain CFG VPlan wrapping the original scalar loop.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range);
-
-  /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
-  void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
