@@ -292,7 +292,8 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             ${{ inputs.build_variant_cmake_preset && format('--preset={0}', inputs.build_variant_cmake_preset) }} \
-            ${{ steps.stage_config.outputs.cmake_args }}            
+            ${{ steps.stage_config.outputs.cmake_args }} \
+            ${{ env.extra_cmake_options }} 
 
       - name: Build stage
         run: |
