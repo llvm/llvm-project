@@ -113,17 +113,6 @@ getInitialStableDirs(const CompilerInstance &ScanInstance);
 std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
                              SmallVector<StringRef> &StableDirs);
-
-/// Create the dependency collector that will collect the produced
-/// dependencies. May return the created ModuleDepCollector depending
-/// on the scanning format.
-std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
-    CompilerInstance &ScanInstance,
-    std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    DependencyScanningService &Service, CompilerInvocation &Inv,
-    DependencyActionController &Controller,
-    PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    SmallVector<StringRef> &StableDirs);
 } // namespace dependencies
 } // namespace clang
 

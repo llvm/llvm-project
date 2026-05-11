@@ -459,6 +459,17 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   }
 }
 
+void ModuleDepCollector::clearLocalState() {
+  MainFile.clear();
+  FileDeps.clear();
+  DirectPrebuiltModularDeps.clear();
+  DirectModularDeps.clear();
+  DirectImports.clear();
+  VisibleModules.clear();
+  ProvidedStdCXXModule.reset();
+  RequiredStdCXXModules.clear();
+}
+
 static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
   // Check if the command line input uses relative paths.
   // It is not safe to ignore the current working directory if any of the
@@ -657,8 +668,20 @@ void ModuleDepCollector::run(DependencyConsumer &Consumer) {
   Consumer.handleProvidedAndRequiredStdCXXModules(MDC.ProvidedStdCXXModule,
                                                   MDC.RequiredStdCXXModules);
 
-  for (auto &&I : MDC.ModularDeps)
-    Consumer.handleModuleDependency(*I.second);
+  llvm::DenseSet<serialization::ModuleFile *> HandledModuleDependencies;
+  std::function<void(serialization::ModuleFile *)> HandleModuleDependency =
+      [&](serialization::ModuleFile *MF) {
+        if (HandledModuleDependencies.insert(MF).second) {
+          for (serialization::ModuleFile *MFI : MF->Imports)
+            HandleModuleDependency(MFI);
+          auto It = MDC.ModularDeps.find(MF);
+          if (It != MDC.ModularDeps.end())
+            Consumer.handleModuleDependency(*It->second);
+        }
+      };
+
+  for (serialization::ModuleFile *MF : MDC.DirectModularDeps)
+    HandleModuleDependency(MF);
 
   for (serialization::ModuleFile *MF : MDC.DirectModularDeps) {
     auto It = MDC.ModularDeps.find(MF);
