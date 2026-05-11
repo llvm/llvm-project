@@ -36,7 +36,7 @@ on:
 jobs:
   # This job checks permissions and validates inputs to prevent potential
   # malicious actions.  Since the release-doxygen job has contents: write
-  # permissions we need to be extract care about who can run the job and
+  # permissions we need to be extra careful about who can run the job and
   # what inputs can be provided.
   release-doxygen-validate-input:
     name: Release Doxygen Validate Input
