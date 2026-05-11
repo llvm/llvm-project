@@ -1209,11 +1209,17 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
     auto value_or_err = GetValueAsAPSInt();
     if (value_or_err)
       return value_or_err->getBoolValue();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPSInt failed: {0}");
   }
   if (HasFloatingRepresentation(val_type)) {
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err)
       return value_or_err->isNonZero();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPFloat failed: {0}");
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
@@ -1294,14 +1300,14 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
     if (value_or_err)
       SetValueFromInteger(*value_or_err, error, can_update_var);
     else
-      error = Status::FromErrorString("error getting APSInt from new_val_sp");
+      error = Status::FromError(value_or_err.takeError());
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
       SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
                           can_update_var);
     else
-      error = Status::FromErrorString("error getting APFloat from new_val_sp");
+      error = Status::FromError(value_or_err.takeError());
   } else if (new_val_type.IsPointerType()) {
     bool success = true;
     uint64_t int_val = new_val_sp->GetValueAsUnsigned(0, &success);
@@ -1403,7 +1409,13 @@ bool ValueObject::DumpPrintableRepresentation(
         options.SetQuote('"');
         options.SetSourceSize(buffer_sp->GetByteSize());
         options.SetIsTruncated(read_string.second);
-        options.SetBinaryZeroIsTerminator(custom_format != eFormatVectorOfChar);
+        if (custom_format == eFormatVectorOfChar) {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::Ignore);
+        } else {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::ZeroTerminate);
+        }
         formatters::StringPrinter::ReadBufferAndDumpToStream<
             lldb_private::formatters::StringPrinter::StringElementType::ASCII>(
             options);

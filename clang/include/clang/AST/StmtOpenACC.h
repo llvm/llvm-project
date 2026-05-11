@@ -515,8 +515,6 @@ class OpenACCWaitConstruct final
 
   ArrayRef<Expr *> getExprs() const { return {getExprPtr(), NumExprs}; }
 
-  ArrayRef<Expr *> getExprs() { return {getExprPtr(), NumExprs}; }
-
 public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OpenACCWaitConstructClass;
@@ -538,7 +536,6 @@ public:
 
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
   ArrayRef<Expr *> getQueueIdExprs() const { return getExprs().drop_front(); }
 
   child_range children() {

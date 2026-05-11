@@ -181,6 +181,10 @@ def Jf : JumpOpcode;
 def PushIgnoreDiags : Opcode;
 def PopIgnoreDiags : Opcode;
 
+
+def StartInit : Opcode;
+def EndInit : Opcode;
+
 def StartSpeculation : Opcode;
 def EndSpeculation : Opcode;
 def BCP : Opcode {
@@ -325,6 +329,9 @@ def GetPtrLocal : OffsetOpcode {
 def GetRefLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+
+def CheckRefInit : Opcode {}
+
 // [] -> [Pointer]
 def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]

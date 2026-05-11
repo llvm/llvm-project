@@ -205,6 +205,16 @@ static bool isSpecifier(Token T) {
                    tok::kw_static, tok::kw_friend, tok::kw_virtual);
 }
 
+namespace {
+
+struct ClassifiedToken {
+  Token T;
+  bool IsQualifier;
+  bool IsSpecifier;
+};
+
+} // namespace
+
 static std::optional<ClassifiedToken>
 classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   ClassifiedToken CT;

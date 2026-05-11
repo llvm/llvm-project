@@ -74,7 +74,7 @@ RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK,
   default:
     return RK;
   case Attribute::NonNull:
-    RK.WasOn = getUnderlyingObject(RK.WasOn);
+    RK.WasOn = RK.WasOn->stripInBoundsOffsets();
     return RK;
   case Attribute::Alignment: {
     Value *V = RK.WasOn->stripInBoundsOffsets([&](const Value *Strip) {
@@ -309,16 +309,6 @@ bool llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
       AC->registerAssumption(Intr);
   }
   return Changed;
-}
-
-AssumeInst *
-llvm::buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
-                               Instruction *CtxI, AssumptionCache *AC,
-                               DominatorTree *DT) {
-  AssumeBuilderState Builder(CtxI->getModule(), CtxI, AC, DT);
-  for (const RetainedKnowledge &RK : Knowledge)
-    Builder.addKnowledge(RK);
-  return Builder.build();
 }
 
 RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,

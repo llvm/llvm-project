@@ -1158,8 +1158,8 @@ class storei<SDPatternOperator operator, SDPatternOperator store = store>
 
 // Create a shift operator that optionally ignores an AND of the
 // shift count with an immediate if the bottom 6 bits are all set.
-def imm32bottom6set : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x3f) == 0x3f;
+def imm32bottom6set : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x3f) == 0x3f;
 }]>;
 class shiftop<SDPatternOperator operator>
   : PatFrags<(ops node:$val, node:$count),
@@ -1168,23 +1168,23 @@ class shiftop<SDPatternOperator operator>
 
 // Create a shift operator that optionally ignores an AND of the
 // shift count with an immediate if the bottom 7 bits are all set.
-def imm32bottom7set : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x7f) == 0x7f;
+def imm32bottom7set : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x7f) == 0x7f;
 }]>;
 class vshiftop<SDPatternOperator operator>
   : PatFrags<(ops node:$val, node:$count),
              [(operator node:$val, node:$count),
               (operator node:$val, (and node:$count, imm32bottom7set))]>;
 
-def imm32mod64  : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() % 64 == 0);
+def imm32mod64  : IntImmLeaf<i32, [{
+  return Imm.getZExtValue() % 64 == 0;
 }]>;
 
-def imm32nobits : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x07) == 0;
+def imm32nobits : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x07) == 0;
 }]>;
-def imm32nobytes : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x78) == 0;
+def imm32nobytes : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x78) == 0;
 }]>;
 
 // Load a scalar and replicate it in all elements of a vector.

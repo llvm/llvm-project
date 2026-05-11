@@ -120,6 +120,34 @@ transform::detail::mergeSymbolsInto(Operation *target,
          "requires target to implement the 'SymbolTable' trait");
 
   SymbolTable targetSymbolTable(target);
+  InlinerInterface inliner(target->getContext());
+
+  // Collect all the functions that are called in `target` that cannot be
+  // inlined into `target`.
+  SmallPtrSet<Operation *, 1> noInlineCalls;
+  target->walk([&](CallOpInterface call) {
+    Operation *callable = nullptr;
+    CallInterfaceCallable callee = call.getCallableForCallee();
+    if (auto symRef = dyn_cast<SymbolRefAttr>(callee)) {
+      // Fall back to full resolution for nested symbols, the table is
+      // one-level only.
+      if (isa<FlatSymbolRefAttr>(symRef))
+        callable = targetSymbolTable.lookup(symRef.getLeafReference());
+      else
+        callable = SymbolTable::lookupNearestSymbolFrom(call, symRef);
+    } else if (auto value = dyn_cast<Value>(callee)) {
+      callable = value.getDefiningOp();
+    }
+
+    if (!callable)
+      return;
+
+    if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
+      noInlineCalls.insert(call.getOperation());
+    }
+    return;
+  });
+
   SymbolTable otherSymbolTable(*other);
 
   // Step 1:
@@ -291,7 +319,6 @@ transform::detail::mergeSymbolsInto(Operation *target,
   if (preVerify.wasInterrupted())
     return failure();
 
-  InlinerInterface inliner(target->getContext());
   WalkResult inlineCheck = target->walk([&](CallOpInterface call) {
     Operation *callable = nullptr;
     CallInterfaceCallable callee = call.getCallableForCallee();
@@ -308,7 +335,8 @@ transform::detail::mergeSymbolsInto(Operation *target,
 
     if (!callable)
       return WalkResult::advance();
-    if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
+    if (!noInlineCalls.contains(call.getOperation()) &&
+        !inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
       InFlightDiagnostic diag =
           call->emitError()
           << "merged call is not legal to inline into its caller";
