@@ -21,6 +21,7 @@ add_clang_library(clangTidyUtils STATIC
   LexerUtils.cpp
   Matchers.cpp
   NamespaceAliaser.cpp
+  NarrowingConversions.cpp
   OptionsUtils.cpp
   RenamerClangTidyCheck.cpp
   TransformerClangTidyCheck.cpp
