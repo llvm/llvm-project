@@ -4516,3 +4516,17 @@ func.func @negative_size1_rank2(%m: memref<4x3xf32>, %i: index, %j: index, %pad:
   %v = vector.transfer_read %m[%i, %j], %pad {in_bounds = [true, true]} : memref<4x3xf32>, vector<2x4xf32>
   return %v : vector<2x4xf32>
 }
+
+// -----
+
+// Negative: scalable vector<[1]xf32> -- the runtime length is vscale, not 1,
+// so the permutation map is semantically relevant.
+
+// CHECK-LABEL: func.func @negative_size1_scalable
+//       CHECK:   vector.transfer_read
+//  CHECK-SAME:     permutation_map
+//  CHECK-SAME:     : memref<4x3xf32>, vector<[1]xf32>
+func.func @negative_size1_scalable(%m: memref<4x3xf32>, %i: index, %j: index, %pad: f32) -> vector<[1]xf32> {
+  %v = vector.transfer_read %m[%i, %j], %pad {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<4x3xf32>, vector<[1]xf32>
+  return %v : vector<[1]xf32>
+}

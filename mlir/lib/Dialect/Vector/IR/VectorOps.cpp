@@ -5641,7 +5641,8 @@ struct CanonicalizeSize1TransferPermutationMap final
   LogicalResult matchAndRewrite(TransferOp op,
                                 PatternRewriter &rewriter) const override {
     VectorType vecType = op.getVectorType();
-    if (vecType.getRank() != 1 || vecType.getShape()[0] != 1)
+    if (vecType.getRank() != 1 || vecType.getShape()[0] != 1 ||
+        vecType.isScalable())
       return failure();
 
     AffineMap map = op.getPermutationMap();
