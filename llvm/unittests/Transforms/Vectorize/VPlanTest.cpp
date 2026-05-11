@@ -1787,6 +1787,47 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
   EXPECT_TRUE(Plan.getVF().isMaterialized());
 }
 
+TEST_F(VPInstructionTest, simplifyRecipesFoldsDoubleReverse) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+
+  // Build a tiny plan: preheader -> body -> scalar.header. Body holds
+  //    %r1 = reverse %a, 
+  //    %r2 = reverse %r1, 
+  //    store %r2, %addr.
+  // The store keeps R2 live until the fold; otherwise removeDeadRecipes
+  // would unconditionally clean up the whole chain.
+  VPValue *A =
+      Plan.getOrAddLiveIn(ConstantInt::get(Int32, 7, /*IsSigned=*/false));
+  VPValue *Addr =
+      Plan.getOrAddLiveIn(ConstantPointerNull::get(PointerType::getUnqual(C)));
+
+  auto *R1 = new VPInstruction(VPInstruction::Reverse, {A});
+  auto *R2 = new VPInstruction(VPInstruction::Reverse, {R1});
+  auto *Sink = new VPInstruction(Instruction::Store, {R2, Addr});
+
+  VPBasicBlock *Body = Plan.createVPBasicBlock("body");
+  Body->appendRecipe(R1);
+  Body->appendRecipe(R2);
+  Body->appendRecipe(Sink);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+  VPBlockUtils::connectBlocks(Body, Plan.getScalarHeader());
+
+  VPlanTransforms::simplifyRecipes(Plan);
+
+  // reverse(reverse(x)) -> x: Sink now stores the live-in directly.
+  EXPECT_EQ(Sink->getOperand(0), A);
+  // The outer reverse becomes dead immediately; the inner reverse is left for
+  // the dead-recipe sweep, where its only remaining user is the dead outer.
+  EXPECT_EQ(R2->getNumUsers(), 0u);
+  EXPECT_EQ(R1->getNumUsers(), 1u);
+
+  // After removeDeadRecipes, both reverses would be gone and only the Sink would remain.
+  VPlanTransforms::removeDeadRecipes(Plan);
+  VPBasicBlock &BodyRef = *Body;
+  CHECK_ITERATOR(BodyRef, Sink);
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   VPlan &Plan = getPlan();

@@ -1470,6 +1470,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
+  // reverse(reverse(x)) -> x. The two reverses cancel out; leave the inner
+  // recipe for removeDeadRecipes to clean up if it becomes unused.
+  if (match(Def, m_Reverse(m_Reverse(m_VPValue(X)))))
+    return Def->replaceAllUsesWith(X);
+
   // select c, false, true -> not c
   VPValue *C;
   if (CanCreateNewRecipe &&
