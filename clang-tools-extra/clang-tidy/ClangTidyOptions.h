@@ -193,11 +193,12 @@ public:
 
   /// Returns an ordered vector of OptionsSources, in order of increasing
   /// priority.
-  virtual std::vector<OptionsSource> getRawOptions(StringRef FileName) = 0;
+  virtual llvm::ErrorOr<std::vector<OptionsSource>>
+  getRawOptions(StringRef FileName) = 0;
 
   /// Returns options applying to a specific translation unit with the
   /// specified \p FileName.
-  ClangTidyOptions getOptions(StringRef FileName);
+  llvm::ErrorOr<ClangTidyOptions> getOptions(StringRef FileName);
 };
 
 /// Implementation of the \c ClangTidyOptionsProvider interface, which
@@ -211,7 +212,8 @@ public:
   const ClangTidyGlobalOptions &getGlobalOptions() override {
     return GlobalOptions;
   }
-  std::vector<OptionsSource> getRawOptions(StringRef FileName) override;
+  llvm::ErrorOr<std::vector<OptionsSource>>
+  getRawOptions(StringRef FileName) override;
 
 private:
   ClangTidyGlobalOptions GlobalOptions;
@@ -255,15 +257,15 @@ protected:
                           ClangTidyOptions OverrideOptions,
                           ConfigFileHandlers ConfigHandlers);
 
-  void addRawFileOptions(StringRef AbsolutePath,
-                         std::vector<OptionsSource> &CurOptions);
+  std::error_code addRawFileOptions(StringRef AbsolutePath,
+                                    std::vector<OptionsSource> &CurOptions);
 
   llvm::ErrorOr<SmallString<128>>
   getNormalizedAbsolutePath(StringRef AbsolutePath);
 
   /// Try to read configuration files from \p Directory using registered
   /// \c ConfigHandlers.
-  std::optional<OptionsSource> tryReadConfigFile(StringRef Directory);
+  llvm::ErrorOr<OptionsSource> tryReadConfigFile(StringRef Directory);
 
   struct OptionsCache {
     llvm::StringMap<size_t> Memorized;
@@ -282,7 +284,8 @@ public:
       ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
       ClangTidyOptions ConfigOptions, ClangTidyOptions OverrideOptions,
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
-  std::vector<OptionsSource> getRawOptions(StringRef FileName) override;
+  llvm::ErrorOr<std::vector<OptionsSource>>
+  getRawOptions(StringRef FileName) override;
 
 private:
   ClangTidyOptions ConfigOptions;
@@ -335,7 +338,8 @@ public:
                       ClangTidyOptions OverrideOptions,
                       ConfigFileHandlers ConfigHandlers);
 
-  std::vector<OptionsSource> getRawOptions(StringRef FileName) override;
+  llvm::ErrorOr<std::vector<OptionsSource>>
+  getRawOptions(StringRef FileName) override;
 };
 
 /// Parses LineFilter from JSON and stores it to the \p Options.

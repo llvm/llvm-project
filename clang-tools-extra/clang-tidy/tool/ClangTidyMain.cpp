@@ -652,18 +652,37 @@ int clangTidyMain(int argc, const char **argv) {
     FileName = PathList.front();
 
   const SmallString<256> FilePath = makeAbsolute(FileName);
-  ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
+  llvm::ErrorOr<ClangTidyOptions> EffectiveOptions =
+      OptionsProvider->getOptions(FilePath);
+
+  if (!EffectiveOptions)
+    return 1;
+
+  // Validate the configuration files associated with all input files so we can
+  // return an error up front.
+  if (PathList.size() > 1) {
+    for (auto iter = PathList.begin() + 1; iter != PathList.end(); ++iter) {
+      llvm::ErrorOr<ClangTidyOptions> Options =
+          OptionsProvider->getOptions(*iter);
+      if (!Options)
+        return 1;
+    }
+  }
 
   const std::vector<std::string> EnabledChecks =
-      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
+      getCheckNames(*EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
                     ExperimentalCustomChecks);
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
-    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
-        OptionsProvider->getRawOptions(FilePath);
+    llvm::ErrorOr<std::vector<ClangTidyOptionsProvider::OptionsSource>>
+        RawOptions = OptionsProvider->getRawOptions(FilePath);
+
+    if (!RawOptions)
+      return 1;
+
     for (const std::string &Check : EnabledChecks) {
-      for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
+      for (const auto &[Opts, Source] : llvm::reverse(*RawOptions)) {
         if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
           llvm::outs() << "'" << Check << "' is enabled in the " << Source
                        << ".\n";
@@ -687,23 +706,25 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (DumpConfig) {
-    EffectiveOptions.CheckOptions =
-        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
+    EffectiveOptions->CheckOptions =
+        getCheckOptions(*EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
                         ExperimentalCustomChecks);
     ClangTidyOptions OptionsToDump =
-        ClangTidyOptions::getDefaults().merge(EffectiveOptions, 0);
+        ClangTidyOptions::getDefaults().merge(*EffectiveOptions, 0);
     filterCheckOptions(OptionsToDump, EnabledChecks);
     llvm::outs() << configurationAsText(OptionsToDump) << "\n";
     return 0;
   }
 
   if (VerifyConfig) {
-    const std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
-        OptionsProvider->getRawOptions(FileName);
+    const llvm::ErrorOr<std::vector<ClangTidyOptionsProvider::OptionsSource>>
+        RawOptions = OptionsProvider->getRawOptions(FileName);
+    if (!RawOptions)
+      return 1;
     const ChecksAndOptions Valid = getAllChecksAndOptions(
         AllowEnablingAnalyzerAlphaCheckers, ExperimentalCustomChecks);
     bool AnyInvalid = false;
-    for (const auto &[Opts, Source] : RawOptions) {
+    for (const auto &[Opts, Source] : *RawOptions) {
       if (Opts.Checks)
         AnyInvalid |= verifyChecks(Valid.Checks, *Opts.Checks, Source);
       if (Opts.HeaderFileExtensions && Opts.ImplementationFileExtensions)
