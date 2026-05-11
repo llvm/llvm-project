@@ -12,9 +12,12 @@
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <algorithm>
-#  include <dlfcn.h>
 #  include <link.h>
 #  include <unistd.h>
+
+#  if __has_include("dlfcn.h")
+#    include <dlfcn.h>
+#  endif
 
 #  include "stacktrace/images.h"
 
@@ -22,6 +25,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 namespace {
+
+#  if __has_include("dlfcn.h")
 int add_image(dl_phdr_info* info, size_t, void* images_v) {
   auto& imgs = *(_Images*)images_v;
   if (imgs.count_ == _Images::k_max_images) {
@@ -45,10 +50,14 @@ int add_image(dl_phdr_info* info, size_t, void* images_v) {
   // If we're at the limit, return nonzero to stop iterating
   return imgs.count_ == _Images::k_max_images;
 }
+#  endif
+
 } // namespace
 
 _Images::_Images() {
+#  if __has_include("dlfcn.h")
   dl_iterate_phdr(add_image, this);
+#  endif
   images_[count_++] = {0uz, 0};  // sentinel at low end
   images_[count_++] = {~0uz, 0}; // sentinel at high end
   std::sort(images_.begin(), images_.begin() + count_);
