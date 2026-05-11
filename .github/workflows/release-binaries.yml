@@ -39,9 +39,12 @@ on:
         required: true
         type: string
     secrets:
-      RELEASE_TASKS_USER_TOKEN:
-        description: "Secret used to check user permissions."
-        required: false
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Client ID for our GitHub App we use for generating access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Private key for our GitHub App we use for generating access tokens."
+        required: true
 
 
 permissions:
@@ -50,6 +53,9 @@ permissions:
 jobs:
   prepare:
     name: Prepare to build binaries
+    environment:
+      deployment: false
+      name: ${{ case( github.event_name == 'pull_request', null, 'release') }}
     runs-on: ${{ inputs.runs-on }}
     if: github.repository_owner == 'llvm'
     outputs:
@@ -65,37 +71,17 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
-    # It's good practice to use setup-python, but this is also required on macos-14
-    # due to https://github.com/actions/runner-images/issues/10385
-    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-      with:
-        python-version: '3.14'
-
-    - name: Install Windows ARM64 dependencies
-      if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      run: |
-        # Some of the python modules we install require this package to be installed on the system.
-        vcpkg install openssl:arm64-windows-static-md
-        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
-
     - name: Checkout LLVM
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
           persist-credentials: false
 
-    - name: Install Dependencies
-      shell: bash
-      run: |
-        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
-
     - name: Check Permissions
       if: github.event_name != 'pull_request'
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-        USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
-      shell: bash
-      run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
+      uses: ./.github/workflows/require-release-manager
+      with:
+        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
     # The name of the Windows binaries uses the version from source, so we need
     # to fetch it here.

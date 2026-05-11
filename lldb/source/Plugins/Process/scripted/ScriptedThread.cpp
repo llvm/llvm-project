@@ -174,8 +174,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         LLVM_PRETTY_FUNCTION,
         llvm::Twine(
             "StackFrame array size (" + llvm::Twine(arr_size) +
-            llvm::Twine(
-                ") is greater than maximum authorized for a StackFrameList."))
+            ") is greater than maximum authorized for a StackFrameList.")
             .str(),
         error, LLDBLog::Thread);
 
@@ -265,8 +264,10 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       if (!frame_from_script_obj_or_err) {
         return ScriptedInterface::ErrorWithMessage<bool>(
             LLVM_PRETTY_FUNCTION,
-            llvm::Twine("Couldn't add artificial frame (" + llvm::Twine(idx) +
-                        llvm::Twine(") to ScriptedThread StackFrameList."))
+            llvm::Twine(
+                "Couldn't add artificial frame (" + llvm::Twine(idx) +
+                llvm::Twine(") to ScriptedThread StackFrameList: ") +
+                llvm::toString(frame_from_script_obj_or_err.takeError()))
                 .str(),
             error, LLDBLog::Thread);
       } else {
@@ -313,9 +314,10 @@ bool ScriptedThread::CalculateStopInfo() {
   // if we CreateStopReasonWithBreakpointSiteID.
   if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
     addr_t pc = reg_ctx_sp->GetPC();
+    ProcessSP proc = GetProcess();
     if (BreakpointSiteSP bp_site_sp =
-            GetProcess()->GetBreakpointSiteList().FindByAddress(pc))
-      if (bp_site_sp->IsEnabled())
+            proc->GetBreakpointSiteList().FindByAddress(pc))
+      if (proc->IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
         SetThreadStoppedAtUnexecutedBP(pc);
   }
 

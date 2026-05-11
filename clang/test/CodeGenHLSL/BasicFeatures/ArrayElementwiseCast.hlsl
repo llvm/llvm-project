@@ -59,7 +59,7 @@ export void call2() {
 // CHECK-LABEL: define void {{.*}}call3
 // CHECK: [[A:%.*]] = alloca <1 x float>, align 4
 // CHECK-NEXT: [[B:%.*]] = alloca [1 x i32], align 4
-// CHECK-NEXT: store <1 x float> splat (float 0x3FF3333340000000), ptr [[A]], align 4
+// CHECK-NEXT: store <1 x float> splat (float 1.200000e+00), ptr [[A]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 4, i1 false)
 // CHECK-NEXT: [[C:%.*]] = load <1 x float>, ptr [[A]], align 4
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[B]], i32 0, i32 0

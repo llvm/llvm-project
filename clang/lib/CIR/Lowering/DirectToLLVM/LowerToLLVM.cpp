@@ -51,6 +51,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace cir;
@@ -185,6 +186,25 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
     return LLVM::WeakODR;
   };
   llvm_unreachable("Unknown CIR linkage type");
+}
+
+static mlir::LLVM::CConv convertCallingConv(cir::CallingConv callingConv) {
+  using CIR = cir::CallingConv;
+  using LLVM = mlir::LLVM::CConv;
+
+  switch (callingConv) {
+  case CIR::C:
+    return LLVM::C;
+  case CIR::SpirKernel:
+    return LLVM::SPIR_KERNEL;
+  case CIR::SpirFunction:
+    return LLVM::SPIR_FUNC;
+  case CIR::PTXKernel:
+    return LLVM::PTX_Kernel;
+  case CIR::AMDGPUKernel:
+    return LLVM::AMDGPU_KERNEL;
+  }
+  llvm_unreachable("Unknown calling convention");
 }
 
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
@@ -1683,7 +1703,6 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
 static void lowerCallAttributes(cir::CIRCallOpInterface op,
                                 SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
-    assert(!cir::MissingFeatures::opFuncCallingConv());
     if (attr.getName() == CIRDialect::getCalleeAttrName() ||
         attr.getName() == CIRDialect::getSideEffectAttrName() ||
         attr.getName() == CIRDialect::getNoThrowAttrName() ||
@@ -2174,12 +2193,11 @@ mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
 void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool filterArgAndResAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
-  assert(!cir::MissingFeatures::opFuncCallingConv());
   for (mlir::NamedAttribute attr : func->getAttrs()) {
-    assert(!cir::MissingFeatures::opFuncCallingConv());
     if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
         attr.getName() == func.getFunctionTypeAttrName() ||
         attr.getName() == getLinkageAttrNameString() ||
+        attr.getName() == func.getCallingConvAttrName() ||
         attr.getName() == func.getDsoLocalAttrName() ||
         attr.getName() == func.getInlineKindAttrName() ||
         attr.getName() == func.getSideEffectAttrName() ||
@@ -2258,8 +2276,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
          "expected single location or unknown location here");
 
   mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
-  assert(!cir::MissingFeatures::opFuncCallingConv());
-  mlir::LLVM::CConv cconv = mlir::LLVM::CConv::C;
+  mlir::LLVM::CConv cconv = convertCallingConv(op.getCallingConv());
   SmallVector<mlir::NamedAttribute, 4> attributes;
   lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
 
@@ -2456,6 +2473,23 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes =
       lowerGlobalAttributes(op, rewriter);
+
+  // If this is a variable alias, lower it to llvm.mlir.alias.
+  if (std::optional<llvm::StringRef> aliasee = op.getAliasee()) {
+    mlir::Location loc = op.getLoc();
+    auto aliasOp = rewriter.replaceOpWithNewOp<mlir::LLVM::AliasOp>(
+        op, llvmType, linkage, symbol, isDsoLocal, isThreadLocal, attributes);
+
+    mlir::OpBuilder builder(op.getContext());
+    mlir::Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
+    builder.setInsertionPointToStart(block);
+    mlir::Type ptrTy =
+        mlir::LLVM::LLVMPointerType::get(getContext(), addrSpace);
+    auto addrOp =
+        mlir::LLVM::AddressOfOp::create(builder, loc, ptrTy, *aliasee);
+    mlir::LLVM::ReturnOp::create(builder, loc, addrOp);
+    return mlir::success();
+  }
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
@@ -2830,6 +2864,9 @@ convertCmpKindToICmpPredicate(cir::CmpOpKind kind, bool isSigned) {
     return (isSigned ? LLVMICmp::sgt : LLVMICmp::ugt);
   case CIR::ge:
     return (isSigned ? LLVMICmp::sge : LLVMICmp::uge);
+  case CIR::one:
+  case CIR::uno:
+    llvm_unreachable("FP-only comparison used with integer type");
   }
   llvm_unreachable("Unknown CmpOpKind");
 }
@@ -2853,6 +2890,10 @@ convertCmpKindToFCmpPredicate(cir::CmpOpKind kind) {
     return LLVMFCmp::ogt;
   case CIR::ge:
     return LLVMFCmp::oge;
+  case CIR::one:
+    return LLVMFCmp::one;
+  case CIR::uno:
+    return LLVMFCmp::uno;
   }
   llvm_unreachable("Unknown CmpOpKind");
 }
@@ -3057,6 +3098,51 @@ mlir::LogicalResult CIRToLLVMMulOverflowOpLowering::matchAndRewrite(
     cir::MulOverflowOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return lowerBinOpOverflow(op, adaptor, rewriter, getTypeConverter(), "mul");
+}
+
+mlir::LogicalResult CIRToLLVMFrexpOpLowering::matchAndRewrite(
+    cir::FrexpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Location loc = op.getLoc();
+  mlir::Type fpLLVMTy =
+      getTypeConverter()->convertType(op.getResult().getType());
+  mlir::Type intLLVMTy = getTypeConverter()->convertType(op.getExp().getType());
+
+  auto structTy = mlir::LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                         {fpLLVMTy, intLLVMTy});
+
+  auto callOp = createCallLLVMIntrinsicOp(rewriter, loc, "llvm.frexp", structTy,
+                                          adaptor.getSrc());
+  mlir::Value result = callOp.getResult(0);
+
+  mlir::Value mantissa =
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, result, 0);
+  mlir::Value exponent =
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, result, 1);
+  rewriter.replaceOp(op, mlir::ValueRange{mantissa, exponent});
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMModfOpLowering::matchAndRewrite(
+    cir::ModfOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Location loc = op.getLoc();
+  mlir::Type fpLLVMTy =
+      getTypeConverter()->convertType(op.getFractional().getType());
+
+  auto structTy = mlir::LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                         {fpLLVMTy, fpLLVMTy});
+
+  auto callOp = createCallLLVMIntrinsicOp(rewriter, loc, "llvm.modf", structTy,
+                                          adaptor.getSrc());
+  mlir::Value result = callOp.getResult(0);
+
+  mlir::Value fractional =
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, result, 0);
+  mlir::Value integral =
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, result, 1);
+  rewriter.replaceOp(op, mlir::ValueRange{fractional, integral});
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
@@ -5002,7 +5088,8 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
 
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
-                             StringRef mlirSaveTempsOutFile) {
+                             StringRef mlirSaveTempsOutFile,
+                             llvm::vfs::FileSystem *fs) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
   mlir::MLIRContext *mlirCtx = mlirModule.getContext();
@@ -5033,8 +5120,8 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
   llvm::TimeTraceScope translateScope("translateModuleToLLVMIR");
 
   StringRef moduleName = mlirModule.getName().value_or("CIRToLLVMModule");
-  std::unique_ptr<llvm::Module> llvmModule =
-      mlir::translateModuleToLLVMIR(mlirModule, llvmCtx, moduleName);
+  std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(
+      mlirModule, llvmCtx, moduleName, /*disableVerification=*/false, fs);
 
   if (!llvmModule) {
     // FIXME: Handle any errors where they occurs and return a nullptr here.

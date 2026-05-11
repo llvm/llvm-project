@@ -9,14 +9,11 @@
 // Registry for SerializationFormats, and some helper functions.
 //
 // To register some custom serialization format, you will need to add some
-// declarations and defintions.
+// declarations and definitions.
 //
 // Insert this code to the header file:
 //
-//   namespace llvm {
-//   extern template class CLANG_TEMPLATE_ABI
-//     Registry<clang::ssaf::MyFormat::FormatInfo>;
-//   } // namespace llvm
+//   LLVM_DECLARE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 //
 // Insert this declaration to the MyFormat class:
 //
@@ -28,7 +25,7 @@
 //   volatile int SSAFMyFormatAnchorSource = 0;
 //   static SerializationFormatRegistry::Add<MyFormat>
 //     RegisterFormat("MyFormat", "My awesome serialization format");
-//   LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+//   LLVM_DEFINE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 //
 // Then implement the formatter for the specific analysis and register the
 // format info for it:
@@ -89,9 +86,6 @@ using SerializationFormatRegistry = llvm::Registry<SerializationFormat>;
 
 } // namespace clang::ssaf
 
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::SerializationFormat>;
-} // namespace llvm
+LLVM_DECLARE_REGISTRY(clang::ssaf::SerializationFormatRegistry)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_SERIALIZATIONFORMATREGISTRY_H

@@ -1685,13 +1685,13 @@ private:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_template_param:
     case DeclSpecContext::DSC_new:
+    case DeclSpecContext::DSC_conv_operator:
       return ImplicitTypenameContext::Yes;
 
     case DeclSpecContext::DSC_normal:
     case DeclSpecContext::DSC_objc_method_result:
     case DeclSpecContext::DSC_condition:
     case DeclSpecContext::DSC_template_arg:
-    case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_association:
       return ImplicitTypenameContext::No;
     }
@@ -2943,6 +2943,7 @@ private:
                                      bool MayBeFollowedByDirectInit);
 
   /// Parse a requires-clause as part of a function declaration.
+  void ParseTrailingRequiresClauseWithScope(Declarator &D);
   void ParseTrailingRequiresClause(Declarator &D);
 
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,
