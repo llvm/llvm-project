@@ -67,8 +67,13 @@ static void InitializeWaitForDebugEvent() {
     return;
 
   g_wait_for_debug_event = GetWaitForDebugEventEx();
-  if (!g_wait_for_debug_event)
+  if (!g_wait_for_debug_event) {
+    LLDB_LOG(
+        GetLog(LLDBLog::Host),
+        "WaitForDebugEventEx unavailable, using WaitForDebugEvent instead. "
+        "Unicode strings from OutputDebugStringW might show incorrectly.");
     g_wait_for_debug_event = &WaitForDebugEvent;
+  }
 }
 
 DebuggerThread::DebuggerThread(DebugDelegateSP debug_delegate)
