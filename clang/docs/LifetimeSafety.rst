@@ -272,8 +272,7 @@ Use after free
 --------------
 
 This check warns when a pointer or reference is used after the object it refers
-to has been freed with ``delete`` or ``delete[]``. Heap allocations created with
-``new`` are checked.
+to has been freed with.
 
 .. list-table::
    :widths: 50 50
@@ -429,9 +428,7 @@ iterators, pointers and references to its elements.
 
 The analysis also treats explicit destruction as invalidation. Explicit
 destructor calls and ``std::destroy_at`` invalidate pointers, references and
-views into the destroyed object. Placement ``new`` is checked against the
-lifetime of the storage passed to it, so the returned pointer must not outlive
-that storage.
+views into the destroyed object.
 
 .. code-block:: c++
 
@@ -451,20 +448,6 @@ that storage.
     u.reset();        // note: invalidated here
     (void)*p;         // note: later used here
   }
-
-.. code-block:: c++
-
-  #include <new>
-
-  void placement_new() {
-    int *p;
-    {
-      int storage;
-      p = new (&storage) int(0); // warning: object whose reference is captured does not live long enough
-    }                            // note: destroyed here
-    (void)*p;                    // note: later used here
-  }
-
 
 Annotation Inference and Suggestions
 ====================================
@@ -519,7 +502,7 @@ enables only the high-confidence subset of these checks.
   * ``-Wlifetime-safety-permissive``: Enables high-confidence checks for dangling pointers. **Recommended for initial adoption.**
 
     * ``-Wlifetime-safety-use-after-scope``: Warns when a pointer to a stack variable is used after the variable's lifetime has ended.
-    * ``-Wlifetime-safety-use-after-free``: Warns when a pointer to a heap allocation or freed parameter is used after ``delete`` or ``delete[]``.
+    * ``-Wlifetime-safety-use-after-free``: Warns when a pointer to an object is used after it's been freed.
     * ``-Wlifetime-safety-return-stack-addr``: Warns when a function returns a pointer or reference to one of its local stack variables.
     * ``-Wlifetime-safety-dangling-field``: Warns when a class field is assigned a pointer to a temporary or stack variable whose lifetime is shorter than the class instance.
   
@@ -528,7 +511,7 @@ enables only the high-confidence subset of these checks.
     *   ``-Wlifetime-safety-use-after-scope-moved``: Same as ``-Wlifetime-safety-use-after-scope`` but for cases where the variable may have been moved from before its destruction.
     *   ``-Wlifetime-safety-return-stack-addr-moved``: Same as ``-Wlifetime-safety-return-stack-addr`` but for cases where the variable may have been moved from.
     *   ``-Wlifetime-safety-dangling-field-moved``: Same as ``-Wlifetime-safety-dangling-field`` but for cases where the variable may have been moved from.
-    *   ``-Wlifetime-safety-invalidation``: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation, ``std::unique_ptr::reset``, explicit destruction or ``std::destroy_at`` (Experimental).
+    *   ``-Wlifetime-safety-invalidation``: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation or explicit destruction (e.g., ``std::unique_ptr::reset``, ``std::destroy_at``) (Experimental).
 
 *   ``-Wlifetime-safety-suggestions``: Enables suggestions to add ``[[clang::lifetimebound]]`` to function parameters and ``this`` parameters.
 
