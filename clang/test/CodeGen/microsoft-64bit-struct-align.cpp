@@ -3,7 +3,7 @@
 
 struct size1 { char str[1]; };
 struct size2 { char str[2]; };
-struct size7 { char str[4]; };
+struct size7 { char str[7]; };
 struct size8 { char str[8]; };
 struct size63 { char str[63]; };
 struct size64 { char str[64]; };
