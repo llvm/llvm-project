@@ -7287,6 +7287,17 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
       APInt BitWidth = APInt(ShAmtC->getBitWidth(), ShAmtC->getBitWidth());
       if (ShAmtC->urem(BitWidth).isZero())
         return Args[IID == Intrinsic::fshl ? 0 : 1];
+
+      // fshl (lshr X, C1), (shl X, C2), C1 -> X when C1 + C2 == BW
+      // fshr (lshr X, C1), (shl X, C2), C2 -> X when C1 + C2 == BW
+      const APInt *C1, *C2;
+      Value *X;
+      unsigned ShAmt = ShAmtC->urem(BitWidth).getZExtValue();
+      if (match(Op0, m_LShr(m_Value(X), m_APInt(C1))) &&
+          match(Op1, m_Shl(m_Specific(X), m_APInt(C2))) &&
+          *C1 + *C2 == BitWidth &&
+          ShAmt == (IID == Intrinsic::fshl ? C1 : C2)->getZExtValue())
+        return X;
     }
 
     // Rotating zero by anything is zero.
