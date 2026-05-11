@@ -3346,14 +3346,13 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
 
-  ExplodedNodeSet EvalSet;
-  EvalSet.insert(CheckerPreStmt);
-
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
+  ExplodedNodeSet EvalSet;
   if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
-    // The constructor visitior has already taken care of everything, let's
-    // skip the 'for' loop:
+    // The constructor visitior has already taken care of everything, so let's
+    // jump to the PostStmt step by skipping the 'for' loop:
+    EvalSet.insert(CheckerPreStmt);
     CheckerPreStmt.clear();
   }
 
@@ -3432,7 +3431,6 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
     else
       Base = UnknownVal();
 
-    EvalSet.erase(Node);
     EvalSet.insert(Engine.makeNodeWithBinding(Node, Ex, Base));
   }
 
