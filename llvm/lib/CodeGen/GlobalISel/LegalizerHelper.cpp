@@ -10662,12 +10662,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
   auto [Dst, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
-  if (Ty != MRI.getType(LHS) || Ty != MRI.getType(RHS))
-    return UnableToLegalize;
-
   unsigned Scale = MI.getOperand(3).getImm();
-  if (Scale >= Ty.getSizeInBits())
-    return UnableToLegalize;
 
   if (Scale == 0) {
     MIRBuilder.buildMul(Dst, LHS, RHS);
