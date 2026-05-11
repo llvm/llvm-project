@@ -28,7 +28,7 @@ jobs:
         run: |
           pkg update
           pkg upgrade -y
-          pkg install -y mpfr gmp mpc ninja cmake llvm22
+          pkg install -y mpfr gmp mpc ninja cmake llvm22 python3
 
     # Use MinSizeRel to reduce the size of the build.
     # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
@@ -41,6 +41,8 @@ jobs:
         -DCMAKE_C_COMPILER=clang22
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DLLVM_ENABLE_RUNTIMES=libc
+        -DLLVM_LIBC_MPFR_INSTALL_PATH=/usr/local
+        -DLIBC_MPC_INSTALL_PATH=/usr/local
         -G Ninja
         -S runtimes
 
