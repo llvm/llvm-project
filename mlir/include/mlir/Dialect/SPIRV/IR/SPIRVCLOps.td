@@ -386,6 +386,48 @@ def SPIRV_CLExpOp : SPIRV_CLUnaryArithmeticOp<"exp", 19, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLExp2Op : SPIRV_CLUnaryArithmeticOp<"exp2", 20, SPIRV_Float> {
+  let summary = "Compute the base-2 exponential of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand,
+    must be of the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.exp2 %0 : f32
+    %3 = spirv.CL.exp2 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLExp10Op : SPIRV_CLUnaryArithmeticOp<"exp10", 21, SPIRV_Float> {
+  let summary = "Compute the base-10 exponential of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand,
+    must be of the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.exp10 %0 : f32
+    %3 = spirv.CL.exp10 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLFAbsOp : SPIRV_CLUnaryArithmeticOp<"fabs", 23, SPIRV_Float> {
   let summary = "Absolute value of operand";
 
@@ -562,6 +604,48 @@ def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.log %0 : f32
     %3 = spirv.CL.log %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLLog2Op : SPIRV_CLUnaryArithmeticOp<"log2", 38, SPIRV_Float> {
+  let summary = "Compute the base-2 logarithm of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.log2 %0 : f32
+    %3 = spirv.CL.log2 %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLLog10Op : SPIRV_CLUnaryArithmeticOp<"log10", 39, SPIRV_Float> {
+  let summary = "Compute the base-10 logarithm of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.log10 %0 : f32
+    %3 = spirv.CL.log10 %1 : vector<3xf16>
     ```
   }];
 }

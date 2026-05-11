@@ -517,7 +517,12 @@ def CUFDeviceGlobal :
   let options = [
     Option<"skipDeadDeclares", "skip-dead-declares", "bool",
            /*default=*/"true",
-           "Skip globals whose only use is a dead fir.declare">
+           "Skip globals whose only use is a dead fir.declare">,
+    Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
+           "Treat host module globals as unified memory (-gpu=mem:unified): "
+           "clone them into the GPU module as external declarations so PTX "
+           "emits `.extern .global ...`. The CUDA runtime maps the device "
+           "extern to the host pointer via __cudaRegisterHostVar.">
   ];
 }
 
@@ -525,6 +530,14 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
+  ];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
+           "Treat host module globals as unified memory (-gpu=mem:unified): "
+           "register every plain host module global that is mirrored in the "
+           "GPU module via CUFRegisterExternalVariable, so the CUDA driver "
+           "maps the device-side symbol to the host pointer at module-load "
+           "time and HMM/ATS handles migration.">
   ];
 }
 

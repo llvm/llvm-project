@@ -76,7 +76,11 @@ function(add_lldb_library name)
   elseif (PARAM_SHARED)
     set(libkind SHARED)
   elseif (PARAM_OBJECT)
-    set(libkind OBJECT)
+    # Pass STATIC alongside OBJECT so that under BUILD_SHARED_LIBS=ON the
+    # secondary library variant llvm_add_library produces is a STATIC archive
+    # rather than a SHARED library. OBJECT consumers in LLDB carry no LINK_LIBS
+    # of their own (consumers add them), so a SHARED variant would fail to link.
+    set(libkind "OBJECT;STATIC")
   else ()
     # PARAM_STATIC or library type unspecified. BUILD_SHARED_LIBS
     # does not control the kind of libraries created for LLDB,

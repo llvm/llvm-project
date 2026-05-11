@@ -207,6 +207,26 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Requires<[IsPPC64]>;
 }
 
+let Predicates = [IsAIX] in {
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR8, X2], Uses = [RM, X1], RST = 2, RA = 1, D = 40 in {
+    def BL8_LDinto_toc : IForm_and_DForm_1<18, 0, 1, 58,
+                        (outs), (ins calltarget:$LI),
+                        "bl $LI\n\tld 2, 40(1)", IIC_BrB,
+                        []>,
+                         Requires<[IsPPC64]>;
+  }
+
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR8, X2, RM], Uses = [RM, X1], RST = 2, RA = 1, D = 40 in {
+    def BL8_LDinto_toc_RM : IForm_and_DForm_1<18, 0, 1, 58,
+                          (outs), (ins calltarget:$LI),
+                          "bl $LI\n\tld 2, 40(1)", IIC_BrB,
+                          []>,
+                           Requires<[IsPPC64]>;
+  }
+}
+
 } // Interpretation64Bit
 
 // FIXME: Duplicating this for the asm parser should be unnecessary, but the
@@ -258,6 +278,14 @@ def : Pat<(PPCcall_rm (i64 mcsym:$dst)),
           (BL8_RM mcsym:$dst)>;
 def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
           (BL8_NOP_RM mcsym:$dst)>;
+
+let Predicates = [IsAIX] in {
+  def : Pat<(PPCbl_load_toc (i64 texternalsym:$dst)),
+            (BL8_LDinto_toc texternalsym:$dst)>;
+
+  def : Pat<(PPCbl_load_toc_rm (i64 texternalsym:$dst)),
+            (BL8_LDinto_toc_RM texternalsym:$dst)>;
+}
 
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
@@ -314,9 +342,9 @@ def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            RegConstraint<"$RSTi = $RST">;
 
 let hasExtraSrcRegAllocReq = 1, mayStore = 1,
-      isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
-def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
-                         "ldat $RST, $RA, $RB", IIC_LdStLoad>,
+      isCodeGenOnly = 1, hasNoSchedulingInfo = 1, RB = 16 in
+def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
+                         "ldat $RST, $RA, 16", IIC_LdStLoad>,
            Requires<[IsISA3_0]>;
 }
 
