@@ -927,7 +927,9 @@ protected:
                   error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
+      return;
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;
@@ -951,6 +953,10 @@ public:
     if (process)
       return process->GetPluginCommandObject();
     return nullptr;
+  }
+
+  llvm::StringRef GetUnsupportedError() override {
+    return "no process plugin commands are currently registered";
   }
 };
 
