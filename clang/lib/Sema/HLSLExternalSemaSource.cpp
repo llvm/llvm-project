@@ -666,11 +666,11 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
   auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
 
   IdentifierInfo &FuncII = AST.Idents.get(FuncName, tok::TokenKind::identifier);
-  DeclarationNameInfo NameInfo(DeclarationName(&FuncII), SourceLocation());
+  DeclarationName FuncDeclName(&FuncII);
 
   FunctionDecl *FD = FunctionDecl::Create(
-      AST, NS, SourceLocation(), NameInfo, FuncTy, TSInfo, SC_Extern,
-      /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
+      AST, NS, SourceLocation(), SourceLocation(), FuncDeclName, FuncTy, TSInfo,
+      SC_Extern, /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
       /*hasWrittenPrototype=*/true);
 
   static const char *const ParamNames[] = {"dest", "value", "original_value"};
@@ -698,8 +698,9 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
 // x {groupshared, device} x {2-arg, 3-arg}.
 static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
   ASTContext &AST = S.getASTContext();
-  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongLongTy,
-                      AST.UnsignedLongLongTy};
+  // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
+  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                      AST.UnsignedLongTy};
   LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
 
   for (QualType ElemTy : Elems)
