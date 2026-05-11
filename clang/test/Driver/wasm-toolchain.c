@@ -303,4 +303,3 @@
 // RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
-
