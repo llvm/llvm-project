@@ -576,10 +576,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     return this->emitCast(*FromT, classifyPrim(E), E);
   }
 
-  case CK_BooleanToSignedIntegral:
-  case CK_IntegralCast: {
-    if (E->getCastKind() == CK_IntegralCast && E->getType()->isVectorType())
+  case CK_IntegralCast:
+    if (E->getType()->isVectorType())
       return this->emitVectorElementwiseCast(E);
+    [[fallthrough]];
+  case CK_BooleanToSignedIntegral: {
     OptPrimType FromT = classify(SubExpr->getType());
     OptPrimType ToT = classify(E->getType());
     if (!FromT || !ToT)
@@ -4358,12 +4359,10 @@ bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
-  assert(Initializing);
+bool Compiler<Emitter>::emitVectorConversion(const Expr *Src, const Expr *E) {
   const auto *VT = E->getType()->castAs<VectorType>();
   QualType ElemType = VT->getElementType();
   PrimType ElemT = classifyPrim(ElemType);
-  const Expr *Src = E->getSrcExpr();
   QualType SrcType = Src->getType();
   PrimType SrcElemT = classifyVectorElementType(SrcType);
 
@@ -4392,8 +4391,13 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
     if (!this->emitInitElem(ElemT, I, E))
       return false;
   }
-
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
+  assert(Initializing);
+  return emitVectorConversion(E->getSrcExpr(), E);
 }
 
 template <class Emitter>
@@ -8133,12 +8137,6 @@ bool Compiler<Emitter>::emitVectorElementwiseCast(const CastExpr *E) {
   assert(SubExpr->getType()->isVectorType() && "expected vector source type");
   assert(E->getType()->isVectorType() && "expected vector destination type");
 
-  const auto *DstVTy = E->getType()->getAs<VectorType>();
-  unsigned NumElts = DstVTy->getNumElements();
-  PrimType SrcElemT = classifyVectorElementType(SubExpr->getType());
-  PrimType DstElemT = classifyVectorElementType(E->getType());
-  QualType DstElemType = DstVTy->getElementType();
-
   if (!Initializing) {
     UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
@@ -8147,24 +8145,7 @@ bool Compiler<Emitter>::emitVectorElementwiseCast(const CastExpr *E) {
       return false;
   }
 
-  unsigned SrcOffset =
-      allocateLocalPrimitive(SubExpr, PT_Ptr, /*IsConst=*/true);
-  if (!this->visit(SubExpr))
-    return false;
-  if (!this->emitSetLocal(PT_Ptr, SrcOffset, E))
-    return false;
-
-  for (unsigned I = 0; I < NumElts; ++I) {
-    if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
-      return false;
-    if (!this->emitArrayElemPop(SrcElemT, I, E))
-      return false;
-    if (!this->emitPrimCast(SrcElemT, DstElemT, DstElemType, E))
-      return false;
-    if (!this->emitInitElem(DstElemT, I, E))
-      return false;
-  }
-  return true;
+  return emitVectorConversion(SubExpr, E);
 }
 
 /// Replicate a scalar value into every scalar element of an aggregate.
