@@ -13032,10 +13032,7 @@ static SDValue PerformUMLALCombine(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue PerformAddcSubcCombine(SDNode *N,
-                                      TargetLowering::DAGCombinerInfo &DCI,
-                                      const ARMSubtarget *Subtarget) {
-  SelectionDAG &DAG(DCI.DAG);
-
+                                      TargetLowering::DAGCombinerInfo &DCI) {
   if (N->getOpcode() == ARMISD::SUBC && N->hasAnyUseOfValue(1)) {
     // (SUBC (ADDE 0, 0, C), 1) -> C
     SDValue LHS = N->getOperand(0);
@@ -13044,20 +13041,6 @@ static SDValue PerformAddcSubcCombine(SDNode *N,
         isNullConstant(LHS->getOperand(0)) &&
         isNullConstant(LHS->getOperand(1)) && isOneConstant(RHS)) {
       return DCI.CombineTo(N, SDValue(N, 0), LHS->getOperand(2));
-    }
-  }
-
-  if (Subtarget->isThumb1Only()) {
-    SDValue RHS = N->getOperand(1);
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      int32_t imm = C->getSExtValue();
-      if (imm < 0 && imm > std::numeric_limits<int>::min()) {
-        SDLoc DL(N);
-        RHS = DAG.getConstant(-imm, DL, MVT::i32);
-        unsigned Opcode = (N->getOpcode() == ARMISD::ADDC) ? ARMISD::SUBC
-                                                           : ARMISD::ADDC;
-        return DAG.getNode(Opcode, DL, N->getVTList(), N->getOperand(0), RHS);
-      }
     }
   }
 
@@ -18968,7 +18951,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::BRCOND:
   case ISD::BR_CC:      return PerformHWLoopCombine(N, DCI, Subtarget);
   case ARMISD::ADDC:
-  case ARMISD::SUBC:    return PerformAddcSubcCombine(N, DCI, Subtarget);
+  case ARMISD::SUBC:
+    return PerformAddcSubcCombine(N, DCI);
   case ARMISD::SUBE:    return PerformAddeSubeCombine(N, DCI, Subtarget);
   case ARMISD::BFI:     return PerformBFICombine(N, DCI.DAG);
   case ARMISD::VMOVRRD: return PerformVMOVRRDCombine(N, DCI, Subtarget);

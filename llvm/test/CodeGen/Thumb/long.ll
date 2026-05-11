@@ -188,12 +188,11 @@ entry:
         ret i64 %tmp2
 ; CHECK-LABEL: f11:
 ; CHECK: movs r1, r3
-; CHECK: movs r0, #125
-; CHECK: lsls r0, r0, #3
 ; CHECK: movs r3, #0
-; CHECK: subs r2, r2, r0
+; CHECK: ldr r0,
+; CHECK: adds r2, r2, r0
 ; CHECK: sbcs r1, r3
-; CHECK: subs r0, r2, r0
+; CHECK: adds r0, r2, r0
 ; CHECK: sbcs r1, r3
 }
 
