@@ -17,14 +17,15 @@ SELECTED=()
 DO_RUN=false
 ANALYZE_DEPS=false
 
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --run)         DO_RUN=true ;;
     --analyze-deps) ANALYZE_DEPS=true ;;
-    --arch=*)      ARCH="${arg#--arch=}" ;;
-    --arch)        shift; ARCH="$1" ;;
-    *)             SELECTED+=("$arg") ;;
+    --arch=*)      ARCH="${1#--arch=}" ;;
+    --arch)        ARCH="$2"; shift ;;
+    *)             SELECTED+=("$1") ;;
   esac
+  shift
 done
 
 # Auto-detect arch from available release build dirs
@@ -180,9 +181,14 @@ echo "Output:  ${OUTDIR}"
 echo "Tests:   ${SELECTED[*]}"
 echo ""
 
+BUILD_FAILED=0
 for t in "${SELECTED[@]}"; do
-  build_one "$t"
+  build_one "$t" || BUILD_FAILED=1
 done
+if [[ $BUILD_FAILED -ne 0 ]]; then
+  echo -e "${RED}Build failed, stopping.${NC}"
+  exit 1
+fi
 
 if ${DO_RUN}; then
   echo ""
