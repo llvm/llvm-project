@@ -2923,6 +2923,12 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   MachineBasicBlock::iterator E = MI.getParent()->end();
   MachineBasicBlock::iterator Update;
 
+  // Do not form post-inc addressing mode for volatile accesses. Instructions
+  // performing register writeback do not set a valid instruction syndrome,
+  // making it impossible to handle MMIO in protected hypervisors.
+  if (MBBI->hasOrderedMemoryRef())
+    return false;
+
   // Look forward to try to form a post-index instruction. For example,
   // ldr x0, [x20]
   // add x20, x20, #32
