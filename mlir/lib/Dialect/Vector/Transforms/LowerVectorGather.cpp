@@ -16,6 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -79,90 +80,115 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
   }
 };
 
-/// Rewrites a vector.gather of a strided MemRef (from a subview) as a gather
-/// of the original non-strided source MemRef with multi-dimensional indices.
+/// Rewrites a vector.gather of a MemRef subview as a gather of the subview's
+/// source MemRef with composed offsets and multi-dimensional indices.
 ///
-/// The original single index vector is used for the outer dimension, and a
-/// zero vector is added for the trailing dimension.
+/// Index vectors are mapped back to their corresponding source dimensions and
+/// multiplied by the subview strides. Any missing source dimensions in the
+/// indexed suffix, such as rank-reduced dimensions, get zero index vectors.
 ///
 /// ```mlir
 ///   %subview = memref.subview %M (...)
-///     : memref<100x3xf32> to memref<100xf32, strided<[3]>>
-///   %gather = vector.gather %subview[%c0][%idxs] (...)
-///     : memref<100xf32, strided<[3]>>
+///     : memref<100x3x5xf32> to memref<100xf32, strided<[15]>>
+///   %gather = vector.gather %subview[%c0] [%idxs] (...)
+///     : memref<100xf32, strided<[15]>>
 /// ```
 /// ==>
 /// ```mlir
 ///   %zeros = arith.constant dense<0> : vector<4xindex>
-///   %gather = vector.gather %M[%c0, %c0][%idxs, %zeros] (...)
-///     : memref<100x3xf32> (...)
+///   %gather = vector.gather %M[%c0, %c0, %c0] [%idxs, %zeros, %zeros] (...)
+///     : memref<100x3x5xf32> (...)
 /// ```
 ///
-/// The subview's static offset (the linearized position of the first element
-/// in the source memref) must be folded into the gather's base offsets, so a
-/// subview that selects e.g. column `j_sub` of a row-major `MxN` memref still
-/// reads from `M_base + j_sub + idx * N` instead of `M_base + idx * N`.
-///
-/// ATM this is effectively limited to reading a 1D Vector from a 2D MemRef,
-/// but should be fairly straightforward to extend beyond that.
 struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
   using Base::Base;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.getIndices().size() != 1)
-      return rewriter.notifyMatchFailure(op, "expected single index vector");
-
     auto subview = op.getBase().getDefiningOp<memref::SubViewOp>();
     if (!subview)
       return rewriter.notifyMatchFailure(op, "base is not a memref.subview");
 
-    // Restricted to a 1-D subview of a 2-D source where the trailing source
-    // dim was rank-reduced (so the subview iterates rows of the source).
-    // TODO: Generalize.
-    if (subview.getSource().getType().getRank() != 2 ||
-        subview.getResult().getType().getRank() != 1 ||
-        !subview.getDroppedDims().test(1))
-      return rewriter.notifyMatchFailure(
-          op, "expected 1-D subview rank-reducing the trailing dim of a 2-D "
-              "source");
-
     Location loc = op.getLoc();
-
-    Value outerStride = getValueOrCreateConstantIndexOp(
-        rewriter, loc, subview.getMixedStrides()[0]);
-
-    SmallVector<OpFoldResult> subviewOffsets = subview.getMixedOffsets();
-    Value subviewOuterOff =
-        getValueOrCreateConstantIndexOp(rewriter, loc, subviewOffsets[0]);
-    Value subviewInnerOff =
-        getValueOrCreateConstantIndexOp(rewriter, loc, subviewOffsets[1]);
-    Value scaledGatherOff = arith::MulIOp::create(
-        rewriter, loc, op.getOffsets().front(), outerStride);
-    Value newOuterOff =
-        arith::AddIOp::create(rewriter, loc, subviewOuterOff, scaledGatherOff);
-
-    // Scale the gather indices by the outer stride for the same reason. Cast
-    // the scalar stride to the index vector's element type before broadcasting.
     VectorType vType = op.getIndexVectorType();
-    Type eltTy = vType.getElementType();
-    Value strideForVec = outerStride;
-    if (eltTy != rewriter.getIndexType())
-      strideForVec =
-          arith::IndexCastOp::create(rewriter, loc, eltTy, outerStride);
-    Value strideVec =
-        vector::BroadcastOp::create(rewriter, loc, vType, strideForVec);
-    Value newOuterIndices = arith::MulIOp::create(rewriter, loc, strideVec,
-                                                  op.getIndices().front());
-
+    Type indexElementType = vType.getElementType();
     Value zeroVec = arith::ConstantOp::create(rewriter, loc, vType,
                                               rewriter.getZeroAttr(vType));
 
+    auto scaleIndexVec = [&](Value indexVec, OpFoldResult stride) -> Value {
+      if (isConstantIntValue(stride, 1))
+        return indexVec;
+
+      Value strideForVec =
+          getValueOrCreateConstantIndexOp(rewriter, loc, stride);
+      if (indexElementType != rewriter.getIndexType())
+        strideForVec = arith::IndexCastOp::create(
+            rewriter, loc, indexElementType, strideForVec);
+      Value strideVec =
+          vector::BroadcastOp::create(rewriter, loc, vType, strideForVec);
+      return rewriter.createOrFold<arith::MulIOp>(loc, indexVec, strideVec);
+    };
+
+    auto scaleOffset = [&](Value offset, OpFoldResult stride) -> Value {
+      if (isConstantIntValue(stride, 1))
+        return offset;
+
+      Value strideValue =
+          getValueOrCreateConstantIndexOp(rewriter, loc, stride);
+      return rewriter.createOrFold<arith::MulIOp>(loc, offset, strideValue);
+    };
+
+    MemRefType sourceType = subview.getSourceType();
+    MemRefType resultType = subview.getResult().getType();
+    unsigned sourceRank = sourceType.getRank();
+    unsigned resultRank = resultType.getRank();
+    unsigned gatherRank = op.getIndices().size();
+    unsigned firstGatherResultDim = resultRank - gatherRank;
+
+    llvm::SmallBitVector droppedDims = subview.getDroppedDims();
+    SmallVector<OpFoldResult> subviewOffsets = subview.getMixedOffsets();
+    SmallVector<OpFoldResult> subviewStrides = subview.getMixedStrides();
+    SmallVector<Value> newOffsets;
+    SmallVector<Value> newIndexVecs;
+
+    std::optional<unsigned> firstIndexedSourceDim;
+    unsigned resultDim = 0;
+    for (unsigned sourceDim = 0; sourceDim < sourceRank; ++sourceDim) {
+      Value sourceOffset = getValueOrCreateConstantIndexOp(
+          rewriter, loc, subviewOffsets[sourceDim]);
+
+      if (!droppedDims.test(sourceDim)) {
+        Value scaledOffset =
+            scaleOffset(op.getOffsets()[resultDim], subviewStrides[sourceDim]);
+        sourceOffset = rewriter.createOrFold<arith::AddIOp>(loc, sourceOffset,
+                                                            scaledOffset);
+
+        if (resultDim >= firstGatherResultDim) {
+          if (!firstIndexedSourceDim) {
+            firstIndexedSourceDim = sourceDim;
+            // Handle dropped dimensions by giving them explicit zero indices
+            // here.
+            newIndexVecs = SmallVector<Value>(sourceRank - sourceDim, zeroVec);
+          }
+          newIndexVecs[sourceDim - *firstIndexedSourceDim] =
+              scaleIndexVec(op.getIndices()[resultDim - firstGatherResultDim],
+                            subviewStrides[sourceDim]);
+        }
+
+        ++resultDim;
+      }
+
+      newOffsets.push_back(sourceOffset);
+    }
+
+    assert(resultDim == resultRank && "did not map all subview result dims");
+    assert(firstIndexedSourceDim &&
+           "expected at least one source dim for the gather indices");
+
     Value newGather = vector::GatherOp::create(
         rewriter, loc, op.getResult().getType(), subview.getSource(),
-        SmallVector<Value>{newOuterOff, subviewInnerOff},
-        SmallVector<Value>{newOuterIndices, zeroVec}, op.getMask(),
-        op.getPassThru(), op.getAlignmentAttr());
+        newOffsets, newIndexVecs, op.getMask(), op.getPassThru(),
+        op.getAlignmentAttr());
     rewriter.replaceOp(op, newGather);
 
     return success();

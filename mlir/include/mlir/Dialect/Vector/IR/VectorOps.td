@@ -2225,7 +2225,7 @@ def Vector_ScatterOp
     if (mask[0, ..., 1]) {
       base[offsets[0],
         ...,
-        offsets[k - 1] + indices[r - 1][0, 0, ... 1]] = value[9, 0, ..., 1]
+        offsets[k - 1] + indices[r - 1][0, 0, ... 1]] = value[0, 0, ..., 1]
     etc.
     ```
 
