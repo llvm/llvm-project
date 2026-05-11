@@ -3351,12 +3351,13 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
 
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
+  if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
+    // The constructor visitior has already taken care of everything, let's
+    // skip the 'for' loop:
+    CheckerPreStmt.clear();
+  }
+
   for (auto *Node : CheckerPreStmt) {
-
-    // The constructor visitior has already taken care of everything.
-    if (isa<CXXConstructExpr>(Ex->getSubExpr()))
-      break;
-
     const LocationContext *LCtx = Node->getLocationContext();
     ProgramStateRef state = Node->getState();
 
