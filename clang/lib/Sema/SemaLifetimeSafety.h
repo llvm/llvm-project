@@ -36,7 +36,7 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_dangling_global,
       diag::warn_lifetime_safety_dangling_global_moved,
       diag::warn_lifetime_safety_noescape_escapes,
-      diag::warn_lifetime_safety_param_lifetimebound_violation,
+      diag::warn_lifetime_safety_lifetimebound_violation,
   };
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
@@ -183,8 +183,21 @@ public:
     StringRef ParamName = ParmWithLifetimebound->getName();
     bool HasName = ParamName.size() > 0;
     S.Diag(ParmWithLifetimebound->getLocation(),
-           diag::warn_lifetime_safety_param_lifetimebound_violation)
+           diag::warn_lifetime_safety_lifetimebound_violation)
         << HasName << ParamName << ParmWithLifetimebound->getSourceRange();
+  }
+
+  void reportLifetimeboundViolation(
+      const CXXMethodDecl *MDWithLifetimebound) override {
+    const Stmt *Body = MDWithLifetimebound->getBody();
+    assert(Body && "Expected a body");
+    // FIXME: When #196549 lands, we can extract the attribute location and warn
+    // on it, for now warn on everything before the body.
+    S.Diag(MDWithLifetimebound->getLocation(),
+           diag::warn_lifetime_safety_lifetimebound_violation)
+        << 2 << "this"
+        << CharSourceRange::getCharRange(MDWithLifetimebound->getBeginLoc(),
+                                         Body->getBeginLoc());
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
