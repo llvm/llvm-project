@@ -9182,7 +9182,7 @@ SDValue RISCVTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
 
 SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  // Currently, only the vdota4 and vdota4u case (from zvdot4a8i) should be
+  // Currently, only the vdot4a and vdot4au case (from zvdot4a8i) should be
   // legal.
   // TODO: There are many other sub-cases we could potentially lower, are
   // any of them worthwhile?  Ex: via vredsum, vwredsum, vwwmaccu, etc..
@@ -9215,13 +9215,13 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   unsigned Opc;
   switch (Op.getOpcode()) {
   case ISD::PARTIAL_REDUCE_SMLA:
-    Opc = RISCVISD::VDOTA4_VL;
+    Opc = RISCVISD::VDOT4A_VL;
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
-    Opc = RISCVISD::VDOTA4U_VL;
+    Opc = RISCVISD::VDOT4AU_VL;
     break;
   case ISD::PARTIAL_REDUCE_SUMLA:
-    Opc = RISCVISD::VDOTA4SU_VL;
+    Opc = RISCVISD::VDOT4ASU_VL;
     break;
   default:
     llvm_unreachable("Unexpected opcode");
@@ -19984,7 +19984,7 @@ static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
   return DAG.getInsertSubvector(DL, B, Res, 0);
 }
 
-static SDValue foldReduceOperandViaVDOTA4(SDValue InVec, const SDLoc &DL,
+static SDValue foldReduceOperandViaVDOT4A(SDValue InVec, const SDLoc &DL,
                                           SelectionDAG &DAG,
                                           const RISCVSubtarget &Subtarget,
                                           const RISCVTargetLowering &TLI) {
@@ -20000,8 +20000,8 @@ static SDValue foldReduceOperandViaVDOTA4(SDValue InVec, const SDLoc &DL,
   // form).
   SDValue A, B;
   if (sd_match(InVec, m_AddLike(m_Value(A), m_Value(B)))) {
-    SDValue AOpt = foldReduceOperandViaVDOTA4(A, DL, DAG, Subtarget, TLI);
-    SDValue BOpt = foldReduceOperandViaVDOTA4(B, DL, DAG, Subtarget, TLI);
+    SDValue AOpt = foldReduceOperandViaVDOT4A(A, DL, DAG, Subtarget, TLI);
+    SDValue BOpt = foldReduceOperandViaVDOT4A(B, DL, DAG, Subtarget, TLI);
     if (AOpt || BOpt) {
       if (AOpt)
         A = AOpt;
@@ -20079,7 +20079,7 @@ static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue InVec = N->getOperand(0);
-  if (SDValue V = foldReduceOperandViaVDOTA4(InVec, DL, DAG, Subtarget, TLI))
+  if (SDValue V = foldReduceOperandViaVDOT4A(InVec, DL, DAG, Subtarget, TLI))
     return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, V);
   return SDValue();
 }
@@ -20407,7 +20407,7 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, DL, VT, Ops);
 }
 
-static SDValue combineVdota4Accum(SDNode *N, SelectionDAG &DAG,
+static SDValue combineVdot4aAccum(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
 
   assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
@@ -20424,21 +20424,21 @@ static SDValue combineVdota4Accum(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  auto IsVdota4Opc = [](unsigned Opc) {
+  auto IsVdot4aOpc = [](unsigned Opc) {
     switch (Opc) {
-    case RISCVISD::VDOTA4_VL:
-    case RISCVISD::VDOTA4U_VL:
-    case RISCVISD::VDOTA4SU_VL:
+    case RISCVISD::VDOT4A_VL:
+    case RISCVISD::VDOT4AU_VL:
+    case RISCVISD::VDOT4ASU_VL:
       return true;
     default:
       return false;
     }
   };
 
-  if (!IsVdota4Opc(DotOp.getOpcode()))
+  if (!IsVdot4aOpc(DotOp.getOpcode()))
     std::swap(Addend, DotOp);
 
-  if (!IsVdota4Opc(DotOp.getOpcode()))
+  if (!IsVdot4aOpc(DotOp.getOpcode()))
     return SDValue();
 
   auto [AddMask, AddVL] = [](SDNode *N, SelectionDAG &DAG,
@@ -21274,7 +21274,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
       return V;
-    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
+    if (SDValue V = combineVdot4aAccum(N, DAG, Subtarget))
       return V;
     return performADDCombine(N, DCI, Subtarget);
   }
@@ -21848,7 +21848,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
-    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
+    if (SDValue V = combineVdot4aAccum(N, DAG, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
   case RISCVISD::VWADDU_VL:
