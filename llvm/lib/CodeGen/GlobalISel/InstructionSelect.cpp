@@ -179,8 +179,7 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
                          *MI);
       return false;
     }
-  // FIXME: We could introduce new blocks and will need to fix the outer loop.
-  // Until then, keep track of the number of blocks to assert that we don't.
+  // NumBlocks is an invariant to ensure the number of blocks doesn't change.
   const size_t NumBlocks = MF.size();
 #endif
   // Keep track of selected blocks, so we can delete unreachable ones later.

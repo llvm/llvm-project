@@ -446,7 +446,7 @@ buildBoolRegister(MachineIRBuilder &MIRBuilder, SPIRVTypeInst ResultType,
   SPIRVTypeInst BoolType = GR->getOrCreateSPIRVBoolType(MIRBuilder, true);
 
   if (ResultType->getOpcode() == SPIRV::OpTypeVector) {
-    unsigned VectorElements = ResultType->getOperand(2).getImm();
+    unsigned VectorElements = GR->getScalarOrVectorComponentCount(ResultType);
     BoolType = GR->getOrCreateSPIRVVectorType(BoolType, VectorElements,
                                               MIRBuilder, true);
     const FixedVectorType *LLVMVectorType =
@@ -1334,7 +1334,7 @@ static bool generateRelationalInst(const SPIRV::IncomingCall *Call,
   if ((Opcode == SPIRV::OpAny || Opcode == SPIRV::OpAll) &&
       !GR->isScalarOrVectorOfType(Arguments[0], SPIRV::OpTypeBool)) {
     SPIRVTypeInst ArgType = GR->getSPIRVTypeForVReg(Arguments[0]);
-    unsigned NumElts = ArgType->getOperand(2).getImm();
+    unsigned NumElts = GR->getScalarOrVectorComponentCount(ArgType);
     SPIRVTypeInst BoolVecTy = GR->getOrCreateSPIRVVectorType(
         GR->getOrCreateSPIRVBoolType(MIRBuilder, /*EmitIR=*/true), NumElts,
         MIRBuilder, /*EmitIR=*/true);
@@ -1462,7 +1462,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     unsigned VecLen = Call->Arguments.size() - 1;
     VecReg = MRI->createGenericVirtualRegister(
         LLT::fixed_vector(VecLen, MRI->getType(ElemReg)));
-    MRI->setRegClass(VecReg, &SPIRV::vIDRegClass);
+    MRI->setRegClass(VecReg, &SPIRV::viIDRegClass);
     SPIRVTypeInst VecType =
         GR->getOrCreateSPIRVVectorType(ElemType, VecLen, MIRBuilder, true);
     GR->assignSPIRVTypeToVReg(VecType, VecReg, MIRBuilder.getMF());
@@ -1796,8 +1796,8 @@ static bool generateBuiltinVar(const SPIRV::IncomingCall *Call,
   unsigned BitWidth = GR->getScalarOrVectorBitWidth(Call->ReturnType);
   LLT LLType;
   if (Call->ReturnType->getOpcode() == SPIRV::OpTypeVector)
-    LLType =
-        LLT::fixed_vector(Call->ReturnType->getOperand(2).getImm(), BitWidth);
+    LLType = LLT::fixed_vector(
+        GR->getScalarOrVectorComponentCount(Call->ReturnType), BitWidth);
   else
     LLType = LLT::scalar(BitWidth);
 
@@ -1830,6 +1830,10 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicXor:
   case SPIRV::OpAtomicAnd:
   case SPIRV::OpAtomicExchange:
+  case SPIRV::OpAtomicSMax:
+  case SPIRV::OpAtomicSMin:
+  case SPIRV::OpAtomicUMax:
+  case SPIRV::OpAtomicUMin:
     return buildAtomicRMWInst(Call, Opcode, MIRBuilder, GR);
   case SPIRV::OpMemoryBarrier:
     return buildBarrierInst(Call, SPIRV::OpMemoryBarrier, MIRBuilder, GR);
@@ -2159,9 +2163,7 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
   // vector, expect only a single size component. Otherwise get the number of
   // expected components.
   unsigned NumExpectedRetComponents =
-      Call->ReturnType->getOpcode() == SPIRV::OpTypeVector
-          ? Call->ReturnType->getOperand(2).getImm()
-          : 1;
+      GR->getScalarOrVectorComponentCount(Call->ReturnType);
   // Get the actual number of query result/size components.
   SPIRVTypeInst ImgType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
   unsigned NumActualRetComponents = getNumSizeComponents(ImgType);
@@ -2173,7 +2175,7 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
                             : 32;
     QueryResult = MIRBuilder.getMRI()->createGenericVirtualRegister(
         LLT::fixed_vector(NumActualRetComponents, Bitwidth));
-    MIRBuilder.getMRI()->setRegClass(QueryResult, &SPIRV::vIDRegClass);
+    MIRBuilder.getMRI()->setRegClass(QueryResult, &SPIRV::viIDRegClass);
     SPIRVTypeInst IntTy = GR->getOrCreateSPIRVIntegerType(Bitwidth, MIRBuilder);
     QueryResultType = GR->getOrCreateSPIRVVectorType(
         IntTy, NumActualRetComponents, MIRBuilder, true);
@@ -2201,10 +2203,12 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
     Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
     SPIRVTypeInst NewType = nullptr;
     if (QueryResultType->getOpcode() == SPIRV::OpTypeVector) {
-      Register NewTypeReg = QueryResultType->getOperand(1).getReg();
-      if (TypeReg != NewTypeReg &&
-          (NewType = GR->getSPIRVTypeForVReg(NewTypeReg)))
+      NewType = GR->getScalarOrVectorComponentType(QueryResultType);
+      Register NewTypeReg = GR->getSPIRVTypeID(NewType);
+      if (TypeReg != NewTypeReg)
         TypeReg = NewTypeReg;
+      else
+        NewType = nullptr;
     }
     MIRBuilder.buildInstr(SPIRV::OpCompositeExtract)
         .addDef(Call->ReturnRegister)

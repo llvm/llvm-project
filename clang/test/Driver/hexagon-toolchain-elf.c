@@ -519,6 +519,17 @@
 // CHECK351-NOT:  "-pie"
 
 // -----------------------------------------------------------------------------
+// Test that -pie is not set by default
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK357 %s
+// CHECK357:      "-cc1"
+// CHECK357:      {{hexagon-link|ld}}
+// CHECK357-NOT:  "-pie"
+
+// -----------------------------------------------------------------------------
 // Test Assembler related args
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-elf -fno-integrated-as    \

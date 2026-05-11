@@ -225,6 +225,22 @@ class FoldTernaryOpPat<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
 
 def imad : FoldTernaryOpPat<mul, add>;
 
+// Match binary op with source operands that won't fold into sdwa patterns.
+class BinOp_no_sdwa<SDPatternOperator binop> : PatFrag<
+  (ops node:$lhs, node:$rhs),
+  (binop node:$lhs, node:$rhs),
+  [{
+    return !isSDWAOperand(Op.getOperand(0).getNode()) &&
+           !isSDWAOperand(Op.getOperand(1).getNode());
+  }]> {
+  let GISelPredicateCode = [{
+    return true; // TODO
+  }];
+}
+
+def AMDGPUmul_i24_no_sdwa : BinOp_no_sdwa<AMDGPUmul_i24>;
+def AMDGPUmul_u24_no_sdwa : BinOp_no_sdwa<AMDGPUmul_u24>;
+
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;
 def smin_oneuse : HasOneUseBinOp<smin>;
@@ -810,13 +826,13 @@ def cvt_flr_i32_f32 : PatFrag<
 
 let AddedComplexity = 2 in {
 class IMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
-  (add (AMDGPUmul_i24 i32:$src0, i32:$src1), i32:$src2),
+  (add (AMDGPUmul_i24_no_sdwa i32:$src0, i32:$src1), i32:$src2),
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
                 (Inst $src0, $src1, $src2))
 >;
 
 class UMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
-  (add (AMDGPUmul_u24 i32:$src0, i32:$src1), i32:$src2),
+  (add (AMDGPUmul_u24_no_sdwa i32:$src0, i32:$src1), i32:$src2),
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
                 (Inst $src0, $src1, $src2))
 >;
