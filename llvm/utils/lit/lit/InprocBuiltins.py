@@ -276,6 +276,9 @@ def executeBuiltinEcho(
     cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
 ) -> int:
     """Interpret a redirected echo or @echo command"""
+    opened_files = []
+
+    stdout = io.stdout
     if (
         kIsWindows
         and isinstance(io.stdout, InprocBuiltinIOFile)
@@ -284,9 +287,13 @@ def executeBuiltinEcho(
         # Reopen stdout with `newline=""` to avoid CRLF translation.
         # The versions of echo we are replacing on Windows all emit plain LF,
         # and the LLVM tests now depend on this.
-        io.stdout.file = os.fdopen(
-            io.stdout.file.fileno(), io.stdout.file.mode, encoding="utf-8", newline=""
+        stdout = open(
+            io.stdout.get_filename(),
+            io.stdout.file.mode,
+            encoding="utf-8",
+            newline="",
         )
+        opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
     # combination. We have to ignore unknown flags, because `echo "-D FOO"`
@@ -310,11 +317,14 @@ def executeBuiltinEcho(
 
     if args:
         for arg in args[:-1]:
-            io.stdout.write(maybeUnescape(arg))
-            io.stdout.write(" ")
-        io.stdout.write(maybeUnescape(args[-1]))
+            stdout.write(maybeUnescape(arg))
+            stdout.write(" ")
+        stdout.write(maybeUnescape(args[-1]))
     if write_newline:
-        io.stdout.write("\n")
+        stdout.write("\n")
+
+    for name, mode, f, path in opened_files:
+        f.close()
 
     return 0
 
