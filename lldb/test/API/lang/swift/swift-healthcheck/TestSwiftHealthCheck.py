@@ -20,7 +20,8 @@ class TestSwiftHealthCheck(TestBase):
             self, 'main')
         self.expect("expression 1")
         result = lldb.SBCommandReturnObject()
-        ret_val = self.dbg.GetCommandInterpreter().HandleCommand("swift-healthcheck", result)
+        ret_val = self.ci.HandleCommand("swift-healthcheck", result)
+        self.assertEqual(ret_val, lldb.eReturnStatusSuccessFinishResult)
         log = result.GetOutput()[:-1].split(" ")[-1]
         self.assertEqual(log[-4:], ".log")
         import io, re

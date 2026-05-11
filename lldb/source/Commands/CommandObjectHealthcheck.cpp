@@ -13,6 +13,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 
 #include "Plugins/Language/Swift/LogChannelSwift.h"
@@ -55,6 +56,8 @@ void CommandObjectHealthcheck::DoExecute(Args &args,
 
   result.AppendMessageWithFormat("Health check written to %s\n",
                                  temp_path.c_str());
+  result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+
 #if defined(__APPLE__)
   // When in an interactive graphical session and not, for example,
   // running LLDB running over ssh, open the log file straight away in
