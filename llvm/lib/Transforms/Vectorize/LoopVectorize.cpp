@@ -2372,7 +2372,9 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     return getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize;
   case Instruction::Load:
   case Instruction::Store: {
-    return !Config.isLegalMaskedLoadOrStore(I, VF) &&
+    bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
+                                                 getLoadStorePointerOperand(I));
+    return !(IsConsecutive && Config.isLegalMaskedLoadOrStore(I, VF)) &&
            !Config.isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
@@ -2593,11 +2595,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (VF.isScalable() && NeedsMaskForGaps)
     return false;
 
-  auto *Ty = getLoadStoreType(I);
-  const Align Alignment = getLoadStoreAlignment(I);
-  unsigned AS = getLoadStoreAddressSpace(I);
-  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
-                          : TTI.isLegalMaskedStore(Ty, Alignment, AS);
+  return Config.isLegalMaskedLoadOrStore(I, VF);
 }
 
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
@@ -7767,28 +7765,16 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           // reduction start value in a final subtraction. Update it to use the
           // resume value from the main vector loop.
           if (PhiR->getVFScaleFactor() > 1 &&
-              RecurrenceDescriptor::isSubRecurrenceKind(
-                  PhiR->getRecurrenceKind())) {
+              PhiR->getRecurrenceKind() == RecurKind::Sub) {
             auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
-            assert((Sub->getOpcode() == Instruction::Sub ||
-                    Sub->getOpcode() == Instruction::FSub) &&
-                   "Unexpected opcode");
+            assert(Sub->getOpcode() == Instruction::Sub && "Unexpected opcode");
             assert(isa<VPIRValue>(Sub->getOperand(0)) &&
                    "Expected operand to match the original start value of the "
                    "reduction");
-            // For integer sub-reductions, verify start value is zero.
-            // For FP sub-reductions, verify start value is negative zero.
-            [[maybe_unused]] auto StartValueIsIdentity = [&] {
-              Value *IdentityValue = getRecurrenceIdentity(
-                  PhiR->getRecurrenceKind(), ResumeV->getType(),
-                  PhiR->getFastMathFlags());
-              auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
-              return StartValue && StartValue->getValue() == IdentityValue;
-            };
-            assert(StartValueIsIdentity() &&
-                   "Expected start value for partial sub-reduction to be zero "
-                   "(or negative zero)");
-
+            assert(VPlanPatternMatch::match(VPI->getOperand(0),
+                                            VPlanPatternMatch::m_ZeroInt()) &&
+                   "Expected start value for partial sub-reduction to start at "
+                   "zero");
             Sub->setOperand(0, StartVal);
           } else
             VPI->setOperand(0, StartVal);
