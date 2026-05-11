@@ -93,3 +93,71 @@ define <4 x ptr> @xor_decompose_gep_vector(<4 x ptr> %p, i32 %x) {
   %gep = getelementptr i32, <4 x ptr> %p, i32 %xor
   ret <4 x ptr> %gep
 }
+
+define ptr @xor_decompose_overwrite_nondisjoint(ptr %p, i1 %c, i64 %x) {
+; CHECK-LABEL: define ptr @xor_decompose_overwrite_nondisjoint(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[Y:%.*]] = and i64 [[X]], 8589934592
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[Y]], 12884901888
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[XOR1]] to i32
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TRUNC]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[SEL]] to i64
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[ADD2]]
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 1024
+; CHECK-NEXT:    ret ptr [[UGLYGEP3]]
+;
+  %y = and i64 %x, 8589934592
+  %xor1 = xor i64 %y, 12884901888
+  %trunc = trunc i64 %xor1 to i32
+  %sel = select i1 %c, i32 0, i32 1
+  %xor2 = xor i32 %sel, 1024
+  %add = add i32 %trunc, %xor2
+  %gep = getelementptr i8, ptr %p, i32 %add
+  ret ptr %gep
+}
+
+define ptr @xor_decompose_both_ops_xor(ptr %p, i1 %c) {
+; CHECK-LABEL: define ptr @xor_decompose_both_ops_xor(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 0, i32 288
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[SEL]], 8224
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[XOR2]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[SEL]] to i64
+; CHECK-NEXT:    [[XOR11:%.*]] = xor i64 [[TMP1]], 32
+; CHECK-NEXT:    [[EXPR2:%.*]] = add i64 [[XOR11]], [[TMP0]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[EXPR2]]
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 4096
+; CHECK-NEXT:    ret ptr [[UGLYGEP3]]
+;
+entry:
+  %sel = select i1 %c, i32 0, i32 288
+  %xor1 = xor i32 %sel, 4128
+  %xor2 = xor i32 %sel, 8224
+  %expr = add i32 %xor1, %xor2
+  %gep = getelementptr i8, ptr %p, i32 %expr
+  ret ptr %gep
+}
+
+define void @xor_decompose_base_zext(ptr %p, i16 %x) {
+; CHECK-LABEL: define void @xor_decompose_base_zext(
+; CHECK-SAME: ptr [[P:%.*]], i16 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], -16
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i16 [[AND]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ZEXT]] to i64
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 65541
+; CHECK-NEXT:    store i32 0, ptr [[UGLYGEP2]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %and = and i16 %x, -16
+  %zext = zext i16 %and to i32
+  %xor = xor i32 %zext, 65541
+  %gep = getelementptr i8, ptr %p, i32 %xor
+  store i32 0, ptr %gep
+  ret void
+}
