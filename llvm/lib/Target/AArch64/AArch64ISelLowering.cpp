@@ -4299,7 +4299,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // >
     // ldrsh w0, [x0, #0]
     // cmn w0, #1
-    // Fundamental, we're relying on the property that (zext LHS) == (zext RHS)
+    // Fundamentally, we're relying on the property that (zext LHS) == (zext RHS)
     // if and only if (sext LHS) == (sext RHS). The checks are in place to
     // ensure both the LHS and RHS are truly zero extended and to make sure the
     // transformation is profitable.

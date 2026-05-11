@@ -6,18 +6,16 @@
 define i16 @test_1cmp_signed_1(ptr %ptr1) {
 ; ARM-LABEL: test_1cmp_signed_1:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    ldrh r0, [r0]
-; ARM-NEXT:    movw r1, #65535
-; ARM-NEXT:    sub r0, r0, r1
+; ARM-NEXT:    ldrsh r0, [r0]
+; ARM-NEXT:    add r0, r0, #1
 ; ARM-NEXT:    clz r0, r0
 ; ARM-NEXT:    lsr r0, r0, #5
 ; ARM-NEXT:    bx lr
 ;
 ; THUMBV7-LABEL: test_1cmp_signed_1:
 ; THUMBV7:       @ %bb.0: @ %entry
-; THUMBV7-NEXT:    ldrh r0, [r0]
-; THUMBV7-NEXT:    movw r1, #65535
-; THUMBV7-NEXT:    subs r0, r0, r1
+; THUMBV7-NEXT:    ldrsh.w r0, [r0]
+; THUMBV7-NEXT:    adds r0, #1
 ; THUMBV7-NEXT:    clz r0, r0
 ; THUMBV7-NEXT:    lsrs r0, r0, #5
 ; THUMBV7-NEXT:    bx lr
@@ -25,8 +23,9 @@ define i16 @test_1cmp_signed_1(ptr %ptr1) {
 ; THUMBV5-LABEL: test_1cmp_signed_1:
 ; THUMBV5:       @ %bb.0: @ %entry
 ; THUMBV5-NEXT:    ldrh r0, [r0]
-; THUMBV5-NEXT:    ldr r1, .LCPI0_0
-; THUMBV5-NEXT:    cmp r0, r1
+; THUMBV5-NEXT:    lsls r0, r0, #16
+; THUMBV5-NEXT:    asrs r0, r0, #16
+; THUMBV5-NEXT:    adds r0, r0, #1
 ; THUMBV5-NEXT:    beq .LBB0_2
 ; THUMBV5-NEXT:  @ %bb.1: @ %if.then
 ; THUMBV5-NEXT:    movs r0, #0
@@ -34,10 +33,6 @@ define i16 @test_1cmp_signed_1(ptr %ptr1) {
 ; THUMBV5-NEXT:  .LBB0_2: @ %if
 ; THUMBV5-NEXT:    movs r0, #1
 ; THUMBV5-NEXT:    bx lr
-; THUMBV5-NEXT:    .p2align 2
-; THUMBV5-NEXT:  @ %bb.3:
-; THUMBV5-NEXT:  .LCPI0_0:
-; THUMBV5-NEXT:    .long 65535 @ 0xffff
 entry:
   %val = load i16, ptr %ptr1, align 2
   %cmp = icmp eq i16 %val, -1
@@ -94,18 +89,16 @@ if.then:
 define i16 @test_1cmp_unsigned_1(ptr %ptr1) {
 ; ARM-LABEL: test_1cmp_unsigned_1:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    ldrh r0, [r0]
-; ARM-NEXT:    movw r1, #65535
-; ARM-NEXT:    sub r0, r0, r1
+; ARM-NEXT:    ldrsh r0, [r0]
+; ARM-NEXT:    add r0, r0, #1
 ; ARM-NEXT:    clz r0, r0
 ; ARM-NEXT:    lsr r0, r0, #5
 ; ARM-NEXT:    bx lr
 ;
 ; THUMBV7-LABEL: test_1cmp_unsigned_1:
 ; THUMBV7:       @ %bb.0: @ %entry
-; THUMBV7-NEXT:    ldrh r0, [r0]
-; THUMBV7-NEXT:    movw r1, #65535
-; THUMBV7-NEXT:    subs r0, r0, r1
+; THUMBV7-NEXT:    ldrsh.w r0, [r0]
+; THUMBV7-NEXT:    adds r0, #1
 ; THUMBV7-NEXT:    clz r0, r0
 ; THUMBV7-NEXT:    lsrs r0, r0, #5
 ; THUMBV7-NEXT:    bx lr
@@ -113,8 +106,9 @@ define i16 @test_1cmp_unsigned_1(ptr %ptr1) {
 ; THUMBV5-LABEL: test_1cmp_unsigned_1:
 ; THUMBV5:       @ %bb.0: @ %entry
 ; THUMBV5-NEXT:    ldrh r0, [r0]
-; THUMBV5-NEXT:    ldr r1, .LCPI2_0
-; THUMBV5-NEXT:    cmp r0, r1
+; THUMBV5-NEXT:    lsls r0, r0, #16
+; THUMBV5-NEXT:    asrs r0, r0, #16
+; THUMBV5-NEXT:    adds r0, r0, #1
 ; THUMBV5-NEXT:    bne .LBB2_2
 ; THUMBV5-NEXT:  @ %bb.1: @ %if
 ; THUMBV5-NEXT:    movs r0, #1
@@ -122,10 +116,6 @@ define i16 @test_1cmp_unsigned_1(ptr %ptr1) {
 ; THUMBV5-NEXT:  .LBB2_2: @ %if.then
 ; THUMBV5-NEXT:    movs r0, #0
 ; THUMBV5-NEXT:    bx lr
-; THUMBV5-NEXT:    .p2align 2
-; THUMBV5-NEXT:  @ %bb.3:
-; THUMBV5-NEXT:  .LCPI2_0:
-; THUMBV5-NEXT:    .long 65535 @ 0xffff
 entry:
   %val = load i16, ptr %ptr1, align 2
   %cmp = icmp uge i16 %val, -1
