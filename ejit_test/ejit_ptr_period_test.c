@@ -15,14 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ejit_may_const          __attribute__((ejit_may_const))
-#define ejit_period(x)          __attribute__((ejit_period(#x)))
-#define ejit_period_arr(x)      __attribute__((ejit_period_arr(#x)))
-#define ejit_period_arr_ind(x)  __attribute__((ejit_period_arr_ind(#x)))
-#define ejit_entry              __attribute__((ejit_entry))
-#define ejit_period_lc(x)       __attribute__((ejit_period_lc(#x)))
-
-// Include the EJIT C runtime header
 #include "llvm/ExecutionEngine/EJIT/EJitRuntime.h"
 
 //===--- Data types --------------------------------------------------------===//

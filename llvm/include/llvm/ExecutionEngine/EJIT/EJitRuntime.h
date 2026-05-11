@@ -13,6 +13,38 @@
 #include <stddef.h>
 #include <stdint.h>
 
+//===----------------------------------------------------------------------===//
+// EmbeddedJIT attribute convenience macros.
+//
+// Define EJIT_DISABLE before including this header to compile out all
+// EmbeddedJIT annotations (the code builds and runs without JIT
+// specialization). Useful for A/B testing, porting to non-clang
+// compilers, or debugging.
+//
+// Example:
+//   typedef struct {
+//     int ejit_may_const threshold;
+//   } Config;
+//   ejit_period(static) Config g_config;
+//   ejit_entry void process(ejit_period_arr_ind(cell) uint8_t idx) { ... }
+//===----------------------------------------------------------------------===//
+
+#ifdef EJIT_DISABLE
+#define ejit_may_const
+#define ejit_period(x)
+#define ejit_period_arr(x)
+#define ejit_period_arr_ind(x)
+#define ejit_entry
+#define ejit_period_lc(x)
+#else
+#define ejit_may_const          __attribute__((ejit_may_const))
+#define ejit_period(x)          __attribute__((ejit_period(#x)))
+#define ejit_period_arr(x)      __attribute__((ejit_period_arr(#x)))
+#define ejit_period_arr_ind(x)  __attribute__((ejit_period_arr_ind(#x)))
+#define ejit_entry              __attribute__((ejit_entry))
+#define ejit_period_lc(x)       __attribute__((ejit_period_lc(#x)))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

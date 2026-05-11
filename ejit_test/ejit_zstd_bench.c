@@ -24,10 +24,6 @@
 #include <string.h>
 #include <time.h>
 
-#define ejit_may_const          __attribute__((ejit_may_const))
-#define ejit_period(x)          __attribute__((ejit_period(#x)))
-#define ejit_entry              __attribute__((ejit_entry))
-
 #include "llvm/ExecutionEngine/EJIT/EJitRuntime.h"
 #include "zstd.h"
 
