@@ -2639,18 +2639,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (auto *CI = dyn_cast<CallInst>(&I))
       NumArgs = CI->arg_size();
 
-    if (FixedPoint)
+    if (FixedPoint) {
       assert(NumArgs == 2);
-    else
+      Value *Precision = I.getOperand(1);
+      insertCheckShadowOf(Precision, &I);
+    } else {
       assert(NumArgs == 1);
+    }
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
-
-    if (FixedPoint) {
-      Value *Precision = I.getOperand(1);
-      insertCheckShadowOf(Precision, &I);
-    }
 
     /// For scalars:
     /// Since they are converting from floating-point to integer, the output is
