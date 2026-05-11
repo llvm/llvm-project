@@ -1792,8 +1792,8 @@ TEST_F(VPInstructionTest, simplifyRecipesFoldsDoubleReverse) {
   IntegerType *Int32 = IntegerType::get(C, 32);
 
   // Build a tiny plan: preheader -> body -> scalar.header. Body holds
-  //    %r1 = reverse %a, 
-  //    %r2 = reverse %r1, 
+  //    %r1 = reverse %a,
+  //    %r2 = reverse %r1,
   //    store %r2, %addr.
   // The store keeps R2 live until the fold; otherwise removeDeadRecipes
   // would unconditionally clean up the whole chain.
@@ -1822,7 +1822,8 @@ TEST_F(VPInstructionTest, simplifyRecipesFoldsDoubleReverse) {
   EXPECT_EQ(R2->getNumUsers(), 0u);
   EXPECT_EQ(R1->getNumUsers(), 1u);
 
-  // After removeDeadRecipes, both reverses would be gone and only the Sink would remain.
+  // After removeDeadRecipes, both reverses would be gone and only the Sink
+  // would remain.
   VPlanTransforms::removeDeadRecipes(Plan);
   VPBasicBlock &BodyRef = *Body;
   CHECK_ITERATOR(BodyRef, Sink);
