@@ -68,8 +68,8 @@ define <16 x i32> @f1() {
   ret <16 x i32> zeroinitializer
 
 4:
-  %5 = phi <16 x i32> [ <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, %1 ],
-                       [ <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, %2 ],
+  %5 = phi <16 x i32> [ <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, %1 ],
+                       [ <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, %2 ],
                        [ %6, %4 ]
   %6 = insertelement <16 x i32> %5, i32 0, i64 0
   switch i8 0, label %3 [
@@ -79,7 +79,7 @@ define <16 x i32> @f1() {
   ]
 
 7:
-  %8 = phi <16 x i32> [ <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, %0 ],
+  %8 = phi <16 x i32> [ <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, %0 ],
                        [ %6, %4 ]
   %9 = shufflevector <16 x i32> %8, <16 x i32> splat (i32 1),
                      <16 x i32> <i32 0, i32 1, i32 2, i32 19, i32 4, i32 21, i32 6, i32 7,
