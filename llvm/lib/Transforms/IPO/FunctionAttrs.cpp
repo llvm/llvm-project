@@ -1933,57 +1933,16 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   return true;
 }
 
-// Return true if this is an atomic which has an ordering stronger than
-// unordered.  Note that this is different than the predicate we use in
-// Attributor.  Here we chose to be conservative and consider monotonic
-// operations potentially synchronizing.  We generally don't do much with
-// monotonic operations, so this is simply risk reduction.
-static bool isOrderedAtomic(Instruction *I) {
-  if (!I->isAtomic())
-    return false;
-
-  if (auto *FI = dyn_cast<FenceInst>(I))
-    // All legal orderings for fence are stronger than monotonic.
-    return FI->getSyncScopeID() != SyncScope::SingleThread;
-  else if (isa<AtomicCmpXchgInst>(I) || isa<AtomicRMWInst>(I))
-    return true;
-  else if (auto *SI = dyn_cast<StoreInst>(I))
-    return !SI->isUnordered();
-  else if (auto *LI = dyn_cast<LoadInst>(I))
-    return !LI->isUnordered();
-  else {
-    llvm_unreachable("unknown atomic instruction?");
-  }
-}
-
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
-  // Volatile may synchronize
-  if (I.isVolatile())
-    return true;
-
-  // An ordered atomic may synchronize.  (See comment about on monotonic.)
-  if (isOrderedAtomic(&I))
-    return true;
-
-  auto *CB = dyn_cast<CallBase>(&I);
-  if (!CB)
-    // Non call site cases covered by the two checks above
+  if (!I.maySynchronize())
     return false;
 
-  if (CB->hasFnAttr(Attribute::NoSync))
-    return false;
-
-  // Non volatile memset/memcpy/memmoves are nosync
-  // NOTE: Only intrinsics with volatile flags should be handled here.  All
-  // others should be marked in Intrinsics.td.
-  if (auto *MI = dyn_cast<MemIntrinsic>(&I))
-    if (!MI->isVolatile())
-      return false;
-
-  // Speculatively assume in SCC.
-  if (Function *Callee = CB->getCalledFunction())
-    if (SCCNodes.contains(Callee))
-      return false;
+  // Optimistically assume calls within the SCC are nosync: if nothing else in
+  // the SCC synchronizes, the assumption holds.
+  if (auto *CB = dyn_cast<CallBase>(&I))
+    if (Function *Callee = CB->getCalledFunction())
+      if (SCCNodes.contains(Callee))
+        return false;
 
   return true;
 }

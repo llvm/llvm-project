@@ -158,7 +158,8 @@ public:
       case dwarf::DW_OP_const2s:
       case dwarf::DW_OP_const4s:
       case dwarf::DW_OP_const8s:
-        if (NextIt == Expression.end() || !isTlsAddressCode(NextIt->getCode()))
+        if (NextIt == Expression.end() ||
+            !dwarf::isTlsAddressOp(NextIt->getCode()))
           break;
         [[fallthrough]];
       case dwarf::DW_OP_addr: {
@@ -193,12 +194,6 @@ public:
     }
 
     return std::make_pair(HasLocationAddress, std::nullopt);
-  }
-
-protected:
-  inline bool isTlsAddressCode(uint8_t DW_OP_Code) {
-    return DW_OP_Code == dwarf::DW_OP_form_tls_address ||
-           DW_OP_Code == dwarf::DW_OP_GNU_push_tls_address;
   }
 };
 

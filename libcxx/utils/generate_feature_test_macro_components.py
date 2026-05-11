@@ -1143,6 +1143,11 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_fold",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
             "name": "__cpp_lib_ranges_indices",
             "values": {"c++26": 202506},
             "headers": ["ranges"],
@@ -1172,6 +1177,11 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_starts_ends_with",
             "values": {"c++23": 202106},
             "headers": ["algorithm"],
+        },
+        {
+            "name": "__cpp_lib_ranges_stride",
+            "values": {"c++23": 202207},
+            "headers": ["ranges"],
         },
         {
             "name": "__cpp_lib_ranges_to_container",
@@ -1316,11 +1326,6 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_span_at",
             "values": {"c++26": 202311},  # P2821R3 span.at()
-            "headers": ["span"],
-        },
-        {
-            "name": "__cpp_lib_span_initializer_list",
-            "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
         },
         {

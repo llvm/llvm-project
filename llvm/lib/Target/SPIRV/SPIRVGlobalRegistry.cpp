@@ -2099,7 +2099,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
       return &SPIRV::vfIDRegClass;
     if (ElemOpcode == SPIRV::OpTypePointer)
       return &SPIRV::vpIDRegClass;
-    return &SPIRV::vIDRegClass;
+    return &SPIRV::viIDRegClass;
   }
   }
   return &SPIRV::iIDRegClass;
