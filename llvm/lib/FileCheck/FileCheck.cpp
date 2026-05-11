@@ -1882,7 +1882,7 @@ bool FileCheck::readCheckFile(
            "Failed to move Buffer's start forward, or pointed prefix outside "
            "of the buffer!");
 
-    const char *BufferEnd = Buffer.data() + Buffer.size();
+    [[maybe_unused]] const char *BufferEnd = Buffer.data() + Buffer.size();
     assert(AfterSuffix.data() >= Buffer.data() &&
            AfterSuffix.data() <= BufferEnd &&
            "Parsing after suffix doesn't start inside of buffer!");
