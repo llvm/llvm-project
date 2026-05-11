@@ -212,7 +212,7 @@ func.func @switch_with_fallthrough(%flag: i32, %arg1 : f32, %arg2 : f32) {
 // CHECK-SAME: %[[ARG2:[[:alnum:]]+]]
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1
-// CHECK-DAG: %[[POISON:.*]] = ub.poison
+// CHECK-DAG: %[[POISON:.*]] = ub.poison : f32
 // CHECK-NEXT: %[[INDEX_CAST:.*]] = arith.index_castui %[[ARG0]]
 // CHECK-NEXT: %[[SWITCH_PAIR:.*]]:2 = scf.index_switch %[[INDEX_CAST]]
 // CHECK-NEXT: case 0
@@ -283,7 +283,7 @@ func.func @exit_loop_iter_use(%arg: f32) -> f32 {
 // CHECK-SAME: %[[ARG:.*]]:
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1
-// CHECK-DAG: %[[POISON:.*]] = ub.poison
+// CHECK-DAG: %[[POISON:.*]] = ub.poison : f32
 // CHECK-NEXT: %[[RES:.*]]:2 = scf.while
 // CHECK-SAME:   %[[ARG1:.*]] = %[[ARG]]
 // CHECK-SAME:   %[[ARG2:.*]] = %[[POISON]]
