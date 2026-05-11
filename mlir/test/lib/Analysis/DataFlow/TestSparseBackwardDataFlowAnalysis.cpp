@@ -70,6 +70,8 @@ struct WrittenTo : public Lattice<WrittenToLatticeValue> {
 /// is eventually written to.
 class WrittenToAnalysis : public SparseBackwardDataFlowAnalysis<WrittenTo> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WrittenToAnalysis)
+
   WrittenToAnalysis(DataFlowSolver &solver, SymbolTableCollection &symbolTable,
                     bool assumeFuncWrites)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),

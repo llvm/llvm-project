@@ -1061,16 +1061,26 @@ createDebugifyFunctionPass(enum DebugifyMode Mode,
   return new DebugifyFunctionPass(Mode, NameOfWrappedPass, DebugInfoBeforePass);
 }
 
-PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
-  if (Mode == DebugifyMode::SyntheticDebugInfo)
-    applyDebugifyMetadata(M, M.functions(),
-                          "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
-  else
+PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &AM) {
+  if (Mode == DebugifyMode::SyntheticDebugInfo) {
+    if (ApplyToMF) {
+      auto ApplyToMFWrapper = [&](DIBuilder &DIB, Function &F) -> bool {
+        return ApplyToMF(DIB, F, AM);
+      };
+      applyDebugifyMetadata(M, M.functions(),
+                            "ModuleDebugify: ", ApplyToMFWrapper);
+    } else {
+      applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ", nullptr);
+    }
+  } else {
     collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                              "ModuleDebugify (original debuginfo)",
                               NameOfWrappedPass);
+  }
 
   PreservedAnalyses PA;
+  if (ApplyToMF)
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

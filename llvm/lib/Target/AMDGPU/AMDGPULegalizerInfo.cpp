@@ -1030,11 +1030,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
 
-  getActionDefinitionsBuilder({G_FNEG, G_FABS})
-    .legalFor(FPTypesPK16)
-    .clampMaxNumElementsStrict(0, S16, 2)
-    .scalarize(0)
-    .clampScalar(0, S16, S64);
+  auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
+  FNegAbs.legalFor(FPTypesPK16)
+      .legalFor(ST.hasPackedFP32Ops(), {V2S32})
+      .clampMaxNumElementsStrict(0, S16, 2);
+  if (ST.hasPackedFP32Ops())
+    FNegAbs.clampMaxNumElementsStrict(0, S32, 2);
+  FNegAbs.scalarize(0).clampScalar(0, S16, S64);
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_FSQRT)
@@ -1131,6 +1133,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // Must use fadd + fneg
       .lowerFor({S64, S16, V2S16});
   }
+
+  if (ST.hasPackedFP32Ops())
+    FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
 
   FSubActions
     .scalarize(0)
@@ -1371,7 +1376,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .custom();
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
-  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
       .legalFor({{S32, S32}, {S32, S64}})
       .customIf(scalarNarrowerThan(1, 32))
       .clampScalar(0, S32, S32)
@@ -1380,7 +1385,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .widenScalarToNextPow2(1, 32);
 
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON)
       .legalFor({{S32, S32}, {S32, S64}})
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S64)
@@ -2319,8 +2324,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeCTLZ_CTTZ(MI, MRI, B);
   case TargetOpcode::G_CTLS:
     return legalizeCTLS(MI, MRI, B);
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
-    return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
+    return legalizeCTLZ_ZERO_POISON(MI, MRI, B);
   case TargetOpcode::G_STACKSAVE:
     return legalizeStackSave(MI, B);
   case TargetOpcode::G_GET_FPENV:
@@ -4653,7 +4658,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
 }
 
 // Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
-// ctlz/cttz_zero_undef. This allows us to fix up the result for the zero input
+// ctlz/cttz_zero_poison. This allows us to fix up the result for the zero input
 // case with a single min instruction instead of a compare+select.
 bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
@@ -4673,9 +4678,9 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
-                                                  MachineRegisterInfo &MRI,
-                                                  MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_POISON(MachineInstr &MI,
+                                                   MachineRegisterInfo &MRI,
+                                                   MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(Src);
@@ -5495,18 +5500,34 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   if (!AllowInaccurateRcp)
     return false;
 
-  auto NegY = B.buildFNeg(ResTy, Y);
+  const ConstantFP *CLHS = getConstantFPVRegVal(X, MRI);
+  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+
+  // Pull out the negation so it folds for free into the source modifiers.
+  if (IsNegRcp)
+    X = B.buildFConstant(ResTy, 1.0).getReg(0);
+
+  Register NegY = IsNegRcp ? Y : B.buildFNeg(ResTy, Y).getReg(0);
   auto One = B.buildFConstant(ResTy, 1.0);
 
   auto R = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy})
                .addUse(Y)
                .setMIFlags(Flags);
+  if (IsNegRcp)
+    R = B.buildFNeg(ResTy, R);
 
   auto Tmp0 = B.buildFMA(ResTy, NegY, R, One);
   R = B.buildFMA(ResTy, Tmp0, R, R);
 
   auto Tmp1 = B.buildFMA(ResTy, NegY, R, One);
   R = B.buildFMA(ResTy, Tmp1, R, R);
+
+  // Skip the last 2 correction terms for reciprocal.
+  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0))) {
+    B.buildCopy(Res, R);
+    MI.eraseFromParent();
+    return true;
+  }
 
   auto Ret = B.buildFMul(ResTy, X, R);
   auto Tmp2 = B.buildFMA(ResTy, NegY, Ret, X);

@@ -201,7 +201,7 @@ enum class DropTestKind {
 
 } // end namespace lowertypetests
 
-class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
+class LowerTypeTestsPass : public RequiredPassInfoMixin<LowerTypeTestsPass> {
   bool UseCommandLine = false;
 
   ModuleSummaryIndex *ExportSummary = nullptr;
@@ -212,25 +212,25 @@ public:
   LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
                      const ModuleSummaryIndex *ImportSummary)
       : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {}
-  static bool isRequired() { return true; }
+
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-class DropTypeTestsPass : public PassInfoMixin<DropTypeTestsPass> {
+class DropTypeTestsPass : public RequiredPassInfoMixin<DropTypeTestsPass> {
   lowertypetests::DropTestKind Kind = lowertypetests::DropTestKind::Assume;
 
 public:
   explicit DropTypeTestsPass(
       lowertypetests::DropTestKind Kind = lowertypetests::DropTestKind::Assume)
       : Kind(Kind) {}
-  static bool isRequired() { return true; }
   LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-class SimplifyTypeTestsPass : public PassInfoMixin<SimplifyTypeTestsPass> {
+class SimplifyTypeTestsPass
+    : public OptionalPassInfoMixin<SimplifyTypeTestsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

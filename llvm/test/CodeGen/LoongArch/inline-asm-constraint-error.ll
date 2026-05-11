@@ -32,15 +32,15 @@ define void @constraint_K() {
 }
 
 define void @constraint_f() nounwind {
-; LA32: error: couldn't allocate input reg for constraint 'f'
+; LA32: error: could not allocate input reg for constraint 'f'
   tail call void asm "fadd.s $$fa0, $$fa0, $0", "f"(float 0.0)
-; LA32: error: couldn't allocate input reg for constraint 'f'
+; LA32: error: could not allocate input reg for constraint 'f'
   tail call void asm "fadd.s $$fa0, $$fa0, $0", "f"(double 0.0)
   ret void
 }
 
 define void @constraint_r_vec() nounwind {
-; CHECK: error: couldn't allocate input reg for constraint 'r'
+; CHECK: error: could not allocate input reg for constraint 'r'
   tail call void asm "add.w $$a0, $$a0, $0", "r"(<4 x i32> zeroinitializer)
   ret void
 }

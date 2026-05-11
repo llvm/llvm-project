@@ -64,7 +64,8 @@ class VAListChecker : public Checker<check::PreCall, check::PreStmt<VAArgExpr>,
     int ParamIndex;
   };
   static const SmallVector<VAListAccepter, 15> VAListAccepters;
-  static const CallDescription VaStart, VaEnd, VaCopy;
+  static const CallDescriptionSet VaStart;
+  static const CallDescription VaEnd, VaCopy;
 
 public:
   void checkPreStmt(const VAArgExpr *VAA, CheckerContext &C) const;
@@ -133,16 +134,18 @@ const SmallVector<VAListChecker::VAListAccepter, 15>
                                       // vsnprintf, vsprintf has no wide version
                                       {{CDM::CLibrary, {"vswscanf"}, 3}, 2}};
 
-const CallDescription VAListChecker::VaStart(CDM::CLibrary,
-                                             {"__builtin_va_start"}, /*Args=*/2,
-                                             /*Params=*/1),
-    VAListChecker::VaCopy(CDM::CLibrary, {"__builtin_va_copy"}, 2),
+const CallDescriptionSet VAListChecker::VaStart{
+    {CDM::CLibrary, {"__builtin_va_start"}},
+    {CDM::CLibrary, {"__builtin_c23_va_start"}}};
+
+const CallDescription VAListChecker::VaCopy(CDM::CLibrary,
+                                            {"__builtin_va_copy"}, 2),
     VAListChecker::VaEnd(CDM::CLibrary, {"__builtin_va_end"}, 1);
 } // end anonymous namespace
 
 void VAListChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
-  if (VaStart.matches(Call))
+  if (VaStart.contains(Call))
     checkVAListStartCall(Call, C);
   else if (VaCopy.matches(Call))
     checkVAListCopyCall(Call, C);
@@ -294,6 +297,9 @@ void VAListChecker::reportLeaked(const RegionVector &Leaked, StringRef Msg1,
 
 void VAListChecker::checkVAListStartCall(const CallEvent &Call,
                                          CheckerContext &C) const {
+  if (Call.getNumArgs() == 0)
+    return; // Prevent a crash on grossly invalid input.
+
   const MemRegion *Arg =
       getVAListAsRegion(Call.getArgSVal(0), Call.getArgExpr(0), C);
   if (!Arg)

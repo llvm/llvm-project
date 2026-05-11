@@ -415,7 +415,7 @@ void ProcessWindows::RefreshStateAfterStop() {
   // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.
   // We'll clear that state if we've actually executed the breakpoint.
   BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-  if (site && site->IsEnabled())
+  if (site && IsBreakpointSitePhysicallyEnabled(*site))
     stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (active_exception->GetExceptionCode()) {
@@ -655,9 +655,11 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
   if (m_pty) {
+    DrainProcessStdout();
     m_pty->SetStopping(true);
-    m_stdio_communication.InterruptRead();
     m_pty->Close();
+    m_stdio_communication.InterruptRead();
+    m_stdio_communication.StopReadThread();
   }
 
   TargetSP target = CalculateTarget();
@@ -672,6 +674,32 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   SetPrivateState(eStateExited);
 
   ProcessDebugger::OnExitProcess(exit_code);
+}
+
+void ProcessWindows::DrainProcessStdout() {
+  if (!m_stdio_communication.ReadThreadIsRunning())
+    return;
+  m_stdio_communication.SynchronizeWithReadThread();
+  if (!m_pty || m_pty->GetMode() != PseudoConsole::Mode::ConPTY)
+    return;
+
+  HANDLE pipe = m_pty->GetSTDOUTHandle();
+  for (int consec_empty = 0; consec_empty < 3;) {
+    if (!m_stdio_communication.ReadThreadIsRunning())
+      break;
+    DWORD avail = 0;
+    // PeekNamedPipe is thread safe.
+    if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &avail, nullptr))
+      break;
+    if (avail > 0) {
+      consec_empty = 0;
+      m_stdio_communication.SynchronizeWithReadThread();
+    } else {
+      ++consec_empty;
+      if (consec_empty < 3)
+        ::SleepEx(1, FALSE);
+    }
+  }
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -743,6 +771,7 @@ ProcessWindows::OnDebugException(bool first_chance,
   if (!first_chance) {
     // Not any second chance exception is an application crash by definition.
     // It may be an expression evaluation crash.
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
   }
 
@@ -763,10 +792,17 @@ ProcessWindows::OnDebugException(bool first_chance,
       LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
                record.GetExceptionAddress());
     }
+    // Drain any in-flight process output before announcing the stop. The I/O
+    // reader thread and this debug-event thread run concurrently. Without
+    // synchronization the eBroadcastBitStateChanged(Stopped) event can reach
+    // the Debugger event thread before the preceding eBroadcastBitSTDOUT
+    // events.
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
   case EXCEPTION_SINGLE_STEP:
     result = ExceptionResult::BreakInDebugger;
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
   default:
