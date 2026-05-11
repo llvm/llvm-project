@@ -29540,8 +29540,6 @@ private:
           // res = vv
           break;
         case RecurKind::Sub:
-        case RecurKind::FSub:
-        case RecurKind::FAddChainWithSubs:
         case RecurKind::AddChainWithSubs:
         case RecurKind::Mul:
         case RecurKind::FMul:
@@ -29693,8 +29691,6 @@ private:
       // res = vv
       return VectorizedValue;
     case RecurKind::Sub:
-    case RecurKind::FSub:
-    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
@@ -29798,8 +29794,6 @@ private:
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
     case RecurKind::Sub:
-    case RecurKind::FSub:
-    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
