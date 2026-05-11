@@ -838,8 +838,8 @@ consumed by the AMDGPU backend during code generation.
        instructions (``buffer_load`` / ``buffer_store``).
 
        - ``0`` (or absent): **any**. The module does not care about OOB
-         semantics.  The backend may treat this the same as
-         **strict**, but this behavior is not guaranteed.
+         semantics. This is an alias of **strict** that is allowed to link
+         with any other module. Code generation is identical to **strict**.
        - ``1``: **relaxed**. The backend may merge misaligned buffer
          accesses for performance, even if that changes OOB behaviour.
        - ``2``: **strict**. The backend preserves per-byte OOB guarantees
