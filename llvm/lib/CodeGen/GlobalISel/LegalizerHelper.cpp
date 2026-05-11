@@ -4968,6 +4968,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case G_SMULFIX:
+    return lowerSmulfix(MI);
   }
 }
 
@@ -10649,6 +10651,35 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineMemOperand *EltLoadMMO = MF.getMachineMemOperand(
       MachinePointerInfo(), MachineMemOperand::MOLoad, LLTTy, EltAlignment);
   MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
+  auto [Dst, LHS, RHS] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Dst);
+  if (Ty != MRI.getType(LHS) || Ty != MRI.getType(RHS) || !Ty.isScalar())
+    return UnableToLegalize;
+
+  unsigned Scale = MI.getOperand(3).getImm();
+  if (Scale >= Ty.getSizeInBits())
+    return UnableToLegalize;
+
+  if (Scale == 0) {
+    MIRBuilder.buildMul(Dst, LHS, RHS);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  LLT WideTy = LLT::scalar(Ty.getSizeInBits() * 2);
+  auto SExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+  auto SExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+  auto Mul = MIRBuilder.buildMul(WideTy, SExtLHS, SExtRHS);
+  auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
+  auto Shifted = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  MIRBuilder.buildTrunc(Dst, Shifted);
 
   MI.eraseFromParent();
   return Legalized;
