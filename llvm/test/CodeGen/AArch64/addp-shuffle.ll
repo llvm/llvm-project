@@ -274,12 +274,8 @@ define <4 x i32> @udot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NOFP16-SD:       // %bb.0:
 ; CHECK-NOFP16-SD-NEXT:    umull v3.8h, v1.8b, v2.8b
 ; CHECK-NOFP16-SD-NEXT:    umull2 v1.8h, v1.16b, v2.16b
-; CHECK-NOFP16-SD-NEXT:    ushll2 v2.4s, v3.8h, #0
-; CHECK-NOFP16-SD-NEXT:    ushll v3.4s, v3.4h, #0
-; CHECK-NOFP16-SD-NEXT:    ushll2 v4.4s, v1.8h, #0
-; CHECK-NOFP16-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NOFP16-SD-NEXT:    addp v2.4s, v3.4s, v2.4s
-; CHECK-NOFP16-SD-NEXT:    addp v1.4s, v1.4s, v4.4s
+; CHECK-NOFP16-SD-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-NOFP16-SD-NEXT:    uaddlp v2.4s, v3.8h
 ; CHECK-NOFP16-SD-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NOFP16-SD-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NOFP16-SD-NEXT:    ret
@@ -288,12 +284,8 @@ define <4 x i32> @udot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    umull v3.8h, v1.8b, v2.8b
 ; CHECK-FP16-SD-NEXT:    umull2 v1.8h, v1.16b, v2.16b
-; CHECK-FP16-SD-NEXT:    ushll2 v2.4s, v3.8h, #0
-; CHECK-FP16-SD-NEXT:    ushll v3.4s, v3.4h, #0
-; CHECK-FP16-SD-NEXT:    ushll2 v4.4s, v1.8h, #0
-; CHECK-FP16-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-FP16-SD-NEXT:    addp v2.4s, v3.4s, v2.4s
-; CHECK-FP16-SD-NEXT:    addp v1.4s, v1.4s, v4.4s
+; CHECK-FP16-SD-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-FP16-SD-NEXT:    uaddlp v2.4s, v3.8h
 ; CHECK-FP16-SD-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-FP16-SD-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-FP16-SD-NEXT:    ret
@@ -302,12 +294,8 @@ define <4 x i32> @udot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NOFP16-GI:       // %bb.0:
 ; CHECK-NOFP16-GI-NEXT:    umull v3.8h, v1.8b, v2.8b
 ; CHECK-NOFP16-GI-NEXT:    umull2 v1.8h, v1.16b, v2.16b
-; CHECK-NOFP16-GI-NEXT:    ushll v2.4s, v3.4h, #0
-; CHECK-NOFP16-GI-NEXT:    ushll2 v3.4s, v3.8h, #0
-; CHECK-NOFP16-GI-NEXT:    ushll v4.4s, v1.4h, #0
-; CHECK-NOFP16-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NOFP16-GI-NEXT:    addp v2.4s, v2.4s, v3.4s
-; CHECK-NOFP16-GI-NEXT:    addp v1.4s, v4.4s, v1.4s
+; CHECK-NOFP16-GI-NEXT:    uaddlp v2.4s, v3.8h
+; CHECK-NOFP16-GI-NEXT:    uaddlp v1.4s, v1.8h
 ; CHECK-NOFP16-GI-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NOFP16-GI-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NOFP16-GI-NEXT:    ret
@@ -316,12 +304,8 @@ define <4 x i32> @udot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-FP16-GI:       // %bb.0:
 ; CHECK-FP16-GI-NEXT:    umull v3.8h, v1.8b, v2.8b
 ; CHECK-FP16-GI-NEXT:    umull2 v1.8h, v1.16b, v2.16b
-; CHECK-FP16-GI-NEXT:    ushll v2.4s, v3.4h, #0
-; CHECK-FP16-GI-NEXT:    ushll2 v3.4s, v3.8h, #0
-; CHECK-FP16-GI-NEXT:    ushll v4.4s, v1.4h, #0
-; CHECK-FP16-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-FP16-GI-NEXT:    addp v2.4s, v2.4s, v3.4s
-; CHECK-FP16-GI-NEXT:    addp v1.4s, v4.4s, v1.4s
+; CHECK-FP16-GI-NEXT:    uaddlp v2.4s, v3.8h
+; CHECK-FP16-GI-NEXT:    uaddlp v1.4s, v1.8h
 ; CHECK-FP16-GI-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-FP16-GI-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-FP16-GI-NEXT:    ret
@@ -343,12 +327,8 @@ define <4 x i32> @sdot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NOFP16-SD:       // %bb.0:
 ; CHECK-NOFP16-SD-NEXT:    smull v3.8h, v1.8b, v2.8b
 ; CHECK-NOFP16-SD-NEXT:    smull2 v1.8h, v1.16b, v2.16b
-; CHECK-NOFP16-SD-NEXT:    sshll2 v2.4s, v3.8h, #0
-; CHECK-NOFP16-SD-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-NOFP16-SD-NEXT:    sshll2 v4.4s, v1.8h, #0
-; CHECK-NOFP16-SD-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NOFP16-SD-NEXT:    addp v2.4s, v3.4s, v2.4s
-; CHECK-NOFP16-SD-NEXT:    addp v1.4s, v1.4s, v4.4s
+; CHECK-NOFP16-SD-NEXT:    saddlp v1.4s, v1.8h
+; CHECK-NOFP16-SD-NEXT:    saddlp v2.4s, v3.8h
 ; CHECK-NOFP16-SD-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NOFP16-SD-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NOFP16-SD-NEXT:    ret
@@ -357,12 +337,8 @@ define <4 x i32> @sdot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    smull v3.8h, v1.8b, v2.8b
 ; CHECK-FP16-SD-NEXT:    smull2 v1.8h, v1.16b, v2.16b
-; CHECK-FP16-SD-NEXT:    sshll2 v2.4s, v3.8h, #0
-; CHECK-FP16-SD-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-FP16-SD-NEXT:    sshll2 v4.4s, v1.8h, #0
-; CHECK-FP16-SD-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-FP16-SD-NEXT:    addp v2.4s, v3.4s, v2.4s
-; CHECK-FP16-SD-NEXT:    addp v1.4s, v1.4s, v4.4s
+; CHECK-FP16-SD-NEXT:    saddlp v1.4s, v1.8h
+; CHECK-FP16-SD-NEXT:    saddlp v2.4s, v3.8h
 ; CHECK-FP16-SD-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-FP16-SD-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-FP16-SD-NEXT:    ret
@@ -371,12 +347,8 @@ define <4 x i32> @sdot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NOFP16-GI:       // %bb.0:
 ; CHECK-NOFP16-GI-NEXT:    smull v3.8h, v1.8b, v2.8b
 ; CHECK-NOFP16-GI-NEXT:    smull2 v1.8h, v1.16b, v2.16b
-; CHECK-NOFP16-GI-NEXT:    sshll v2.4s, v3.4h, #0
-; CHECK-NOFP16-GI-NEXT:    sshll2 v3.4s, v3.8h, #0
-; CHECK-NOFP16-GI-NEXT:    sshll v4.4s, v1.4h, #0
-; CHECK-NOFP16-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-NOFP16-GI-NEXT:    addp v2.4s, v2.4s, v3.4s
-; CHECK-NOFP16-GI-NEXT:    addp v1.4s, v4.4s, v1.4s
+; CHECK-NOFP16-GI-NEXT:    saddlp v2.4s, v3.8h
+; CHECK-NOFP16-GI-NEXT:    saddlp v1.4s, v1.8h
 ; CHECK-NOFP16-GI-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NOFP16-GI-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NOFP16-GI-NEXT:    ret
@@ -385,12 +357,8 @@ define <4 x i32> @sdot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-FP16-GI:       // %bb.0:
 ; CHECK-FP16-GI-NEXT:    smull v3.8h, v1.8b, v2.8b
 ; CHECK-FP16-GI-NEXT:    smull2 v1.8h, v1.16b, v2.16b
-; CHECK-FP16-GI-NEXT:    sshll v2.4s, v3.4h, #0
-; CHECK-FP16-GI-NEXT:    sshll2 v3.4s, v3.8h, #0
-; CHECK-FP16-GI-NEXT:    sshll v4.4s, v1.4h, #0
-; CHECK-FP16-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-FP16-GI-NEXT:    addp v2.4s, v2.4s, v3.4s
-; CHECK-FP16-GI-NEXT:    addp v1.4s, v4.4s, v1.4s
+; CHECK-FP16-GI-NEXT:    saddlp v2.4s, v3.8h
+; CHECK-FP16-GI-NEXT:    saddlp v1.4s, v1.8h
 ; CHECK-FP16-GI-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-FP16-GI-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-FP16-GI-NEXT:    ret
