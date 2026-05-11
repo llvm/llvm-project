@@ -375,9 +375,7 @@ def invoke_process(
         args.insert(0, sys.executable)
         args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
         for limit in cmd_shenv.ulimit:
-            cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(
-                cmd_shenv.ulimit[limit]
-            )
+            cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(cmd_shenv.ulimit[limit])
 
     try:
         # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
