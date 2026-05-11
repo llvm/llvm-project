@@ -27097,11 +27097,6 @@ static SDValue performBRCONDCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
   MachineFunction &MF = DAG.getMachineFunction();
-  // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z instructions
-  // will not be produced, as they are conditional branch instructions that do
-  // not set flags.
-  if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
-    return SDValue();
 
   if (SDValue NV = performCONDCombine(N, DCI, DAG, 2, 3))
     N = NV.getNode();
@@ -27126,6 +27121,12 @@ static SDValue performBRCONDCombine(SDNode *N,
                          CSel.getOperand(3));
     }
   }
+
+  // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z instructions
+  // will not be produced, as they are conditional branch instructions that do
+  // not set flags.
+  if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
+    return SDValue();
 
   unsigned CmpOpc = Cmp.getOpcode();
   if (CmpOpc != AArch64ISD::ADDS && CmpOpc != AArch64ISD::SUBS)
