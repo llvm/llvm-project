@@ -26,12 +26,10 @@
 
 namespace __xray {
 
-static bool GetXRaySledSections(const struct mach_header_64 *MH,
-                                const XRaySledEntry **SledsBegin,
-                                const XRaySledEntry **SledsEnd,
-                                const XRayFunctionSledIndex **FnIdxBegin,
-                                const XRayFunctionSledIndex **FnIdxEnd)
-    XRAY_NEVER_INSTRUMENT {
+static bool GetXRaySledSections(
+    const struct mach_header_64 *MH, const XRaySledEntry **SledsBegin,
+    const XRaySledEntry **SledsEnd, const XRayFunctionSledIndex **FnIdxBegin,
+    const XRayFunctionSledIndex **FnIdxEnd) XRAY_NEVER_INSTRUMENT {
   unsigned long SledSectionSize = 0;
   const auto *Sleds = reinterpret_cast<const XRaySledEntry *>(
       getsectiondata(MH, "__DATA", "xray_instr_map", &SledSectionSize));
@@ -47,19 +45,16 @@ static bool GetXRaySledSections(const struct mach_header_64 *MH,
       getsectiondata(MH, "__DATA", "xray_fn_idx", &FnIdxSectionSize));
 
   *FnIdxBegin = FnIdx;
-  *FnIdxEnd =
-      FnIdx ? FnIdx + (FnIdxSectionSize / sizeof(XRayFunctionSledIndex))
-            : nullptr;
+  *FnIdxEnd = FnIdx ? FnIdx + (FnIdxSectionSize / sizeof(XRayFunctionSledIndex))
+                    : nullptr;
 
   return true;
 }
 
-bool FindXRaySledSectionInImage(const void *Addr,
-                                const XRaySledEntry **SledsBegin,
-                                const XRaySledEntry **SledsEnd,
-                                const XRayFunctionSledIndex **FnIdxBegin,
-                                const XRayFunctionSledIndex **FnIdxEnd)
-    XRAY_NEVER_INSTRUMENT {
+bool FindXRaySledSectionInImage(
+    const void *Addr, const XRaySledEntry **SledsBegin,
+    const XRaySledEntry **SledsEnd, const XRayFunctionSledIndex **FnIdxBegin,
+    const XRayFunctionSledIndex **FnIdxEnd) XRAY_NEVER_INSTRUMENT {
   Dl_info Info;
   if (!dladdr(Addr, &Info) || !Info.dli_fbase)
     return false;

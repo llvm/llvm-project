@@ -107,11 +107,11 @@ extern int32_t __xray_register_dso(const XRaySledEntry *SledsBegin,
 
 extern bool __xray_deregister_dso(int32_t ObjId);
 
-extern int32_t __xray_register_sleds(
-    const XRaySledEntry *SledsBegin, const XRaySledEntry *SledsEnd,
-    const XRayFunctionSledIndex *FnIndexBegin,
-    const XRayFunctionSledIndex *FnIndexEnd, bool FromDSO,
-    XRayTrampolines Trampolines);
+extern int32_t __xray_register_sleds(const XRaySledEntry *SledsBegin,
+                                     const XRaySledEntry *SledsEnd,
+                                     const XRayFunctionSledIndex *FnIndexBegin,
+                                     const XRayFunctionSledIndex *FnIndexEnd,
+                                     bool FromDSO, XRayTrampolines Trampolines);
 }
 
 namespace __xray {

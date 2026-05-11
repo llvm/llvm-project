@@ -12,7 +12,8 @@
 static int custom_event_count = 0;
 static char last_event[64] = {};
 
-[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) {}
+[[clang::xray_never_instrument]] void handler(int32_t fid, XRayEntryType type) {
+}
 
 [[clang::xray_never_instrument]] void custom_handler(void *data, size_t size) {
   ++custom_event_count;

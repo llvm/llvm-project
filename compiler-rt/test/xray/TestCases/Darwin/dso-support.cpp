@@ -20,9 +20,7 @@ static int entry_count = 0;
     ++entry_count;
 }
 
-[[clang::xray_always_instrument]] int main_fn(int x) {
-  return dso_add(x, x);
-}
+[[clang::xray_always_instrument]] int main_fn(int x) { return dso_add(x, x); }
 
 int main() {
   __xray_set_handler(handler);

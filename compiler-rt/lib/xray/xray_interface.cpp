@@ -139,10 +139,9 @@ public:
     // On macOS, mprotect() cannot change protections on code-signed __TEXT
     // pages. Use vm_protect() with VM_PROT_COPY to create a copy-on-write
     // mapping that allows modification.
-    kern_return_t kr = vm_protect(mach_task_self(),
-                                  reinterpret_cast<vm_address_t>(PageAlignedAddr),
-                                  MProtectLen, 0,
-                                  VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
+    kern_return_t kr = vm_protect(
+        mach_task_self(), reinterpret_cast<vm_address_t>(PageAlignedAddr),
+        MProtectLen, 0, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
     if (kr == KERN_SUCCESS) {
       MustCleanup = true;
       return 0;

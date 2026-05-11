@@ -11,6 +11,4 @@
 [[clang::xray_always_instrument]] int fn_a() { return 1; }
 [[clang::xray_always_instrument]] int fn_b() { return 2; }
 
-int main() {
-  return fn_a() + fn_b();
-}
+int main() { return fn_a() + fn_b(); }

@@ -20,7 +20,9 @@ static uint64_t rdtsc() {
   return ((uint64_t)hi << 32) | lo;
 }
 #else
+// clang-format off
 #include <time.h>
+// clang-format on
 [[clang::xray_never_instrument]] static uint64_t rdtsc() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
