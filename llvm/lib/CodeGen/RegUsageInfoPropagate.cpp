@@ -154,7 +154,8 @@ bool RegUsageInfoPropagation::run(MachineFunction &MF) {
       };
 
       if (const Function *F = findCalledFunction(M, MI)) {
-        if (F->isDefinitionExact()) {
+        // The Function must not be preemptable.
+        if (F->isDefinitionExact() && F->isDSOLocal()) {
           UpdateRegMask(*F);
         } else {
           LLVM_DEBUG(dbgs() << "Function definition is not exact\n");
