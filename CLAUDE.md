@@ -4,78 +4,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Configuration
 
-- **Build directory**: `build/` (out-of-tree CMake, **Ninja** generator)
-- **Build type**: `Debug` (shared libs, split DWARF — optimized for incremental dev)
-- **Compiler**: Clang + ccache (`clang`/`clang++` with `ccache` launcher)
-- **Linker**: `lld`
-- **Targets**: `X86`
-- **Enabled projects**: `clang`
-
-### First-time Configure
+Use the top-level `build.sh` script for all builds:
 
 ```bash
-cmake -S llvm -B build \
-  -G "Ninja" \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DBUILD_SHARED_LIBS=ON \
-  -DLLVM_OPTIMIZED_TABLEGEN=ON \
-  -DLLVM_TARGETS_TO_BUILD="X86" \
-  -DLLVM_ENABLE_PROJECTS="clang" \
-  -DLLVM_USE_SPLIT_DWARF=ON \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+./build.sh debug x86              # → build_debug_x86/ (dev daily driver)
+./build.sh release x86            # → build_release_x86/ (for EJIT tests)
+./build.sh release x86 minimal    # → build_release_x86_minimal/
+./build.sh debug aarch64          # → build_debug_aarch64/
+./build.sh release aarch64        # → build_release_aarch64/
 ```
 
 ### Incremental Build (use these daily)
 
-This machine has **limited CPU and memory**. After the first full build, always use targeted incremental builds to avoid OOM and excessive compile time:
+This machine has **limited CPU and memory**. Use targeted incremental builds:
 
 ```bash
-# Build just the `opt` tool (and its library dependencies) — fastest for LLVM pass dev
-cd build && ninja opt
+# Dev build (debug, shared libs)
+ninja -C build_debug_x86 clang opt lld
 
-# Build just `clang` (for frontend attribute / CodeGen work)
-cd build && ninja clang
+# Release build (static libs, for ejit_test)
+ninja -C build_release_x86 LLVMEJIT lld
 
-# Build both opt and clang
-cd build && ninja opt clang
+# Just the AOT passes library (runs inside clang)
+ninja -C build_debug_x86 clang
 
-# Build specific LLVM library (for runtime lib work)
-cd build && ninja LLVMEJIT        # once the EJIT runtime library exists
-cd build && ninja LLVMCore        # Core changes
-cd build && ninja LLVMTransformUtils
-
-# Rebuild only what changed (Ninja auto-detects, no need for -j flag)
-cd build && ninja
-
-# If you must do a full build, limit parallelism to avoid OOM:
-cd build && ninja -j2            # 2 parallel jobs max on low-memory machines
+# Just the runtime library (linked into test binaries)
+ninja -C build_release_x86 LLVMEJIT
 ```
 
-### Reconfigure After CMake Changes
+### Build directory layout
 
-```bash
-cd build && cmake . && ninja      # cmake re-reads cache, ninja rebuilds
-```
-
-### ccache
-
-- ccache caches compiled object files across builds. After a `git checkout` or branch switch, most objects hit the cache.
-- Check stats: `ccache -s`
-- Clear cache: `ccache -C`
-
-### Why Each Config Option
-
-| Option | Reason |
-|--------|--------|
-| `Debug` | Needed for step-through debugging of clang/opt |
-| `BUILD_SHARED_LIBS=ON` | Dramatically smaller link times and memory per binary |
-| `LLVM_OPTIMIZED_TABLEGEN=ON` | TableGen runs much faster even in Debug |
-| `LLVM_USE_LINKER=lld` | 2-4x faster linking than GNU ld / gold |
-| `LLVM_USE_SPLIT_DWARF=ON` | Smaller object files, less I/O during linking |
-| `CMAKE_C_COMPILER_LAUNCHER=ccache` | Skip recompilation of unchanged TUs |
+| Directory | Type | Arch | Purpose |
+|-----------|------|------|---------|
+| `build_debug_x86/` | Debug | x86 | Dev: clang, opt, lld (shared libs) |
+| `build_release_x86/` | Release | x86 | EJIT tests: LLVMEJIT.a, lld |
+| `build_debug_aarch64/` | Debug | AArch64 | Cross-compile dev |
+| `build_release_aarch64/` | Release | AArch64 | Cross-compile runtime |
 
 ## Running Tests
 

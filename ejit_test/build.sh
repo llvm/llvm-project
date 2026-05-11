@@ -26,11 +26,11 @@ for arg in "$@"; do
   esac
 done
 
-# Auto-detect: prefer X86, fallback to aarch64, else error
+# Auto-detect: prefer x86 release, fallback to aarch64 release
 if [[ -z "${ARCH}" ]]; then
-  if [[ -d "${ROOT_DIR}/build_x86" ]]; then
+  if [[ -d "${ROOT_DIR}/build_release_x86" ]]; then
     ARCH="x86"
-  elif [[ -d "${ROOT_DIR}/build_aarch64" ]]; then
+  elif [[ -d "${ROOT_DIR}/build_release_aarch64" ]]; then
     ARCH="aarch64"
   else
     echo "ERROR: could not auto-detect architecture. Set --arch=x86|aarch64"
@@ -40,10 +40,10 @@ fi
 
 case "${ARCH}" in
   x86|X86|x86_64)
-    BUILD_DIR="${ROOT_DIR}/build_x86"
+    BUILD_DIR="${ROOT_DIR}/build_release_x86"
     ;;
   aarch64|AArch64|arm64)
-    BUILD_DIR="${ROOT_DIR}/build_aarch64"
+    BUILD_DIR="${ROOT_DIR}/build_release_aarch64"
     ;;
   *)
     echo "ERROR: unknown architecture '${ARCH}'. Use x86 or aarch64."
@@ -53,20 +53,20 @@ esac
 
 if [[ ! -d "${BUILD_DIR}" ]]; then
   echo "ERROR: build directory '${BUILD_DIR}' not found."
-  echo "  Create it first: cmake -S llvm -B ${BUILD_DIR} ... -DLLVM_TARGETS_TO_BUILD=${ARCH^}"
+  echo "  Run: ./build.sh release ${ARCH}"
   exit 1
 fi
 
-CLANG="${ROOT_DIR}/build/bin/clang"
+# Everything comes from a single build directory: compiler, headers, runtime libs, linker
+CLANG="${BUILD_DIR}/bin/clang"
 CXX="${CLANG}++"
 
 BUILD_INCLUDE="${BUILD_DIR}/include"
 LLVM_INCLUDE="${ROOT_DIR}/llvm/include"
-LLVM_BUILD_INCLUDE="${ROOT_DIR}/build/include"
 
-INCLUDES="-I${LLVM_INCLUDE} -I${BUILD_INCLUDE} -I${LLVM_BUILD_INCLUDE}"
+INCLUDES="-I${LLVM_INCLUDE} -I${BUILD_INCLUDE}"
 
-# --- Linker (lld) from the target build ---
+# --- Linker (lld) from the same build ---
 LD_LLD="${BUILD_DIR}/bin/ld.lld"
 if [[ ! -x "${LD_LLD}" ]]; then
   echo "ERROR: lld not found at ${LD_LLD}. Build it first: ninja -C ${BUILD_DIR} lld"
