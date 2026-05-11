@@ -14,9 +14,23 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
+
+/// Emit a CIR LLVMIntrinsicCallOp for a unary NVVM intrinsic.
+/// The result type is inferred from the single argument.
+static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
+                                          const CallExpr *expr,
+                                          llvm::StringRef intrinsicName) {
+  auto &builder = cgf.getBuilder();
+  mlir::Value arg = cgf.emitScalarExpr(expr->getArg(0));
+  return cir::LLVMIntrinsicCallOp::create(
+             builder, cgf.getLoc(expr->getExprLoc()),
+             builder.getStringAttr(intrinsicName), arg.getType(), {arg})
+      .getResult();
+}
 
 std::optional<mlir::Value>
 CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
@@ -774,33 +788,18 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_abs_bf16x2:
   case NVPTX::BI__nvvm_fabs_f16:
   case NVPTX::BI__nvvm_fabs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.fabs");
   case NVPTX::BI__nvvm_fabs_ftz_f:
   case NVPTX::BI__nvvm_fabs_ftz_f16:
   case NVPTX::BI__nvvm_fabs_ftz_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.fabs.ftz");
   case NVPTX::BI__nvvm_fabs_d:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitUnaryNVVMIntrinsic(*this, expr, "fabs");
   case NVPTX::BI__nvvm_ex2_approx_d:
   case NVPTX::BI__nvvm_ex2_approx_f:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx");
   case NVPTX::BI__nvvm_ex2_approx_ftz_f:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx.ftz");
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     cgm.errorNYI(expr->getSourceRange(),
