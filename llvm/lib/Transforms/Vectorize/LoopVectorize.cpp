@@ -3083,14 +3083,15 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         MaxFactors.ScalableVF = ElementCount::getScalable(0);
         return MaxFactors;
       }
-      // Allow cases where the ExpectedTC == VF + 1. VF can be any power of
+      // Allow cases where the ExactTC == VF + 1. VF can be any power of
       // 2 between 2 and MaxVF.
       //
       // This produces 1 vector iteration, and 1 scalar iteration with
       // no remainder. Later passes will eliminate the loop and leave
       // straight-line code as the both iteration counts are statically known.
+      ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          ExpectedTC->isFixed()) {
+          ExactTC.isFixed()) {
         // If the maximum VF cannot produce 1 vector iteration + 1 scalar
         // iteration, step down VF's to find one that can. The result should
         // also eliminate any loops.
@@ -3100,7 +3101,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         // one vector iteration, but only one scalar iteration.
         for (unsigned MaxVF = MaxFactors.FixedVF.getFixedValue(); MaxVF >= 2;
              MaxVF /= 2) {
-          if (HasOneScalarIterationRemainder(*ExpectedTC, MaxVF)) {
+          if (HasOneScalarIterationRemainder(ExactTC, MaxVF)) {
             LLVM_DEBUG(dbgs() << "LV: Picking VF=" << MaxVF
                               << " with 1 scalar iteration remainder.\n");
             MaxFactors.FixedVF = ElementCount::getFixed(MaxVF);
