@@ -134,6 +134,42 @@ func.func @extract_strided_metadata_i4_base_buffer(%arg: memref<8xi4>)
 
 // -----
 
+// Rank-0 sub-byte source with zero offset: the converted source is a rank-0
+// i8 memref, and the pattern returns only `{baseBuffer, emulatedOffset}` with
+// no size/stride results (matching `extract_strided_metadata`'s rank-0
+// signature). The emulated offset is the static zero constant.
+
+// CHECK-LABEL: func.func @extract_strided_metadata_i4_rank0
+// CHECK-SAME:    %{{.+}}: memref<i8>
+// CHECK-DAG:     %[[OFF:.+]] = arith.constant 0 : index
+// CHECK:         return %[[OFF]]
+func.func @extract_strided_metadata_i4_rank0(%arg: memref<i4>) -> index {
+  %base, %offset = memref.extract_strided_metadata %arg :
+    memref<i4> -> memref<i4>, index
+  return %offset : index
+}
+
+// -----
+
+// Rank-0 sub-byte source with a dynamic offset: the converter produces a
+// rank-0 i8 memref with a `strided<[], offset: ?>` layout (empty strides),
+// and the pattern scales the runtime i8 offset back to i4 units via muli.
+
+// CHECK-LABEL: func.func @extract_strided_metadata_i4_rank0_dynamic_offset
+// CHECK-SAME:    %[[ARG:.+]]: memref<i8, strided<[], offset: ?>>
+// CHECK-DAG:     %[[SCALE:.+]] = arith.constant 2 : index
+// CHECK-DAG:     %{{.+}}, %[[I8OFF:.+]] = memref.extract_strided_metadata %[[ARG]]
+// CHECK-DAG:     %[[OFF:.+]] = arith.muli %[[I8OFF]], %[[SCALE]]
+// CHECK:         return %[[OFF]]
+func.func @extract_strided_metadata_i4_rank0_dynamic_offset(
+    %arg: memref<i4, strided<[], offset: ?>>) -> index {
+  %base, %offset = memref.extract_strided_metadata %arg :
+    memref<i4, strided<[], offset: ?>> -> memref<i4>, index
+  return %offset : index
+}
+
+// -----
+
 // Non-sub-byte source: pattern must not fire and the op is left for the
 // existing `populateResolveExtractStridedMetadataPatterns` pipeline (which
 // here resolves it on the unchanged i8 source).

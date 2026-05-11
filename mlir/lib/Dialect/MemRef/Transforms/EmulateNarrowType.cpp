@@ -850,12 +850,13 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
     if (width >= loadStoreWidth)
       return ty;
 
-    // Currently only handle innermost stride being 1, checking
+    // Only handle innermost stride being 1. Rank-0 memrefs have no strides
+    // and trivially satisfy this.
     SmallVector<int64_t> strides;
     int64_t offset;
     if (failed(ty.getStridesAndOffset(strides, offset)))
       return nullptr;
-    if (!strides.empty() && strides.back() != 1)
+    if (ty.getRank() > 0 && strides.back() != 1)
       return nullptr;
 
     auto newElemTy = IntegerType::get(
@@ -866,21 +867,27 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
       return nullptr;
 
     StridedLayoutAttr layoutAttr;
-    // If the offset is 0, we do not need a strided layout as the stride is
-    // 1, so we only use the strided layout if the offset is not 0.
+    // The default layout (no `layoutAttr`) covers the common case of a
+    // zero-offset, unit-innermost-stride memref. We only build a strided
+    // layout when the original offset is non-zero. Rank-0 memrefs carry no
+    // strides, so the layout uses an empty stride list.
     if (offset != 0) {
+      SmallVector<int64_t, 1> resultStrides =
+          ty.getRank() == 0 ? SmallVector<int64_t, 1>{}
+                            : SmallVector<int64_t, 1>{1};
       if (offset == ShapedType::kDynamic) {
-        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                            ArrayRef<int64_t>{1});
+        layoutAttr =
+            StridedLayoutAttr::get(ty.getContext(), offset, resultStrides);
       } else {
-        // Check if the number of bytes are a multiple of the loadStoreWidth
-        // and if so, divide it by the loadStoreWidth to get the offset.
+        // Scale the static offset from emulated-element units to
+        // load-store-element units. Reject offsets that are not a whole
+        // number of load-store elements.
         if ((offset * width) % loadStoreWidth != 0)
           return std::nullopt;
         offset = (offset * width) / loadStoreWidth;
 
-        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                            ArrayRef<int64_t>{1});
+        layoutAttr =
+            StridedLayoutAttr::get(ty.getContext(), offset, resultStrides);
       }
     }
 
