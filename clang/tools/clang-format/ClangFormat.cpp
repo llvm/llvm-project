@@ -701,8 +701,15 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty()) {
-    if (isIgnored(AssumeFileName))
+    if (isIgnored(AssumeFileName)) {
+      // The user should be able to expect that running
+      // `cat foo | clang-format --assume-filename foo` and writing the output
+      // to foo will format foo.
+      // Thus, we need to just output stdin untouched if it is ignored.
+      if (!OutputXML)
+        outs() << MemoryBuffer::getSTDIN()->get()->getBuffer();
       return 0;
+    }
     return clang::format::format("-", FailOnIncompleteFormat);
   }
 

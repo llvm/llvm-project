@@ -15,7 +15,7 @@
 //
 // The pass handles:
 //  * Cross-block: SUBS/ADDS followed by conditional branches
-//  * Intra-block: CSINC conditional instructions
+//  * Intra-block: Select-family conditional instructions
 //
 //
 // Consider the following example in C:
@@ -57,10 +57,6 @@
 // TODO: For cross-block:
 //   - handle other conditional instructions (e.g. CSET)
 //   - allow second branching to be anything if it doesn't require adjusting
-// TODO: For intra-block:
-//   - handle CINC and CSET (CSINC aliases) as their conditions are inverted
-//   compared to CSINC.
-//   - handle other non-CSINC conditional instructions
 //
 //===----------------------------------------------------------------------===//
 
@@ -238,10 +234,6 @@ static bool isCmpInstruction(unsigned Opc) {
   default:
     return false;
   }
-}
-
-static bool isCSINCInstruction(unsigned Opc) {
-  return Opc == AArch64::CSINCWr || Opc == AArch64::CSINCXr;
 }
 
 // Returns the Bcc terminator if present, otherwise nullptr.
@@ -577,7 +569,8 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (isCSINCInstruction(MI.getOpcode())) {
+    if (AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(MI) >= 0 &&
+        !MI.isBranch()) {
       if (PendingPair) {
         // A second conditional consuming the same CMP would invalidate any
         // optimization: modifying the CMP would silently change what both

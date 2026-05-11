@@ -89,9 +89,6 @@ jobs:
   release-lit:
     name: Release Lit
     runs-on: ubuntu-24.04
-    environment:
-      name: release
-      deployment: false
     permissions:
       id-token: write # Requred for pypi publishing
     needs:
@@ -109,18 +106,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-build python3-psutil python3-github
 
-      - id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
-        with:
-          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          permission-members: read
-
       - name: Check Permissions
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          USER_TOKEN: ${{ steps.app-token.outputs.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
         run: |
           ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
 
