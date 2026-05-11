@@ -99,6 +99,19 @@ static_assert(!is_volatile<void()volatile&>::value, "");
 #endif
 } // namespace cwg713
 
+namespace cwg717 { // cwg717: 3.3
+#if __cplusplus >= 201103L
+void f() {
+  thread_local extern int i;
+  thread_local extern int& j;
+}
+
+struct S {
+  thread_local static int i;
+};
+#endif
+} // namespace cwg717
+
 // cwg722 is in cwg722.cpp
 
 namespace cwg727 { // cwg727: partial
