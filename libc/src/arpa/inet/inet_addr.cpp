@@ -8,7 +8,7 @@
 
 #include "src/arpa/inet/inet_addr.h"
 #include "include/llvm-libc-macros/netinet-in-macros.h"
-#include "include/llvm-libc-types/in_addr.h"
+#include "include/llvm-libc-types/struct_in_addr.h"
 #include "include/llvm-libc-types/in_addr_t.h"
 #include "src/__support/common.h"
 #include "src/arpa/inet/inet_aton.h"
@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(in_addr_t, inet_addr, (const char *cp)) {
-  in_addr addr;
+  struct in_addr addr;
   return inet_aton(cp, &addr) ? addr.s_addr : INADDR_NONE;
 }
 
