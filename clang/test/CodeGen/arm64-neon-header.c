@@ -2,6 +2,8 @@
 // RUN:     -fms-compatibility -fms-compatibility-version=19.00 \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
+// REQUIRES: aarch64-registered-target
+
 #include <arm64_neon.h>
 
 // CHECK-LABEL: define{{.*}} @test_vld1q_s32_x4(
