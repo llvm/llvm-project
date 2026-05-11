@@ -6,7 +6,7 @@
 # RUN: echo '    symbols:' >> %t2.map
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
-# RUN: dsymutil -f -y %t2.map -o - | llvm-dwarfdump --debug-info - | FileCheck %s
+# RUN: dsymutil --linker classic -f -y %t2.map -o - | llvm-dwarfdump --debug-info - | FileCheck %s
 # RUN: dsymutil --linker parallel -f -y %t2.map -o - | llvm-dwarfdump --debug-info - | FileCheck --check-prefix=PARALLEL %s
 
 ## Test that dsymutil correctly handles -gsimple-template-names, where

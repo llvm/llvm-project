@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64RegisterBankInfo.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -379,6 +380,13 @@ static bool preferGPRForFPImm(const MachineInstr &MI,
   const APFloat Imm = MI.getOperand(1).getFPImm()->getValueAPF();
   const APInt ImmBits = Imm.bitcastToAPInt();
 
+  // If all the uses are stores use a gpr constant
+  if (all_of(MRI.use_nodbg_instructions(Dst), [&](const MachineInstr &UseMI) {
+        return UseMI.getOpcode() == TargetOpcode::G_STORE &&
+               UseMI.getOperand(0).getReg() == Dst;
+      }))
+    return true;
+
   // Check if we can encode this as a movi. Note, we only have one pattern so
   // far for movis, hence the one check.
   if (Size == 32) {
@@ -733,6 +741,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case AArch64::G_PMULL:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
+  case AArch64::G_FPTRUNC_ODD:
     return true;
   case TargetOpcode::G_INTRINSIC:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -773,6 +782,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
+  case AArch64::G_FPTRUNC_ODD:
     return true;
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
