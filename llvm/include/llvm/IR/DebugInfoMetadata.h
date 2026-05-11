@@ -94,7 +94,7 @@ class DISourceLanguageName {
   /// This is intentionally not modeled as a DICompileUnit operand. Code that
   /// introspects DICompileUnit through getNumOperands()/getOperand(i) will not
   /// see this field.
-  MDString *Dialect = nullptr;
+  uint16_t Dialect = 0;
 
 public:
   bool hasVersionedName() const { return HasVersion; }
@@ -118,16 +118,11 @@ public:
     return Version;
   }
 
-  StringRef getDialect() const {
-    return Dialect ? Dialect->getString() : StringRef{};
-  }
+  uint16_t getDialect() const { return Dialect; }
 
-  MDString *getRawDialect() const { return Dialect; }
-
-  DISourceLanguageName(uint16_t Lang, uint32_t Version,
-                       MDString *Dialect = nullptr)
+  DISourceLanguageName(uint16_t Lang, uint32_t Version, uint16_t Dialect = 0)
       : Version(Version), Name(Lang), HasVersion(true), Dialect(Dialect) {}
-  DISourceLanguageName(uint16_t Lang, MDString *Dialect = nullptr)
+  DISourceLanguageName(uint16_t Lang, uint16_t Dialect = 0)
       : Version(0), Name(Lang), HasVersion(false), Dialect(Dialect) {}
 };
 
@@ -2208,8 +2203,8 @@ public:
   }
   StringRef getSysRoot() const { return getStringOperand(9); }
   StringRef getSDK() const { return getStringOperand(10); }
-  /// Target-specific language dialect for DWARF. Empty when unset.
-  StringRef getDialect() const { return SourceLanguage.getDialect(); }
+  /// Target-specific language dialect for DWARF.
+  uint16_t getDialect() const { return SourceLanguage.getDialect(); }
 
   MDString *getRawProducer() const { return getOperandAs<MDString>(1); }
   MDString *getRawFlags() const { return getOperandAs<MDString>(2); }
@@ -2223,9 +2218,6 @@ public:
   Metadata *getRawMacros() const { return getOperand(8); }
   MDString *getRawSysRoot() const { return getOperandAs<MDString>(9); }
   MDString *getRawSDK() const { return getOperandAs<MDString>(10); }
-  /// Returns the out-of-band dialect payload carried by SourceLanguage.
-  MDString *getRawDialect() const { return SourceLanguage.getRawDialect(); }
-
   /// Replace arrays.
   ///
   /// If this \a isUniqued() and not \a isResolved(), it will be RAUW'ed and

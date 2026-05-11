@@ -751,10 +751,6 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
 
   // Don't assign IDs to metadata nodes.
   if (auto *N = dyn_cast<MDNode>(MD)) {
-    // DICompileUnit dialect is out-of-band (not in the CU operand list), so
-    // enumerate it explicitly to keep bitcode round-trips from dropping it.
-    if (const auto *CU = dyn_cast<DICompileUnit>(N))
-      enumerateMetadataImpl(F, CU->getRawDialect());
     return N;
   }
 

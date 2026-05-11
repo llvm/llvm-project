@@ -1235,9 +1235,6 @@ DICompileUnit *DICompileUnit::getImpl(
   assert(isCanonical(Producer) && "Expected canonical MDString");
   assert(isCanonical(Flags) && "Expected canonical MDString");
   assert(isCanonical(SplitDebugFilename) && "Expected canonical MDString");
-  assert((!SourceLanguage.getRawDialect() ||
-          isCanonical(SourceLanguage.getRawDialect())) &&
-         "Expected canonical MDString");
 
   Metadata *Ops[] = {File,
                      Producer,

@@ -5011,6 +5011,10 @@ struct DwarfSourceLangNameField : public MDUnsignedField {
   DwarfSourceLangNameField() : MDUnsignedField(0, UINT32_MAX) {}
 };
 
+struct DwarfLangDialectField : public MDUnsignedField {
+  DwarfLangDialectField() : MDUnsignedField(0, UINT16_MAX) {}
+};
+
 struct DwarfCCField : public MDUnsignedField {
   DwarfCCField() : MDUnsignedField(0, dwarf::DW_CC_hi_user) {}
 };
@@ -5283,6 +5287,26 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
                     Lex.getStrVal() + "'");
   assert(Lang <= Result.Max && "Expected valid DWARF source language name");
   Result.assign(Lang);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfLangDialectField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfLangDialect)
+    return tokError("expected DWARF language dialect");
+
+  StringRef DialectString = Lex.getStrVal();
+  unsigned Dialect = dwarf::getLanguageDialect(DialectString);
+  if (Dialect == dwarf::DW_LANG_DIALECT_invalid)
+    return tokError("invalid DWARF language dialect" + Twine(" '") +
+                    DialectString + "'");
+  assert(Dialect <= Result.Max && "Expected DWARF language dialect");
+  Result.assign(Dialect);
   Lex.Lex();
   return false;
 }
@@ -6128,7 +6152,8 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      splitDebugFilename: "abc.debug",
 ///                      emissionKind: FullDebug, enums: !1, retainedTypes: !2,
 ///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd,
-///                      sysroot: "/", sdk: "MacOSX.sdk", dialect: "simt")
+///                      sysroot: "/", sdk: "MacOSX.sdk",
+///                      dialect: DW_LANG_DIALECT_simt)
 bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return tokError("missing 'distinct', required for !DICompileUnit");
@@ -6158,7 +6183,7 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(rangesBaseAddress, MDBoolField, = false);                           \
   OPTIONAL(sysroot, MDStringField, );                                          \
   OPTIONAL(sdk, MDStringField, );                                              \
-  OPTIONAL(dialect, MDStringField, );
+  OPTIONAL(dialect, DwarfLangDialectField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -6174,11 +6199,13 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
     return error(Loc, "'sourceLanguageVersion' requires an associated "
                       "'sourceLanguageName' on !DICompileUnit");
 
+  uint16_t Dialect = static_cast<uint16_t>(dialect.Val);
   DISourceLanguageName SourceLanguage =
       language.Seen
-          ? DISourceLanguageName(language.Val, dialect.Val)
-          : DISourceLanguageName(sourceLanguageName.Val,
-                                 sourceLanguageVersion.Val, dialect.Val);
+          ? DISourceLanguageName(static_cast<uint16_t>(language.Val), Dialect)
+          : DISourceLanguageName(
+                static_cast<uint16_t>(sourceLanguageName.Val),
+                static_cast<uint32_t>(sourceLanguageVersion.Val), Dialect);
 
   Result = DICompileUnit::getDistinct(
       Context, SourceLanguage, file.Val, producer.Val, isOptimized.Val,

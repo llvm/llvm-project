@@ -2919,7 +2919,7 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(DWOId, N->getDWOId());
   EXPECT_EQ(SysRoot, N->getSysRoot());
   EXPECT_EQ(SDK, N->getSDK());
-  EXPECT_TRUE(N->getDialect().empty());
+  EXPECT_EQ(dwarf::DW_LANG_DIALECT_invalid, N->getDialect());
 
   TempDICompileUnit Temp = N->clone();
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, Temp->getTag());
@@ -2938,7 +2938,7 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(Macros, Temp->getMacros().get());
   EXPECT_EQ(SysRoot, Temp->getSysRoot());
   EXPECT_EQ(SDK, Temp->getSDK());
-  EXPECT_TRUE(Temp->getDialect().empty());
+  EXPECT_EQ(dwarf::DW_LANG_DIALECT_invalid, Temp->getDialect());
 
   auto *TempAddress = Temp.get();
   auto *Clone = MDNode::replaceWithPermanent(std::move(Temp));
@@ -2963,7 +2963,7 @@ TEST_F(DICompileUnitTest, getWithDialect) {
   MDTuple *Macros = getTuple();
   StringRef SysRoot = "/";
   StringRef SDK = "TestSDK";
-  auto *Dialect = MDString::get(Context, "simt");
+  uint16_t Dialect = dwarf::DW_LANG_DIALECT_simt;
   auto *N = DICompileUnit::getDistinct(
       Context, DISourceLanguageName(SourceLanguage, Dialect), File, Producer,
       IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
@@ -2971,12 +2971,10 @@ TEST_F(DICompileUnitTest, getWithDialect) {
       DWOId, true, false, DICompileUnit::DebugNameTableKind::Default, false,
       SysRoot, SDK);
 
-  EXPECT_EQ(StringRef("simt"), N->getDialect());
-  EXPECT_EQ(Dialect, N->getRawDialect());
+  EXPECT_EQ(dwarf::DW_LANG_DIALECT_simt, N->getDialect());
 
   TempDICompileUnit Temp = N->clone();
-  EXPECT_EQ(StringRef("simt"), Temp->getDialect());
-  EXPECT_EQ(Dialect, Temp->getRawDialect());
+  EXPECT_EQ(dwarf::DW_LANG_DIALECT_simt, Temp->getDialect());
 }
 
 TEST_F(DICompileUnitTest, replaceArrays) {

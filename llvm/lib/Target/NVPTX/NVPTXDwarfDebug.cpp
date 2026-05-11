@@ -29,8 +29,8 @@
 
 using namespace llvm;
 
-static constexpr StringLiteral SimtDialect = "simt";
-static constexpr StringLiteral TileDialect = "tile";
+static constexpr uint16_t SimtDialect = dwarf::DW_LANG_DIALECT_simt;
+static constexpr uint16_t TileDialect = dwarf::DW_LANG_DIALECT_tile;
 
 // Command line option to control inlined_at enhancement to lineinfo support.
 // Valid only when debuginfo emissionkind is DebugDirectivesOnly or
@@ -286,17 +286,22 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 
 void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
                                                  DwarfCompileUnit &NewCU) {
-  StringRef Dialect = DIUnit.getSourceLanguage().getDialect();
-  if (!Dialect.empty()) {
+  uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
+  if (Dialect != dwarf::DW_LANG_DIALECT_invalid) {
     if (Dialect != SimtDialect && Dialect != TileDialect &&
         WarnedDialectCUs.insert(&DIUnit).second) {
-      DIUnit.getContext().diagnose(
-          DiagnosticInfoGeneric(Twine("unknown NVPTX language dialect '") +
-                                    Dialect + "' on DICompileUnit; expected '" +
-                                    SimtDialect + "' or '" + TileDialect + "'",
-                                DS_Warning));
+      std::string DialectString =
+          dwarf::LanguageDialectString(Dialect).empty()
+              ? Twine(Dialect).str()
+              : dwarf::LanguageDialectString(Dialect).str();
+      DIUnit.getContext().diagnose(DiagnosticInfoGeneric(
+          Twine("unknown NVPTX language dialect '") + DialectString +
+              "' on DICompileUnit; expected '" +
+              dwarf::LanguageDialectString(SimtDialect) + "' or '" +
+              dwarf::LanguageDialectString(TileDialect) + "'",
+          DS_Warning));
     }
-    NewCU.addString(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
-                    Dialect);
+    NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
+                  dwarf::DW_FORM_data1, Dialect);
   }
 }

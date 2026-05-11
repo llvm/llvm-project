@@ -1947,7 +1947,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
     const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
-    auto *Dialect = Record.size() <= 23 ? nullptr : getMDString(Record[23]);
+    uint16_t Dialect =
+        Record.size() > 23
+            ? static_cast<uint16_t>(Record[23])
+            : static_cast<uint16_t>(dwarf::DW_LANG_DIALECT_invalid);
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
@@ -1968,7 +1971,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         // Keep these guarded for backwards-compatibility with older bitcode
         // records. Keep this index layout in sync with writeDICompileUnit:
         // index 20 is sysroot, 21 is SDK, 22 is source-language version, and
-        // 23 is dialect (read above via getMDString(Record[23])).
+        // 23 is dialect (read above as raw enum value, where 0 means unset).
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
         Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 

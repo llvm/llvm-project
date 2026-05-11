@@ -1616,8 +1616,6 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
 
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
-  CheckDI(!N.getRawDialect() || !N.getRawDialect()->getString().empty(),
-          "invalid empty dialect", &N);
 
   if (auto *Array = N.getRawEnumTypes()) {
     CheckDI(isa<MDTuple>(Array), "invalid enum list", &N, Array);

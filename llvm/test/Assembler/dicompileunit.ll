@@ -16,25 +16,25 @@
 !6 = distinct !{}
 !7 = distinct !{}
 
-; CHECK: !8 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, flags: "-O2", runtimeVersion: 2, splitDebugFilename: "abc.debug", emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !5, imports: !6, macros: !7, dwoId: 42, rangesBaseAddress: true, sysroot: "/", dialect: "simt")
+; CHECK: !8 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, flags: "-O2", runtimeVersion: 2, splitDebugFilename: "abc.debug", emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !5, imports: !6, macros: !7, dwoId: 42, rangesBaseAddress: true, sysroot: "/", dialect: DW_LANG_DIALECT_simt)
 !8 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
                              isOptimized: true, flags: "-O2", runtimeVersion: 2,
                              splitDebugFilename: "abc.debug",
                              emissionKind: FullDebug,
                              enums: !2, retainedTypes: !3,
                              globals: !5, imports: !6, macros: !7, dwoId: 42,
-                             splitDebugInlining: true, rangesBaseAddress: true, sysroot: "/", dialect: "simt")
+                             splitDebugInlining: true, rangesBaseAddress: true, sysroot: "/", dialect: DW_LANG_DIALECT_simt)
 
 ; CHECK: !9 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 !9 = distinct !DICompileUnit(language: 12, file: !1, producer: "",
                              isOptimized: false, flags: "", runtimeVersion: 0,
                              splitDebugFilename: "", emissionKind: NoDebug)
 
-; CHECK: !10 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, flags: "-O2", runtimeVersion: 2, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly, splitDebugInlining: false)
+; CHECK: !10 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, flags: "-O2", runtimeVersion: 2, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly, splitDebugInlining: false, dialect: DW_LANG_DIALECT_tile)
 !10 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
                              isOptimized: true, flags: "-O2", runtimeVersion: 2,
                              splitDebugFilename: "abc.debug",
-                             emissionKind: LineTablesOnly, splitDebugInlining: false)
+                             emissionKind: LineTablesOnly, splitDebugInlining: false, dialect: DW_LANG_DIALECT_tile)
 
 !llvm.module.flags = !{!11}
 !11 = !{i32 2, !"Debug Info Version", i32 3}
