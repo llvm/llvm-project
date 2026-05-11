@@ -740,21 +740,12 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       if (Count >= 2)
         return std::nullopt;
 
-      // For the current ABI, a record can be treated as complex-like if no
-      // field requires an alignment stronger than a native complex type (2 *
-      // sizeof(T)) and the record size is exactly 2 * sizeof(T). Under these
-      // constraints, per-field alignment cannot introduce internal or tail
-      // padding, and the layout is guaranteed to match two adjacent FP
-      // elements.
-      unsigned MaxAlignOnDecl = FD->getMaxAlignment();
+      // A record can be treated as complex-like if its size is exactly
+      // 2 * sizeof(T), matching the layout of two adjacent FP elements.
       QualType FT = FD->getType();
       QualType FTSingleTy = getSingleElementType(FT);
-      unsigned ElemSize = getContext().getTypeSize(FTSingleTy);
-      if (MaxAlignOnDecl > 2 * ElemSize)
-        return std::nullopt;
-
-      unsigned StructSize = getContext().getTypeSize(Ty);
-      if (StructSize != 2 * ElemSize)
+      auto &Ctx = getContext();
+      if (Ctx.getTypeSize(Ty)!= 2 * Ctx.getTypeSize(FTSingleTy))
         return std::nullopt;
 
       if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
@@ -839,8 +830,9 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
       return getNaturalAlignIndirect(RetTy,
                                      getDataLayout().getAllocaAddrSpace());
   }
-  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy, CGT.ConvertType(RetTy))
-                                               : ABIArgInfo::getDirect(CGT.ConvertType(RetTy)));
+  return (isPromotableIntegerTypeForABI(RetTy)
+                ? ABIArgInfo::getExtend(RetTy, CGT.ConvertType(RetTy))
+                : ABIArgInfo::getDirect(CGT.ConvertType(RetTy)));
 }
 
 ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
