@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -132,6 +133,79 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   // Aliasing ops.
   auto viewOp = dyn_cast<ViewLikeOpInterface>(defOp);
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
+}
+
+// Walk the view chain rooted at `memref` to its ultimate base. When every link
+// is a rank-preserving `memref.cast`, `memref.subview`, or
+// `memref.reinterpret_cast` with fully static offsets and strides, returns
+// `success()` and composes the per-dimension affine transform
+// `base[d] = offsets[d] + strides[d] * memref[d]`. On any non-static or
+// non-rank-preserving link the walk still finishes to find `base` so callers
+// can compare bases, but returns `failure()` and leaves the transform vectors
+// unspecified.
+static LogicalResult
+resolveViewBaseAndStaticTransform(Value memref, Value &base,
+                                  SmallVectorImpl<int64_t> &offsets,
+                                  SmallVectorImpl<int64_t> &strides) {
+  auto memrefType = dyn_cast<MemRefType>(memref.getType());
+  if (!memrefType) {
+    base = memref;
+    return failure();
+  }
+  unsigned rank = memrefType.getRank();
+  offsets.assign(rank, 0);
+  strides.assign(rank, 1);
+  base = memref;
+  bool isStatic = true;
+  while (auto viewOp = base.getDefiningOp<ViewLikeOpInterface>()) {
+    Value src = viewOp.getViewSource();
+    auto srcType = dyn_cast<MemRefType>(src.getType());
+    if (!srcType || srcType.getRank() != static_cast<int64_t>(rank)) {
+      isStatic = false;
+    } else if (isa<memref::CastOp>(viewOp.getOperation())) {
+      // Identity index transform.
+    } else if (auto offSizeStr = dyn_cast<OffsetSizeAndStrideOpInterface>(
+                   viewOp.getOperation())) {
+      ArrayRef<int64_t> sOff = offSizeStr.getStaticOffsets();
+      ArrayRef<int64_t> sStr = offSizeStr.getStaticStrides();
+      if (sOff.size() != rank || sStr.size() != rank) {
+        isStatic = false;
+      } else {
+        for (unsigned d = 0; d < rank && isStatic; ++d) {
+          if (ShapedType::isDynamic(sOff[d]) ||
+              ShapedType::isDynamic(sStr[d])) {
+            isStatic = false;
+            break;
+          }
+          offsets[d] = sOff[d] + sStr[d] * offsets[d];
+          strides[d] = sStr[d] * strides[d];
+        }
+      }
+    } else {
+      isStatic = false;
+    }
+    base = src;
+  }
+  return success(isStatic);
+}
+
+// Build a B->C relation that applies `range[d] = offsets[d] + strides[d] *
+// domain[d]` so it can be composed into the range of an access relation via
+// `IntegerRelation::applyRange`.
+static IntegerRelation buildViewToBaseRelation(unsigned rank,
+                                               ArrayRef<int64_t> offsets,
+                                               ArrayRef<int64_t> strides) {
+  IntegerRelation rel(PresburgerSpace::getRelationSpace(
+      /*numDomain=*/rank, /*numRange=*/rank,
+      /*numSymbols=*/0, /*numLocals=*/0));
+  for (unsigned d = 0; d < rank; ++d) {
+    SmallVector<int64_t> eq(2 * rank + 1, 0);
+    eq[d] = -strides[d];
+    eq[rank + d] = 1;
+    eq.back() = -offsets[d];
+    rel.addEquality(eq);
+  }
+  return rel;
 }
 
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
@@ -615,9 +689,26 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   LLVM_DEBUG(srcAccess.opInst->dump());
   LLVM_DEBUG(dstAccess.opInst->dump());
 
-  // Return 'NoDependence' if these accesses do not access the same memref.
-  if (srcAccess.memref != dstAccess.memref)
-    return DependenceResult::NoDependence;
+  // For accesses through distinct SSA memref values, resolve the view chain to
+  // its ultimate base. If the bases differ, the accesses cannot alias. If they
+  // match, try to compose each access's view chain into a static base-coord
+  // transform so the existing Presburger analysis can reason about overlap
+  // (e.g. disjoint subviews of the same base). Fall back to a conservative
+  // `Failure` when the view chain is not fully static or not rank-preserving.
+  SmallVector<int64_t, 4> srcOff, srcStr, dstOff, dstStr;
+  bool composeInBaseCoords = false;
+  if (srcAccess.memref != dstAccess.memref) {
+    Value srcBase, dstBase;
+    LogicalResult srcStatic = resolveViewBaseAndStaticTransform(
+        srcAccess.memref, srcBase, srcOff, srcStr);
+    LogicalResult dstStatic = resolveViewBaseAndStaticTransform(
+        dstAccess.memref, dstBase, dstOff, dstStr);
+    if (srcBase != dstBase)
+      return DependenceResult::NoDependence;
+    if (failed(srcStatic) || failed(dstStatic))
+      return DependenceResult::Failure;
+    composeInBaseCoords = true;
+  }
 
   // Return 'NoDependence' if one of these accesses is not an
   // AffineWriteOpInterface.
@@ -640,6 +731,13 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
     return DependenceResult::Failure;
   if (failed(dstAccess.getAccessRelation(dstRel)))
     return DependenceResult::Failure;
+
+  // Lift each view-coord access relation into shared base coordinates so the
+  // existing range-composition machinery can compare them directly.
+  if (composeInBaseCoords) {
+    srcRel.applyRange(buildViewToBaseRelation(srcOff.size(), srcOff, srcStr));
+    dstRel.applyRange(buildViewToBaseRelation(dstOff.size(), dstOff, dstStr));
+  }
 
   FlatAffineValueConstraints srcDomain(srcRel.getDomainSet());
   FlatAffineValueConstraints dstDomain(dstRel.getDomainSet());

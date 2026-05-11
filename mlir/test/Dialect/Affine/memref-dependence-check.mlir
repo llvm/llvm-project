@@ -1166,3 +1166,51 @@ func.func @affine_parallel_min_max_bounds(%arg0: memref<4090x2040xf32>, %arg1: f
   }
   return
 }
+
+// -----
+
+// Two disjoint memref.subview windows over the same base must not be flagged
+// as aliasing: the dependence analysis composes each view's static
+// offset/stride transform into base coordinates before testing overlap.
+// CHECK-LABEL: func @disjoint_subview_no_dependence
+func.func @disjoint_subview_no_dependence(%arg0: memref<8xi32>) {
+  %v1 = memref.subview %arg0[0] [4] [1] : memref<8xi32> to memref<4xi32, strided<[1], offset: 0>>
+  %v2 = memref.subview %arg0[4] [4] [1] : memref<8xi32> to memref<4xi32, strided<[1], offset: 4>>
+  affine.for %i = 0 to 4 {
+    %0 = affine.load %v1[%i] : memref<4xi32, strided<[1], offset: 0>>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 2 = false}}
+    affine.store %0, %v2[%i] : memref<4xi32, strided<[1], offset: 4>>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+  }
+  return
+}
+
+// -----
+
+// Overlapping subviews of the same base do alias: %v1 = [0, 4), %v2 = [2, 6),
+// and iteration i stores into a cell that iteration i + 2 reads back. The
+// carried dependence must be reported as [2, 2] at depth 1.
+// CHECK-LABEL: func @overlapping_subview_carries_dependence
+func.func @overlapping_subview_carries_dependence(%arg0: memref<8xi32>) {
+  %v1 = memref.subview %arg0[0] [4] [1] : memref<8xi32> to memref<4xi32, strided<[1], offset: 0>>
+  %v2 = memref.subview %arg0[2] [4] [1] : memref<8xi32> to memref<4xi32, strided<[1], offset: 2>>
+  affine.for %i = 0 to 4 {
+    %0 = affine.load %v1[%i] : memref<4xi32, strided<[1], offset: 0>>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 2 = false}}
+    affine.store %0, %v2[%i] : memref<4xi32, strided<[1], offset: 2>>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = [2, 2]}}
+    // expected-remark@above {{dependence from 1 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+  }
+  return
+}
