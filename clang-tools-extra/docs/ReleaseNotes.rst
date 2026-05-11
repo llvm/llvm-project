@@ -55,6 +55,46 @@ Potentially Breaking Changes
   <clang-tidy/checks/performance/prefer-single-char-overloads>`.
   The original check will be removed in the 25th release.
 
+- Removed the :program:`clang-tidy` ``hicpp`` module. All checks have been moved
+  to the other modules. Use the replacement checks instead:
+
+  ================================== ========================================================================
+  Removed check                      Replacement check
+  ================================== ========================================================================
+  ``hicpp-avoid-c-arrays``           :doc:`modernize-avoid-c-arrays
+                                     <clang-tidy/checks/modernize/avoid-c-arrays>`
+  ``hicpp-avoid-goto``               :doc:`cppcoreguidelines-avoid-goto
+                                     <clang-tidy/checks/cppcoreguidelines/avoid-goto>`
+  ``hicpp-braces-around-statements`` :doc:`readability-braces-around-statements
+                                     <clang-tidy/checks/readability/braces-around-statements>`
+  ``hicpp-deprecated-headers``       :doc:`modernize-deprecated-headers
+                                     <clang-tidy/checks/modernize/deprecated-headers>`
+  ``hicpp-exception-baseclass``      :doc:`bugprone-std-exception-baseclass
+                                     <clang-tidy/checks/bugprone/std-exception-baseclass>`
+  ``hicpp-explicit-conversions``     :doc:`misc-explicit-constructor
+                                     <clang-tidy/checks/misc/explicit-constructor>`
+  ``hicpp-function-size``            :doc:`readability-function-size
+                                     <clang-tidy/checks/readability/function-size>`
+  ``hicpp-ignored-remove-result``    :doc:`bugprone-unused-return-value
+                                     <clang-tidy/checks/bugprone/unused-return-value>`
+  ``hicpp-invalid-access-moved``     :doc:`bugprone-use-after-move
+                                     <clang-tidy/checks/bugprone/use-after-move>`
+  ``hicpp-member-init``              :doc:`cppcoreguidelines-pro-type-member-init
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`
+  ``hicpp-move-const-arg``           :doc:`performance-move-const-arg
+                                     <clang-tidy/checks/performance/move-const-arg>`
+  ``hicpp-named-parameter``          :doc:`readability-named-parameter
+                                     <clang-tidy/checks/readability/named-parameter>`
+  ``hicpp-new-delete-operators``     :doc:`misc-new-delete-overloads
+                                     <clang-tidy/checks/misc/new-delete-overloads>`
+  ``hicpp-no-array-decay``           :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
+                                     <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>`
+  ``hicpp-noexcept-move``            :doc:`performance-noexcept-move-constructor
+                                     <clang-tidy/checks/performance/noexcept-move-constructor>`
+  ``hicpp-signed-bitwise``           :doc:`bugprone-signed-bitwise
+                                     <clang-tidy/checks/bugprone/signed-bitwise>`
+  ================================== ========================================================================
+
 Improvements to clangd
 ----------------------
 
@@ -78,6 +118,18 @@ Code completion
 
 - Now also provides include files without extension, if they are in a directory
   only called ``include``.
+
+- Added support for ``InsertReplaceEdit`` in code completion (LSP 3.16),
+  allowing clients that advertise ``insertReplaceSupport`` to receive both
+  insert and replace ranges for completion items.
+
+- Changed completion-style default to ``detailed``. This means function
+  overloads will no longer be bundled together, but instead each have
+  their own completion item. This gives the user a better overview of the
+  possible overloads and also when accepting the item it will generate
+  placeholder parameters, which was not possible due to ambiguity with
+  ``bundled``. To change back to the old behaviour, pass the argument
+  ``--completion-style=bundled`` to clangd.
 
 Code actions
 ^^^^^^^^^^^^
@@ -195,30 +247,31 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
-- New alias :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
+- Renamed :doc:`cert-exp45-c <clang-tidy/checks/cert/exp45-c>`
   to :doc:`bugprone-assignment-in-selection-statement
   <clang-tidy/checks/bugprone/assignment-in-selection-statement>`.
 
-- Renamed :doc:`hicpp-exception-baseclass
-  <clang-tidy/checks/hicpp/exception-baseclass>`
-  to :doc:`bugprone-std-exception-baseclass
-  <clang-tidy/checks/bugprone/std-exception-baseclass>`.
-  The `hicpp-exception-baseclass` name is kept as an alias.
+- Renamed :doc:`cppcoreguidelines-explicit-constructor
+  <clang-tidy/checks/cppcoreguidelines/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `cppcoreguidelines-explicit-constructor` name is kept as an alias.
 
-- Renamed :doc:`hicpp-ignored-remove-result
-  <clang-tidy/checks/hicpp/ignored-remove-result>`
-  to :doc:`bugprone-unused-return-value
-  <clang-tidy/checks/bugprone/unused-return-value>`.
-  The `hicpp-ignored-remove-result` name is kept as an alias.
+- Renamed :doc:`google-explicit-constructor
+  <clang-tidy/checks/google/explicit-constructor>`
+  to :doc:`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>`. The
+  `google-explicit-constructor` name is kept as an alias.
+
+- Renamed :doc:`hicpp-multiway-paths-covered
+  <clang-tidy/checks/hicpp/multiway-paths-covered>`
+  to :doc:`bugprone-unhandled-code-paths
+  <clang-tidy/checks/bugprone/unhandled-code-paths>`.
+  The `hicpp-multiway-paths-covered` name is kept as an alias.
 
 - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
   to :doc:`portability-no-assembler
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
-  name is kept as an alias.
-
-- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
-  to :doc:`bugprone-signed-bitwise
-  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
   name is kept as an alias.
 
 - Renamed :doc:`performance-faster-string-find
@@ -231,8 +284,14 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`bugprone-argument-comment
-  <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
-  inherited constructors.
+  <clang-tidy/checks/bugprone/argument-comment>`:
+
+  - Checks for C++11 inherited constructors.
+
+  - Adds `CommentAnonymousInitLists`, `CommentTypedInitLists`, and
+    `CommentParenthesizedTemporaries` options to comment braced-init list
+    arguments and explicit temporary constructions (for example, ``{}``,
+    ``Type{}``, and ``Type()``).
 
 - Improved :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
@@ -432,6 +491,11 @@ Changes in existing checks
   private deleted functions, if they do not have a public overload or are a
   special member function.
 
+- Improved :doc:`modernize-use-nodiscard
+  <clang-tidy/checks/modernize/use-nodiscard>` check by avoiding false
+  positives on functions returning specializations of class templates marked
+  ``[[nodiscard]]``.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
 
@@ -500,10 +564,17 @@ Changes in existing checks
   - Reduce verbosity by removing the note indicating source location of the
     ``empty`` function.
 
+  - Fixed a false positive with suggesting ``empty`` when comparing a container
+    to a default-constructed object of an unrelated type.
+
 - Improved :doc:`readability-convert-member-functions-to-static
-  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
-  avoiding false positive on ``const`` member functions to static when they are
-  a part of const/non-const overload pair.
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check:
+
+  - Fixing a false positive where ``const`` member functions were incorrectly
+    flagged when they are part of a const/non-const overload pair.
+
+  - Correctly detecting ``this`` usage when a generic lambda calls an overloaded
+    member function.
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
@@ -563,6 +634,9 @@ Changes in existing checks
     implicit conversions of logical operator results (``&&``, ``||``, ``!``)
     to ``bool`` in C.
 
+  - Fixed a false positive where ``bool`` conditions in C conditional
+    operators were diagnosed as implicit conversions to ``int``.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
@@ -571,6 +645,14 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check by adding the
+  `IgnoreImplicitCasts` option (default `false`) to flag casts as redundant
+  when at least one operand of a binary operation matches the cast type due to
+  implicit conversion. For example, ``static_cast<float>(1.0f + 1)`` is now
+  identified as redundant since ``1`` is implicitly converted to ``float``.
+  Setting this option to `true` restores the previous behavior.
 
 - Improved :doc:`readability-redundant-member-init
   <clang-tidy/checks/readability/redundant-member-init>` check by adding an

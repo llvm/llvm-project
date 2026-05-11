@@ -684,6 +684,7 @@ define <2 x i8> @sv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI-LABEL: sv2i8_7:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mvni v1.4h, #108
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    shl v2.2s, v0.2s, #24
 ; CHECK-GI-NEXT:    movi v3.2s, #7
 ; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #8
@@ -696,8 +697,7 @@ define <2 x i8> @sv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI-NEXT:    mul v1.2s, v2.2s, v1.2s
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    add v1.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    uaddw v1.4s, v0.4s, v1.4h
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    mov v1.b[1], w8
 ; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #2
@@ -712,6 +712,7 @@ define <2 x i8> @sv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI-NEXT:    mov v2.s[1], w11
 ; CHECK-GI-NEXT:    add v1.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v3.2s
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem <2 x i8> %d, <i8 7, i8 7>
@@ -901,9 +902,7 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #2
 ; CHECK-GI-NEXT:    ushr v2.8b, v1.8b, #7
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    add v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    uaddl v1.8h, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -938,9 +937,7 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #4
 ; CHECK-GI-NEXT:    ushr v2.8b, v1.8b, #7
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    add v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    uaddl v1.8h, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1086,12 +1083,12 @@ define <2 x i8> @uv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d1, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    movi v2.2s, #37
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    usubw v2.4s, v0.4s, v1.4h
 ; CHECK-GI-NEXT:    mov w8, v2.s[1]
 ; CHECK-GI-NEXT:    mov v2.b[1], w8
 ; CHECK-GI-NEXT:    ushr v2.8b, v2.8b, #1
@@ -1099,7 +1096,7 @@ define <2 x i8> @uv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI-NEXT:    umov w9, v2.b[1]
 ; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    mov v2.s[1], w9
-; CHECK-GI-NEXT:    add v1.2s, v2.2s, v1.2s
+; CHECK-GI-NEXT:    uaddw v1.4s, v2.4s, v1.4h
 ; CHECK-GI-NEXT:    movi v2.2s, #7
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    mov v1.b[1], w8
@@ -1109,6 +1106,7 @@ define <2 x i8> @uv2i8_7(<2 x i8> %d, <2 x i8> %e) {
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    mov v1.s[1], w9
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem <2 x i8> %d, <i8 7, i8 7>
@@ -1288,16 +1286,15 @@ define <4 x i8> @uv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ushr v2.4h, v1.4h, #8
-; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v2.4h
+; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
+; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    ushr v2.8b, v2.8b, #1
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    usra v2.4h, v1.4h, #8
-; CHECK-GI-NEXT:    uzp1 v1.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    uaddw v1.8h, v1.8h, v2.8b
 ; CHECK-GI-NEXT:    movi v2.4h, #7
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ushr v1.8b, v1.8b, #2
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1328,7 +1325,7 @@ define <4 x i8> @uv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ushr v1.8b, v1.8b, #4
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1456,9 +1453,7 @@ define <2 x i16> @sv2i16_7(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #1
 ; CHECK-GI-NEXT:    ushr v2.4h, v1.4h, #15
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    add v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    uaddl v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1495,9 +1490,7 @@ define <2 x i16> @sv2i16_100(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #3
 ; CHECK-GI-NEXT:    ushr v2.4h, v1.4h, #15
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    add v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    uaddl v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1770,16 +1763,15 @@ define <2 x i16> @uv2i16_7(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ushr v2.2s, v1.2s, #16
-; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v2.2s
+; CHECK-GI-NEXT:    ushr v1.2s, v1.2s, #16
+; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    uzp1 v2.4h, v2.4h, v0.4h
 ; CHECK-GI-NEXT:    ushr v2.4h, v2.4h, #1
-; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    usra v2.2s, v1.2s, #16
-; CHECK-GI-NEXT:    uzp1 v1.4h, v2.4h, v0.4h
+; CHECK-GI-NEXT:    uaddw v1.4s, v1.4s, v2.4h
 ; CHECK-GI-NEXT:    movi v2.2s, #7
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #2
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    zip1 v1.4h, v1.4h, v1.4h
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1814,7 +1806,7 @@ define <2 x i16> @uv2i16_100(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    ushr v1.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #1
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    zip1 v1.4h, v1.4h, v1.4h
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    ret
 entry:

@@ -59,6 +59,15 @@ bool GIMatchTableExecutor::executeMatchTable(
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
   const uint32_t Flags = State.MIs[0]->getFlags();
+  bool BuilderInitialized = false;
+  const auto initializeBuilder = [&]() {
+    if (BuilderInitialized)
+      return;
+    // Delay setting the insertion point and debug location until a successful
+    // action needs the builder.
+    Builder.setInstrAndDebugLoc(*State.MIs[0]);
+    BuilderInitialized = true;
+  };
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -126,6 +135,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
 
   const auto eraseImpl = [&](MachineInstr *MI) {
+    initializeBuilder();
     // If we're erasing the insertion point, ensure we don't leave a dangling
     // pointer in the builder.
     if (Builder.getInsertPt() == MI)
@@ -1089,6 +1099,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
+      initializeBuilder();
       OutMIs[NewInsnID] = Builder.buildInstr(Opcode);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildMI(OutMIs["
@@ -1099,6 +1110,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_BuildConstant: {
       uint64_t TempRegID = readULEB();
       uint64_t Imm = readU64();
+      initializeBuilder();
       Builder.buildConstant(State.TempRegisters[TempRegID], Imm);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildConstant(TempReg["

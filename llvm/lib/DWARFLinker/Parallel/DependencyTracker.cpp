@@ -397,6 +397,32 @@ getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
     return CompileUnit::PlainDwarf;
 
   if (Entry.DieEntry->getTag() == dwarf::DW_TAG_variable) {
+    // In-class static member declarations (e.g. "static constexpr int x = 1;")
+    // are DW_TAG_variable children of a DW_TAG_class_type /
+    // DW_TAG_structure_type / DW_TAG_union_type with DW_AT_declaration set.
+    // They are part of the class type and belong in the TypeTable together with
+    // the class. Forcing them into PlainDwarf would also drag the parent class
+    // into PlainDwarf (via markParentsAsKeepingChildren), producing a duplicate
+    // empty class declaration DIE alongside the full class definition emitted
+    // in another CU.
+    bool IsDeclaration = dwarf::toUnsigned(
+        Entry.CU->find(Entry.DieEntry, dwarf::DW_AT_declaration), 0);
+    bool ParentIsType = false;
+    if (IsDeclaration) {
+      if (std::optional<uint32_t> ParentIdx = Entry.DieEntry->getParentIdx()) {
+        dwarf::Tag ParentTag =
+            Entry.CU->getDebugInfoEntry(*ParentIdx)->getTag();
+        ParentIsType = ParentTag == dwarf::DW_TAG_class_type ||
+                       ParentTag == dwarf::DW_TAG_structure_type ||
+                       ParentTag == dwarf::DW_TAG_union_type;
+      }
+    }
+    if (IsDeclaration && ParentIsType) {
+      // Pure declarations have no runtime address; they belong with the class
+      // type. Always place in TypeTable regardless of how they were reached.
+      return CompileUnit::TypeTable;
+    }
+
     // Do not put variable into the "TypeTable" and "PlainDwarf" at the same
     // time.
     if (EntryInfo.getPlacement() == CompileUnit::PlainDwarf ||
@@ -722,6 +748,16 @@ DependencyTracker::getRootForSpecifiedEntry(UnitEntryPairTy Entry) {
   return Result;
 }
 
+static void dumpKeptDIE(const DWARFDie &DIE, StringRef Kind, bool Verbose) {
+  if (!Verbose)
+    return;
+  outs() << "Keeping " << Kind << " DIE:";
+  DIDumpOptions DumpOpts;
+  DumpOpts.ChildRecurseDepth = 0;
+  DumpOpts.Verbose = Verbose;
+  DIE.dump(outs(), /*Indent=*/8, DumpOpts);
+}
+
 bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
                                             bool IsLiveParent) {
   DWARFDie DIE = Entry.CU->getDIE(Entry.DieEntry);
@@ -756,13 +792,7 @@ bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
   }
   Info.setHasAnAddress();
 
-  if (Entry.CU->getGlobalData().getOptions().Verbose) {
-    outs() << "Keeping variable DIE:";
-    DIDumpOptions DumpOpts;
-    DumpOpts.ChildRecurseDepth = 0;
-    DumpOpts.Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
-    DIE.dump(outs(), 8 /* Indent */, DumpOpts);
-  }
+  dumpKeptDIE(DIE, "variable", Entry.CU->getGlobalData().getOptions().Verbose);
 
   return true;
 }
@@ -772,6 +802,7 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
   CompileUnit::DIEInfo &Info = Entry.CU->getDIEInfo(Entry.DieEntry);
   std::optional<DWARFFormValue> LowPCVal = DIE.find(dwarf::DW_AT_low_pc);
 
+  const bool Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
   std::optional<uint64_t> LowPc;
   std::optional<uint64_t> HighPc;
   std::optional<int64_t> RelocAdjustment;
@@ -784,7 +815,7 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
 
     RelocAdjustment =
         Entry.CU->getContaingFile().Addresses->getSubprogramRelocAdjustment(
-            DIE, Entry.CU->getGlobalData().getOptions().Verbose);
+            DIE, Verbose);
     if (!RelocAdjustment)
       return false;
 
@@ -816,18 +847,26 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
               .value_or(UINT64_MAX) <= LowPc)
         return false;
 
+      // For assembly-language CUs there are typically no DW_TAG_subprogram
+      // DIEs, so labels are the only addresses we see. Fall back to the
+      // assembly-range lookup to recover a function range for the line-table
+      // filter; otherwise the output line table would be empty.
+      uint16_t Language = dwarf::toUnsigned(
+          Entry.CU->getOrigUnit().getUnitDIE().find(dwarf::DW_AT_language), 0);
+      if (Language == dwarf::DW_LANG_Mips_Assembler ||
+          Language == dwarf::DW_LANG_Assembly) {
+        if (auto Range = Entry.CU->getContaingFile()
+                             .Addresses->getAssemblyRangeForAddress(*LowPc))
+          Entry.CU->addFunctionRange(Range->LowPC, Range->HighPC,
+                                     *RelocAdjustment);
+      }
+
       Entry.CU->addLabelLowPc(*LowPc, *RelocAdjustment);
     }
   } else
     Info.setHasAnAddress();
 
-  if (Entry.CU->getGlobalData().getOptions().Verbose) {
-    outs() << "Keeping subprogram DIE:";
-    DIDumpOptions DumpOpts;
-    DumpOpts.ChildRecurseDepth = 0;
-    DumpOpts.Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
-    DIE.dump(outs(), 8 /* Indent */, DumpOpts);
-  }
+  dumpKeptDIE(DIE, "subprogram", Verbose);
 
   if (!Info.getTrackLiveness() || DIE.getTag() == dwarf::DW_TAG_label)
     return true;
