@@ -271,14 +271,14 @@ public:
     return G.getRoot()->getLocation().getStackFrame();
   }
 
-  /// Get the 'current' location context corresponding to the current work item
+  /// Get the 'current' stack frame corresponding to the current work item
   /// (elementary analysis step handled by `dispatchWorkItem`).
   /// FIXME: This sometimes (e.g. in some `BeginFunction` callbacks) differs
-  /// from the `LocationContext` that can be obtained from different sources
-  /// (e.g. a recent `ExplodedNode`). Traditionally this location context is
+  /// from the `StackFrame` that can be obtained from different sources
+  /// (e.g. a recent `ExplodedNode`). Traditionally this stack frame is
   /// only used for block count calculations (`getNumVisited`); it is probably
   /// wise to follow this tradition until the discrepancies are resolved.
-  const LocationContext *getCurrLocationContext() const {
+  const StackFrame *getCurrStackFrame() const {
     return currBldrCtx ? currBldrCtx->getStackFrame() : nullptr;
   }
 
@@ -299,7 +299,7 @@ public:
   }
 
   unsigned getNumVisitedCurrent() const {
-    return getNumVisited(getCurrLocationContext(), getCurrBlock());
+    return getNumVisited(getCurrStackFrame(), getCurrBlock());
   }
 
   /// Dump graph to the specified filename.

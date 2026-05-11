@@ -62,8 +62,8 @@ void ExprEngine::processCallEnter(CallEnter CE, ExplodedNode *Pred) {
   Node->addPredecessor(Pred, G);
   if (isNew) {
     // FIXME: In the `processBeginOfFunction` callback
-    // `ExprEngine::getCurrLocationContext()` can be different from the
-    // `LocationContext` queried from e.g. the `ExplodedNode`s. I'm not
+    // `ExprEngine::getCurrStackFrame()` can be different from the
+    // `StackFrame` queried from e.g. the `ExplodedNode`s. I'm not
     // touching this now because this commit is NFC; but in the future it would
     // be nice to avoid this inconsistency.
     ExplodedNodeSet DstBegin;

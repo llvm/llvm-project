@@ -2967,7 +2967,7 @@ void ExprEngine::processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
                                      const CFGBlock *Dispatch,
                                      ExplodedNode *Pred) {
   ProgramStateRef State = Pred->getState();
-  SVal V = State->getSVal(Tgt, getCurrLocationContext());
+  SVal V = State->getSVal(Tgt, getCurrStackFrame());
 
   // We cannot dispatch anywhere if the label is undefined, NULL or some other
   // concrete number.
