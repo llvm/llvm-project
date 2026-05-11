@@ -10016,7 +10016,7 @@ requirement to ensure the base subobject remains correctly aligned.
 
 .. code-block:: c++
 
-  struct alignas(16) Base {
+  struct __attribute__((aligned(16))) Base {
     int i;
   };
 
