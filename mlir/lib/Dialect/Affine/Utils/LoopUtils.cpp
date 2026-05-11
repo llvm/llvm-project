@@ -2439,6 +2439,50 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
     return failure();
   }
 
+  // Synthesise a copy-IN for any write-only region we cannot prove covers its
+  // bounding box. The post-loop copy-OUT writes the whole bounding box back,
+  // so gap cells must be initialised first (#54994).
+  llvm::SmallDenseMap<Value, int64_t> provenTouched;
+  block->walk(begin, end, [&](Operation *opInst) {
+    Value memref;
+    if (auto load = dyn_cast<AffineLoadOp>(opInst))
+      memref = load.getMemRef();
+    else if (auto store = dyn_cast<AffineStoreOp>(opInst))
+      memref = store.getMemRef();
+    if (!memref || !writeRegions.count(memref) || readRegions.count(memref))
+      return;
+    SmallVector<Value, 4> enclosingIVs;
+    getAffineIVs(*opInst, enclosingIVs);
+    int64_t iter = 1;
+    for (unsigned k = copyDepth, e = enclosingIVs.size(); k < e; ++k) {
+      auto forOp = getForInductionVarOwner(enclosingIVs[k]);
+      if (!forOp)
+        return;
+      std::optional<uint64_t> trip = getConstantTripCount(forOp);
+      if (!trip || *trip == 0 ||
+          static_cast<uint64_t>(iter) >
+              std::numeric_limits<int64_t>::max() / *trip)
+        return;
+      iter *= static_cast<int64_t>(*trip);
+    }
+    int64_t &m = provenTouched[memref];
+    if (iter > m)
+      m = iter;
+  });
+  for (auto &[memref, region] : writeRegions) {
+    if (readRegions.count(memref))
+      continue;
+    std::optional<int64_t> volume = region->getConstantBoundingSizeAndShape();
+    auto it = provenTouched.find(memref);
+    if (volume && it != provenTouched.end() && it->second >= *volume)
+      continue;
+    auto inRegion = std::make_unique<MemRefRegion>(region->loc);
+    inRegion->memref = region->memref;
+    inRegion->write = false;
+    inRegion->cst.clearAndCopyFrom(region->cst);
+    readRegions[memref] = std::move(inRegion);
+  }
+
   uint64_t totalCopyBuffersSizeInBytes = 0;
   bool ret = true;
   auto processRegions =
