@@ -5,7 +5,7 @@
 ; operations.
 
 
-; Should be able to reduce this to a 32-bit or plus a copy
+; Should be able to reduce this to a 32-bit xor plus a copy
 ; https://alive2.llvm.org/ce/z/9LddFX
 define i64 @v_xor_i64_known_hi_i32_from_arg_range(i64 range(i64 0, 4294967296) %arg0, i64 %arg1) {
 ; CHECK-LABEL: v_xor_i64_known_hi_i32_from_arg_range:
@@ -32,7 +32,7 @@ define i64 @v_or_i64_known_hi_i32_from_arg_range(i64 range(i64 0, 4294967296) %a
 }
 
 ; https://alive2.llvm.org/ce/z/M96Ror
-; Should be able to reduce this to a 32-bit plus a copy
+; Should be able to reduce this to a 32-bit and plus a copy
 define i64 @v_and_i64_known_i32_from_arg_range(i64 range(i64 -4294967296, 0) %arg0, i64 %arg1) {
 ; CHECK-LABEL: v_and_i64_known_i32_from_arg_range:
 ; CHECK:       ; %bb.0:
