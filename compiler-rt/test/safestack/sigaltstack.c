@@ -35,7 +35,7 @@ void signal_sigalt_handler(int signo) {
            __get_unsafe_stack_ptr() >= __get_unsafe_sigalt_stack_bottom());
   } else {
     assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-        __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+           __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
   }
 }
 
@@ -52,7 +52,7 @@ void signal_sigalt_sigaction(int signo, siginfo_t *si, void *uc) {
            __get_unsafe_stack_ptr() >= __get_unsafe_sigalt_stack_bottom());
   } else {
     assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+           __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
   }
 }
 
