@@ -1353,6 +1353,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
 
   FPM.addPass(InferAlignmentPass());
   if (isFullLTOPostLink(LTOPhase)) {
+    LoopPassManager LPM;
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
     // parallel execution resources of an out-of-order processor. We also then
@@ -1362,11 +1363,15 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // across the loop nests.
     // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
     if (EnableUnrollAndJam && PTO.LoopUnrolling)
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(static_cast<int>(Level))));
-    FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
-        static_cast<int>(Level), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
-        PTO.ForgetAllSCEVInLoopUnroll)));
+      LPM.addPass(LoopUnrollAndJamPass(static_cast<int>(Level)));
+
+    // Unroll small loops and perform peeling.
+    LPM.addPass(LoopFullUnrollPass(static_cast<int>(Level),
+                                   /* OnlyWhenForced= */ !PTO.LoopUnrolling,
+                                   PTO.ForgetAllSCEVInLoopUnroll));
+    FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
+                                                /*UseMemorySSA=*/false));
+
     FPM.addPass(WarnMissedTransformationsPass());
     // Now that we are done with loop unrolling, be it either by LoopVectorizer,
     // or LoopUnroll passes, some variable-offset GEP's into alloca's could have
@@ -2299,12 +2304,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   LPM.addPass(LoopDeletionPass());
   // FIXME: Add loop interchange.
 
-  // Unroll small loops and perform peeling.
-  LPM.addPass(LoopFullUnrollPass(static_cast<int>(Level),
-                                 /* OnlyWhenForced= */ !PTO.LoopUnrolling,
-                                 PTO.ForgetAllSCEVInLoopUnroll));
   // The loop passes in LPM (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
+  // TODO: Explore enabling MemorySSA for loop passes after we remove the
+  // LoopFullUnrollPass.
   MainFPM.addPass(
       createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/false));
 
