@@ -2,11 +2,7 @@
 // RUN: %clang_cc1 %s -Eonly -std=c99 -verify=undef-true
 // RUN: %clang_cc1 %s -Eonly -std=c11 -verify=undef-true
 // RUN: %clang_cc1 %s -Eonly -std=c17 -verify=undef-true
-// RUN: %clang_cc1 %s -Eonly -std=c23 -verify=undef-true
-
-#if __STDC_VERSION__ >= 202311L
-/* undef-true-no-diagnostics */
-#endif
+// RUN: %clang_cc1 %s -Eonly -std=c23 -verify=undef-true,c23-keyword
 
 #define FOO true
 #if FOO /* #1 */
@@ -27,7 +23,7 @@
 /* undef-true-warning@#3 {{'true' is not defined, evaluates to 0}} */
 #endif
 
-#define true 1
+#define true 1 /* c23-keyword-warning {{keyword is hidden by macro definition}} */
 
 #define FOO true
 #if FOO
@@ -39,7 +35,7 @@
 #if false || true
 #endif
 
-#undef true
+#undef true /* c23-keyword-warning {{keyword or identifier with special meaning is used as a macro name}} */
 
 #define FOO true
 #if FOO /* #4 */
@@ -66,7 +62,7 @@
 #if __STDC_VERSION__ < 202311L
 /* undef-true-warning@#7 {{'true' is not defined, evaluates to 0}} */
 #endif
-#undef true
+#undef true /* c23-keyword-warning {{keyword or identifier with special meaning is used as a macro name}} */
 
 /* Test that #pragma-enabled 'Wundef' can override 'Wundef-true' */
 #pragma clang diagnostic warning "-Wundef"
