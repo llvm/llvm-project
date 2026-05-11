@@ -1897,7 +1897,9 @@ bool VPWidenCallRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   FunctionType *VFTy = Variant->getFunctionType();
   return all_of(enumerate(args()), [VFTy, &Op](const auto &Arg) {
     auto [Idx, V] = Arg;
-    return V != Op || !VFTy->getParamType(Idx)->isVectorTy();
+    Type *ArgTy = VFTy->getParamType(Idx);
+    return V != Op || ArgTy->isIntegerTy() || ArgTy->isFloatingPointTy() ||
+           ArgTy->isPointerTy() || ArgTy->isByteTy();
   });
 }
 
