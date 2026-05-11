@@ -25,6 +25,10 @@ StreamGDBRemote::StreamGDBRemote(uint32_t flags, uint32_t addr_size,
 
 StreamGDBRemote::~StreamGDBRemote() = default;
 
+int StreamGDBRemote::PutEscapedBytes(llvm::StringRef str) {
+  return PutEscapedBytes(str.data(), str.size());
+}
+
 int StreamGDBRemote::PutEscapedBytes(const void *s, size_t src_len) {
   int bytes_written = 0;
   const uint8_t *src = static_cast<const uint8_t *>(s);

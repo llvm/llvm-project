@@ -84,6 +84,17 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
 
+void Process::DelayedBreakpointCache::Enqueue(lldb::BreakpointSiteSP site,
+                                              BreakpointAction action) {
+  auto [previous, inserted] = m_site_to_action.insert({site, action});
+  // New site or already enqueued for the same action.
+  if (inserted || previous->second == action)
+    return;
+  // Previously enqueued for the opposite action, don't update the site.
+  m_site_to_action.erase(previous);
+  assert(site->m_enabled == (action == BreakpointAction::Enable));
+}
+
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
@@ -331,6 +342,12 @@ bool ProcessProperties::GetWarningsToolchainMismatch() const {
 
 bool ProcessProperties::GetStopOnExec() const {
   const uint32_t idx = ePropertyStopOnExec;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
+bool ProcessProperties::GetUseDelayedBreakpoints() const {
+  const uint32_t idx = ePropertyUseDelayedBreakpoints;
   return GetPropertyAtIndexAs<bool>(
       idx, g_process_properties[idx].default_uint_value != 0);
 }
@@ -1722,8 +1739,8 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    //        bp_site->SetEnabled(true);
-    DisableBreakpointSite(bp_site);
+    llvm::consumeError(
+        ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable));
   });
 }
 
@@ -1740,22 +1757,51 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
-    if (bp_site_sp->IsEnabled())
-      error = DisableBreakpointSite(bp_site_sp.get());
+    if (IsBreakpointSiteEnabled(*bp_site_sp))
+      error = Status::FromError(
+          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
   }
 
   return error;
+}
+
+llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
+                                                 BreakpointAction action) {
+  auto site_sp = site.shared_from_this();
+  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
+
+  // Ignore requests that won't change the Site status.
+  if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
+    return llvm::Error::success();
+
+  if (ShouldUseDelayedBreakpoints()) {
+    m_delayed_breakpoints.Enqueue(site_sp, action);
+    return llvm::Error::success();
+  }
+
+  m_delayed_breakpoints.RemoveSite(site_sp);
+  guard.unlock();
+
+  switch (action) {
+  case BreakpointAction::Enable:
+    return EnableBreakpointSite(site_sp.get()).takeError();
+  case BreakpointAction::Disable:
+    return DisableBreakpointSite(site_sp.get()).takeError();
+  }
+
+  llvm_unreachable("Unhandled BreakpointAction");
 }
 
 Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
-    if (!bp_site_sp->IsEnabled())
-      error = EnableBreakpointSite(bp_site_sp.get());
+    if (!IsBreakpointSiteEnabled(*bp_site_sp))
+      error = Status::FromError(
+          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1763,13 +1809,26 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-lldb::break_id_t
-Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
-                              bool use_hardware) {
-  addr_t load_addr = LLDB_INVALID_ADDRESS;
+bool Process::IsBreakpointSiteEnabled(const BreakpointSite &site) {
+  std::lock_guard<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
 
-  bool show_error = true;
-  switch (GetState()) {
+  // `site` won't be mutated, but the cache stores mutable pointers.
+  auto it = m_delayed_breakpoints.m_site_to_action.find(
+      const_cast<BreakpointSite &>(site).shared_from_this());
+
+  // If no actions are delayed, use the current state of the site.
+  if (it == m_delayed_breakpoints.m_site_to_action.end())
+    return site.m_enabled;
+
+  return it->second == BreakpointAction::Enable;
+}
+
+bool Process::IsBreakpointSitePhysicallyEnabled(const BreakpointSite &site) {
+  return site.m_enabled;
+}
+
+static bool ShouldShowError(Process &process) {
+  switch (process.GetState()) {
   case eStateInvalid:
   case eStateUnloaded:
   case eStateConnected:
@@ -1777,80 +1836,133 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   case eStateLaunching:
   case eStateDetached:
   case eStateExited:
-    show_error = false;
-    break;
-
+    return false;
   case eStateStopped:
   case eStateRunning:
   case eStateStepping:
   case eStateCrashed:
   case eStateSuspended:
-    show_error = IsAlive();
-    break;
+    return process.IsAlive();
   }
+  llvm_unreachable("unhandled process state");
+}
 
+static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
+                                            Process &proc) {
   // Reset the IsIndirect flag here, in case the location changes from pointing
-  // to a indirect symbol to a regular symbol.
-  constituent->SetIsIndirect(false);
+  // from an indirect symbol to a regular symbol.
+  constituent.SetIsIndirect(false);
 
-  if (constituent->ShouldResolveIndirectFunctions()) {
-    Symbol *symbol = constituent->GetAddress().CalculateSymbolContextSymbol();
-    if (symbol && symbol->IsIndirect()) {
-      Status error;
-      Address symbol_address = symbol->GetAddress();
-      load_addr = ResolveIndirectFunction(&symbol_address, error);
-      if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-            "warning: failed to resolve indirect function at 0x%" PRIx64
-            " for breakpoint %i.%i: %s\n",
-            symbol->GetLoadAddress(&GetTarget()),
-            constituent->GetBreakpoint().GetID(), constituent->GetID(),
-            error.AsCString() ? error.AsCString() : "unknown error");
-        return LLDB_INVALID_BREAK_ID;
-      }
-      Address resolved_address(load_addr);
-      load_addr = resolved_address.GetOpcodeLoadAddress(&GetTarget());
-      constituent->SetIsIndirect(true);
-    } else
-      load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
-  } else
-    load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
+  Target &target = proc.GetTarget();
 
-  if (load_addr != LLDB_INVALID_ADDRESS) {
-    BreakpointSiteSP bp_site_sp;
+  if (!constituent.ShouldResolveIndirectFunctions())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
 
-    // Look up this breakpoint site.  If it exists, then add this new
-    // constituent, otherwise create a new breakpoint site and add it.
+  const Symbol *symbol =
+      constituent.GetAddress().CalculateSymbolContextSymbol();
+  if (!symbol || !symbol->IsIndirect())
+    return constituent.GetAddress().GetOpcodeLoadAddress(&target);
 
-    bp_site_sp = m_breakpoint_site_list.FindByAddress(load_addr);
+  // An indirect symbol is involved.
+  Status error;
+  Address symbol_address = symbol->GetAddress();
+  addr_t load_addr = proc.ResolveIndirectFunction(&symbol_address, error);
 
-    if (bp_site_sp) {
-      bp_site_sp->AddConstituent(constituent);
-      constituent->SetBreakpointSite(bp_site_sp);
-      return bp_site_sp->GetID();
-    } else {
-      bp_site_sp.reset(
-          new BreakpointSite(constituent, load_addr, use_hardware));
-      if (bp_site_sp) {
-        Status error = EnableBreakpointSite(bp_site_sp.get());
-        if (error.Success()) {
-          constituent->SetBreakpointSite(bp_site_sp);
-          return m_breakpoint_site_list.Add(bp_site_sp);
-        } else {
-          if (show_error || use_hardware) {
-            // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-                "warning: failed to set breakpoint site at 0x%" PRIx64
-                " for breakpoint %i.%i: %s\n",
-                load_addr, constituent->GetBreakpoint().GetID(),
-                constituent->GetID(),
-                error.AsCString() ? error.AsCString() : "unknown error");
-          }
-        }
-      }
-    }
+  if (!error.Success() && ShouldShowError(proc)) {
+    target.GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to resolve indirect function at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        symbol->GetLoadAddress(&target), constituent.GetBreakpoint().GetID(),
+        constituent.GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+    // FIXME: ShouldShowError must only guard the error message.
+    // FIXME: Use diagnostics instead of printing "warning" to the async output.
+    return LLDB_INVALID_ADDRESS;
   }
-  // We failed to enable the breakpoint
+
+  Address resolved_address(load_addr);
+  constituent.SetIsIndirect(true);
+  return resolved_address.GetOpcodeLoadAddress(&target);
+}
+
+llvm::Error Process::FlushDelayedBreakpoints() {
+  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
+
+  // Clear the cache in m_delayed_breakpoints so it can't affect the actual
+  // enabling of breakpoints. For example, if `EnableSoftwareBreakpoint` is
+  // called outside of FlushDelayedBreakpoints, it needs to check the delayed
+  // breakpoints and possibly early return. However, when called from
+  // FlushDelayedBreakpoints, the queue better be empty so that no early returns
+  // take place.
+  auto site_to_action = std::move(m_delayed_breakpoints.m_site_to_action);
+  m_delayed_breakpoints.m_site_to_action.clear();
+
+  guard.unlock();
+  // Use a copy of the cache so that iteration is safe.
+  return UpdateBreakpointSites(site_to_action);
+}
+
+llvm::Error Process::UpdateBreakpointSites(
+    const BreakpointSiteToActionMap &site_to_action) {
+  llvm::Error error = llvm::Error::success();
+  for (auto [site, action] : site_to_action) {
+    Status new_error = action == BreakpointAction::Enable
+                           ? EnableBreakpointSite(site.get())
+                           : DisableBreakpointSite(site.get());
+    error = llvm::joinErrors(std::move(error), new_error.takeError());
+  }
+  return error;
+}
+
+lldb::break_id_t
+Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
+                              bool use_hardware) {
+  addr_t load_addr = ComputeConstituentLoadAddress(*constituent, *this);
+
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return LLDB_INVALID_BREAK_ID;
+
+  // Look up this breakpoint site.  If it exists, then add this new
+  // constituent, otherwise create a new breakpoint site and add it.
+  if (BreakpointSiteSP bp_site_sp =
+          m_breakpoint_site_list.FindByAddress(load_addr)) {
+    bp_site_sp->AddConstituent(constituent);
+    constituent->SetBreakpointSite(bp_site_sp);
+    return bp_site_sp->GetID();
+  }
+
+  BreakpointSiteSP bp_site_sp(
+      new BreakpointSite(constituent, load_addr, use_hardware));
+
+  bool bp_from_address =
+      constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
+      BreakpointResolver::ResolverTy::AddressResolver;
+  bool should_be_eager = use_hardware || bp_from_address;
+
+  // If this breakpoint must be eager, flush the breakpoint queue in case there
+  // is an interaction between the sites in the queue and this new site.
+  if (should_be_eager)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
+
+  auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
+                               : Status::FromError(ExecuteBreakpointSiteAction(
+                                     *bp_site_sp, BreakpointAction::Enable));
+  if (error.Success()) {
+    constituent->SetBreakpointSite(bp_site_sp);
+    return m_breakpoint_site_list.Add(bp_site_sp);
+  }
+
+  if (ShouldShowError(*this) || use_hardware) {
+    // Report error for setting breakpoint...
+    GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
+        "warning: failed to set breakpoint site at 0x%" PRIx64
+        " for breakpoint %i.%i: %s\n",
+        load_addr, constituent->GetBreakpoint().GetID(), constituent->GetID(),
+        error.AsCString() ? error.AsCString() : "unknown error");
+  }
   return LLDB_INVALID_BREAK_ID;
 }
 
@@ -1862,7 +1974,8 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      DisableBreakpointSite(bp_site_sp.get());
+      llvm::consumeError(
+          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
@@ -1912,7 +2025,7 @@ Status Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
   LLDB_LOGF(
       log, "Process::EnableSoftwareBreakpoint (site_id = %d) addr = 0x%" PRIx64,
       bp_site->GetID(), (uint64_t)bp_addr);
-  if (bp_site->IsEnabled()) {
+  if (IsBreakpointSiteEnabled(*bp_site)) {
     LLDB_LOGF(
         log,
         "Process::EnableSoftwareBreakpoint (site_id = %d) addr = 0x%" PRIx64
@@ -1956,7 +2069,7 @@ Status Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
                          error) == bp_opcode_size) {
           if (::memcmp(bp_opcode_bytes, verify_bp_opcode_bytes,
                        bp_opcode_size) == 0) {
-            bp_site->SetEnabled(true);
+            SetBreakpointSiteEnabled(*bp_site);
             bp_site->SetType(BreakpointSite::eSoftware);
             LLDB_LOGF(log,
                       "Process::EnableSoftwareBreakpoint (site_id = %d) "
@@ -1998,7 +2111,7 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
   if (bp_site->IsHardware()) {
     error =
         Status::FromErrorString("Breakpoint site is a hardware breakpoint.");
-  } else if (bp_site->IsEnabled()) {
+  } else if (IsBreakpointSiteEnabled(*bp_site)) {
     const size_t break_op_size = bp_site->GetByteSize();
     const uint8_t *const break_op = bp_site->GetTrapOpcodeBytes();
     if (break_op_size > 0) {
@@ -2040,7 +2153,7 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
             if (::memcmp(bp_site->GetSavedOpcodeBytes(), verify_opcode,
                          break_op_size) == 0) {
               // SUCCESS
-              bp_site->SetEnabled(false);
+              SetBreakpointSiteEnabled(*bp_site, false);
               LLDB_LOGF(log,
                         "Process::DisableSoftwareBreakpoint (site_id = %d) "
                         "addr = 0x%" PRIx64 " -- SUCCESS",
@@ -3605,6 +3718,9 @@ Status Process::PrivateResume() {
             "Process::PrivateResume PreResumeActions failed, not resuming.");
       } else {
         m_mod_id.BumpResumeID();
+        if (auto E = FlushDelayedBreakpoints())
+          LLDB_LOG_ERROR(log, std::move(E),
+                         "Failed to update some delayed breakpoints: {0}");
         error = DoResume(direction);
         if (error.Success()) {
           DidResume();
@@ -3811,6 +3927,10 @@ Status Process::Detach(bool keep_stopped) {
 
     m_thread_list.DiscardThreadPlans();
     DisableAllBreakpointSites();
+    if (auto error = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Process), std::move(error),
+          "Failed to update some delayed breakpoints during detach: {0}");
 
     error = DoDetach(keep_stopped);
     if (error.Success()) {
@@ -3881,6 +4001,10 @@ Status Process::DestroyImpl(bool force_kill) {
       // doing this now.
       m_thread_list.DiscardThreadPlans();
       DisableAllBreakpointSites();
+      if (auto error = FlushDelayedBreakpoints())
+        LLDB_LOG_ERROR(
+            GetLog(LLDBLog::Process), std::move(error),
+            "Failed to update some delayed breakpoints during destroy: {0}");
     }
 
     error = DoDestroy();

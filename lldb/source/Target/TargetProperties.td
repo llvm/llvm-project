@@ -392,6 +392,11 @@ let Definition = "process" in {
         Desc<"A list of thread names. Threads with any of these names will "
              "always be resumed when the process resumes, even when other "
              "threads are suspended during single-stepping operations.">;
+  def UseDelayedBreakpoints
+      : Property<"use-delayed-breakpoints", "Boolean">,
+        DefaultTrue,
+        Desc<"Specify whether updating breakpoints may be delayed until the "
+             "process is about to resume.">;
 }
 
 let Definition = "platform" in {

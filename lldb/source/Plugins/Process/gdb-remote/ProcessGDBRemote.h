@@ -170,6 +170,9 @@ public:
   // Process Breakpoints
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
 
+  llvm::Error UpdateBreakpointSites(
+      const BreakpointSiteToActionMap &site_to_action) override;
+
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
   // Process Watchpoints
@@ -449,6 +452,17 @@ private:
   std::string m_partial_profile_data;
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
   uint64_t m_last_signals_version = 0;
+
+  /// Enable a single breakpoint site by trying Z0 (software), then Z1
+  /// (hardware), then manual memory write as a last resort.
+  llvm::Error DoEnableBreakpointSite(BreakpointSite &bp_site);
+
+  /// Disable a single breakpoint site directly by sending the appropriate
+  /// z packet or restoring the original instruction.
+  llvm::Error DoDisableBreakpointSite(BreakpointSite &bp_site);
+
+  llvm::Error UpdateBreakpointSitesNotBatched(
+      const BreakpointSiteToActionMap &site_to_action);
 
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,
