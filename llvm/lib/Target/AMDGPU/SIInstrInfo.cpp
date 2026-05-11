@@ -7287,7 +7287,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
   if (UseNewExecInstructions) {
     MRI.setSimpleHint(NewExec, PhiExec);
-    BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2WRExecOpc), NewExec)
+    BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2WrExecOpc), NewExec)
         .addReg(PhiExec);
   } else {
     // Update EXEC, switch all done bits to 0 and all todo bits to 1.
