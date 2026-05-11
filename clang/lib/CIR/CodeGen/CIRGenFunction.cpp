@@ -231,7 +231,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  Address addr(addrVal, convertTypeForMem(ty), alignment);
+  Address addr(addrVal, alignment);
   cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   assert(allocaOp && "expected cir::AllocaOp");
 
