@@ -266,7 +266,7 @@ public:
     return *currBldrCtx;
   }
 
-  const LocationContext *getRootLocationContext() const {
+  const StackFrame *getRootStackFrame() const {
     assert(G.getRoot());
     return G.getRoot()->getLocation().getStackFrame();
   }

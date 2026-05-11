@@ -44,9 +44,9 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   const SourceManager &SM = B.getSourceManager();
   llvm::SmallPtrSet<const CFGBlock*, 32> reachable;
 
-  const LocationContext *LC = Eng.getRootLocationContext();
+  const StackFrame *RootSF = Eng.getRootStackFrame();
 
-  const Decl *D = LC->getDecl();
+  const Decl *D = RootSF->getDecl();
 
   // Iterate over the exploded graph.
   for (const ExplodedNode &N : G.nodes()) {
@@ -63,7 +63,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   }
 
   // Get the CFG and the Decl of this block.
-  C = LC->getCFG();
+  C = RootSF->getCFG();
 
   unsigned total = 0, unreachable = 0;
 
@@ -124,7 +124,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
                  ": The analyzer generated a sink at this point";
       B.EmitBasicReport(
           D, this, "Sink Point", "Internal Statistics", outputI.str(),
-          PathDiagnosticLocation::createBegin(CS->getStmt(), SM, LC));
+          PathDiagnosticLocation::createBegin(CS->getStmt(), SM, RootSF));
     }
   }
 }

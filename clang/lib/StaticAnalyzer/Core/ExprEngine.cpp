@@ -961,7 +961,7 @@ void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
 
 void ExprEngine::processEndWorklist() {
   // This prints the name of the top-level function if we crash.
-  PrettyStackTraceLocationContext CrashInfo(getRootLocationContext());
+  PrettyStackTraceLocationContext CrashInfo(getRootStackFrame());
   getCheckerManager().runCheckersForEndAnalysis(G, BR, *this);
 }
 
