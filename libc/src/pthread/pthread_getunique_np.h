@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int pthread_getunique_np(pthread_t *thread, pthread_id_np_t *);
+int pthread_getunique_np(pthread_t *thread, pthread_id_np_t *id);
 
 } // namespace LIBC_NAMESPACE_DECL
 

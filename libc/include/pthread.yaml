@@ -448,7 +448,7 @@ functions:
   - name: pthread_getthreadid_np
     return_type: pthread_id_np_t
     arguments:
-      - type: void    
+      - type: void
   - name: pthread_getunique_np
     return_type: int
     arguments:
