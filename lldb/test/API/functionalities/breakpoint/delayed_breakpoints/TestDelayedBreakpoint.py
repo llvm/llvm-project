@@ -55,7 +55,7 @@ class TestDelayedBreakpoint(TestBase):
         bp1 = target.BreakpointCreateByLocation("main.c", 1)
         self.runCmd("proc plugin packet send BEGIN_EAGER", check=False)
         # Create an address breakpoint to trigger eager breakpoints.
-        fake_address = 0x1234567
+        fake_address = 0x1234560
         target.BreakpointCreateByAddress(fake_address)
         self.runCmd("proc plugin packet send END_EAGER", check=False)
 
