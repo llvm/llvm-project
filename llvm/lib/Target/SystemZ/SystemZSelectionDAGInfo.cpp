@@ -95,10 +95,12 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemmove(
   if (IsVolatile)
     return SDValue();
 
-  // XXX VLL FeatureVector
-  // XXX MVCRL FeatureMiscellaneousExtensions3
+  const SystemZSubtarget &Subtarget =
+    DAG.getMachineFunction().getSubtarget<SystemZSubtarget>();
+
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
-    if (CSize->getZExtValue() <= 256)
+    if (Subtarget.hasMiscellaneousExtensions3() &&
+        CSize->getZExtValue() > 0 && CSize->getZExtValue() <= 256)
       return DAG.getNode(SystemZISD::MEMMOVE, DL, MVT::Other,
                          {Chain, Dst, Src, Size});
 

@@ -43,10 +43,6 @@ static cl::opt<bool> EnableIntArgExtCheck(
     cl::desc("Verify that narrow int args are properly extended per the "
              "SystemZ ABI."));
 
-// EXPERIMENTAL
-static cl::opt<unsigned> MEMMOVESTORES("memmove-stores", cl::init(1));
-static cl::opt<bool> MEMMOVEVLL("memmove-vll", cl::init(true));
-
 namespace {
 // Represents information about a comparison.
 struct Comparison {
@@ -819,7 +815,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemcpyOptSize = 0;
 
   // Same with memmove.
-  MaxStoresPerMemmove = Subtarget.hasVector() ? MEMMOVESTORES : 0;
+  MaxStoresPerMemmove = Subtarget.hasVector() ? 2 : 0;
   MaxStoresPerMemmoveOptSize = 0;
 
   // The main memset sequence is a byte store followed by an MVC.
@@ -9410,6 +9406,51 @@ SDValue SystemZTargetLowering::combineINTRINSIC(
   return SDValue();
 }
 
+SDValue SystemZTargetLowering::combineMEMMOVE(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+
+  SDValue Chain = N->getOperand(0);
+  SDValue Dst = N->getOperand(1);
+  SDValue Src = N->getOperand(2);
+  unsigned Len = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+
+  struct Address {
+    SDValue Addr;
+    Address(SDValue V) : Addr(V) {}
+    SDValue Base() {
+      if (Addr->getOpcode() == ISD::ADD &&
+          isa<ConstantSDNode>(Addr->getOperand(1)))
+        return Addr->getOperand(0);
+      return Addr;
+    }
+    uint64_t Offset() {
+      if (Addr->getOpcode() == ISD::ADD)
+        if (auto *Const = dyn_cast<ConstantSDNode>(Addr->getOperand(1)))
+          return Const->getZExtValue();
+      return 0;
+    }
+  };
+
+  Address DstAddr(Dst), SrcAddr(Src);
+  if (DstAddr.Base() == SrcAddr.Base()) {
+    assert(Len >= 16 && Len <= 256 &&
+           "Memmove of of unsupported constant length.");
+    if (DstAddr.Offset() <= SrcAddr.Offset()) {
+      SDValue LenAdj = DAG.getConstant(Len - 1, SDLoc(N), MVT::i64);
+      return DAG.getNode(SystemZISD::MVC, SDLoc(N), MVT::Other,
+                         { Chain, Dst, Src, LenAdj });
+    } else {
+      SDValue LenAdj = DAG.getConstant(Len - 1, SDLoc(N), MVT::i32);
+      Chain = DAG.getCopyToReg(Chain, SDLoc(N), SystemZ::R0L, LenAdj);
+      return DAG.getNode(SystemZISD::MVCRL, SDLoc(N), MVT::Other,
+                         { Chain, Dst, Src });
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SystemZTargetLowering::unwrapAddress(SDValue N) const {
   if (N->getOpcode() == SystemZISD::PCREL_WRAPPER)
     return N->getOperand(0);
@@ -9451,6 +9492,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UREM:               return combineIntDIVREM(N, DCI);
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:     return combineINTRINSIC(N, DCI);
+  case SystemZISD::MEMMOVE:     return combineMEMMOVE(N, DCI);
   }
 
   return SDValue();
@@ -10884,50 +10926,14 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
 MachineBasicBlock *
 SystemZTargetLowering::emitMemmoveImm(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const {
-  MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   DebugLoc DL = MI.getDebugLoc();
-  MachineOperand DstBase = earlyUseOperand(MI.getOperand(0));
-  uint64_t DstDisp = MI.getOperand(1).getImm();
-  MachineOperand SrcBase = earlyUseOperand(MI.getOperand(2));
-  uint64_t SrcDisp = MI.getOperand(3).getImm();
-  uint64_t Len = MI.getOperand(4).getImm();
-  assert(Len >= 1 && Len <= 256 &&
+  MachineOperand DstAddr = earlyUseOperand(MI.getOperand(0));
+  MachineOperand SrcAddr = earlyUseOperand(MI.getOperand(1));
+  uint64_t Len = MI.getOperand(2).getImm();
+  assert(Len >= 16 && Len <= 256 &&
          "Memmove of of unsupported constant length.");
-  assert(isUInt<12>(DstDisp) && isUInt<12>(SrcDisp) &&
-         "Unexpected large displacement.");
-
-  // Fold any displacement (or frame index reference) into a new register.
-  auto foldAddressIfNeeded = [&](MachineOperand &Base, uint64_t &Disp) -> void {
-    if (Disp || Base.isFI()) {
-      Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-      unsigned Opcode = TII->getOpcodeForOffset(SystemZ::LA, Disp);
-      BuildMI(*MBB, MI, DL, TII->get(Opcode), Reg)
-          .add(Base).addImm(Disp).addReg(0);
-      Base = MachineOperand::CreateReg(Reg, false);
-      Disp = 0;
-    }
-  };
-
-  if (Len <= 15 && MEMMOVEVLL) {
-    Register HighByteReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
-    BuildMI(*MBB, MI, DL, TII->get(SystemZ::LHI), HighByteReg).addImm(Len - 1);
-
-    Register VecReg = MRI.createVirtualRegister(&SystemZ::VR128BitRegClass);
-    BuildMI(*MBB, MI, DL, TII->get(SystemZ::VLL), VecReg)
-        .addReg(HighByteReg)
-        .add(SrcBase).addImm(SrcDisp);
-
-    BuildMI(*MBB, MI, DL, TII->get(SystemZ::VSTL))
-        .addReg(VecReg)
-        .addReg(HighByteReg)
-        .add(DstBase).addImm(DstDisp);
-
-    MI.eraseFromParent();
-    return MBB;
-  }
 
   // Use MVC or MVCRL after comparing the addresses.
   MachineBasicBlock *DoneMBB = SystemZ::splitBlockAfter(MI, MBB);
@@ -10938,26 +10944,22 @@ SystemZTargetLowering::emitMemmoveImm(MachineInstr &MI,
   MvcMBB->addSuccessor(DoneMBB);
   MvcrlMBB->addSuccessor(DoneMBB);
 
-  // Fold any displacements in order to do the compare.
-  foldAddressIfNeeded(SrcBase, SrcDisp);
-  foldAddressIfNeeded(DstBase, DstDisp);
-
-  BuildMI(MBB, DL, TII->get(SystemZ::CLGR)).add(SrcBase).add(DstBase);
+  BuildMI(MBB, DL, TII->get(SystemZ::CLGR)).add(SrcAddr).add(DstAddr);
   BuildMI(MBB, DL, TII->get(SystemZ::BRC))
       .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_LT)
       .addMBB(MvcrlMBB);
 
   BuildMI(MvcMBB, DL, TII->get(SystemZ::MVC))
-      .add(DstBase).addImm(DstDisp)
+      .add(DstAddr).addImm(0)
       .addImm(Len)
-      .add(SrcBase).addImm(SrcDisp)
+      .add(SrcAddr).addImm(0)
       .setMemRefs(MI.memoperands());
   BuildMI(MvcMBB, DL, TII->get(SystemZ::J)).addMBB(DoneMBB);
 
   BuildMI(MvcrlMBB, DL, TII->get(SystemZ::LHI), SystemZ::R0L).addImm(Len - 1);
   BuildMI(MvcrlMBB, DL, TII->get(SystemZ::MVCRL))
-      .add(DstBase).addImm(DstDisp)
-      .add(SrcBase).addImm(SrcDisp)
+      .add(DstAddr).addImm(0)
+      .add(SrcAddr).addImm(0)
       .setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
