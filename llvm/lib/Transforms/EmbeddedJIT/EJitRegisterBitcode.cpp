@@ -41,8 +41,7 @@ static void collectReferencedGlobals(Function &F,
     for (Instruction &I : BB)
       for (Value *Op : I.operands())
         if (auto *GV = dyn_cast<GlobalVariable>(Op->stripPointerCasts()))
-          if (!GV->isConstant() || GV->hasMetadata(MD_EJIT_METADATA))
-            Globals.insert(GV);
+          Globals.insert(GV);
 }
 
 static void computeTransitiveClosure(
@@ -102,10 +101,12 @@ static std::string extractAndSerialize(Module &M,
     GV->eraseFromParent();
   }
 
-  // Convert kept global definitions to external declarations so the JIT
-  // linker resolves them from the host process (not from private copies).
+  // Convert kept non-constant global definitions to external declarations
+  // so the JIT linker resolves them from the host process. Constants (e.g.
+  // version strings, lookup tables) are kept as-is since they're embedded
+  // in the bitcode and don't need external resolution.
   for (GlobalVariable &GV : Extracted->globals()) {
-    if (GV.isDeclaration())
+    if (GV.isDeclaration() || GV.isConstant())
       continue;
     GV.setInitializer(nullptr);
     GV.setLinkage(GlobalValue::ExternalLinkage);
@@ -174,9 +175,12 @@ static void generateSymbolRegisters(
             }
           }
         }
-        // External global variable references
+        // External global variable references. Skip constants (compiler-
+        // generated strings etc.) — they're embedded in the bitcode.
         for (Use &U : I.operands()) {
           if (auto *GV = dyn_cast<GlobalVariable>(U.get())) {
+            if (GV->isConstant())
+              continue;
             if (GV->isDeclaration() || !isPeriodVar(*GV)) {
               std::string Name = GV->getName().str();
               if (registered.insert(Name).second) {
