@@ -2102,43 +2102,43 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
 
 // a > -1 ? 1 : ( a | (+ve)value) --> smin(1, a | (+ve)value)
 // a < -1 ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+// a < 0  ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
 static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
                                        InstCombiner::BuilderTy &Builder,
                                        const SimplifyQuery &SQ) {
+  Value *OrVal, *ConstVal, *Mask;
   Value *A = ICI->getOperand(0);
   Value *B = ICI->getOperand(1);
   Value *TVal = SI.getTrueValue();
   Value *FVal = SI.getFalseValue();
   ICmpInst::Predicate Pred = ICI->getPredicate();
 
-  if (!((Pred == ICmpInst::ICMP_SLT && match(B, m_Zero())) ||
-        (Pred == ICmpInst::ICMP_SLE && match(B, m_AllOnes())) ||
-        (Pred == ICmpInst::ICMP_SGT && match(B, m_AllOnes())) ||
-        (Pred == ICmpInst::ICMP_SGE && match(B, m_Zero()))))
-    return nullptr;
-
-
-  Value *OrVal, *ConstVal;
   if ((Pred == ICmpInst::ICMP_SLT && match(B, m_Zero())) ||
       (Pred == ICmpInst::ICMP_SLE && match(B, m_AllOnes()))) {
     OrVal = TVal;
     ConstVal = FVal;
-  } else {
+  } else if ((Pred == ICmpInst::ICMP_SGT &&
+              match(B, m_AllOnes())) ||
+             (Pred == ICmpInst::ICMP_SGE && match(B, m_Zero()))) {
     OrVal = FVal;
     ConstVal = TVal;
+  } else {
+    return nullptr;
   }
 
-  if (!match(ConstVal, m_Zero()) && !match(ConstVal, m_One()))
+  ConstantRange CR = computeConstantRange(ConstVal, true, SQ);
+
+  APInt Min = CR.getSignedMin();
+  APInt Max = CR.getSignedMax();
+
+  if (Min.slt(APInt(Min.getBitWidth(), -1)) ||
+      Max.sgt(APInt(Max.getBitWidth(), 1)))
     return nullptr;
 
-  Value *X, *Mask;
-  if (!match(OrVal, m_Or(m_Value(X), m_Value(Mask))))
+  if (!match(OrVal, m_c_Or(m_Specific(A), m_Value(Mask))))
     return nullptr;
 
-  if (X != A)
-    return nullptr;
-
-  if (!isKnownNonNegative(Mask, SQ))
+  if (!isKnownPositive(Mask, SQ))
     return nullptr;
 
   return Builder.CreateBinaryIntrinsic(Intrinsic::smin, OrVal, ConstVal);

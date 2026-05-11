@@ -1070,6 +1070,65 @@ define i8 @icmp_pos_sgt_diff_const(i8 %inl, i8 %y) {
   ret i8 %s
 }
 
+define i8 @src_sle_known_range(i8 %inl,
+; CHECK-LABEL: @src_sle_known_range(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.smin.i8(i8 [[OR]], i8 [[C:%.*]])
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  i8 noundef range(i8 1, 128) %y,
+  i8 noundef range(i8 -1, 2) %c) {
+
+  %or = or i8 %inl, %y
+  %cmp = icmp sle i8 %inl, -1
+  %s = select i1 %cmp, i8 %or, i8 %c
+  ret i8 %s
+}
+
+define i8 @known_positive_range(i8 %a, i8 range(i8 1, 128) %y) {
+; CHECK-LABEL: @known_positive_range(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smin.i8(i8 [[OR]], i8 1)
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+
+  %or = or i8 %a, %y
+  %cmp = icmp sgt i8 %a, -1
+  %sel = select i1 %cmp, i8 1, i8 %or
+  ret i8 %sel
+}
+
+define i8 @not_known_positive_range(i8 %a,
+; CHECK-LABEL: @not_known_positive_range(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  i8 range(i8 0, 128) %y) {
+
+  %or = or i8 %a, %y
+  %cmp = icmp sgt i8 %a, -1
+  %sel = select i1 %cmp, i8 1, i8 %or
+  ret i8 %sel
+}
+
+define i8 @zext_maybe_zero(i8 %a, i1 %x) {
+; CHECK-LABEL: @zext_maybe_zero(
+; CHECK-NEXT:    [[MASK:%.*]] = zext i1 [[X:%.*]] to i8
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A:%.*]], [[MASK]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+
+  %mask = zext i1 %x to i8
+  %or = or i8 %a, %mask
+  %cmp = icmp sgt i8 %a, -1
+  %sel = select i1 %cmp, i8 1, i8 %or
+  ret i8 %sel
+}
+
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
