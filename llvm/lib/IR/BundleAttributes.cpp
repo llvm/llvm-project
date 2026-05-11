@@ -1,0 +1,58 @@
+//===- llvm/BundleAttributes.cpp - LLVM Bundle Attributes -------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/BundleAttributes.h"
+
+using namespace llvm;
+
+StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
+  switch (BA) {
+#define ATTR(Name, Str)                                                        \
+  case BundleAttr::Name:                                                       \
+    return #Str;
+#include "llvm/IR/BundleAttributes.def"
+  case BundleAttr::None:
+    return "none";
+  }
+}
+
+BundleAttr llvm::getBundleAttrFromString(StringRef Str) {
+  return StringSwitch<BundleAttr>(Str)
+#define ATTR(Name, Str) .Case(#Str, BundleAttr::Name)
+#include "llvm/IR/BundleAttributes.def"
+      .Default(BundleAttr::None);
+}
+
+AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagName() == "align" && OBU.Inputs.size() >= 2 &&
+         OBU.Inputs.size() <= 3);
+  AssumeAlignInfo Ret{};
+  Ret.Ptr = OBU.Inputs[0];
+  Ret.Alignment = OBU.Inputs[1];
+  if (OBU.Inputs.size() == 3)
+    Ret.Offset = OBU.Inputs[2];
+  return Ret;
+}
+
+AssumeSeparateStorageInfo
+llvm::getAssumeSeparateStorageInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagName() == "separate_storage" && OBU.Inputs.size() == 2);
+  return {&OBU.Inputs[0], &OBU.Inputs[1]};
+}
+
+AssumeNonNullInfo llvm::getAssumeNonNullInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1);
+  return {OBU.Inputs[0]};
+}
+
+AssumeDereferenceableInfo
+llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagName() == "dereferenceable" && OBU.Inputs.size() == 2);
+  return {OBU.Inputs[0], OBU.Inputs[1]};
+}
