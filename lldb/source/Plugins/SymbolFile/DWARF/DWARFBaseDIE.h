@@ -123,8 +123,6 @@ public:
   // LLVM libraries.
   dw_tag_t getTag() const { return Tag(); }
 
-  dw_offset_t getOffset() const { return GetOffset(); }
-
   const char *getShortName() const { return GetName(); }
 
 protected:

@@ -9,12 +9,10 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/WithColor.h"
 
 #include <string>
 
@@ -171,29 +169,20 @@ const char *toString(std::optional<DWARFFormValueType> F) {
 }
 
 /// Resolve the DW_AT_type of \c D until we reach a DIE that is not a
-/// DW_TAG_typedef. Gives up if a cycle is detected in malformed DWARF.
-/// In this case, returns the typedef DIE where the cycle is formed.
+/// DW_TAG_typedef.
 template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
-  SmallSet<uint64_t, 4> Visited;
-  while (true) {
-    auto TypeAttr = D.find(dwarf::DW_AT_type);
-    if (!TypeAttr)
-      return DieType();
+  auto TypeAttr = D.find(dwarf::DW_AT_type);
+  if (!TypeAttr)
+    return DieType();
 
-    auto Unwrapped = detail::resolveReferencedType(D, *TypeAttr);
-    if (!Unwrapped || Unwrapped.getTag() != dwarf::DW_TAG_typedef)
-      return Unwrapped;
+  auto Unwrapped = detail::resolveReferencedType(D, *TypeAttr);
+  if (!Unwrapped)
+    return DieType();
 
-    if (!Visited.insert(Unwrapped.getOffset()).second) {
-      WithColor::warning()
-          << "typedef cycle detected: DW_TAG_typedef at offset 0x"
-          << utohexstr(Unwrapped.getOffset())
-          << " references itself through DW_TAG_typedef chain\n";
-      return Unwrapped;
-    }
+  if (Unwrapped.getTag() == dwarf::DW_TAG_typedef)
+    return unwrapReferencedTypedefType(Unwrapped);
 
-    D = Unwrapped;
-  }
+  return Unwrapped;
 }
 } // namespace detail
 
