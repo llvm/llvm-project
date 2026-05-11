@@ -595,10 +595,7 @@ declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 define i32 @fshl_identity(i32 %x) {
 ; CHECK-LABEL: @fshl_identity(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X1:%.*]], 24
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X1]], 8
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.fshl.i32(i32 [[SHR]], i32 [[SHL]], i32 24)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %shr = lshr i32 %x, 24
   %shl = shl i32 %x, 8
@@ -608,10 +605,7 @@ define i32 @fshl_identity(i32 %x) {
 
 define i32 @fshr_identity(i32 %x) {
 ; CHECK-LABEL: @fshr_identity(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X1:%.*]], 24
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X1]], 8
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.fshr.i32(i32 [[SHR]], i32 [[SHL]], i32 8)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %shr = lshr i32 %x, 24
   %shl = shl i32 %x, 8
@@ -621,10 +615,7 @@ define i32 @fshr_identity(i32 %x) {
 
 define i32 @fshl_identity_modulo(i32 %x) {
 ; CHECK-LABEL: @fshl_identity_modulo(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X1:%.*]], 8
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X1]], 24
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.fshl.i32(i32 [[SHR]], i32 [[SHL]], i32 40)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %shr = lshr i32 %x, 8
   %shl = shl i32 %x, 24
