@@ -41,7 +41,7 @@ def int_corge_sub : Intrinsic<[llvm_i32_ty], [], [], "llvm.corge.f128">;
 // === Conflict without allowlist ==========================================
 #ifdef ERROR_NOT_ALLOWLISTED
 // CHECK-NOT-ALLOWLISTED: error: intrinsic `llvm.foo.f128` cannot share prefix
-// CHECK-NOT-ALLOWLISTED: note: if intentional, add `let KnownOverloadConflict = "int_foo" in`
+// CHECK-NOT-ALLOWLISTED: note: if intentional, add `let KnownOverloadConflict = "xxx" in`
 def int_foo_f128 : Intrinsic<[llvm_i32_ty]>;
 #endif
 

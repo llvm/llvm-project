@@ -290,8 +290,7 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
         // not the mangled name (`OverloadName == Overloaded->Name`,
         // which is "llvm.foo"). The comparison must therefore use
         // `Overloaded->TheDef->getName()`.
-        StringRef Allow =
-            Int.TheDef->getValueAsString("KnownOverloadConflict");
+        StringRef Allow = Int.TheDef->getValueAsString("KnownOverloadConflict");
         if (!Allow.empty() && Allow == Overloaded->TheDef->getName())
           continue;
 
