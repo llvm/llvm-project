@@ -440,7 +440,7 @@ const ExplodedNode *
 MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
                                            SymbolRef Sym,
                                            CheckerContext &C) const {
-  const LocationContext *LeakContext = N->getStackFrame();
+  const StackFrame *LeakStackFrame = N->getStackFrame();
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked symbol.
   const ExplodedNode *AllocNode = N;
@@ -450,9 +450,8 @@ MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
       break;
     // Allocation node, is the last node in the current or parent context in
     // which the symbol was tracked.
-    const LocationContext *NContext = N->getStackFrame();
-    if (NContext == LeakContext ||
-        NContext->isParentOf(LeakContext))
+    const StackFrame *NSF = N->getStackFrame();
+    if (NSF == LeakStackFrame || NSF->isParentOf(LeakStackFrame))
       AllocNode = N;
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }

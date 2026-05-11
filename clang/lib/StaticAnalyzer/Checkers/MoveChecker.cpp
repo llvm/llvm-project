@@ -219,7 +219,7 @@ private:
   ExplodedNode *tryToReportBug(const MemRegion *Region, const CXXRecordDecl *RD,
                                CheckerContext &C, MisuseKind MK) const;
 
-  bool isInMoveSafeContext(const LocationContext *LC) const;
+  bool isInMoveSafeContext(const StackFrame *SF) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
   bool isMoveSafeMethod(const CXXMethodDecl *MethodDec) const;
   const ExplodedNode *getMoveLocation(const ExplodedNode *N,
@@ -529,18 +529,18 @@ bool MoveChecker::isStateResetMethod(const CXXMethodDecl *MethodDec) const {
 
 // Don't report an error inside a move related operation.
 // We assume that the programmer knows what she does.
-bool MoveChecker::isInMoveSafeContext(const LocationContext *LC) const {
+bool MoveChecker::isInMoveSafeContext(const StackFrame *SF) const {
   do {
-    const auto *CtxDec = LC->getDecl();
-    auto *CtorDec = dyn_cast_or_null<CXXConstructorDecl>(CtxDec);
-    auto *DtorDec = dyn_cast_or_null<CXXDestructorDecl>(CtxDec);
-    auto *MethodDec = dyn_cast_or_null<CXXMethodDecl>(CtxDec);
+    const auto *SFDec = SF->getDecl();
+    auto *CtorDec = dyn_cast_or_null<CXXConstructorDecl>(SFDec);
+    auto *DtorDec = dyn_cast_or_null<CXXDestructorDecl>(SFDec);
+    auto *MethodDec = dyn_cast_or_null<CXXMethodDecl>(SFDec);
     if (DtorDec || (CtorDec && CtorDec->isCopyOrMoveConstructor()) ||
         (MethodDec && MethodDec->isOverloadedOperator() &&
          MethodDec->getOverloadedOperator() == OO_Equal) ||
         isStateResetMethod(MethodDec) || isMoveSafeMethod(MethodDec))
       return true;
-  } while ((LC = LC->getParent()));
+  } while ((SF = SF->getParent()));
   return false;
 }
 

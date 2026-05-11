@@ -157,14 +157,14 @@ private:
   getDeallocReleaseRequirement(const ObjCPropertyImplDecl *PropImpl) const;
 
   bool isInInstanceDealloc(const CheckerContext &C, SVal &SelfValOut) const;
-  bool isInInstanceDealloc(const CheckerContext &C, const LocationContext *LCtx,
+  bool isInInstanceDealloc(const CheckerContext &C, const StackFrame *SF,
                            SVal &SelfValOut) const;
   bool instanceDeallocIsOnStack(const CheckerContext &C,
                                 SVal &InstanceValOut) const;
 
   bool isSuperDeallocMessage(const ObjCMethodCall &M) const;
 
-  const ObjCImplDecl *getContainingObjCImpl(const LocationContext *LCtx) const;
+  const ObjCImplDecl *getContainingObjCImpl(const StackFrame *SF) const;
 
   const ObjCPropertyDecl *
   findShadowedPropertyDecl(const ObjCPropertyImplDecl *PropImpl) const;
@@ -783,10 +783,10 @@ bool ObjCDeallocChecker::isSuperDeallocMessage(
   return M.getSelector() == DeallocSel;
 }
 
-/// Returns the ObjCImplDecl containing the method declaration in LCtx.
+/// Returns the ObjCImplDecl containing the method declaration in SF.
 const ObjCImplDecl *
-ObjCDeallocChecker::getContainingObjCImpl(const LocationContext *LCtx) const {
-  auto *MD = cast<ObjCMethodDecl>(LCtx->getDecl());
+ObjCDeallocChecker::getContainingObjCImpl(const StackFrame *SF) const {
+  auto *MD = cast<ObjCMethodDecl>(SF->getDecl());
   return cast<ObjCImplDecl>(MD->getDeclContext());
 }
 
@@ -960,21 +960,21 @@ bool ObjCDeallocChecker::isInInstanceDealloc(const CheckerContext &C,
   return isInInstanceDealloc(C, C.getStackFrame(), SelfValOut);
 }
 
-/// Returns true if LCtx is a call to -dealloc and false
+/// Returns true if SF is a call to -dealloc and false
 /// otherwise. If true, it also sets SelfValOut to the value of
 /// 'self'.
 bool ObjCDeallocChecker::isInInstanceDealloc(const CheckerContext &C,
-                                             const LocationContext *LCtx,
+                                             const StackFrame *SF,
                                              SVal &SelfValOut) const {
-  auto *MD = dyn_cast<ObjCMethodDecl>(LCtx->getDecl());
+  auto *MD = dyn_cast<ObjCMethodDecl>(SF->getDecl());
   if (!MD || !MD->isInstanceMethod() || MD->getSelector() != DeallocSel)
     return false;
 
-  const ImplicitParamDecl *SelfDecl = LCtx->getSelfDecl();
+  const ImplicitParamDecl *SelfDecl = SF->getSelfDecl();
   assert(SelfDecl && "No self in -dealloc?");
 
   ProgramStateRef State = C.getState();
-  SelfValOut = State->getSVal(State->getRegion(SelfDecl, LCtx));
+  SelfValOut = State->getSVal(State->getRegion(SelfDecl, SF));
   return true;
 }
 

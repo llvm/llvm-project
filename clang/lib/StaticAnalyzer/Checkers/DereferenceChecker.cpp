@@ -57,8 +57,7 @@ public:
   static void AddDerefSource(raw_ostream &os,
                              SmallVectorImpl<SourceRange> &Ranges,
                              const Expr *Ex, const ProgramState *state,
-                             const LocationContext *LCtx,
-                             bool loadedFrom = false);
+                             const StackFrame *SF, bool loadedFrom = false);
 
   CheckerFrontend NullDerefChecker, FixedDerefChecker, NullPointerArithmChecker;
   const DerefBugType NullBug{&NullDerefChecker, "Dereference of null pointer",
@@ -86,20 +85,18 @@ struct ValueDescStr {
   SmallVectorImpl<SourceRange> &Ranges;
   const Expr *Ex;
   const ProgramState *State;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   bool IsPointer;
   ConditionTruthVal IsNull;
 };
 
 } // end anonymous namespace
 
-void
-DereferenceChecker::AddDerefSource(raw_ostream &os,
-                                   SmallVectorImpl<SourceRange> &Ranges,
-                                   const Expr *Ex,
-                                   const ProgramState *state,
-                                   const LocationContext *LCtx,
-                                   bool loadedFrom) {
+void DereferenceChecker::AddDerefSource(raw_ostream &os,
+                                        SmallVectorImpl<SourceRange> &Ranges,
+                                        const Expr *Ex,
+                                        const ProgramState *state,
+                                        const StackFrame *SF, bool loadedFrom) {
   Ex = Ex->IgnoreParenLValueCasts();
   switch (Ex->getStmtClass()) {
     default:
@@ -407,7 +404,7 @@ template <> struct format_provider<ValueDescStr> {
         << ValueStr[V.IsPointer][V.IsNull.isConstrainedTrue()
                                      ? 0
                                      : (V.IsNull.isConstrainedFalse() ? 1 : 2)];
-    DereferenceChecker::AddDerefSource(Stream, V.Ranges, V.Ex, V.State, V.LCtx,
+    DereferenceChecker::AddDerefSource(Stream, V.Ranges, V.Ex, V.State, V.SF,
                                        false);
   }
 };

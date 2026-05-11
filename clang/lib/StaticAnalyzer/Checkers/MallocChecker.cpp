@@ -1942,10 +1942,10 @@ ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
 
   unsigned Count = C.blockCount();
   SValBuilder &SVB = C.getSValBuilder();
-  const LocationContext *LCtx = C.getPredecessor()->getStackFrame();
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
   DefinedSVal RetVal =
-      isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
-               : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), LCtx,
+      isAlloca ? SVB.getAllocaRegionVal(CE, SF, Count)
+               : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), SF,
                                               CE->getType(), Count);
   return State->BindExpr(CE, C.getStackFrame(), RetVal);
 }
@@ -2029,11 +2029,11 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   assert(Loc::isLocType(CE->getType()) &&
          "Allocation functions must return a pointer");
 
-  const LocationContext *LCtx = C.getPredecessor()->getStackFrame();
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
   SVal RetVal = State->getSVal(CE, C.getStackFrame());
 
   // Fill the region with the initialization value.
-  State = State->bindDefaultInitial(RetVal, Init, LCtx);
+  State = State->bindDefaultInitial(RetVal, Init, SF);
 
   // If Size is somehow undefined at this point, this line prevents a crash.
   if (Size.isUndef())
@@ -2978,7 +2978,7 @@ ProgramStateRef MallocChecker::CallocMem(CheckerContext &C,
 MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
                                                          SymbolRef Sym,
                                                          CheckerContext &C) {
-  const LocationContext *LeakContext = N->getStackFrame();
+  const StackFrame *LeakStackFrame = N->getStackFrame();
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked symbol.
   const ExplodedNode *AllocNode = N;
@@ -2998,7 +2998,7 @@ MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
           const VarRegion *VR = MR->getBaseRegion()->getAs<VarRegion>();
           // Do not show local variables belonging to a function other than
           // where the error is reported.
-          if (!VR || (VR->getStackFrame() == LeakContext->getStackFrame()))
+          if (!VR || (VR->getStackFrame() == LeakStackFrame))
             ReferenceRegion = MR;
         }
       }
@@ -3006,9 +3006,8 @@ MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
 
     // Allocation node, is the last node in the current or parent context in
     // which the symbol was tracked.
-    const LocationContext *NContext = N->getStackFrame();
-    if (NContext == LeakContext ||
-        NContext->isParentOf(LeakContext))
+    const StackFrame *NSF = N->getStackFrame();
+    if (NSF == LeakStackFrame || NSF->isParentOf(LeakStackFrame))
       AllocNode = N;
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }
@@ -4049,8 +4048,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         ReleaseFunctionLC = CurrentSF->getStackFrame();
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
-        for (const LocationContext *LC = CurrentSF; LC; LC = LC->getParent()) {
-          if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
+        for (const StackFrame *SF = CurrentSF; SF; SF = SF->getParent()) {
+          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF->getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {
               // This immediately looks like a reference-counting destructor.
               // We're bad at guessing the original reference count of the
@@ -4086,7 +4085,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   if (refPut(data))
             //     doFree(data);
             // }
-            ReleaseFunctionLC = LC->getStackFrame();
+            ReleaseFunctionLC = SF;
           }
         }
 

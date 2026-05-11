@@ -117,8 +117,8 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
 /// corresponding to the symbol @c Sym.
 /// If none found, returns std::nullopt.
 static std::optional<unsigned>
-findArgIdxOfSymbol(ProgramStateRef CurrSt, const LocationContext *LCtx,
-                   SymbolRef &Sym, std::optional<CallEventRef<>> CE) {
+findArgIdxOfSymbol(ProgramStateRef CurrSt, const StackFrame *SF, SymbolRef &Sym,
+                   std::optional<CallEventRef<>> CE) {
   if (!CE)
     return std::nullopt;
 
@@ -614,7 +614,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   const ExplodedNode *AllocationNode = N;
   const ExplodedNode *AllocationNodeInCurrentOrParentContext = N;
   const MemRegion *FirstBinding = nullptr;
-  const LocationContext *LeakContext = N->getStackFrame();
+  const StackFrame *LeakStackFrame = N->getStackFrame();
 
   // The location context of the init method called on the leaked object, if
   // available.
@@ -622,7 +622,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
   while (N) {
     ProgramStateRef St = N->getState();
-    const LocationContext *NContext = N->getStackFrame();
+    const StackFrame *NStackFrame = N->getStackFrame();
 
     if (!getRefBinding(St, Sym))
       break;
@@ -635,7 +635,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       // Do not show local variables belonging to a function other than
       // where the error is reported.
       if (const auto *MR = R->getMemorySpaceAs<StackSpaceRegion>(St))
-        if (MR->getStackFrame() == LeakContext->getStackFrame())
+        if (MR->getStackFrame() == LeakStackFrame->getStackFrame())
           FirstBinding = R;
     }
 
@@ -649,7 +649,8 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
     // the case where an allocation happens in a block that captures a reference
     // to it and that reference is overwritten/dropped by another call to
     // the block.
-    if (NContext == LeakContext || NContext->isParentOf(LeakContext))
+    if (NStackFrame == LeakStackFrame ||
+        NStackFrame->isParentOf(LeakStackFrame))
       AllocationNodeInCurrentOrParentContext = N;
 
     // Find the last init that was called on the given symbol and store the
@@ -659,7 +660,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
         const Stmt *CE = CEP->getCallExpr();
         if (const auto *ME = dyn_cast_or_null<ObjCMessageExpr>(CE)) {
           if (const Expr *RecExpr = ME->getInstanceReceiver()) {
-            SVal RecV = St->getSVal(RecExpr, NContext);
+            SVal RecV = St->getSVal(RecExpr, NStackFrame);
             if (ME->getMethodFamily() == OMF_init && RecV.getAsSymbol() == Sym)
               InitMethodStackFrame = CEP->getCalleeContext();
           }
@@ -685,7 +686,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   assert(N && "Could not find allocation node");
 
   if (AllocationNodeInCurrentOrParentContext &&
-      AllocationNodeInCurrentOrParentContext->getStackFrame() != LeakContext)
+      AllocationNodeInCurrentOrParentContext->getStackFrame() != LeakStackFrame)
     FirstBinding = nullptr;
 
   return AllocationInfo(AllocationNodeInCurrentOrParentContext, FirstBinding,

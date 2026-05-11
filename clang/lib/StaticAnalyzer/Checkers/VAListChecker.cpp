@@ -235,7 +235,7 @@ void VAListChecker::checkDeadSymbols(SymbolReaper &SR,
 const ExplodedNode *
 VAListChecker::getStartCallSite(const ExplodedNode *N,
                                 const MemRegion *Reg) const {
-  const LocationContext *LeakContext = N->getStackFrame();
+  const StackFrame *LeakSF = N->getStackFrame();
   const ExplodedNode *StartCallNode = N;
 
   bool SeenInitializedState = false;
@@ -247,8 +247,7 @@ VAListChecker::getStartCallSite(const ExplodedNode *N,
     } else if (SeenInitializedState) {
       break;
     }
-    const LocationContext *NContext = N->getStackFrame();
-    if (NContext == LeakContext || NContext->isParentOf(LeakContext))
+    if (N->getStackFrame() == LeakSF || N->getStackFrame()->isParentOf(LeakSF))
       StartCallNode = N;
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }

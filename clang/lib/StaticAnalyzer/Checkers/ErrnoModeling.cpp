@@ -176,15 +176,14 @@ std::optional<SVal> getErrnoValue(ProgramStateRef State) {
   return State->getSVal(ErrnoR, IntTy);
 }
 
-ProgramStateRef setErrnoValue(ProgramStateRef State,
-                              const LocationContext *LCtx, SVal Value,
-                              ErrnoCheckState EState) {
+ProgramStateRef setErrnoValue(ProgramStateRef State, const StackFrame *SF,
+                              SVal Value, ErrnoCheckState EState) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return State;
   // First set the errno value, the old state is still available at 'checkBind'
   // or 'checkLocation' for errno value.
-  State = State->bindLoc(loc::MemRegionVal{ErrnoR}, Value, LCtx);
+  State = State->bindLoc(loc::MemRegionVal{ErrnoR}, Value, SF);
   return State->set<ErrnoState>(EState);
 }
 

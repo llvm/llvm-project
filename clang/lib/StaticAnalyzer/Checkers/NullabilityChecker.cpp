@@ -398,15 +398,14 @@ static bool checkValueAtLValForInvariantViolation(ProgramStateRef State,
   return false;
 }
 
-static bool
-checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
-                                    ProgramStateRef State,
-                                    const LocationContext *LocCtxt) {
+static bool checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
+                                                ProgramStateRef State,
+                                                const StackFrame *SF) {
   for (const auto *ParamDecl : Params) {
     if (ParamDecl->isParameterPack())
       break;
 
-    SVal LV = State->getLValue(ParamDecl, LocCtxt);
+    SVal LV = State->getLValue(ParamDecl, SF);
     if (checkValueAtLValForInvariantViolation(State, LV,
                                               ParamDecl->getType())) {
       return true;
@@ -415,18 +414,17 @@ checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
   return false;
 }
 
-static bool
-checkSelfIvarsForInvariantViolation(ProgramStateRef State,
-                                    const LocationContext *LocCtxt) {
-  auto *MD = dyn_cast<ObjCMethodDecl>(LocCtxt->getDecl());
+static bool checkSelfIvarsForInvariantViolation(ProgramStateRef State,
+                                                const StackFrame *SF) {
+  auto *MD = dyn_cast<ObjCMethodDecl>(SF->getDecl());
   if (!MD || !MD->isInstanceMethod())
     return false;
 
-  const ImplicitParamDecl *SelfDecl = LocCtxt->getSelfDecl();
+  const ImplicitParamDecl *SelfDecl = SF->getSelfDecl();
   if (!SelfDecl)
     return false;
 
-  SVal SelfVal = State->getSVal(State->getRegion(SelfDecl, LocCtxt));
+  SVal SelfVal = State->getSVal(State->getRegion(SelfDecl, SF));
 
   const ObjCObjectPointerType *SelfType =
       dyn_cast<ObjCObjectPointerType>(SelfDecl->getType());

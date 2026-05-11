@@ -136,11 +136,11 @@ static const char *getArgumentValueString(const CallExpr *CE,
     return "Missing assertion argument";
 
   ExplodedNode *N = C.getPredecessor();
-  const LocationContext *LC = N->getStackFrame();
+  const StackFrame *SF = N->getStackFrame();
   ProgramStateRef State = N->getState();
 
   const Expr *Assertion = CE->getArg(0);
-  SVal AssertionVal = State->getSVal(Assertion, LC);
+  SVal AssertionVal = State->getSVal(Assertion, SF);
 
   if (AssertionVal.isUndef())
     return "UNDEFINED";
@@ -210,11 +210,11 @@ const MemRegion *ExprInspectionChecker::getArgRegion(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerEval(const CallExpr *CE,
                                          CheckerContext &C) const {
-  const LocationContext *LC = C.getPredecessor()->getStackFrame();
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
 
   // A specific instantiation of an inlined function may have more constrained
   // values than can generally be assumed. Skip the check.
-  if (LC->getStackFrame()->getParent() != nullptr)
+  if (SF->getParent() != nullptr)
     return;
 
   reportBug(getArgumentValueString(CE, C), C);
@@ -237,14 +237,14 @@ void ExprInspectionChecker::analyzerNumTimesReached(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerCheckInlined(const CallExpr *CE,
                                                  CheckerContext &C) const {
-  const LocationContext *LC = C.getPredecessor()->getStackFrame();
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
 
   // An inlined function could conceivably also be analyzed as a top-level
   // function. We ignore this case and only emit a message (TRUE or FALSE)
   // when we are analyzing it as an inlined function. This means that
   // clang_analyzer_checkInlined(true) should always print TRUE, but
   // clang_analyzer_checkInlined(false) should never actually print anything.
-  if (LC->getStackFrame()->getParent() == nullptr)
+  if (SF->getParent() == nullptr)
     return;
 
   reportBug(getArgumentValueString(CE, C), C);

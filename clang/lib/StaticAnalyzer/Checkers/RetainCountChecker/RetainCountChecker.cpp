@@ -1375,9 +1375,9 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
   RefBindingsTy B = state->get<RefBindings>();
 
   // Don't process anything within synthesized bodies.
-  const LocationContext *LCtx = Pred->getStackFrame();
-  if (LCtx->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    assert(!LCtx->inTopFrame());
+  const StackFrame *SF = Pred->getStackFrame();
+  if (SF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+    assert(!SF->inTopFrame());
     return;
   }
 
@@ -1387,11 +1387,11 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
       return;
   }
 
-  // If the current LocationContext has a parent, don't check for leaks.
+  // If the current StackFrame has a parent, don't check for leaks.
   // We will do that later.
   // FIXME: we should instead check for imbalances of the retain/releases,
   // and suggest annotations.
-  if (LCtx->getParent())
+  if (SF->getParent())
     return;
 
   B = state->get<RefBindings>();

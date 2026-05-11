@@ -471,7 +471,7 @@ template <> struct ScalarEnumerationTraits<TaintConfiguration::VariadicType> {
 /// to the call post-visit. The values are signed integers, which are either
 /// ReturnValueIndex, or indexes of the pointer/reference argument, which
 /// points to data, which should be tainted on return.
-REGISTER_MAP_WITH_PROGRAMSTATE(TaintArgsOnPostVisit, const LocationContext *,
+REGISTER_MAP_WITH_PROGRAMSTATE(TaintArgsOnPostVisit, const StackFrame *,
                                ImmutableSet<ArgIdxTy>)
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(ArgIdxFactory, ArgIdxTy)
 

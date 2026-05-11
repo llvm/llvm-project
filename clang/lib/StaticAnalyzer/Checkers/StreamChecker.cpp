@@ -841,7 +841,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
       RegionAndSymbolInvalidationTraits::InvalidationKinds::
           TK_DoNotInvalidateSuperRegion;
 
-  const LocationContext *LCtx = Call.getStackFrame();
+  const StackFrame *SF = Call.getStackFrame();
   const ASTContext &Ctx = State->getStateManager().getContext();
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   auto &RegionManager = Buffer->getMemRegionManager();
@@ -858,7 +858,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
     ITraits.setTrait(Element, DoNotInvalidateSuperRegion);
   }
   return State->invalidateRegions(
-      EscapingVals, Call.getCFGElementRef(), BlockCount, LCtx,
+      EscapingVals, Call.getCFGElementRef(), BlockCount, SF,
       /*CausesPointerEscape=*/false,
       /*InvalidatedSymbols=*/nullptr, &Call, &ITraits);
 }
