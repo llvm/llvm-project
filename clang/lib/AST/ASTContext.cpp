@@ -16011,4 +16011,9 @@ ASTContext::getPaddingIntervals(QualType Ty) const {
   assert(res && "Failed to insert?");
 
   return itr->second;
+
+bool ASTContext::shouldIgnoreNotesForConstEval(
+    SmallVectorImpl<PartialDiagnosticAt> &Notes) {
+  return getLangOpts().MSVCCompat && Notes.size() == 1 &&
+         Notes[0].second.getDiagID() == diag::note_constexpr_invalid_cast;
 }
