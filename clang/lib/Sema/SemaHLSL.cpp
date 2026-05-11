@@ -2711,22 +2711,13 @@ static QualType wrapMatrixWithLayoutAttr(ASTContext &C, QualType T,
   if (T.isNull() || T->isDependentType())
     return T;
 
-  if (const auto *AT = dyn_cast<ArrayType>(T.getTypePtr())) {
-    QualType Inner = wrapMatrixWithLayoutAttr(C, AT->getElementType(), AttrK);
-    if (Inner == AT->getElementType())
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(T.getTypePtr())) {
+    QualType Inner = wrapMatrixWithLayoutAttr(C, CAT->getElementType(), AttrK);
+    if (Inner == CAT->getElementType())
       return T;
-
-    // fallthrough Inner != AT->getElementType()
-    if (const auto *CAT = dyn_cast<ConstantArrayType>(T.getTypePtr()))
-      return C.getConstantArrayType(Inner, CAT->getSize(), CAT->getSizeExpr(),
-                                    CAT->getSizeModifier(),
-                                    CAT->getIndexTypeCVRQualifiers());
-    // Note The IncompleteArrayType case would handle something like row_major
-    // float2x3 arr[] but HLSL doesn't support this syntax. so we can't test it.
-    // consider removing.
-    if (const auto *IAT = dyn_cast<IncompleteArrayType>(T.getTypePtr()))
-      return C.getIncompleteArrayType(Inner, IAT->getSizeModifier(),
-                                      IAT->getIndexTypeCVRQualifiers());
+    return C.getConstantArrayType(Inner, CAT->getSize(), CAT->getSizeExpr(),
+                                  CAT->getSizeModifier(),
+                                  CAT->getIndexTypeCVRQualifiers());
   }
   if (T->isConstantMatrixType())
     return C.getAttributedType(AttrK, T, T);
