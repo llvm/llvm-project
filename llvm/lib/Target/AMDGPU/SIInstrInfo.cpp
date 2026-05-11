@@ -7216,25 +7216,18 @@ static void emitLoadScalarOpsFromVGPRLoop(
             .addReg(CurRegHi)
             .addImm(AMDGPU::sub1);
 
-        if (UseNewExecInstructions) {
-          auto CmpX =
-              BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU64Opc)).addReg(CurReg);
+        unsigned SubReg =
+            NumSubRegs <= 2 ? 0 : TRI->getSubRegFromChannel(Idx, 2);
 
-          if (NumSubRegs <= 2)
-            CmpX.addReg(VScalarOp);
-          else
-            CmpX.addReg(VScalarOp, VScalarOpUndef,
-                        TRI->getSubRegFromChannel(Idx, 2));
+        if (UseNewExecInstructions) {
+          BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU64Opc))
+              .addReg(CurReg)
+              .addReg(VScalarOp, VScalarOpUndef, SubReg);
         } else {
           Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
-          auto Cmp = BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64),
-                             NewCondReg)
-                         .addReg(CurReg);
-          if (NumSubRegs <= 2)
-            Cmp.addReg(VScalarOp);
-          else
-            Cmp.addReg(VScalarOp, VScalarOpUndef,
-                       TRI->getSubRegFromChannel(Idx, 2));
+          BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64), NewCondReg)
+              .addReg(CurReg)
+              .addReg(VScalarOp, VScalarOpUndef, SubReg);
 
           // Combine the comparison results with AND.
           if (!CondReg) // First.
