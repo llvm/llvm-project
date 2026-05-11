@@ -79,8 +79,8 @@ bool loadFuncs() {
 
   attempted = true;
 
-  HMODULE psapi   = LoadLibraryA("psapi.dll");
-  HMODULE dbghelp = LoadLibraryA("dbghelp.dll");
+  HMODULE psapi   = LoadLibraryExW(L"psapi.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+  HMODULE dbghelp = LoadLibraryExW(L"dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
   // clang-format off
   succeeded = true
