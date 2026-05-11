@@ -722,8 +722,6 @@ public:
       Result.ExpandedTokens.emplace_back(Loc, 0, tok::eof);
     }
 
-    assert(Result.ExpandedTokens.back().kind() == tok::eof);
-
     // Tokenize every file that contributed tokens to the expanded stream.
     buildSpelledTokens();
 
