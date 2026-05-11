@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as child_process from "child_process";
 import * as util from "util";
+import * as os from "os";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { ConfigureButton, showErrorMessage } from "./ui/show-error-message";
@@ -70,8 +71,7 @@ const configurations: Record<string, DefaultConfig> = {
 };
 
 export class LLDBDapConfigurationProvider
-  implements vscode.DebugConfigurationProvider
-{
+  implements vscode.DebugConfigurationProvider {
   constructor(
     private readonly server: LLDBDapServer,
     private readonly logger: vscode.LogOutputChannel,
@@ -110,7 +110,7 @@ export class LLDBDapConfigurationProvider
     );
     this.logger.debug(
       "Initial debug configuration:\n" +
-        JSON.stringify(debugConfiguration, undefined, 2),
+      JSON.stringify(debugConfiguration, undefined, 2),
     );
     let config = vscode.workspace.getConfiguration("lldb-dap");
     for (const [key, cfg] of Object.entries(configurations)) {
@@ -195,6 +195,22 @@ export class LLDBDapConfigurationProvider
           return undefined;
         }
 
+        if (os.platform() === "win32") {
+          const pythonCheckProcess = child_process.spawnSync(executable.command, [
+            "--check-python",
+          ]);
+          if (pythonCheckProcess.status !== 0) {
+            await vscode.window.showErrorMessage(
+              "Python is not installed correctly. Please install it to use lldb-dap.",
+              {
+                modal: true,
+                detail: pythonCheckProcess.stderr?.toString() ?? "",
+              },
+            );
+            return undefined;
+          }
+        }
+
         // Server mode needs to be handled here since DebugAdapterDescriptorFactory
         // will show an unhelpful error if it returns undefined. We'd rather show a
         // nicer error message here and allow stopping the debug session gracefully.
@@ -222,7 +238,7 @@ export class LLDBDapConfigurationProvider
 
       this.logger.info(
         "Resolved debug configuration:\n" +
-          JSON.stringify(debugConfiguration, undefined, 2),
+        JSON.stringify(debugConfiguration, undefined, 2),
       );
 
       return debugConfiguration;

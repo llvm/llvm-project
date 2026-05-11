@@ -19,10 +19,11 @@
 
 using namespace llvm;
 
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 static std::string GetModulePath(HMODULE module) {
   std::vector<WCHAR> buffer(MAX_PATH);
   while (buffer.size() <= PATHCCH_MAX_CCH) {
-    DWORD len = GetModuleFileNameW(NULL, buffer.data(), buffer.size());
+    DWORD len = GetModuleFileNameW(module, buffer.data(), buffer.size());
     if (len == 0)
       return "";
     if (len < buffer.size()) {
@@ -40,7 +41,6 @@ static std::string GetModulePath(HMODULE module) {
 /// Returns the full path to the lldb.exe executable.
 static std::string GetPathToExecutable() { return GetModulePath(NULL); }
 
-#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 bool AddPythonDLLToSearchPath() {
   std::string path_str = GetPathToExecutable();
   if (path_str.empty())
@@ -62,26 +62,31 @@ bool AddPythonDLLToSearchPath() {
 #endif
 
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-bool IsPythonDLLInPath() {
+std::optional<std::string> GetPythonDLLPath() {
 #define WIDEN2(x) L##x
 #define WIDEN(x) WIDEN2(x)
   HMODULE h = LoadLibraryW(WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME));
   if (!h)
-    return false;
+    return std::nullopt;
+
+  std::string path = GetModulePath(h);
   FreeLibrary(h);
-  return true;
+
+  return path;
 #undef WIDEN2
 #undef WIDEN
 }
 #endif
 
-llvm::Error SetupPythonRuntimeLibrary() {
+llvm::Expected<std::string> SetupPythonRuntimeLibrary() {
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-  if (IsPythonDLLInPath())
-    return Error::success();
+  if (std::optional<std::string> python_path = GetPythonDLLPath())
+    return *python_path;
 #ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-  if (AddPythonDLLToSearchPath() && IsPythonDLLInPath())
-    return Error::success();
+  if (AddPythonDLLToSearchPath()) {
+    if (std::optional<std::string> python_path = GetPythonDLLPath())
+      return *python_path;
+  }
 #endif
   return createStringError(
       inconvertibleErrorCode(),
@@ -91,7 +96,7 @@ llvm::Error SetupPythonRuntimeLibrary() {
     return createStringError(inconvertibleErrorCode(),
                              "unable to find the Python runtime library");
 #endif
-  return Error::success();
+  return "";
 }
 
 // BEGIN SWIFT
