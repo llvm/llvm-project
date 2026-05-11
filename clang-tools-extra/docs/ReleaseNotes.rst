@@ -58,9 +58,9 @@ Potentially Breaking Changes
 - Removed the :program:`clang-tidy` ``hicpp`` module. All checks have been moved
   to the other modules. Use the replacement checks instead:
 
-  ================================== =========================================================
+  ================================== ========================================================================
   Removed check                      Replacement check
-  ================================== =========================================================
+  ================================== ========================================================================
   ``hicpp-avoid-c-arrays``           :doc:`modernize-avoid-c-arrays
                                      <clang-tidy/checks/modernize/avoid-c-arrays>`
   ``hicpp-avoid-goto``               :doc:`cppcoreguidelines-avoid-goto
@@ -77,7 +77,23 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/readability/function-size>`
   ``hicpp-ignored-remove-result``    :doc:`bugprone-unused-return-value
                                      <clang-tidy/checks/bugprone/unused-return-value>`
-  ================================== =========================================================
+  ``hicpp-invalid-access-moved``     :doc:`bugprone-use-after-move
+                                     <clang-tidy/checks/bugprone/use-after-move>`
+  ``hicpp-member-init``              :doc:`cppcoreguidelines-pro-type-member-init
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`
+  ``hicpp-move-const-arg``           :doc:`performance-move-const-arg
+                                     <clang-tidy/checks/performance/move-const-arg>`
+  ``hicpp-named-parameter``          :doc:`readability-named-parameter
+                                     <clang-tidy/checks/readability/named-parameter>`
+  ``hicpp-new-delete-operators``     :doc:`misc-new-delete-overloads
+                                     <clang-tidy/checks/misc/new-delete-overloads>`
+  ``hicpp-no-array-decay``           :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
+                                     <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>`
+  ``hicpp-noexcept-move``            :doc:`performance-noexcept-move-constructor
+                                     <clang-tidy/checks/performance/noexcept-move-constructor>`
+  ``hicpp-signed-bitwise``           :doc:`bugprone-signed-bitwise
+                                     <clang-tidy/checks/bugprone/signed-bitwise>`
+  ================================== ========================================================================
 
 Improvements to clangd
 ----------------------
@@ -258,11 +274,6 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
-- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
-  to :doc:`bugprone-signed-bitwise
-  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
-  name is kept as an alias.
-
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
   :doc:`performance-prefer-single-char-overloads
@@ -273,8 +284,14 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`bugprone-argument-comment
-  <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
-  inherited constructors.
+  <clang-tidy/checks/bugprone/argument-comment>`:
+
+  - Checks for C++11 inherited constructors.
+
+  - Adds `CommentAnonymousInitLists`, `CommentTypedInitLists`, and
+    `CommentParenthesizedTemporaries` options to comment braced-init list
+    arguments and explicit temporary constructions (for example, ``{}``,
+    ``Type{}``, and ``Type()``).
 
 - Improved :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false

@@ -110,7 +110,8 @@ public:
 
   // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
   // through return.
-  virtual void reportLifetimeboundViolation(const ParmVarDecl *VD) {}
+  virtual void
+  reportLifetimeboundViolation(const ParmVarDecl *ParmWithLifetimebound) {}
 
   // Reports misuse of [[clang::lifetimebound]] when implicit this parameter
   // doesn't escape through return.

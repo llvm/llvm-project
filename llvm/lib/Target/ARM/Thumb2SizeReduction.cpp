@@ -1010,7 +1010,7 @@ bool Thumb2SizeReduce::ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
                                 bool LiveCPSR, bool IsSelfLoop,
                                 bool SkipPrologueEpilogue) {
   unsigned Opcode = MI->getOpcode();
-  DenseMap<unsigned, unsigned>::iterator OPI = ReduceOpcodeMap.find(Opcode);
+  auto OPI = ReduceOpcodeMap.find(Opcode);
   if (OPI == ReduceOpcodeMap.end())
     return false;
   if (SkipPrologueEpilogue && (MI->getFlag(MachineInstr::FrameSetup) ||

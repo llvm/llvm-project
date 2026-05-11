@@ -62,6 +62,7 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                const LegalizerInfo *LI)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer), VT(VT),
       MDT(MDT), IsPreLegalize(IsPreLegalize), LI(LI),
+      TII(Builder.getMF().getSubtarget().getInstrInfo()),
       RBI(Builder.getMF().getSubtarget().getRegBankInfo()),
       TRI(Builder.getMF().getSubtarget().getRegisterInfo()) {
   (void)this->VT;
