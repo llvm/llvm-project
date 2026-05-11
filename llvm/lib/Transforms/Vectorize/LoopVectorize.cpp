@@ -3091,7 +3091,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // straight-line code as the both iteration counts are statically known.
       ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          ExactTC.isFixed()) {
+          ExactTC.getFixedValue() != 0) {
         // If the maximum VF cannot produce 1 vector iteration + 1 scalar
         // iteration, step down VF's to find one that can. The result should
         // also eliminate any loops.

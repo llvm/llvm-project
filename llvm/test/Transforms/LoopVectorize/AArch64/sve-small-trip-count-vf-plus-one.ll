@@ -255,6 +255,59 @@ exit:
   ret void
 }
 
+; ExactTC is unknown here because the loop trip count is the runtime value %n,
+; but the guard proves the maximum trip count is 5. This should still take the
+; low-trip-count path, but it must not use the VF+1 escape because
+; getSmallConstantTripCount returns 0.
+define void @unknown_exact_tc_max5(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
+; CHECK-LABEL: define void @unknown_exact_tc_max5(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label %[[EXIT:.*]], label %[[GUARD:.*]]
+; CHECK:       [[GUARD]]:
+; CHECK-NEXT:    [[TOO_LARGE:%.*]] = icmp ugt i64 [[N]], 5
+; CHECK-NEXT:    br i1 [[TOO_LARGE]], label %[[EXIT]], label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[VAL]], 1
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %is.zero = icmp eq i64 %n, 0
+  br i1 %is.zero, label %exit, label %guard
+
+guard:
+  %too.large = icmp ugt i64 %n, 5
+  br i1 %too.large, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ 0, %guard ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %val = load i32, ptr %gep.a, align 4
+  %add = add nsw i32 %val, 1
+  store i32 %add, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
