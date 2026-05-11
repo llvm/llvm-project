@@ -126,7 +126,8 @@ define void @static_4112(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
-; CHECK-NEXT:    ldr xzr, [sp], #-16
+; CHECK-NEXT:    ldr xzr, [sp]
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4128
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
@@ -485,7 +486,8 @@ define void @static_9232(ptr %out) uwtable(async) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8208
 ; CHECK-NEXT:    sub sp, sp, #800
 ; CHECK-NEXT:    .cfi_def_cfa_offset 9008
-; CHECK-NEXT:    ldr xzr, [sp], #-240
+; CHECK-NEXT:    ldr xzr, [sp]
+; CHECK-NEXT:    sub sp, sp, #240
 ; CHECK-NEXT:    .cfi_def_cfa_offset 9248
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]

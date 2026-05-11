@@ -67,7 +67,8 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    ldr xzr, [sp, #-16]!
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16

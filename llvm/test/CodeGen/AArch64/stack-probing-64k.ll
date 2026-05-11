@@ -37,7 +37,8 @@ define void @static_65552(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    sub sp, sp, #16, lsl #12 // =65536
 ; CHECK-NEXT:    .cfi_def_cfa_offset 65552
-; CHECK-NEXT:    ldr xzr, [sp], #-16
+; CHECK-NEXT:    ldr xzr, [sp]
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 65568
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
