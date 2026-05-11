@@ -11,3 +11,7 @@ RUN: echo_to_stderr "goodbye" 2> %t2
 RUN: grep -x "goodbye" < %t2
 RUN: echo_to_stderr ", for now" 2>> %t2
 RUN: grep -x "goodbye, for now" < %t2
+
+# fallback_to_grep should fail when called directly. This command is used to
+# verify the fallback behaviour.
+RUN: echo "Hello" | not fallback_to_grep "Hello"

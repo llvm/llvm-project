@@ -224,6 +224,7 @@ class InprocBuiltin:
     """
 
     execute: InprocBuiltinExecuteFn
+    fallback_command: str | None = None
 
 
 def executeBuiltinCd(

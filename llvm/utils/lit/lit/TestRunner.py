@@ -594,7 +594,13 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper, extra_inproc_builtins):
                 error = "Error: 'env' cannot call '{}'".format(args[0])
 
             if error:
-                raise InternalShellError(j, error)
+                if inproc_builtin.fallback_command:
+                    # Can't use the in-process built-in in this case, so use
+                    # the fallback command instead.
+                    args[0] = inproc_builtin.fallback_command
+                    inproc_builtin = None
+                else:
+                    raise InternalShellError(j, error)
 
         # Resolve any out-of-process builtin command before adding back 'not'
         # commands.

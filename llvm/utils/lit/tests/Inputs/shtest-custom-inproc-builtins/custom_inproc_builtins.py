@@ -29,3 +29,10 @@ def echo_to_stderr(
 ):
     io.stderr.write(args[1])
     return 0
+
+
+def fallback_to_grep(
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+):
+    io.stderr.write("This function should never be called.")
+    return 1

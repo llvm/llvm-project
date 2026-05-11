@@ -5,6 +5,8 @@
 # RUN: | FileCheck -match-full-lines %s
 # END.
 
+# CHECK: PASS: shtest-custom-inproc-builtins :: env-fallback.txt ({{[^)]*}})
+# CHECK: PASS: shtest-custom-inproc-builtins :: not-fallback.txt ({{[^)]*}})
 # CHECK: PASS: shtest-custom-inproc-builtins :: use-custom-inproc-builtins.txt ({{[^)]*}})
 
-# CHECK: Passed: 1 ({{[^)]*}})
+# CHECK: Passed: 3 ({{[^)]*}})
