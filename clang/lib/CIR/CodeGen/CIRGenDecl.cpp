@@ -306,7 +306,7 @@ void CIRGenFunction::emitAutoVarInit(
       // out of it while trying to build the expression, mark it as such.
       Address addr = lv.getAddress();
       assert(addr.isValid() && "Should have an address");
-      auto allocaOp = addr.getUnderlyingAllocaOp();
+      cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
       assert(allocaOp && "Address should come straight out of the alloca");
 
       if (!allocaOp.use_empty())

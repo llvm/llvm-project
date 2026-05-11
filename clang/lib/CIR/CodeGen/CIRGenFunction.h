@@ -2286,14 +2286,13 @@ public:
                            mlir::Value arraySize = nullptr,
                            Address *alloca = nullptr,
                            mlir::OpBuilder::InsertPoint ip = {});
-  Address
-  createTempAlloca(mlir::Type ty,
-                   mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
-                   CharUnits align, mlir::Location loc,
-                   const Twine &name = "tmp",
-                   mlir::Value arraySize = nullptr,
-                   Address *alloca = nullptr,
-                   mlir::OpBuilder::InsertPoint ip = {});
+  Address createTempAlloca(mlir::Type ty,
+                           mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                           CharUnits align, mlir::Location loc,
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
   Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
                                       mlir::Location loc,
                                       const Twine &name = "tmp",
