@@ -41,14 +41,18 @@ void DominanceInfoBase<IsPostDom>::invalidate() {
 }
 
 template <bool IsPostDom>
-void DominanceInfoBase<IsPostDom>::invalidate(Region *region) {
-  region->walk([&](Region *r) {
+void DominanceInfoBase<IsPostDom>::invalidate(Region *region, bool recursive) {
+  auto invalidate = [&](Region *r) {
     auto it = dominanceInfos.find(r);
     if (it != dominanceInfos.end()) {
       delete it->second.getPointer();
       dominanceInfos.erase(it);
     }
-  });
+  };
+  if (recursive)
+    region->walk([&](Region *r) { invalidate(r); });
+  else
+    invalidate(region);
 }
 
 /// Return the dom tree and "hasSSADominance" bit for the given region.  The
