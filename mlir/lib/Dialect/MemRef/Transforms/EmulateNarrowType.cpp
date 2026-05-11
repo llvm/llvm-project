@@ -32,15 +32,21 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 /// Converts a memref::ReinterpretCastOp to the converted type. The result
-/// MemRefType of the old op must have a rank and stride of 1, with static
-/// offset and size. The number of bits in the offset must evenly divide the
-/// bitwidth of the new converted type.
+/// memref is linearized to a rank-1 byte view (or rank-0 if the source is
+/// rank-0). Dynamic offsets are accepted under the alignment contract that
+/// the caller guarantees the offset is a multiple of `dstBits / srcBits`;
+/// statically-provable misalignment is rejected.
 static LogicalResult
 convertCastingOp(ConversionPatternRewriter &rewriter,
                  memref::ReinterpretCastOp::Adaptor adaptor,
                  memref::ReinterpretCastOp op, MemRefType newTy) {
-  auto convertedElementType = newTy.getElementType();
-  auto oldElementType = op.getType().getElementType();
+  if (newTy == op.getType()) {
+    return rewriter.notifyMatchFailure(
+        op, "result type was not converted by narrow-type emulation");
+  }
+
+  Type convertedElementType = newTy.getElementType();
+  Type oldElementType = op.getType().getElementType();
   int srcBits = oldElementType.getIntOrFloatBitWidth();
   int dstBits = convertedElementType.getIntOrFloatBitWidth();
   if (dstBits % srcBits != 0) {
@@ -48,35 +54,63 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
                                        "only dstBits % srcBits == 0 supported");
   }
 
-  // Only support stride of 1.
-  if (llvm::any_of(op.getStaticStrides(),
-                   [](int64_t stride) { return stride != 1; })) {
-    return rewriter.notifyMatchFailure(op->getLoc(),
-                                       "stride != 1 is not supported");
-  }
-
-  auto sizes = op.getStaticSizes();
-  int64_t offset = op.getStaticOffset(0);
-  // Only support static sizes and offsets.
-  if (llvm::is_contained(sizes, ShapedType::kDynamic) ||
-      offset == ShapedType::kDynamic) {
+  ArrayRef<int64_t> staticStrides = op.getStaticStrides();
+  if (!staticStrides.empty() && staticStrides.back() != 1) {
     return rewriter.notifyMatchFailure(
-        op, "dynamic size or offset is not supported");
+        op->getLoc(), "innermost stride != 1 is not supported");
   }
 
-  int elementsPerByte = dstBits / srcBits;
-  if (offset % elementsPerByte != 0) {
+  if (llvm::is_contained(op.getStaticSizes(), ShapedType::kDynamic)) {
+    return rewriter.notifyMatchFailure(op, "dynamic sizes are not supported");
+  }
+
+  if (!memref::isStaticShapeAndContiguousRowMajor(op.getType())) {
     return rewriter.notifyMatchFailure(
-        op, "offset not multiple of elementsPerByte is not supported");
+        op, "result memref is not row-major contiguous");
   }
 
-  SmallVector<int64_t> size;
-  if (!sizes.empty())
-    size.push_back(llvm::divideCeilSigned(sizes[0], elementsPerByte));
-  offset = offset / elementsPerByte;
+  Location loc = op.getLoc();
+  SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
+  OpFoldResult origOffset = op.getMixedOffsets()[0];
+
+  SmallVector<OpFoldResult> newSizes;
+  SmallVector<OpFoldResult> newStrides;
+  OpFoldResult newOffset;
+  OpFoldResult intraOffset;
+  if (mixedSizes.empty()) {
+    int64_t elementsPerByte = dstBits / srcBits;
+    AffineExpr s0;
+    bindSymbols(rewriter.getContext(), s0);
+    newOffset = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, s0.floorDiv(elementsPerByte), {origOffset});
+    intraOffset = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, s0 % elementsPerByte, {origOffset});
+  } else {
+    memref::LinearizedMemRefInfo info =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, srcBits, dstBits, origOffset, mixedSizes);
+    newOffset = info.linearizedOffset;
+    intraOffset = info.intraDataOffset;
+    // `info.linearizedSize` uses floor division, but the converted result
+    // memref shape uses ceil division to fit all source elements (see
+    // `getLinearizedShape` in the type converter). Use the converted type's
+    // static dim when available to keep the new reinterpret_cast's
+    // `static_sizes` attribute consistent with its result type.
+    int64_t newDim = newTy.getShape().front();
+    if (ShapedType::isStatic(newDim))
+      newSizes.push_back(rewriter.getIndexAttr(newDim));
+    else
+      newSizes.push_back(info.linearizedSize);
+    newStrides.push_back(rewriter.getIndexAttr(1));
+  }
+
+  if (auto cst = getConstantIntValue(intraOffset); cst && *cst != 0) {
+    return rewriter.notifyMatchFailure(
+        op, "offset is provably not a multiple of dstBits / srcBits");
+  }
 
   rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-      op, newTy, adaptor.getSource(), offset, size, op.getStaticStrides());
+      op, newTy, adaptor.getSource(), newOffset, newSizes, newStrides);
   return success();
 }
 
@@ -350,6 +384,32 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertMemRefCast
+//===----------------------------------------------------------------------===//
+
+/// `memref.cast` between two narrow-typed memrefs forwards through the type
+/// converter to a cast between the converted byte-typed memrefs.
+struct ConvertMemRefCast final : OpConversionPattern<memref::CastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type newTy = getTypeConverter()->convertType(op.getType());
+    if (!newTy) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          llvm::formatv("failed to convert memref type: {0}", op.getType()));
+    }
+    if (newTy == op.getType())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<memref::CastOp>(op, newTy, adaptor.getSource());
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertMemRefMemorySpaceCast
 //===----------------------------------------------------------------------===//
 
@@ -377,8 +437,7 @@ struct ConvertMemRefMemorySpaceCast final
 // ConvertMemRefReinterpretCast
 //===----------------------------------------------------------------------===//
 
-/// Output types should be at most one dimensional, so only the 0 or 1
-/// dimensional cases are supported.
+/// Forwards to `convertCastingOp`, which enforces all preconditions.
 struct ConvertMemRefReinterpretCast final
     : OpConversionPattern<memref::ReinterpretCastOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -392,12 +451,6 @@ struct ConvertMemRefReinterpretCast final
       return rewriter.notifyMatchFailure(
           op->getLoc(),
           llvm::formatv("failed to convert memref type: {0}", op.getType()));
-    }
-
-    // Only support for 0 or 1 dimensional cases.
-    if (op.getType().getRank() > 1) {
-      return rewriter.notifyMatchFailure(
-          op->getLoc(), "subview with rank > 1 is not supported");
     }
 
     return convertCastingOp(rewriter, adaptor, op, newTy);
@@ -503,9 +556,11 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// Emulating narrow ints on subview have limited support, supporting only
-/// static offset and size and stride of 1. Ideally, the subview should be
-/// folded away before running narrow type emulation, and this pattern should
-/// only run for cases that can't be folded.
+/// static sizes and stride of 1. Dynamic offsets are accepted under the
+/// alignment contract that the caller guarantees the offset is a multiple of
+/// `dstBits / srcBits`. Ideally, the subview should be folded away before
+/// running narrow type emulation, and this pattern should only run for cases
+/// that can't be folded.
 struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -543,12 +598,9 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
     }
 
     auto sizes = subViewOp.getStaticSizes();
-    int64_t lastOffset = subViewOp.getStaticOffsets().back();
-    // Only support static sizes and offsets.
-    if (llvm::is_contained(sizes, ShapedType::kDynamic) ||
-        lastOffset == ShapedType::kDynamic) {
-      return rewriter.notifyMatchFailure(
-          subViewOp->getLoc(), "dynamic size or offset is not supported");
+    if (llvm::is_contained(sizes, ShapedType::kDynamic)) {
+      return rewriter.notifyMatchFailure(subViewOp->getLoc(),
+                                         "dynamic size is not supported");
     }
 
     // Transform the offsets, sizes and strides according to the emulation.
@@ -565,6 +617,13 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
             subViewOp.getMixedSizes(), strides,
             getMixedValues(adaptor.getStaticOffsets(), adaptor.getOffsets(),
                            rewriter));
+
+    if (auto cst = getConstantIntValue(linearizedInfo.intraDataOffset);
+        cst && *cst != 0) {
+      return rewriter.notifyMatchFailure(
+          subViewOp,
+          "subview offset is provably not a multiple of dstBits / srcBits");
+    }
 
     rewriter.replaceOpWithNewOp<memref::SubViewOp>(
         subViewOp, newTy, adaptor.getSource(), linearizedIndices,
@@ -633,13 +692,14 @@ void memref::populateMemRefNarrowTypeEmulationPatterns(
     RewritePatternSet &patterns, bool disableAtomicRMW) {
 
   // Populate `memref.*` conversion patterns.
-  patterns.add<ConvertMemRefAllocation<memref::AllocOp>,
-               ConvertMemRefAllocation<memref::AllocaOp>, ConvertMemRefCopy,
-               ConvertMemRefDealloc, ConvertMemRefCollapseShape,
-               ConvertMemRefExpandShape, ConvertMemRefLoad,
-               ConvertMemRefAssumeAlignment, ConvertMemRefMemorySpaceCast,
-               ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
-      typeConverter, patterns.getContext());
+  patterns
+      .add<ConvertMemRefAllocation<memref::AllocOp>,
+           ConvertMemRefAllocation<memref::AllocaOp>, ConvertMemRefCast,
+           ConvertMemRefCopy, ConvertMemRefDealloc, ConvertMemRefCollapseShape,
+           ConvertMemRefExpandShape, ConvertMemRefLoad,
+           ConvertMemRefAssumeAlignment, ConvertMemRefMemorySpaceCast,
+           ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
+          typeConverter, patterns.getContext());
   patterns.insert<ConvertMemrefStore>(typeConverter, patterns.getContext(),
                                       disableAtomicRMW);
   memref::populateResolveExtractStridedMetadataPatterns(patterns);
