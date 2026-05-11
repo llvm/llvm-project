@@ -376,6 +376,65 @@ TEST(SSAUpdaterBulk, SimplifyPHIs) {
   EXPECT_EQ(Phi, Cmp->getOperand(1));
 }
 
+// Test that AddUse on a PHI incoming operand where the incoming block is also
+// a def block (self-loop) does not insert a spurious intermediate phi.
+// Previously, RewriteAllUses used (BB != User->getParent()) to select
+// IsLiveOut, which returned false for self-loop PHI uses, causing the IDF
+// calculator to insert an unnecessary phi in the loop block.
+//
+// The pattern comes from StructurizeCFG: a phi in a loop block has a loop-back
+// incoming slot that should be rewritten to a constant (poison) defined at that
+// same block. Since the block is its own def block, no new phi should appear.
+TEST(SSAUpdaterBulk, PHIUseInDefBlock) {
+  const char *IR = R"(
+      define double @main() {
+      entry:
+          br label %loop
+      loop:
+          %loaded = phi double [ 0.0, %entry ], [ poison, %loop ]
+          br i1 true, label %exit, label %loop
+      exit:
+          ret double %loaded
+      }
+  )";
+
+  llvm::LLVMContext Context;
+  llvm::SMDiagnostic Err;
+  std::unique_ptr<llvm::Module> M = llvm::parseAssemblyString(IR, Err, Context);
+  ASSERT_NE(M, nullptr) << "Failed to parse IR: " << Err.getMessage();
+
+  Function *F = M->getFunction("main");
+  BasicBlock *Entry = &F->getEntryBlock();
+  BasicBlock *Loop = Entry->getSingleSuccessor();
+  PHINode *Loaded = cast<PHINode>(&Loop->front());
+
+  // Rewrite the loop-back incoming slot of %loaded using a variable that has
+  // poison defined at %loop (the same block as the PHI's parent). This is
+  // exactly the self-loop case: the incoming block equals the def block equals
+  // the PHI's parent block.
+  SSAUpdaterBulk Updater;
+  Type *F64Ty = Type::getDoubleTy(Context);
+  Value *Poison = PoisonValue::get(F64Ty);
+  unsigned Var = Updater.AddVariable("v", F64Ty);
+  Updater.AddAvailableValue(Var, Entry, ConstantFP::get(F64Ty, 0.0));
+  Updater.AddAvailableValue(Var, Loop, Poison); // Loop is def block == incoming block
+
+  // Add the loop-back slot of %loaded as the use to rewrite.
+  int Idx = Loaded->getBasicBlockIndex(Loop);
+  ASSERT_GE(Idx, 0);
+  Updater.AddUse(Var, &Loaded->getOperandUse(Idx));
+
+  SmallVector<PHINode *, 4> Inserted;
+  DominatorTree DT(*F);
+  Updater.RewriteAllUses(&DT, &Inserted);
+
+  // The loop-back incoming value of %loaded must be poison directly, not routed
+  // through an intermediate phi. With the bug, IsLiveOut was false for this
+  // self-loop use, so ComputeValue returned the live-in phi instead of the
+  // live-out poison, and %loaded would pick up the intermediate phi.
+  EXPECT_EQ(Loaded->getIncomingValueForBlock(Loop), Poison);
+}
+
 // Helper to run both versions on the same input.
 static void RunEliminateNewDuplicatePHINode(
     const char *AsmText,
