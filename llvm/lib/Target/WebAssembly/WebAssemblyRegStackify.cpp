@@ -933,7 +933,6 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         bool CanMove = SameBlock &&
                        isSafeToMove(Def, &Use, Insert, MFI, MRI, Optimize) &&
                        !TreeWalker.isOnStack(Reg);
-
         if (CanMove && hasSingleUse(Reg, MRI, MF, Optimize, DefI, LIS)) {
           Insert = moveForSingleUse(Reg, Use, DefI, MBB, Insert, LIS, MFI, MRI);
 
