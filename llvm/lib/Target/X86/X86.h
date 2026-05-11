@@ -411,7 +411,15 @@ public:
 };
 
 FunctionPass *createX86PostLegalizerCombinerLegacy();
-FunctionPass *createX86PreLegalizerCombiner();
+
+class X86PreLegalizerCombinerPass
+    : public PassInfoMixin<X86PreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86PreLegalizerCombinerLegacy();
 
 class X86LoadValueInjectionLoadHardeningPass
     : public OptionalPassInfoMixin<X86LoadValueInjectionLoadHardeningPass> {
@@ -497,7 +505,7 @@ void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
-void initializeX86PreLegalizerCombinerPass(PassRegistry &);
+void initializeX86PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeX86PostLegalizerCombinerLegacyPass(PassRegistry &);
 
 namespace X86AS {

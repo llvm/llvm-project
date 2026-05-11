@@ -68,6 +68,38 @@ func.func @exp2vec(%arg0 : vector<3xf16>) -> () {
 
 // -----
 
+func.func @exp2(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.exp2 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @exp2(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.exp2 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @exp2(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.exp2 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @exp2(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.exp2 %arg0 :
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.CL.exp10
 //===----------------------------------------------------------------------===//
@@ -81,6 +113,38 @@ func.func @exp10(%arg0 : f32) -> () {
 func.func @exp10vec(%arg0 : vector<3xf16>) -> () {
   // CHECK: spirv.CL.exp10 {{%.*}} : vector<3xf16>
   %2 = spirv.CL.exp10 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.exp10 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.exp10 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.exp10 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.exp10 %arg0 :
   return
 }
 
@@ -104,6 +168,38 @@ func.func @log2vec(%arg0 : vector<3xf16>) -> () {
 
 // -----
 
+func.func @log2(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.log2 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @log2(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.log2 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @log2(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.log2 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @log2(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.log2 %arg0 :
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.CL.log10
 //===----------------------------------------------------------------------===//
@@ -117,6 +213,38 @@ func.func @log10(%arg0 : f32) -> () {
 func.func @log10vec(%arg0 : vector<3xf16>) -> () {
   // CHECK: spirv.CL.log10 {{%.*}} : vector<3xf16>
   %2 = spirv.CL.log10 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.log10 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.log10 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.log10 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.log10 %arg0 :
   return
 }
 

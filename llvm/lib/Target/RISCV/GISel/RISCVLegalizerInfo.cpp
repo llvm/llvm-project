@@ -219,8 +219,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     BSWAPActions.maxScalar(0, sXLen).lower();
 
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
-  auto &CountZerosUndefActions =
-      getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
+  auto &CountZerosPoisonActions =
+      getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
   if (ST.hasStdExtZbb()) {
     CountZerosActions.legalFor({{sXLen, sXLen}})
         .customFor({{s32, s32}})
@@ -229,9 +229,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .scalarSameSizeAs(1, 0);
   } else {
     CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
-    CountZerosUndefActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    CountZerosPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
   }
-  CountZerosUndefActions.lower();
+  CountZerosPoisonActions.lower();
 
   auto &CountSignActions = getActionDefinitionsBuilder(G_CTLS);
   if (ST.hasStdExtP()) {

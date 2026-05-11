@@ -5,24 +5,6 @@
 ; RUN: llc < %s -mtriple aarch64 -mattr=+bf16 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-BF16,CHECK-BF16-GI
 
 ; CHECK-CVT-GI:       warning: Instruction selection used fallback path for test_frem
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_select_cc
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_select_cc_f32_f16
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_une
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ueq
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ugt
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_uge
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ult
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ule
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_uno
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_one
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_oeq
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ogt
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_oge
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_olt
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ole
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ord
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fccmp
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_br_cc
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i32
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
@@ -55,24 +37,6 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fneg
 ;
 ; CHECK-BF16-GI:       warning: Instruction selection used fallback path for test_frem
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_select_cc
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_select_cc_f32_f16
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_une
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ueq
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ugt
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_uge
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ult
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ule
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_uno
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_one
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_oeq
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ogt
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_oge
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_olt
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ole
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ord
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fccmp
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_br_cc
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
@@ -582,33 +546,108 @@ define bfloat @test_select(bfloat %a, bfloat %b, i1 zeroext %c) #0 {
 }
 
 define bfloat @test_select_cc(bfloat %a, bfloat %b, bfloat %c, bfloat %d) #0 {
-; CHECK-LABEL: test_select_cc:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h3 killed $h3 def $d3
-; CHECK-NEXT:    // kill: def $h2 killed $h2 def $d2
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
-; CHECK-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-NEXT:    shll v2.4s, v2.4h, #16
-; CHECK-NEXT:    fcmp s2, s3
-; CHECK-NEXT:    fcsel s0, s0, s1, ne
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_select_cc:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-CVT-SD-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s2, s3
+; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_select_cc:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-BF16-SD-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s2, s3
+; CHECK-BF16-SD-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_select_cc:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-CVT-GI-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-CVT-GI-NEXT:    fmov w8, s0
+; CHECK-CVT-GI-NEXT:    fmov w9, s1
+; CHECK-CVT-GI-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s2, s3
+; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, ne
+; CHECK-CVT-GI-NEXT:    fmov s0, w8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_select_cc:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-BF16-GI-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-BF16-GI-NEXT:    fmov w8, s0
+; CHECK-BF16-GI-NEXT:    fmov w9, s1
+; CHECK-BF16-GI-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s2, s3
+; CHECK-BF16-GI-NEXT:    csel w8, w8, w9, ne
+; CHECK-BF16-GI-NEXT:    fmov s0, w8
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-BF16-GI-NEXT:    ret
   %cc = fcmp une bfloat %c, %d
   %r = select i1 %cc, bfloat %a, bfloat %b
   ret bfloat %r
 }
 
 define float @test_select_cc_f32_f16(float %a, float %b, bfloat %c, bfloat %d) #0 {
-; CHECK-LABEL: test_select_cc_f32_f16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h3 killed $h3 def $d3
-; CHECK-NEXT:    // kill: def $h2 killed $h2 def $d2
-; CHECK-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-NEXT:    shll v2.4s, v2.4h, #16
-; CHECK-NEXT:    fcmp s2, s3
-; CHECK-NEXT:    fcsel s0, s0, s1, ne
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_select_cc_f32_f16:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-CVT-SD-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s2, s3
+; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_select_cc_f32_f16:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-BF16-SD-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s2, s3
+; CHECK-BF16-SD-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_select_cc_f32_f16:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-CVT-GI-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-CVT-GI-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s2, s3
+; CHECK-CVT-GI-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_select_cc_f32_f16:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h2 killed $h2 def $d2
+; CHECK-BF16-GI-NEXT:    // kill: def $h3 killed $h3 def $d3
+; CHECK-BF16-GI-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s2, s3
+; CHECK-BF16-GI-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-BF16-GI-NEXT:    ret
   %cc = fcmp une bfloat %c, %d
   %r = select i1 %cc, float %a, float %b
   ret float %r
@@ -662,217 +701,695 @@ define bfloat @test_select_cc_f16_f32(bfloat %a, bfloat %b, float %c, float %d) 
 }
 
 define i1 @test_fcmp_une(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_une:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_une:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, ne
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_une:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, ne
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_une:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, ne
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_une:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, ne
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp une bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_ueq(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_ueq:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    csinc w0, w8, wzr, vc
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_ueq:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w8, eq
+; CHECK-CVT-SD-NEXT:    csinc w0, w8, wzr, vc
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_ueq:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w8, eq
+; CHECK-BF16-SD-NEXT:    csinc w0, w8, wzr, vc
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_ueq:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w8, eq
+; CHECK-CVT-GI-NEXT:    cset w9, vs
+; CHECK-CVT-GI-NEXT:    orr w0, w8, w9
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_ueq:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w8, eq
+; CHECK-BF16-GI-NEXT:    cset w9, vs
+; CHECK-BF16-GI-NEXT:    orr w0, w8, w9
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ueq bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_ugt(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_ugt:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, hi
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_ugt:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, hi
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_ugt:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, hi
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_ugt:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, hi
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_ugt:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, hi
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ugt bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_uge(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_uge:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, pl
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_uge:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, pl
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_uge:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, pl
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_uge:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, pl
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_uge:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, pl
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp uge bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_ult(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_ult:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, lt
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_ult:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, lt
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_ult:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, lt
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_ult:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, lt
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_ult:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, lt
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ult bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_ule(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_ule:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, le
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_ule:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, le
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_ule:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, le
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_ule:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, le
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_ule:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, le
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ule bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_uno(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_uno:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, vs
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_uno:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, vs
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_uno:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, vs
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_uno:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, vs
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_uno:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, vs
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp uno bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_one(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_one:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w8, mi
-; CHECK-NEXT:    csinc w0, w8, wzr, le
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_one:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w8, mi
+; CHECK-CVT-SD-NEXT:    csinc w0, w8, wzr, le
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_one:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w8, mi
+; CHECK-BF16-SD-NEXT:    csinc w0, w8, wzr, le
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_one:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w8, mi
+; CHECK-CVT-GI-NEXT:    cset w9, gt
+; CHECK-CVT-GI-NEXT:    orr w0, w8, w9
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_one:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w8, mi
+; CHECK-BF16-GI-NEXT:    cset w9, gt
+; CHECK-BF16-GI-NEXT:    orr w0, w8, w9
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp one bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_oeq(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_oeq:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_oeq:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, eq
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_oeq:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, eq
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_oeq:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, eq
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_oeq:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, eq
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp oeq bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_ogt(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_ogt:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, gt
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_ogt:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, gt
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_ogt:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, gt
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_ogt:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, gt
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_ogt:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, gt
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ogt bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_oge(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_oge:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, ge
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_oge:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, ge
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_oge:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, ge
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_oge:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, ge
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_oge:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, ge
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp oge bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_olt(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_olt:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, mi
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_olt:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, mi
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_olt:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, mi
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_olt:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, mi
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_olt:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, mi
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp olt bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_ole(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_ole:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, ls
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_ole:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, ls
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_ole:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, ls
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_ole:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, ls
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_ole:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, ls
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ole bfloat %a, %b
   ret i1 %r
 }
 
 define i1 @test_fcmp_ord(bfloat %a, bfloat %b) #0 {
-; CHECK-LABEL: test_fcmp_ord:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w0, vc
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fcmp_ord:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    cset w0, vc
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fcmp_ord:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    cset w0, vc
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fcmp_ord:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    cset w0, vc
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fcmp_ord:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    cset w0, vc
+; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ord bfloat %a, %b
   ret i1 %r
 }
 
 define void @test_fccmp(bfloat %in, ptr %out) {
-; CHECK-LABEL: test_fccmp:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2s, #69, lsl #24
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v2.4s, v0.4h, #16
-; CHECK-NEXT:    adrp x8, .LCPI29_0
-; CHECK-NEXT:    movi v3.2s, #72, lsl #24
-; CHECK-NEXT:    fcmp s2, s1
-; CHECK-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
-; CHECK-NEXT:    fccmp s2, s3, #4, mi
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fccmp:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    movi v1.2s, #69, lsl #24
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    adrp x8, .LCPI29_0
+; CHECK-CVT-SD-NEXT:    movi v3.2s, #72, lsl #24
+; CHECK-CVT-SD-NEXT:    fcmp s2, s1
+; CHECK-CVT-SD-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-CVT-SD-NEXT:    fccmp s2, s3, #4, mi
+; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s1, gt
+; CHECK-CVT-SD-NEXT:    str h0, [x0]
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fccmp:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    movi v1.2s, #69, lsl #24
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    adrp x8, .LCPI29_0
+; CHECK-BF16-SD-NEXT:    movi v3.2s, #72, lsl #24
+; CHECK-BF16-SD-NEXT:    fcmp s2, s1
+; CHECK-BF16-SD-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-BF16-SD-NEXT:    fccmp s2, s3, #4, mi
+; CHECK-BF16-SD-NEXT:    fcsel s0, s0, s1, gt
+; CHECK-BF16-SD-NEXT:    str h0, [x0]
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fccmp:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    movi v1.2s, #69, lsl #24
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI29_0
+; CHECK-CVT-GI-NEXT:    movi v3.2s, #72, lsl #24
+; CHECK-CVT-GI-NEXT:    shll v4.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s2, s1
+; CHECK-CVT-GI-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-CVT-GI-NEXT:    fmov w8, s0
+; CHECK-CVT-GI-NEXT:    fmov w9, s1
+; CHECK-CVT-GI-NEXT:    fccmp s4, s3, #4, mi
+; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, gt
+; CHECK-CVT-GI-NEXT:    strh w8, [x0]
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fccmp:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    movi v1.2s, #69, lsl #24
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    adrp x8, .LCPI29_0
+; CHECK-BF16-GI-NEXT:    movi v3.2s, #72, lsl #24
+; CHECK-BF16-GI-NEXT:    shll v4.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s2, s1
+; CHECK-BF16-GI-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-BF16-GI-NEXT:    fmov w8, s0
+; CHECK-BF16-GI-NEXT:    fmov w9, s1
+; CHECK-BF16-GI-NEXT:    fccmp s4, s3, #4, mi
+; CHECK-BF16-GI-NEXT:    csel w8, w8, w9, gt
+; CHECK-BF16-GI-NEXT:    strh w8, [x0]
+; CHECK-BF16-GI-NEXT:    ret
   %cmp1 = fcmp ogt bfloat %in, 0xR4800
   %cmp2 = fcmp olt bfloat %in, 0xR4500
   %cond = and i1 %cmp1, %cmp2
@@ -882,16 +1399,49 @@ define void @test_fccmp(bfloat %in, ptr %out) {
 }
 
 define void @test_br_cc(bfloat %a, bfloat %b, ptr %p1, ptr %p2) #0 {
-; CHECK-LABEL: test_br_cc:
-; CHECK:       // %bb.0: // %common.ret
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csel x8, x0, x1, pl
-; CHECK-NEXT:    str wzr, [x8]
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_br_cc:
+; CHECK-CVT-SD:       // %bb.0: // %common.ret
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcmp s0, s1
+; CHECK-CVT-SD-NEXT:    csel x8, x0, x1, pl
+; CHECK-CVT-SD-NEXT:    str wzr, [x8]
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_br_cc:
+; CHECK-BF16-SD:       // %bb.0: // %common.ret
+; CHECK-BF16-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcmp s0, s1
+; CHECK-BF16-SD-NEXT:    csel x8, x0, x1, pl
+; CHECK-BF16-SD-NEXT:    str wzr, [x8]
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_br_cc:
+; CHECK-CVT-GI:       // %bb.0: // %common.ret
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-GI-NEXT:    fcmp s0, s1
+; CHECK-CVT-GI-NEXT:    csel x8, x0, x1, pl
+; CHECK-CVT-GI-NEXT:    str wzr, [x8]
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_br_cc:
+; CHECK-BF16-GI:       // %bb.0: // %common.ret
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-BF16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    fcmp s0, s1
+; CHECK-BF16-GI-NEXT:    csel x8, x0, x1, pl
+; CHECK-BF16-GI-NEXT:    str wzr, [x8]
+; CHECK-BF16-GI-NEXT:    ret
   %c = fcmp uge bfloat %a, %b
   br i1 %c, label %then, label %else
 then:

@@ -397,7 +397,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .scalarSameSizeAs(0, 1);
 
-  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_CTTZ)
       .lowerIf(isVector(0))
@@ -407,7 +407,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasCSSC, {s32, s64})
       .customFor(!HasCSSC, {s32, s64});
 
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({i32, i64, v8i8, v16i8})
@@ -777,7 +777,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasFP16, {{i32, f16}, {v4i16, v4f16}, {v8i16, v8f16}})
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(0, s32, s32)
-      .minScalarOrElt(1, MinFPScalar)
+      .widenScalarIf(
+          [=](const LegalityQuery &Q) {
+            return (!HasFP16 && Q.Types[1].getScalarType().isFloat16()) ||
+                   Q.Types[1].getScalarType().isBFloat16();
+          },
+          changeElementTo(1, f32))
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .minScalarEltSameAsIf(
           [=](const LegalityQuery &Query) {

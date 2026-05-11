@@ -1,0 +1,89 @@
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -verify %s
+
+#include "Inputs/lifetime-analysis.h"
+
+struct [[gsl::Owner]] MyObj {
+  int id;
+  ~MyObj() {}  // Non-trivial destructor
+};
+
+struct [[gsl::Pointer()]] View {
+  View(const MyObj &); // Borrows from MyObj
+  View();
+  void use() const;
+};
+
+bool cond();
+
+View not_lb(const MyObj &obj);
+
+View lb(const MyObj &obj [[clang::lifetimebound]]);
+
+View return_through_unannotated_passthrough(
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  return not_lb(obj);
+}
+
+View return_through_lifetimebound_passthrough(
+    const MyObj &obj [[clang::lifetimebound]]) {
+  return lb(obj);
+}
+
+View lose_lb(const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  return not_lb(obj);
+}
+
+View return_through_alias(const MyObj &obj [[clang::lifetimebound]]) {
+  const MyObj &alias = obj;
+  return alias;
+}
+
+View return_alias_through_unannotated_passthrough(
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  const MyObj &alias = obj;
+  return not_lb(alias);
+}
+
+View not_lb_view(View v);
+
+View lb_view(View v [[clang::lifetimebound]]);
+
+
+View return_through_two_lifetimebound_calls(
+    const MyObj &obj [[clang::lifetimebound]]) {
+  return lb_view(lb(obj));
+}
+
+View return_through_nested_broken_chain(
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  return not_lb_view(lb_view(View(obj)));
+}
+
+View return_constructed_view_through_unannotated_forwarder(
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  return not_lb_view(View(obj));
+}
+
+View return_constructed_view_through_lifetimebound_forwarder(
+    const MyObj &obj [[clang::lifetimebound]]) {
+  return lb_view(View(obj));
+}
+
+View verify_each_annotated_param_independently(
+    const MyObj &a [[clang::lifetimebound]],
+    const MyObj &b [[clang::lifetimebound]], // expected-warning {{could not verify that the return value can be lifetime bound to 'b'}}
+    const MyObj &c [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}}
+  return cond() ? a : not_lb(b);
+}
+
+View unnamed_lifetimebound_param(
+    [[clang::lifetimebound]] const MyObj &) { // expected-warning {{could not verify that the return value can be lifetime bound to an unnamed parameter}}
+  return View();
+}
+
+// FIXME: Should warn on declaration, not definiton
+View annotated_decl_but_not_def_not_returned(const MyObj &obj [[clang::lifetimebound]]);
+
+View annotated_decl_but_not_def_not_returned(const MyObj &obj) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  return not_lb(obj);
+}
