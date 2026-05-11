@@ -2391,6 +2391,79 @@ static ParseResult parseCaptureType(OpAsmParser &parser,
   return success();
 }
 
+static LogicalResult verifyMapInfoForMapClause(
+    Operation *op, mlir::omp::MapInfoOp mapInfoOp,
+    llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> &updateToVars,
+    llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>>
+        &updateFromVars) {
+  mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
+
+  bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
+  bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
+  bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
+
+  bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
+  bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
+  bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
+  bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
+
+  if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
+    return emitError(op->getLoc(),
+                     "to, from, tofrom and alloc map types are permitted");
+
+  if (isa<TargetEnterDataOp>(op) && (from || del))
+    return emitError(op->getLoc(), "to and alloc map types are permitted");
+
+  if (isa<TargetExitDataOp>(op) && to)
+    return emitError(op->getLoc(),
+                     "from, release and delete map types are permitted");
+
+  if (isa<TargetUpdateOp>(op)) {
+    if (del) {
+      return emitError(op->getLoc(),
+                       "at least one of to or from map types must be "
+                       "specified, other map types are not permitted");
+    }
+
+    if (!to && !from && !attach) {
+      return emitError(
+          op->getLoc(),
+          "at least one of to or from or attach map types must be "
+          "specified, other map types are not permitted");
+    }
+
+    auto updateVar = mapInfoOp.getVarPtr();
+
+    if ((to && from) || (to && updateFromVars.contains(updateVar)) ||
+        (from && updateToVars.contains(updateVar))) {
+      return emitError(
+          op->getLoc(),
+          "either to or from map types can be specified, not both");
+    }
+
+    if (always || close || implicit) {
+      return emitError(
+          op->getLoc(),
+          "present, mapper and iterator map type modifiers are permitted");
+    }
+
+    // It's possible we have an attach map, in which case if there is no to
+    // or from tied to it, we skip insertion.
+    if (to || from) {
+      to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
+    }
+  }
+
+  if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
+      (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
+    return emitError(op->getLoc(),
+                     "if varPtrPtr or varPtrPtrType is specified, then both "
+                     "must be present");
+  }
+
+  return success();
+}
+
 static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
                                      OperandRange mapIterated) {
   llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateToVars;
@@ -2401,72 +2474,9 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
       return emitError(op->getLoc(), "missing map operation");
 
     if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
-      mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
-
-      bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
-      bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
-      bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
-
-      bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
-      bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
-      bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
-      bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
-
-      if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
-        return emitError(op->getLoc(),
-                         "to, from, tofrom and alloc map types are permitted");
-
-      if (isa<TargetEnterDataOp>(op) && (from || del))
-        return emitError(op->getLoc(), "to and alloc map types are permitted");
-
-      if (isa<TargetExitDataOp>(op) && to)
-        return emitError(op->getLoc(),
-                         "from, release and delete map types are permitted");
-
-      if (isa<TargetUpdateOp>(op)) {
-        if (del) {
-          return emitError(op->getLoc(),
-                           "at least one of to or from map types must be "
-                           "specified, other map types are not permitted");
-        }
-
-        if (!to && !from && !attach) {
-          return emitError(
-              op->getLoc(),
-              "at least one of to or from or attach map types must be "
-              "specified, other map types are not permitted");
-        }
-
-        auto updateVar = mapInfoOp.getVarPtr();
-
-        if ((to && from) || (to && updateFromVars.contains(updateVar)) ||
-            (from && updateToVars.contains(updateVar))) {
-          return emitError(
-              op->getLoc(),
-              "either to or from map types can be specified, not both");
-        }
-
-        if (always || close || implicit) {
-          return emitError(
-              op->getLoc(),
-              "present, mapper and iterator map type modifiers are permitted");
-        }
-
-        // It's possible we have an attach map, in which case if there is no to
-        // or from tied to it, we skip insertion.
-        if (to || from) {
-          to ? updateToVars.insert(updateVar)
-             : updateFromVars.insert(updateVar);
-        }
-      }
-
-      if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
-          (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
-        return emitError(
-            op->getLoc(),
-            "if varPtrPtr or varPtrPtrType is specified, then both "
-            "must be present");
-      }
+      if (failed(verifyMapInfoForMapClause(op, mapInfoOp, updateToVars,
+                                           updateFromVars)))
+        return failure();
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       return emitError(op->getLoc(),
                        "map argument is not a map entry operation");
@@ -2482,15 +2492,22 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
 
     // Check that the iterator body yields a value defined by omp.map.info.
     auto &region = iterOp.getRegion();
-    if (!region.empty()) {
-      auto yieldOp = cast<mlir::omp::YieldOp>(region.front().getTerminator());
-      if (yieldOp.getNumOperands() > 0) {
-        auto yieldedVal = yieldOp.getOperand(0);
-        if (!yieldedVal.getDefiningOp<mlir::omp::MapInfoOp>())
-          return op->emitOpError() << "'map_iterated' iterator body must yield "
-                                      "a value defined by 'omp.map.info'";
-      }
-    }
+    if (region.empty())
+      continue;
+
+    auto yieldOp = dyn_cast<mlir::omp::YieldOp>(region.front().getTerminator());
+    if (!yieldOp || yieldOp.getNumOperands() == 0)
+      continue;
+
+    auto yieldedMapInfo =
+        yieldOp.getOperand(0).getDefiningOp<mlir::omp::MapInfoOp>();
+    if (!yieldedMapInfo)
+      return op->emitOpError() << "'map_iterated' iterator body must yield "
+                                  "a value defined by 'omp.map.info'";
+
+    if (failed(verifyMapInfoForMapClause(op, yieldedMapInfo, updateToVars,
+                                         updateFromVars)))
+      return failure();
   }
 
   return success();

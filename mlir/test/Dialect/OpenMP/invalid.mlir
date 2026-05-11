@@ -3542,11 +3542,11 @@ func.func @target_undefined_privatizer(%arg0: index) {
 
 func.func @target_private_count_mismatch(%arg0: !llvm.ptr) {
   // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
-  "omp.target"(%arg0) ({
+  "omp.target"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
+                         private_syms = [@x.privatizer, @y.privatizer]}> ({
   ^bb0(%arg1 : !llvm.ptr):
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
-       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  }) : (!llvm.ptr) -> ()
   return
 }
 
@@ -4508,6 +4508,115 @@ func.func @map_iterated_yield_not_map_info_exit(%lb : index, %ub : index, %st : 
 
 // -----
 
+func.func @target_enter_data_map_iterated_invalid_from(%lb : index, %ub : index,
+                                                       %st : index,
+                                                       %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{to and alloc map types are permitted}}
+  omp.target_enter_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @target_exit_data_map_iterated_invalid_to(%lb : index, %ub : index,
+                                                    %st : index,
+                                                    %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{from, release and delete map types are permitted}}
+  omp.target_exit_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @target_update_map_iterated_invalid_delete(%lb : index, %ub : index,
+                                                     %st : index,
+                                                     %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  omp.target_update map_entries(%it : !omp.iterated<!llvm.ptr>)
+  return
+}
+
+// -----
+
+func.func @target_update_map_iterated_invalid_conflict(%lb : index, %ub : index,
+                                                       %st : index,
+                                                       %addr : !llvm.ptr) {
+  %mapv = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{either to or from map types can be specified, not both}}
+  omp.target_update map_entries(%mapv, %it : !llvm.ptr, !omp.iterated<!llvm.ptr>)
+  return
+}
+
+// -----
+
+func.func @target_data_map_iterated_invalid_delete(%lb : index, %ub : index,
+                                                   %st : index,
+                                                   %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
+  omp.target_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @target_map_iterated_invalid_delete(%lb : index, %ub : index,
+                                              %st : index,
+                                              %addr : !llvm.ptr) {
+  %mapv = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
+  omp.target map_entries(%mapv -> %arg0 : !llvm.ptr) {
+    omp.terminator
+  } map_iterated_entries(%it : !omp.iterated<!llvm.ptr>)
+  return
+}
+
+// -----
+
+omp.declare_mapper @declare_mapper_iterated_not_iterator : !llvm.struct<"mapper_type", (i32)> {
+^bb0(%arg: !llvm.ptr, %it: !omp.iterated<!llvm.ptr>):
+  // expected-error @below {{'omp.declare_mapper.info' op 'map_iterated' arguments must be defined by 'omp.iterator' ops}}
+  omp.declare_mapper.info map_entries(%it : !omp.iterated<!llvm.ptr>)
+}
+
+// -----
+
+omp.declare_mapper @declare_mapper_iterated_yield_not_map_info : !llvm.struct<"mapper_type", (i32)> {
+^bb0(%arg: !llvm.ptr):
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%arg : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{'omp.declare_mapper.info' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}
+  omp.declare_mapper.info map_entries(%it : !omp.iterated<!llvm.ptr>)
+}
+
+// -----
 func.func @target_allocmem_invalid_uniq_name(%device : i32) -> () {
 // expected-error @below {{op attribute 'uniq_name' failed to satisfy constraint: string attribute}}
   %0 = omp.target_allocmem %device : i32, i64 {uniq_name=2}
@@ -4515,7 +4624,6 @@ func.func @target_allocmem_invalid_uniq_name(%device : i32) -> () {
 }
 
 // -----
-
 func.func @target_allocmem_invalid_bindc_name(%device : i32) -> () {
 // expected-error @below {{op attribute 'bindc_name' failed to satisfy constraint: string attribute}}
   %0 = omp.target_allocmem %device : i32, i64 {bindc_name=2}

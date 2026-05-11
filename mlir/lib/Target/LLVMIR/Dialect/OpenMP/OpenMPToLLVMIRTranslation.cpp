@@ -484,6 +484,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkThreadLimit(op, result);
       })
       .Case([&](omp::TargetDataOp op) { checkMapIteratorModifier(op, result); })
+      .Case([&](omp::DeclareMapperInfoOp op) {
+        checkMapIteratorModifier(op, result);
+      })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
         // checked above.
@@ -6664,6 +6667,9 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
          "function only supported for host device codegen");
   auto declMapperOp = cast<omp::DeclareMapperOp>(op);
   auto declMapperInfoOp = declMapperOp.getDeclareMapperInfo();
+  if (failed(checkImplementationStatus(*declMapperInfoOp)))
+    return llvm::make_error<PreviouslyReportedError>();
+
   DataLayout dl = DataLayout(declMapperOp->getParentOfType<ModuleOp>());
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::Type *varType = moduleTranslation.convertType(declMapperOp.getType());

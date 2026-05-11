@@ -1001,6 +1001,24 @@ omp.declare_mapper @my_mapper : !llvm.struct<"my_type", (i32)> {
   omp.declare_mapper.info map_entries(%decl_map_info : !llvm.ptr)
 }
 
+// CHECK: omp.declare_mapper @my_mapper_iterated : !llvm.struct<"my_iter_type", (i32)>
+omp.declare_mapper @my_mapper_iterated : !llvm.struct<"my_iter_type", (i32)> {
+^bb0(%arg: !llvm.ptr):
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 4 : index
+  %step = arith.constant 1 : index
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   %[[DECL_MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : !llvm.ptr, !llvm.struct<"my_iter_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  // CHECK:   omp.yield(%[[DECL_MAP_INFO]] : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %decl_map_info = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"my_iter_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%decl_map_info : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // CHECK: omp.declare_mapper.info map_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.declare_mapper.info map_entries(%it : !omp.iterated<!llvm.ptr>)
+}
+
 // CHECK-LABEL: func @wsloop_reduction
 func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
