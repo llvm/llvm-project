@@ -1313,29 +1313,18 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) nounwind {
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double>)
 
 define <2 x iXLen> @lrint_v2f64(<2 x double> %x) nounwind {
-; CHECK-i32-SD-LABEL: lrint_v2f64:
-; CHECK-i32-SD:       // %bb.0:
-; CHECK-i32-SD-NEXT:    frintx v0.2d, v0.2d
-; CHECK-i32-SD-NEXT:    mov d1, v0.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d0
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d1
-; CHECK-i32-SD-NEXT:    fmov s0, w8
-; CHECK-i32-SD-NEXT:    mov v0.s[1], w9
-; CHECK-i32-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-i32-SD-NEXT:    ret
+; CHECK-i32-LABEL: lrint_v2f64:
+; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    frintx v0.2d, v0.2d
+; CHECK-i32-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-i32-NEXT:    xtn v0.2s, v0.2d
+; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v2f64:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    frintx v0.2d, v0.2d
 ; CHECK-i64-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-i64-NEXT:    ret
-;
-; CHECK-i32-GI-LABEL: lrint_v2f64:
-; CHECK-i32-GI:       // %bb.0:
-; CHECK-i32-GI-NEXT:    frintx v0.2d, v0.2d
-; CHECK-i32-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-i32-GI-NEXT:    xtn v0.2s, v0.2d
-; CHECK-i32-GI-NEXT:    ret
   %a = call <2 x iXLen> @llvm.lrint.v2iXLen.v2f64(<2 x double> %x)
   ret <2 x iXLen> %a
 }
@@ -1344,18 +1333,11 @@ declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f64(<2 x double>)
 define <4 x iXLen> @lrint_v4f64(<4 x double> %x) nounwind {
 ; CHECK-i32-SD-LABEL: lrint_v4f64:
 ; CHECK-i32-SD:       // %bb.0:
-; CHECK-i32-SD-NEXT:    frintx v0.2d, v0.2d
 ; CHECK-i32-SD-NEXT:    frintx v1.2d, v1.2d
-; CHECK-i32-SD-NEXT:    mov d2, v0.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d0
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d2
-; CHECK-i32-SD-NEXT:    fmov s0, w8
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d1
-; CHECK-i32-SD-NEXT:    mov d1, v1.d[1]
-; CHECK-i32-SD-NEXT:    mov v0.s[1], w9
-; CHECK-i32-SD-NEXT:    mov v0.s[2], w8
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d1
-; CHECK-i32-SD-NEXT:    mov v0.s[3], w8
+; CHECK-i32-SD-NEXT:    frintx v0.2d, v0.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-i32-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
 ; CHECK-i32-SD-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v4f64:
@@ -1382,30 +1364,16 @@ declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f64(<4 x double>)
 define <8 x iXLen> @lrint_v8f64(<8 x double> %x) nounwind {
 ; CHECK-i32-SD-LABEL: lrint_v8f64:
 ; CHECK-i32-SD:       // %bb.0:
-; CHECK-i32-SD-NEXT:    frintx v2.2d, v2.2d
+; CHECK-i32-SD-NEXT:    frintx v1.2d, v1.2d
 ; CHECK-i32-SD-NEXT:    frintx v0.2d, v0.2d
 ; CHECK-i32-SD-NEXT:    frintx v3.2d, v3.2d
-; CHECK-i32-SD-NEXT:    mov d4, v0.d[1]
-; CHECK-i32-SD-NEXT:    mov d5, v2.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d0
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d2
-; CHECK-i32-SD-NEXT:    frintx v2.2d, v1.2d
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d4
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d5
-; CHECK-i32-SD-NEXT:    fmov s0, w8
-; CHECK-i32-SD-NEXT:    fmov s1, w9
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d2
-; CHECK-i32-SD-NEXT:    mov d2, v2.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d3
-; CHECK-i32-SD-NEXT:    mov d3, v3.d[1]
-; CHECK-i32-SD-NEXT:    mov v0.s[1], w10
-; CHECK-i32-SD-NEXT:    mov v1.s[1], w11
-; CHECK-i32-SD-NEXT:    mov v0.s[2], w8
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d2
-; CHECK-i32-SD-NEXT:    mov v1.s[2], w9
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d3
-; CHECK-i32-SD-NEXT:    mov v0.s[3], w8
-; CHECK-i32-SD-NEXT:    mov v1.s[3], w9
+; CHECK-i32-SD-NEXT:    frintx v2.2d, v2.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v3.2d, v3.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v2.2d, v2.2d
+; CHECK-i32-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-i32-SD-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
 ; CHECK-i32-SD-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v8f64:
@@ -1441,54 +1409,26 @@ declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double>)
 define <16 x iXLen> @lrint_v16f64(<16 x double> %x) nounwind {
 ; CHECK-i32-SD-LABEL: lrint_v16f64:
 ; CHECK-i32-SD:       // %bb.0:
+; CHECK-i32-SD-NEXT:    frintx v1.2d, v1.2d
 ; CHECK-i32-SD-NEXT:    frintx v0.2d, v0.2d
+; CHECK-i32-SD-NEXT:    frintx v3.2d, v3.2d
 ; CHECK-i32-SD-NEXT:    frintx v2.2d, v2.2d
-; CHECK-i32-SD-NEXT:    frintx v4.2d, v4.2d
-; CHECK-i32-SD-NEXT:    frintx v6.2d, v6.2d
-; CHECK-i32-SD-NEXT:    frintx v17.2d, v1.2d
 ; CHECK-i32-SD-NEXT:    frintx v5.2d, v5.2d
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d0
-; CHECK-i32-SD-NEXT:    mov d16, v0.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d2
-; CHECK-i32-SD-NEXT:    mov d2, v2.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d4
-; CHECK-i32-SD-NEXT:    mov d4, v4.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d6
-; CHECK-i32-SD-NEXT:    mov d6, v6.d[1]
-; CHECK-i32-SD-NEXT:    fmov s0, w8
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d16
-; CHECK-i32-SD-NEXT:    frintx v16.2d, v3.2d
-; CHECK-i32-SD-NEXT:    fmov s1, w9
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d2
-; CHECK-i32-SD-NEXT:    fmov s2, w10
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d4
-; CHECK-i32-SD-NEXT:    frintx v4.2d, v7.2d
-; CHECK-i32-SD-NEXT:    fmov s3, w11
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d6
-; CHECK-i32-SD-NEXT:    mov d6, v17.d[1]
-; CHECK-i32-SD-NEXT:    mov v0.s[1], w8
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d17
-; CHECK-i32-SD-NEXT:    mov d7, v16.d[1]
-; CHECK-i32-SD-NEXT:    mov v1.s[1], w9
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d16
-; CHECK-i32-SD-NEXT:    mov v2.s[1], w10
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d5
-; CHECK-i32-SD-NEXT:    mov d5, v5.d[1]
-; CHECK-i32-SD-NEXT:    mov v3.s[1], w11
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d4
-; CHECK-i32-SD-NEXT:    mov d4, v4.d[1]
-; CHECK-i32-SD-NEXT:    mov v0.s[2], w8
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d6
-; CHECK-i32-SD-NEXT:    mov v1.s[2], w9
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d7
-; CHECK-i32-SD-NEXT:    mov v2.s[2], w10
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d5
-; CHECK-i32-SD-NEXT:    mov v3.s[2], w11
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d4
-; CHECK-i32-SD-NEXT:    mov v0.s[3], w8
-; CHECK-i32-SD-NEXT:    mov v1.s[3], w9
-; CHECK-i32-SD-NEXT:    mov v2.s[3], w10
-; CHECK-i32-SD-NEXT:    mov v3.s[3], w11
+; CHECK-i32-SD-NEXT:    frintx v4.2d, v4.2d
+; CHECK-i32-SD-NEXT:    frintx v7.2d, v7.2d
+; CHECK-i32-SD-NEXT:    frintx v6.2d, v6.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v3.2d, v3.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v2.2d, v2.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v5.2d, v5.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v4.2d, v4.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-i32-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-i32-SD-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
+; CHECK-i32-SD-NEXT:    uzp1 v2.4s, v4.4s, v5.4s
+; CHECK-i32-SD-NEXT:    uzp1 v3.4s, v6.4s, v7.4s
 ; CHECK-i32-SD-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v16f64:
@@ -1542,106 +1482,50 @@ declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f64(<16 x double>)
 define <32 x iXLen> @lrint_v32f64(<32 x double> %x) nounwind {
 ; CHECK-i32-SD-LABEL: lrint_v32f64:
 ; CHECK-i32-SD:       // %bb.0:
-; CHECK-i32-SD-NEXT:    frintx v17.2d, v0.2d
-; CHECK-i32-SD-NEXT:    frintx v19.2d, v2.2d
-; CHECK-i32-SD-NEXT:    frintx v0.2d, v1.2d
-; CHECK-i32-SD-NEXT:    frintx v1.2d, v4.2d
-; CHECK-i32-SD-NEXT:    frintx v2.2d, v3.2d
-; CHECK-i32-SD-NEXT:    frintx v3.2d, v5.2d
-; CHECK-i32-SD-NEXT:    ldp q16, q5, [sp]
-; CHECK-i32-SD-NEXT:    frintx v18.2d, v6.2d
-; CHECK-i32-SD-NEXT:    frintx v4.2d, v7.2d
-; CHECK-i32-SD-NEXT:    ldp q22, q6, [sp, #64]
-; CHECK-i32-SD-NEXT:    mov d20, v17.d[1]
-; CHECK-i32-SD-NEXT:    mov d21, v19.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d17
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d19
-; CHECK-i32-SD-NEXT:    ldp q17, q7, [sp, #32]
-; CHECK-i32-SD-NEXT:    fcvtzs w12, d0
-; CHECK-i32-SD-NEXT:    mov d19, v1.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w13, d1
-; CHECK-i32-SD-NEXT:    frintx v16.2d, v16.2d
-; CHECK-i32-SD-NEXT:    mov d23, v18.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w15, d18
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d20
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d21
-; CHECK-i32-SD-NEXT:    mov d21, v0.d[1]
-; CHECK-i32-SD-NEXT:    fmov s0, w8
-; CHECK-i32-SD-NEXT:    fmov s1, w9
-; CHECK-i32-SD-NEXT:    frintx v17.2d, v17.2d
-; CHECK-i32-SD-NEXT:    frintx v20.2d, v22.2d
-; CHECK-i32-SD-NEXT:    mov d22, v2.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w14, d19
-; CHECK-i32-SD-NEXT:    mov d18, v16.d[1]
+; CHECK-i32-SD-NEXT:    ldp q16, q17, [sp, #96]
+; CHECK-i32-SD-NEXT:    frintx v3.2d, v3.2d
+; CHECK-i32-SD-NEXT:    ldp q18, q19, [sp, #64]
+; CHECK-i32-SD-NEXT:    frintx v1.2d, v1.2d
+; CHECK-i32-SD-NEXT:    ldp q20, q21, [sp, #32]
+; CHECK-i32-SD-NEXT:    frintx v0.2d, v0.2d
+; CHECK-i32-SD-NEXT:    ldp q22, q23, [sp]
+; CHECK-i32-SD-NEXT:    frintx v2.2d, v2.2d
+; CHECK-i32-SD-NEXT:    frintx v5.2d, v5.2d
+; CHECK-i32-SD-NEXT:    frintx v4.2d, v4.2d
 ; CHECK-i32-SD-NEXT:    frintx v7.2d, v7.2d
-; CHECK-i32-SD-NEXT:    mov v0.s[1], w10
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d2
-; CHECK-i32-SD-NEXT:    mov v1.s[1], w11
-; CHECK-i32-SD-NEXT:    fcvtzs w8, d21
-; CHECK-i32-SD-NEXT:    ldp q21, q19, [sp, #96]
-; CHECK-i32-SD-NEXT:    fmov s2, w13
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d23
-; CHECK-i32-SD-NEXT:    mov d23, v3.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w9, d22
-; CHECK-i32-SD-NEXT:    mov d22, v17.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w13, d18
-; CHECK-i32-SD-NEXT:    mov v0.s[2], w12
-; CHECK-i32-SD-NEXT:    fcvtzs w12, d16
-; CHECK-i32-SD-NEXT:    mov v1.s[2], w10
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d3
-; CHECK-i32-SD-NEXT:    fmov s3, w15
+; CHECK-i32-SD-NEXT:    frintx v6.2d, v6.2d
 ; CHECK-i32-SD-NEXT:    frintx v21.2d, v21.2d
-; CHECK-i32-SD-NEXT:    mov v2.s[1], w14
-; CHECK-i32-SD-NEXT:    mov d16, v20.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w14, d17
-; CHECK-i32-SD-NEXT:    mov d17, v4.d[1]
-; CHECK-i32-SD-NEXT:    fcvtzs w15, d22
-; CHECK-i32-SD-NEXT:    frintx v22.2d, v5.2d
-; CHECK-i32-SD-NEXT:    mov v3.s[1], w11
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d4
-; CHECK-i32-SD-NEXT:    fmov s4, w12
-; CHECK-i32-SD-NEXT:    fcvtzs w12, d20
-; CHECK-i32-SD-NEXT:    mov d18, v21.d[1]
-; CHECK-i32-SD-NEXT:    mov d20, v7.d[1]
-; CHECK-i32-SD-NEXT:    fmov s5, w14
-; CHECK-i32-SD-NEXT:    fcvtzs w14, d21
-; CHECK-i32-SD-NEXT:    mov v2.s[2], w10
-; CHECK-i32-SD-NEXT:    mov v4.s[1], w13
-; CHECK-i32-SD-NEXT:    fcvtzs w13, d16
-; CHECK-i32-SD-NEXT:    frintx v16.2d, v6.2d
-; CHECK-i32-SD-NEXT:    fcvtzs w10, d23
-; CHECK-i32-SD-NEXT:    mov v3.s[2], w11
-; CHECK-i32-SD-NEXT:    fcvtzs w11, d17
-; CHECK-i32-SD-NEXT:    fmov s6, w12
-; CHECK-i32-SD-NEXT:    mov v5.s[1], w15
-; CHECK-i32-SD-NEXT:    fcvtzs w15, d18
-; CHECK-i32-SD-NEXT:    frintx v18.2d, v19.2d
-; CHECK-i32-SD-NEXT:    fcvtzs w12, d22
-; CHECK-i32-SD-NEXT:    mov d19, v22.d[1]
-; CHECK-i32-SD-NEXT:    mov v0.s[3], w8
-; CHECK-i32-SD-NEXT:    mov v1.s[3], w9
-; CHECK-i32-SD-NEXT:    mov v6.s[1], w13
-; CHECK-i32-SD-NEXT:    fcvtzs w13, d7
-; CHECK-i32-SD-NEXT:    fmov s7, w14
-; CHECK-i32-SD-NEXT:    fcvtzs w14, d16
-; CHECK-i32-SD-NEXT:    mov d16, v16.d[1]
-; CHECK-i32-SD-NEXT:    mov v2.s[3], w10
-; CHECK-i32-SD-NEXT:    mov v4.s[2], w12
-; CHECK-i32-SD-NEXT:    fcvtzs w12, d19
-; CHECK-i32-SD-NEXT:    mov v3.s[3], w11
-; CHECK-i32-SD-NEXT:    mov v7.s[1], w15
-; CHECK-i32-SD-NEXT:    fcvtzs w15, d18
-; CHECK-i32-SD-NEXT:    mov d18, v18.d[1]
-; CHECK-i32-SD-NEXT:    mov v5.s[2], w13
-; CHECK-i32-SD-NEXT:    fcvtzs w13, d20
-; CHECK-i32-SD-NEXT:    mov v6.s[2], w14
-; CHECK-i32-SD-NEXT:    fcvtzs w14, d16
-; CHECK-i32-SD-NEXT:    mov v4.s[3], w12
-; CHECK-i32-SD-NEXT:    mov v7.s[2], w15
-; CHECK-i32-SD-NEXT:    fcvtzs w15, d18
-; CHECK-i32-SD-NEXT:    mov v5.s[3], w13
-; CHECK-i32-SD-NEXT:    mov v6.s[3], w14
-; CHECK-i32-SD-NEXT:    mov v7.s[3], w15
+; CHECK-i32-SD-NEXT:    frintx v20.2d, v20.2d
+; CHECK-i32-SD-NEXT:    frintx v23.2d, v23.2d
+; CHECK-i32-SD-NEXT:    frintx v22.2d, v22.2d
+; CHECK-i32-SD-NEXT:    frintx v19.2d, v19.2d
+; CHECK-i32-SD-NEXT:    frintx v18.2d, v18.2d
+; CHECK-i32-SD-NEXT:    frintx v17.2d, v17.2d
+; CHECK-i32-SD-NEXT:    frintx v16.2d, v16.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v3.2d, v3.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v2.2d, v2.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v5.2d, v5.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v4.2d, v4.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v23.2d, v23.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v22.2d, v22.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v21.2d, v21.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v20.2d, v20.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v19.2d, v19.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v18.2d, v18.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v17.2d, v17.2d
+; CHECK-i32-SD-NEXT:    fcvtzs v16.2d, v16.2d
+; CHECK-i32-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-i32-SD-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
+; CHECK-i32-SD-NEXT:    uzp1 v2.4s, v4.4s, v5.4s
+; CHECK-i32-SD-NEXT:    uzp1 v3.4s, v6.4s, v7.4s
+; CHECK-i32-SD-NEXT:    uzp1 v4.4s, v22.4s, v23.4s
+; CHECK-i32-SD-NEXT:    uzp1 v5.4s, v20.4s, v21.4s
+; CHECK-i32-SD-NEXT:    uzp1 v6.4s, v18.4s, v19.4s
+; CHECK-i32-SD-NEXT:    uzp1 v7.4s, v16.4s, v17.4s
 ; CHECK-i32-SD-NEXT:    ret
 ;
 ; CHECK-i64-SD-LABEL: lrint_v32f64:
