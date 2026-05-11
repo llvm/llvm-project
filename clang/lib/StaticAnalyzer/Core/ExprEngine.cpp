@@ -1668,7 +1668,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 S->getBeginLoc(), "Error evaluating statement");
   ExplodedNodeSet Dst;
-  NodeBuilder Bldr(Pred, DstTop, *currBldrCtx);
 
   assert(!isa<Expr>(S) || S == cast<Expr>(S)->IgnoreParens());
 
@@ -1800,7 +1799,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass:
     case Stmt::HLSLOutArgExprClass: {
-      const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
+      const ExplodedNode *node = Engine.makePostStmtNode(
+          S, Pred->getState(), Pred, /*MarkAsSink=*/true);
       Engine.addAbortedBlock(node, getCurrBlock());
       break;
     }
@@ -1842,40 +1842,35 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
     case Stmt::GNUNullExprClass: {
       // GNU __null is a pointer-width integer, not an actual pointer.
-      ProgramStateRef state = Pred->getState();
-      state = state->BindExpr(
-          cast<Expr>(S), Pred->getStackFrame(),
-          svalBuilder.makeIntValWithWidth(getContext().VoidPtrTy, 0));
-      Bldr.generateNode(S, Pred, state);
+      SVal Val = svalBuilder.makeIntValWithWidth(getContext().VoidPtrTy, 0);
+      DstTop.insert(Engine.makeNodeWithBinding(Pred, cast<Expr>(S), Val));
       break;
     }
 
     case Stmt::ObjCAtSynchronizedStmtClass:
-      Bldr.takeNodes(Pred);
       VisitObjCAtSynchronizedStmt(cast<ObjCAtSynchronizedStmt>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Expr::ConstantExprClass:
     case Stmt::ExprWithCleanupsClass:
+      DstTop.insert(Pred);
       // Handled due to fully linearised CFG.
       break;
 
     case Stmt::CXXBindTemporaryExprClass: {
-      Bldr.takeNodes(Pred);
       ExplodedNodeSet PreVisit;
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
       ExplodedNodeSet Next;
       VisitCXXBindTemporaryExpr(cast<CXXBindTemporaryExpr>(S), PreVisit, Next);
       getCheckerManager().runCheckersForPostStmt(Dst, Next, S, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::ArrayInitLoopExprClass:
-      Bldr.takeNodes(Pred);
       VisitArrayInitLoopExpr(cast<ArrayInitLoopExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     // Cases not handled yet; but will handle some day.
     case Stmt::DesignatedInitExprClass:
@@ -1931,24 +1926,21 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SYCLUniqueStableNameExprClass:
     case Stmt::OpenACCAsteriskSizeExprClass:
     case Stmt::TypeTraitExprClass: {
-      Bldr.takeNodes(Pred);
       ExplodedNodeSet preVisit;
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
       getCheckerManager().runCheckersForPostStmt(Dst, preVisit, S, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::AttributedStmtClass: {
-      Bldr.takeNodes(Pred);
       VisitAttributedStmt(cast<AttributedStmt>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::CXXDefaultArgExprClass:
     case Stmt::CXXDefaultInitExprClass: {
-      Bldr.takeNodes(Pred);
       ExplodedNodeSet PreVisit;
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
 
@@ -1983,7 +1975,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
@@ -1992,8 +1984,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Expr::ObjCArrayLiteralClass:
     case Expr::ObjCDictionaryLiteralClass:
     case Expr::ObjCBoxedExprClass: {
-      Bldr.takeNodes(Pred);
-
       ExplodedNodeSet preVisit;
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
 
@@ -2025,14 +2015,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::ArraySubscriptExprClass:
-      Bldr.takeNodes(Pred);
       VisitArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::MatrixSingleSubscriptExprClass:
@@ -2045,36 +2034,33 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
 
     case Stmt::GCCAsmStmtClass: {
-      Bldr.takeNodes(Pred);
       ExplodedNodeSet PreVisit;
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
       ExplodedNodeSet PostVisit;
       for (ExplodedNode *const N : PreVisit)
         VisitGCCAsmStmt(cast<GCCAsmStmt>(S), N, PostVisit);
       getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::MSAsmStmtClass:
-      Bldr.takeNodes(Pred);
       VisitMSAsmStmt(cast<MSAsmStmt>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::BlockExprClass:
-      Bldr.takeNodes(Pred);
       VisitBlockExpr(cast<BlockExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::LambdaExprClass:
       if (AMgr.options.ShouldInlineLambdas) {
-        Bldr.takeNodes(Pred);
         VisitLambdaExpr(cast<LambdaExpr>(S), Pred, Dst);
-        Bldr.addNodes(Dst);
+        DstTop.insert(Dst);
       } else {
-        const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
+        const ExplodedNode *node = Engine.makePostStmtNode(
+            S, Pred->getState(), Pred, /*MarkAsSink=*/true);
         Engine.addAbortedBlock(node, getCurrBlock());
       }
       break;
@@ -2082,22 +2068,15 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::BinaryOperatorClass: {
       const auto *B = cast<BinaryOperator>(S);
       if (B->isLogicalOp()) {
-        Bldr.takeNodes(Pred);
         VisitLogicalExpr(B, Pred, Dst);
-        Bldr.addNodes(Dst);
+        DstTop.insert(Dst);
+        break;
+      } else if (B->getOpcode() == BO_Comma) {
+        SVal Val =
+            Pred->getState()->getSVal(B->getRHS(), Pred->getStackFrame());
+        DstTop.insert(Engine.makeNodeWithBinding(Pred, B, Val));
         break;
       }
-      else if (B->getOpcode() == BO_Comma) {
-        ProgramStateRef state = Pred->getState();
-        Bldr.generateNode(
-            B, Pred,
-            state->BindExpr(
-                B, Pred->getStackFrame(),
-                state->getSVal(B->getRHS(), Pred->getStackFrame())));
-        break;
-      }
-
-      Bldr.takeNodes(Pred);
 
       if (AMgr.options.ShouldEagerlyAssume &&
           (B->isRelationalOp() || B->isEqualityOp())) {
@@ -2108,7 +2087,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       else
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Dst);
 
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
@@ -2125,47 +2104,43 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
           ProgramStateRef NewState =
               createTemporaryRegionIfNeeded(State, SF, OCE->getArg(0));
           if (NewState != State) {
-            Pred = Bldr.generateNode(OCE, Pred, NewState, /*tag=*/nullptr,
-                                     ProgramPoint::PreStmtKind);
-            // Did we cache out?
+            PreStmt PS(OCE, SF, /*tag=*/nullptr);
+            Pred = Engine.makeNode(PS, NewState, Pred);
             if (!Pred)
-              break;
+              break; // Cached out.
           }
         }
       }
+      // FIXME: Move this logic into `VisitCallExpr` to reduce the complexity
+      // of `Visit`.
       [[fallthrough]];
     }
 
     case Stmt::CallExprClass:
     case Stmt::CXXMemberCallExprClass:
     case Stmt::UserDefinedLiteralClass:
-      Bldr.takeNodes(Pred);
       VisitCallExpr(cast<CallExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::CXXCatchStmtClass:
-      Bldr.takeNodes(Pred);
       VisitCXXCatchStmt(cast<CXXCatchStmt>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::CXXTemporaryObjectExprClass:
     case Stmt::CXXConstructExprClass:
-      Bldr.takeNodes(Pred);
       VisitCXXConstructExpr(cast<CXXConstructExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::CXXInheritedCtorInitExprClass:
-      Bldr.takeNodes(Pred);
       VisitCXXInheritedCtorInitExpr(cast<CXXInheritedCtorInitExpr>(S), Pred,
                                     Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::CXXNewExprClass: {
-      Bldr.takeNodes(Pred);
 
       ExplodedNodeSet PreVisit;
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
@@ -2175,12 +2150,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         VisitCXXNewExpr(cast<CXXNewExpr>(S), i, PostVisit);
 
       getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::CXXDeleteExprClass: {
-      Bldr.takeNodes(Pred);
       ExplodedNodeSet PreVisit;
       const auto *CDE = cast<CXXDeleteExpr>(S);
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
@@ -2190,59 +2164,52 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       for (const auto i : PostVisit)
         VisitCXXDeleteExpr(CDE, i, Dst);
 
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
       // FIXME: ChooseExpr is really a constant.  We need to fix
       //        the CFG do not model them as explicit control-flow.
 
     case Stmt::ChooseExprClass: { // __builtin_choose_expr
-      Bldr.takeNodes(Pred);
       const auto *C = cast<ChooseExpr>(S);
       VisitGuardedExpr(C, C->getLHS(), C->getRHS(), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::CompoundAssignOperatorClass:
-      Bldr.takeNodes(Pred);
       VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::CompoundLiteralExprClass:
-      Bldr.takeNodes(Pred);
       VisitCompoundLiteralExpr(cast<CompoundLiteralExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::BinaryConditionalOperatorClass:
     case Stmt::ConditionalOperatorClass: { // '?' operator
-      Bldr.takeNodes(Pred);
       const auto *C = cast<AbstractConditionalOperator>(S);
       VisitGuardedExpr(C, C->getTrueExpr(), C->getFalseExpr(), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::CXXThisExprClass:
-      Bldr.takeNodes(Pred);
       VisitCXXThisExpr(cast<CXXThisExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::DeclRefExprClass: {
-      Bldr.takeNodes(Pred);
       const auto *DE = cast<DeclRefExpr>(S);
       VisitCommonDeclRefExpr(DE, DE->getDecl(), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::DeclStmtClass:
-      Bldr.takeNodes(Pred);
       VisitDeclStmt(cast<DeclStmt>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::ImplicitCastExprClass:
@@ -2255,19 +2222,17 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::BuiltinBitCastExprClass:
     case Stmt::ObjCBridgedCastExprClass:
     case Stmt::CXXAddrspaceCastExprClass: {
-      Bldr.takeNodes(Pred);
       const auto *C = cast<CastExpr>(S);
       ExplodedNodeSet dstExpr;
       VisitCast(C, C->getSubExpr(), Pred, dstExpr);
 
       // Handle the postvisit checks.
       getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, C, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Expr::MaterializeTemporaryExprClass: {
-      Bldr.takeNodes(Pred);
       const auto *MTE = cast<MaterializeTemporaryExpr>(S);
       ExplodedNodeSet dstPrevisit;
       getCheckerManager().runCheckersForPreStmt(dstPrevisit, Pred, MTE, *this);
@@ -2275,72 +2240,63 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       for (const auto i : dstPrevisit)
         CreateCXXTemporaryObject(MTE, i, dstExpr);
       getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, MTE, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::InitListExprClass: {
       const InitListExpr *E = cast<InitListExpr>(S);
-      Bldr.takeNodes(Pred);
       ConstructInitList(E, E->inits(), E->isTransparent(), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Expr::CXXParenListInitExprClass: {
       const CXXParenListInitExpr *E = cast<CXXParenListInitExpr>(S);
-      Bldr.takeNodes(Pred);
       ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred,
                         Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::MemberExprClass:
-      Bldr.takeNodes(Pred);
       VisitMemberExpr(cast<MemberExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::AtomicExprClass:
-      Bldr.takeNodes(Pred);
       VisitAtomicExpr(cast<AtomicExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::ObjCIvarRefExprClass:
-      Bldr.takeNodes(Pred);
       VisitLvalObjCIvarRefExpr(cast<ObjCIvarRefExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::ObjCForCollectionStmtClass:
-      Bldr.takeNodes(Pred);
       VisitObjCForCollectionStmt(cast<ObjCForCollectionStmt>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::ObjCMessageExprClass:
-      Bldr.takeNodes(Pred);
       VisitObjCMessage(cast<ObjCMessageExpr>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::ObjCAtThrowStmtClass:
     case Stmt::CXXThrowExprClass:
       // FIXME: This is not complete.  We basically treat @throw as
       // an abort.
-      Bldr.generateSink(S, Pred, Pred->getState());
+      Engine.makePostStmtNode(S, Pred->getState(), Pred, /*MarkAsSink=*/true);
       break;
 
     case Stmt::ReturnStmtClass:
-      Bldr.takeNodes(Pred);
       VisitReturnStmt(cast<ReturnStmt>(S), Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::OffsetOfExprClass: {
-      Bldr.takeNodes(Pred);
       ExplodedNodeSet PreVisit;
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
 
@@ -2349,15 +2305,14 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         VisitOffsetOfExpr(cast<OffsetOfExpr>(S), Node, PostVisit);
 
       getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::UnaryExprOrTypeTraitExprClass:
-      Bldr.takeNodes(Pred);
-      VisitUnaryExprOrTypeTraitExpr(cast<UnaryExprOrTypeTraitExpr>(S),
-                                    Pred, Dst);
-      Bldr.addNodes(Dst);
+      VisitUnaryExprOrTypeTraitExpr(cast<UnaryExprOrTypeTraitExpr>(S), Pred,
+                                    Dst);
+      DstTop.insert(Dst);
       break;
 
     case Stmt::StmtExprClass: {
@@ -2367,22 +2322,16 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         // Empty statement expression.
         assert(SE->getType() == getContext().VoidTy
                && "Empty statement expression must have void type.");
-        break;
+      } else if (const auto *LastExpr =
+                     dyn_cast<Expr>(*SE->getSubStmt()->body_rbegin())) {
+        SVal Val = Pred->getState()->getSVal(LastExpr, Pred->getStackFrame());
+        Pred = Engine.makeNodeWithBinding(Pred, SE, Val);
       }
-
-      if (const auto *LastExpr =
-              dyn_cast<Expr>(*SE->getSubStmt()->body_rbegin())) {
-        ProgramStateRef state = Pred->getState();
-        Bldr.generateNode(
-            SE, Pred,
-            state->BindExpr(SE, Pred->getStackFrame(),
-                            state->getSVal(LastExpr, Pred->getStackFrame())));
-      }
+      DstTop.insert(Pred);
       break;
     }
 
     case Stmt::UnaryOperatorClass: {
-      Bldr.takeNodes(Pred);
       const auto *U = cast<UnaryOperator>(S);
       if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
         ExplodedNodeSet Tmp;
@@ -2391,25 +2340,21 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       }
       else
         VisitUnaryOperator(U, Pred, Dst);
-      Bldr.addNodes(Dst);
+      DstTop.insert(Dst);
       break;
     }
 
     case Stmt::PseudoObjectExprClass: {
-      Bldr.takeNodes(Pred);
       ProgramStateRef state = Pred->getState();
       const auto *PE = cast<PseudoObjectExpr>(S);
+      // FIXME: Simplify
       if (const Expr *Result = PE->getResultExpr()) {
         SVal V = state->getSVal(Result, Pred->getStackFrame());
-        Bldr.generateNode(
-            S, Pred, state->BindExpr(cast<Expr>(S), Pred->getStackFrame(), V));
+        DstTop.insert(Engine.makeNodeWithBinding(Pred, PE, V));
       }
       else
-        Bldr.generateNode(S, Pred,
-                          state->BindExpr(cast<Expr>(S), Pred->getStackFrame(),
-                                          UnknownVal()));
+        DstTop.insert(Engine.makeNodeWithBinding(Pred, PE, UnknownVal()));
 
-      Bldr.addNodes(Dst);
       break;
     }
 
@@ -2417,14 +2362,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // ObjCIndirectCopyRestoreExpr implies passing a temporary for
       // correctness of lifetime management.  Due to limited analysis
       // of ARC, this is implemented as direct arg passing.
-      Bldr.takeNodes(Pred);
       ProgramStateRef state = Pred->getState();
       const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
       const Expr *E = OIE->getSubExpr();
       SVal V = state->getSVal(E, Pred->getStackFrame());
-      Bldr.generateNode(
-          S, Pred, state->BindExpr(cast<Expr>(S), Pred->getStackFrame(), V));
-      Bldr.addNodes(Dst);
+      DstTop.insert(Engine.makeNodeWithBinding(Pred, OIE, V));
       break;
     }
   }
