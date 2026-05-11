@@ -8346,6 +8346,50 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
 // InterleaveOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+/// This canonicalization folds the following round-trip identity:
+///  interleave(deinterleave(x).even, deinterleave(x).odd) -> x
+struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto lhsDefOp = interleaveOp.getLhs().getDefiningOp();
+    auto rhsDefOp = interleaveOp.getRhs().getDefiningOp();
+    if (!lhsDefOp || !rhsDefOp)
+      return rewriter.notifyMatchFailure(
+          interleaveOp, "expected both operands to be defined by an op");
+    if (!isa<DeinterleaveOp>(lhsDefOp) || !isa<DeinterleaveOp>(rhsDefOp))
+      return rewriter.notifyMatchFailure(
+          interleaveOp,
+          "expected both operands to be defined by a deinterleave op");
+    if (lhsDefOp != rhsDefOp)
+      return rewriter.notifyMatchFailure(
+          interleaveOp,
+          "expected both operands to be defined by the same deinterleave op");
+    if (auto deinterleaveRes = cast<OpResult>(interleaveOp.getLhs());
+        deinterleaveRes.getResultNumber())
+      return rewriter.notifyMatchFailure(interleaveOp,
+                                         "expected the lhs operand to be the "
+                                         "first result of the deinterleave op");
+    if (auto deinterleaveRes = cast<OpResult>(interleaveOp.getRhs());
+        deinterleaveRes.getResultNumber() != 1)
+      return rewriter.notifyMatchFailure(
+          interleaveOp, "expected the rhs operand to be the second result of "
+                        "the deinterleave op");
+    rewriter.replaceOp(interleaveOp,
+                       cast<DeinterleaveOp>(lhsDefOp).getSource());
+    return success();
+  }
+};
+} // namespace
+
+void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<InterleaveDeinterleaveFolder>(context);
+}
+
 std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }

@@ -584,6 +584,7 @@ def Vector_InterleaveOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
+  let hasCanonicalizer = 1;
 }
 
 class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
@@ -2560,7 +2561,7 @@ def Vector_TypeCastOp :
 }
 
 def Vector_ConstantMaskOp :
-  Vector_Op<"constant_mask", [Pure, 
+  Vector_Op<"constant_mask", [Pure,
    DeclareOpInterfaceMethods<VectorUnrollOpInterface>
    ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
@@ -2620,7 +2621,7 @@ def Vector_ConstantMaskOp :
 }
 
 def Vector_CreateMaskOp :
-  Vector_Op<"create_mask", [Pure, 
+  Vector_Op<"create_mask", [Pure,
    DeclareOpInterfaceMethods<VectorUnrollOpInterface>
    ]>,
     Arguments<(ins Variadic<Index>:$mask_dim_sizes)>,
