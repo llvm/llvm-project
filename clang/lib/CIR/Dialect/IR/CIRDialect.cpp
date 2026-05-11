@@ -1903,12 +1903,19 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
-  if ((getStaticLocalGuard().has_value() || getTlsModel()) &&
+  if ((getStaticLocalGuard().has_value()) &&
       (!getCtorRegion().empty() || !getDtorRegion().empty()))
     return emitOpError(
-        "Cannot have a thread-local or static-local global-op "
-        "with a constructor or destructor, they require in-function "
-        "initialization via LocalInitOp");
+        "Cannot have a static-local global-op with a constructor or "
+        "destructor, they require in-function initialization via LocalInitOp");
+
+  if (getDynTlsRefs()) {
+    if (getStaticLocalGuard().has_value())
+      return emitOpError(
+          "cannot have both static local and dynamic tls references");
+    if (!getTlsModel() || getTlsModel() != TLS_Model::GeneralDynamic)
+      return emitOpError("'dyn_tls_refs' only valid for dynamic tls");
+  }
 
   if (getAliasee().has_value()) {
     if (getInitialValue().has_value() || !getCtorRegion().empty() ||

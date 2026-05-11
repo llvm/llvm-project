@@ -1197,6 +1197,26 @@ namespace vdtor {
   static_assert(vdtor_3(3) == 3);
 }
 
+namespace ArrayDestSize {
+  template<typename T>
+  constexpr T dynarray(int elems, int i) {
+    T *p;
+    if constexpr (sizeof(T) == 1)
+      p = new T[elems]{"fox"}; // both-note {{evaluated array bound 3 is too small to hold 4 explicitly initialized elements}}
+    else
+      p = new T[elems]{1, 2, 3}; // both-note {{evaluated array bound 2 is too small to hold 3 explicitly initialized elements}}
+    T n = p[i]; // both-note 4{{past-the-end}}
+    delete [] p;
+    return n;
+  }
+  static_assert(dynarray<int>(4, 4) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<int>(3, 3) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<int>(2, 1) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<char>(5, 5) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<char>(4, 4) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<char>(3, 2) == 'x'); // both-error {{constant expression}} both-note {{in call}}
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

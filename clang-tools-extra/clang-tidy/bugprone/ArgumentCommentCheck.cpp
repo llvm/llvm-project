@@ -36,26 +36,35 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", false)),
       IgnoreSingleArgument(Options.get("IgnoreSingleArgument", false)),
+      CommentAnonymousInitLists(
+          Options.get("CommentAnonymousInitLists", false)),
       CommentBoolLiterals(Options.get("CommentBoolLiterals", false)),
-      CommentIntegerLiterals(Options.get("CommentIntegerLiterals", false)),
+      CommentCharacterLiterals(Options.get("CommentCharacterLiterals", false)),
       CommentFloatLiterals(Options.get("CommentFloatLiterals", false)),
+      CommentIntegerLiterals(Options.get("CommentIntegerLiterals", false)),
+      CommentNullPtrs(Options.get("CommentNullPtrs", false)),
+      CommentParenthesizedTemporaries(
+          Options.get("CommentParenthesizedTemporaries", false)),
       CommentStringLiterals(Options.get("CommentStringLiterals", false)),
+      CommentTypedInitLists(Options.get("CommentTypedInitLists", false)),
       CommentUserDefinedLiterals(
           Options.get("CommentUserDefinedLiterals", false)),
-      CommentCharacterLiterals(Options.get("CommentCharacterLiterals", false)),
-      CommentNullPtrs(Options.get("CommentNullPtrs", false)),
       IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {}
 
 void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
   Options.store(Opts, "IgnoreSingleArgument", IgnoreSingleArgument);
+  Options.store(Opts, "CommentAnonymousInitLists", CommentAnonymousInitLists);
   Options.store(Opts, "CommentBoolLiterals", CommentBoolLiterals);
-  Options.store(Opts, "CommentIntegerLiterals", CommentIntegerLiterals);
-  Options.store(Opts, "CommentFloatLiterals", CommentFloatLiterals);
-  Options.store(Opts, "CommentStringLiterals", CommentStringLiterals);
-  Options.store(Opts, "CommentUserDefinedLiterals", CommentUserDefinedLiterals);
   Options.store(Opts, "CommentCharacterLiterals", CommentCharacterLiterals);
+  Options.store(Opts, "CommentFloatLiterals", CommentFloatLiterals);
+  Options.store(Opts, "CommentIntegerLiterals", CommentIntegerLiterals);
   Options.store(Opts, "CommentNullPtrs", CommentNullPtrs);
+  Options.store(Opts, "CommentParenthesizedTemporaries",
+                CommentParenthesizedTemporaries);
+  Options.store(Opts, "CommentStringLiterals", CommentStringLiterals);
+  Options.store(Opts, "CommentTypedInitLists", CommentTypedInitLists);
+  Options.store(Opts, "CommentUserDefinedLiterals", CommentUserDefinedLiterals);
 }
 
 void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
@@ -199,21 +208,91 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
   return Func;
 }
 
-// Given the argument type and the options determine if we should
-// be adding an argument comment.
-bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
-  Arg = Arg->IgnoreImpCasts();
-  if (isa<UnaryOperator>(Arg))
-    Arg = cast<UnaryOperator>(Arg)->getSubExpr();
+namespace {
+
+enum class InitListKind {
+  None,
+  Anonymous,
+  Typed,
+};
+
+} // namespace
+
+static InitListKind getInitListKind(const Expr *Arg) {
+  Arg = Arg->IgnoreUnlessSpelledInSource();
+
+  if (const auto *StdInit = dyn_cast<CXXStdInitializerListExpr>(Arg))
+    Arg = StdInit->getSubExpr()->IgnoreUnlessSpelledInSource();
+
+  if (isa<InitListExpr>(Arg))
+    return InitListKind::Anonymous;
+
+  if (const auto *Ctor = dyn_cast<CXXConstructExpr>(Arg)) {
+    if (!Ctor->isListInitialization())
+      return InitListKind::None;
+    // CXXTemporaryObjectExpr corresponds to explicit Type{...} syntax.
+    if (isa<CXXTemporaryObjectExpr>(Ctor))
+      return InitListKind::Typed;
+    // Other list-initialized constructions (for example '{}') have no
+    // explicit type at the call site.
+    return InitListKind::Anonymous;
+  }
+
+  // std::initializer_list<T>{...} is represented as a functional cast whose
+  // subexpression carries the list-initialization spelling.
+  if (const auto *FuncCast = dyn_cast<CXXFunctionalCastExpr>(Arg)) {
+    const Expr *SubExpr = FuncCast->getSubExpr()->IgnoreImplicit();
+    if (FuncCast->isListInitialization() ||
+        isa<CXXStdInitializerListExpr>(SubExpr))
+      return InitListKind::Typed;
+  }
+
+  return InitListKind::None;
+}
+
+static bool isParenthesizedTemporary(const Expr *Arg) {
+  Arg = Arg->IgnoreUnlessSpelledInSource();
+  if (const auto *TempObject = dyn_cast<CXXTemporaryObjectExpr>(Arg))
+    return !TempObject->isListInitialization();
+  // CXXFunctionalCastExpr with CXXParenListInitExpr corresponds to explicit
+  // Type(...) aggregate temporary initialization syntax.
+  const auto *FuncCast = dyn_cast<CXXFunctionalCastExpr>(Arg);
+  return FuncCast &&
+         isa<CXXParenListInitExpr>(FuncCast->getSubExpr()->IgnoreImplicit());
+}
+
+// Given the argument type and the options determine if we should be adding an
+// argument comment and which diagnostic wording to use.
+ArgumentCommentCheck::CommentKind
+ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
+  const InitListKind Kind = getInitListKind(Arg);
+  const bool IsParenthesizedTemporary = isParenthesizedTemporary(Arg);
+
+  // Strip implicit wrappers so brace-init arguments bound to references still
+  // look like list-initialization at this point.
+  Arg = Arg->IgnoreImplicit();
+  if (const auto *UO = dyn_cast<UnaryOperator>(Arg))
+    Arg = UO->getSubExpr()->IgnoreImplicit();
   if (Arg->getExprLoc().isMacroID())
-    return false;
-  return (CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
-         (CommentIntegerLiterals && isa<IntegerLiteral>(Arg)) ||
-         (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
-         (CommentUserDefinedLiterals && isa<UserDefinedLiteral>(Arg)) ||
-         (CommentCharacterLiterals && isa<CharacterLiteral>(Arg)) ||
-         (CommentStringLiterals && isa<StringLiteral>(Arg)) ||
-         (CommentNullPtrs && isa<CXXNullPtrLiteralExpr>(Arg));
+    return CommentKind::None;
+
+  if ((CommentAnonymousInitLists && Kind == InitListKind::Anonymous) ||
+      (CommentTypedInitLists && Kind == InitListKind::Typed) ||
+      (CommentParenthesizedTemporaries && IsParenthesizedTemporary)) {
+    return CommentKind::NonLiteral;
+  }
+
+  if ((CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
+      (CommentIntegerLiterals && isa<IntegerLiteral>(Arg)) ||
+      (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
+      (CommentUserDefinedLiterals && isa<UserDefinedLiteral>(Arg)) ||
+      (CommentCharacterLiterals && isa<CharacterLiteral>(Arg)) ||
+      (CommentStringLiterals && isa<StringLiteral>(Arg)) ||
+      (CommentNullPtrs && isa<CXXNullPtrLiteralExpr>(Arg))) {
+    return CommentKind::Literal;
+  }
+
+  return CommentKind::None;
 }
 
 void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
@@ -283,7 +362,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
               << Matches[2] << II;
           if (isLikelyTypo(Callee->parameters(), Matches[2], II->getName())) {
             Diag << FixItHint::CreateReplacement(
-                Comment.Loc, (Matches[1] + II->getName() + Matches[3]).str());
+                Comment.Loc,
+                llvm::Twine(Matches[1] + II->getName() + Matches[3]).str());
           }
         }
         diag(PVD->getLocation(), "%0 declared here", DiagnosticIDs::Note) << II;
@@ -295,14 +375,18 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       }
     }
 
-    // If the argument comments are missing for literals add them.
-    if (Comments.empty() && shouldAddComment(Args[I])) {
+    // If the argument comments are missing for configured argument kinds, add
+    // them.
+    const CommentKind Kind = shouldAddComment(Args[I]);
+    if (Comments.empty() && Kind != CommentKind::None) {
       SmallString<32> ArgComment;
-      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
+      llvm::Twine(llvm::Twine("/*") + II->getName() + "=*/")
+          .toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
           diag(Args[I]->getBeginLoc(),
-               "argument comment missing for literal argument %0")
-          << II
+               "argument comment missing for %select{literal argument|"
+               "argument}0 %1")
+          << (Kind == CommentKind::Literal ? 0 : 1) << II
           << FixItHint::CreateInsertion(Args[I]->getBeginLoc(), ArgComment);
     }
   }

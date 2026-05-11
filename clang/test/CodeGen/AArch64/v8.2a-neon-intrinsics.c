@@ -1621,25 +1621,6 @@ float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
   return vfma_f16(a, b, c);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test_vfmaq_f16
-// CHECK-SAME: (<8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]], <8 x half> noundef [[C:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[C]] to <8 x i16>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP2]] to <16 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
-// CHECK-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]])
-// CHECK-NEXT:    ret <8 x half> [[TMP9]]
-//
-float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
-  return vfmaq_f16(a, b, c);
-}
-
 // CHECK-LABEL: define {{[^@]+}}@test_vfms_f16
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:

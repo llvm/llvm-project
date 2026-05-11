@@ -72,6 +72,7 @@ def TernaryBitwiseINTEL : BuiltinGroup;
 def Block2DLoadStore : BuiltinGroup;
 def Pipe : BuiltinGroup;
 def PredicatedLoadStore : BuiltinGroup;
+def Arithmetic : BuiltinGroup;
 def ArbitraryPrecisionFixedPoint : BuiltinGroup;
 def BlockingPipes : BuiltinGroup;
 def ImageChannelDataTypes : BuiltinGroup;
@@ -696,6 +697,9 @@ defm : DemangledNativeBuiltin<"__spirv_UMulExtended", OpenCL_std, MulExtended, 2
 defm : DemangledNativeBuiltin<"__spirv_UMulExtended", GLSL_std_450, MulExtended, 2, 3, OpUMulExtended>;
 defm : DemangledNativeBuiltin<"__spirv_SMulExtended", OpenCL_std, MulExtended, 2, 3, OpSMulExtended>;
 defm : DemangledNativeBuiltin<"__spirv_SMulExtended", GLSL_std_450, MulExtended, 2, 3, OpSMulExtended>;
+
+// Arithmetic builtin records:
+defm : DemangledNativeBuiltin<"__spirv_FMod", OpenCL_std, Arithmetic, 2, 2, OpFMod>;
 
 // cl_intel_split_work_group_barrier
 defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;

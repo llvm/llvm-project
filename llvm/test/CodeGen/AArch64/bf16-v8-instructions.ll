@@ -2000,7 +2000,7 @@ define <8 x i32> @test_fptosi_i32(<8 x bfloat> %a) #0 {
 define <8 x i64> @test_fptosi_i64(<8 x bfloat> %a) #0 {
 ; CHECK-LABEL: test_fptosi_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    mov h4, v0.h[2]
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h7, v0.h[3]
@@ -2098,7 +2098,7 @@ define <8 x i32> @test_fptoui_i32(<8 x bfloat> %a) #0 {
 define <8 x i64> @test_fptoui_i64(<8 x bfloat> %a) #0 {
 ; CHECK-LABEL: test_fptoui_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    mov h4, v0.h[2]
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h7, v0.h[3]

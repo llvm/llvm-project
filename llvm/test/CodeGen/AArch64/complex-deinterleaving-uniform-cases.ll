@@ -31,8 +31,8 @@ entry:
 define <4 x float> @simple_mul_no_contract(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: simple_mul_no_contract:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
 ; CHECK-NEXT:    zip1 v4.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    zip2 v0.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    zip1 v2.2s, v1.2s, v3.2s
@@ -149,8 +149,8 @@ entry:
 define <4 x float> @add_external_use(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: add_external_use:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
 ; CHECK-NEXT:    zip1 v4.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    zip2 v0.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    zip1 v2.2s, v1.2s, v3.2s

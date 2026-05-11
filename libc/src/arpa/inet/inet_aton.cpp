@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
+LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, struct in_addr *inp)) {
   constexpr int IPV4_MAX_DOT_NUM = 3;
   unsigned long parts[IPV4_MAX_DOT_NUM + 1] = {0};
   int dot_num = 0;

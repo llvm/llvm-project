@@ -284,16 +284,10 @@ define <2 x float> @ins4f2(<4 x float> %tmp1, <2 x float> %tmp2) {
 }
 
 define <1 x double> @ins2f1(<2 x double> %tmp1, <1 x double> %tmp2) {
-; CHECK-SD-LABEL: ins2f1:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ins2f1:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ins2f1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
   %tmp3 = extractelement <2 x double> %tmp1, i32 1
   %tmp4 = insertelement <1 x double> %tmp2, double %tmp3, i32 0
   ret <1 x double> %tmp4

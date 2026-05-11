@@ -81,9 +81,8 @@ View unnamed_lifetimebound_param(
   return View();
 }
 
-// FIXME: Should warn on declaration, not definiton
-View annotated_decl_but_not_def_not_returned(const MyObj &obj [[clang::lifetimebound]]);
+View annotated_decl_but_not_def_not_returned(const MyObj &obj [[clang::lifetimebound]]); // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
 
-View annotated_decl_but_not_def_not_returned(const MyObj &obj) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+View annotated_decl_but_not_def_not_returned(const MyObj &obj) {
   return not_lb(obj);
 }

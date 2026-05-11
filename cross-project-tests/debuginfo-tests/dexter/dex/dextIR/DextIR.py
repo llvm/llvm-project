@@ -6,10 +6,11 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 from collections import OrderedDict
 import os
-from typing import List
+from typing import List, Union
 
 from dex.dextIR.DebuggerIR import DebuggerIR
 from dex.dextIR.StepIR import StepIR, StepKind
+from dex.test_script.Script import DexterScript
 
 
 def _step_kind_func(context, step):
@@ -55,6 +56,7 @@ class DextIR:
         self.debugger = debugger
         self.commands = commands
         self.steps: List[StepIR] = []
+        self.script: Union[DexterScript, None] = None
 
     def __str__(self):
         colors = "rgby"

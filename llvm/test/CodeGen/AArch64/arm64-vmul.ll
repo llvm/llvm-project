@@ -1542,7 +1542,7 @@ define <4 x i32> @sqdmull2_lane_4s(<8 x i16> %A, <8 x i16> %B) nounwind {
 ;
 ; CHECK-GI-LABEL: sqdmull2_lane_4s:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.h[1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1559,7 +1559,7 @@ define <2 x i64> @sqdmull2_lane_2d(<4 x i32> %A, <4 x i32> %B) nounwind {
 ;
 ; CHECK-GI-LABEL: sqdmull2_lane_2d:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[1]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = shufflevector <4 x i32> %A, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -1673,7 +1673,7 @@ define <4 x i32> @sqdmlal2_lane_4s(<8 x i16> %A, <8 x i16> %B, <4 x i32> %C) nou
 ;
 ; CHECK-GI-LABEL: sqdmlal2_lane_4s:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    sqdmlal v0.4s, v3.4h, v1.h[1]
 ; CHECK-GI-NEXT:    ret
@@ -1693,7 +1693,7 @@ define <2 x i64> @sqdmlal2_lane_2d(<4 x i32> %A, <4 x i32> %B, <2 x i64> %C) nou
 ;
 ; CHECK-GI-LABEL: sqdmlal2_lane_2d:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    sqdmlal v0.2d, v3.2s, v1.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1978,7 +1978,7 @@ define <4 x i32> @sqdmlsl2_lane_4s(<8 x i16> %A, <8 x i16> %B, <4 x i32> %C) nou
 ;
 ; CHECK-GI-LABEL: sqdmlsl2_lane_4s:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    sqdmlsl v0.4s, v3.4h, v1.h[1]
 ; CHECK-GI-NEXT:    ret
@@ -1998,7 +1998,7 @@ define <2 x i64> @sqdmlsl2_lane_2d(<4 x i32> %A, <4 x i32> %B, <2 x i64> %C) nou
 ;
 ; CHECK-GI-LABEL: sqdmlsl2_lane_2d:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    sqdmlsl v0.2d, v3.2s, v1.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -2908,7 +2908,7 @@ define <2 x i64> @mull_from_extract_dup_high(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-GI-LABEL: mull_from_extract_dup_high:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    dup v1.2s, w0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
@@ -2945,7 +2945,7 @@ define <8 x i16> @pmull_from_extract_dup_high(<16 x i8> %lhs, i8 %rhs) {
 ; CHECK-GI-LABEL: pmull_from_extract_dup_high:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    dup v1.8b, w0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    pmull v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %rhsvec.0 = insertelement <8 x i8> undef, i8 %rhs, i32 0
@@ -2982,7 +2982,7 @@ define <8 x i16> @pmull_from_extract_duplane_high(<16 x i8> %lhs, <8 x i8> %rhs)
 ; CHECK-GI-LABEL: pmull_from_extract_duplane_high:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    dup v1.8b, v1.b[0]
 ; CHECK-GI-NEXT:    pmull v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
@@ -3013,7 +3013,7 @@ define <2 x i64> @sqdmull_from_extract_duplane_high(<4 x i32> %lhs, <4 x i32> %r
 ;
 ; CHECK-GI-LABEL: sqdmull_from_extract_duplane_high:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
   %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3044,7 +3044,7 @@ define <2 x i64> @sqdmlal_from_extract_duplane_high(<2 x i64> %accum, <4 x i32> 
 ;
 ; CHECK-GI-LABEL: sqdmlal_from_extract_duplane_high:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    sqdmlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
   %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3076,7 +3076,7 @@ define <2 x i64> @umlal_from_extract_duplane_high(<2 x i64> %accum, <4 x i32> %l
 ;
 ; CHECK-GI-LABEL: umlal_from_extract_duplane_high:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
   %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3495,7 +3495,7 @@ define <4 x i32> @sqdmlal2_lane_4s_lib(<4 x i32> %dst, <8 x i16> %v1, <8 x i16> 
 ;
 ; CHECK-GI-LABEL: sqdmlal2_lane_4s_lib:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    sqdmlal v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
   %tmp0 = shufflevector <8 x i16> %v1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3513,7 +3513,7 @@ define <2 x i64> @sqdmlal2_lane_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> 
 ;
 ; CHECK-GI-LABEL: sqdmlal2_lane_2d_lib:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    sqdmlal v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
   %tmp0 = shufflevector <4 x i32> %v1, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
@@ -3599,7 +3599,7 @@ define <4 x i32> @sqdmlsl2_lane_4s_lib(<4 x i32> %dst, <8 x i16> %v1, <8 x i16> 
 ;
 ; CHECK-GI-LABEL: sqdmlsl2_lane_4s_lib:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    sqdmlsl v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
   %tmp0 = shufflevector <8 x i16> %v1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3617,7 +3617,7 @@ define <2 x i64> @sqdmlsl2_lane_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> 
 ;
 ; CHECK-GI-LABEL: sqdmlsl2_lane_2d_lib:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    sqdmlsl v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
   %tmp0 = shufflevector <4 x i32> %v1, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
@@ -3688,7 +3688,7 @@ define <16 x i16> @or_sext_idx_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16
 ; CHECK-GI-LABEL: or_sext_idx_v16i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
-; CHECK-GI-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    smlal v2.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    smlal v3.8h, v0.8b, v4.8b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -3716,7 +3716,7 @@ define <16 x i16> @or_zext_idx_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16
 ; CHECK-GI-LABEL: or_zext_idx_v16i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
-; CHECK-GI-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v2.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umlal v3.8h, v0.8b, v4.8b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -3793,7 +3793,7 @@ define <8 x i32> @or_sext_idx_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> 
 ;
 ; CHECK-GI-LABEL: or_sext_idx_v8i16_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    smlal v2.4s, v1.4h, v0.h[3]
 ; CHECK-GI-NEXT:    smlal v3.4s, v4.4h, v0.h[3]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -3819,7 +3819,7 @@ define <8 x i32> @or_zext_idx_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> 
 ;
 ; CHECK-GI-LABEL: or_zext_idx_v8i16_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v2.4s, v1.4h, v0.h[3]
 ; CHECK-GI-NEXT:    umlal v3.4s, v4.4h, v0.h[3]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -3893,7 +3893,7 @@ define <4 x i64> @or_sext_idx_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> 
 ;
 ; CHECK-GI-LABEL: or_sext_idx_v4i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    smlal v2.2d, v1.2s, v0.s[3]
 ; CHECK-GI-NEXT:    smlal v3.2d, v4.2s, v0.s[3]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -3919,7 +3919,7 @@ define <4 x i64> @or_zext_idx_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> 
 ;
 ; CHECK-GI-LABEL: or_zext_idx_v4i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v2.2d, v1.2s, v0.s[3]
 ; CHECK-GI-NEXT:    umlal v3.2d, v4.2s, v0.s[3]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b

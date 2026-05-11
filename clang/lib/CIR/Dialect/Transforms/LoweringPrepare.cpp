@@ -67,23 +67,25 @@ static SmallString<128> getTransformedFileName(mlir::ModuleOp mlirModule) {
   return fileName;
 }
 
-/// Return the FuncOp called by `callOp`.
-static cir::FuncOp getCalledFunction(cir::CallOp callOp) {
-  mlir::SymbolRefAttr sym = llvm::dyn_cast_if_present<mlir::SymbolRefAttr>(
-      callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
-  return dyn_cast_or_null<cir::FuncOp>(
-      mlir::SymbolTable::lookupNearestSymbolFrom(callOp, sym));
-}
-
 namespace {
 struct LoweringPreparePass
     : public impl::LoweringPrepareBase<LoweringPreparePass> {
   LoweringPreparePass() = default;
+
+  // `mlir::SymbolTableCollection` is move-only (it owns lazily-created
+  // `unique_ptr<SymbolTable>` entries), which makes the implicit copy
+  // constructor ill-formed.  MLIR's `clonePass()` requires copy
+  // construction, so define one explicitly.  Per-run state members
+  // (dynamic initializers, guard maps, symbol-table cache, etc.) all
+  // start fresh in the cloned pass, which matches MLIR convention for
+  // pass clones and is more correct than the previous default-generated
+  // behavior that silently copied them.
+  LoweringPreparePass(const LoweringPreparePass &other)
+      : impl::LoweringPrepareBase<LoweringPreparePass>(other) {}
+
   void runOnOperation() override;
 
-  void runOnOp(mlir::Operation *op, mlir::SymbolTableCollection &symbolTables);
+  void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
@@ -93,10 +95,13 @@ struct LoweringPreparePass
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
-  void lowerStoreOfConstAggregate(cir::StoreOp op,
-                                  mlir::SymbolTableCollection &symbolTables);
-  void lowerLocalInitOp(cir::LocalInitOp op,
-                        mlir::SymbolTableCollection &symbolTables);
+  void lowerStoreOfConstAggregate(cir::StoreOp op);
+  void lowerLocalInitOp(cir::LocalInitOp op);
+
+  /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
+  /// member to avoid the O(M) module-wide scan that the static
+  /// `mlir::SymbolTable::lookupNearestSymbolFrom` would do per call.
+  cir::FuncOp getCalledFunction(cir::CallOp callOp);
 
   /// Return a private constant cir::GlobalOp with the given type and initial
   /// value, suitable for backing a memcpy-initialized local aggregate.
@@ -105,11 +110,11 @@ struct LoweringPreparePass
   /// already has a matching type and initial value, that global is reused.
   /// Otherwise a new global is created with the next available `.<n>` suffix
   /// (matching CIRGenBuilder::createVersionedGlobal and OGCG behavior).
-  cir::GlobalOp
-  getOrCreateConstAggregateGlobal(CIRBaseBuilderTy &builder,
-                                  mlir::SymbolTableCollection &symbolTables,
-                                  mlir::Location loc, llvm::StringRef baseName,
-                                  mlir::Type ty, mlir::TypedAttr constant);
+  cir::GlobalOp getOrCreateConstAggregateGlobal(CIRBaseBuilderTy &builder,
+                                                mlir::Location loc,
+                                                llvm::StringRef baseName,
+                                                mlir::Type ty,
+                                                mlir::TypedAttr constant);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -226,6 +231,26 @@ struct LoweringPreparePass
 
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
+
+  /// Cached symbol tables used to avoid repeated O(M) module-wide scans
+  /// during per-call/per-global symbol lookups.  Lazily populated on first
+  /// use.  Pass methods access this directly rather than threading it
+  /// through helper signatures (see PR feedback on #195919).
+  ///
+  /// Invariant: every site that mutates the module's symbol table either
+  /// (a) keeps `symbolTables` in sync via
+  /// `symbolTables.getSymbolTable(mlirModule).insert(...)` (as
+  /// `getOrCreateConstAggregateGlobal` does), or (b) creates a symbol
+  /// that is never resolved through the cache later.  Today
+  /// `buildRuntimeFunction` and `getOrCreateRuntimeVariable` fall in the
+  /// (b) bucket: their callers either use a separate map
+  /// (`cudaKernelMap`, `staticLocalDeclGuardMap`, `dynamicInitializers`)
+  /// or the static `mlir::SymbolTable::lookupNearestSymbolFrom`, never
+  /// the cached path.  If a future change adds a cached lookup of a
+  /// freshly created symbol, the corresponding create site MUST move
+  /// to bucket (a) (insert into the cache or call
+  /// `invalidateSymbolTable`).
+  mlir::SymbolTableCollection symbolTables;
 
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
@@ -1319,8 +1344,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   builder.getInsertionBlock()->push_back(ret);
 }
 
-void LoweringPreparePass::lowerLocalInitOp(
-    cir::LocalInitOp initOp, mlir::SymbolTableCollection &symbolTables) {
+void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
 
   // If we don't actually need to initialize anything anymore, we're done here.
   if (initOp.getCtorRegion().empty() && initOp.getDtorRegion().empty()) {
@@ -1692,6 +1716,14 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
                              /*isCtor=*/true);
 }
 
+cir::FuncOp LoweringPreparePass::getCalledFunction(cir::CallOp callOp) {
+  mlir::SymbolRefAttr sym = llvm::dyn_cast_if_present<mlir::SymbolRefAttr>(
+      callOp.getCallableForCallee());
+  if (!sym)
+    return nullptr;
+  return symbolTables.lookupNearestSymbolFrom<cir::FuncOp>(callOp, sym);
+}
+
 void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
   cir::FuncOp funcOp = getCalledFunction(op);
   if (!funcOp)
@@ -1712,9 +1744,8 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
 }
 
 cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
-    CIRBaseBuilderTy &builder, mlir::SymbolTableCollection &symbolTables,
-    mlir::Location loc, llvm::StringRef baseName, mlir::Type ty,
-    mlir::TypedAttr constant) {
+    CIRBaseBuilderTy &builder, mlir::Location loc, llvm::StringRef baseName,
+    mlir::Type ty, mlir::TypedAttr constant) {
   // Look up (and lazily populate) the per-base-name cache.
   llvm::SmallVector<cir::GlobalOp, 1> &versions =
       constAggregateGlobals[baseName];
@@ -1770,8 +1801,7 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
   return gv;
 }
 
-void LoweringPreparePass::lowerStoreOfConstAggregate(
-    cir::StoreOp op, mlir::SymbolTableCollection &symbolTables) {
+void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   // Check if the value operand is a cir.const with aggregate type.
   auto constOp = op.getValue().getDefiningOp<cir::ConstantOp>();
   if (!constOp)
@@ -1813,8 +1843,8 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(
 
   // Check for existing globals and create a new global with a unique name
   // if no match is found.
-  cir::GlobalOp gv = getOrCreateConstAggregateGlobal(
-      builder, symbolTables, op.getLoc(), baseName, ty, constant);
+  cir::GlobalOp gv = getOrCreateConstAggregateGlobal(builder, op.getLoc(),
+                                                     baseName, ty, constant);
 
   // Now replace the store with get_global + copy.
   builder.setInsertionPoint(op);
@@ -1834,8 +1864,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(
     constOp.erase();
 }
 
-void LoweringPreparePass::runOnOp(mlir::Operation *op,
-                                  mlir::SymbolTableCollection &symbolTables) {
+void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
@@ -1853,7 +1882,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op,
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
-    lowerStoreOfConstAggregate(storeOp, symbolTables);
+    lowerStoreOfConstAggregate(storeOp);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorPriority())
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
@@ -1869,7 +1898,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op,
   } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
   } else if (auto initOp = dyn_cast<cir::LocalInitOp>(op)) {
-    lowerLocalInitOp(initOp, symbolTables);
+    lowerLocalInitOp(initOp);
   }
 }
 
@@ -2251,7 +2280,6 @@ void LoweringPreparePass::runOnOperation() {
     mlirModule = cast<::mlir::ModuleOp>(op);
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
-  mlir::SymbolTableCollection symbolTables;
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
@@ -2263,7 +2291,7 @@ void LoweringPreparePass::runOnOperation() {
   });
 
   for (mlir::Operation *o : opsToTransform)
-    runOnOp(o, symbolTables);
+    runOnOp(o);
 
   buildCXXGlobalInitFunc();
   if (astCtx->getLangOpts().CUDA && !astCtx->getLangOpts().CUDAIsDevice)

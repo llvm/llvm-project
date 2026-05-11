@@ -60,9 +60,8 @@ define <3 x double> @insert_v3f64_0(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-SD-NEXT:    mov v0.d[0], v3.d[0]
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: insert_v3f64_0:
@@ -99,9 +98,8 @@ define <3 x double> @insert_v3f64_c(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-NEXT:    str d3, [x8, x9, lsl #3]
 ; CHECK-SD-NEXT:    ldr q0, [sp]
 ; CHECK-SD-NEXT:    ldr d2, [sp, #16]
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1182,9 +1180,8 @@ define <3 x i64> @insert_v3i64_0(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[0], x0
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: insert_v3i64_0:
@@ -1221,9 +1218,8 @@ define <3 x i64> @insert_v3i64_c(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-NEXT:    str x0, [x8, x9, lsl #3]
 ; CHECK-SD-NEXT:    ldr q0, [sp]
 ; CHECK-SD-NEXT:    ldr d2, [sp, #16]
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    ret
 ;

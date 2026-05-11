@@ -154,7 +154,7 @@ define <8 x i16> @test_sshll2_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_sshll2_v16i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #3
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -189,7 +189,7 @@ define <4 x i32> @test_sshll2_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: test_sshll2_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #9
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -224,7 +224,7 @@ define <2 x i64> @test_sshll2_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: test_sshll2_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #19
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -259,7 +259,7 @@ define <8 x i16> @test_ushll2_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_ushll2_v16i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #3
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -288,7 +288,7 @@ define <4 x i32> @test_ushll2_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: test_ushll2_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #9
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -317,7 +317,7 @@ define <2 x i64> @test_ushll2_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: test_ushll2_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #19
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>

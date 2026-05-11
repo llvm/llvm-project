@@ -107,7 +107,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationLegacyPass(PR);
   initializeX86WinEHUnwindV2LegacyPass(PR);
-  initializeX86PreLegalizerCombinerPass(PR);
+  initializeX86PreLegalizerCombinerLegacyPass(PR);
   initializeX86PostLegalizerCombinerLegacyPass(PR);
 }
 
@@ -495,7 +495,7 @@ bool X86PassConfig::addGlobalInstructionSelect() {
 
 void X86PassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createX86PreLegalizerCombiner());
+    addPass(createX86PreLegalizerCombinerLegacy());
   }
 }
 

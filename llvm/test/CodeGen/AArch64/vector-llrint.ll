@@ -88,7 +88,7 @@ declare <4 x i64> @llvm.llrint.v4i64.v4f16(<4 x half>)
 define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v8i64_v8f16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mov h4, v0.h[2]
 ; CHECK-SD-NEXT:    mov h3, v0.h[1]
 ; CHECK-SD-NEXT:    mov h7, v0.h[3]
@@ -156,8 +156,8 @@ declare <8 x i64> @llvm.llrint.v8i64.v8f16(<8 x half>)
 define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v16i64_v16f16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-SD-NEXT:    mov d2, v0.d[1]
+; CHECK-SD-NEXT:    mov d3, v1.d[1]
 ; CHECK-SD-NEXT:    mov h17, v0.h[1]
 ; CHECK-SD-NEXT:    mov h19, v0.h[2]
 ; CHECK-SD-NEXT:    fcvt s18, h0
@@ -279,10 +279,10 @@ declare <16 x i64> @llvm.llrint.v16i64.v16f16(<16 x half>)
 define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v32i64_v32f16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
-; CHECK-SD-NEXT:    ext v6.16b, v3.16b, v3.16b, #8
-; CHECK-SD-NEXT:    ext v7.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d4, v1.d[1]
+; CHECK-SD-NEXT:    mov d5, v2.d[1]
+; CHECK-SD-NEXT:    mov d6, v3.d[1]
+; CHECK-SD-NEXT:    mov d7, v0.d[1]
 ; CHECK-SD-NEXT:    mov h19, v0.h[1]
 ; CHECK-SD-NEXT:    fcvt s21, h0
 ; CHECK-SD-NEXT:    mov h23, v1.h[2]
@@ -560,7 +560,7 @@ declare <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float>)
 define <4 x i64> @llrint_v4i64_v4f32(<4 x float> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v4i64_v4f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    frintx v0.2s, v0.2s
 ; CHECK-SD-NEXT:    frintx v1.2s, v1.2s
 ; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
@@ -585,19 +585,19 @@ declare <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float>)
 define <8 x i64> @llrint_v8i64_v8f32(<8 x float> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v8i64_v8f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-SD-NEXT:    mov d2, v0.d[1]
+; CHECK-SD-NEXT:    mov d3, v1.d[1]
 ; CHECK-SD-NEXT:    frintx v0.2s, v0.2s
 ; CHECK-SD-NEXT:    frintx v1.2s, v1.2s
 ; CHECK-SD-NEXT:    frintx v2.2s, v2.2s
 ; CHECK-SD-NEXT:    frintx v3.2s, v3.2s
 ; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-SD-NEXT:    fcvtl v1.2d, v1.2s
-; CHECK-SD-NEXT:    fcvtl v4.2d, v2.2s
+; CHECK-SD-NEXT:    fcvtl v4.2d, v1.2s
+; CHECK-SD-NEXT:    fcvtl v2.2d, v2.2s
 ; CHECK-SD-NEXT:    fcvtl v3.2d, v3.2s
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtzs v2.2d, v1.2d
-; CHECK-SD-NEXT:    fcvtzs v1.2d, v4.2d
+; CHECK-SD-NEXT:    fcvtzs v1.2d, v2.2d
+; CHECK-SD-NEXT:    fcvtzs v2.2d, v4.2d
 ; CHECK-SD-NEXT:    fcvtzs v3.2d, v3.2d
 ; CHECK-SD-NEXT:    ret
 ;
@@ -622,10 +622,10 @@ declare <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float>)
 define <16 x i64> @llrint_v16i64_v16f32(<16 x float> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v16i64_v16f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    ext v5.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v6.16b, v2.16b, v2.16b, #8
-; CHECK-SD-NEXT:    ext v7.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    mov d4, v1.d[1]
+; CHECK-SD-NEXT:    mov d5, v0.d[1]
+; CHECK-SD-NEXT:    mov d6, v2.d[1]
+; CHECK-SD-NEXT:    mov d7, v3.d[1]
 ; CHECK-SD-NEXT:    frintx v0.2s, v0.2s
 ; CHECK-SD-NEXT:    frintx v1.2s, v1.2s
 ; CHECK-SD-NEXT:    frintx v2.2s, v2.2s
@@ -683,70 +683,70 @@ declare <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float>)
 define <32 x i64> @llrint_v32i64_v32f32(<32 x float> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v32i64_v32f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v16.16b, v7.16b, v7.16b, #8
-; CHECK-SD-NEXT:    ext v17.16b, v6.16b, v6.16b, #8
+; CHECK-SD-NEXT:    mov d16, v7.d[1]
+; CHECK-SD-NEXT:    mov d17, v6.d[1]
 ; CHECK-SD-NEXT:    frintx v7.2s, v7.2s
+; CHECK-SD-NEXT:    mov d18, v5.d[1]
 ; CHECK-SD-NEXT:    frintx v6.2s, v6.2s
-; CHECK-SD-NEXT:    ext v18.16b, v5.16b, v5.16b, #8
-; CHECK-SD-NEXT:    ext v21.16b, v4.16b, v4.16b, #8
-; CHECK-SD-NEXT:    ext v22.16b, v2.16b, v2.16b, #8
+; CHECK-SD-NEXT:    mov d19, v4.d[1]
+; CHECK-SD-NEXT:    mov d22, v3.d[1]
 ; CHECK-SD-NEXT:    frintx v5.2s, v5.2s
-; CHECK-SD-NEXT:    ext v23.16b, v3.16b, v3.16b, #8
-; CHECK-SD-NEXT:    frintx v4.2s, v4.2s
-; CHECK-SD-NEXT:    ext v19.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v20.16b, v1.16b, v1.16b, #8
+; CHECK-SD-NEXT:    mov d20, v0.d[1]
+; CHECK-SD-NEXT:    frintx v21.2s, v1.2s
+; CHECK-SD-NEXT:    mov d1, v1.d[1]
+; CHECK-SD-NEXT:    mov d23, v2.d[1]
 ; CHECK-SD-NEXT:    frintx v16.2s, v16.2s
 ; CHECK-SD-NEXT:    frintx v17.2s, v17.2s
 ; CHECK-SD-NEXT:    fcvtl v7.2d, v7.2s
-; CHECK-SD-NEXT:    fcvtl v6.2d, v6.2s
 ; CHECK-SD-NEXT:    frintx v18.2s, v18.2s
-; CHECK-SD-NEXT:    frintx v21.2s, v21.2s
-; CHECK-SD-NEXT:    frintx v2.2s, v2.2s
+; CHECK-SD-NEXT:    fcvtl v6.2d, v6.2s
+; CHECK-SD-NEXT:    frintx v19.2s, v19.2s
+; CHECK-SD-NEXT:    frintx v4.2s, v4.2s
+; CHECK-SD-NEXT:    frintx v22.2s, v22.2s
 ; CHECK-SD-NEXT:    frintx v3.2s, v3.2s
 ; CHECK-SD-NEXT:    fcvtl v5.2d, v5.2s
+; CHECK-SD-NEXT:    frintx v2.2s, v2.2s
 ; CHECK-SD-NEXT:    frintx v23.2s, v23.2s
-; CHECK-SD-NEXT:    fcvtl v4.2d, v4.2s
-; CHECK-SD-NEXT:    frintx v1.2s, v1.2s
 ; CHECK-SD-NEXT:    fcvtl v16.2d, v16.2s
 ; CHECK-SD-NEXT:    fcvtl v17.2d, v17.2s
 ; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
-; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
 ; CHECK-SD-NEXT:    fcvtl v18.2d, v18.2s
-; CHECK-SD-NEXT:    fcvtl v21.2d, v21.2s
-; CHECK-SD-NEXT:    frintx v20.2s, v20.2s
+; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-SD-NEXT:    fcvtl v19.2d, v19.2s
+; CHECK-SD-NEXT:    frintx v1.2s, v1.2s
+; CHECK-SD-NEXT:    fcvtl v4.2d, v4.2s
 ; CHECK-SD-NEXT:    fcvtl v3.2d, v3.2s
 ; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
 ; CHECK-SD-NEXT:    frintx v0.2s, v0.2s
 ; CHECK-SD-NEXT:    fcvtl v2.2d, v2.2s
-; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
 ; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
 ; CHECK-SD-NEXT:    fcvtzs v17.2d, v17.2d
+; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
 ; CHECK-SD-NEXT:    fcvtl v1.2d, v1.2s
 ; CHECK-SD-NEXT:    fcvtzs v3.2d, v3.2d
 ; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
 ; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
-; CHECK-SD-NEXT:    fcvtl v6.2d, v23.2s
-; CHECK-SD-NEXT:    frintx v17.2s, v19.2s
+; CHECK-SD-NEXT:    frintx v6.2s, v20.2s
+; CHECK-SD-NEXT:    fcvtl v17.2d, v23.2s
 ; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
-; CHECK-SD-NEXT:    frintx v7.2s, v22.2s
+; CHECK-SD-NEXT:    fcvtl v7.2d, v22.2s
 ; CHECK-SD-NEXT:    fcvtzs v16.2d, v18.2d
-; CHECK-SD-NEXT:    fcvtzs v18.2d, v21.2d
+; CHECK-SD-NEXT:    fcvtzs v18.2d, v19.2d
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-SD-NEXT:    fcvtl v6.2d, v6.2s
 ; CHECK-SD-NEXT:    stp q5, q16, [x8, #160]
-; CHECK-SD-NEXT:    fcvtl v7.2d, v7.2s
-; CHECK-SD-NEXT:    fcvtl v5.2d, v20.2s
-; CHECK-SD-NEXT:    stp q4, q18, [x8, #128]
-; CHECK-SD-NEXT:    fcvtl v4.2d, v17.2s
-; CHECK-SD-NEXT:    stp q3, q6, [x8, #96]
 ; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-SD-NEXT:    fcvtl v5.2d, v21.2s
+; CHECK-SD-NEXT:    stp q4, q18, [x8, #128]
+; CHECK-SD-NEXT:    fcvtzs v16.2d, v17.2d
+; CHECK-SD-NEXT:    fcvtzs v4.2d, v6.2d
+; CHECK-SD-NEXT:    stp q3, q7, [x8, #96]
 ; CHECK-SD-NEXT:    fcvtzs v3.2d, v5.2d
-; CHECK-SD-NEXT:    stp q1, q3, [x8, #32]
-; CHECK-SD-NEXT:    stp q2, q7, [x8, #64]
-; CHECK-SD-NEXT:    fcvtzs v2.2d, v4.2d
-; CHECK-SD-NEXT:    stp q0, q2, [x8]
+; CHECK-SD-NEXT:    stp q2, q16, [x8, #64]
+; CHECK-SD-NEXT:    stp q0, q4, [x8]
+; CHECK-SD-NEXT:    stp q3, q1, [x8, #32]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: llrint_v32i64_v32f32:

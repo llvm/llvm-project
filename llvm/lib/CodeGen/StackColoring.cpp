@@ -719,6 +719,11 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
             H.CatchObj.FrameIndex >= 0)
           ConservativeSlots.set(H.CatchObj.FrameIndex);
 
+  // Treat all stack slots as conservative if we happen to have calls to
+  // setjmp/sigsetjmp, as longjmp may re-enter the function on a different path.
+  if (MF->exposesReturnsTwice())
+    ConservativeSlots.set();
+
   LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
   // Step 2: compute begin/end sets for each block

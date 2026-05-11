@@ -145,12 +145,11 @@ static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
   // mismatch on the arguments. The argument are always prepared according
   // to the implicit interface. Cast the actual function if any of the
   // argument mismatch cannot be dealt with a simple fir.convert.
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    for (auto [actualType, dummyType] :
-         llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
-      if (actualType != dummyType &&
-          !fir::ConvertOp::canBeConverted(actualType, dummyType))
-        return true;
+  for (auto [actualType, dummyType] :
+       llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
+    if (actualType != dummyType &&
+        !fir::ConvertOp::canBeConverted(actualType, dummyType))
+      return true;
   return false;
 }
 
@@ -408,7 +407,6 @@ Fortran::lower::genCallOpAndResult(
     }
   }
   const bool isExprCall =
-      converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       callSiteType.getNumResults() == 1 &&
       llvm::isa<fir::SequenceType>(callSiteType.getResult(0));
 
@@ -622,8 +620,6 @@ Fortran::lower::genCallOpAndResult(
         // With the lowering to HLFIR, box arguments have already been built
         // according to the attributes, rank, bounds, and type they should have.
         // Do not attempt any reboxing here that could break this.
-        bool legacyLowering =
-            !converter.getLoweringOptions().getLowerToHighLevelFIR();
         // When dealing with a dummy character argument (fir.boxchar), the
         // effective argument might be a non-character raw pointer. This may
         // happen when calling an implicit interface that was previously called
@@ -635,7 +631,7 @@ Fortran::lower::genCallOpAndResult(
         cast = builder.createVolatileCast(loc, isVolatile, fst);
         cast = builder.convertWithSemantics(loc, snd, cast,
                                             allowCharacterConversions,
-                                            /*allowRebox=*/legacyLowering);
+                                            /*allowRebox=*/false);
       }
     }
     operands.push_back(cast);
@@ -845,9 +841,7 @@ Fortran::lower::genCallOpAndResult(
   // In HLFIR, this is skipped when the result does not need to be finalized
   // because the result is moved to an expression that will deal with the
   // finalization.
-  if (allocatedResult &&
-      (mustFinalizeResult ||
-       !converter.getLoweringOptions().getLowerToHighLevelFIR())) {
+  if (allocatedResult && mustFinalizeResult) {
     // The result must be optionally destroyed (if it is of a derived type
     // that may need finalization or deallocation of the components).
     // For an allocatable result we have to free the memory allocated

@@ -287,8 +287,7 @@ entry:
 define <4 x half> @get_high(<8 x half> %a) #0 {
 ; CHECK-LABEL: get_high:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x half> %a, <8 x half> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>

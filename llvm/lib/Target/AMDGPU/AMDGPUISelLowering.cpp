@@ -5557,7 +5557,7 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
   auto &ST = DAG.getSubtarget<GCNSubtarget>();
   const auto *TII = ST.getInstrInfo();
 
-  if (!ST.hasMovB64() || (!SDConstant && !SDFPConstant))
+  if (!ST.hasVMovB64Inst() || (!SDConstant && !SDFPConstant))
     return false;
 
   if (ST.has64BitLiterals())

@@ -213,8 +213,7 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
         continue;
       unsigned DepthOp = 0;
       unsigned LatencyOp = 0;
-      DenseMap<Register, unsigned>::iterator II =
-          InstrIdxForVirtReg.find(MO.getReg());
+      auto II = InstrIdxForVirtReg.find(MO.getReg());
       if (II != InstrIdxForVirtReg.end()) {
         // Operand is new virtual register not in trace
         assert(II->second < InstrDepth.size() && "Bad Index");

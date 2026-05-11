@@ -488,6 +488,15 @@ public:
   static unsigned getCXXCompatDiagId(const LangOptions &LangOpts,
                                      unsigned CompatDiagId);
 
+  /// Return true if either of the following two conditions hold:
+  /// 1. \p Loc is in a system header and the diagnostic kind \p DiagID does
+  ///    not have the property 'ShowInSystemHeader'.
+  /// 2. \p Loc is in the expansion of a macro defined in a system header and
+  ///    the diagnostic kind \p DiagID does not have the property
+  ///    'ShowInSystemMacro'.
+  bool shouldSuppressAsSystemWarning(unsigned DiagID, SourceLocation Loc,
+                                     const DiagnosticsEngine &Diag) const;
+
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by
   /// the DiagnosticClient.

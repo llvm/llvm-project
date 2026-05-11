@@ -5055,4 +5055,15 @@ def SPIRV_TosaExtRoundingModeAttr : SPIRV_I32EnumAttr<
       I32EnumAttrCase<"DoubleRound", 3>,
   ]>;
 
+//===----------------------------------------------------------------------===//
+// SPIR-V Common Constraints.
+//===----------------------------------------------------------------------===//
+
+class SPIRV_ExecutionScopeAttrIs<string operand, list<string> values> : PredOpTrait<
+  operand # " must be '" # !interleave(values, "' or '") # "'",
+  CPred<"::llvm::is_contained({::mlir::spirv::Scope::" # !interleave(values, ", ::mlir::spirv::Scope::") #
+        "}, ::llvm::cast<::mlir::spirv::ScopeAttr>(getProperties()." # operand #
+        ").getValue())">
+>;
+
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

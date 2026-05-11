@@ -38,10 +38,9 @@
 using namespace llvm;
 
 // Forward declaration of static functions.
-static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                              bool Consume);
 static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
                              raw_ostream &OS);
 
@@ -398,6 +397,8 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::SameVecWidth, OverloadIndex));
+    // IIT_SAME_VEC_WIDTH_ARG entry is followed by the element type.
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   }
   case IIT_VEC_OF_ANYPTRS_TO_ELT: {
@@ -451,8 +452,9 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 #define GET_INTRINSIC_GENERATOR_GLOBAL
 #include "llvm/IR/IntrinsicImpl.inc"
 
-void Intrinsic::getIntrinsicInfoTableEntries(
-    ID id, SmallVectorImpl<IITDescriptor> &T) {
+std::tuple<ArrayRef<Intrinsic::IITDescriptor>, unsigned, bool>
+Intrinsic::getIntrinsicInfoTableEntries(ID id,
+                                        SmallVectorImpl<IITDescriptor> &T) {
   // Note that `FixedEncodingTy` is defined in IntrinsicImpl.inc and can be
   // uint16_t or uint32_t based on the the value of `Use16BitFixedEncoding` in
   // IntrinsicEmitter.cpp.
@@ -497,8 +499,21 @@ void Intrinsic::getIntrinsicInfoTableEntries(
 
   // Okay, decode the table into the output vector of IITDescriptors.
   DecodeIITType(NextElt, IITEntries, T);
-  while (IITEntries[NextElt] != IIT_Done)
+  unsigned NumArgs = 0;
+  while (IITEntries[NextElt] != IIT_Done) {
     DecodeIITType(NextElt, IITEntries, T);
+    ++NumArgs;
+  }
+
+  ArrayRef<IITDescriptor> TableRef = T;
+
+  bool IsVarArg = false;
+  if (TableRef.back().Kind == Intrinsic::IITDescriptor::VarArg) {
+    IsVarArg = true;
+    TableRef.consume_back();
+    --NumArgs;
+  }
+  return {TableRef, NumArgs, IsVarArg};
 }
 
 static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
@@ -510,8 +525,6 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
   switch (D.Kind) {
   case IITDescriptor::Void:
-    return Type::getVoidTy(Context);
-  case IITDescriptor::VarArg:
     return Type::getVoidTy(Context);
   case IITDescriptor::MMX:
     return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
@@ -589,6 +602,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     assert(VTy && "Expected overload type to be a Vector Type");
     return VectorType::getInteger(VTy);
   }
+  case IITDescriptor::VarArg:
+    // VarArg token should be consumed by `getIntrinsicInfoTableEntries`, so we
+    // should never see it here.
+    llvm_unreachable("IITDescriptor::VarArg not expected");
   }
   llvm_unreachable("unhandled");
 }
@@ -596,10 +613,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
 FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
                                  ArrayRef<Type *> OverloadTys) {
   SmallVector<IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(id, Table);
-  ArrayRef<IITDescriptor> TableRef = Table;
-
-  bool IsVarArg = isIntrinsicVarArg(TableRef, /*Consume=*/true);
+  auto [TableRef, _, IsVarArg] = getIntrinsicInfoTableEntries(id, Table);
 
   Type *ResultTy = DecodeFixedType(TableRef, OverloadTys, Context);
 
@@ -777,16 +791,13 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
 
   // Get the intrinsic signature metadata.
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(id, Table);
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-  bool IsVarArg = isIntrinsicVarArg(TableRef, /*Consume=*/false);
-
+  auto [TableRef, NumArgs, IsVarArg] = getIntrinsicInfoTableEntries(id, Table);
   FunctionType *FTy = FunctionType::get(RetTy, ArgTys, IsVarArg);
 
   // Automatically determine the overloaded types.
   SmallVector<Type *, 4> OverloadTys;
-  [[maybe_unused]] bool IsValid =
-      ::isSignatureValid(FTy, TableRef, OverloadTys, nulls());
+  [[maybe_unused]] bool IsValid = ::isSignatureValid(
+      FTy, TableRef, NumArgs, IsVarArg, OverloadTys, nulls());
   assert(IsValid && "intrinsic signature mismatch");
   return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FTy);
 }
@@ -859,8 +870,6 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   switch (D.Kind) {
   case IITDescriptor::Void:
     return !Ty->isVoidTy();
-  case IITDescriptor::VarArg:
-    return true;
   case IITDescriptor::MMX: {
     FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
     return !VT || VT->getNumElements() != 1 ||
@@ -1050,43 +1059,39 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return true;
     return ThisArgVecTy != VectorType::getInteger(ReferenceType);
   }
+  case IITDescriptor::VarArg:
+    // VarArg token should be consumed by `getIntrinsicInfoTableEntries`, so we
+    // should never see it here.
+    llvm_unreachable("IITDescriptor::VarArg not expected");
   }
   llvm_unreachable("unhandled");
 }
 
-/// Returns true if the intrinsic is a VarArg intrinsics. If \p Consume is true
-/// the IITDescriptor for the VarArg is consumed and removed from \p Infos, else
-/// it stays unchanged.
-static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                              bool Consume) {
-  if (!Infos.empty() && Infos.back().Kind == Intrinsic::IITDescriptor::VarArg) {
-    if (Consume)
-      Infos.consume_back();
-    return true;
-  }
-  return false;
-}
-
 /// Return true if the function type \p FTy is a valid type signature for the
-/// type constraints specified in the .td file, represented by \p Infos.
-/// The overloaded type for the intrinsic are pushed to the OverloadTys vector.
+/// type constraints specified in the .td file, represented by \p Infos and
+/// \p IsVarArg. The overloaded types for the intrinsic are pushed to the
+/// \p OverloadTys vector.
 ///
 /// If the type is not valid, returns false and prints an error message to
 /// \p OS.
 static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
                              raw_ostream &OS) {
-  bool IsVarArg = isIntrinsicVarArg(Infos, /*Consume=*/true);
-
   SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
   if (matchIntrinsicType(FTy->getReturnType(), Infos, OverloadTys,
                          DeferredChecks, false)) {
     OS << "intrinsic has incorrect return type!";
     return false;
   }
-
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
+
+  if (FTy->getNumParams() != NumArgs) {
+    OS << "intrinsic has incorrect number of args. Expected " << NumArgs
+       << ", but got " << FTy->getNumParams();
+    return false;
+  }
 
   for (Type *Ty : FTy->params()) {
     if (matchIntrinsicType(Ty, Infos, OverloadTys, DeferredChecks, false)) {
@@ -1137,10 +1142,9 @@ bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
     return false;
 
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(ID, Table);
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
+  auto [TableRef, NumArgs, IsVarArg] = getIntrinsicInfoTableEntries(ID, Table);
 
-  return ::isSignatureValid(FT, TableRef, OverloadTys, OS);
+  return ::isSignatureValid(FT, TableRef, NumArgs, IsVarArg, OverloadTys, OS);
 }
 
 bool Intrinsic::isSignatureValid(Function *F,

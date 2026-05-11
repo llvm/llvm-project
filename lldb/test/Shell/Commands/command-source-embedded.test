@@ -1,0 +1,29 @@
+# Test automatically listing source on break for binary with embedded source.
+
+# When a program with embedded source being debugged reaches a breakpoint, its
+# source code should be listed. This test prevents a regression identified in #191801.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf -gembed-source %t/main.c -o %t.out
+# RUN: %lldb -x -b -s %t/commands %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.c
+int main() {
+  return 0;
+}
+
+#--- commands
+break set -n main
+# CHECK-LABEL: break set -n main
+# CHECK-NEXT: Breakpoint 1: where = {{.*}}`main
+
+run
+# CHECK-LABEL: run
+# CHECK-NEXT:  Process [[PID:.*]] launched
+# CHECK-NEXT:  Process [[PID]] stopped
+# CHECK-NEXT:  name = {{.*}}, stop reason = breakpoint 1.1
+# CHECK-NEXT:  frame #0: {{.*}}`main at main.c:2:3
+# CHECK-NEXT:  1   	int main() {
+# CHECK-NEXT:  -> 2   					return 0;
+# CHECK-NEXT   3   	}

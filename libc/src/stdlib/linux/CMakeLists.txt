@@ -8,3 +8,18 @@ add_header_library(
     libc.src.signal.linux.__restore
     libc.src.signal.linux.signal_utils
 )
+
+add_entrypoint_object(
+  setenv
+  SRCS
+    setenv.cpp
+  HDRS
+    ../setenv.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
+)

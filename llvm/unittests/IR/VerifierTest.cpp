@@ -21,7 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
 namespace {
 
 TEST(VerifierTest, Branch_i1) {
@@ -538,4 +538,3 @@ TEST(VerifierTest, DeeplyNested) {
 }
 
 } // end anonymous namespace
-} // end namespace llvm

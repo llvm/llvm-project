@@ -1005,7 +1005,7 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
-; CHECK-GI-NEXT:    ext.16b v1, v0, v0, #8
+; CHECK-GI-NEXT:    mov d1, v0[1]
 ; CHECK-GI-NEXT:    umov.b w10, v0[1]
 ; CHECK-GI-NEXT:    umov.b w9, v0[0]
 ; CHECK-GI-NEXT:    umov.b w13, v0[0]

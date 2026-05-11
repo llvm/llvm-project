@@ -14,6 +14,7 @@
 #include "GCNRegPressure.h"
 #include "AMDGPU.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 
@@ -520,28 +521,54 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   return LiveRegs;
 }
 
-void GCNRPTracker::reset(const MachineInstr &MI,
-                         const LiveRegSet *LiveRegsCopy,
-                         bool After) {
-  const MachineFunction &MF = *MI.getMF();
-  MRI = &MF.getRegInfo();
-  if (LiveRegsCopy) {
-    if (&LiveRegs != LiveRegsCopy)
-      LiveRegs = *LiveRegsCopy;
-  } else {
-    LiveRegs = After ? getLiveRegsAfter(MI, LIS)
-                     : getLiveRegsBefore(MI, LIS);
+void GCNRPTracker::reset(const MachineInstr &MI, bool After) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  if (!MI.isDebugInstr()) {
+    SlotIndex SI = LIS.getInstructionIndex(MI);
+    if (After)
+      SI = SI.getDeadSlot();
+    reset(MRI, SI);
+    return;
   }
 
-  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+  // Look for the first valid index after the provided debug MI.
+  MachineBasicBlock::const_iterator It = MI.getIterator(),
+                                    MBBEnd = MI.getParent()->end();
+  MachineBasicBlock::const_iterator NonDbgMI =
+      skipDebugInstructionsForward(It, MBBEnd);
+  if (NonDbgMI == MBBEnd) {
+    // There are no non-debug instruction between MI and the end of the
+    // block, so we reset the tracker at the end of the block.
+    reset(*MI.getParent(), /*End=*/true);
+    return;
+  }
+  // MI is a debug instruction so register pressure before or after it is
+  // identical. Since we moved forward to finding a non-debug instruction
+  // in the block, we reset the tracker before that instruction i.e., at its
+  // base index.
+  reset(MRI, LIS.getInstructionIndex(*NonDbgMI));
 }
 
-void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
-                         const LiveRegSet &LiveRegs_) {
-  MRI = &MRI_;
-  LiveRegs = LiveRegs_;
+void GCNRPTracker::reset(const MachineBasicBlock &MBB, bool End) {
+  SlotIndex SI = End ? LIS.getSlotIndexes()->getMBBLastIdx(&MBB)
+                     : LIS.getMBBStartIdx(&MBB);
+  reset(MBB.getParent()->getRegInfo(), SI);
+}
+
+void GCNRPTracker::reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
+  this->MRI = &MRI;
   LastTrackedMI = nullptr;
-  MaxPressure = CurPressure = getRegPressure(MRI_, LiveRegs_);
+  LiveRegs = llvm::getLiveRegs(SI, LIS, MRI);
+  MaxPressure = CurPressure = getRegPressure(MRI, LiveRegs);
+}
+
+void GCNRPTracker::reset(const MachineRegisterInfo &MRI,
+                         const LiveRegSet &LiveRegs) {
+  this->MRI = &MRI;
+  LastTrackedMI = nullptr;
+  if (&this->LiveRegs != &LiveRegs)
+    this->LiveRegs = LiveRegs;
+  MaxPressure = CurPressure = getRegPressure(MRI, LiveRegs);
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
@@ -621,16 +648,25 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 // GCNDownwardRPTracker
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
+                                 MachineBasicBlock::const_iterator End,
                                  const LiveRegSet *LiveRegsCopy) {
-  MRI = &MI.getMF()->getRegInfo();
-  LastTrackedMI = nullptr;
   MBBEnd = MI.getParent()->end();
+  assert(End == MBBEnd ||
+         End->getParent()->end() == MBBEnd && "end unrelated to MI block");
   NextMI = &MI;
-  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
-  if (NextMI == MBBEnd)
-    return false;
-  GCNRPTracker::reset(*NextMI, LiveRegsCopy, false);
-  return true;
+  NextMI = skipDebugInstructionsForward(NextMI, End);
+
+  // Do not use the MI to compute live registers when a set is provided.
+  // Otherwise the first non-debug instruction after the provided one (or the
+  // end of the block, if no such instruction exists) serves as the basis to
+  // compute a live register set.
+  if (LiveRegsCopy)
+    GCNRPTracker::reset(MI.getMF()->getRegInfo(), *LiveRegsCopy);
+  else if (NextMI != MBBEnd)
+    GCNRPTracker::reset(*NextMI, /*After=*/false);
+  else
+    GCNRPTracker::reset(*MI.getParent(), /*End=*/true);
+  return NextMI != End;
 }
 
 bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
@@ -738,15 +774,17 @@ bool GCNDownwardRPTracker::advance(MachineInstr *MI, bool UseInternalIterator) {
 }
 
 bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator End) {
-  while (NextMI != End)
-    if (!advance()) return false;
-  return true;
+  bool AnyAdvance = false;
+  while (NextMI != End && advance())
+    AnyAdvance = true;
+  return AnyAdvance;
 }
 
 bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
                                    MachineBasicBlock::const_iterator End,
                                    const LiveRegSet *LiveRegsCopy) {
-  reset(*Begin, LiveRegsCopy);
+  if (!reset(*Begin, End, LiveRegsCopy))
+    return false;
   return advance(End);
 }
 
@@ -962,7 +1000,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
         RPAtMBBEnd = getRegPressure(MRI, LiveIn);
       } else {
         GCNDownwardRPTracker RPT(LIS);
-        RPT.reset(MBB.front());
+        RPT.reset(MBB.front(), MBB.end());
 
         LiveIn = RPT.getLiveRegs();
 

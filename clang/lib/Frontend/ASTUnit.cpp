@@ -784,7 +784,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       *AST->PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr,
       *AST->CodeGenOpts, ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
       /*isysroot=*/"",
-      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
+      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors,
+      /*AllowConfigurationMismatch=*/false,
+      /*ValidateSystemInputs=*/false,
+      /*ForceValidateUserInputs=*/true, HSOpts.ValidateASTInputFilesContent);
 
   // Attach the AST reader to the AST context as an external AST source, so that
   // declarations will be deserialized from the AST file as needed.

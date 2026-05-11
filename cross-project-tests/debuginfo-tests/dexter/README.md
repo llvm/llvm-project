@@ -13,11 +13,12 @@ The following command evaluates your environment, listing the available and comp
     dexter.py list-debuggers
 
 ## Dependencies
-[TODO] Add a requirements.txt or an install.py and document it here.
 
-### Python 3.6
+See: requirements.txt
 
-DExTer requires python version 3.6 or greater.
+### Python 3.8
+
+DExTer requires python version 3.8 or greater.
 
 ### pywin32 python package
 

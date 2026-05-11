@@ -208,6 +208,7 @@ class Context {
   bool Deterministic = false;
   UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
   NaNPropagationBehavior NaNBehavior = NaNPropagationBehavior::NonDeterministic;
+  bool FusedMultiplyAdd = false;
 
   std::mt19937_64 Rng;
 
@@ -260,6 +261,7 @@ public:
   void setVScale(uint32_t VS) { VScale = VS; }
   void setMaxSteps(uint32_t MS) { MaxSteps = MS; }
   void setMaxStackDepth(uint32_t Depth) { MaxStackDepth = Depth; }
+  void setFusedMultiplyAdd(bool F) { FusedMultiplyAdd = F; }
   uint64_t getMemoryLimit() const { return MaxMem; }
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
@@ -269,6 +271,7 @@ public:
   bool mayUseNonDeterminism() const { return !Deterministic; }
   UndefValueBehavior getEffectiveUndefValueBehavior() const;
   NaNPropagationBehavior getEffectiveNaNPropagationBehavior() const;
+  bool fuseMultiplyAdd() const { return FusedMultiplyAdd; }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
   void setNaNPropagationBehavior(NaNPropagationBehavior NaNBehav) {
     NaNBehavior = NaNBehav;

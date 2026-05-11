@@ -358,8 +358,8 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
     // Try looking for an instance variable (class member).
     SymbolContext sc = stack_frame->GetSymbolContext(
         lldb::eSymbolContextFunction | lldb::eSymbolContextBlock);
-    llvm::StringRef ivar_name = sc.GetInstanceVariableName();
-    value_sp = stack_frame->FindVariable(ConstString(ivar_name));
+    llvm::StringRef instance_name = sc.GetInstanceName();
+    value_sp = stack_frame->FindVariable(ConstString(instance_name));
     if (value_sp)
       value_sp = value_sp->GetChildMemberWithName(name_ref);
 
