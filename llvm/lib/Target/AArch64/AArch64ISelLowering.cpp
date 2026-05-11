@@ -1533,6 +1533,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasAES()) {
       setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64}, Custom);
       setOperationAction(ISD::CLMUL, {MVT::v1i64, MVT::v2i64}, Legal);
+      setOperationAction(ISD::CLMULH, {MVT::v1i64, MVT::v2i64}, Legal);
     }
 
   } else /* !isNeonAvailable */ {
@@ -26041,9 +26042,6 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         SelectionDAG &DAG,
                                         const AArch64Subtarget *Subtarget) {
-  // Limit to post-legalization in order to avoid peeling truncating stores.
-  if (DCI.isBeforeLegalize())
-    return SDValue();
   if (!Subtarget->isNeonAvailable())
     return SDValue();
   // Source operand is already a vector.

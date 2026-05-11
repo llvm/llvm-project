@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --experimental-pic --unresolved-symbols=import-dynamic -shared -o %t.wasm %t.o
+# RUN: wasm-ld --unresolved-symbols=import-dynamic -shared -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 

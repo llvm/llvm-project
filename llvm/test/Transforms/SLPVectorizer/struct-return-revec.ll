@@ -8,24 +8,28 @@
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr @phase, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast { <8 x double>, <8 x double> } @llvm.sincos.v8f64(<8 x double> [[TMP0]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @phase, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 1
 ; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr @sinval, align 16
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr @cosval, align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 16), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP5]], 1
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 16), align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 16), align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 32), align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call fast { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP9]], 1
 ; CHECK-NEXT:    store <2 x double> [[TMP10]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 32), align 16
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 32), align 16
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 48), align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call fast { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[TMP12]])
+; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP13]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP13]], 1
 ; CHECK-NEXT:    store <2 x double> [[TMP14]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 48), align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP15]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 48), align 8
 ; CHECK-NEXT:    ret i32 0
