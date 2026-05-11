@@ -1721,6 +1721,13 @@ def CXX11NoReturn : InheritableAttr {
   let Documentation = [CXX11NoReturnDocs];
 }
 
+def CXX11Uninitialized : InheritableAttr {
+  let Spellings = [CXX11<"", "uninitialized", 202602>];
+  let Subjects = SubjectList<[Var], ErrorDiag>;
+  let Documentation = [CXX11UninitializedDocs];
+  let SimpleHandler = 1;
+}
+
 def NonBlocking : TypeAttr {
   let Spellings = [Clang<"nonblocking">];
   let Args = [ExprArgument<"Cond", /*optional*/1>];

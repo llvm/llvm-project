@@ -875,6 +875,39 @@ migration for code using ``[[noreturn]]`` after including ``<stdnoreturn.h>``.
   }];
 }
 
+def CXX11UninitializedDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "uninitialized";
+  let Content = [{
+The ``[[uninitialized]]`` attribute marks a variable definition as
+intentionally left uninitialized. It is purely informational: it has no
+effect on code generation and the variable still has the same indeterminate
+value it would have without the attribute.
+
+The attribute exists to support the initialization profile (see
+:doc:`ProfilesFramework`). Under that profile, a definition such as
+``int x;`` is diagnosed because it leaves ``x`` with an indeterminate
+value; writing ``int x [[uninitialized]];`` instead suppresses that
+declaration-site diagnostic and documents that the lack of an initializer
+is intentional. The attribute does **not** suppress diagnostics that fire
+when the variable is later read before being assigned; the read-before-init
+rule still applies.
+
+A declaration that has both ``[[uninitialized]]`` and an initializer is
+ill-formed under the initialization profile (the marker contradicts the
+explicit initialization).
+
+Outside the initialization profile the attribute is silently accepted and
+has no effect, so code that uses it remains valid when compiled without
+``-fprofiles``.
+
+This attribute is distinct from the Clang vendor attribute
+``[[clang::uninitialized]]``, which interacts with
+``-ftrivial-auto-var-init`` to force a local variable to remain
+uninitialized.
+  }];
+}
+
 def NoMergeDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
