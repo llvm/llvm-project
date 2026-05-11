@@ -219,7 +219,7 @@ public:
 
   /// Find the line and column number for the specified location in the
   /// specified file. This method has O(log n) complexity, where n is the number
-  /// of lines in the
+  /// of lines in the buffer.
   LLVM_ABI std::pair<unsigned, unsigned>
   getLineAndColumn(SMLoc Loc, unsigned BufferID = 0) const;
 
