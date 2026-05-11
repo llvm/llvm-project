@@ -2326,8 +2326,8 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
   SPIRVTypeInst SrcType =
       SrcReg.isValid() ? GR.getSPIRVTypeForVReg(SrcReg) : nullptr;
   if (!SrcType || SrcType->getOpcode() != SPIRV::OpTypeVector)
-    return diagnoseUnsupported(
-        I, "cannot select G_UNMERGE_VALUES with a non-vector argument");
+    report_fatal_error(
+        "cannot select G_UNMERGE_VALUES with a non-vector argument");
 
   SPIRVTypeInst ScalarType = GR.getScalarOrVectorComponentType(SrcType);
   MachineBasicBlock &BB = *I.getParent();
@@ -3857,11 +3857,9 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
   else if (ResType->getOpcode() == SPIRV::OpTypeArray)
     N = getArrayComponentCount(MRI, ResType);
   else
-    return diagnoseUnsupported(
-        I, "Cannot select G_BUILD_VECTOR with a non-vector result");
+    report_fatal_error("Cannot select G_BUILD_VECTOR with a non-vector result");
   if (I.getNumExplicitOperands() - I.getNumExplicitDefs() != N)
-    return diagnoseUnsupported(
-        I, "G_BUILD_VECTOR and the result type are inconsistent");
+    report_fatal_error("G_BUILD_VECTOR and the result type are inconsistent");
 
   // check if we may construct a constant vector
   bool IsConst = true;
@@ -3895,12 +3893,11 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   else if (ResType->getOpcode() == SPIRV::OpTypeArray)
     N = getArrayComponentCount(MRI, ResType);
   else
-    return diagnoseUnsupported(
-        I, "Cannot select G_SPLAT_VECTOR with a non-vector result");
+    report_fatal_error("Cannot select G_SPLAT_VECTOR with a non-vector result");
 
   unsigned OpIdx = I.getNumExplicitDefs();
   if (!I.getOperand(OpIdx).isReg())
-    return diagnoseUnsupported(I, "Unexpected argument in G_SPLAT_VECTOR");
+    report_fatal_error("Unexpected argument in G_SPLAT_VECTOR");
 
   // check if we may construct a constant vector
   Register OpReg = I.getOperand(OpIdx).getReg();
@@ -4649,8 +4646,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     SPIRVTypeInst OpType =
         OpReg.isValid() ? GR.getSPIRVTypeForVReg(OpReg) : nullptr;
     if (!GR.isBitcastCompatible(ResType, OpType))
-      return diagnoseUnsupported(
-          I, "incompatible result and operand types in a bitcast");
+      report_fatal_error("incompatible result and operand types in a bitcast");
     return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
   }
   case Intrinsic::spv_unref_global:
