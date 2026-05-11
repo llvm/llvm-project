@@ -36,3 +36,5 @@ loop:
 exit:
   ret float %sub
 }
+
+attributes #0 = { vscale_range(1,16) "target-features"="+sve2" }

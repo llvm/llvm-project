@@ -185,9 +185,9 @@ exit:
   ret i32 %sub
 }
 
-define float @fsub_reduction(float %startval, ptr %src1, ptr %src2) #0 {
+define float @fsub_reduction(float %startval, ptr %src1, ptr %src2) #1 {
 ; CHECK-EPI-LABEL: define float @fsub_reduction(
-; CHECK-EPI-SAME: float [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR0]] {
+; CHECK-EPI-SAME: float [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-EPI-NEXT:  [[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]:
 ; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_VECTOR_BODY:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK1:.*]]
 ; CHECK-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK1]]:
@@ -259,7 +259,7 @@ define float @fsub_reduction(float %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    ret float [[SUB_LCSSA]]
 ;
 ; CHECK-PARTIAL-RED-EPI-LABEL: define float @fsub_reduction(
-; CHECK-PARTIAL-RED-EPI-SAME: float [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR0]] {
+; CHECK-PARTIAL-RED-EPI-SAME: float [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-PARTIAL-RED-EPI-NEXT:  [[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_VECTOR_BODY:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK1:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK1]]:
@@ -352,9 +352,9 @@ exit:
   ret float %sub
 }
 
-define float @fsub_reduction_nsz(ptr %a, ptr %b, ptr %c, i64 %n) {
+define float @fsub_reduction_nsz(ptr %a, ptr %b, ptr %c, i64 %n) #1{
 ; CHECK-EPI-LABEL: define float @fsub_reduction_nsz(
-; CHECK-EPI-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) {
+; CHECK-EPI-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-EPI-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
@@ -441,7 +441,7 @@ define float @fsub_reduction_nsz(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-EPI-NEXT:    ret float [[SUB_LCSSA]]
 ;
 ; CHECK-PARTIAL-RED-EPI-LABEL: define float @fsub_reduction_nsz(
-; CHECK-PARTIAL-RED-EPI-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) {
+; CHECK-PARTIAL-RED-EPI-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-PARTIAL-RED-EPI-NEXT:  [[ENTRY:.*:]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_PH]]:
@@ -500,6 +500,7 @@ for.exit:
 }
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
+attributes #1 = { vscale_range(1,16) "target-features"="+sve2" }
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 16}

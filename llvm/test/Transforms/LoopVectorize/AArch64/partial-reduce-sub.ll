@@ -269,9 +269,9 @@ exit:
   ret i64 %sub
 }
 
-define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #0 {
+define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #2 {
 ; CHECK-INTERLEAVE1-LABEL: define float @fdotp_fsub(
-; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       vector.ph:
@@ -303,7 +303,7 @@ define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    ret float [[TMP7]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define float @fdotp_fsub(
-; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVED:       vector.ph:
@@ -350,7 +350,7 @@ define float @fdotp_fsub(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-INTERLEAVED-NEXT:    ret float [[TMP12]]
 ;
 ; CHECK-MAXBW-LABEL: define float @fdotp_fsub(
-; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
@@ -412,5 +412,7 @@ for.exit:
 !8 = !{!"llvm.loop.mustprogress"}
 !9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !10 = !{!"llvm.loop.vectorize.enable", i1 true}
+
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 attributes #1 = { "target-cpu"="apple-m1" }
+attributes #2 = { vscale_range(1,16) "target-features"="+sve2" }
