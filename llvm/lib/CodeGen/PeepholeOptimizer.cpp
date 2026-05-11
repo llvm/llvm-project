@@ -1825,55 +1825,37 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         NAPhysToVirtMIs.clear();
       }
 
-      // SrcReg must be captured before MI is erased inside optimizeCmpInstr.
-      Register CmpSrcReg;
       if (MI->isCompare()) {
-        Register SrcReg2;
+        Register CmpSrcReg, SrcReg2;
         int64_t CmpMask, CmpValue;
-        if (!TII->analyzeCompare(*MI, CmpSrcReg, SrcReg2, CmpMask, CmpValue) ||
-            CmpSrcReg.isPhysical() || SrcReg2.isPhysical())
-          CmpSrcReg = Register();
+        // Capture CmpSrcReg before MI is erased inside optimizeCmpInstr.
+        bool HaveVirtSrc =
+            TII->analyzeCompare(*MI, CmpSrcReg, SrcReg2, CmpMask, CmpValue) &&
+            CmpSrcReg.isVirtual() && !SrcReg2.isPhysical();
+        if (optimizeCmpInstr(*MI)) {
+          LocalMIs.erase(MI);
+          Changed = true;
+          // The eliminated compare may have been the extra use preventing a
+          // load from being folded into the flag-setting instruction.
+          if (HaveVirtSrc && MRI->hasOneNonDBGUser(CmpSrcReg)) {
+            MachineInstr *FlagProducer =
+                MRI->use_nodbg_begin(CmpSrcReg)->getParent();
+            MachineInstr *LoadMI = MRI->getVRegDef(CmpSrcReg);
+            if (LocalMIs.count(FlagProducer) && LoadMI &&
+                LoadMI->canFoldAsLoad() && LoadMI->mayLoad() &&
+                LocalMIs.count(LoadMI))
+              foldLoadInto(MF, *FlagProducer, CmpSrcReg, LocalMIs);
+          }
+          continue;
+        }
       }
 
       if ((isUncoalescableCopy(*MI) &&
            optimizeUncoalescableCopy(*MI, LocalMIs)) ||
-          (MI->isCompare() && optimizeCmpInstr(*MI)) ||
           (MI->isSelect() && optimizeSelect(*MI, LocalMIs))) {
         // MI is deleted.
         LocalMIs.erase(MI);
         Changed = true;
-
-        // The eliminated compare may have been the extra use blocking load
-        // folding into the EFLAGS producer;
-        if (CmpSrcReg.isVirtual() && MRI->hasOneNonDBGUser(CmpSrcReg)) {
-          MachineInstr *FlagProducer =
-              MRI->use_nodbg_begin(CmpSrcReg)->getParent();
-          MachineInstr *LoadMI = MRI->getVRegDef(CmpSrcReg);
-          if (LocalMIs.count(FlagProducer) && LoadMI &&
-              LoadMI->canFoldAsLoad() && LoadMI->mayLoad() &&
-              LocalMIs.count(LoadMI)) {
-            Register FoldReg = CmpSrcReg;
-            MachineInstr *DefMI = nullptr;
-            MachineInstr *CopyMI = nullptr;
-            if (MachineInstr *FoldMI = TII->optimizeLoadInstr(
-                    *FlagProducer, MRI, FoldReg, DefMI, CopyMI)) {
-              LLVM_DEBUG(dbgs() << "Replacing: " << *FlagProducer);
-              LLVM_DEBUG(dbgs() << "     With: " << *FoldMI);
-              LocalMIs.erase(FlagProducer);
-              LocalMIs.erase(LoadMI);
-              LocalMIs.insert(FoldMI);
-              if (CopyMI)
-                LocalMIs.insert(CopyMI);
-              if (FlagProducer->shouldUpdateAdditionalCallInfo())
-                FlagProducer->getMF()->moveAdditionalCallInfo(FlagProducer,
-                                                              FoldMI);
-              FlagProducer->eraseFromParent();
-              DefMI->eraseFromParent();
-              MRI->markUsesInDebugValueAsUndef(CmpSrcReg);
-              ++NumLoadFold;
-            }
-          }
-        }
         continue;
       }
 
