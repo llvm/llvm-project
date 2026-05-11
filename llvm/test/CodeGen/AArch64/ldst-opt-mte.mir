@@ -11,7 +11,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGi $x0, $x0, 0
+    STGi $x0, $x0, 0 :: (store (s64))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -23,7 +23,7 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1
 
-    STGi $x1, $x0, 0
+    STGi $x1, $x0, 0 :: (store (s64))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -36,7 +36,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGi $x0, $x0, 0
+    STGi $x0, $x0, 0 :: (store (s64))
     $x0 = ADDXri $x0, 8, 0
     RET_ReallyLR implicit $x0
 ...
@@ -48,7 +48,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGi $x0, $x0, 0
+    STGi $x0, $x0, 0 :: (store (s64))
     $x0 = SUBXri $x0, 4096, 0
     RET_ReallyLR implicit $x0
 ...
@@ -61,7 +61,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGi $x0, $x0, 0
+    STGi $x0, $x0, 0 :: (store (s64))
     $x0 = SUBXri $x0, 4112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -73,7 +73,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGi $x0, $x0, 0
+    STGi $x0, $x0, 0 :: (store (s64))
     $x0 = ADDXri $x0, 4080, 0
     RET_ReallyLR implicit $x0
 ...
@@ -86,7 +86,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGi $x0, $x0, 0
+    STGi $x0, $x0, 0 :: (store (s64))
     $x0 = ADDXri $x0, 4096, 0
     RET_ReallyLR implicit $x0
 ...
@@ -100,7 +100,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STZGi $x0, $x0, 0
+    STZGi $x0, $x0, 0 :: (store (s64))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -112,7 +112,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    ST2Gi $x0, $x0, 0
+    ST2Gi $x0, $x0, 0 :: (store (s256))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -124,7 +124,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STZ2Gi $x0, $x0, 0
+    STZ2Gi $x0, $x0, 0 :: (store (s256))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -138,7 +138,7 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2
 
-    STGPi $x1, $x2, $x0, 0
+    STGPi $x1, $x2, $x0, 0 :: (store (s128))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -150,7 +150,7 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2
 
-    STGPi $x1, $x2, $x0, 0
+    STGPi $x1, $x2, $x0, 0 :: (store (s128))
     $x0 = SUBXri $x0, 1024, 0
     RET_ReallyLR implicit $x0
 ...
@@ -163,7 +163,7 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2
 
-    STGPi $x1, $x2, $x0, 0
+    STGPi $x1, $x2, $x0, 0 :: (store (s128))
     $x0 = SUBXri $x0, 1040, 0
     RET_ReallyLR implicit $x0
 ...
@@ -175,7 +175,7 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2
 
-    STGPi $x1, $x2, $x0, 0
+    STGPi $x1, $x2, $x0, 0 :: (store (s128))
     $x0 = ADDXri $x0, 1008, 0
     RET_ReallyLR implicit $x0
 ...
@@ -188,7 +188,7 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2
 
-    STGPi $x1, $x2, $x0, 0
+    STGPi $x1, $x2, $x0, 0 :: (store (s128))
     $x0 = ADDXri $x0, 1024, 0
     RET_ReallyLR implicit $x0
 ...
@@ -202,7 +202,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGi $x0, $x0, 10
+    STGi $x0, $x0, 10 :: (store (s64))
     $x0 = ADDXri $x0, 160, 0
     RET_ReallyLR implicit $x0
 ...
@@ -214,7 +214,7 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2
 
-    STGPi $x1, $x2, $x0, 10
+    STGPi $x1, $x2, $x0, 10 :: (store (s128))
     $x0 = ADDXri $x0, 160, 0
     RET_ReallyLR implicit $x0
 ...
@@ -229,7 +229,7 @@ body: |
     liveins: $x0
 
     $x0 = ADDXri $x0, 32, 0
-    STGi $x0, $x0, 0
+    STGi $x0, $x0, 0 :: (store (s64))
     RET_ReallyLR implicit $x0
 ...
 
@@ -241,7 +241,7 @@ body: |
     liveins: $x0, $x1, $x2
 
     $x0 = SUBXri $x0, 48, 0
-    STGPi $x1, $x2, $x0, 0
+    STGPi $x1, $x2, $x0, 0 :: (store (s128))
     RET_ReallyLR implicit $x0
 ...
 
@@ -254,7 +254,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGPi $x0, $x0, $x0, 0
+    STGPi $x0, $x0, $x0, 0 :: (store (s128))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -266,7 +266,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGPi $x0, $x0, $x0, 7
+    STGPi $x0, $x0, $x0, 7 :: (store (s128))
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -281,6 +281,6 @@ body: |
     liveins: $x0
 
     $x0 = SUBXri $x0, 48, 0
-    STGPi $x0, $x0, $x0, 0
+    STGPi $x0, $x0, $x0, 0 :: (store (s128))
     RET_ReallyLR implicit $x0
 ...
