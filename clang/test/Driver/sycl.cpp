@@ -22,7 +22,7 @@
 
 // RUN: %clang -### -fsycl  %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefix=DEFAULT
 // RUN: %clangxx -### -fsycl %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefix=DEFAULT
-// RUN: %clang_cl -### -fsycl -- %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefix=DEFAULT
+// RUN: %clang_cl -### -fsycl --sysroot=%S/Inputs/SYCL -- %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
 // DEFAULT: "-sycl-std=2020"
 
