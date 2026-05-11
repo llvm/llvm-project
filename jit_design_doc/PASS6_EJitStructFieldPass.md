@@ -1,12 +1,14 @@
 # EJitStructFieldPass 设计文档
 
-**版本**: 1.5
-**日期**: 2026-04-29
+**版本**: 1.6
+**日期**: 2026-05-11
 **关联**: SPEC4.md, PLAN4.md
 **类型**: JIT Module Pass
 **顺序**: JIT Pipeline 第 4 步 (参数预处理 → InstCombine → Inline 之后)
 
-> **v1.5 变更**: 支持指针全局变量。当 GEP 基址是间接 load（load ptr from GV）时，PASS6 多追溯一层 —— 先从 GV 读取指针值作为真正的基地址，再加字段偏移。详见 §2.1 模式 5、§3.2。
+> **v1.6 变更**: v1.5 设计的间接指针访问路径已全部实现。支持 `ejit_period_arr` 指针型全局变量（§2.1 模式 5/5b）和 `ejit_period` 指针型静态变量。当 `findRootGV` 沿 GEP 链遇到 `LoadInst` 阻隔时，回退到间接路径：扫描 GEP 链找到 `LoadInst` → 解析其来源 GV → 通过 `resolveBase` 获取运行时地址 → 读取 `*(void**)&GV` 得到实际数据指针 → 累加字段偏移 → 读取常量值。
+>
+> **v1.5 变更**: 设计指针全局变量支持方案。当 GEP 基址是间接 load（load ptr from GV）时，PASS6 多追溯一层 —— 先从 GV 读取指针值作为真正的基地址，再加字段偏移。详见 §2.1 模式 5、§3.2。
 >
 > **v1.4 变更**: 移除 `getConstantArrayIndex`。`accumulateConstantOffset` 隐含验证所有 GEP 索引为常量。
 >

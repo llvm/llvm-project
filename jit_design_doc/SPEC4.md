@@ -90,8 +90,18 @@ ejit_period_arr(cell) struct CellConfig g_cellCfg[N];
 ```
 
 **约束**:
-- 数组长度 N 固定且较小 (<100)
+- 数组长度 N 固定且较小 (<100)（仅数组类型；指针类型无大小约束，由用户保证越界安全）
 - 整个程序最多支持 1024 个 `ejit_period_arr` 数组
+
+**指针类型支持 (v1.6)**: `ejit_period_arr` 也支持指向结构体的指针变量：
+
+```c
+ejit_period_arr(cell) struct CellConfig *g_cellPtr;
+// g_cellPtr = malloc(N * sizeof(struct CellConfig));
+// 用户保证在 ejit_entry 调用前指针已赋值，下标不越界
+```
+
+PASS6 在 JIT 编译期通过读取 `*(void**)&GV` 获取指针值作为数组基地址。指针必须指向结构体/类类型。
 
 ### 2.3 JIT 函数标注
 
@@ -246,7 +256,22 @@ active  → ejit_deactivate() → invalid (缓存失效)
 invalid → ejit_activate()   → active (可 JIT)
 ```
 
-### 3.4 编译接口
+### 3.4 符号注册
+
+```c
+void ejit_register_symbol(const char *name, void *addr);
+```
+
+用于裸核/嵌入式场景，将外部符号（库函数、全局变量）注册到 JIT 引擎，使 JIT 编译时可以解析。PASS1 在编译期自动扫描 ejit_entry 闭包引用的外部符号并生成注册调用，用户通常无需手动调用。
+
+| 参数 | 说明 |
+|------|------|
+| `name` | 符号名称（与 bitcode 中声明一致） |
+| `addr` | 符号运行时地址 |
+
+**自动注册**: PASS1 `EJitRegisterBitcodePass` 扫描闭包中的外部函数调用和全局变量引用，在 `ejit_auto_register` 构造函数中自动生成 `ejit_register_symbol` 调用。Constructor 阶段暂存到 `EJitRegistrationStore`，`ejit_init` 时消费并转发给 JIT 引擎。
+
+### 3.5 编译接口
 
 ```c
 void* ejit_compile_or_get(const char* func_name, ejit_dim_t* dims,

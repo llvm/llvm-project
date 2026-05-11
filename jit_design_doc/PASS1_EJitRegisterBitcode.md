@@ -461,6 +461,10 @@ EJitPeriodHandlerPass    (晚期: 生命周期处理)
 
 7. **多 ejit_entry 函数的 Bitcode 合并**: 当前设计将所有 ejit_entry 函数（含传递闭包）放入一个 `@__ejit_bitcode` 全局变量。运行时通过 `ejit_register_bitcode(funcName, ptr, size)` 为每个函数名注册同一份 bitcode。JIT 编译时，从 bitcode 中按函数名定位目标函数，仅编译该函数及其依赖。
 
+8. **自动符号注册 (v1.6)**: `ejit_auto_register` 函数中除了 `ejit_register_bitcode` 调用外，还自动生成 `ejit_register_symbol` 调用。PASS1 扫描闭包中所有外部函数调用（`isDeclaration() && !isIntrinsic()`）和全局变量引用，为每个唯一符号生成注册代码。这使 JIT 在裸核环境无需 dlsym 即可解析外部符号。符号地址暂存于 `EJitRegistrationStore`，在 `ejit_init` 时消费。
+
+9. **常量全局变量保留 (v1.6)**: `collectReferencedGlobals` 现在包含所有被引用的全局变量（含常量）。`extractAndSerialize` 在转换为外部声明时跳过了常量（`GV.isConstant()`），避免版本字符串等编译器生成的常量在 JIT 链接时出现 "Symbols not found" 错误。这些常量作为定义保留在 bitcode 中。
+
 ---
 
 *文档版本: 1.0*
