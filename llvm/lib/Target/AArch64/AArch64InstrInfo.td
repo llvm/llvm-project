@@ -10116,6 +10116,13 @@ def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
 def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
 def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
 
+// Truncating post-inc stores from lane 0 of v4i32/v2i64.
+defm : St1LanePost128Pat<post_truncsti8, VectorIndex0, v4i32, i32, ST1i8_POST, 1>;
+defm : St1LanePost128Pat<post_truncsti16, VectorIndex0, v4i32, i32, ST1i16_POST, 2>;
+defm : St1LanePost128Pat<post_truncsti8, VectorIndex0, v2i64, i64, ST1i8_POST, 1>;
+defm : St1LanePost128Pat<post_truncsti16, VectorIndex0, v2i64, i64, ST1i16_POST, 2>;
+defm : St1LanePost128Pat<post_truncsti32, VectorIndex0, v2i64, i64, ST1i32_POST, 4>;
+
 let mayStore = 1, hasSideEffects = 0 in {
 defm ST2 : SIMDStSingleB<1, 0b000,       "st2", VecListTwob,   GPR64pi2>;
 defm ST2 : SIMDStSingleH<1, 0b010, 0,    "st2", VecListTwoh,   GPR64pi4>;
