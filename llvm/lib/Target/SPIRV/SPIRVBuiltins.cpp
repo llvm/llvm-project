@@ -2471,6 +2471,12 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
 
 static bool generateSelectInst(const SPIRV::IncomingCall *Call,
                                MachineIRBuilder &MIRBuilder) {
+  const MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  LLT ResTy = MRI->getType(Call->ReturnRegister);
+  LLT CondTy = MRI->getType(Call->Arguments[0]);
+  if (!ResTy.isVector() && CondTy.isVector())
+    report_fatal_error("OpSelect with a scalar result requires a scalar "
+                       "boolean condition");
   MIRBuilder.buildSelect(Call->ReturnRegister, Call->Arguments[0],
                          Call->Arguments[1], Call->Arguments[2]);
   return true;
