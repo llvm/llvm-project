@@ -12,79 +12,81 @@ intermediate LLVM representation.
 .. toctree::
    :hidden:
 
-   AArch64SME
-   AddingConstrainedIntrinsics
-   AdminTasks
-   AdvancedBuilds
-   AliasAnalysis
-   AMDGPUUsage
-   AMDGPUAsyncOperations
-   AMDGPUExecutionSynchronization
-   Benchmarking
-   BigEndianNEON
-   BuildingADistribution
-   CFIVerify
-   CMake
-   CMakePrimer
-   CodeGenerator
-   CodeOfConduct
-   CommandLine
-   CompileCudaWithLLVM
-   CoverageMappingFormat
-   CycleTerminology
-   DebuggingJITedCode
-   DirectXUsage
-   Docker
-   DTLTO
-   FatLTO
-   ExtendingLLVM
-   GitHub
-   GoldPlugin
-   GlobalISel/MIRPatterns
    HowToBuildOnARM
    HowToBuildWithPGO
-   HowToBuildWindowsItaniumPrograms
-   HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
-   HowToUpdateDebugInfo
-   InstCombineContributorGuide
-   InstrProfileFormat
-   InstrRefDebugInfo
-   KeyInstructionsDebugInfo
-   LFI
-   LinkTimeOptimization
-   LoopTerminology
-   MarkdownQuickstartTemplate
+   CoverageMappingFormat
+   CFIVerify
+   BuildingADistribution
+   CMake
+   Docker
+   SupportLibrary
+   AdvancedBuilds
+   WritingAnLLVMNewPMPass
+   WritingAnLLVMPass
+   Passes
+   StackSafetyAnalysis
+   MergeFunctions
+   AliasAnalysis
    MemorySSA
    MemProf
-   MergeFunctions
-   MCJITDesignAndImplementation
-   MisExpect
-   ORCv2
-   OpaquePointers
-   JITLink
-   NewPassManager
-   NVPTXUsage
-   Passes
-   ReportingGuide
-   ResponseGuide
+   LoopTerminology
+   CycleTerminology
+   Vectorizers
+   LinkTimeOptimization
+   DTLTO
+   GoldPlugin
    Remarks
+   SourceLevelDebugging
+   HowToUpdateDebugInfo
+   InstrRefDebugInfo
    RemoveDIsDebugInfo
+   KeyInstructionsDebugInfo
+   InstrProfileFormat
+   InstCombineContributorGuide
+   WritingAnLLVMBackend
+   CodeGenerator
+   TableGen/index
+   GlobalISel/MIRPatterns
+   MCJITDesignAndImplementation
+   ORCv2
+   JITLink
+   DebuggingJITedCode
+   CommandLine
+   ExtendingLLVM
+   AddingConstrainedIntrinsics
+   HowToBuildWindowsItaniumPrograms
+   HowToCrossCompileBuiltinsOnArm
+   BigEndianNEON
+   AArch64SME
+   CompileCudaWithLLVM
+   NVPTXUsage
+   AMDGPUUsage
+   AMDGPUAsyncOperations
+   AMDGPUDwarfExtensionsForHeterogeneousDebugging
+   AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
+   AMDGPUExecutionSynchronization
+   SPIRVUsage
+   DirectXUsage
    RISCVUsage
    RISCV/RISCVVectorExtension
    RISCV/RISCVVCIX
-   SourceLevelDebugging
-   SPIRVUsage
    SandboxIR
-   StackSafetyAnalysis
-   SupportLibrary
-   TableGen/index
-   TableGenFundamentals
    Telemetry
-   Vectorizers
-   WritingAnLLVMPass
-   WritingAnLLVMNewPMPass
-   WritingAnLLVMBackend
+   LFI
+   AdminTasks
+   Benchmarking
+   CMakePrimer
+   CodeOfConduct
+   FatLTO
+   GitHub
+   MarkdownQuickstartTemplate
+   MisExpect
+   OpaquePointers
+   NewPassManager
+   ReportingGuide
+   ResponseGuide
+   TableGenFundamentals
    yaml2obj
 
 Clang

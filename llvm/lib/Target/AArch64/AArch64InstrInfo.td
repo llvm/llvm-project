@@ -6676,6 +6676,24 @@ defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
 
+// ssub_sat(0, R) -> sqneg(R)
+def : Pat<(v16i8 (ssubsat immAllZerosV, V128:$reg)),
+          (v16i8 (SQNEGv16i8 V128:$reg))>;
+def : Pat<(v8i16 (ssubsat immAllZerosV, V128:$reg)),
+          (v8i16 (SQNEGv8i16 V128:$reg))>;
+def : Pat<(v4i32 (ssubsat immAllZerosV, V128:$reg)),
+          (v4i32 (SQNEGv4i32 V128:$reg))>;
+def : Pat<(v2i64 (ssubsat immAllZerosV, V128:$reg)),
+          (v2i64 (SQNEGv2i64 V128:$reg))>;
+def : Pat<(v8i8 (ssubsat immAllZerosV, V64:$reg)),
+          (v8i8 (SQNEGv8i8 V64:$reg))>;
+def : Pat<(v4i16 (ssubsat immAllZerosV, V64:$reg)),
+          (v4i16 (SQNEGv4i16 V64:$reg))>;
+def : Pat<(v2i32 (ssubsat immAllZerosV, V64:$reg)),
+          (v2i32 (SQNEGv2i32 V64:$reg))>;
+def : Pat<(v1i64 (ssubsat immAllZerosV, V64:$reg)),
+          (v1i64 (SQNEGv1i64 V64:$reg))>;
+
 // Floating-point conversion patterns.
 multiclass IntegerToFPSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
   let Predicates = [HasFPRCVT] in {
@@ -7559,10 +7577,6 @@ multiclass ExtPat<ValueType VT64, ValueType VT128, int N> {
             (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
   def : Pat<(VT128 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
             (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-  // We use EXT to handle extract_subvector to copy the upper 64-bits of a
-  // 128-bit vector.
-  def : Pat<(VT64 (extract_subvector V128:$Rn, (i64 N))),
-            (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
   // A 64-bit EXT of two halves of the same 128-bit register can be done as a
   // single 128-bit EXT.
   def : Pat<(VT64 (AArch64ext (extract_subvector V128:$Rn, (i64 0)),
@@ -10098,6 +10112,13 @@ def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
 def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
 def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
 
+// Truncating post-inc stores from lane 0 of v4i32/v2i64.
+defm : St1LanePost128Pat<post_truncsti8, VectorIndex0, v4i32, i32, ST1i8_POST, 1>;
+defm : St1LanePost128Pat<post_truncsti16, VectorIndex0, v4i32, i32, ST1i16_POST, 2>;
+defm : St1LanePost128Pat<post_truncsti8, VectorIndex0, v2i64, i64, ST1i8_POST, 1>;
+defm : St1LanePost128Pat<post_truncsti16, VectorIndex0, v2i64, i64, ST1i16_POST, 2>;
+defm : St1LanePost128Pat<post_truncsti32, VectorIndex0, v2i64, i64, ST1i32_POST, 4>;
+
 let mayStore = 1, hasSideEffects = 0 in {
 defm ST2 : SIMDStSingleB<1, 0b000,       "st2", VecListTwob,   GPR64pi2>;
 defm ST2 : SIMDStSingleH<1, 0b010, 0,    "st2", VecListTwoh,   GPR64pi4>;
@@ -10951,14 +10972,22 @@ def : Pat<(v1i64 (extract_subvector V128:$Rn, (i64 0))),
 def : Pat<(v1f64 (extract_subvector V128:$Rn, (i64 0))),
            (EXTRACT_SUBREG V128:$Rn, dsub)>;
 
-def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
-def : Pat<(v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
-def : Pat<(v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
+def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 8))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+          (DUPi64 FPR128:$Rn, 1)>;
 def : Pat<(v1i64 (extract_subvector (v2i64 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4bf16 (extract_subvector (v8bf16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v2f32 (extract_subvector (v4f32 FPR128:$Rn), (i64 2))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v1f64 (extract_subvector (v2f64 FPR128:$Rn), (i64 1))),
+          (DUPi64 FPR128:$Rn, 1)>;
 
 // A 64-bit subvector insert to the first 128-bit vector position
 // is a subregister copy that needs no instruction.
@@ -11363,12 +11392,10 @@ foreach i = 0-7 in {
 }
 
 let Predicates = [HasLS64] in {
-  let mayLoad = 1 in
-  def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
-                                          (outs GPR64x8:$Rt)>;
-  let mayStore = 1 in
-  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
-                                          (outs)>;
+  defm LD64B: LoadStore64B<0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
+                                           (outs GPR64x8:$Rt)>;
+  defm ST64B: LoadStore64B<0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
+                                           (outs)>;
   def ST64BV:   Store64BV<0b011, "st64bv">;
   def ST64BV0:  Store64BV<0b010, "st64bv0">;
 
