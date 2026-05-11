@@ -74,8 +74,8 @@ struct _Trace {
   _LIBCPP_EXPORTED_FROM_ABI string __to_string() const;
 
   _LIBCPP_EXPORTED_FROM_ABI size_t __hash_code() const;
-  _LIBCPP_HIDE_FROM_ABI static _Trace& __base(auto& __trace);
-  _LIBCPP_HIDE_FROM_ABI static _Trace const& __base(auto const& __trace);
+  _LIBCPP_HIDE_FROM_ABI static _Trace& __trace_base(auto& __trace);
+  _LIBCPP_HIDE_FROM_ABI static _Trace const& __trace_base(auto const& __trace);
 
 #  ifdef _WIN32
   // Windows impl uses dbghelp and psapi DLLs to do the full stacktrace operation.
@@ -300,7 +300,7 @@ _LIBCPP_HIDE_FROM_ABI ostream& operator<<(ostream& __os, const basic_stacktrace<
 template <class _Allocator>
 struct hash<basic_stacktrace<_Allocator>> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
-    return __stacktrace::_Trace::__base(__trace).__hash_code();
+    return __stacktrace::_Trace::__trace_base(__trace).__hash_code();
   }
 };
 
@@ -348,9 +348,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::__populate_addrs
 
 #  endif // _WIN32
 
-_Trace& _Trace::__base(auto& __trace) { return *static_cast<_Trace*>(std::addressof(__trace)); }
+_Trace& _Trace::__trace_base(auto& __trace) { return *static_cast<_Trace*>(std::addressof(__trace)); }
 
-_Trace const& _Trace::__base(auto const& __trace) { return *static_cast<_Trace const*>(std::addressof(__trace)); }
+_Trace const& _Trace::__trace_base(auto const& __trace) { return *static_cast<_Trace const*>(std::addressof(__trace)); }
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD

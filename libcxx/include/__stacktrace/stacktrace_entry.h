@@ -76,13 +76,13 @@ struct _Entry {
   _Image const* __image_{};
 
 #  if _LIBCPP_HAS_LOCALIZATION
-  _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
-  _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
+  _LIBCPP_EXPORTED_FROM_ABI std::ostream& __write_to(std::ostream& __os) const;
+  _LIBCPP_EXPORTED_FROM_ABI string __to_string() const;
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-  _LIBCPP_EXPORTED_FROM_ABI size_t hash() const;
-  _LIBCPP_HIDE_FROM_ABI static _Entry& base(stacktrace_entry& __entry);
-  _LIBCPP_HIDE_FROM_ABI static _Entry const& base(stacktrace_entry const& __entry);
+  _LIBCPP_EXPORTED_FROM_ABI size_t __hash_code() const;
+  _LIBCPP_HIDE_FROM_ABI static _Entry& __entry_base(stacktrace_entry& __entry);
+  _LIBCPP_HIDE_FROM_ABI static _Entry const& __entry_base(stacktrace_entry const& __entry);
 
   _LIBCPP_HIDE_FROM_ABI uintptr_t adjusted_addr() const;
 
@@ -139,11 +139,11 @@ public:
 #  if _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_HIDE_FROM_ABI inline string to_string(const std::stacktrace_entry& __entry) {
-  return __stacktrace::_Entry::base(__entry).to_string();
+  return __stacktrace::_Entry::__entry_base(__entry).__to_string();
 }
 
 _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const stacktrace_entry& __entry) {
-  return __stacktrace::_Entry::base(__entry).write_to(__os);
+  return __stacktrace::_Entry::__entry_base(__entry).__write_to(__os);
 }
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
@@ -158,15 +158,17 @@ _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const stacktrace
 template <>
 struct hash<stacktrace_entry> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const stacktrace_entry& __entry) const noexcept {
-    return __stacktrace::_Entry::base(__entry).hash();
+    return __stacktrace::_Entry::__entry_base(__entry).__hash_code();
   }
 };
 
 namespace __stacktrace {
 
-_LIBCPP_HIDE_FROM_ABI inline _Entry& _Entry::base(stacktrace_entry& __entry) { return __entry.__base_; }
+_LIBCPP_HIDE_FROM_ABI inline _Entry& _Entry::__entry_base(stacktrace_entry& __entry) { return __entry.__base_; }
 
-_LIBCPP_HIDE_FROM_ABI inline _Entry const& _Entry::base(stacktrace_entry const& __entry) { return __entry.__base_; }
+_LIBCPP_HIDE_FROM_ABI inline _Entry const& _Entry::__entry_base(stacktrace_entry const& __entry) {
+  return __entry.__base_;
+}
 
 } // namespace __stacktrace
 
