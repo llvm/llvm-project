@@ -16,7 +16,7 @@ if (HLSL_ENABLE_DISTRIBUTION)
 endif()
 
 # Enable the offload test suite distribution. Produces a portable install
-# prefix containing the binaries and test data needed to run the HLSL
+# prefix containing the binaries, headers, and libs needed to run the HLSL
 # offload test suite on another machine. See the offload-test-suite repo
 # (docs/offload-distribution.md) for setup, prerequisites, and run
 # instructions.
