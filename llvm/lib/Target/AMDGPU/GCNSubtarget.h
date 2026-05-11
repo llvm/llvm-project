@@ -21,6 +21,7 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -359,10 +360,6 @@ public:
 
   bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
-  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
-
-  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
-
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
   }
@@ -428,6 +425,23 @@ public:
   }
 
   bool hasPrefetch() const { return HasGFX12Insts; }
+
+  bool hasInstPrefSize() const { return isGFX11Plus(); }
+
+  void getInstPrefSizeArgs(uint32_t &Mask, uint32_t &Shift, uint32_t &Width,
+                           uint32_t &CacheLineSize) const {
+    assert(isGFX11Plus());
+    CacheLineSize = getInstCacheLineSize();
+    if (getGeneration() == GFX11) {
+      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+    } else {
+      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+    }
+  }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -506,8 +520,6 @@ public:
   }
 
   bool hasMadF16() const;
-
-  bool hasMovB64() const { return HasGFX940Insts || HasGFX1250Insts; }
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return HasGFX1250Insts; }

@@ -5231,14 +5231,14 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
     "candidate template ignored: deduced values %diff{"
     "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
     "%1 and %3 of conflicting types for parameter %0}2,4">;
-def note_ovl_candidate_explicit_arg_mismatch_named : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0">;
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;
-def note_ovl_candidate_explicit_arg_mismatch_unnamed : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for %ordinal0 template parameter">;
+def note_ovl_candidate_explicit_arg_mismatch : Note<
+    "candidate template ignored: %enum_select<ExplicitArgMismatchReasonKind>{"
+    "%Vague{invalid explicitly-specified argument}|"
+    "%Detailed{%3}}2 for %enum_select<ExplicitArgMismatchNameKind>{"
+    "%Named{template parameter %1}|"
+    "%Unnamed{%ordinal1 template parameter}}0">;
 def note_ovl_candidate_instantiation_depth : Note<
     "candidate template ignored: substitution exceeded maximum template "
     "instantiation depth">;
@@ -11007,6 +11007,11 @@ def warn_lifetime_safety_dangling_global_moved
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
 
+def warn_lifetime_safety_param_lifetimebound_violation
+    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'}0">,
+      InGroup<LifetimeSafetyLifetimeboundViolation>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
@@ -12174,6 +12179,10 @@ def err_omp_declare_target_var_in_both_clauses
 def err_omp_declare_target_local_host_only
     : Error<"'local' clause is incompatible with 'device_type(host)'; "
             "local variables exist only on the device">;
+def warn_omp_declare_target_local_nohost
+    : Warning<"'device_type(nohost)' is not yet supported with 'local' clause; "
+              "treating as 'device_type(any)'">,
+      InGroup<OpenMPTarget>;
 def warn_omp_not_in_target_context : Warning<
   "declaration is not declared in any declare target region">,
   InGroup<OpenMPTarget>;
@@ -12596,11 +12605,6 @@ def err_omp_declare_target_has_local_vars : Error<
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
-def warn_omp_declare_target_local_not_implemented
-    : Warning<"'local' clause on 'declare_target' directive is not yet fully "
-              "implemented; "
-              "variable will be treated as 'enter'">,
-      InGroup<OpenMPTarget>;
 def err_omp_declare_variant_incompat_attributes : Error<
   "'#pragma omp declare variant' is not compatible with any target-specific attributes">;
 def warn_omp_declare_variant_score_not_constant

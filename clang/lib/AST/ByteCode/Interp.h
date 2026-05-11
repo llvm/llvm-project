@@ -3564,6 +3564,17 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool StartInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingBlocks.push_back(Ptr.block());
+  return true;
+}
+
+inline bool EndInit(InterpState &S, CodePtr OpPC) {
+  S.InitializingBlocks.pop_back();
+  return true;
+}
+
 // This is special-cased in the tablegen opcode emitter.
 // Its dispatch function will NOT call InterpNext
 // and instead simply return true.
@@ -3739,6 +3750,22 @@ inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
         << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
     return false;
   }
+  return true;
+}
+
+/// Check if the destination array we're initializing can hold the \p NumElems
+/// elements.
+inline bool CheckArrayDestSize(InterpState &S, CodePtr OpPC, size_t NumElems) {
+  if (!CheckArraySize(S, OpPC, NumElems))
+    return false;
+
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!Ptr.isUnknownSizeArray() && NumElems > Ptr.getNumElems()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_small)
+        << Ptr.getNumElems() << NumElems;
+    return false;
+  }
+
   return true;
 }
 

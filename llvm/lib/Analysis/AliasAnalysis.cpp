@@ -458,20 +458,48 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
 // Helper method implementation
 //===----------------------------------------------------------------------===//
 
+/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
+/// than monotonic atomic load/store.
+static ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                 AAQueryInfo &AAQI) {
+  if (!Loc.Ptr)
+    return ModRefInfo::ModRef;
+
+  // If the location is *never* captured, it cannot be affected by
+  // synchronizing operations. However, we cannot ignore locations that are
+  // only captured after the operation, as the synchronization may still have
+  // an effect if the object is only captured *later*. As such, set I to null
+  // and ReturnCaptures to true here.
+  const Value *Obj = getUnderlyingObject(Loc.Ptr);
+  if (capturesNothing(AAQI.CA->getCapturesBefore(
+          Obj, /*I=*/nullptr, /*OrAt=*/true, /*ReturnCaptures=*/true)))
+    return ModRefInfo::NoModRef;
+
+  // If Loc is a constant memory location, the synchronization operation
+  // definitely could not modify it.
+  return AA->getModRefInfoMask(Loc);
+}
+
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Be conservative in the face of atomic.
-  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
-    return ModRefInfo::ModRef;
-
   // If the load address doesn't alias the given address, it doesn't read
   // or write the specified memory.
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(L), Loc, AAQI, L);
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      // FIXME: Should be isStrongerThanMonotonic().
+      if (isStrongerThanUnordered(L->getOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
   }
+
+  // Preserve the ordering requirement.
+  if (isStrongerThanUnordered(L->getOrdering()))
+    return ModRefInfo::ModRef;
+
   // Otherwise, a load just reads.
   return ModRefInfo::Ref;
 }
@@ -479,16 +507,17 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Be conservative in the face of atomic.
-  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
-    return ModRefInfo::ModRef;
-
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(S), Loc, AAQI, S);
     // If the store address cannot alias the pointer in question, then the
     // specified memory cannot be modified by the store.
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      // FIXME: Should be isStrongerThanMonotonic().
+      if (isStrongerThanUnordered(S->getOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
 
     // Examine the ModRef mask. If Mod isn't present, then return NoModRef.
     // This ensures that if Loc is a constant memory location, we take into
@@ -497,6 +526,10 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
     if (!isModSet(getModRefInfoMask(Loc)))
       return ModRefInfo::NoModRef;
   }
+
+  // Preserve the ordering requirement.
+  if (isStrongerThanUnordered(S->getOrdering()))
+    return ModRefInfo::ModRef;
 
   // Otherwise, a store just writes.
   return ModRefInfo::Mod;
@@ -515,14 +548,9 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *F,
         return ModRefInfo::NoModRef;
     }
 
-    // Apply the ModRef mask. This ensures that if Loc is a constant memory
-    // location, we take into account the fact that the fence definitely could
-    // not modify the memory location.
-    if (!isNoModRef(Result))
-      Result &= getModRefInfoMask(Loc);
-
-    return Result;
+    return Result & getSyncEffects(this, Loc, AAQI);
   }
+
   return ModRefInfo::ModRef;
 }
 
@@ -574,16 +602,16 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Acquire/Release cmpxchg has properties that matter for arbitrary addresses.
-  if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
-    return ModRefInfo::ModRef;
-
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(CX), Loc, AAQI, CX);
     // If the cmpxchg address does not alias the location, it does not access
     // it.
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
   }
 
   return ModRefInfo::ModRef;
@@ -592,16 +620,16 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Acquire/Release atomicrmw has properties that matter for arbitrary addresses.
-  if (isStrongerThanMonotonic(RMW->getOrdering()))
-    return ModRefInfo::ModRef;
-
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(RMW), Loc, AAQI, RMW);
     // If the atomicrmw address does not alias the location, it does not access
     // it.
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      if (isStrongerThanMonotonic(RMW->getOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
   }
 
   return ModRefInfo::ModRef;

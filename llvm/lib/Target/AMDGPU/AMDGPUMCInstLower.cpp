@@ -320,6 +320,9 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall())
+    collectCallEdge(*MI);
+
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
   //                                        getSubtargetInfo().getFeatureBits());
