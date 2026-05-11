@@ -25,7 +25,7 @@ namespace __stacktrace {
 
 #if _LIBCPP_HAS_LOCALIZATION
 
-_LIBCPP_HIDE_FROM_ABI ostream& _Entry::__write_to(ostream& __os) const {
+ostream& _Entry::__write_to(ostream& __os) const {
   // printf-style format to a small buffer, to avoid messing with stream (with `setw` etc.)
   char ubuf[25]{};
   if constexpr (sizeof(void*) > 4) {
@@ -52,7 +52,7 @@ _LIBCPP_HIDE_FROM_ABI ostream& _Entry::__write_to(ostream& __os) const {
   return __os;
 }
 
-_LIBCPP_HIDE_FROM_ABI string _Entry::__to_string() const {
+string _Entry::__to_string() const {
   stringstream __ss;
   __write_to(__ss);
   return __ss.str();
@@ -65,7 +65,7 @@ uintptr_t _Entry::__adjusted_addr() const {
   return __addr_ - sub;
 }
 
-_LIBCPP_HIDE_FROM_ABI size_t _Entry::__hash_code() const { return std::__hash_memory(&__addr_, sizeof(uintptr_t)); }
+size_t _Entry::__hash_code() const { return std::__hash_memory(&__addr_, sizeof(uintptr_t)); }
 
 } // namespace __stacktrace
 
