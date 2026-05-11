@@ -3363,9 +3363,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Pop all cleanup blocks at the end of the asm statement.
   CodeGenFunction::RunCleanupsScope Cleanups(*this);
 
-  // Assemble the final asm string.
-  std::string AsmString = S.generateAsmString(getContext());
-
   // Get all the output and input constraints together.
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
   SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
