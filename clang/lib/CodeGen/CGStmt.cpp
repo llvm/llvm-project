@@ -2657,9 +2657,6 @@ struct AsmConstraintsInfo {
   bool ReadOnly = true;
   bool ReadNone = true;
 
-  // Prefer to use registers to memory for constraints that allow both.
-  bool PreferRegs = false;
-
   AsmConstraintsInfo(
       SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
       SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos)
@@ -3241,13 +3238,11 @@ bool CodeGenFunction::HandleClobbers(const AsmStmt &S,
 void CodeGenFunction::EmitAsmStmt(
     const AsmStmt &S,
     SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos,
-    bool PreferRegs) {
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos) {
   // Assemble the final asm string.
   std::string AsmString = S.generateAsmString(getContext());
 
   AsmConstraintsInfo AsmInfo(OutputConstraintInfos, InputConstraintInfos);
-  AsmInfo.PreferRegs = PreferRegs;
 
   // Handle output constraints.
   HandleOutputConstraints(S, AsmInfo);
@@ -3378,7 +3373,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                                     InputConstraintInfos))
     return EmitHipStdParUnsupportedAsm(this, S);
 
-  EmitAsmStmt(S, OutputConstraintInfos, InputConstraintInfos, false);
+  EmitAsmStmt(S, OutputConstraintInfos, InputConstraintInfos);
 }
 
 LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {

@@ -5496,8 +5496,7 @@ private:
   void EmitAsmStmt(
       const AsmStmt &S,
       SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos,
-      bool PreferRegs);
+      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
   void EmitAsmStores(const AsmStmt &S,
                      const llvm::ArrayRef<llvm::Value *> RegResults,
                      const AsmConstraintsInfo &AsmInfo);
