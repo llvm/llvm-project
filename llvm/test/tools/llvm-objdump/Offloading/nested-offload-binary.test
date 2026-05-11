@@ -1,7 +1,7 @@
 ## Test that llvm-objdump can display nested OffloadBinary images.
 
 # RUN: yaml2obj %S/Inputs/inner.yaml -o %t-inner.bin
-# RUN: %python -c "import sys; hex = open('%t-inner.bin', 'rb').read().hex(); test = open('%/s', 'r').read(); sys.stdout.write(test.replace('INNER_IMAGE', hex))" | yaml2obj - -o %t.bin
+# RUN: %python -c "import sys; hex = open('%/t-inner.bin', 'rb').read().hex(); test = open('%/s', 'r').read(); sys.stdout.write(test.replace('INNER_IMAGE', hex))" | yaml2obj - -o %t.bin
 # RUN: llvm-objdump --offloading %t.bin | FileCheck --match-full-lines --strict-whitespace --implicit-check-not={{.}} %s
 
 !Offload
