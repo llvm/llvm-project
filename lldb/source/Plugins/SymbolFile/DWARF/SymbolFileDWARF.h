@@ -321,6 +321,8 @@ public:
 
   StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
 
+  ModuleSpecList GetSeparateDebugInfoModuleSpecs() override;
+
   void ResetStatistics() override;
 
   virtual lldb::offset_t

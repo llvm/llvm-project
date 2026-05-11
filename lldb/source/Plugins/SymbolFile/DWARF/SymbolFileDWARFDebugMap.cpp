@@ -13,6 +13,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
@@ -1325,6 +1326,31 @@ bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
             std::make_shared<StructuredData::Array>(
                 std::move(separate_debug_info_files)));
   return true;
+}
+
+ModuleSpecList SymbolFileDWARFDebugMap::GetSeparateDebugInfoModuleSpecs() {
+  ModuleSpecList specs;
+  const uint32_t cu_count = GetNumCompileUnits();
+  for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
+    const auto &info = m_compile_unit_infos[cu_idx];
+    if (!info.oso_path)
+      continue;
+
+    ModuleSpec spec;
+    FileSpec oso_file;
+    ConstString oso_object;
+    if (ObjectFile::SplitArchivePathWithObject(
+            info.oso_path.GetStringRef(), oso_file, oso_object,
+            /*must_exist=*/false)) {
+      spec.GetFileSpec() = oso_file;
+      spec.GetObjectName() = oso_object;
+    } else {
+      spec.GetFileSpec() = FileSpec(info.oso_path.GetStringRef());
+    }
+    spec.GetObjectModificationTime() = info.oso_mod_time;
+    specs.Append(spec);
+  }
+  return specs;
 }
 
 lldb::CompUnitSP

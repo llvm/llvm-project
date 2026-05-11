@@ -666,6 +666,22 @@ lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
   return sb_addr;
 }
 
+lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBModuleSpecList sb_mspec_list;
+  ModuleSP module_sp(GetSP());
+  if (!module_sp)
+    return sb_mspec_list;
+
+  SymbolFile *sym_file = module_sp->GetSymbolFile();
+  if (!sym_file)
+    return sb_mspec_list;
+  
+  sb_mspec_list.ref() = sym_file->GetSeparateDebugInfoModuleSpecs();
+  return sb_mspec_list;
+}
+
 uint32_t SBModule::GetNumberAllocatedModules() {
   LLDB_INSTRUMENT();
 

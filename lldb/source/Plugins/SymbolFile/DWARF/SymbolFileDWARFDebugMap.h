@@ -136,6 +136,8 @@ public:
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
 
+  ModuleSpecList GetSeparateDebugInfoModuleSpecs() override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 

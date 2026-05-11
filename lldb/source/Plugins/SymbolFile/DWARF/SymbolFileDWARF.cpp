@@ -4560,6 +4560,47 @@ StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {
   return {};
 }
 
+ModuleSpecList SymbolFileDWARF::GetSeparateDebugInfoModuleSpecs() {
+  ModuleSpecList specs;
+
+  // Check if a .dwp file exists using LLDB's built-in DWP discovery.
+  if (const auto &dwp_sp = GetDwpSymbolFile()) {
+    if (ObjectFile *dwp_obj = dwp_sp->GetObjectFile()) {
+      specs.Append(ModuleSpec(dwp_obj->GetFileSpec()));
+      return specs;
+    }
+  }
+
+  // No DWP — collect individual DWO file paths from the skeleton CUs.
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  for (size_t cu_idx = 0; cu_idx < num_cus; cu_idx++) {
+    DWARFUnit *unit = info.GetUnitAtIndex(cu_idx);
+    DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(unit);
+    if (!dwarf_cu || !dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+    if (!die)
+      continue;
+
+    const char *dwo_name = GetDWOName(*dwarf_cu, *die.GetDIE());
+    if (!dwo_name)
+      continue;
+
+    FileSpec dwo_file(dwo_name);
+    if (!dwo_file.IsAbsolute()) {
+      const char *comp_dir = 
+        die.GetDIE()->GetAttributeValueAsString(dwarf_cu, 
+          DW_AT_comp_dir, nullptr);
+      if (comp_dir)
+        dwo_file.PrependPathComponent(comp_dir);
+    }
+    specs.Append(ModuleSpec(dwo_file));
+  }
+  return specs;
+}
+
 void SymbolFileDWARF::ResetStatistics() {
   m_parse_time.reset();
   if (m_index)

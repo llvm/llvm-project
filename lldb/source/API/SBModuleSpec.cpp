@@ -269,3 +269,5 @@ bool SBModuleSpecList::GetDescription(lldb::SBStream &description) {
   m_opaque_up->Dump(description.ref());
   return true;
 }
+
+ModuleSpecList &SBModuleSpecList::ref() { return *m_opaque_up; }

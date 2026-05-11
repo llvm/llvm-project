@@ -135,6 +135,8 @@ public:
   bool GetDescription(lldb::SBStream &description);
 
 private:
+  friend class SBModule;
+  lldb_private::ModuleSpecList &ref();
   std::unique_ptr<lldb_private::ModuleSpecList> m_opaque_up;
 };
 
