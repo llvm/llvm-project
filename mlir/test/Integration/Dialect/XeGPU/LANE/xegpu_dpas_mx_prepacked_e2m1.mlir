@@ -35,8 +35,10 @@ module @gemm attributes {gpu.container_module} {
       %flat_scale_a = memref.reshape %scale_a(%flat_scale_a_shape) : (memref<8x2xf8E8M0FNU>, memref<1xi32>) -> memref<16xf8E8M0FNU>
       %id_x = gpu.thread_id x
       %idx_x = vector.broadcast %id_x : index to vector<1xindex>
+      %c16 = arith.constant dense<16> : vector<1xindex>
+      %idx2_x = arith.remui %idx_x, %c16 : vector<1xindex>
       %c2 = arith.constant dense <2> : vector<1xindex>
-      %first_idx = arith.muli %idx_x, %c2 : vector<1xindex>
+      %first_idx = arith.muli %idx2_x, %c2 : vector<1xindex>
       %true_mask = arith.constant dense <1> : vector<1xi1>
       %first = xegpu.load %flat_scale_a[%first_idx], %true_mask : memref<16xf8E8M0FNU>, vector<1xindex>, vector<1xi1> -> vector<1xf8E8M0FNU>
       %c1 = arith.constant dense <1> : vector<1xindex>
