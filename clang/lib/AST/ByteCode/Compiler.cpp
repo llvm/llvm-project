@@ -2665,6 +2665,13 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   }
 
   if (!isa<FieldDecl>(Member)) {
+    // A non-static member function access only makes sense as part of the
+    // enclosing call here. Don't try to evaluate it in isolation.
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(Member);
+        MD && !MD->isStatic()) {
+      return false;
+    }
+
     if (!this->discard(Base) && !this->emitSideEffect(E))
       return false;
 
@@ -5149,6 +5156,15 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::visitLValueExpr(const Expr *E,
+                                        bool DestroyToplevelScope) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/true);
+
+  return this->visitExpr(E, DestroyToplevelScope);
+}
+
+template <class Emitter>
 VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
 
   auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true);
@@ -5291,7 +5307,13 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     if (!this->emitGetPtrGlobal(*GlobalIndex, Init))
       return false;
 
+    if (!this->emitStartInit(Init))
+      return false;
+
     if (!visitInitializer(Init))
+      return false;
+
+    if (!this->emitEndInit(Init))
       return false;
 
     return this->emitFinishInitGlobal(Init);

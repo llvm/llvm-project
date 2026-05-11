@@ -148,7 +148,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
 
-      if (UndefBehavior == UndefValueBehavior::NonDeterministic) {
+      if (getEffectiveUndefValueBehavior() ==
+          UndefValueBehavior::NonDeterministic) {
         // We don't use std::uniform_int_distribution here because it produces
         // different results across different library implementations. Instead,
         // we directly use the low bits from Rng.
@@ -396,7 +397,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
   if (Val.isPoison()) {
     uint32_t Bits = DL.getTypeSizeInBits(Ty);
     APInt RandomVal = APInt::getZero(Bits);
-    if (UndefBehavior == UndefValueBehavior::NonDeterministic) {
+    if (mayUseNonDeterminism()) {
       SmallVector<APInt::WordType> RandomWords;
       uint32_t NumWords = APInt::getNumWords(Bits);
       RandomWords.reserve(NumWords);
@@ -404,7 +405,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
                         std::numeric_limits<APInt::WordType>::digits,
                     "Unexpected Rng result type.");
       for (uint32_t I = 0; I != NumWords; ++I)
-        RandomWords.push_back(static_cast<APInt::WordType>(Rng()));
+        RandomWords.push_back(static_cast<APInt::WordType>(getRandomUInt64()));
       RandomVal = APInt(Bits, RandomWords);
     }
     if (Ty->isIntegerTy())
@@ -517,6 +518,51 @@ uint64_t Context::getEffectiveTypeAllocSize(Type *Ty) {
 }
 uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
   return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
+}
+
+RoundingMode Context::getCurrentRoundingMode() const {
+  return CurrentRoundingMode;
+}
+
+fp::ExceptionBehavior Context::getCurrentExceptionBehavior() const {
+  return CurrentExceptionBehavior;
+}
+
+void Context::setCurrentRoundingMode(RoundingMode RM) {
+  CurrentRoundingMode = RM;
+}
+
+void Context::setCurrentExceptionBehavior(fp::ExceptionBehavior EB) {
+  CurrentExceptionBehavior = EB;
+}
+
+bool Context::isDefaultFPEnv() const {
+  return isDefaultFPEnvironment(CurrentExceptionBehavior, CurrentRoundingMode);
+}
+
+UndefValueBehavior Context::getEffectiveUndefValueBehavior() const {
+  if (isDeterministic())
+    return UndefValueBehavior::Zero;
+  return UndefBehavior;
+}
+
+NaNPropagationBehavior Context::getEffectiveNaNPropagationBehavior() const {
+  if (isDeterministic())
+    return NaNPropagationBehavior::PreferredNaN;
+  return NaNBehavior;
+}
+
+bool Context::getRandomBool() {
+  // We use the lowest bit of the raw bits from RNG as the result:
+  if (mayUseNonDeterminism())
+    return static_cast<bool>(Rng() & 1);
+  return false;
+}
+
+uint64_t Context::getRandomUInt64() {
+  if (mayUseNonDeterminism())
+    return Rng();
+  return 0;
 }
 
 void MemoryObject::markAsFreed() {

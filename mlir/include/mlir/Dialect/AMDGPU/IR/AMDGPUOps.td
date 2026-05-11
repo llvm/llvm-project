@@ -1637,9 +1637,6 @@ class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
                    Variadic<Index>:$lds_indices)>,
     Results<(outs outType: $base)> {
 
-  // TODO:
-  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
-
   let assemblyFormat = [{
     $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
   }];

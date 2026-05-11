@@ -2502,6 +2502,17 @@ For example:
     This attribute by itself does not imply restrictions on
     inter-procedural optimizations.  All of the semantic effects the
     patching may have to be separately conveyed via the linkage type.
+``"patchable-function-prefix"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted before the function entry label.
+``"patchable-function-entry"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted after the function entry label.  These NOPs are emitted before the
+    function prologue.
+``"patchable-function-entry-section"``
+    This attribute specifies the section used to record the start of the
+    patchable function entry area when such a section is emitted.  If omitted,
+    the default section name is ``__patchable_function_entries``.
 ``"probe-stack"``
     This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
@@ -21080,11 +21091,12 @@ matches the element-type of the vector input.
 This instruction has the same comparison and ``nsz`` semantics as the
 '``llvm.maxnum.*``' intrinsic.
 
-If any of the vector elements is a signaling NaN, the intrinsic will
-non-deterministically either:
+The reduction is performed in a non-deterministic order. This is only observable
+if one of the inputs is a signaling NaN.
 
- * Return a :ref:`NaN <floatnan>`.
- * Treat the signaling NaN as a quiet NaN.
+For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+which order is picked.
 
 Arguments:
 """"""""""
@@ -21114,11 +21126,12 @@ matches the element-type of the vector input.
 This instruction has the same comparison and ``nsz`` semantics as the
 '``llvm.minnum.*``' intrinsic.
 
-If any of the vector elements is a signaling NaN, the intrinsic will
-non-deterministically either:
+The reduction is performed in a non-deterministic order. This is only observable
+if one of the inputs is a signaling NaN.
 
- * Return a :ref:`NaN <floatnan>`.
- * Treat the signaling NaN as a quiet NaN.
+For example, if a reduction is performed over ``<sNaN, 0.0, 1.0>``, then all of
+:ref:`NaN <floatnan>`, ``0.0`` and ``1.0`` are possible results, depending on
+which order is picked.
 
 Arguments:
 """"""""""
