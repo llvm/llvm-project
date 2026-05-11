@@ -134,8 +134,68 @@ static GlobalVariable *embedBitcode(Module &M, const std::string &Bitcode) {
   return GV;
 }
 
+/// Collect external symbols (functions + globals) referenced by the
+/// closure and generate ejit_register_symbol calls so the JIT can resolve
+/// them without dlsym — suitable for bare-metal embedded environments.
+static void generateSymbolRegisters(
+    Module &M,
+    const SetVector<Function *> &ClosureFuncs,
+    Function *AutoReg) {
+  LLVMContext &Ctx = M.getContext();
+  auto *VoidTy = Type::getVoidTy(Ctx);
+  auto *PtrTy = PointerType::getUnqual(Ctx);
+
+  M.getOrInsertFunction("ejit_register_symbol",
+      FunctionType::get(VoidTy, {PtrTy, PtrTy}, false));
+
+  std::set<std::string> registered;
+
+  auto isPeriodVar = [&](GlobalVariable &GV) -> bool {
+    return GV.hasMetadata(MD_EJIT_METADATA);
+  };
+
+  BasicBlock *BB = &AutoReg->getEntryBlock();
+  Instruction *InsertBefore = BB->getTerminator();
+
+  for (Function *F : ClosureFuncs) {
+    for (BasicBlock &Blk : *F) {
+      for (Instruction &I : Blk) {
+        // External function calls
+        if (auto *CI = dyn_cast<CallInst>(&I)) {
+          if (Function *Callee = CI->getCalledFunction()) {
+            if (Callee->isDeclaration() && !Callee->isIntrinsic()) {
+              std::string Name = Callee->getName().str();
+              if (registered.insert(Name).second) {
+                IRBuilder<> Builder(InsertBefore);
+                Builder.CreateCall(M.getFunction("ejit_register_symbol"),
+                    {Builder.CreateGlobalString(Name),
+                     Builder.CreateBitCast(Callee, PtrTy)});
+              }
+            }
+          }
+        }
+        // External global variable references
+        for (Use &U : I.operands()) {
+          if (auto *GV = dyn_cast<GlobalVariable>(U.get())) {
+            if (GV->isDeclaration() || !isPeriodVar(*GV)) {
+              std::string Name = GV->getName().str();
+              if (registered.insert(Name).second) {
+                IRBuilder<> Builder(InsertBefore);
+                Builder.CreateCall(M.getFunction("ejit_register_symbol"),
+                    {Builder.CreateGlobalString(Name),
+                     Builder.CreateBitCast(GV, PtrTy)});
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
-                                 const SmallVectorImpl<Function *> &EntryFuncs) {
+                                 const SmallVectorImpl<Function *> &EntryFuncs,
+                                 const SetVector<Function *> &ClosureFuncs) {
   LLVMContext &Ctx = M.getContext();
   auto *VoidTy = Type::getVoidTy(Ctx);
   auto *PtrTy = PointerType::getUnqual(Ctx);
@@ -166,6 +226,10 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
     });
   }
 
+  // Auto-register external symbols referenced by the closure so the JIT
+  // can resolve them without manual ejit_register_symbol calls.
+  generateSymbolRegisters(M, ClosureFuncs, AutoReg);
+
   appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 }
 
@@ -184,7 +248,7 @@ EJitRegisterBitcodePass::run(Module &M, ModuleAnalysisManager &) {
 
   std::string Bitcode = extractAndSerialize(M, ClosureFuncs, ClosureGlobals);
   GlobalVariable *BitcodeGV = embedBitcode(M, Bitcode);
-  generateRegisterCall(M, BitcodeGV, EntryFuncs);
+  generateRegisterCall(M, BitcodeGV, EntryFuncs, ClosureFuncs);
 
   return PreservedAnalyses::none();
 }

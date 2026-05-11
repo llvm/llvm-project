@@ -36,10 +36,16 @@ struct StaticVarEntry {
   void *varAddr;
 };
 
+struct SymbolEntry {
+  std::string name;
+  void *addr;
+};
+
 struct StoredData {
   std::vector<BitcodeEntry> bitcodes;
   std::vector<PeriodArrayEntry> periodArrays;
   std::vector<StaticVarEntry> staticVars;
+  std::vector<SymbolEntry> userSymbols;
 };
 
 /// Process-global singleton staging area for data passed from
@@ -54,6 +60,7 @@ public:
                            const std::string &varName,
                            void *baseAddr, uint64_t arraySize);
   void registerStaticVar(const std::string &varName, void *varAddr);
+  void registerSymbol(const std::string &name, void *addr);
 
   /// Consume and clear all stored registration data.
   StoredData consume();
@@ -65,6 +72,7 @@ private:
   std::vector<BitcodeEntry> bitcodes_;
   std::vector<PeriodArrayEntry> periodArrays_;
   std::vector<StaticVarEntry> staticVars_;
+  std::vector<SymbolEntry> userSymbols_;
 };
 
 } // namespace ejit

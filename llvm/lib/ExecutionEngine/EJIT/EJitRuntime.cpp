@@ -50,6 +50,15 @@ void ejit_shutdown(void) {
   gEJIT = nullptr;
 }
 
+void ejit_register_symbol(const char *name, void *addr) {
+  if (gEJIT) {
+    gEJIT->registerSymbol(name, addr);
+  } else {
+    // Constructor-phase call (before ejit_init): stage for later consumption.
+    EJitRegistrationStore::instance().registerSymbol(name, addr);
+  }
+}
+
 ejit_status_t ejit_activate(const char *periodName, uint8_t cellIdx) {
   if (!gEJIT)
     return EJIT_ERR_NOT_ACTIVE;

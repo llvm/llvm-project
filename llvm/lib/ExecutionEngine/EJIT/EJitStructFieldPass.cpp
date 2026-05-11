@@ -241,7 +241,7 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
           continue;
 
         // Resolve which GV the load reads from (direct or via ptr-array GEP).
-        Value *LoadPtr = BaseLoad->getPointerOperand()->stripPointerCasts();
+        const Value *LoadPtr = BaseLoad->getPointerOperand()->stripPointerCasts();
         const GlobalVariable *PtrGV = nullptr;
         uint64_t ptrArrayByteOff = 0;
 

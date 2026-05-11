@@ -28,14 +28,22 @@ void EJitRegistrationStore::registerStaticVar(const std::string &varName,
   staticVars_.push_back({varName, varAddr});
 }
 
+void EJitRegistrationStore::registerSymbol(const std::string &name,
+                                            void *addr) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  userSymbols_.push_back({name, addr});
+}
+
 StoredData EJitRegistrationStore::consume() {
   std::lock_guard<std::mutex> lock(mutex_);
   StoredData data;
   data.bitcodes = std::move(bitcodes_);
   data.periodArrays = std::move(periodArrays_);
   data.staticVars = std::move(staticVars_);
+  data.userSymbols = std::move(userSymbols_);
   bitcodes_.clear();
   periodArrays_.clear();
   staticVars_.clear();
+  userSymbols_.clear();
   return data;
 }

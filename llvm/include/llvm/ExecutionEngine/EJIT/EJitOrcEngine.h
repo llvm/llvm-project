@@ -62,6 +62,11 @@ public:
 
   EJitJITLinkMemoryManager *getMemoryManager() const;
 
+  /// Register a user-defined external symbol (function or global) that the
+  /// JIT can resolve when compiling bitcode modules. Required for bare-metal
+  /// environments where dynamic symbol lookup is unavailable.
+  void addUserSymbol(const std::string &name, void *addr);
+
 private:
   struct Impl;
   std::unique_ptr<Impl> P;

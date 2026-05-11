@@ -72,6 +72,9 @@ typedef struct {
 ejit_status_t ejit_init(const ejit_config_t *config);
 void ejit_shutdown(void);
 
+// Symbol registration for bare-metal (no dlsym)
+void ejit_register_symbol(const char *name, void *addr);
+
 // Lifecycle
 ejit_status_t ejit_activate(const char *periodName, uint8_t cellIdx);
 ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx);

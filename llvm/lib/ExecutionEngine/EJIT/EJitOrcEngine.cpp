@@ -28,6 +28,9 @@ struct EJitOrcEngine::Impl {
   /// independently compiled and symbols from different specializations
   /// never conflict.
   std::map<std::string, orc::JITDylib *> specDylibs;
+  /// User-registered symbols (functions + globals) for bare-metal.
+  /// Populated via ejit_register_symbol() / addUserSymbol().
+  std::map<std::string, void *> userSymbols;
 };
 
 EJitOrcEngine::EJitOrcEngine() : P(std::make_unique<Impl>()) {}
@@ -170,8 +173,37 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   if (!JDOrErr)
     return JDOrErr.takeError();
 
-  // Define global symbols directly in the spec JITDylib so the linker
-  // can resolve external global references.
+  // Resolve undefined function symbols from user-registered table.
+  // Required for bare-metal where dynamic lookup (dlsym) is unavailable.
+  for (Function &F : (*ModuleOrErr)->functions()) {
+    if (!F.isDeclaration() || F.getName().empty())
+      continue;
+    std::string name = F.getName().str();
+    if (globalSymbols.count(P->J->mangleAndIntern(name)))
+      continue;
+    auto it = P->userSymbols.find(name);
+    if (it == P->userSymbols.end())
+      continue;
+    globalSymbols[P->J->mangleAndIntern(name)] =
+        orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(it->second),
+                               JITSymbolFlags::Exported);
+  }
+  for (GlobalVariable &GV : (*ModuleOrErr)->globals()) {
+    if (!GV.isDeclaration() || GV.getName().empty())
+      continue;
+    std::string name = GV.getName().str();
+    if (globalSymbols.count(P->J->mangleAndIntern(name)))
+      continue;
+    auto it = P->userSymbols.find(name);
+    if (it == P->userSymbols.end())
+      continue;
+    globalSymbols[P->J->mangleAndIntern(name)] =
+        orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(it->second),
+                               JITSymbolFlags::Exported);
+  }
+
+  // Define all collected symbols in the spec JITDylib before loading the
+  // IR module so the JIT linker can resolve external references.
   if (!globalSymbols.empty())
     (void)JDOrErr->define(orc::absoluteSymbols(std::move(globalSymbols)));
 
@@ -208,3 +240,9 @@ const SpecializationContext *EJitOrcEngine::getActiveContext() const {
 EJitJITLinkMemoryManager *EJitOrcEngine::getMemoryManager() const {
   return nullptr; // Using default LLJIT memory manager
 }
+
+void EJitOrcEngine::addUserSymbol(const std::string &name, void *addr) {
+  P->userSymbols[name] = addr;
+}
+// DEBUG
+#include <cstdio>

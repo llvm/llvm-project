@@ -52,6 +52,10 @@ public:
   void setOptimizationLevel(OptimizationLevel level);
   OptimizationLevel getOptimizationLevel() const;
 
+  /// Register a user-defined external symbol for JIT resolution.
+  /// Required for bare-metal where dlsym is unavailable.
+  void registerSymbol(const std::string &name, void *addr);
+
   // Registry access (for C API validation)
   const PeriodArrayRegistry &getRegistry() const { return runtimeState_->getRegistry(); }
 

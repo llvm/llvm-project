@@ -54,6 +54,9 @@ public:
 
   void setSyncEngine(std::unique_ptr<EJitOrcEngine> engine);
 
+  /// Register a user-defined symbol for JIT resolution (bare-metal).
+  void registerSymbol(const std::string &name, void *addr);
+
 private:
   const Config &config_;
   EJitCache &cache_;

@@ -44,9 +44,12 @@ EJit::EJit(const Config &config) : config_(config) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
   auto engine = EJitOrcEngine::Create(config, reg, *runtimeState_);
-  if (engine)
+  if (engine) {
+    // Forward auto-registered user symbols to the engine.
+    for (auto &sym : data.userSymbols)
+      (*engine)->addUserSymbol(sym.name, sym.addr);
     compileDriver_->setSyncEngine(std::move(*engine));
-  else {
+  } else {
     std::string errStr;
     llvm::handleAllErrors(engine.takeError(),
                           [&](const llvm::ErrorInfoBase &E) { errStr = E.message(); });
@@ -110,6 +113,11 @@ void EJit::invalidateAllByPeriod(const std::string &periodName) {
     for (size_t i = 0; i < info.arraySize; i++)
       cache_->invalidateByPeriod(periodName, static_cast<uint8_t>(i));
   }
+}
+
+void EJit::registerSymbol(const std::string &name, void *addr) {
+  if (compileDriver_)
+    compileDriver_->registerSymbol(name, addr);
 }
 
 void EJit::setCompileMode(CompileMode mode) {

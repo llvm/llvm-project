@@ -23,6 +23,11 @@ void EJitCompileDriver::setSyncEngine(std::unique_ptr<EJitOrcEngine> engine) {
   syncEngine_ = std::move(engine);
 }
 
+void EJitCompileDriver::registerSymbol(const std::string &name, void *addr) {
+  if (syncEngine_)
+    syncEngine_->addUserSymbol(name, addr);
+}
+
 void *EJitCompileDriver::getOrCompile(
     const std::string &funcName,
     const std::pair<std::string, uint8_t> *dims,
