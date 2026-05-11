@@ -13,7 +13,6 @@
 #include <string>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <iomanip>
 #  include <iostream>
 #  include <sstream>
 #endif //_LIBCPP_HAS_LOCALIZATION
@@ -30,18 +29,31 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& _Entry::__write_to(ostream& __os) const {
   // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
 
-  // TODO: should not use os with `hex` etc.
+  // printf-style format to a small buffer, to avoid messing with stream (with `setw` etc.)
+  char ubuf[25]{};
+  switch (__k_addr_width) {
+  case 8:
+    snprintf(ubuf, sizeof(ubuf) - 1, "0x%08lx", uintptr_t(__addr_));
+    break;
+  case 12:
+    snprintf(ubuf, sizeof(ubuf) - 1, "0x%012llx", uint64_t(__addr_));
+    break;
+  }
+  __os << ubuf;
 
-  __os << "0x" << std::hex << std::setfill('0') << std::setw(__k_addr_width) << __addr_;
   if (__desc_.__view().size()) {
     __os << ": " << __desc_.__view();
   }
+
   if (__file_.__view().size()) {
     __os << ": " << __file_.__view();
   }
+
   if (__line_) {
-    __os << ":" << std::dec << __line_;
+    snprintf(ubuf, sizeof(ubuf) - 1, "%u", __line_);
+    __os << ":" << ubuf;
   }
+
   return __os;
 }
 
