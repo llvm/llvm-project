@@ -457,7 +457,7 @@ def simm16_lsl2 : Operand<GRLenVT>,
 def simm16_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
-  let DecoderMethod = "decodeSImmOperand<16, 2>";
+  let DecoderMethod = "decodeSImmOperand<16, 2, true>";
 }
 
 class SImm20Operand : Operand<GRLenVT> {
@@ -502,7 +502,7 @@ def simm21_lsl2 : Operand<OtherVT> {
 def simm21_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
-  let DecoderMethod = "decodeSImmOperand<21, 2>";
+  let DecoderMethod = "decodeSImmOperand<21, 2, true>";
 }
 
 def SImm26OperandB: AsmOperandClass {
@@ -517,7 +517,7 @@ def SImm26OperandB: AsmOperandClass {
 def simm26_b : Operand<OtherVT> {
   let ParserMatchClass = SImm26OperandB;
   let EncoderMethod = "getImmOpValueAsr<2>";
-  let DecoderMethod = "decodeSImmOperand<26, 2>";
+  let DecoderMethod = "decodeSImmOperand<26, 2, true>";
 }
 
 def SImm26OperandBL: AsmOperandClass {
@@ -532,7 +532,7 @@ def SImm26OperandBL: AsmOperandClass {
 def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
   let EncoderMethod = "getImmOpValueAsr<2>";
-  let DecoderMethod = "decodeSImmOperand<26, 2>";
+  let DecoderMethod = "decodeSImmOperand<26, 2, true>";
 }
 
 // A 32-bit signed immediate with the lowest 16 bits zeroed, suitable for
