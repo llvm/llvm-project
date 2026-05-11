@@ -4,19 +4,19 @@ namespace std {
   class type_info {};
 }
 
-struct Poly {
+struct Base {
   virtual int foo() { return 42; }
-  virtual ~Poly();
+  virtual ~Base();
 };
 
-struct Derived : Poly {};
-struct Final final : Poly {
+struct NonFinal : Base {};
+struct Final final : Base {
     int foo() override { return 84; }
 };
 
 // Most derived
-void value(Poly p) { typeid(p); }
-// CHECK-LABEL: define {{.*}}void @_Z5value4Poly
+void base_by_value(Base b) { typeid(b); }
+// CHECK-LABEL: define {{.*}}void @_Z13base_by_value4Base
 // CHECK-NOT:   %vtable
 // CHECK:       ret void
 
@@ -33,25 +33,25 @@ void final_deref(Final *f) { typeid(*f); }
 // CHECK:       ret void
 
 // Not most derived
-void poly_ref(Poly &p) { typeid(p); }
-// CHECK-LABEL: define {{.*}}void @_Z8poly_refR4Poly
+void base_ref(Base &b) { typeid(b); }
+// CHECK-LABEL: define {{.*}}void @_Z8base_refR4Base
 // CHECK:       %vtable
 // CHECK:       ret void
 
 // Not most derived
-void poly_deref(Poly *p) { typeid(*p); }
-// CHECK-LABEL: define {{.*}}void @_Z10poly_derefP4Poly
+void base_deref(Base *b) { typeid(*b); }
+// CHECK-LABEL: define {{.*}}void @_Z10base_derefP4Base
 // CHECK:       %vtable
 // CHECK:       ret void
 
 // Not most derived
-void derived_ref(Derived &d) { typeid(d); }
-// CHECK-LABEL: define {{.*}}void @_Z11derived_refR7Derived
+void nonfinal_ref(NonFinal &d) { typeid(d); }
+// CHECK-LABEL: define {{.*}}void @_Z12nonfinal_refR8NonFinal
 // CHECK:       %vtable
 // CHECK:       ret void
 
 // Not most derived
-void derived_deref(Derived *d) { typeid(*d); }
-// CHECK-LABEL: define {{.*}}void @_Z13derived_derefP7Derived
+void nonfinal_deref(NonFinal *d) { typeid(*d); }
+// CHECK-LABEL: define {{.*}}void @_Z14nonfinal_derefP8NonFinal
 // CHECK:       %vtable
 // CHECK:       ret void
