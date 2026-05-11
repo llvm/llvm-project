@@ -406,7 +406,7 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
     // on those.
     return;
   }
-  if (auto *symbol{GetObjectSymbol(object)}) {
+  if (auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
     // Eliminate certain kinds of symbols before running the analyzer to
     // avoid confusing error messages. The analyzer assumes that the context
     // of the object use is an expression, and some diagnostics are tailored
@@ -1580,7 +1580,7 @@ void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
-    const Symbol *sym{GetArgumentSymbol(arg)};
+    const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
 
     if (!locator || !sym ||
         (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
@@ -1693,7 +1693,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   }};
 
   const parser::OmpArgument &arg{args.v.front()};
-  if (auto *sym{GetArgumentSymbol(arg)}) {
+  if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)}) {
     if (!isValidSymbol(sym)) {
       auto &msg{context_.Say(arg.source,
           "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
@@ -1748,11 +1748,13 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
   common::visit( //
       common::visitors{
           [&](const parser::OmpBaseVariantNames &y) {
-            CheckSymbol(GetObjectSymbol(std::get<0>(y.t)), arg.source);
-            CheckSymbol(GetObjectSymbol(std::get<1>(y.t)), arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<0>(y.t), /*ultimate=*/true),
+                arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<1>(y.t), /*ultimate=*/true),
+                arg.source);
           },
           [&](const parser::OmpLocator &y) {
-            CheckSymbol(GetArgumentSymbol(arg), arg.source);
+            CheckSymbol(GetArgumentSymbol(arg, /*ultimate=*/true), arg.source);
           },
           [&](auto &&y) { InvalidArgument(arg.source); },
       },
@@ -3029,7 +3031,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
 
   if (flushList) {
     for (const parser::OmpArgument &arg : flushList->v) {
-      if (auto *sym{GetArgumentSymbol(arg)};
+      if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
           sym && !isVariableListItemOrCommonBlock(*sym)) {
         context_.Say(arg.source,
             "FLUSH argument must be a variable list item"_err_en_US);
@@ -3888,7 +3890,7 @@ void OmpStructureChecker::CheckReductionObjects(
   // Iterate on objects because `GetSymbolsInObjectList` expands common block
   // names into the lists of their members.
   for (const parser::OmpObject &object : objects.v) {
-    auto *symbol{GetObjectSymbol(object)};
+    auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)};
     if (symbol && IsCommonBlock(*symbol)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,

@@ -507,11 +507,19 @@ void OmpStructureChecker::CheckIterationVariables(
           "Loop iteration variable of an affected loop cannot be THREADPRIVATE"_err_en_US,
           iv.ToString());
     }
+    // Get the symbol from the variable that was listed in a DSA clause.
+    const Symbol *host{iv.symbol};
+    while (host && !dsa.count(host)) {
+      host = GetHostSymbol(*host);
+    }
+    if (!host) {
+      continue;
+    }
     // Check conflict between a predetermined DSA and explicit DSA.
     assert(iv.symbol->test(Symbol::Flag::OmpPreDetermined) &&
         "Expecting affected iteration variable to have predetermined DSA");
     if (iv.symbol->test(Symbol::Flag::OmpExplicit)) {
-      auto range{dsa.equal_range(&iv.symbol->GetUltimate())};
+      auto range{dsa.equal_range(host)};
       for (auto found{range.first}; found != range.second; ++found) {
         llvm::omp::Clause id{found->second.clauseId};
         if (!llvm::omp::isAllowedClauseForDirective(dirId, id, version)) {

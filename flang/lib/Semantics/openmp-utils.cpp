@@ -210,7 +210,8 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
 }
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
-  if (auto *sym{GetObjectSymbol(object)}; sym && IsAssumedSizeArray(*sym)) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)};
+      sym && IsAssumedSizeArray(*sym)) {
     return !GetArrayElementFromObj(object);
   }
   return false;
