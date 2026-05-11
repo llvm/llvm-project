@@ -5,6 +5,7 @@ int4 test_asint_too_many_arg(float p0, float p1) {
   return asint(p0, p1);
   // expected-error@-1 {{no matching function for call to 'asint'}}
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function template not viable: requires single argument 'V', but 2 arguments were provided}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function template not viable: requires single argument 'V', but 2 arguments were provided}}
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function template not viable: requires single argument 'F', but 2 arguments were provided}}
 }
 
