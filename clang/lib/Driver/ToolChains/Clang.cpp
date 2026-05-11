@@ -4278,7 +4278,7 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
     bool EnableConstantLiterals =
         Args.hasFlag(options::OPT_fobjc_constant_literals,
                      options::OPT_fno_objc_constant_literals,
-                     /*default=*/true) &&
+                     /*default=*/false) &&
         Runtime.hasConstantLiteralClasses();
     if (EnableConstantLiterals)
       CmdArgs.push_back("-fobjc-constant-literals");
@@ -4997,17 +4997,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  const llvm::Triple *AuxTriple =
-      (IsCuda || IsHIP) ? TC.getAuxTriple() : nullptr;
-  bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsUEFI = RawTriple.isUEFI();
   bool IsIAMCU = RawTriple.isOSIAMCU();
-
-  // Adjust IsWindowsXYZ for CUDA/HIP/SYCL compilations.  Even when compiling in
-  // device mode (i.e., getToolchain().getTriple() is NVPTX/AMDGCN, not
-  // Windows), we need to pass Windows-specific flags to cc1.
-  if (IsCuda || IsHIP || IsSYCL)
-    IsWindowsMSVC |= AuxTriple && AuxTriple->isWindowsMSVCEnvironment();
 
   // C++ is not supported for IAMCU.
   if (IsIAMCU && types::isCXX(Input.getType()))
@@ -5022,6 +5013,34 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-triple");
   CmdArgs.push_back(Args.MakeArgStringRef(TripleStr));
 
+  bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
+
+  const llvm::Triple *AuxTriple = TC.getAuxTriple();
+  if (AuxTriple) {
+    CmdArgs.push_back("-aux-triple");
+    CmdArgs.push_back(Args.MakeArgStringRef(AuxTriple->str()));
+
+    // Adjust IsWindowsXYZ for CUDA/HIP/SYCL compilations.  Even when compiling
+    // in device mode (i.e., getToolchain().getTriple() is NVPTX/AMDGCN, not
+    // Windows), we need to pass Windows-specific flags to cc1.
+    IsWindowsMSVC |= AuxTriple->isWindowsMSVCEnvironment();
+  } else if (JA.getOffloadingHostActiveKinds() != Action::OFK_None) {
+    // Figure out the device side triple for the host-side compilation.
+    for (unsigned I = Action::OFK_DeviceFirst; I <= Action::OFK_DeviceLast;
+         ++I) {
+      Compilation::const_offload_toolchains_range OffloadToolChains =
+          C.getOffloadToolChains(static_cast<Action::OffloadKind>(I));
+      if (OffloadToolChains.first == OffloadToolChains.second)
+        continue;
+
+      const llvm::Triple &DeviceAuxTriple =
+          OffloadToolChains.first->second->getTriple();
+      CmdArgs.push_back("-aux-triple");
+      CmdArgs.push_back(Args.MakeArgStringRef(DeviceAuxTriple.str()));
+      break;
+    }
+  }
+
   if (const Arg *MJ = Args.getLastArg(options::OPT_MJ)) {
     DumpCompilationDatabase(C, MJ->getValue(), TripleStr, Output, Input, Args);
     Args.ClaimAllArgs(options::OPT_MJ);
@@ -5032,38 +5051,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.ClaimAllArgs(options::OPT_gen_cdb_fragment_path);
   }
 
-  if (IsCuda || IsHIP) {
-    CmdArgs.push_back("-aux-triple");
-
-    // We have to pass the triple of the host if compiling for a CUDA/HIP device
-    // and vice-versa.
-    if (IsCudaDevice || IsHIPDevice) {
-      StringRef AuxTripleStr =
-          C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple().str();
-      CmdArgs.push_back(Args.MakeArgStringRef(AuxTripleStr));
-    } else {
-      // Host-side compilation.
-      StringRef AuxTripleStr =
-          (IsCuda ? C.getOffloadToolChains(Action::OFK_Cuda).first->second
-                  : C.getOffloadToolChains(Action::OFK_HIP).first->second)
-              ->getTriple()
-              .str();
-      CmdArgs.push_back(Args.MakeArgStringRef(AuxTripleStr));
-    }
-
-    if (JA.isDeviceOffloading(Action::OFK_HIP) &&
-        (getToolChain().getTriple().isAMDGPU() ||
-         (getToolChain().getTriple().isSPIRV() &&
-          getToolChain().getTriple().getVendor() == llvm::Triple::AMD))) {
-      // Device side compilation printf
-      if (Args.getLastArg(options::OPT_mprintf_kind_EQ)) {
-        CmdArgs.push_back(Args.MakeArgString(
-            "-mprintf-kind=" +
-            Args.getLastArgValue(options::OPT_mprintf_kind_EQ)));
-        // Force compiler error on invalid conversion specifiers
-        CmdArgs.push_back(
-            Args.MakeArgStringRef("-Werror=format-invalid-specifier"));
-      }
+  if ((getToolChain().getTriple().isAMDGPU() ||
+       (getToolChain().getTriple().isSPIRV() &&
+        getToolChain().getTriple().getVendor() == llvm::Triple::AMD))) {
+    // Device side compilation printf
+    if (Args.getLastArg(options::OPT_mprintf_kind_EQ)) {
+      CmdArgs.push_back(Args.MakeArgString(
+          "-mprintf-kind=" +
+          Args.getLastArgValue(options::OPT_mprintf_kind_EQ)));
+      // Force compiler error on invalid conversion specifiers
+      CmdArgs.push_back(
+          Args.MakeArgStringRef("-Werror=format-invalid-specifier"));
     }
   }
 
@@ -5095,12 +5093,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (IsSYCL) {
     if (IsSYCLDevice) {
-      // Host triple is needed when doing SYCL device compilations.
-      llvm::Triple AuxT = C.getDefaultToolChain().getTriple();
-      std::string NormalizedTriple = AuxT.normalize();
-      CmdArgs.push_back("-aux-triple");
-      CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
-
       // We want to compile sycl kernels.
       CmdArgs.push_back("-fsycl-is-device");
 
@@ -6150,12 +6142,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Prepare `-aux-target-cpu` and `-aux-target-feature` unless
   // `--gpu-use-aux-triple-only` is specified.
-  if (!Args.getLastArg(options::OPT_gpu_use_aux_triple_only) &&
-      (IsCudaDevice || IsHIPDevice || IsSYCLDevice)) {
+  if (AuxTriple && !Args.getLastArg(options::OPT_gpu_use_aux_triple_only)) {
     const ArgList &HostArgs =
         C.getArgsForToolChain(nullptr, StringRef(), Action::OFK_None);
-    std::string HostCPU =
-        getCPUName(D, HostArgs, *TC.getAuxTriple(), /*FromAs*/ false);
+    std::string HostCPU = getCPUName(D, HostArgs, *AuxTriple, /*FromAs*/ false);
     if (!HostCPU.empty()) {
       CmdArgs.push_back("-aux-target-cpu");
       CmdArgs.push_back(Args.MakeArgString(HostCPU));
@@ -6302,7 +6292,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
-    if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
+    if (((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) ||
+        (Triple.isX86() && Triple.isOSBinFormatCOFF())) {
       if (A->getOption().matches(options::OPT_fbasic_block_address_map))
         A->render(Args, CmdArgs);
     } else {
@@ -6518,8 +6509,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-std=c++98");
       else
         CmdArgs.push_back("-std=c89");
-    else
+    else {
+      if (IsSYCL) {
+        const LangStandard *LangStd =
+            LangStandard::getLangStandardForName(Std->getValue());
+        if (LangStd) {
+          // Use of -std= with 'C' is not supported for SYCL.
+          if (LangStd->getLanguage() == Language::C)
+            D.Diag(diag::err_drv_argument_not_allowed_with)
+                << Std->getAsString(Args) << "-fsycl";
+          // SYCL requires C++17 or later.
+          else if (LangStd->isCPlusPlus() && !LangStd->isCPlusPlus17())
+            D.Diag(diag::err_drv_sycl_requires_cxx17) << Std->getAsString(Args);
+        }
+      }
       Std->render(Args, CmdArgs);
+    }
 
     // If -f(no-)trigraphs appears after the language standard flag, honor it.
     if (Arg *A = Args.getLastArg(options::OPT_std_EQ, options::OPT_ansi,
@@ -6543,6 +6548,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
     else if (IsWindowsMSVC)
       ImplyVCPPCXXVer = true;
+
+    if (IsSYCL && types::isCXX(InputType) &&
+        !Args.hasArg(options::OPT__SLASH_std) && !IsWindowsMSVC)
+      // For SYCL, we default to -std=c++17 for all compilations. Use of -std
+      // on the command line will override. On Windows MSVC, this is handled
+      // by the ImplyVCPPCXXVer path below.
+      CmdArgs.push_back("-std=c++17");
 
     Args.AddLastArg(CmdArgs, options::OPT_ftrigraphs,
                     options::OPT_fno_trigraphs);
@@ -7459,13 +7471,30 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
                              .Default("");
+      if (IsSYCL) {
+        const LangStandard *LangStd =
+            LangStandard::getLangStandardForName(StdArg->getValue());
+        if (LangStd) {
+          // Use of /std: with 'C' is not supported for SYCL.
+          if (LangStd->getLanguage() == Language::C)
+            D.Diag(diag::err_drv_argument_not_allowed_with)
+                << StdArg->getAsString(Args) << "-fsycl";
+          // SYCL requires C++17 or later.
+          else if (LangStd->isCPlusPlus() && !LangStd->isCPlusPlus17())
+            D.Diag(diag::err_drv_sycl_requires_cxx17)
+                << StdArg->getAsString(Args);
+        }
+      }
       if (LanguageStandard.empty())
         D.Diag(clang::diag::warn_drv_unused_argument)
             << StdArg->getAsString(Args);
     }
 
     if (LanguageStandard.empty()) {
-      if (IsMSVC2015Compatible)
+      if (IsSYCL)
+        // For SYCL, C++17 is the default.
+        LanguageStandard = "-std=c++17";
+      else if (IsMSVC2015Compatible)
         LanguageStandard = "-std=c++14";
       else
         LanguageStandard = "-std=c++11";

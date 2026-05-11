@@ -1369,6 +1369,16 @@ func.func @subSub0(%arg0: index, %arg1: index) -> index {
   return %sub2 : index
 }
 
+// CHECK-LABEL: @subSub1
+// CHECK-SAME:    %[[ARG0:.*]]: index,
+// CHECK-SAME:    %[[ARG1:.*]]: index)
+//      CHECK:    return %[[ARG1]] : index
+func.func @subSub1(%arg0: index, %arg1: index) -> index {
+  %sub1 = arith.subi %arg0, %arg1 : index
+  %sub2 = arith.subi %arg0, %sub1 : index
+  return %sub2 : index
+}
+
 // CHECK-LABEL: @subSub0Ovf
 //       CHECK:   %[[c0:.+]] = arith.constant 0 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[c0]], %arg1 overflow<nsw, nuw> : index
@@ -2490,6 +2500,38 @@ func.func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
   return %0, %1, %2 : f16, f16, f16
 }
 
+// CHECK-LABEL: @test_subf_negzero(
+//  CHECK-SAME: %[[ARG0:.+]]: f16
+func.func @test_subf_negzero(%arg0 : f16) -> f16 {
+  // CHECK-NEXT:  %[[X:.+]] = arith.negf %[[ARG0]] : f16
+  // CHECK-NEXT:  return %[[X]] : f16
+  %c-0 = arith.constant -0.0 : f16
+  %0 = arith.subf %c-0, %arg0 : f16
+  return %0 : f16
+}
+
+// subf(+0, x) must NOT fold to negf(x)
+// CHECK-LABEL: @test_subf_poszero_no_negf(
+//  CHECK-SAME: %[[ARG0:.+]]: f16
+func.func @test_subf_poszero_no_negf(%arg0 : f16) -> f16 {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.subf %[[C0]], %[[ARG0]] : f16
+  // CHECK-NEXT:  return %[[X]] : f16
+  %c0 = arith.constant 0.0 : f16
+  %0 = arith.subf %c0, %arg0 : f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @test_subf_negzero_splat(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<4xf32>
+func.func @test_subf_negzero_splat(%arg0 : vector<4xf32>) -> vector<4xf32> {
+  // CHECK-NEXT:  %[[X:.+]] = arith.negf %[[ARG0]] : vector<4xf32>
+  // CHECK-NEXT:  return %[[X]] : vector<4xf32>
+  %c-0 = arith.constant dense<-0.0> : vector<4xf32>
+  %0 = arith.subf %c-0, %arg0 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // -----
 
 // CHECK-LABEL: @test_mulf(
@@ -2577,10 +2619,12 @@ func.func @test_addf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
 
 // CHECK-LABEL: @test_subf_rounding_mode(
 // CHECK-SAME: %[[ARG0:.+]]: f32
-func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:  %[[NZ:.+]] = arith.constant -0.000000e+00 : f32
   // CHECK-DAG:  %[[UP:.+]] = arith.constant 2.00000024 : f32
   // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 2.000000e+00 : f32
-  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  // CHECK:      %[[NEG:.+]] = arith.subf %[[NZ]], %[[ARG0]] downward : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]], %[[NEG]]
   %a = arith.constant 1.0000001 : f32
   %b = arith.constant -1.0 : f32
   // subf(x, +0) folds even with a rounding mode.
@@ -2588,7 +2632,10 @@ func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
   %0 = arith.subf %arg0, %c0 downward : f32
   %1 = arith.subf %a, %b upward : f32
   %2 = arith.subf %a, %b downward : f32
-  return %0, %1, %2 : f32, f32, f32
+  // subf(-0, x) must NOT fold to negf when a custom rounding mode is set.
+  %c-0 = arith.constant -0.0 : f32
+  %3 = arith.subf %c-0, %arg0 downward : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----

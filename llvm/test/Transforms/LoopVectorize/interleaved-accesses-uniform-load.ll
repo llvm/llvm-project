@@ -47,7 +47,7 @@ define void @test_dead_load(i32 %arg) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[BB2:.*]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[TMP6:%.*]], %[[BB2]] ], [ getelementptr (i8, ptr @[[GLOB0:[0-9]+]], i64 832), %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[TMP6:%.*]], %[[BB2]] ], [ getelementptr inbounds nuw (i8, ptr @[[GLOB0:[0-9]+]], i64 832), %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[TMP0]], ptr [[TMP]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 258

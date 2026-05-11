@@ -26,6 +26,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <functional>
 
+namespace Fortran::evaluate::characteristics {
+struct DummyDataObject;
+}
+
 namespace Fortran::semantics {
 
 class DeclTypeSpec;
@@ -127,6 +131,9 @@ bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool HasAlternateReturns(const Symbol &);
 bool IsAutomaticallyDestroyed(const Symbol &);
 
+// Follow association until the first symbol without HostAssocDetails.
+const Symbol &FollowHostAssoc(const Symbol &);
+
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
     const std::function<bool(const Symbol &)> &predicate);
@@ -227,6 +234,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 }
 
 bool HasCUDAComponent(const Symbol &sym);
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &);
 
 inline bool IsCUDADevice(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {

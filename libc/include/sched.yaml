@@ -25,6 +25,29 @@ functions:
     arguments:
       - type: size_t
       - type: const cpu_set_t *
+  - name: __sched_getcpuisset
+    standards:
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: int
+      - type: size_t
+      - type: const cpu_set_t *
+  - name: __sched_setcpuset
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: int
+      - type: size_t
+      - type: cpu_set_t *
+  - name: __sched_setcpuzero
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: size_t
+      - type: cpu_set_t *
   - name: getcpu
     standards:
       - Linux
@@ -52,6 +75,12 @@ functions:
       - type: pid_t
       - type: size_t
       - type: cpu_set_t *
+  - name: sched_getcpu
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: void
   - name: sched_getparam
     standards:
       - POSIX
@@ -65,8 +94,6 @@ functions:
     return_type: int
     arguments:
       - type: pid_t
-      - type: int
-      - type: const struct sched_param *
   - name: sched_rr_get_interval
     standards:
       - POSIX
@@ -95,6 +122,8 @@ functions:
     return_type: int
     arguments:
       - type: pid_t
+      - type: int
+      - type: const struct sched_param *
   - name: sched_yield
     standards:
       - POSIX

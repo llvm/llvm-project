@@ -423,7 +423,7 @@ private:
   SDValue PromoteIntOp_UnaryBooleanVectorOp(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N);
-  SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue PromoteIntOp_MaskedBinOp(SDNode *N, unsigned OpNo);
 
   void SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS);
@@ -806,6 +806,7 @@ private:
   SDValue SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N);
   SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
   SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_BR_CC(SDNode *N);
   SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo);

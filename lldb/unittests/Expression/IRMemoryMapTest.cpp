@@ -79,10 +79,8 @@ public:
 
 } // namespace
 
-// Verify that host-only allocations succeed when the process is alive but
-// can't JIT. Before the fix, FindSpace would probe GetMemoryRegionInfo,
-// which could assert/crash for targets with partial address-space coverage.
-TEST_F(IRMemoryMapTest, FindSpaceNoJIT) {
+// Verify that FindSpace handles partial memory region coverage gracefully.
+TEST_F(IRMemoryMapTest, FindSpacePartialRegionCoverage) {
   ArchSpec arch("i386-pc-linux");
   Platform::SetHostPlatform(
       platform_linux::PlatformLinux::CreateInstance(true, &arch));
@@ -105,13 +103,15 @@ TEST_F(IRMemoryMapTest, FindSpaceNoJIT) {
   TestIRMemoryMap memory_map(target_sp);
   memory_map.SetProcess(process_sp);
 
-  // This would previously crash in FindSpace via lldbassert when
-  // GetMemoryRegionInfo succeeded then failed on a subsequent call.
+  // FindSpace treats the remaining address space as unmapped.
   auto addr_or_err =
       memory_map.Malloc(1024, 8, ePermissionsReadable | ePermissionsWritable,
                         IRMemoryMap::eAllocationPolicyHostOnly, false);
   ASSERT_THAT_EXPECTED(addr_or_err, llvm::Succeeded());
   EXPECT_NE(*addr_or_err, LLDB_INVALID_ADDRESS);
+  // The allocation must not overlap with the inferior's mapped region
+  // [0, 0x10000).
+  EXPECT_GE(*addr_or_err, 0x10000ULL);
 
   // A second allocation should also succeed and not overlap.
   auto addr2_or_err =

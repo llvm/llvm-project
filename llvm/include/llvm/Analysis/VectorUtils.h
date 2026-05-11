@@ -14,6 +14,8 @@
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
@@ -593,6 +595,15 @@ public:
   InstTy *getMember(uint32_t Index) const {
     int32_t Key = SmallestKey + Index;
     return Members.lookup(Key);
+  }
+
+  /// Return an iterator range over the non-null members of this group, in
+  /// index order.
+  auto members() const {
+    return make_filter_range(
+        map_range(seq<uint32_t>(0, Factor),
+                  [this](uint32_t I) { return getMember(I); }),
+        [](InstTy *I) { return I != nullptr; });
   }
 
   /// Get the index for the given member. Unlike the key in the member
