@@ -26,10 +26,22 @@
 // RUN:   -analyzer-config ctu-dir=%t \
 // RUN:   -verify %t/main.c
 
+// Step 4': Run without content validation: CTU import failure
+// RUN: not %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
+// RUN:   -analyzer-config ctu-dir=%t \
+// RUN:   -verify %t/main.c 2>&1 | FileCheck %s
+
 //--- main.c
 // Without CTU, always_zero() has an unknown return value so no bug is found.
 // With CTU, always_zero() is inlined and its return value (0) is known,
 // exposing the division by zero.
+
+// CHECK: fatal error: file '{{.*}}/other.c' has been modified since the precompiled file '{{.*}}/other.c.ast' was built
+// CHECK: note: mtime changed from expected
+// CHECK: note: earlier input file validation has covered only user files
+// CHECK: import of an external symbol for CTU failed: Failed to load external AST source.
 
 int always_zero(void);
 
