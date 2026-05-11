@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/WithColor.h"
 
 #include <string>
 
@@ -183,8 +184,13 @@ template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
     if (!Unwrapped || Unwrapped.getTag() != dwarf::DW_TAG_typedef)
       return Unwrapped;
 
-    if (!Visited.insert(Unwrapped.getOffset()).second)
+    if (!Visited.insert(Unwrapped.getOffset()).second) {
+      WithColor::warning()
+          << "typedef cycle detected: DW_TAG_typedef at offset 0x"
+          << utohexstr(Unwrapped.getOffset())
+          << " references itself through DW_TAG_typedef chain\n";
       return Unwrapped;
+    }
 
     D = Unwrapped;
   }
