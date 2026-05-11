@@ -31,20 +31,16 @@ module @gemm attributes {gpu.container_module} {
       //%tdesc_scale_a = xegpu.create_nd_tdesc %scale_a : memref<8x2xf8E8M0FNU> -> !xegpu.tensor_desc<8x2xf8E8M0FNU>
       //%scale_a_loaded = xegpu.load_nd %tdesc_scale_a[0, 0] : !xegpu.tensor_desc<8x2xf8E8M0FNU> -> vector<2xf8E8M0FNU>
       // Option 2: Use load + insert
-      %flat_scale_a_shape = arith.constant dense<16> : memref<1xi32>
-      %flat_scale_a = memref.reshape %scale_a(%flat_scale_a_shape) : (memref<8x2xf8E8M0FNU>, memref<1xi32>) -> memref<16xf8E8M0FNU>
       %id_x = gpu.thread_id x
-      %idx_x = vector.broadcast %id_x : index to vector<1xindex>
-      %c16 = arith.constant dense<16> : vector<1xindex>
-      %idx2_x = arith.remui %idx_x, %c16 : vector<1xindex>
-      %c2 = arith.constant dense <2> : vector<1xindex>
-      %first_idx = arith.muli %idx2_x, %c2 : vector<1xindex>
-      %true_mask = arith.constant dense <1> : vector<1xi1>
-      %first = xegpu.load %flat_scale_a[%first_idx], %true_mask : memref<16xf8E8M0FNU>, vector<1xindex>, vector<1xi1> -> vector<1xf8E8M0FNU>
-      %c1 = arith.constant dense <1> : vector<1xindex>
-      %second_idx = arith.addi %first_idx, %c1 : vector<1xindex>
-      %second = xegpu.load %flat_scale_a[%second_idx], %true_mask : memref<16xf8E8M0FNU>, vector<1xindex>, vector<1xi1> -> vector<1xf8E8M0FNU>
-      %scale_a_loaded = vector.shuffle %first, %second [0, 1] : vector<1xf8E8M0FNU>, vector<1xf8E8M0FNU>
+      %c8 = arith.constant 16 : index
+      %idx_x = arith.remui %id_x, %c8 : index
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %first = memref.load %scale_a[%idx_x, %c0] : memref<8x2xf8E8M0FNU>
+      %second = memref.load %scale_a[%idx_x, %c1] : memref<8x2xf8E8M0FNU>
+      %scale_a_undef = arith.constant dense<1.0> : vector<2xf8E8M0FNU>
+      %scale_a_tmp = vector.insert %first, %scale_a_undef[%c0] : f8E8M0FNU into vector<2xf8E8M0FNU>
+      %scale_a_loaded = vector.insert %second, %scale_a_tmp[%c1] : f8E8M0FNU into vector<2xf8E8M0FNU>
 
       %tdesc_scale_b = xegpu.create_nd_tdesc %scale_b : memref<2x16xf8E8M0FNU> -> !xegpu.tensor_desc<2x16xf8E8M0FNU>
       %scale_b_loaded = xegpu.load_nd %tdesc_scale_b[0, 0] : !xegpu.tensor_desc<2x16xf8E8M0FNU> -> vector<2xf8E8M0FNU>
