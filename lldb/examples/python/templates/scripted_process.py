@@ -364,8 +364,8 @@ class ScriptedThread(metaclass=ABCMeta):
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = ARM32_GPR
             elif "hexagon" in self.arch:
-                self.register_info['sets'] = ['General Purpose Registers']
-                self.register_info['registers'] = HEXAGON_GPR
+                self.register_info["sets"] = ['General Purpose Registers']
+                self.register_info["registers"] = HEXAGON_GPR
             else:
                 raise ValueError("Unknown architecture", self.arch)
         return self.register_info
@@ -530,8 +530,8 @@ class ScriptedFrame(metaclass=ABCMeta):
                     self.register_info["sets"] = ["General Purpose Registers"]
                     self.register_info["registers"] = ARM32_GPR
                 elif "hexagon" in self.arch:
-                    self.register_info['sets'] = ['General Purpose Registers']
-                    self.register_info['registers'] = HEXAGON_GPR
+                    self.register_info["sets"] = ['General Purpose Registers']
+                    self.register_info["registers"] = HEXAGON_GPR
                 else:
                     raise ValueError("Unknown architecture", self.arch)
         return self.register_info
