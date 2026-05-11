@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # Build all EJIT integration tests.
-# Usage: ./build.sh [--run] [--arch=x86|aarch64] [--analyze-deps] [<test_name> ...]
+# Usage: ./build.sh [--run] [--arch=x86|aarch64] [--analyze-deps] [<test>...]
 #   --run          Build and run all tests
 #   --arch=<arch>  Target architecture (default: auto-detect from build dirs)
 #   --analyze-deps Build & show which LLVM .a files were actually linked
 #   test_name      Build only the named test (without .c extension)
+#
+# Requires a release build (static libs): ./build.sh release x86
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# --- Architecture setup ---
 ARCH=""
 SELECTED=()
 DO_RUN=false
@@ -26,71 +27,45 @@ for arg in "$@"; do
   esac
 done
 
-# Auto-detect: prefer x86 release, fallback to aarch64 release
+# Auto-detect arch from available release build dirs
+find_build_dir() {
+  local arch="$1"
+  local dir="${ROOT_DIR}/build_release_${arch}"
+  if [[ -d "${dir}" ]]; then echo "${dir}"; return 0; fi
+  return 1
+}
+
 if [[ -z "${ARCH}" ]]; then
-  if [[ -d "${ROOT_DIR}/build_release_x86" ]]; then
-    ARCH="x86"
-  elif [[ -d "${ROOT_DIR}/build_release_aarch64" ]]; then
-    ARCH="aarch64"
-  else
-    echo "ERROR: could not auto-detect architecture. Set --arch=x86|aarch64"
+  for a in x86 aarch64; do
+    BUILD_DIR=$(find_build_dir "$a" || true)
+    if [[ -n "${BUILD_DIR}" ]]; then ARCH="$a"; break; fi
+  done
+  if [[ -z "${ARCH}" ]]; then
+    echo "ERROR: no release build found. Run: ../build.sh release x86"
+    exit 1
+  fi
+else
+  BUILD_DIR=$(find_build_dir "${ARCH}" || true)
+  if [[ -z "${BUILD_DIR}" ]]; then
+    echo "ERROR: build_release_${ARCH} not found. Run: ../build.sh release ${ARCH}"
     exit 1
   fi
 fi
 
-case "${ARCH}" in
-  x86|X86|x86_64)
-    BUILD_DIR="${ROOT_DIR}/build_release_x86"
-    ;;
-  aarch64|AArch64|arm64)
-    BUILD_DIR="${ROOT_DIR}/build_release_aarch64"
-    ;;
-  *)
-    echo "ERROR: unknown architecture '${ARCH}'. Use x86 or aarch64."
-    exit 1
-    ;;
-esac
-
-if [[ ! -d "${BUILD_DIR}" ]]; then
-  echo "ERROR: build directory '${BUILD_DIR}' not found."
-  echo "  Run: ./build.sh release ${ARCH}"
-  exit 1
-fi
-
-# Everything comes from a single build directory: compiler, headers, runtime libs, linker
+# Everything from a single release build directory (static libs only)
 CLANG="${BUILD_DIR}/bin/clang"
 CXX="${CLANG}++"
-
 BUILD_INCLUDE="${BUILD_DIR}/include"
 LLVM_INCLUDE="${ROOT_DIR}/llvm/include"
-
 INCLUDES="-I${LLVM_INCLUDE} -I${BUILD_INCLUDE}"
 
-# --- Linker (lld) from the same build ---
 LD_LLD="${BUILD_DIR}/bin/ld.lld"
-if [[ ! -x "${LD_LLD}" ]]; then
-  echo "ERROR: lld not found at ${LD_LLD}. Build it first: ninja -C ${BUILD_DIR} lld"
-  exit 1
-fi
+[[ -x "${LD_LLD}" ]] || { echo "ERROR: lld not found at ${LD_LLD}"; exit 1; }
 
-# --- Library resolution ---
-# Only --whole-archive the EJIT runtime (libLLVMEJIT.a) — it contains
-# SyncCompiler/AsyncCompiler whose symbols are reached indirectly
-# (factory / virtual dispatch), so the linker can't see them via normal
-# undefined-symbol scanning.
-#
-# libLLVMEmbeddedJIT.a (AOT passes) is NOT linked — it runs inside clang
-# at compile time, never at runtime.
-#
-# All other LLVM/Clang .a files are resolved by the linker automatically.
 EJIT_RUNTIME="${BUILD_DIR}/lib/libLLVMEJIT.a"
 OTHER_LIBS=$(ls "${BUILD_DIR}/lib/"*.a 2>/dev/null | grep -v gtest | grep -v libLLVMEJIT | grep -v libLLVMEmbeddedJIT || true)
 LINK_LIBS="-lz -lpthread -ldl"
-
-if [[ ! -f "${EJIT_RUNTIME}" ]]; then
-  echo "ERROR: EJIT runtime not found at ${EJIT_RUNTIME}"
-  exit 1
-fi
+[[ -f "${EJIT_RUNTIME}" ]] || { echo "ERROR: libLLVMEJIT.a not found in ${BUILD_DIR}/lib/"; exit 1; }
 
 OUTDIR="${SCRIPT_DIR}/out"
 mkdir -p "${OUTDIR}"
