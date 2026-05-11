@@ -886,44 +886,6 @@ float32x2_t test_vfma_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
   return vfma_f32(v1, v2, v3);
 }
 
-// CHECK-LABEL: define dso_local <4 x float> @test_vfmaq_f32(
-// CHECK-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]], <4 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[V1]] to <4 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[V2]] to <4 x i32>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[V3]] to <4 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP2]] to <16 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x float>
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <4 x float>
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x float>
-// CHECK-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[TMP6]])
-// CHECK-NEXT:    ret <4 x float> [[TMP9]]
-//
-float32x4_t test_vfmaq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
-  return vfmaq_f32(v1, v2, v3);
-}
-
-// CHECK-LABEL: define dso_local <2 x double> @test_vfmaq_f64(
-// CHECK-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]], <2 x double> noundef [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[V1]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[V2]] to <2 x i64>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V3]] to <2 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to <16 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x double>
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x double>
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
-// CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x double> [[TMP6]])
-// CHECK-NEXT:    ret <2 x double> [[TMP9]]
-//
-float64x2_t test_vfmaq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
-  return vfmaq_f64(v1, v2, v3);
-}
-
 // CHECK-LABEL: define dso_local <2 x float> @test_vfms_f32(
 // CHECK-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]], <2 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

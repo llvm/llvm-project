@@ -1229,6 +1229,31 @@ class VOP_DPP8_Base<string OpName, VOPProfile P, dag InsDPP8 = P.InsDPP8, string
 class VOP_DPP8<string OpName, VOPProfile P> :
   VOP_DPP8_Base<OpName, P>, VOP_DPP8e<P>;
 
+class VOP_DPP8_Pseudo<string OpName, VOPProfile P, list<dag> pattern=[]> :
+  VOP_Pseudo<OpName, "_dpp8", P, P.OutsDPP8, P.InsDPP8, P.AsmDPP8, pattern> {
+
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+
+  let VALU = 1;
+  let DPP = 1;
+  let Size = 8;
+  let IsPacked = P.IsPacked;
+
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
+  let mayRaiseFPException = ReadsModeReg;
+  let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
+  let isConvergent = 1;
+
+  string AsmOperands = P.AsmDPP8;
+
+  let AsmMatchConverter = "cvtDPP8";
+  let AssemblerPredicate = HasDPP8;
+  let AsmVariantName = AMDGPUAsmVariants.Disable;
+  let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
+}
+
 class VOP3_DPP8_Base<string OpName, VOPProfile P> :
   VOP_DPP8_Base<OpName, P, P.InsVOP3DPP8, P.AsmVOP3DPP8> {
   let OutOperandList = P.OutsVOP3DPP8;

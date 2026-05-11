@@ -933,7 +933,7 @@ define <2 x i32> @xor_sign_bit_vec_splat(<2 x i32> %x) {
 
 define i8 @add_nsw_signbit(i8 %x) {
 ; CHECK-LABEL: @add_nsw_signbit(
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[Y:%.*]] = or disjoint i8 [[X:%.*]], -128
 ; CHECK-NEXT:    ret i8 [[Y]]
 ;
   %y = add nsw i8 %x, -128
@@ -944,7 +944,7 @@ define i8 @add_nsw_signbit(i8 %x) {
 
 define i8 @add_nuw_signbit(i8 %x) {
 ; CHECK-LABEL: @add_nuw_signbit(
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[Y:%.*]] = or disjoint i8 [[X:%.*]], -128
 ; CHECK-NEXT:    ret i8 [[Y]]
 ;
   %y = add nuw i8 %x, 128
