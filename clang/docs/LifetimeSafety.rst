@@ -272,7 +272,7 @@ Use after free
 --------------
 
 This check warns when a pointer or reference is used after the object it refers
-to has been freed with.
+to has been freed.
 
 .. list-table::
    :widths: 50 50
