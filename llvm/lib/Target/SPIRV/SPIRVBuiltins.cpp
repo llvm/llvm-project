@@ -2139,6 +2139,21 @@ static bool generateMulExtendedInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool generateArithmeticInst(const SPIRV::IncomingCall *Call,
+                                   MachineIRBuilder &MIRBuilder,
+                                   SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (Register Arg : Call->Arguments)
+    MIB.addUse(Arg);
+  return true;
+}
+
 static bool generateGetQueryInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
@@ -3346,6 +3361,7 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
   case SPIRV::AsyncCopy:
   case SPIRV::LoadStore:
   case SPIRV::CoopMatr:
+  case SPIRV::Arithmetic:
     if (const auto *R =
             SPIRV::lookupNativeBuiltin(Call->Builtin->Name, Call->Builtin->Set))
       return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
@@ -3459,6 +3475,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateICarryBorrowInst(Call.get(), MIRBuilder, GR);
   case SPIRV::MulExtended:
     return generateMulExtendedInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::Arithmetic:
+    return generateArithmeticInst(Call.get(), MIRBuilder, GR);
   case SPIRV::GetQuery:
     return generateGetQueryInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ImageSizeQuery:
