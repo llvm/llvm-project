@@ -465,16 +465,15 @@ APInt Context::generateRandomAPInt(uint32_t BitWidth) {
                     std::numeric_limits<APInt::WordType>::digits,
                 "Unexpected Rng result type.");
   for (uint32_t I = 0; I != NumWords; ++I)
-    RandomWords.push_back(static_cast<APInt::WordType>(getRandomUInt64()));
+    RandomWords.push_back(static_cast<APInt::WordType>(Rng()));
   return APInt(BitWidth, RandomWords);
 }
 
 void Context::freeze(AnyValue &Val, Type *Ty) {
   if (Val.isPoison()) {
     uint32_t Bits = DL.getTypeSizeInBits(Ty);
-    APInt RandomVal = mayUseNonDeterminism()
-                          ? generateRandomAPInt(Bits)
-                          : APInt::getZero(Bits);
+    APInt RandomVal = mayUseNonDeterminism() ? generateRandomAPInt(Bits)
+                                             : APInt::getZero(Bits);
     if (Ty->isIntegerTy())
       Val = AnyValue(RandomVal);
     else if (Ty->isFloatingPointTy())

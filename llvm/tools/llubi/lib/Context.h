@@ -227,6 +227,8 @@ class Context {
   bool FusedMultiplyAdd = false;
 
   std::mt19937_64 Rng;
+  /// Always returns a random APInt value. It is not controlled by
+  /// Deterministic.
   APInt generateRandomAPInt(uint32_t BitWidth);
 
   // Memory
