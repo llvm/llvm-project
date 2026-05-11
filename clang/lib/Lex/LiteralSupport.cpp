@@ -784,11 +784,11 @@ static int MeasureUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
 /// StringLiteralParser. When we decide to implement UCN's for identifiers,
 /// we will likely rework our support for UCN's.
 static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
-                            const char *ThisTokEnd,
-                            char *&ResultBuf, bool &HadError,
-                            FullSourceLoc Loc, unsigned CharByteWidth,
-                            DiagnosticsEngine *Diags,
-                            const LangOptions &Features) {
+                            const char *ThisTokEnd, char *&ResultBuf,
+                            bool &HadError, FullSourceLoc Loc,
+                            unsigned CharByteWidth, DiagnosticsEngine *Diags,
+                            const LangOptions &Features,
+                            llvm::TextEncodingConverter *Converter) {
   typedef uint32_t UTF32;
   UTF32 UcnVal = 0;
   unsigned short UcnLen = 0;
@@ -875,6 +875,20 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   }
   // Update the buffer.
   ResultBuf += bytesToWrite;
+
+  if (Converter) {
+    SmallString<4> CpConv;
+    char *Cp = ResultBuf - bytesToWrite;
+    auto EC = Converter->convert(StringRef(Cp, bytesToWrite), CpConv);
+    if (!EC) {
+      memcpy(Cp, CpConv.data(), CpConv.size());
+      ResultBuf = Cp + CpConv.size();
+    } else {
+      Diags->Report(Loc, diag::err_exec_charset_conversion_failed)
+          << EC.message();
+      HadError = true;
+    }
+  }
 }
 
 ///       integer-constant: [C99 6.4.4.1]
@@ -1942,20 +1956,9 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
         EncodeUCNEscape(TokBegin, begin, end, ResultPtr, HadError,
                         FullSourceLoc(Loc, PP.getSourceManager()),
                         /*CharByteWidth=*/1u, &PP.getDiagnostics(),
-                        PP.getLangOpts());
-        assert(ResultPtr - Cp <= 4 &&
-               "unexpected result size for UCN escape character");
-        if (!HadError) {
-          auto ErrorOrChar =
-              convertCharacter(StringRef(Cp, ResultPtr - Cp), *Converter);
-          if (ErrorOrChar)
-            *buffer_begin = *ErrorOrChar;
-          else {
-            PP.Diag(Loc, diag::err_exec_charset_conversion_failed)
-                << ErrorOrChar.getError().message();
-            HadError = true;
-          }
-        }
+                        PP.getLangOpts(), Converter);
+        if (!HadError)
+          *buffer_begin = *Cp;
       }
       ++buffer_begin;
       continue;
@@ -2340,17 +2343,10 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
         // Is this a Universal Character Name escape?
         if (ThisTokBuf[1] == 'u' || ThisTokBuf[1] == 'U' ||
             ThisTokBuf[1] == 'N') {
-          char *Cp = ResultPtr;
           EncodeUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd, ResultPtr,
                           hadError,
                           FullSourceLoc(StringToks[i].getLocation(), SM),
-                          CharByteWidth, Diags, Features);
-          if (!hadError && Converter) {
-            SmallString<8> CpConv;
-            Converter->convert(StringRef(Cp), CpConv);
-            memcpy(Cp, CpConv.data(), CpConv.size());
-            ResultPtr = Cp + CpConv.size();
-          }
+                          CharByteWidth, Diags, Features, Converter);
           continue;
         }
         // Otherwise, this is a non-UCN escape character.  Process it.
