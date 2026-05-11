@@ -149,12 +149,12 @@ bool isTaintedOrPointsToTainted(ProgramStateRef State, SVal ExprSVal) {
 const NoteTag *taintOriginTrackerTag(CheckerContext &C,
                                      std::vector<SymbolRef> TaintedSymbols,
                                      std::vector<ArgIdxTy> TaintedArgs,
-                                     const LocationContext *CallLocation) {
+                                     const StackFrame *CallSF) {
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
-                       TaintedArgs = std::move(TaintedArgs), CallLocation](
-                          PathSensitiveBugReport &BR) -> std::string {
+                       TaintedArgs = std::move(TaintedArgs),
+                       CallSF](PathSensitiveBugReport &BR) -> std::string {
     // We give diagnostics only for taint related reports
-    if (!BR.isInteresting(CallLocation) ||
+    if (!BR.isInteresting(CallSF) ||
         BR.getBugType().getCategory() != categories::TaintedData) {
       return "";
     }
@@ -177,11 +177,11 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
 /// when the return value, or the outgoing parameters are tainted.
 const NoteTag *taintPropagationExplainerTag(
     CheckerContext &C, std::vector<SymbolRef> TaintedSymbols,
-    std::vector<ArgIdxTy> TaintedArgs, const LocationContext *CallLocation) {
+    std::vector<ArgIdxTy> TaintedArgs, const StackFrame *CallSF) {
   assert(TaintedSymbols.size() == TaintedArgs.size());
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
-                       TaintedArgs = std::move(TaintedArgs), CallLocation](
-                          PathSensitiveBugReport &BR) -> std::string {
+                       TaintedArgs = std::move(TaintedArgs),
+                       CallSF](PathSensitiveBugReport &BR) -> std::string {
     SmallString<256> Msg;
     llvm::raw_svector_ostream Out(Msg);
     // We give diagnostics only for taint related reports
@@ -192,7 +192,7 @@ const NoteTag *taintPropagationExplainerTag(
     int nofTaintedArgs = 0;
     for (auto [Idx, Sym] : llvm::enumerate(TaintedSymbols)) {
       if (BR.isInteresting(Sym)) {
-        BR.markInteresting(CallLocation);
+        BR.markInteresting(CallSF);
         if (TaintedArgs[Idx] != ReturnValueIndex) {
           LLVM_DEBUG(llvm::dbgs() << "Taint Propagated to argument "
                                   << TaintedArgs[Idx] + 1 << "\n");

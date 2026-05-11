@@ -596,16 +596,16 @@ namespace {
 // Find the first node in the current function context that referred to the
 // tracked symbol and the memory location that value was stored to. Note, the
 // value is only reported if the allocation occurred in the same function as
-// the leak. The function can also return a location context, which should be
+// the leak. The function can also return a stack frame, which should be
 // treated as interesting.
 struct AllocationInfo {
   const ExplodedNode* N;
   const MemRegion *R;
-  const LocationContext *InterestingMethodContext;
-  AllocationInfo(const ExplodedNode *InN,
-                 const MemRegion *InR,
-                 const LocationContext *InInterestingMethodContext) :
-    N(InN), R(InR), InterestingMethodContext(InInterestingMethodContext) {}
+  const StackFrame *InterestingMethodStackFrame;
+  AllocationInfo(const ExplodedNode *InN, const MemRegion *InR,
+                 const StackFrame *InterestingMethodStackFrame)
+      : N(InN), R(InR),
+        InterestingMethodStackFrame(InterestingMethodStackFrame) {}
 };
 } // end anonymous namespace
 
@@ -618,7 +618,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
   // The location context of the init method called on the leaked object, if
   // available.
-  const LocationContext *InitMethodContext = nullptr;
+  const StackFrame *InitMethodStackFrame = nullptr;
 
   while (N) {
     ProgramStateRef St = N->getState();
@@ -654,14 +654,14 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
     // Find the last init that was called on the given symbol and store the
     // init method's location context.
-    if (!InitMethodContext)
+    if (!InitMethodStackFrame)
       if (auto CEP = N->getLocation().getAs<CallEnter>()) {
         const Stmt *CE = CEP->getCallExpr();
         if (const auto *ME = dyn_cast_or_null<ObjCMessageExpr>(CE)) {
           if (const Expr *RecExpr = ME->getInstanceReceiver()) {
             SVal RecV = St->getSVal(RecExpr, NContext);
             if (ME->getMethodFamily() == OMF_init && RecV.getAsSymbol() == Sym)
-              InitMethodContext = CEP->getCalleeContext();
+              InitMethodStackFrame = CEP->getCalleeContext();
           }
         }
       }
@@ -671,13 +671,13 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
   // If we are reporting a leak of the object that was allocated with alloc,
   // mark its init method as interesting.
-  const LocationContext *InterestingMethodContext = nullptr;
-  if (InitMethodContext) {
+  const StackFrame *InterestingMethodStackFrame = nullptr;
+  if (InitMethodStackFrame) {
     const ProgramPoint AllocPP = AllocationNode->getLocation();
     if (std::optional<StmtPoint> SP = AllocPP.getAs<StmtPoint>())
       if (const ObjCMessageExpr *ME = SP->getStmtAs<ObjCMessageExpr>())
         if (ME->getMethodFamily() == OMF_alloc)
-          InterestingMethodContext = InitMethodContext;
+          InterestingMethodStackFrame = InitMethodStackFrame;
   }
 
   // If allocation happened in a function different from the leak node context,
@@ -689,7 +689,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
     FirstBinding = nullptr;
 
   return AllocationInfo(AllocationNodeInCurrentOrParentContext, FirstBinding,
-                        InterestingMethodContext);
+                        InterestingMethodStackFrame);
 }
 
 PathDiagnosticPieceRef
@@ -829,7 +829,7 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx) {
 
   AllocNode = AllocI.N;
   AllocFirstBinding = AllocI.R;
-  markInteresting(AllocI.InterestingMethodContext);
+  markInteresting(AllocI.InterestingMethodStackFrame);
 
   // Get the SourceLocation for the allocation site.
   // FIXME: This will crash the analyzer if an allocation comes from an
