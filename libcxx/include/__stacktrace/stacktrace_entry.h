@@ -33,6 +33,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class stacktrace_entry;
 
@@ -40,7 +41,7 @@ namespace __stacktrace {
 
 struct _Image;
 
-struct _StringWrapper {
+struct StringWrapper {
   // XXX FIXME TODO:
   // Figure out a solution for creating strings while respecting
   // the caller's allocator they provided:
@@ -54,7 +55,7 @@ struct _StringWrapper {
 
   _LIBCPP_HIDE_FROM_ABI std::string_view __view() const { return __str_; }
 
-  _LIBCPP_HIDE_FROM_ABI _StringWrapper& __assign(std::string_view __view) {
+  _LIBCPP_HIDE_FROM_ABI StringWrapper& __assign(std::string_view __view) {
     __str_ = __view;
     return *this;
   }
@@ -70,8 +71,8 @@ struct _Entry {
 #  endif
 
   uintptr_t __addr_{};
-  _StringWrapper __desc_{};
-  _StringWrapper __file_{};
+  StringWrapper __desc_{};
+  StringWrapper __file_{};
   uint_least32_t __line_{};
   _Image const* __image_{};
 
@@ -172,6 +173,7 @@ _LIBCPP_HIDE_FROM_ABI inline _Entry const& _Entry::__entry_base(stacktrace_entry
 
 } // namespace __stacktrace
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE

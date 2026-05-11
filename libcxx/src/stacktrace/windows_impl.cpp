@@ -20,6 +20,8 @@
 #  include <mutex>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __stacktrace {
 
 namespace {
@@ -128,7 +130,7 @@ struct SymInitScope {
 
 } // namespace
 
-void _Trace::windows_impl(size_t skip, size_t max_depth) {
+void _Trace::__windows_impl(size_t skip, size_t max_depth) {
   static BOOL loadedDLLFuncs = loadFuncs();
   if (!loadedDLLFuncs) {
     return;
@@ -288,6 +290,8 @@ void _Trace::windows_impl(size_t skip, size_t max_depth) {
 }
 
 } // namespace __stacktrace
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _WIN32

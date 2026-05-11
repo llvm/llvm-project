@@ -18,6 +18,7 @@
 #endif //_LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace __stacktrace {
 
@@ -64,4 +65,5 @@ size_t _Trace::__hash_code() const {
 
 } // namespace __stacktrace
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

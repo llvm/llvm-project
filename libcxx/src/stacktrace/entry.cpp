@@ -20,6 +20,7 @@
 #include "stacktrace/images.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace __stacktrace {
 
@@ -69,4 +70,5 @@ size_t _Entry::__hash_code() const { return std::__hash_memory(&__addr_, sizeof(
 
 } // namespace __stacktrace
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

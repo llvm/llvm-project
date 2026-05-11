@@ -64,7 +64,7 @@ struct _Images {
   unsigned count_{};                              // image count, including sentinels
 
   /** An OS-specific constructor is defined. */
-  _LIBCPP_EXPORTED_FROM_ABI _Images();
+  _Images();
 
   _Image& operator[](size_t __index) { return images_[__index]; }
 

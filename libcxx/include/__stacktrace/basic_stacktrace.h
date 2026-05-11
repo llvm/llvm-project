@@ -45,6 +45,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace __stacktrace {
 
@@ -353,6 +354,8 @@ _Trace& _Trace::__trace_base(auto& __trace) { return *static_cast<_Trace*>(std::
 _Trace const& _Trace::__trace_base(auto const& __trace) { return *static_cast<_Trace const*>(std::addressof(__trace)); }
 
 } // namespace __stacktrace
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
