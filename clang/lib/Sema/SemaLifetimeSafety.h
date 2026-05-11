@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_SEMA_SEMALIFETIMESAFETY_H
 #define LLVM_CLANG_LIB_SEMA_SEMALIFETIMESAFETY_H
 
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
@@ -189,15 +190,12 @@ public:
 
   void reportLifetimeboundViolation(
       const CXXMethodDecl *MDWithLifetimebound) override {
-    const Stmt *Body = MDWithLifetimebound->getBody();
-    assert(Body && "Expected a body");
-    // FIXME: When #196549 lands, we can extract the attribute location and warn
-    // on it, for now warn on everything before the body.
-    S.Diag(MDWithLifetimebound->getLocation(),
+    const auto *Attr =
+        getImplicitObjectParamLifetimeBoundAttr(MDWithLifetimebound);
+    assert(Attr && "Expected lifetimebound attribute");
+    S.Diag(Attr->getLocation(),
            diag::warn_lifetime_safety_lifetimebound_violation)
-        << 2 << "this"
-        << CharSourceRange::getCharRange(MDWithLifetimebound->getBeginLoc(),
-                                         Body->getBeginLoc());
+        << 2 << "" << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

@@ -107,10 +107,10 @@ struct GoodThisReturn {
 // FIXME: Wrong warning loc
 struct RedeclaredThis {
   MyObj data;
-  View get() const [[clang::lifetimebound]];
+  View get() const [[clang::lifetimebound]]; // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
 };
 
-View RedeclaredThis::get() const { // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
+View RedeclaredThis::get() const {
   return not_lb(data);
 }
 
@@ -125,10 +125,11 @@ struct ThisAndParam {
 struct ThisAndMixedParams {
   MyObj data;
 
-  View get( // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
+  View get(
       const MyObj &a [[clang::lifetimebound]],
       const MyObj &b,
-      const MyObj &c [[clang::lifetimebound]]) const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}}
+      const MyObj &c [[clang::lifetimebound]]) const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}} \
+                                                                                // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
     return cond() ? lb(a) : not_lb(b);
   }
 };
