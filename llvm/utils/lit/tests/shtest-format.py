@@ -2,7 +2,6 @@
 
 # RUN: rm -f %t.xml
 # RUN: not %{lit} -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
-# RUN: FileCheck < %t.out %s
 # RUN: FileCheck -DERROR_MSG=%errc_ENOENT < %t.out %s \
 # RUN:   %if system-aix %{ --check-prefix=AIX,CHECK %} \
 # RUN:   %else  %{ --check-prefix=NON-AIX,CHECK %}
