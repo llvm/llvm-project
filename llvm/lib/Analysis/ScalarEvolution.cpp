@@ -16238,6 +16238,8 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
       // Helper to check if S is a subtraction (A - B) where A != B, and if so,
       // return UMax(S, 1).
       auto RewriteSubtraction = [&](const SCEV *S) -> const SCEV * {
@@ -16289,6 +16291,8 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
       SmallVector<SCEVUse, 2> Operands;
       bool Changed = false;
       for (SCEVUse Op : Expr->operands()) {
