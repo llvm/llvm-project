@@ -18,50 +18,50 @@ namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE long syscall_impl(long __number) {
   long retcode;
-  LIBC_INLINE_ASM("syscall\n\t"
-                  "jnc 1f\n\t"
-                  "neg %%rax\n"
-                  "1:"
-                  : "=a"(retcode)
-                  : "a"(__number)
-                  : SYSCALL_CLOBBER_LIST);
+  asm volatile("syscall\n\t"
+               "jnc 1f\n\t"
+               "neg %%rax\n"
+               "1:"
+               : "=a"(retcode)
+               : "a"(__number)
+               : SYSCALL_CLOBBER_LIST);
   return retcode;
 }
 
 LIBC_INLINE long syscall_impl(long __number, long __arg1) {
   long retcode;
-  LIBC_INLINE_ASM("syscall\n\t"
-                  "jnc 1f\n\t"
-                  "neg %%rax\n"
-                  "1:"
-                  : "=a"(retcode)
-                  : "a"(__number), "D"(__arg1)
-                  : SYSCALL_CLOBBER_LIST);
+  asm volatile("syscall\n\t"
+               "jnc 1f\n\t"
+               "neg %%rax\n"
+               "1:"
+               : "=a"(retcode)
+               : "a"(__number), "D"(__arg1)
+               : SYSCALL_CLOBBER_LIST);
   return retcode;
 }
 
 LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2) {
   long retcode;
-  LIBC_INLINE_ASM("syscall\n\t"
-                  "jnc 1f\n\t"
-                  "neg %%rax\n"
-                  "1:"
-                  : "=a"(retcode)
-                  : "a"(__number), "D"(__arg1), "S"(__arg2)
-                  : SYSCALL_CLOBBER_LIST);
+  asm volatile("syscall\n\t"
+               "jnc 1f\n\t"
+               "neg %%rax\n"
+               "1:"
+               : "=a"(retcode)
+               : "a"(__number), "D"(__arg1), "S"(__arg2)
+               : SYSCALL_CLOBBER_LIST);
   return retcode;
 }
 
 LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
                               long __arg3) {
   long retcode;
-  LIBC_INLINE_ASM("syscall\n\t"
-                  "jnc 1f\n\t"
-                  "neg %%rax\n"
-                  "1:"
-                  : "=a"(retcode)
-                  : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3)
-                  : SYSCALL_CLOBBER_LIST);
+  asm volatile("syscall\n\t"
+               "jnc 1f\n\t"
+               "neg %%rax\n"
+               "1:"
+               : "=a"(retcode)
+               : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3)
+               : SYSCALL_CLOBBER_LIST);
   return retcode;
 }
 
@@ -69,14 +69,13 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
                               long __arg3, long __arg4) {
   long retcode;
   register long r10 __asm__("r10") = __arg4;
-  LIBC_INLINE_ASM("syscall\n\t"
-                  "jnc 1f\n\t"
-                  "neg %%rax\n"
-                  "1:"
-                  : "=a"(retcode)
-                  : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3),
-                    "r"(r10)
-                  : SYSCALL_CLOBBER_LIST);
+  asm volatile("syscall\n\t"
+               "jnc 1f\n\t"
+               "neg %%rax\n"
+               "1:"
+               : "=a"(retcode)
+               : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3), "r"(r10)
+               : SYSCALL_CLOBBER_LIST);
   return retcode;
 }
 
@@ -85,14 +84,14 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
   long retcode;
   register long r10 __asm__("r10") = __arg4;
   register long r8 __asm__("r8") = __arg5;
-  LIBC_INLINE_ASM("syscall\n\t"
-                  "jnc 1f\n\t"
-                  "neg %%rax\n"
-                  "1:"
-                  : "=a"(retcode)
-                  : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3),
-                    "r"(r10), "r"(r8)
-                  : SYSCALL_CLOBBER_LIST);
+  asm volatile("syscall\n\t"
+               "jnc 1f\n\t"
+               "neg %%rax\n"
+               "1:"
+               : "=a"(retcode)
+               : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3), "r"(r10),
+                 "r"(r8)
+               : SYSCALL_CLOBBER_LIST);
   return retcode;
 }
 
@@ -103,14 +102,14 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
   register long r10 __asm__("r10") = __arg4;
   register long r8 __asm__("r8") = __arg5;
   register long r9 __asm__("r9") = __arg6;
-  LIBC_INLINE_ASM("syscall\n\t"
-                  "jnc 1f\n\t"
-                  "neg %%rax\n"
-                  "1:"
-                  : "=a"(retcode)
-                  : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3),
-                    "r"(r10), "r"(r8), "r"(r9)
-                  : SYSCALL_CLOBBER_LIST);
+  asm volatile("syscall\n\t"
+               "jnc 1f\n\t"
+               "neg %%rax\n"
+               "1:"
+               : "=a"(retcode)
+               : "a"(__number), "D"(__arg1), "S"(__arg2), "d"(__arg3), "r"(r10),
+                 "r"(r8), "r"(r9)
+               : SYSCALL_CLOBBER_LIST);
   return retcode;
 }
 
