@@ -126,8 +126,8 @@ struct ThisAndMixedParams {
   View get(
       const MyObj &a [[clang::lifetimebound]],
       const MyObj &b,
-      const MyObj &c [[clang::lifetimebound]]) const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}} \
-                                                                                // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
+      const MyObj &c [[clang::lifetimebound]]) const // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}}
+      [[clang::lifetimebound]] {                     // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
     return cond() ? lb(a) : not_lb(b);
   }
 };
