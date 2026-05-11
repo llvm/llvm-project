@@ -20,6 +20,8 @@
 
 #ifdef FE_DENORM
 #define DENORM_EXCEPT FE_DENORM
+#elif defined(FE_DENORMAL)
+#define DENORM_EXCEPT FE_DENORMAL
 #elif defined(__FE_DENORM)
 #define DENORM_EXCEPT __FE_DENORM
 #else
