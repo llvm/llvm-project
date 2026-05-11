@@ -19,8 +19,8 @@
 // Step 2b: Run with content validation - no difference.
 // RUN: %{ctu_analysis} %t/main.c -fvalidate-ast-input-files-content
 
-// Step 3: Set mtime of the source from which PCH was built to the year 3000 (way in the future).
-// RUN: touch -t 300001010000 %t/other.c
+// Step 3: Advance the modification time of the source from which the PCH was derived.
+// RUN: touch -d "+2 hours" %t/other.c
 
 // Step 4a: Run CTU using the "stale" PCH, and it should still load it and find the division by zero bug.
 // RUN: %{ctu_analysis} -fvalidate-ast-input-files-content %t/main.c
