@@ -270,3 +270,7 @@ TEST_P(BinaryContextTester, BaseAddressSegmentsSmallerThanAlignment) {
   ASSERT_TRUE(BaseAddress.has_value());
   ASSERT_EQ(*BaseAddress, 0xaaaaaaaa0000ULL);
 }
+
+#if !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(BinaryContextTester);
+#endif // !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
