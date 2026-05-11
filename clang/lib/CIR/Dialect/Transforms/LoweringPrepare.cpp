@@ -90,6 +90,7 @@ struct LoweringPreparePass
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
   void lowerUnaryOp(cir::UnaryOpInterface op);
+  void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
@@ -118,6 +119,13 @@ struct LoweringPreparePass
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
+
+  /// When looking at the 'global' op, create the wrapper function.
+  void defineGlobalThreadLocalWrapper(cir::GlobalOp op, cir::FuncOp initAlias,
+                                      bool isVarDefinition);
+  /// Get the declaration for the 'wrapper' function for a global-TLS variable.
+  cir::FuncOp getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
+                                            cir::GlobalOp op);
 
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
@@ -255,6 +263,7 @@ struct LoweringPreparePass
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
   llvm::SmallVector<cir::FuncOp> dynamicInitializers;
+  llvm::StringMap<cir::FuncOp> threadLocalWrappers;
 
   /// Tracks guard variables for static locals (keyed by global symbol name).
   llvm::StringMap<cir::GlobalOp> staticLocalDeclGuardMap;
@@ -1360,6 +1369,88 @@ void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
   // Remove the init local op, now that we've done everything we need with it.
   initOp.erase();
 }
+static bool isThreadWrapperReplaceable(cir::TLS_Model tls,
+                                       clang::ASTContext &astCtx) {
+  return tls == cir::TLS_Model::GeneralDynamic &&
+         astCtx.getTargetInfo().getTriple().isOSDarwin();
+}
+
+static cir::GlobalLinkageKind
+getThreadLocalWrapperLinkage(GlobalOp op, clang::ASTContext &astCtx) {
+  if (isLocalLinkage(op.getLinkage()))
+    return op.getLinkage();
+
+  if (isThreadWrapperReplaceable(*op.getTlsModel(), astCtx))
+    if (!isLinkOnceLinkage(op.getLinkage()) &&
+        !isWeakODRLinkage(op.getLinkage()))
+      return op.getLinkage();
+
+  // If this isn't a TU in which this variable is defined, the thread wrapper is
+  // discardable.
+  if (op.isDeclaration())
+    return cir::GlobalLinkageKind::LinkOnceODRLinkage;
+  return cir::GlobalLinkageKind::WeakODRLinkage;
+}
+
+cir::FuncOp
+LoweringPreparePass::getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
+                                                   GlobalOp op) {
+  mlir::OpBuilder::InsertionGuard insertGuard(builder);
+  builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
+
+  mlir::StringAttr wrapperName = op.getDynTlsRefs()->getWrapperName();
+
+  auto existingWrapperIter = threadLocalWrappers.find(wrapperName.getValue());
+  if (existingWrapperIter != threadLocalWrappers.end())
+    return existingWrapperIter->second;
+
+  // type is ptr-to-global-type(void);
+  auto funcType = cir::FuncType::get({}, builder.getPointerTo(op.getSymType()));
+  cir::FuncOp func =
+      cir::FuncOp::create(builder, op.getLoc(), wrapperName, funcType);
+
+  cir::GlobalLinkageKind linkageKind =
+      getThreadLocalWrapperLinkage(op, *astCtx);
+  func.setLinkageAttr(
+      cir::GlobalLinkageKindAttr::get(&getContext(), linkageKind));
+
+  // TODO(cir): This is supposed to refer to the comdat of the global symbol,
+  // but that isn't in CIR yet.
+  if (astCtx->getTargetInfo().getTriple().supportsCOMDAT() &&
+      func.isWeakForLinker())
+    func.setComdat(true);
+
+  mlir::SymbolTable::setSymbolVisibility(
+      func, mlir::SymbolTable::Visibility::Private);
+
+  if (!isLocalLinkage(linkageKind)) {
+    if (!isThreadWrapperReplaceable(*op.getTlsModel(), *astCtx) ||
+        isLinkOnceLinkage(linkageKind) || isWeakODRLinkage(linkageKind) ||
+        op.getGlobalVisibility() == cir::VisibilityKind::Hidden)
+      func.setGlobalVisibility(cir::VisibilityKind::Hidden);
+  }
+  if (isThreadWrapperReplaceable(*op.getTlsModel(), *astCtx))
+    op->emitError("Unhandled thread wrapper attributes for CC and Nounwind");
+
+  threadLocalWrappers.insert({wrapperName.getValue(), func});
+  return func;
+}
+
+void LoweringPreparePass::defineGlobalThreadLocalWrapper(cir::GlobalOp op,
+                                                         cir::FuncOp initAlias,
+                                                         bool isVarDefinition) {
+  CIRBaseBuilderTy builder(getContext());
+  cir::FuncOp wrapper = getOrCreateThreadLocalWrapper(builder, op);
+  mlir::Block *entryBB = wrapper.addEntryBlock();
+  builder.setInsertionPointToStart(entryBB);
+  // If we are a situation where we have/need one, emit a call to the init
+  // function.
+  if (initAlias) {
+    op->emitError("not yet implemented, wrapper with an init alias");
+  }
+  auto get = builder.createGetGlobal(op, /*tls=*/true);
+  cir::ReturnOp::create(builder, op.getLoc(), {get});
+}
 
 void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
   // Static locals are handled separately via guard variables.
@@ -1368,6 +1459,8 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
 
   mlir::Region &ctorRegion = op.getCtorRegion();
   mlir::Region &dtorRegion = op.getDtorRegion();
+  // TODO(cir): Implement the initialization of this.
+  cir::FuncOp initAlias;
 
   if (!ctorRegion.empty() || !dtorRegion.empty()) {
     // Build a variable initialization function and move the initialzation code
@@ -1382,7 +1475,60 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     dynamicInitializers.push_back(f);
   }
 
+  // We need a wrapper for TLS globals that MIGHT have a non-constant
+  // initialization. The FE will have generated the DynTlsRefs for any with
+  // known dynamic init, or unknown (extern) init.
+  if (op.getTlsModel() == TLS_Model::GeneralDynamic && op.getDynTlsRefs())
+    defineGlobalThreadLocalWrapper(op, initAlias, !op.isDeclaration());
+
   assert(!cir::MissingFeatures::opGlobalAnnotations());
+}
+
+void LoweringPreparePass::lowerGetGlobalOp(GetGlobalOp op) {
+  if (!op.getTls())
+    return;
+  auto globalOp = mlir::dyn_cast_or_null<cir::GlobalOp>(
+      symbolTables.lookupNearestSymbolFrom(op, op.getNameAttr()));
+
+  if (!globalOp || globalOp.getTlsModel() != TLS_Model::GeneralDynamic ||
+      globalOp.getStaticLocalGuard().has_value())
+    return;
+
+  // Global ops that have constant init don't actually end up with a wrapper, so
+  // don't replace anything.
+  if (!globalOp.getDynTlsRefs())
+    return;
+
+  // If this is a global TLS, we need to replace the call to 'get_global' with a
+  // call to the wrapper function.  Classic codegen figures out some cases where
+  // we can omit this, but for now we're going to always put it in, as it is
+  // effectively a no-op.
+
+  // The first 'GetGlobalOp' at the beginning of a ctor/dtor region on one of
+  // these is for the purpose of creating/destroying.  We want to skip replacing
+  // THAT one, but leave all other get-global-ops in place, else
+  // self-referential ops won't work right.
+  mlir::Operation *parentOp = op->getParentOp();
+  if (parentOp == globalOp) {
+    mlir::Region *ctorRegion = &globalOp.getCtorRegion();
+    mlir::Region *dtorRegion = &globalOp.getDtorRegion();
+
+    if (!ctorRegion->empty() && &*ctorRegion->op_begin() == op.getOperation())
+      return;
+    if (!dtorRegion->empty() && &*dtorRegion->op_begin() == op.getOperation())
+      return;
+  }
+
+  CIRBaseBuilderTy builder(getContext());
+  cir::FuncOp wrapperFunc = getOrCreateThreadLocalWrapper(builder, globalOp);
+
+  builder.setInsertionPoint(op);
+  cir::CallOp call = builder.createCallOp(
+      wrapperFunc.getLoc(),
+      mlir::FlatSymbolRefAttr::get(wrapperFunc.getSymNameAttr()),
+      wrapperFunc.getFunctionType().getReturnType(), {});
+  op->replaceAllUsesWith(call);
+  op.erase();
 }
 
 void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
@@ -1877,6 +2023,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
+  } else if (auto getGlob = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
+    lowerGetGlobalOp(getGlob);
   } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
     lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
@@ -2284,9 +2432,9 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::CallOp, cir::GlobalOp, cir::StoreOp,
-                  cir::CmpThreeWayOp, cir::IncOp, cir::DecOp, cir::MinusOp,
-                  cir::NotOp, cir::LocalInitOp>(op))
+                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
+                  cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
+                  cir::MinusOp, cir::NotOp, cir::LocalInitOp>(op))
       opsToTransform.push_back(op);
   });
 
