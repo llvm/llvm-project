@@ -3233,11 +3233,10 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
   clang::QualType BaseType = PassedType;
-  if (const auto *VT = PassedType->getAs<clang::VectorType>()) {
+  if (const auto *VT = PassedType->getAs<clang::VectorType>())
     BaseType = VT->getElementType();
-  } else if (const auto *MT = PassedType->getAs<clang::MatrixType>()) {
+  else if (const auto *MT = PassedType->getAs<clang::MatrixType>())
     BaseType = MT->getElementType();
-  }
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
