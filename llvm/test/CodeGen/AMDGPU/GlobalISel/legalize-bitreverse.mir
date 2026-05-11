@@ -95,10 +95,13 @@ body: |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[BITCAST]]
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITREVERSE]], [[C]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITREVERSE]], [[C1]](s32)
     ; CHECK-NEXT: [[BITREVERSE1:%[0-9]+]]:_(s32) = G_BITREVERSE [[LSHR]]
-    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITREVERSE1]], [[C]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR2]], [[C]](s32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITREVERSE1]], [[C2]](s32)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR2]], [[C3]](s32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL]]
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)

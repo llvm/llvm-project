@@ -58,7 +58,8 @@ body:             |
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p0) :: (load (s8))
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
-    ; MIPS32-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
+    ; MIPS32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C1]]
     ; MIPS32-NEXT: G_STORE [[AND1]](s32), [[COPY]](p0) :: (store (s8))
     ; MIPS32-NEXT: RetRA
     %0:_(p0) = COPY $a0

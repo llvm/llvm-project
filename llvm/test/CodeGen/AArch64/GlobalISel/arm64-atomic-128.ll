@@ -556,15 +556,16 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ; CHECK-LLSC-O0-LABEL: atomic_load_relaxed:
 ; CHECK-LLSC-O0:       // %bb.0:
 ; CHECK-LLSC-O0-NEXT:    mov x11, xzr
+; CHECK-LLSC-O0-NEXT:    mov x12, xzr
 ; CHECK-LLSC-O0-NEXT:  .LBB4_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-LLSC-O0-NEXT:    ldxp x9, x8, [x2]
 ; CHECK-LLSC-O0-NEXT:    cmp x9, x11
 ; CHECK-LLSC-O0-NEXT:    cset w10, ne
-; CHECK-LLSC-O0-NEXT:    cmp x8, x11
+; CHECK-LLSC-O0-NEXT:    cmp x8, x12
 ; CHECK-LLSC-O0-NEXT:    cinc w10, w10, ne
 ; CHECK-LLSC-O0-NEXT:    cbnz w10, .LBB4_3
 ; CHECK-LLSC-O0-NEXT:  // %bb.2: // in Loop: Header=BB4_1 Depth=1
-; CHECK-LLSC-O0-NEXT:    stxp w10, x11, x11, [x2]
+; CHECK-LLSC-O0-NEXT:    stxp w10, x11, x12, [x2]
 ; CHECK-LLSC-O0-NEXT:    cbnz w10, .LBB4_1
 ; CHECK-LLSC-O0-NEXT:    b .LBB4_4
 ; CHECK-LLSC-O0-NEXT:  .LBB4_3: // in Loop: Header=BB4_1 Depth=1
@@ -585,10 +586,10 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    .cfi_offset w30, -16
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x4, x2
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    str x3, [sp, #8] // 8-byte Spill
+; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, xzr
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x3, xzr
-; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x3
+; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x0, x2
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x1, x3
-; CHECK-OUTLINE-LLSC-O0-NEXT:    mov x2, x3
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    bl __aarch64_cas16_relax
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    ldr x3, [sp, #8] // 8-byte Reload
 ; CHECK-OUTLINE-LLSC-O0-NEXT:    // implicit-def: $q0
@@ -601,10 +602,11 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ;
 ; CHECK-CAS-O0-LABEL: atomic_load_relaxed:
 ; CHECK-CAS-O0:       // %bb.0:
+; CHECK-CAS-O0-NEXT:    mov x4, xzr
 ; CHECK-CAS-O0-NEXT:    mov x8, xzr
-; CHECK-CAS-O0-NEXT:    mov x0, x8
+; CHECK-CAS-O0-NEXT:    mov x0, x4
 ; CHECK-CAS-O0-NEXT:    mov x1, x8
-; CHECK-CAS-O0-NEXT:    mov x4, x8
+; CHECK-CAS-O0-NEXT:    // kill: def $x4 killed $x4 def $x4_x5
 ; CHECK-CAS-O0-NEXT:    mov x5, x8
 ; CHECK-CAS-O0-NEXT:    casp x0, x1, x4, x5, [x2]
 ; CHECK-CAS-O0-NEXT:    mov x9, x0

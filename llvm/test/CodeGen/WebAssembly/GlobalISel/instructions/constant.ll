@@ -16,7 +16,9 @@ define zeroext i8 @const_i8_zext() {
 ; CHECK-LABEL: const_i8_zext:
 ; CHECK:         .functype const_i8_zext () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 255
+; CHECK-NEXT:    i32.const $push1=, -1
+; CHECK-NEXT:    i32.const $push2=, 255
+; CHECK-NEXT:    i32.and $push0=, $pop1, $pop2
 ; CHECK-NEXT:    return $pop0
   ret i8 255
 }
@@ -43,7 +45,9 @@ define zeroext i16 @const_i16_zext() {
 ; CHECK-LABEL: const_i16_zext:
 ; CHECK:         .functype const_i16_zext () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 65535
+; CHECK-NEXT:    i32.const $push1=, -1
+; CHECK-NEXT:    i32.const $push2=, 65535
+; CHECK-NEXT:    i32.and $push0=, $pop1, $pop2
 ; CHECK-NEXT:    return $pop0
   ret i16 65535
 }

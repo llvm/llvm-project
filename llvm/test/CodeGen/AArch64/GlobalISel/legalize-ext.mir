@@ -40,7 +40,8 @@ body:             |
     ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC9]], 16
     ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG2]](s32)
     ; CHECK-NEXT: [[TRUNC10:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC10]], [[C2]]
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC10]], [[C3]]
     ; CHECK-NEXT: $w0 = COPY [[AND3]](s32)
     ; CHECK-NEXT: [[TRUNC11:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: $w0 = COPY [[TRUNC11]](s32)
@@ -48,9 +49,10 @@ body:             |
     ; CHECK-NEXT: $w0 = COPY [[TRUNC12]](s32)
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(s64) = G_FPEXT [[TRUNC12]](s32)
     ; CHECK-NEXT: $x0 = COPY [[FPEXT]](s64)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY [[C3]](s32)
-    ; CHECK-NEXT: $w0 = COPY [[C3]](s32)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY [[C4]](s32)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY [[C5]](s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
     %0:_(s64) = COPY $x0

@@ -242,11 +242,13 @@ body: |
     ; GFX7: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX7-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX7-NEXT: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX7-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; GFX7-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV]]
-    ; GFX7-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV1]]
-    ; GFX7-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV2]]
+    ; GFX7-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF1]](s32), [[UV1]]
+    ; GFX7-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF2]](s32), [[UV2]]
     ; GFX7-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX7-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
     ; GFX7-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
@@ -257,11 +259,13 @@ body: |
     ; GFX8: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX8-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX8-NEXT: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; GFX8-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV]]
-    ; GFX8-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV1]]
-    ; GFX8-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV2]]
+    ; GFX8-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF1]](s32), [[UV1]]
+    ; GFX8-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF2]](s32), [[UV2]]
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX8-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
     ; GFX8-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
@@ -272,11 +276,13 @@ body: |
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; GFX9-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV]]
-    ; GFX9-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV1]]
-    ; GFX9-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV2]]
+    ; GFX9-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF1]](s32), [[UV1]]
+    ; GFX9-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF2]](s32), [[UV2]]
     ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX9-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
     ; GFX9-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
@@ -380,7 +386,8 @@ body: |
     ; GFX7-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX7-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
     ; GFX7-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX7-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; GFX7-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX7-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
     ; GFX7-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; GFX7-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; GFX7-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
@@ -409,7 +416,8 @@ body: |
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
     ; GFX8-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
     ; GFX8-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; GFX8-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[TRUNC]](s16), [[TRUNC2]]
     ; GFX8-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[TRUNC1]](s16), [[TRUNC3]]
@@ -434,7 +442,8 @@ body: |
     ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
     ; GFX9-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
     ; GFX9-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; GFX9-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[TRUNC]](s16), [[TRUNC2]]
     ; GFX9-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[TRUNC1]](s16), [[TRUNC3]]

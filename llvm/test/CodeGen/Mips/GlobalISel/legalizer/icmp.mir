@@ -81,7 +81,8 @@ body:             |
     ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; MIPS32-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; MIPS32-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; MIPS32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; MIPS32-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
     ; MIPS32-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND]](s32), [[AND1]]
     ; MIPS32-NEXT: $v0 = COPY [[ICMP]](s32)
     ; MIPS32-NEXT: RetRA implicit $v0
@@ -111,8 +112,9 @@ body:             |
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; MIPS32-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
     ; MIPS32-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; MIPS32-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
-    ; MIPS32-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C]](s32)
+    ; MIPS32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; MIPS32-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C1]](s32)
+    ; MIPS32-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
     ; MIPS32-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[ASHR]](s32), [[ASHR1]]
     ; MIPS32-NEXT: $v0 = COPY [[ICMP]](s32)
     ; MIPS32-NEXT: RetRA implicit $v0

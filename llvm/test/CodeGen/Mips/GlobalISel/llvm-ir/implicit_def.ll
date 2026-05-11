@@ -15,7 +15,7 @@ define void @g_i32() nounwind {
 ; MIPS32-NEXT:    addiu $sp, $sp, 24
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
-
+;
 ; MIPS64-LABEL: g_i32:
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
@@ -27,6 +27,7 @@ define void @g_i32() nounwind {
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
+
 entry:
   call void @f_i32(i32 undef)
   ret void
@@ -38,15 +39,15 @@ define void @g_i64() nounwind {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    # implicit-def: $a0
 ; MIPS32-NEXT:    # implicit-def: $a1
-; MIPS32-NEXT:    move $4, $5
 ; MIPS32-NEXT:    jal f_i64
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 24
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
-
+;
 ; MIPS64-LABEL: g_i64:
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
@@ -58,6 +59,7 @@ define void @g_i64() nounwind {
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
+
 entry:
   call void @f_i64(i64 undef)
   ret void
@@ -76,7 +78,7 @@ define void @g_float() nounwind {
 ; MIPS32-NEXT:    addiu $sp, $sp, 24
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
-
+;
 ; MIPS64-LABEL: g_float:
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
@@ -88,6 +90,7 @@ define void @g_float() nounwind {
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
+
 entry:
   call void @f_float(float undef)
   ret void
@@ -106,7 +109,7 @@ define void @g_double() nounwind {
 ; MIPS32-NEXT:    addiu $sp, $sp, 24
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
-
+;
 ; MIPS64-LABEL: g_double:
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
@@ -118,6 +121,7 @@ define void @g_double() nounwind {
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
+
 entry:
   call void @f_double(double undef)
   ret void

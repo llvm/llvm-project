@@ -45,7 +45,8 @@ entry:
 define zeroext i16 @unsigned_i16() {
 ; MIPS32-LABEL: unsigned_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $2, $zero, 32768
+; MIPS32-NEXT:    addiu $1, $zero, 32768
+; MIPS32-NEXT:    andi $2, $1, 65535
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -55,7 +56,8 @@ entry:
 define zeroext i8 @unsigned_i8() {
 ; MIPS32-LABEL: unsigned_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $2, $zero, 128
+; MIPS32-NEXT:    addiu $1, $zero, 65408
+; MIPS32-NEXT:    andi $2, $1, 255
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

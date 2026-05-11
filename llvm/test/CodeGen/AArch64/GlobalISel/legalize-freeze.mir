@@ -43,8 +43,9 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_v4s64
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<2 x s64>) = G_FREEZE [[DEF]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(<2 x s64>) = G_FREEZE [[DEF]]
+    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(<2 x s64>) = G_FREEZE [[DEF1]]
     ; CHECK-NEXT: $q0 = COPY [[FREEZE]](<2 x s64>)
     ; CHECK-NEXT: $q1 = COPY [[FREEZE1]](<2 x s64>)
     %undef:_(<4 x s64>) = G_IMPLICIT_DEF
@@ -160,7 +161,11 @@ body: |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF4:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF1]](s16), [[DEF2]](s16), [[DEF3]](s16), [[DEF4]](s16), [[DEF4]](s16), [[DEF4]](s16), [[DEF4]](s16)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[BUILD_VECTOR]](<8 x s16>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s8>), [[UV1:%[0-9]+]]:_(<4 x s8>) = G_UNMERGE_VALUES [[TRUNC]](<8 x s8>)
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<4 x s8>) = G_FREEZE [[UV]]

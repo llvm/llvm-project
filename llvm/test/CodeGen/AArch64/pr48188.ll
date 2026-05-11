@@ -7,8 +7,8 @@ define void @test() nounwind {
 ; GISEL-LABEL: test:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    mov x9, xzr
 ; GISEL-NEXT:    mov x8, xzr
-; GISEL-NEXT:    mov x9, x8
 ; GISEL-NEXT:    str x9, [sp] // 8-byte Spill
 ; GISEL-NEXT:    str x8, [sp, #8] // 8-byte Spill
 ; GISEL-NEXT:    b .LBB0_1
