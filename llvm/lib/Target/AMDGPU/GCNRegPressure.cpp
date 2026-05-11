@@ -99,8 +99,8 @@ void GCNRegPressure::inc(unsigned Reg, LaneBitmask PrevMask,
   Value[RegKind] += Sign;
 }
 
-void GCNRegPressure::inc(MCRegister Reg, bool IsAdd,
-                         const MachineRegisterInfo &MRI) {
+void GCNRegPressure::adjustPhysRegPressure(MCRegister Reg, bool IsAdd,
+                                           const MachineRegisterInfo &MRI) {
   if (!MRI.isAllocatable(Reg))
     return;
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
@@ -566,7 +566,7 @@ bool GCNRPTracker::insertIfNotLive(MCRegister Reg) {
 GCNRegPressure GCNRPTracker::constructPhysRegPressure() const {
   GCNRegPressure Res;
   for (MCRegister Reg : PhysLiveRegs.Regs)
-    Res.inc(Reg, /*IsAdd=*/true, *MRI);
+    Res.inc(Reg, *MRI);
   return Res;
 }
 
@@ -693,13 +693,13 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
         VirtLiveRegs.erase(I);
     } else if (TrackPhysRegs && Reg.isPhysical() && MRI->isAllocatable(Reg)) {
       if (MO.isEarlyClobber()) {
-        ECDefPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
+        ECDefPressure.inc(Reg.asMCReg(), *MRI);
         HasECDefs = true;
       }
 
       bool WasLive = eraseAllLiveUnits(Reg.asMCReg());
       if (WasLive)
-        CurPressure.inc(Reg.asMCReg(), /*IsAdd=*/false, *MRI);
+        CurPressure.dec(Reg.asMCReg(), *MRI);
     }
   }
 
@@ -730,7 +730,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
         continue;
       bool NewlyLive = insertIfNotLive(Reg.asMCReg());
       if (NewlyLive)
-        CurPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
+        CurPressure.inc(Reg.asMCReg(), *MRI);
     }
   }
 
@@ -829,7 +829,7 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
       if (!SeenRegs.insert(Reg).second)
         continue;
       if (eraseKilledUnits(Reg.asMCReg(), SI))
-        CurPressure.inc(Reg.asMCReg(), /*IsAdd=*/false, *MRI);
+        CurPressure.dec(Reg.asMCReg(), *MRI);
     }
   }
 
@@ -864,7 +864,7 @@ void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
       bool WasNotLive = isAnyRegUnitNotLive(Reg.asMCReg());
       if (WasNotLive && !MO.isDead()) {
         PhysLiveRegs.add(Reg.asMCReg());
-        CurPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
+        CurPressure.inc(Reg.asMCReg(), *MRI);
       }
     }
   }
@@ -997,7 +997,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
 
       bool WasNotLive = isAnyRegUnitNotLive(Reg.asMCReg());
       if (WasNotLive && !MO.isDead())
-        TempPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
+        TempPressure.inc(Reg.asMCReg(), *MRI);
     }
 
     SeenRegs.clear();
@@ -1011,7 +1011,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
 
       bool IsKilled = checkRegKilled(Reg.asMCReg(), SlotIdx);
       if (IsKilled)
-        TempPressure.inc(Reg.asMCReg(), /*IsAdd=*/false, *MRI);
+        TempPressure.dec(Reg.asMCReg(), *MRI);
     }
   }
 

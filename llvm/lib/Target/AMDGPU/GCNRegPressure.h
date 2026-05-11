@@ -126,15 +126,27 @@ struct GCNRegPressure {
     return std::max(UnifiedSpill, ArchSpill + AGPRSpill);
   }
 
+  /// Adjust pressure for a virtual register.
   void inc(unsigned Reg,
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
 
-  /// Update pressure for a physical register (add or remove). Used when
-  /// tracking physical registers.
-  void inc(MCRegister Reg, bool IsAdd, const MachineRegisterInfo &MRI);
+  /// Increment pressure for a physical register.
+  void inc(MCRegister Reg, const MachineRegisterInfo &MRI) {
+    adjustPhysRegPressure(Reg, /*IsAdd=*/true, MRI);
+  }
 
+  /// Decrement pressure for a physical register.
+  void dec(MCRegister Reg, const MachineRegisterInfo &MRI) {
+    adjustPhysRegPressure(Reg, /*IsAdd=*/false, MRI);
+  }
+
+private:
+  void adjustPhysRegPressure(MCRegister Reg, bool IsAdd,
+                             const MachineRegisterInfo &MRI);
+
+public:
   bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
                        unsigned DynamicVGPRBlockSize) const {
     return getOccupancy(ST, DynamicVGPRBlockSize) >
