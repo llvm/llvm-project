@@ -429,7 +429,7 @@ function(add_compiler_rt_runtime name type)
 
         add_custom_command(TARGET ${libname}
           POST_BUILD
-          COMMAND ${CODESIGN} --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
+          COMMAND ${CODESIGN} --force --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
           WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
           COMMAND_EXPAND_LISTS
         )
