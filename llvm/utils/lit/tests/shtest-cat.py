@@ -1,6 +1,6 @@
 ## Test the cat command.
 
-# This is required for the use of %errc_ENOENT.
+## This is required for the use of %errc_ENOENT.
 # REQUIRES: llvm-config-available
 #
 # RUN: not %{lit} -v %{inputs}/shtest-cat \

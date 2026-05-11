@@ -1,5 +1,8 @@
 # Check the various features of the ShTest format.
 
+## This is required for the use of %errc_ENOENT.
+# REQUIRES: llvm-config-available
+
 # RUN: rm -f %t.xml
 # RUN: not %{lit} -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
 # RUN: FileCheck -DERROR_MSG=%errc_ENOENT < %t.out %s \
