@@ -345,6 +345,8 @@ public:
     SmallVector<ValueRange> caseArguments;
     SmallVector<unsigned> caseValues;
     SmallVector<Block *> caseDestinations;
+    SmallVector<SmallVector<Value>> reconstructedArgsStorage;
+
     for (auto &&[index, pair] : llvm::enumerate(blockArgMapping)) {
       auto &&[succ, offset] = pair;
       if (excluded.contains(succ))
@@ -355,8 +357,21 @@ public:
       unsigned count = countIt != blockArgCounts.end()
                            ? countIt->second
                            : succ->getNumArguments();
-      caseArguments.push_back(
-          multiplexerBlock->getArguments().slice(offset, count));
+
+      auto it = argMappings.find(succ);
+      if (it != argMappings.end()) {
+        const auto &mapping = it->second;
+        reconstructedArgsStorage.emplace_back(mapping.size());
+        auto &reconstructedArgs = reconstructedArgsStorage.back();
+        for (unsigned i = 0; i < mapping.size(); ++i) {
+          reconstructedArgs[i] =
+              multiplexerBlock->getArgument(offset + mapping[i]);
+        }
+        caseArguments.push_back(reconstructedArgs);
+      } else {
+        caseArguments.push_back(
+            multiplexerBlock->getArguments().slice(offset, count));
+      }
       caseDestinations.push_back(succ);
     }
 
@@ -1219,8 +1234,13 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     if (branchRegion.empty()) {
       // If no block is part of the branch region, we create a dummy block to
       // place the region terminator into.
-      createdEmptyBlocks.emplace_back(
-          new Block, llvm::to_vector(entryEdge.getSuccessorOperands()));
+      SmallVector<Value> yieldValues =
+          llvm::to_vector(entryEdge.getSuccessorOperands());
+      while (yieldValues.size() < continuation->getNumArguments()) {
+        yieldValues.push_back(getUndefValue(
+            continuation->getArgument(yieldValues.size()).getType()));
+      }
+      createdEmptyBlocks.emplace_back(new Block, yieldValues);
       conditionalRegion.push_back(createdEmptyBlocks.back().first);
       continue;
     }
@@ -1281,9 +1301,14 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
   for (Operation *user : llvm::make_early_inc_range(continuation->getUsers())) {
     assert(user->getNumSuccessors() == 1);
     auto builder = OpBuilder::atBlockTerminator(user->getBlock());
-    LogicalResult result = interface.createStructuredBranchRegionTerminatorOp(
-        user->getLoc(), builder, structuredCondOp, user,
+    SmallVector<Value> yieldValues = llvm::to_vector(
         getMutableSuccessorOperands(user->getBlock(), 0).getAsOperandRange());
+    while (yieldValues.size() < continuation->getNumArguments()) {
+      yieldValues.push_back(getUndefValue(
+          continuation->getArgument(yieldValues.size()).getType()));
+    }
+    LogicalResult result = interface.createStructuredBranchRegionTerminatorOp(
+        user->getLoc(), builder, structuredCondOp, user, yieldValues);
     if (failed(result))
       return failure();
     user->erase();
@@ -1394,9 +1419,6 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
   if (region.empty() || region.hasOneBlock())
     return false;
 
-  if (failed(checkTransformationPreconditions(region, interface)))
-    return failure();
-
   DenseMap<Type, Value> typedUndefCache;
   auto getUndefValue = [&](Type type) {
     auto [iter, inserted] = typedUndefCache.try_emplace(type);
@@ -1409,6 +1431,9 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
         interface.getUndefValue(region.getLoc(), constantBuilder, type);
     return iter->second;
   };
+
+  if (failed(checkTransformationPreconditions(region, interface)))
+    return failure();
 
   // The transformation only creates all values in the range of 0 to
   // max(#numSuccessors). Therefore using a vector instead of a map.
