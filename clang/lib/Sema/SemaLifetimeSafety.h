@@ -24,18 +24,24 @@ namespace clang::lifetimes {
 
 inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
   DiagnosticsEngine &Diags = S.getDiagnostics();
-  return !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope,
-                          D->getBeginLoc()) ||
-         !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope_moved,
-                          D->getBeginLoc()) ||
-         !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr,
-                          D->getBeginLoc()) ||
-         !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_moved,
-                          D->getBeginLoc()) ||
-         !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
-                          D->getBeginLoc()) ||
-         !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
-                          D->getBeginLoc());
+  constexpr unsigned DiagIDs[] = {
+      diag::warn_lifetime_safety_use_after_scope,
+      diag::warn_lifetime_safety_use_after_scope_moved,
+      diag::warn_lifetime_safety_use_after_free,
+      diag::warn_lifetime_safety_return_stack_addr,
+      diag::warn_lifetime_safety_return_stack_addr_moved,
+      diag::warn_lifetime_safety_invalidation,
+      diag::warn_lifetime_safety_dangling_field,
+      diag::warn_lifetime_safety_dangling_field_moved,
+      diag::warn_lifetime_safety_dangling_global,
+      diag::warn_lifetime_safety_dangling_global_moved,
+      diag::warn_lifetime_safety_noescape_escapes,
+      diag::warn_lifetime_safety_param_lifetimebound_violation,
+  };
+  for (unsigned DiagID : DiagIDs)
+    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+      return true;
+  return false;
 }
 
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
@@ -170,6 +176,15 @@ public:
       S.Diag(EscapeField->getLocation(),
              diag::note_lifetime_safety_escapes_to_field_here)
           << EscapeField->getSourceRange();
+  }
+
+  void reportLifetimeboundViolation(
+      const ParmVarDecl *ParmWithLifetimebound) override {
+    StringRef ParamName = ParmWithLifetimebound->getName();
+    bool HasName = ParamName.size() > 0;
+    S.Diag(ParmWithLifetimebound->getLocation(),
+           diag::warn_lifetime_safety_param_lifetimebound_violation)
+        << HasName << ParamName << ParmWithLifetimebound->getSourceRange();
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

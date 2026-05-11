@@ -241,6 +241,7 @@ LLVMInitializeAArch64Target() {
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769LegacyPass(PR);
   initializeAArch64A57FPLoadBalancingLegacyPass(PR);
+  initializeAArch64CodeLayoutOptPass(PR);
   initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
@@ -273,7 +274,7 @@ LLVMInitializeAArch64Target() {
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
-  initializeAArch64SLSHardeningPass(PR);
+  initializeAArch64SLSHardeningLegacyPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRALegacyPass(PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
@@ -921,10 +922,15 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());
+
+  // Apply code layout optimizations. Run late so detection reflects the
+  // final MI stream.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64CodeLayoutOptPass());
 }
 
 void AArch64PassConfig::addPostBBSections() {
-  addPass(createAArch64SLSHardeningPass());
+  addPass(createAArch64SLSHardeningLegacyPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());
