@@ -92,7 +92,8 @@ public:
   /// Run the clang frontend, collect the preprocessed tokens from the frontend
   /// invocation and store them in this->Buffer.
   /// This also clears SourceManager before running the compiler.
-  void recordTokens(llvm::StringRef Code) {
+  void recordTokens(llvm::StringRef Code,
+                    llvm::ArrayRef<const char *> ExtraArgs = {}) {
     class RecordTokens : public ASTFrontendAction {
     public:
       explicit RecordTokens(TokenBuffer &Result) : Result(Result) {}
@@ -123,8 +124,10 @@ public:
     // Prepare to run a compiler.
     if (!Diags->getClient())
       Diags->setClient(new IgnoringDiagConsumer);
-    std::vector<const char *> Args = {"tok-test", "-std=c++03", "-fsyntax-only",
-                                      FileName};
+    std::vector<const char *> Args = {"tok-test", "-std=c++03",
+                                      "-fsyntax-only"};
+    Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
+    Args.push_back(FileName);
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
     CIOpts.VFS = FS;
@@ -1147,5 +1150,38 @@ TEST_F(TokenCollectorTest, Pragmas) {
       for(int i=0;i<4;++i);
     }
   )cpp");
+}
+
+TEST_F(TokenBufferTest, EofTokenOnFunctionScopeDepthLimit) {
+  static_assert(ParmVarDecl::getMaxFunctionScopeDepth() == 127,
+                "Test input relies on a max depth of 127");
+
+  // Force parser to bail out due to exceeding the function scope depth limit.
+  // https://github.com/llvm/llvm-project/issues/196244
+  recordTokens(R"cpp(
+    #define L [](int=
+    #define L4 L L L L
+    #define L16 L4 L4 L4 L4
+    #define L64 L16 L16 L16 L16
+
+    void foo() {
+      L64 L64 L
+    }
+  )cpp");
+
+  ASSERT_GE(Buffer.expandedTokens().size(), 2u);
+  // The stream is truncated but ends with an `eof`.
+  EXPECT_EQ(Buffer.expandedTokens().back().kind(), tok::eof);
+  EXPECT_EQ(Buffer.expandedTokens().drop_back().back().kind(), tok::kw_int);
+}
+
+TEST_F(TokenBufferTest, EofTokenOnBracketDepthLimit) {
+  // Force parser to bail out due to exceeding the bracket depth limit.
+  recordTokens("((;", {"-fbracket-depth=1"});
+
+  ASSERT_GE(Buffer.expandedTokens().size(), 2u);
+  // The stream is truncated but ends with an `eof`.
+  EXPECT_EQ(Buffer.expandedTokens().back().kind(), tok::eof);
+  EXPECT_EQ(Buffer.expandedTokens().drop_back().back().kind(), tok::l_paren);
 }
 } // namespace
