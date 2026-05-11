@@ -2760,6 +2760,23 @@ void CodeGenFunction::EmitAsmStores(
   }
 }
 
+static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
+                                        const AsmStmt &S) {
+  constexpr auto Name = "__ASM__hipstdpar_unsupported";
+
+  std::string Asm;
+  if (auto GCCAsm = dyn_cast<GCCAsmStmt>(&S))
+    Asm = GCCAsm->getAsmString();
+
+  auto &Ctx = CGF->CGM.getLLVMContext();
+  auto StrTy = llvm::ConstantDataArray::getString(Ctx, Asm);
+  auto FnTy = llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx),
+                                      {StrTy->getType()}, false);
+  auto UBF = CGF->CGM.getModule().getOrInsertFunction(Name, FnTy);
+
+  CGF->Builder.CreateCall(UBF, {StrTy});
+}
+
 /// Gather and validate the output and input constraints for the given inline
 /// assembly statement. This ensures that the constraints are valid for the
 /// target and prepares them for further processing.
@@ -3106,6 +3123,7 @@ bool CodeGenFunction::HandleLabels(const AsmStmt &S,
 /// and side-effect modeling.
 bool CodeGenFunction::HandleClobbers(const AsmStmt &S,
                                      AsmConstraintsInfo &AsmInfo) {
+  std::string &Constraints = AsmInfo.Constraints;
   bool HasUnwindClobber = false;
   for (unsigned I = 0, E = S.getNumClobbers(); I != E; I++) {
     std::string Clobber = S.getClobber(I);
@@ -3129,48 +3147,31 @@ bool CodeGenFunction::HandleClobbers(const AsmStmt &S,
 
     if (isa<MSAsmStmt>(&S)) {
       if (Clobber == "eax" || Clobber == "edx") {
-        if (AsmInfo.Constraints.find("=&A") != std::string::npos)
+        if (Constraints.find("=&A") != std::string::npos)
           continue;
 
         std::string::size_type position1 =
-            AsmInfo.Constraints.find("={" + Clobber + "}");
+            Constraints.find("={" + Clobber + "}");
         if (position1 != std::string::npos) {
-          AsmInfo.Constraints.insert(position1 + 1, "&");
+          Constraints.insert(position1 + 1, "&");
           continue;
         }
 
-        std::string::size_type position2 = AsmInfo.Constraints.find("=A");
+        std::string::size_type position2 = Constraints.find("=A");
         if (position2 != std::string::npos) {
-          AsmInfo.Constraints.insert(position2 + 1, "&");
+          Constraints.insert(position2 + 1, "&");
           continue;
         }
       }
     }
 
-    if (!AsmInfo.Constraints.empty())
-      AsmInfo.Constraints += ',';
+    if (!Constraints.empty())
+      Constraints += ',';
 
-    AsmInfo.Constraints += "~{" + Clobber + '}';
+    Constraints += "~{" + Clobber + '}';
   }
 
   return HasUnwindClobber;
-}
-
-static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
-                                        const AsmStmt &S) {
-  constexpr auto Name = "__ASM__hipstdpar_unsupported";
-
-  std::string Asm;
-  if (auto GCCAsm = dyn_cast<GCCAsmStmt>(&S))
-    Asm = GCCAsm->getAsmString();
-
-  auto &Ctx = CGF->CGM.getLLVMContext();
-  auto StrTy = llvm::ConstantDataArray::getString(Ctx, Asm);
-  auto FnTy = llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx),
-                                      {StrTy->getType()}, false);
-  auto UBF = CGF->CGM.getModule().getOrInsertFunction(Name, FnTy);
-
-  CGF->Builder.CreateCall(UBF, {StrTy});
 }
 
 void CodeGenFunction::EmitAsmStmt(
