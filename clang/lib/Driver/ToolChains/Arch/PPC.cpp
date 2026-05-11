@@ -84,12 +84,12 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Triple.isOSAIX())
     Features.push_back("+modern-aix-as");
 
-  if (Arg *A = Args.getLastArg(options::OPT_mnoaix_ptr_glue,
-                               options::OPT_maix_ptr_glue)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mnoaix_use_ptrgl,
+                               options::OPT_maix_use_ptrgl)) {
     if (!Triple.isOSAIX())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << Triple.str();
-    else if (A->getOption().matches(options::OPT_maix_ptr_glue))
+    else if (A->getOption().matches(options::OPT_maix_use_ptrgl))
       Features.push_back("+use-ptrgl-helper");
   }
 }
