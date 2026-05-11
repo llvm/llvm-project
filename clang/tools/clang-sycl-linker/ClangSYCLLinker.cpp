@@ -519,8 +519,8 @@ static bool isEntryPoint(const Function &F, bool EmitOnlyKernelsAsEntryPoints) {
 }
 
 /// Collect entry point names from \p M and serialize them into a symbol table.
-static SmallString<0> collectSymbols(const Module &M,
-                                     bool EmitOnlyKernelsAsEntryPoints) {
+static SmallString<0> collectEntryPoints(const Module &M,
+                                         bool EmitOnlyKernelsAsEntryPoints) {
   SmallVector<StringRef> Names;
   for (const Function &F : M)
     if (isEntryPoint(F, EmitOnlyKernelsAsEntryPoints))
@@ -554,7 +554,7 @@ public:
       Key = F.getFnAttribute(AttrSYCLModuleId).getValueAsString().str();
       break;
     case IRSplitMode::SPLIT_NONE:
-      llvm_unreachable("categorizer not used for SPLIT_NONE");
+      llvm_unreachable("categorizer should not be used for SPLIT_NONE");
     }
 
     auto [It, Inserted] =
@@ -576,8 +576,7 @@ static Expected<SmallVector<SplitModule, 0>>
 splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
                 IRSplitMode Mode, bool EmitOnlyKernelsAsEntryPoints,
                 const ArgList &Args) {
-  assert(Mode != IRSplitMode::SPLIT_NONE &&
-         "Any split method except None should be specified");
+  assert(Mode != IRSplitMode::SPLIT_NONE && "SPLIT_NONE is unsupported");
 
   SmallVector<SplitModule, 0> SplitModules;
   EntryPointCategorizer Categorizer(Mode, EmitOnlyKernelsAsEntryPoints);
@@ -596,7 +595,7 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
 
     SplitModules.push_back(
         {SmallString<256>(*BitcodeFileOrErr),
-         collectSymbols(*Part, EmitOnlyKernelsAsEntryPoints)});
+         collectEntryPoints(*Part, EmitOnlyKernelsAsEntryPoints)});
     return Error::success();
   };
 
@@ -622,7 +621,7 @@ static bool checkModuleSplitCanBeSkipped(IRSplitMode Mode, const Module &M,
                                          bool EmitOnlyKernelsAsEntryPoints) {
   if (Mode == IRSplitMode::SPLIT_NONE)
     return true;
-  return !llvm::any_of(M.functions(), [&](const Function &F) {
+  return llvm::none_of(M.functions(), [&](const Function &F) {
     return isEntryPoint(F, EmitOnlyKernelsAsEntryPoints);
   });
 }
@@ -662,7 +661,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
                                    EmitOnlyKernelsAsEntryPoints)) {
     SplitModules.push_back(
         {SmallString<256>(LinkedFile),
-         collectSymbols(*LinkedModule, EmitOnlyKernelsAsEntryPoints)});
+         collectEntryPoints(*LinkedModule, EmitOnlyKernelsAsEntryPoints)});
   } else {
     Expected<SmallVector<SplitModule, 0>> SplitModulesOrErr =
         splitDeviceCode(std::move(LinkedModule), LinkedFile, SplitMode,

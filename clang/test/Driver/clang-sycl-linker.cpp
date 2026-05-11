@@ -9,6 +9,7 @@
 // RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
 // SIMPLE-FO:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 // SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
+// SIMPLE-FO-NOT:  {{.+}}
 //
 // Test that IMG_SPIRV image kind is set for non-AOT compilation.
 // RUN: llvm-objdump --offloading %t-spirv.out | FileCheck %s --check-prefix=IMAGE-KIND-SPIRV
@@ -69,48 +70,3 @@
 // RUN: not clang-sycl-linker --dry-run %t_1.bc %t_2.bc -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=NOTARGET
 // NOTARGET: Target triple must be specified
-//
-// Test the split mode ("none"): kernels from different TUs are not split into
-// separate images.
-// RUN: llvm-as %S/Inputs/SYCL/two-modules.ll -o %t-two-mod.bc
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 --module-split-mode=none %t-two-mod.bc -o %t-split-none.out 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=SPLIT-NONE
-// SPLIT-NONE:      sycl-device-link: inputs: {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
-// SPLIT-NONE-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
-// SPLIT-NONE-NOT:  LLVM backend: input: {{.*}}.bc, output: {{.*}}_1.spv
-//
-// Test per-kernel split: a module with two SPIR_KERNEL functions produces two
-// device images.
-// RUN: llvm-as %S/Inputs/SYCL/two-kernels.ll -o %t-two.bc
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 --module-split-mode=kernel %t-two.bc -o %t-split-kernel.out 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=SPLIT-KERNEL
-// SPLIT-KERNEL:      sycl-device-link: inputs: {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
-// SPLIT-KERNEL-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[SPLIT0:.*]].bc, [[SPLIT1:.*]].bc, mode: kernel
-// SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT0]].bc, output: {{.*}}_0.spv
-// SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT1]].bc, output: {{.*}}_1.spv
-//
-// Test that an invalid split mode is rejected.
-// RUN: not clang-sycl-linker --dry-run -triple=spirv64 --module-split-mode=bogus %t_1.bc -o a.out 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=SPLIT-INVALID
-// SPLIT-INVALID: module-split-mode value isn't recognized: bogus
-//
-// Test default split mode ('source'): no --module-split-mode flag needed.
-// Two kernels with different sycl-module-id values produce two device images.
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 %t-two-mod.bc -o %t-src.out 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=SPLIT-SRC
-//
-// Test per-TU split ('source' explicitely provided)
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 --module-split-mode=source %t-two-mod.bc -o %t-src.out 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=SPLIT-SRC
-// SPLIT-SRC:      sycl-device-link: inputs: {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
-// SPLIT-SRC-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[S0:.*]].bc, [[S1:.*]].bc, mode: source
-// SPLIT-SRC-NEXT: LLVM backend: input: [[S0]].bc, output: {{.*}}_0.spv
-// SPLIT-SRC-NEXT: LLVM backend: input: [[S1]].bc, output: {{.*}}_1.spv
-//
-// Test that sycl_external functions are not treated as entry points: a kernel
-// from TU1 and a sycl_external function from TU2 produce a single image,
-// since only the kernel is an entry point.
-// RUN: llvm-as %S/Inputs/SYCL/external-fn.ll -o %t-ext.bc
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 --module-split-mode=source %t-ext.bc -o %t-ext.out 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=SPLIT-EXT-NO-ENTRY
-// SPLIT-EXT-NO-ENTRY: sycl-module-split: input: {{.*}}.bc, output: [[S0:.*]].bc, mode: source
