@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_SYS_PERSONALITY_PERSONALITY_H
 
 #include "src/__support/macros/config.h"
-#include <sys/personality.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

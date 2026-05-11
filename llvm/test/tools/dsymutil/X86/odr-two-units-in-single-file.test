@@ -12,27 +12,32 @@
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
 # RUN: dsymutil --linker classic -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker parallel -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+
+# The two input CUs both define "class1"; dsymutil must unique it to a
+# single DW_TAG_class_type DIE that both CUs' variables reference. The
+# classic linker keeps the DIE in the first defining CU; the parallel
+# linker hoists it into an artificial type unit. Either way, both var1
+# (in CU1) and var2 (in CU2) must reference the same class1 DIE offset.
+#
+# The %.16x format specifier in the DW_AT_type references matches
+# llvm-dwarfdump's current 16-char zero-padded emission of 64-bit DWARF
+# attribute values; if that padding ever changes the CHECKs here will
+# need to be updated.
 
 # CHECK: file format Mach-O 64-bit x86-64
 # CHECK: .debug_info contents:
-# CHECK: Compile Unit:
-# CHECK: DW_TAG_compile_unit
-# CHECK: DW_AT_name{{.*}}"CU1"
-# CHECK: DW_TAG_class_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"class1"
+# CHECK: 0x[[#%x,CLASS1:]]: DW_TAG_class_type
+# CHECK-NEXT:                 DW_AT_name{{.*}}"class1"
+# CHECK-NOT:                   DW_TAG_class_type
+
 # CHECK: DW_TAG_variable
 # CHECK: DW_AT_name{{.*}}"var1"
-# CHECK: DW_AT_const_value
-# CHECK: DW_AT_type (0x00000000[[CLASS1:[0-9a-f]*]]
+# CHECK: DW_AT_type (0x[[#%.16x,CLASS1]] "class1")
 
-# CHECK: Compile Unit:
-# CHECK: DW_TAG_compile_unit
-# CHECK: DW_AT_name{{.*}}"CU2"
-# CHECK-NOT: DW_TAG_class_type
-# CHECK-NOT: "class1"
 # CHECK: DW_TAG_variable
 # CHECK: DW_AT_name{{.*}}"var2"
-# CHECK: DW_AT_const_value
-# CHECK: DW_AT_type (0x00000000[[CLASS1]]
+# CHECK: DW_AT_type (0x[[#%.16x,CLASS1]] "class1")
 
 
 
@@ -198,5 +203,3 @@ DWARF:
             - Value:  0x0000001a
         - AbbrCode: 0
 ...
-
-## FIXME: Support --linker parallel

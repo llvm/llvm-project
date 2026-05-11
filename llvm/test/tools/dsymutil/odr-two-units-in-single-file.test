@@ -9,18 +9,22 @@
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
 # RUN: dsymutil --linker classic -y -j 16 %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker parallel -y -j 16 %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
 
-## FIXME: Support --linker parallel
-
+# Both input CUs define "class1"; verify it is uniqued to exactly one
+# DW_TAG_class_type in the linked output (the classic linker leaves it in
+# the last defining CU; the parallel linker hoists it into an artificial
+# type unit). Either way, exactly one DW_TAG_class_type should remain,
+# both input CUs must be preserved, and both variables must be present.
 # CHECK: file format Mach-O 64-bit x86-64
 # CHECK: .debug_info contents:
-# CHECK: Compile Unit:
-# CHECK: DW_TAG_compile_unit
-# CHECK-NOT: DW_TAG_class_type
-# CHECK: Compile Unit:
-# CHECK: DW_TAG_compile_unit
-# CHECK: DW_TAG_class_type
-# CHECK: NULL
+# CHECK-COUNT-1: DW_TAG_class_type
+# CHECK-NOT:     DW_TAG_class_type
+# CHECK:         .debug_str contents:
+# CHECK-DAG:     "CU1"
+# CHECK-DAG:     "CU2"
+# CHECK-DAG:     "var1"
+# CHECK-DAG:     "var2"
 
 
 --- !mach-o

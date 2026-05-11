@@ -835,8 +835,7 @@ struct FormatStyle {
   /// * ``InlineOnly``
   ///   Only merge functions defined inside a class. Same as ``inline``,
   ///   except it does not implies ``empty``: i.e. top level empty functions
-  ///   are not merged either. This option is **deprecated** and is retained
-  ///   for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+  ///   are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -849,9 +848,7 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Empty``
-  ///   Only merge empty functions. This option is **deprecated** and is
-  ///   retained for backwards compatibility. See ``Empty`` of
-  ///   ``ShortFunctionStyle``.
+  ///   Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     void f() {}
   ///     void f2() {
@@ -860,9 +857,8 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Inline``
-  ///   Only merge functions defined inside a class. Implies ``empty``. This
-  ///   option is **deprecated** and is retained for backwards compatibility.
-  ///   See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+  ///   Only merge functions defined inside a class. Implies ``empty``. See
+  ///   ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -2647,6 +2643,20 @@ struct FormatStyle {
   /// The break constructor initializers style to use.
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
+
+  /// If ``true``, clang-format will always break before function declaration
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDeclaration(
+  ///             int A, int B);
+  ///
+  ///    false:
+  ///    void functionDeclaration(int A, int B);
+  ///
+  /// \endcode
+  /// \version 23
+  bool BreakFunctionDeclarationParameters;
 
   /// If ``true``, clang-format will always break before function definition
   /// parameters.
@@ -6080,6 +6090,8 @@ struct FormatStyle {
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDeclarationParameters ==
+               R.BreakFunctionDeclarationParameters &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&

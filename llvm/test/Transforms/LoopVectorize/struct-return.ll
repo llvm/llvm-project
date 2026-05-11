@@ -76,7 +76,7 @@ define void @struct_return_f64_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -138,7 +138,7 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-NEXT:    store <2 x float> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -188,7 +188,7 @@ define void @test_overflow_intrinsic(ptr noalias readonly %in, ptr noalias write
 ; CHECK-NEXT:    store <2 x i8> [[TMP4]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -235,7 +235,7 @@ define void @struct_return_i32_three_results_widen(ptr noalias %in, ptr noalias 
 ; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -279,7 +279,18 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi { i64, i64 } [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_STORE_IF]] ]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
+; CHECK-NEXT:    br i1 [[TMP29]], label %[[PRED_CALL_IF1:.*]], label %[[PRED_CALL_CONTINUE2:.*]]
+; CHECK:       [[PRED_CALL_IF1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR3]]
+; CHECK-NEXT:    br label %[[PRED_CALL_CONTINUE2]]
+; CHECK:       [[PRED_CALL_CONTINUE2]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi { i64, i64 } [ poison, %[[PRED_STORE_CONTINUE]] ], [ [[TMP24]], %[[PRED_CALL_IF1]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64 } [[TMP4]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { <2 x i64>, <2 x i64> } poison, <2 x i64> [[TMP6]], 0
@@ -287,35 +298,22 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP7]], <2 x i64> [[TMP14]], 1
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = phi { <2 x i64>, <2 x i64> } [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_STORE_IF]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP34]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i64 } [[TMP12]], 0
-; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP31]], 0
+; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP30]], 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <2 x i64> [[TMP32]], i64 [[TMP13]], i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP31]], <2 x i64> [[TMP33]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP30]], <2 x i64> [[TMP33]], 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { i64, i64 } [[TMP12]], 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP19]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i64> [[TMP21]], i64 [[TMP20]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP19]], <2 x i64> [[TMP22]], 1
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP24:%.*]] = phi { <2 x i64>, <2 x i64> } [ [[TMP31]], %[[PRED_STORE_CONTINUE]] ], [ [[TMP19]], %[[PRED_STORE_IF1]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP24]], 0
+; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <2 x i64> @llvm.masked.udiv.v2i64(<2 x i64> [[TMP25]], <2 x i64> [[WIDE_LOAD]], <2 x i1> [[TMP1]])
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
-; CHECK-NEXT:    br i1 [[TMP27]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
 ; CHECK:       [[PRED_STORE_IF2]]:
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i64> [[TMP26]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP28]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE1]]
 ; CHECK:       [[PRED_STORE_CONTINUE1]]:
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_IF3]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 1
@@ -326,7 +324,7 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -425,7 +423,7 @@ define void @mixed_element_type_struct_return(ptr noalias %in, ptr noalias write
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
