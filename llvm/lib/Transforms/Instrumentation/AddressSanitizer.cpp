@@ -216,9 +216,10 @@ static cl::opt<bool> ClInstrumentReads("asan-instrument-reads",
                                        cl::desc("instrument read instructions"),
                                        cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClInstrumentWrites(
-    "asan-instrument-writes", cl::desc("instrument write instructions"),
-    cl::Hidden, cl::init(true));
+static cl::opt<bool>
+    ClInstrumentWrites("asan-instrument-writes",
+                       cl::desc("instrument write instructions"), cl::Hidden,
+                       cl::init(true));
 
 static cl::opt<bool>
     ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(true),
@@ -451,6 +452,11 @@ static cl::list<unsigned> ClAddrSpaces(
     cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
       SrcAddrSpaces.insert(AddrSpace);
     }));
+
+static cl::opt<bool> ClEmitDebugInfo(
+    "asan-emit-debug-info",
+    cl::desc("Emit debug info for inserted ASan runtime function declarations"),
+    cl::Hidden, cl::init(false));
 
 // Debug flags.
 
@@ -717,15 +723,83 @@ namespace {
 
 class AsanFunctionInserter {
 public:
-  AsanFunctionInserter(Module &M) : M(M) {}
+  AsanFunctionInserter(Module &M, bool EmitDebugInfo)
+      : M(M), DL(M.getDataLayout()), EmitDebugInfo(EmitDebugInfo),
+        File(M.debug_compile_units().empty()
+                 ? nullptr
+                 : DIFile::get(M.getContext(), /*Filename=*/"asan_interface.h",
+                               /*Directory=*/"sanitizer")),
+        DIB(M, false) {}
+  ~AsanFunctionInserter() { DIB.finalize(); }
 
   template <typename... ArgTypes>
   FunctionCallee insertFunction(StringRef Name, ArgTypes &&...Args) {
-    return M.getOrInsertFunction(Name, std::forward<ArgTypes>(Args)...);
+    FunctionCallee Callee =
+        M.getOrInsertFunction(Name, std::forward<ArgTypes>(Args)...);
+    maybeEmitDebugInfo(Callee);
+    return Callee;
   }
 
 private:
+  unsigned getAsanDIPointerAddressSpace() {
+    return ClAddrSpaces.empty() ? 0 : *ClAddrSpaces.begin();
+  }
+
+  void maybeEmitDebugInfo(FunctionCallee Callee) {
+    if (!EmitDebugInfo || !File)
+      return;
+
+    auto *F = dyn_cast<Function>(Callee.getCallee()->stripPointerCasts());
+    if (!F || !F->isDeclaration() || F->getSubprogram())
+      return;
+
+    FunctionType *FTy = F->getFunctionType();
+    SmallVector<Metadata *, 4> ParamTypes;
+    ParamTypes.push_back(this->solveAsanDIType(FTy->getReturnType()));
+    for (Type *PT : FTy->params())
+      ParamTypes.push_back(this->solveAsanDIType(PT));
+
+    DISubroutineType *SubTy =
+        DIB.createSubroutineType(DIB.getOrCreateTypeArray(ParamTypes));
+    DISubprogram *SP =
+        DIB.createFunction(File, F->getName(), F->getName(), File, 0, SubTy, 0,
+                           DINode::FlagArtificial | DINode::FlagPrototyped,
+                           DISubprogram::SPFlagZero);
+    F->setSubprogram(SP);
+  }
+
+  /// Resolve an LLVM IR type to a synthetic DIType for ASan runtime callbacks.
+  /// Only handles the types that actually appear in ASan callback signatures.
+  DIType *solveAsanDIType(Type *Ty) {
+    // Functions have a void return type.
+    if (Ty->isVoidTy())
+      return nullptr;
+
+    // The mem* intrinsics and AMDGPU specific calls have pointer parameters.
+    if (Ty->isPointerTy()) {
+      return DIB.createPointerType(
+          nullptr, DL.getPointerSizeInBits(getAsanDIPointerAddressSpace()),
+          DL.getABITypeAlign(Ty).value() * CHAR_BIT, std::nullopt,
+          "PointerType");
+    }
+
+    // All other parameters are integers, even pointers (intptr_t).
+    assert(Ty->isIntegerTy() && "unexpected type in ASan callback signature");
+
+    unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
+    SmallString<16> Name;
+    raw_svector_ostream OS(Name);
+    OS << "__int_" << BitWidth;
+
+    return DIB.createBasicType(OS.str(), BitWidth, dwarf::DW_ATE_signed,
+                               DINode::FlagArtificial);
+  }
+
   Module &M;
+  const DataLayout &DL;
+  bool EmitDebugInfo;
+  DIFile *File;
+  DIBuilder DIB;
 };
 
 } // end anonymous namespace
@@ -1940,7 +2014,8 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
 
 Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
                                                     Value *Cond, bool Recover) {
-  AsanFunctionInserter Inserter(M);
+  Module &M = *IRB.GetInsertBlock()->getModule();
+  AsanFunctionInserter Inserter(M, ClEmitDebugInfo);
   Value *ReportCond = Cond;
   if (!Recover) {
     auto Ballot = Inserter.insertFunction(kAMDGPUBallotName, IRB.getInt64Ty(),
@@ -2320,7 +2395,7 @@ StringRef ModuleAddressSanitizer::getGlobalMetadataSection() const {
 
 void ModuleAddressSanitizer::initializeCallbacks() {
   IRBuilder<> IRB(*C);
-  AsanFunctionInserter Inserter(M);
+  AsanFunctionInserter Inserter(M, ClEmitDebugInfo);
 
   // Declare our poisoning and unpoisoning functions.
   AsanPoisonGlobals = Inserter.insertFunction(kAsanPoisonGlobalsName,
@@ -2859,6 +2934,13 @@ bool ModuleAddressSanitizer::instrumentModule() {
           createSanitizerCtorAndInitFunctions(
               M, kAsanModuleCtorName, kAsanInitName, /*InitArgTypes=*/{},
               /*InitArgs=*/{}, VersionCheckName);
+
+      // Call insertFunction to generate the functions' DInfo,
+      // the getOrInsertFunction() is effectively a no-op.
+      AsanFunctionInserter Inserter(M, ClEmitDebugInfo);
+      Inserter.insertFunction(kAsanInitName, Type::getVoidTy(*C));
+      if (!VersionCheckName.empty())
+        Inserter.insertFunction(VersionCheckName, Type::getVoidTy(*C));
     }
   }
 
@@ -2900,7 +2982,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
   IRBuilder<> IRB(*C);
-  AsanFunctionInserter Inserter(M);
+  AsanFunctionInserter Inserter(M, ClEmitDebugInfo);
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -2990,6 +3072,8 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
     FunctionCallee AsanInitFunction =
         declareSanitizerInitFunction(*F.getParent(), kAsanInitName, {});
     IRBuilder<> IRB(&F.front(), F.front().begin());
+    AsanFunctionInserter Inserter(*F.getParent(), ClEmitDebugInfo);
+    Inserter.insertFunction(kAsanInitName, IRB.getVoidTy());
     IRB.CreateCall(AsanInitFunction, {});
     return true;
   }
@@ -3236,7 +3320,7 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
 
 void FunctionStackPoisoner::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
-  AsanFunctionInserter Inserter(M);
+  AsanFunctionInserter Inserter(M, ClEmitDebugInfo);
   if (ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Always ||
       ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Runtime) {
     const char *MallocNameTemplate =
