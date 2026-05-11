@@ -2004,6 +2004,8 @@ namespace GH196375 {
 
 namespace GH175831 {
 
+namespace ShuoldResolve {
+
 template<class>
 struct reference {};
 template<class Q>
@@ -2017,5 +2019,29 @@ template<auto V, representation_of<get_spec(V)>>
 struct quantity {};
 
 auto x = quantity<reference<int>{}, int>{};
+
+} // namespace ShouldResolve
+
+namespace CannotResolve {
+
+template<class>
+struct reference {};
+template<class Q>
+consteval auto get_spec(reference<Q>) { return Q{}; }
+
+template<class T>
+concept repr_impl = sizeof(T) > sizeof(char);
+template<class, auto V>
+concept representation_of = repr_impl<decltype(V)>;
+template<auto V, representation_of<get_spec(V)>>
+struct quantity {};
+
+auto x = quantity<reference<char>{}, char>{};
+// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<char>{}, $1 = char]}}
+// expected-note@-5  {{because 'representation_of<char, get_spec(reference<char>{})>' evaluated to false}}
+// expected-note-re@-7  {{because 'decltype({{.*}})' (aka 'char') does not satisfy 'repr_impl'}}
+// expected-note@-10  {{because 'sizeof(char) > sizeof(char)' (1 > 1) evaluated to false}}
+
+} // namespace CannotResolve
 
 } // namespace GH175831
