@@ -12201,7 +12201,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
                                OutVal, SDNoFPClass);
         }
-        if (NumValues == 1 && VT.isInteger())
+        if (NumValues == 1 && VT.isInteger() && !isa<LoadSDNode>(OutVal))
           OutVal = SDB->lowerRangeToAssertZExt(DAG, Arg.getRange(), OutVal);
         ArgValues.push_back(OutVal);
       }

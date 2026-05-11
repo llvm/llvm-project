@@ -88,6 +88,17 @@ define i32 @arg_range_zeroext(i8 zeroext range(i8 0, 16) %n) {
   ret i32 %r
 }
 
+; The 7th integer arg is passed on the stack on x86-64 SysV.
+define i64 @arg_range_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 range(i64 0, 256) %g) {
+; CHECK-LABEL: arg_range_stack:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    andl $248, %eax
+; CHECK-NEXT:    retq
+  %r = and i64 %g, 248
+  ret i64 %r
+}
+
 ; Negative tests
 
 define i64 @neg_no_range(i64 %n) {
