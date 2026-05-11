@@ -11,11 +11,14 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/NarrowTypeEmulationConverter.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -34,9 +37,9 @@ struct TestEmulateNarrowTypePass
       : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<arith::ArithDialect, func::FuncDialect, memref::MemRefDialect,
-                vector::VectorDialect, affine::AffineDialect>();
+    registry.insert<arith::ArithDialect, cf::ControlFlowDialect,
+                    func::FuncDialect, memref::MemRefDialect,
+                    vector::VectorDialect, affine::AffineDialect>();
   }
   StringRef getArgument() const final { return "test-emulate-narrow-int"; }
   StringRef getDescription() const final {
@@ -96,6 +99,19 @@ struct TestEmulateNarrowTypePass
         arith::ArithDialect, vector::VectorDialect, memref::MemRefDialect,
         affine::AffineDialect>(opLegalCallback);
 
+    if (enableCFConversion) {
+      target.addDynamicallyLegalDialect<cf::ControlFlowDialect>(
+          [&typeConverter](Operation *op) -> bool {
+            // Only apply legality check to BranchOpInterface ops; other cf ops
+            // (e.g. cf.assert) have no successor-block-arg conversion concern
+            // and should remain legal.
+            if (!isa<BranchOpInterface>(op))
+              return true;
+            return isLegalForBranchOpInterfaceTypeConversionPattern(
+                op, typeConverter);
+          });
+    }
+
     RewritePatternSet patterns(ctx);
 
     arith::populateArithNarrowTypeEmulationPatterns(typeConverter, patterns);
@@ -103,6 +119,17 @@ struct TestEmulateNarrowTypePass
         typeConverter, patterns, disableAtomicRMW, assumeAligned);
     vector::populateVectorNarrowTypeEmulationPatterns(
         typeConverter, patterns, disableAtomicRMW, assumeAligned);
+
+    if (enableCFConversion) {
+      populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
+      // Opt the FunctionOpInterface signature-conversion pattern into the
+      // all-blocks mode so non-entry block-arg types are converted in
+      // lockstep with the function signature and branch operands. Use a
+      // higher benefit so it supersedes the default-benefit pattern
+      // populated by `populateArithNarrowTypeEmulationPatterns`.
+      populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+          patterns, typeConverter, /*benefit=*/2, /*convertAllBlocks=*/true);
+    }
 
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
@@ -132,6 +159,13 @@ struct TestEmulateNarrowTypePass
       *this, "assume-aligned",
       llvm::cl::desc("assume store offsets are aligned to container element "
                      "boundaries"),
+      llvm::cl::init(false)};
+
+  Option<bool> enableCFConversion{
+      *this, "enable-cf-conversion",
+      llvm::cl::desc("register populateBranchOpInterfaceTypeConversionPattern "
+                     "and mark cf dialect ops dynamically legal based on "
+                     "isLegalForBranchOpInterfaceTypeConversionPattern"),
       llvm::cl::init(false)};
 };
 

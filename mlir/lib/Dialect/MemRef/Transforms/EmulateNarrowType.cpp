@@ -718,6 +718,80 @@ struct ConvertMemRefExpandShape final
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// ConvertExtractStridedMetadata
+//===----------------------------------------------------------------------===//
+
+/// Lowers `memref.extract_strided_metadata` on a sub-byte source by
+/// delegating to the i8 container produced by the narrow-type converter and
+/// scaling the runtime offset from i8 units back to emulated-element units.
+struct ConvertExtractStridedMetadata final
+    : OpConversionPattern<memref::ExtractStridedMetadataOp> {
+  ConvertExtractStridedMetadata(
+      const arith::NarrowTypeEmulationConverter &converter, MLIRContext *ctx,
+      PatternBenefit benefit = 1)
+      : OpConversionPattern(converter, ctx, benefit),
+        loadStoreBitwidth(converter.getLoadStoreBitwidth()) {}
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = dyn_cast<MemRefType>(op.getSource().getType());
+    if (!srcType)
+      return rewriter.notifyMatchFailure(op, "source is not a MemRefType");
+
+    Type elemTy = srcType.getElementType();
+    if (!elemTy.isIntOrFloat() ||
+        elemTy.getIntOrFloatBitWidth() >= loadStoreBitwidth)
+      return rewriter.notifyMatchFailure(op, "source element not sub-byte");
+
+    unsigned scale = loadStoreBitwidth / elemTy.getIntOrFloatBitWidth();
+
+    Location loc = op.getLoc();
+    auto i8Meta = memref::ExtractStridedMetadataOp::create(rewriter, loc,
+                                                           adaptor.getSource());
+
+    int64_t srcStaticOffset;
+    SmallVector<int64_t> srcStaticStrides;
+    if (failed(srcType.getStridesAndOffset(srcStaticStrides, srcStaticOffset)))
+      return rewriter.notifyMatchFailure(op, "failed to get strides from type");
+
+    Value emulatedOffset;
+    if (srcStaticOffset == ShapedType::kDynamic) {
+      Value scaleCst = arith::ConstantIndexOp::create(rewriter, loc, scale);
+      emulatedOffset =
+          arith::MulIOp::create(rewriter, loc, i8Meta.getOffset(), scaleCst);
+    } else {
+      // The static offset on the original sub-byte type is already in
+      // emulated-element units; no scaling needed.
+      emulatedOffset =
+          arith::ConstantIndexOp::create(rewriter, loc, srcStaticOffset);
+    }
+
+    SmallVector<Value> emulatedSizes;
+    for (int64_t dim : srcType.getShape())
+      emulatedSizes.push_back(
+          arith::ConstantIndexOp::create(rewriter, loc, dim));
+
+    SmallVector<Value> emulatedStrides;
+    for (int64_t stride : srcStaticStrides) {
+      if (stride == ShapedType::kDynamic)
+        return rewriter.notifyMatchFailure(op, "dynamic stride not supported");
+      emulatedStrides.push_back(
+          arith::ConstantIndexOp::create(rewriter, loc, stride));
+    }
+
+    SmallVector<Value> results = {i8Meta.getBaseBuffer(), emulatedOffset};
+    results.append(emulatedSizes);
+    results.append(emulatedStrides);
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+
+private:
+  unsigned loadStoreBitwidth;
+};
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -740,6 +814,8 @@ void memref::populateMemRefNarrowTypeEmulationPatterns(
       typeConverter, patterns.getContext(), assumeAligned);
   patterns.insert<ConvertMemrefStore>(typeConverter, patterns.getContext(),
                                       disableAtomicRMW);
+  patterns.insert<ConvertExtractStridedMetadata>(typeConverter,
+                                                 patterns.getContext());
   memref::populateResolveExtractStridedMetadataPatterns(patterns);
 }
 
@@ -763,53 +839,52 @@ static SmallVector<int64_t> getLinearizedShape(MemRefType ty, int srcBits,
 
 void memref::populateMemRefNarrowTypeEmulationConversions(
     arith::NarrowTypeEmulationConverter &typeConverter) {
-  typeConverter.addConversion(
-      [&typeConverter](MemRefType ty) -> std::optional<Type> {
-        Type elementType = ty.getElementType();
-        if (!elementType.isIntOrFloat())
-          return ty;
+  typeConverter.addConversion([&typeConverter](
+                                  MemRefType ty) -> std::optional<Type> {
+    Type elementType = ty.getElementType();
+    if (!elementType.isIntOrFloat())
+      return ty;
 
-        unsigned width = elementType.getIntOrFloatBitWidth();
-        unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
-        if (width >= loadStoreWidth)
-          return ty;
+    unsigned width = elementType.getIntOrFloatBitWidth();
+    unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
+    if (width >= loadStoreWidth)
+      return ty;
 
-        // Currently only handle innermost stride being 1, checking
-        SmallVector<int64_t> strides;
-        int64_t offset;
-        if (failed(ty.getStridesAndOffset(strides, offset)))
-          return nullptr;
-        if (!strides.empty() && strides.back() != 1)
-          return nullptr;
+    // Currently only handle innermost stride being 1, checking
+    SmallVector<int64_t> strides;
+    int64_t offset;
+    if (failed(ty.getStridesAndOffset(strides, offset)))
+      return nullptr;
+    if (!strides.empty() && strides.back() != 1)
+      return nullptr;
 
-        auto newElemTy = IntegerType::get(
-            ty.getContext(), loadStoreWidth,
-            elementType.isInteger()
-                ? cast<IntegerType>(elementType).getSignedness()
-                : IntegerType::SignednessSemantics::Signless);
-        if (!newElemTy)
-          return nullptr;
+    auto newElemTy = IntegerType::get(
+        ty.getContext(), loadStoreWidth,
+        elementType.isInteger() ? cast<IntegerType>(elementType).getSignedness()
+                                : IntegerType::SignednessSemantics::Signless);
+    if (!newElemTy)
+      return nullptr;
 
-        StridedLayoutAttr layoutAttr;
-        // If the offset is 0, we do not need a strided layout as the stride is
-        // 1, so we only use the strided layout if the offset is not 0.
-        if (offset != 0) {
-          if (offset == ShapedType::kDynamic) {
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          } else {
-            // Check if the number of bytes are a multiple of the loadStoreWidth
-            // and if so, divide it by the loadStoreWidth to get the offset.
-            if ((offset * width) % loadStoreWidth != 0)
-              return std::nullopt;
-            offset = (offset * width) / loadStoreWidth;
+    StridedLayoutAttr layoutAttr;
+    // If the offset is 0, we do not need a strided layout as the stride is
+    // 1, so we only use the strided layout if the offset is not 0.
+    if (offset != 0) {
+      if (offset == ShapedType::kDynamic) {
+        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
+                                            ArrayRef<int64_t>{1});
+      } else {
+        // Check if the number of bytes are a multiple of the loadStoreWidth
+        // and if so, divide it by the loadStoreWidth to get the offset.
+        if ((offset * width) % loadStoreWidth != 0)
+          return std::nullopt;
+        offset = (offset * width) / loadStoreWidth;
 
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          }
-        }
+        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
+                                            ArrayRef<int64_t>{1});
+      }
+    }
 
-        return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
-                               newElemTy, layoutAttr, ty.getMemorySpace());
-      });
+    return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
+                           newElemTy, layoutAttr, ty.getMemorySpace());
+  });
 }
