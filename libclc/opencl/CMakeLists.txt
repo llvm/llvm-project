@@ -1,0 +1,6 @@
+if(LIBCLC_ARCH_DIR AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/lib/${LIBCLC_ARCH_DIR})
+  add_subdirectory(lib/${LIBCLC_ARCH_DIR})
+endif()
+if(NOT LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
+  add_subdirectory(lib/generic)
+endif()
