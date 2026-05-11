@@ -1125,7 +1125,7 @@ unsigned clang::Microsoft64BitMinGlobalAlign(uint64_t TypeSize) {
   if (TypeSize >= 512) // TypeSize >= 64 bytes
     return 128;        // align type at least 16 bytes
   if (TypeSize >= 64)  // TypeSize >= 8 bytes
-    return 64;         // align type at least 8 butes
+    return 64;         // align type at least 8 bytes
   if (TypeSize >= 16)  // TypeSize >= 2 bytes
     return 32;         // align type at least 4 bytes
 
