@@ -1383,15 +1383,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                            ArrayRef{Op}, "hlsl.wave.active.bit.and");
   }
   case Builtin::BI__builtin_hlsl_interlocked_add: {
-    // HLSL signatures:
-    //   void InterlockedAdd(inout T dest, T value);
-    //   void InterlockedAdd(inout T dest, T value, out T original_value);
-    // The `inout` / `out` parameters are wrapped in HLSLOutArgExpr by Sema, so
-    // we can unconditionally cast and use the underlying lvalue directly.
-    assert(isa<HLSLOutArgExpr>(E->getArg(0)) &&
-           "InterlockedAdd dest argument must be an HLSLOutArgExpr (inout)");
-    const auto *DestOut = cast<HLSLOutArgExpr>(E->getArg(0));
-    LValue DestLV = EmitLValue(DestOut->getArgLValue());
+    // HLSL signatures (synthesized as overloads in HLSLExternalSemaSource):
+    //   void InterlockedAdd(groupshared|device T &dest, T value);
+    //   void InterlockedAdd(groupshared|device T &dest, T value,
+    //                       T &original_value);
+    // Both `dest` and `original_value` are plain references, so we can use
+    // the underlying lvalue directly without HLSLOutArgExpr unwrapping.
+    LValue DestLV = EmitLValue(E->getArg(0));
     Value *Ptr = DestLV.getAddress().emitRawPointer(*this);
     Value *Val = EmitScalarExpr(E->getArg(1));
     assert(E->getArg(1)->getType()->isIntegerType() &&
@@ -1404,13 +1402,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         ArrayRef<Value *>{Ptr, Val}, "hlsl.interlocked.add");
 
     // The 3-arg overload writes the old value (the intrinsic's return value)
-    // into the `out original_value` parameter.
+    // into the `original_value` reference parameter.
     if (E->getNumArgs() == 3) {
-      assert(isa<HLSLOutArgExpr>(E->getArg(2)) &&
-             "InterlockedAdd original_value argument must be an HLSLOutArgExpr "
-             "(out)");
-      const auto *OrigOut = cast<HLSLOutArgExpr>(E->getArg(2));
-      LValue OrigLV = EmitLValue(OrigOut->getArgLValue());
+      LValue OrigLV = EmitLValue(E->getArg(2));
       EmitStoreThroughLValue(RValue::get(Call), OrigLV);
     }
     return Call;

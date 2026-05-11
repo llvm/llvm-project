@@ -4376,46 +4376,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_interlocked_add: {
-    // void InterlockedAdd(inout T dest, T value);
-    // void InterlockedAdd(inout T dest, T value, out T original_value);
-    unsigned NumArgs = TheCall->getNumArgs();
-    if (NumArgs != 2 && NumArgs != 3) {
-      if (SemaRef.checkArgCount(TheCall, 2))
-        return true;
-    }
-
-    // The destination must be an integer scalar lvalue.
-    Expr *DestArg = TheCall->getArg(0);
-    QualType DestTy = DestArg->getType().getNonReferenceType();
-    if (!DestTy->isIntegerType() || DestTy->isBooleanType()) {
-      SemaRef.Diag(DestArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << DestTy << SemaRef.Context.UnsignedIntTy << 1 << 0 << 0;
-      return true;
-    }
-
-    // The value argument must have the same integer type as the destination.
-    Expr *ValArg = TheCall->getArg(1);
-    QualType ValTy = ValArg->getType();
-    if (!SemaRef.Context.hasSameUnqualifiedType(DestTy, ValTy)) {
-      SemaRef.Diag(ValArg->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ValTy << DestTy << 4 << 0 << 0;
-      return true;
-    }
-
-    // The optional original_value argument must also match the destination
-    // type.
-    if (NumArgs == 3) {
-      Expr *OrigArg = TheCall->getArg(2);
-      QualType OrigTy = OrigArg->getType().getNonReferenceType();
-      if (!SemaRef.Context.hasSameUnqualifiedType(DestTy, OrigTy)) {
-        SemaRef.Diag(OrigArg->getBeginLoc(),
-                     diag::err_typecheck_convert_incompatible)
-            << OrigTy << DestTy << 4 << 0 << 0;
-        return true;
-      }
-    }
-
+    // Overload resolution against the synthesized FunctionDecls in
+    // HLSLExternalSemaSource has already validated argument count, integer
+    // type matching, and the address-space requirement on `dest`.
     TheCall->setType(SemaRef.Context.VoidTy);
     break;
   }
