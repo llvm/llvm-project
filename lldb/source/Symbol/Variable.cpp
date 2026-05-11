@@ -483,7 +483,7 @@ static CompilerType GetInstanceType(StackFrame &frame,
                                     VariableList &variable_list) {
   SymbolContext sc =
       frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
-  llvm::StringRef instance_name = sc.GetInstanceVariableName();
+  llvm::StringRef instance_name = sc.GetInstanceName();
   if (instance_name.empty())
     return {};
   VariableSP var_sp = variable_list.FindVariable(ConstString(instance_name));
