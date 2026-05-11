@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -split-input-file -affine-loop-tile="cache-size=512" | FileCheck %s --check-prefix=MODEL
 // RUN: mlir-opt %s -split-input-file -affine-loop-tile="cache-size=0" | FileCheck %s --check-prefix=ZERO-CACHE
 // RUN: mlir-opt %s -split-input-file -affine-loop-tile="tile-size=32 separate" | FileCheck %s --check-prefix=SEPARATE
+// RUN: mlir-opt %s -split-input-file -affine-loop-tile="tile-sizes=2,2" | FileCheck %s --check-prefix=NEG-DEP
 
 // CHECK-DAG: [[$UB:#map[0-9]*]] = affine_map<(d0) -> (d0 + 32)>
 // CHECK-DAG: [[$UB_MIN:#map[0-9]*]] = affine_map<(d0) -> (d0 + 32, 50)>
@@ -327,3 +328,23 @@ func.func @separate_full_tile_1d_max_min(%M : index, %N : index, %P : index, %Q 
 // SEPARATE-NEXT:        }
 // SEPARATE-NEXT:      }
 // SEPARATE-NEXT:    }
+
+// -----
+
+// Tiling this nest would violate the dependence with distance (1, -1). The
+// negative component is exact, lb == ub == -1, so the tiling legality check
+// must reject singleton negative distances too.
+// NEG-DEP-LABEL: func.func @tile_exact_negative_dependence
+// NEG-DEP-NEXT:    affine.for %[[I:.*]] = 0 to 4 {
+// NEG-DEP-NEXT:      affine.for %[[J:.*]] = 1 to 5 {
+// NEG-DEP-NEXT:        affine.load %{{.*}}[%[[I]] + 1, %[[J]] - 1]
+// NEG-DEP-NEXT:        affine.store %{{.*}}, %{{.*}}[%[[I]], %[[J]]]
+func.func @tile_exact_negative_dependence(%arg0: memref<5x5xi32>) {
+  affine.for %i = 0 to 4 {
+    affine.for %j = 1 to 5 {
+      %0 = affine.load %arg0[%i + 1, %j - 1] : memref<5x5xi32>
+      affine.store %0, %arg0[%i, %j] : memref<5x5xi32>
+    }
+  }
+  return
+}
