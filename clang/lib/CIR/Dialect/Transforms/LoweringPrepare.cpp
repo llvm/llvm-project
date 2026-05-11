@@ -1487,16 +1487,15 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
 void LoweringPreparePass::lowerGetGlobalOp(GetGlobalOp op) {
   if (!op.getTls())
     return;
-  auto globalOp = mlir::dyn_cast_or_null<cir::GlobalOp>(
+  auto globalOp = mlir::cast<cir::GlobalOp>(
       symbolTables.lookupNearestSymbolFrom(op, op.getNameAttr()));
 
-  if (!globalOp || globalOp.getTlsModel() != TLS_Model::GeneralDynamic ||
-      globalOp.getStaticLocalGuard().has_value())
-    return;
-
-  // Global ops that have constant init don't actually end up with a wrapper, so
-  // don't replace anything.
-  if (!globalOp.getDynTlsRefs())
+  // Only global/namespace scope thread local variables need to have their
+  // get-global operations rewritten to be calls to a wrapper function.  If
+  // we're not in a dynamic TLS (or one without the TLS markers), we can leave
+  // this one as a get-global and return early.
+  if (globalOp.getTlsModel() != TLS_Model::GeneralDynamic ||
+      !globalOp.getDynTlsRefs())
     return;
 
   // If this is a global TLS, we need to replace the call to 'get_global' with a
@@ -1508,6 +1507,12 @@ void LoweringPreparePass::lowerGetGlobalOp(GetGlobalOp op) {
   // these is for the purpose of creating/destroying.  We want to skip replacing
   // THAT one, but leave all other get-global-ops in place, else
   // self-referential ops won't work right.
+
+  // Note that ctors/dtors are removed during this pass. We get away with these
+  // checks because the only time that these situations can actually be true
+  // (that is, the ctor/dtor region exist) is if we're in the process of
+  // converting the ctor/dtor for this. If we're NOT doing that, the ctor/dtor
+  // will have already disappeared.
   mlir::Operation *parentOp = op->getParentOp();
   if (parentOp == globalOp) {
     mlir::Region *ctorRegion = &globalOp.getCtorRegion();
