@@ -806,25 +806,25 @@ static bool HasFloatingRepresentation(CompilerType ct) {
   return ct.GetTypeInfo() & lldb::eTypeIsFloat;
 }
 
-static Status VerifyAssignmentTypes(CompilerType lhs_type,
-                                    CompilerType rhs_type) {
+static llvm::Expected<bool> VerifyAssignmentTypes(CompilerType lhs_type,
+                                                  CompilerType rhs_type) {
   // Make sure lhs is a legal type for DIL assignment.
   if (!lhs_type.IsInteger() && !lhs_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(lhs_type) && !lhs_type.IsPointerType() &&
       !lhs_type.IsScalarType())
-    return Status::FromErrorString(
+    return llvm::createStringError(
         "Illegal type for lhs of assignment (not scalar numeric type)\n");
 
   // Make sure rhs is a legal type for DIL assignment.
   if (!rhs_type.IsInteger() && !rhs_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(rhs_type) && !rhs_type.IsPointerType())
-    return Status::FromErrorString(
+    return llvm::createStringError(
         "Illegal type for rhs of assignment (not scalar numeric type)\n");
 
   // Only allow assigning pointers to pointers.
   if ((lhs_type.IsPointerType() && !rhs_type.IsPointerType()) ||
       (!lhs_type.IsPointerType() && rhs_type.IsPointerType()))
-    return Status::FromErrorString(
+    return llvm::createStringError(
         "Invalid assignment: Can only assign pointers to pointers\n");
 
   // For "real numbers", the types must match exactly.
@@ -835,22 +835,22 @@ static Status VerifyAssignmentTypes(CompilerType lhs_type,
         llvm::formatv("Incompatible types for assignment: Cannot assign {0} "
                       "to {1}\n",
                       rhs_type.TypeDescription(), lhs_type.TypeDescription());
-    return Status::FromErrorString(err_msg.c_str());
+    return llvm::createStringError(err_msg.c_str());
   }
 
-  return Status();
+  return true;
 }
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
                                 lldb::ValueObjectSP rhs, uint32_t location) {
 
-  Status status =
+  auto all_ok =
       VerifyAssignmentTypes(lhs->GetCompilerType(), rhs->GetCompilerType());
-  if (status.Fail())
-    return llvm::make_error<DILDiagnosticError>(m_expr, status.AsCString(),
-                                                location);
+  if (!all_ok)
+    return all_ok.takeError();
 
+  Status status;
   lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
   if (status.Success())
     return lhs;

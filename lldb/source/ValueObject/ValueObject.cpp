@@ -1253,9 +1253,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
   uint64_t byte_size = 0;
   // Exclude size check when assigning an integer 1 or 0 to a boolean.
   if (!val_type.IsBoolean() || (!value.isOne() && !value.isZero())) {
-    if (auto temp = llvm::expectedToOptional(
-            GetCompilerType().GetByteSize(target.get())))
-      byte_size = temp.value();
+    byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
     if (value.getBitWidth() > byte_size * CHAR_BIT) {
       // The type is too big, but maybe the value itself is small enough?
       uint64_t u_max = (1 << (byte_size * CHAR_BIT)) - 1;
