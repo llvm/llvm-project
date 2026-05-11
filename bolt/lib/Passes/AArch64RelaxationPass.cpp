@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/AArch64RelaxationPass.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include <iterator>
+#include <memory>
 
 using namespace llvm;
 
@@ -24,6 +27,12 @@ static cl::opt<bool> AArch64PassOpt(
     "aarch64-relaxation",
     cl::desc("Replace ARM non-local ADR/LDR instructions with ADRP"),
     cl::init(true), cl::cat(BoltCategory), cl::ReallyHidden);
+
+static cl::opt<bool> AArch64RelaxLoadLiteralFPR(
+    "aarch64-relax-ldr-fp-using-la",
+    cl::desc("Replace AArch64 LDR (literal, SIMD&FP) with ADRP, "
+             "using LivenessAnalysis to find available regsiters"),
+    cl::init(true), cl::cat(BoltCategory), cl::Hidden);
 } // namespace opts
 
 namespace llvm {
@@ -44,9 +53,10 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
       MCInst &Inst = *It;
       bool IsADR = BC.MIB->isADR(Inst);
-
-      // TODO: Handle other types of LDR (literal, PC-relative) instructions.
-      if (!IsADR && !BC.MIB->isLoadLiteralGPR(Inst))
+      bool IsLoadLiteralGPR = BC.MIB->isLoadLiteralGPR(Inst);
+      bool IsLoadLiteralFPR =
+          (opts::AArch64RelaxLoadLiteralFPR && BC.MIB->isLoadLiteralFPR(Inst));
+      if (!IsADR && !IsLoadLiteralGPR && !IsLoadLiteralFPR)
         continue;
 
       const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, IsADR ? 0 : 1);
@@ -77,9 +87,27 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
       InstructionListType AdrpMaterialization;
       {
         auto L = BC.scopeLock();
-        AdrpMaterialization =
-            IsADR ? BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get())
-                  : BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
+        if (IsADR) {
+          AdrpMaterialization =
+              BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get());
+        } else if (IsLoadLiteralGPR) {
+          AdrpMaterialization = BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
+        } else if (IsLoadLiteralFPR) {
+          if (!RA) {
+            CG.reset(new BinaryFunctionCallGraph(buildCallGraph(BC)));
+            RA.reset(new RegAnalysis(BC, &BC.getBinaryFunctions(), &*CG));
+          }
+          DataflowInfoManager Info(BF, RA.get(), nullptr);
+          auto Reg = Info.getLivenessAnalysis().scavengeRegAfter(&Inst);
+          if (Reg == 0) {
+            BC.outs()
+                << "BOLT-INFO: For lack of a register to hold the address, "
+                << "this LDR (literal, SIMD&FP) cannot be relaxed:\n";
+            BC.printInstruction(BC.outs(), Inst);
+            continue;
+          }
+          AdrpMaterialization = BC.MIB->createAdrpLdr(Inst, BC.Ctx.get(), Reg);
+        }
       }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {

@@ -19,11 +19,18 @@
 #define BOLT_PASSES_AARCH64RELAXATIONPASS_H
 
 #include "bolt/Passes/BinaryPasses.h"
+#include <memory>
 
 namespace llvm {
 namespace bolt {
 
+class RegAnalysis;
+class BinaryFunctionCallGraph;
+
 class AArch64RelaxationPass : public BinaryFunctionPass {
+  std::unique_ptr<RegAnalysis> RA;
+  std::unique_ptr<BinaryFunctionCallGraph> CG;
+
 public:
   explicit AArch64RelaxationPass(const cl::opt<bool> &PrintPass)
       : BinaryFunctionPass(PrintPass) {}

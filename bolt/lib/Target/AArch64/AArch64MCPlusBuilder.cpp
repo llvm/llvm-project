@@ -721,6 +721,12 @@ public:
            OpCode == AArch64::LDRSWl;
   }
 
+  bool isLoadLiteralFPR(const MCInst &Inst) const override {
+    unsigned OpCode = Inst.getOpcode();
+    return OpCode == AArch64::LDRSl || OpCode == AArch64::LDRDl ||
+           OpCode == AArch64::LDRQl;
+  }
+
   MCPhysReg getADRReg(const MCInst &Inst) const {
     assert((isADR(Inst) || isADRP(Inst)) && "Not an ADR instruction");
     assert(MCPlus::getNumPrimeOperands(Inst) != 0 &&
@@ -740,10 +746,8 @@ public:
     return materializeAddress(Target, Ctx, Reg, Addend);
   }
 
-  InstructionListType createAdrpLdr(const MCInst &LDRInst,
-                                    MCContext *Ctx) const override {
-    assert(isLoadLiteralGPR(LDRInst) &&
-           "LDR (literal) or LDRSW (literal) expected");
+  InstructionListType createAdrpLdr(const MCInst &LDRInst, MCContext *Ctx,
+                                    MCPhysReg Reg) const override {
     assert(LDRInst.getOperand(0).isReg() &&
            "unexpected operand in LDR instruction");
     const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
@@ -768,8 +772,24 @@ public:
       OpCode = AArch64::LDRSWui;
       RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
       break;
+    case AArch64::LDRSl:
+      AddrReg = Reg;
+      OpCode = AArch64::LDRSui;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
+      break;
+    case AArch64::LDRDl:
+      AddrReg = Reg;
+      OpCode = AArch64::LDRDui;
+      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      break;
+    case AArch64::LDRQl:
+      AddrReg = Reg;
+      OpCode = AArch64::LDRQui;
+      RelType = ELF::R_AARCH64_LDST128_ABS_LO12_NC;
+      break;
     default:
-      llvm_unreachable("LDR (literal) or LDRSW (literal) expected");
+      llvm_unreachable("LDR (literal), LDRSW (literal), LDR (literal, SIMD&FP) "
+                       "expected");
     }
 
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
