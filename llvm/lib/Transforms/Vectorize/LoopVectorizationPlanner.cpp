@@ -27,6 +27,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-vectorize"
 
+extern cl::opt<bool> VPlanBuildOuterloopStressTest;
+
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
@@ -59,20 +61,16 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
 
-bool VFSelectionContext::isLegalMaskedStore(Type *DataType, Value *Ptr,
-                                            Align Alignment,
-                                            unsigned AddressSpace) const {
-  return Legal->isConsecutivePtr(DataType, Ptr) &&
-         (ForceTargetSupportsMaskedMemoryOps ||
-          TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace));
-}
+bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
+                                                  ElementCount VF) const {
+  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+  auto *Ty = getLoadStoreType(I);
+  const unsigned AS = getLoadStoreAddressSpace(I);
+  const Align Alignment = getLoadStoreAlignment(I);
 
-bool VFSelectionContext::isLegalMaskedLoad(Type *DataType, Value *Ptr,
-                                           Align Alignment,
-                                           unsigned AddressSpace) const {
-  return Legal->isConsecutivePtr(DataType, Ptr) &&
-         (ForceTargetSupportsMaskedMemoryOps ||
-          TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace));
+  return ForceTargetSupportsMaskedMemoryOps ||
+         (isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
+                           : TTI.isLegalMaskedStore(Ty, Alignment, AS));
 }
 
 bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
@@ -563,6 +561,10 @@ bool VFSelectionContext::runtimeChecksRequired() {
   return false;
 }
 
+void VFSelectionContext::computeMinimalBitwidths() {
+  MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
+}
+
 void VFSelectionContext::collectInLoopReductions() {
   // Avoid duplicating work finding in-loop reductions.
   if (!InLoopReductions.empty())
@@ -613,4 +615,50 @@ void VFSelectionContext::collectInLoopReductions() {
     LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
                       << " reduction for phi: " << *Phi << "\n");
   }
+}
+
+// TODO: we could return a pair of values that specify the max VF and
+// min VF, to be used in `buildVPlans(MinVF, MaxVF)` instead of
+// `buildVPlans(VF, VF)`. We cannot do it because VPLAN at the moment
+// doesn't have a cost model that can choose which plan to execute if
+// more than one is generated.
+FixedScalableVFPair
+VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
+  if (UserVF.isScalable() && !supportsScalableVectors()) {
+    reportVectorizationFailure(
+        "Scalable vectorization requested but not supported by the target",
+        "the scalable user-specified vectorization width for outer-loop "
+        "vectorization cannot be used because the target does not support "
+        "scalable vectors.",
+        "ScalableVFUnfeasible", ORE, TheLoop);
+    return FixedScalableVFPair::getNone();
+  }
+
+  ElementCount VF = UserVF;
+  if (VF.isZero()) {
+    auto [_, WidestType] = getSmallestAndWidestTypes();
+
+    auto RegKind = TTI.enableScalableVectorization()
+                       ? TargetTransformInfo::RGK_ScalableVector
+                       : TargetTransformInfo::RGK_FixedWidthVector;
+
+    TypeSize RegSize = TTI.getRegisterBitWidth(RegKind);
+    unsigned N = RegSize.getKnownMinValue() / WidestType;
+    VF = ElementCount::get(N, RegSize.isScalable());
+    LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
+
+    // Make sure we have a VF > 1 for stress testing.
+    if (VPlanBuildOuterloopStressTest && VF.isScalar()) {
+      LLVM_DEBUG(dbgs() << "LV: VPlan stress testing: "
+                        << "overriding computed VF.\n");
+      VF = ElementCount::getFixed(4);
+    }
+  }
+  assert(isPowerOf2_32(VF.getKnownMinValue()) &&
+         "VF needs to be a power of two");
+  if (VF.isScalar())
+    return FixedScalableVFPair::getNone();
+  LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
+                    << "VF " << VF << " to build VPlans.\n");
+  return FixedScalableVFPair(VF);
 }
