@@ -55,9 +55,9 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
 GDBRemoteRegisterContext::~GDBRemoteRegisterContext() = default;
 
 void GDBRemoteRegisterContext::SetAllRegistersValidState(LazyBool valid) {
-    m_gpacket_cached = (valid == eLazyBoolYes);
-    for (auto &reg : m_reg_valid)
-      reg = valid;
+  m_gpacket_cached = (valid == eLazyBoolYes);
+  for (auto &reg : m_reg_valid)
+    reg = valid;
 }
 
 LazyBool GDBRemoteRegisterContext::GetRegisterValidState(uint32_t reg) const {
