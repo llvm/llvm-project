@@ -11,7 +11,7 @@ template <class T> int test1(T) {
 
 int x = test1(1);
 
-template <class T> int f2(T) {
+template <class T> int test2(T) {
   struct A {
     static int B; // expected-error {{static data member 'B' not allowed in local struct 'A'}}
   };
