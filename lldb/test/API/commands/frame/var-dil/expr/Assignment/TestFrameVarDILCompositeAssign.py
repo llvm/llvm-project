@@ -50,7 +50,6 @@ class TestFrameVarDILAssignment(TestBase):
             self.expect("frame variable 'p += 2'", substrs=["p = 0x0000000000000012"])
             self.expect("frame variable 'p += i'", substrs=["p = 0x0000000000000016"])
 
-
         self.expect("frame variable 'i = 1'", substrs=["1"])
         self.expect("frame variable 'i -= 1'", substrs=["0"])
         self.expect("frame variable 'i -= 2'", substrs=["-2"])
@@ -78,5 +77,7 @@ class TestFrameVarDILAssignment(TestBase):
             self.expect("frame variable 'p = (int *)10'", substrs=["p = 0x0000000a"])
             self.expect("frame variable 'p -= 2'", substrs=["p = 0x00000002"])
         else:
-            self.expect("frame variable 'p = (int *)10'", substrs=["p = 0x000000000000000a"])
+            self.expect(
+                "frame variable 'p = (int *)10'", substrs=["p = 0x000000000000000a"]
+            )
             self.expect("frame variable 'p -= 2'", substrs=["p = 0x0000000000000002"])
