@@ -15,6 +15,7 @@
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
 #include "PPCMCAsmInfo.h"
+#include "PPCMCCodeEmitter.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -246,6 +247,10 @@ public:
       OS << "\t.machine " << CPU << '\n';
   }
 
+  void emitEndianSet(bool little) override {
+    OS << (little ? "\t.little\n" : "\t.big\n");
+  }
+
   void emitAbiVersion(int AbiVersion) override {
     OS << "\t.abiversion " << AbiVersion << '\n';
   }
@@ -278,6 +283,13 @@ public:
   void emitMachine(StringRef CPU) override {
     // FIXME: Is there anything to do in here or does this directive only
     // limit the parser?
+  }
+
+  void emitEndianSet(bool little) override {
+    PPCMCCodeEmitter *emitter = static_cast<PPCMCCodeEmitter *>(
+        getStreamer().getAssembler().getEmitterPtr());
+    if (emitter != nullptr)
+      emitter->setLittleEndian(little);
   }
 
   void emitAbiVersion(int AbiVersion) override {
@@ -406,6 +418,16 @@ public:
   void emitMachine(StringRef CPU) override {
     static_cast<XCOFFObjectWriter &>(Streamer.getAssemblerPtr()->getWriter())
         .setCPU(CPU);
+  }
+
+  void emitEndianSet(bool little) override {
+    MCAssembler *assembler = getStreamer().getAssemblerPtr();
+    if (assembler == nullptr)
+      return;
+    PPCMCCodeEmitter *emitter =
+        static_cast<PPCMCCodeEmitter *>(assembler->getEmitterPtr());
+    if (emitter != nullptr)
+      emitter->setLittleEndian(little);
   }
 
   void emitAbiVersion(int AbiVersion) override {
