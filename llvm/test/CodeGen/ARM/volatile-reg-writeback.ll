@@ -47,7 +47,8 @@ define ptr @volatile_store_preinc(ptr %p) {
 ; SDAG-LABEL: volatile_store_preinc:
 ; SDAG:       @ %bb.0:
 ; SDAG-NEXT:    mov r1, #0
-; SDAG-NEXT:    str r1, [r0, #4]!
+; SDAG-NEXT:    str r1, [r0, #4]
+; SDAG-NEXT:    add r0, r0, #4
 ; SDAG-NEXT:    mov pc, lr
 ;
 ; GISEL-LABEL: volatile_store_preinc:
@@ -65,7 +66,8 @@ define ptr @volatile_store_preinc(ptr %p) {
 define ptr @volatile_load_preinc(ptr %p) {
 ; SDAG-LABEL: volatile_load_preinc:
 ; SDAG:       @ %bb.0:
-; SDAG-NEXT:    ldr r1, [r0, #4]!
+; SDAG-NEXT:    ldr r1, [r0, #4]
+; SDAG-NEXT:    add r0, r0, #4
 ; SDAG-NEXT:    mov pc, lr
 ;
 ; GISEL-LABEL: volatile_load_preinc:

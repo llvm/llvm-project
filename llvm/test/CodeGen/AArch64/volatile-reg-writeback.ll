@@ -33,10 +33,17 @@ define ptr @volatile_load_postinc(ptr %p) {
 }
 
 define ptr @volatile_store_preinc(ptr %p) {
-; CHECK-LABEL: volatile_store_preinc:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str wzr, [x0, #4]!
-; CHECK-NEXT:    ret
+; SDAG-LABEL: volatile_store_preinc:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    mov x8, x0
+; SDAG-NEXT:    add x0, x0, #4
+; SDAG-NEXT:    str wzr, [x8, #4]
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: volatile_store_preinc:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    str wzr, [x0, #4]!
+; GISEL-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i64 4
   store volatile i32 0, ptr %gep
   ret ptr %gep
