@@ -41,7 +41,7 @@ CHECK4C: found 'CHECK-EMPTY' without previous 'CHECK: line
 ; CHECK-EMPTY at EOF without trailing newline still works after a prior check.
 ; RUN: printf "foo\n\n" > %t.no-newline-success.in
 ; RUN: printf "CHECK: foo\nCHECK-EMPTY:" > %t.no-newline-success.chk
-; RUN: FileCheck --allow-empty --input-file=%t.no-newline-success.in %t.no-newline-success.chk
+; RUN: FileCheck --input-file=%t.no-newline-success.in %t.no-newline-success.chk
 
 ; CHECK-EMPTY-NOT and CHECK-NOT-EMPTY rejected
 ; RUN: %ProtectFileCheckOutput \
