@@ -925,35 +925,72 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
   return nullptr;
 }
 
+/// Extracts an immediate operand from \p Ops and replaces the operand with
+/// zero. If \p PreferScalable is true and \p Ops contains both a scalable and
+/// non-scalable offsets, the scalable offset will be extracted.
+static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
+                                         ScalarEvolution &SE,
+                                         bool PreferScalable) {
+  const APInt *C;
+  SCEVUse *Op = nullptr;
+  Immediate Result = Immediate::getZero();
+
+  if (EnableVScaleImmediates) {
+    // A vscale immediate is a scMulExpr, which when sorted by complexity, can
+    // occur after casted operands (truncate/sext/zext).
+    for (SCEVUse &S : Ops) {
+      // We know anything past scMulExpr will not be a vscale immediate.
+      if (S->getSCEVType() > scMulExpr)
+        break;
+      if (match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
+        Op = &S;
+        Result = Immediate::getScalable(C->getZExtValue());
+        break;
+      }
+    }
+  }
+
+  if (Result.isZero() || !PreferScalable) {
+    // A constant SCEV operands are always sorted to the LHS.
+    SCEVUse &S = Ops.front();
+    if (match(S, m_scev_APInt(C)) && !C->isZero()) {
+      if (C->getSignificantBits() <= 64) {
+        Op = &S;
+        Result = Immediate::getFixed(C->getSExtValue());
+      }
+    }
+  }
+
+  if (Result.isNonZero()) {
+    SCEVUse &S = *Op;
+    S = SE.getConstant(S->getType(), 0);
+  }
+
+  return Result;
+}
+
 /// If S involves the addition of a constant integer value, return that integer
 /// value, and mutate S to point to a new SCEV with that value excluded.
-static Immediate ExtractImmediate(SCEVUse &S, ScalarEvolution &SE) {
-  const APInt *C;
-  if (match(S, m_scev_APInt(C))) {
-    if (C->getSignificantBits() <= 64) {
-      S = SE.getConstant(S->getType(), 0);
-      return Immediate::getFixed(C->getSExtValue());
-    }
-  } else if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
+static Immediate ExtractImmediate(SCEVUse &S, ScalarEvolution &SE,
+                                  bool PreferScalable = false) {
+  if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     SmallVector<SCEVUse, 8> NewOps(Add->operands());
-    Immediate Result = ExtractImmediate(NewOps.front(), SE);
+    Immediate Result = ExtractImmediateOperand(NewOps, SE, PreferScalable);
+    if (Result.isZero())
+      Result = ExtractImmediate(NewOps.front(), SE, PreferScalable);
     if (Result.isNonZero())
       S = SE.getAddExpr(NewOps);
     return Result;
   } else if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     SmallVector<SCEVUse, 8> NewOps(AR->operands());
-    Immediate Result = ExtractImmediate(NewOps.front(), SE);
+    Immediate Result = ExtractImmediate(NewOps.front(), SE, PreferScalable);
     if (Result.isNonZero())
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                            SCEV::FlagAnyWrap);
     return Result;
-  } else if (EnableVScaleImmediates &&
-             match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
-    S = SE.getConstant(S->getType(), 0);
-    return Immediate::getScalable(C->getSExtValue());
   }
-  return Immediate::getZero();
+  return ExtractImmediateOperand({S}, SE, PreferScalable);
 }
 
 /// If S involves the addition of a GlobalValue address, return that symbol, and
@@ -2817,7 +2854,8 @@ std::pair<size_t, Immediate> LSRInstance::getUse(const SCEV *&Expr,
                                                  MemAccessTy AccessTy) {
   const SCEV *Copy = Expr;
   SCEVUse ExprUse = Expr;
-  Immediate Offset = ExtractImmediate(ExprUse, SE);
+  Immediate Offset = ExtractImmediate(
+      ExprUse, SE, AccessTy.MemTy && AccessTy.MemTy->isScalableTy());
   Expr = ExprUse;
 
   // Basic uses can't accept any offset, for example.
@@ -4187,7 +4225,7 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   for (Immediate Offset : Worklist)
     GenerateOffset(G, Offset);
 
-  Immediate Imm = ExtractImmediate(G, SE);
+  Immediate Imm = ExtractImmediate(G, SE, Base.BaseOffset.isScalable());
   if (G->isZero() || Imm.isZero() ||
       !Base.BaseOffset.isCompatibleImmediate(Imm))
     return;
@@ -4518,6 +4556,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
   SmallVector<const SCEV *, 8> Sequence;
   for (const SCEV *Use : RegUses) {
     SCEVUse Reg = Use; // Make a copy for ExtractImmediate to modify.
+    // TODO: Extract both scalable and fixed immediates (if present)?
     Immediate Imm = ExtractImmediate(Reg, SE);
     auto Pair = Map.try_emplace(Reg);
     if (Pair.second)
