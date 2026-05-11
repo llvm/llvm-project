@@ -11008,7 +11008,7 @@ def warn_lifetime_safety_dangling_global_moved
       DefaultIgnore;
 
 def warn_lifetime_safety_lifetimebound_violation
-    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|an implicit this parameter}0">,
+    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|the implicit this parameter}0">,
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 

@@ -90,7 +90,7 @@ View annotated_decl_but_not_def_not_returned(const MyObj &obj) {
 struct BadThisReturn {
   MyObj data;
 
-  View get() const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
+  View get() const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
     return not_lb(data);
   }
 };
@@ -105,7 +105,7 @@ struct GoodThisReturn {
 
 struct RedeclaredThis {
   MyObj data;
-  View get() const [[clang::lifetimebound]]; // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
+  View get() const [[clang::lifetimebound]]; // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
 };
 
 View RedeclaredThis::get() const {
@@ -115,7 +115,7 @@ View RedeclaredThis::get() const {
 struct ThisAndParam {
   MyObj data;
 
-  View get(const MyObj &obj [[clang::lifetimebound]]) const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
+  View get(const MyObj &obj [[clang::lifetimebound]]) const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
     return lb(obj);
   }
 };
@@ -127,7 +127,7 @@ struct ThisAndMixedParams {
       const MyObj &a [[clang::lifetimebound]],
       const MyObj &b,
       const MyObj &c [[clang::lifetimebound]]) const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}} \
-                                                                                // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
+                                                                                // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
     return cond() ? lb(a) : not_lb(b);
   }
 };
