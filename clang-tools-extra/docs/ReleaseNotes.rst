@@ -181,6 +181,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`misc-use-braced-initialization
+  <clang-tidy/checks/misc/use-braced-initialization>` check.
+
+  Suggests replacing parenthesized initialization with braced
+  initialization.
+
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 
@@ -240,6 +246,11 @@ New check aliases
   to :doc:`misc-explicit-constructor
   <clang-tidy/checks/misc/explicit-constructor>`. The
   `cppcoreguidelines-explicit-constructor` name is kept as an alias.
+
+- New :doc:`cppcoreguidelines-use-braced-initialization
+  <clang-tidy/checks/cppcoreguidelines/use-braced-initialization>` check
+  alias for :doc:`misc-use-braced-initialization
+  <clang-tidy/checks/misc/use-braced-initialization>`.
 
 - Renamed :doc:`google-explicit-constructor
   <clang-tidy/checks/google/explicit-constructor>`

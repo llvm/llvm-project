@@ -12,6 +12,7 @@
 #include "../misc/ExplicitConstructorCheck.h"
 #include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
+#include "../misc/UseBracedInitializationCheck.h"
 #include "../modernize/AvoidCArraysCheck.h"
 #include "../modernize/MacroToEnumCheck.h"
 #include "../modernize/UseDefaultMemberInitCheck.h"
@@ -136,6 +137,8 @@ public:
     CheckFactories.registerCheck<SpecialMemberFunctionsCheck>(
         "cppcoreguidelines-special-member-functions");
     CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
+    CheckFactories.registerCheck<misc::UseBracedInitializationCheck>(
+        "cppcoreguidelines-use-braced-initialization");
     CheckFactories.registerCheck<modernize::UseDefaultMemberInitCheck>(
         "cppcoreguidelines-use-default-member-init");
     CheckFactories.registerCheck<UseEnumClassCheck>(
