@@ -5596,6 +5596,27 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
 
   APInt Val = SDFPConstant->getValueAPF().bitcastToAPInt();
   return isUInt<32>(Val.getZExtValue()) || TII->isInlineConstant(Val);
+
+SDValue AMDGPUTargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
+                                        bool IsNegative) const {
+  if (N->isDivergent() ||
+      (N->getValueType(0) != MVT::i8 && N->getValueType(0) != MVT::i16))
+    return TargetLowering::expandABS(N, DAG, IsNegative);
+
+  //(abs i8/i16 (i8/i16 op1)) -> (trunc i8/i16 (abs i32 (sext i32 (i8/i16
+  // op1))))
+  SDValue Src = N->getOperand(0);
+  SDLoc DL(Src);
+  SDValue SExtSrc = DAG.getSExtOrTrunc(Src, DL, MVT::i32);
+  SDValue ExtAbs = DAG.getNode(ISD::ABS, DL, MVT::i32, SExtSrc);
+  SDValue TruncResult =
+      DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), ExtAbs);
+
+  if (!IsNegative)
+    return TruncResult;
+
+  return DAG.getNode(ISD::SUB, DL, N->getValueType(0),
+                     DAG.getConstant(0, DL, N->getValueType(0)), TruncResult);
 }
 
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
