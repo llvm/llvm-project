@@ -23,7 +23,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-
 define void @test(ptr %this, i32 %format, i32 %w, i32 %h, i32 %levels, ptr %s, ptr %data, ptr nocapture %rowbytes, ptr %release, ptr %info) nounwind {
 entry:
   %tmp1 = getelementptr inbounds %s1, ptr %this, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0
-  store volatile i32 1, ptr %tmp1, align 4
+  store i32 1, ptr %tmp1, align 4
   %tmp12 = getelementptr inbounds %s1, ptr %this, i32 0, i32 1
   store i32 %levels, ptr %tmp12, align 4
   %tmp13 = getelementptr inbounds %s1, ptr %this, i32 0, i32 3
@@ -47,7 +47,7 @@ entry:
   %tmp24 = shl i32 %flags.0, 16
   %asmtmp.i.i.i = tail call %0 asm sideeffect "\0A0:\09ldrex $1, [$2]\0A\09orr $1, $1, $3\0A\09strex $0, $1, [$2]\0A\09cmp $0, #0\0A\09bne 0b", "=&r,=&r,r,r,~{memory},~{cc}"(ptr %tmp1, i32 %tmp24) nounwind
   %tmp25 = getelementptr inbounds %s1, ptr %this, i32 0, i32 2, i32 0, i32 0
-  store volatile i32 1, ptr %tmp25, align 4
+  store i32 1, ptr %tmp25, align 4
   %tmp26 = icmp eq i32 %levels, 0
   br i1 %tmp26, label %return, label %bb4
 
