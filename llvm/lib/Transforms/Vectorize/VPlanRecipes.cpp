@@ -578,14 +578,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   }
 }
 
-static Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
-  if (Kind == RecurKind::Sub)
-    return Instruction::Add;
-  if (Kind == RecurKind::FSub)
-    return Instruction::FAdd;
-  llvm_unreachable("RecurKind should be Sub/FSub.");
-}
-
 Value *VPInstruction::generate(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
 
@@ -799,8 +791,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
           // For sub-recurrences, each part's reduction variable is already
           // negative, we need to do: reduce.add(-acc_uf0 + -acc_uf1)
           Instruction::BinaryOps Opcode =
-              RecurrenceDescriptor::isSubRecurrenceKind(RK)
-                  ? getSubRecurOpcode(RK)
+              RK == RecurKind::Sub
+                  ? Instruction::Add
                   : (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
           ReducedPartRdx =
               Builder.CreateBinOp(Opcode, RdxPart, ReducedPartRdx, "bin.rdx");
