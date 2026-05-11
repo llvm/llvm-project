@@ -14,6 +14,8 @@ define void @unknown_divisor(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE14:.*]] ]
@@ -52,8 +54,7 @@ define void @unknown_divisor(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE8]]
 ; CHECK:       [[PRED_LOAD_CONTINUE8]]:
 ; CHECK-NEXT:    [[TMP23:%.*]] = phi <4 x i32> [ [[TMP22]], %[[PRED_LOAD_CONTINUE6]] ], [ [[TMP25]], %[[PRED_LOAD_IF7]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = select i1 [[C]], <4 x i32> [[TMP23]], <4 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP28:%.*]] = udiv exact <4 x i32> splat (i32 100), [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> splat (i32 100), <4 x i32> [[TMP23]], <4 x i1> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP28]], i64 0
