@@ -107,7 +107,7 @@ TEST(AnnotationsTest, Nested) {
 }
 
 TEST(AnnotationsTest, Payload) {
-  // A single unnamed point or range with unspecified payload.
+  // // A single unnamed point or range with unspecified payload
   EXPECT_THAT(llvm::Annotations("a$^b").pointWithPayload(), Pair(1u, ""));
   EXPECT_THAT(llvm::Annotations("a$[[b]]cdef").rangeWithPayload(),
               Pair(range(1, 2), ""));

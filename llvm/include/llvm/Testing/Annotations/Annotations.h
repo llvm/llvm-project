@@ -26,8 +26,7 @@ class raw_ostream;
 ///       $definition^class Foo{};          // points can be named: "definition"
 ///       $(foo)^class Foo{};               // ...or have a payload: "foo"
 ///       $definition(foo)^class Foo{};     // ...or both
-///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads
-///                                         // too
+///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads too
 ///    )cpp");
 ///
 ///    StringRef Code = Example.code();             // annotations stripped.
@@ -39,7 +38,7 @@ class raw_ostream;
 /// annotations.
 ///
 /// Names consist of only alphanumeric characters or '_'.
-/// Payloads can contain any character except '(' and ')'.
+/// Payloads can contain any character expect '(' and ')'.
 ///
 /// Ranges may be nested (and points can be inside ranges), but there's no way
 /// to define general overlapping ranges.
