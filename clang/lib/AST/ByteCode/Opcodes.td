@@ -454,6 +454,7 @@ def CheckLiteralType : Opcode {
 }
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
+def CheckArrayDestSize : Opcode { let Args = [ArgUint64]; }
 def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
 def CheckBitCast : Opcode { let Args = [ArgTypePtr, ArgBool]; }
 
