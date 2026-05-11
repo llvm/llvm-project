@@ -115,6 +115,7 @@ end program
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
+! ALL-NEXT:     RematerializeFIRBoxOpsPass
 ! ALL-NEXT:   'gpu.module' Pipeline
 ! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
 ! ALL-NEXT:   'func.func' Pipeline
@@ -128,7 +129,6 @@ end program
 ! ALL-NEXT:   'omp.private' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 
-! ALL-NEXT: RematerializeFIRBoxOpsPass
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
 ! ALL-NEXT: ExternalNameConversion

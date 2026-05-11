@@ -203,15 +203,15 @@ public:
       RematerializeFIRBoxOpsPass>::RematerializeFIRBoxOpsPassBase;
 
   void runOnOperation() override final {
-    mlir::ModuleOp module = getOperation();
+    mlir::Operation *top = getOperation();
 
     llvm::SmallVector<mlir::Operation *> regionOwners;
-    module.walk([&](mlir::Operation *op) {
+    top->walk([&](mlir::Operation *op) {
       if (isRematerializationRegionOp(op))
         regionOwners.push_back(op);
     });
 
-    mlir::IRRewriter rewriter(module.getContext());
+    mlir::IRRewriter rewriter(top->getContext());
     for (mlir::Operation *op : regionOwners)
       rematerializeInRegion(rewriter, op);
   }

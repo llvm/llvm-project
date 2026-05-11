@@ -63,7 +63,7 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
 }
 
 def RematerializeFIRBoxOpsPass
-    : Pass<"fir-rematerialize-box-ops", "mlir::ModuleOp"> {
+    : Pass<"fir-rematerialize-box-ops", "mlir::func::FuncOp"> {
   let summary = "Rematerialize FIR box operations before selected uses.";
   let description = [{
     Clone selected FIR box operations to preserve region-local descriptor
