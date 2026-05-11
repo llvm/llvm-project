@@ -2400,27 +2400,18 @@ void StmtProfiler::VisitMaterializeTemporaryExpr(
 }
 
 void StmtProfiler::VisitCXXFoldExpr(const CXXFoldExpr *S) {
-  // For CXXFoldExpr, do not profile the callee as it may
-  // be affected by the context. e.g.,
+  VisitStmtNoChildren(S);
+  // The callee sub-expression is not part of how the expression is written,
+  // so it's not added to the profile.
   //
-  // "a.h"
+  // Example:
+  // template <typename... T> requires ((sizeof(T) > 0) && ...) void f() {}
+  // class A;
+  // void operator&&(A, A);
+  // template <typename... T> requires ((sizeof(T) > 0) && ...) void f() {}
   //
-  //   struct F {
-  //     template <typename... T> requires ((sizeof(T) > 0) && ...)
-  //     void operator()(T...) {}
-  //   } f;
-  //
-  // and
-  //
-  // "c.h"
-  //
-  //   void operator&&(struct X, struct X);
-  //   #include "a.h"
-  //
-  // Here we may give different profile results to F::operator() in
-  // "c.h" vs other use cases of "a.h". This is problematic in
-  // cases where we may have expression coming from different
-  // headers, e.g., modules.
+  // Both definitions have identically written fold expressions, but semantic
+  // analysis adds the overloaded operator to the second one.
   if (S->getLHS())
     Visit(S->getLHS());
   else

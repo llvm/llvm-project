@@ -914,11 +914,25 @@ public:
     return Res.TheMatch->Pos;
   }
 
-  void printVariableDefs(FileCheckDiag::MatchType MatchTy,
-                         std::vector<FileCheckDiag> &Diags) {
-    P.printVariableDefs(SM, MatchTy, &Diags);
+  void printVariableDefs(FileCheckDiagList &Diags) {
+    P.printVariableDefs(SM, &Diags);
   }
+
+  SourceMgr &getSourceMgr() { return SM; }
 };
+
+#define EXPECT_SM_RANGE(SM, RangeOpt, StartLineExpected, StartColExpected,     \
+                        EndLineExpected, EndColExpected)                       \
+  do {                                                                         \
+    EXPECT_TRUE(RangeOpt->isValid());                                          \
+    SMRange Range = *RangeOpt;                                                 \
+    auto StartActual = SM.getLineAndColumn(Range.Start);                       \
+    auto EndActual = SM.getLineAndColumn(Range.End);                           \
+    EXPECT_EQ(StartActual.first, StartLineExpected);                           \
+    EXPECT_EQ(StartActual.second, StartColExpected);                           \
+    EXPECT_EQ(EndActual.first, EndLineExpected);                               \
+    EXPECT_EQ(EndActual.second, EndColExpected);                               \
+  } while (0)
 
 TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   PatternTester Tester;
@@ -1639,22 +1653,21 @@ TEST_F(FileCheckTest, FileCheckContext) {
 
 TEST_F(FileCheckTest, CapturedVarDiags) {
   PatternTester Tester;
+  SourceMgr &SM = Tester.getSourceMgr();
   ASSERT_FALSE(Tester.parsePattern("[[STRVAR:[a-z]+]] [[#NUMVAR:@LINE]]"));
   EXPECT_THAT_EXPECTED(Tester.match("foobar 2"), Succeeded());
-  std::vector<FileCheckDiag> Diags;
-  Tester.printVariableDefs(FileCheckDiag::MatchFoundAndExpected, Diags);
+  FileCheckDiagList Diags;
+  Tester.printVariableDefs(Diags);
   EXPECT_EQ(Diags.size(), 2ul);
+  SmallVector<MatchCustomNoteDiag, 2> Notes;
   for (const FileCheckDiag &Diag : Diags) {
-    EXPECT_EQ(Diag.CheckTy, Check::CheckPlain);
-    EXPECT_EQ(Diag.MatchTy, FileCheckDiag::MatchFoundAndExpected);
-    EXPECT_EQ(Diag.InputStartLine, 1u);
-    EXPECT_EQ(Diag.InputEndLine, 1u);
+    EXPECT_EQ(Diag.getKind(), FileCheckDiag::MatchCustomNoteDiag);
+    EXPECT_FALSE(Diag.isError());
+    Notes.push_back(cast<MatchCustomNoteDiag>(Diag));
   }
-  EXPECT_EQ(Diags[0].InputStartCol, 1u);
-  EXPECT_EQ(Diags[0].InputEndCol, 7u);
-  EXPECT_EQ(Diags[1].InputStartCol, 8u);
-  EXPECT_EQ(Diags[1].InputEndCol, 9u);
-  EXPECT_EQ(Diags[0].Note, "captured var \"STRVAR\"");
-  EXPECT_EQ(Diags[1].Note, "captured var \"NUMVAR\"");
+  EXPECT_SM_RANGE(SM, Notes[0].getMatchRange(), 1u, 1u, 1u, 7u);
+  EXPECT_SM_RANGE(SM, Notes[1].getMatchRange(), 1u, 8u, 1u, 9u);
+  EXPECT_EQ(Notes[0].getNote(), "captured var \"STRVAR\"");
+  EXPECT_EQ(Notes[1].getNote(), "captured var \"NUMVAR\"");
 }
 } // namespace

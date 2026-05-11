@@ -85,7 +85,7 @@ define i16 @test_incomplete_chain_without_mul(ptr noalias %dst, ptr %A, ptr %B) 
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[BROADCAST_SPLAT]] to <16 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i16> [[TMP1]], i32 15
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i16> [[TMP1]], i64 15
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[B]], align 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i8> poison, i8 [[TMP3]], i64 0
