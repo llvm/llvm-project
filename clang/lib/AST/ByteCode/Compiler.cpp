@@ -2018,7 +2018,7 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-  if (E->getType()->isVoidType())
+  if (E->getType()->isVoidType() || E->containsErrors())
     return false;
 
   const Expr *LHS = E->getLHS();
