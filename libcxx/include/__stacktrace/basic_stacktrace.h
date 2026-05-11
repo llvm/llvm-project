@@ -71,9 +71,9 @@ struct _Trace {
       : __entry_iters_(__entry_iters), __entry_append_(__entry_append) {}
 
   _LIBCPP_EXPORTED_FROM_ABI ostream& __write_to(ostream& __os) const;
-  _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
+  _LIBCPP_EXPORTED_FROM_ABI string __to_string() const;
 
-  _LIBCPP_EXPORTED_FROM_ABI size_t hash_code() const;
+  _LIBCPP_EXPORTED_FROM_ABI size_t __hash_code() const;
   _LIBCPP_HIDE_FROM_ABI static _Trace& __base(auto& __trace);
   _LIBCPP_HIDE_FROM_ABI static _Trace const& __base(auto const& __trace);
 
@@ -284,7 +284,7 @@ swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexc
 
 template <class _Allocator>
 _LIBCPP_HIDE_FROM_ABI string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
-  return ((__stacktrace::_Trace const&)__stacktrace).to_string();
+  return ((__stacktrace::_Trace const&)__stacktrace).__to_string();
 }
 
 template <class _Allocator>
@@ -295,12 +295,12 @@ _LIBCPP_HIDE_FROM_ABI ostream& operator<<(ostream& __os, const basic_stacktrace<
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
 // (19.6.6)
-// Hash support [stacktrace.basic.hash_code]
+// Hash support [stacktrace.basic.__hash_code]
 
 template <class _Allocator>
-struct hash_code<basic_stacktrace<_Allocator>> {
+struct hash<basic_stacktrace<_Allocator>> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
-    return __stacktrace::_Trace::__base(__trace).hash_code();
+    return __stacktrace::_Trace::__base(__trace).__hash_code();
   }
 };
 
