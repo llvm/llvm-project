@@ -2415,8 +2415,7 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules);
 
   void emitRuleConfigImpl(raw_ostream &OS);
-  SmallSetVector<const CodeGenInstruction *, 32>
-  collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) const;
+  void collectMatchOpcodes(ArrayRef<RuleMatcher> Rules);
   void emitCanMatchOpcodeFn(raw_ostream &OS, StringRef FnName) const;
 
   void emitAdditionalImpl(raw_ostream &OS) override;
@@ -2564,15 +2563,12 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
      << "}\n\n";
 }
 
-SmallSetVector<const CodeGenInstruction *, 32>
-GICombinerEmitter::collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) const {
-  SmallSetVector<const CodeGenInstruction *, 32> Opcodes;
+void GICombinerEmitter::collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) {
   for (const RuleMatcher &Rule : Rules) {
     for (const CodeGenInstruction *I :
          Rule.insnmatchers_front().getOpcodeMatcher().getAlternativeOpcodes())
-      Opcodes.insert(I);
+      MatchOpcodes.insert(I);
   }
-  return Opcodes;
 }
 
 void GICombinerEmitter::emitCanMatchOpcodeFn(raw_ostream &OS,
@@ -2822,7 +2818,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     return false;
   });
 
-  MatchOpcodes = collectMatchOpcodes(Rules);
+  collectMatchOpcodes(Rules);
   const MatchTable Table = buildMatchTable(Rules);
 
   Timer.startTimer("Emit combiner");
