@@ -4383,8 +4383,8 @@ def SPIRV_IntVec4 : SPIRV_Vec4<SPIRV_Integer>;
 def SPIRV_IOrUIVec4 : SPIRV_Vec4<SPIRV_SignlessOrUnsignedInt>;
 def SPIRV_Int32Vec4 : SPIRV_Vec4<AnyI32>;
 
-// TODO: From 1.4, this should also include Composite type.
-def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr]>;
+def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr,
+                                  SPIRV_AnyMatrix, SPIRV_AnyArray, SPIRV_AnyStruct]>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V OpTrait definitions
@@ -5054,5 +5054,16 @@ def SPIRV_TosaExtRoundingModeAttr : SPIRV_I32EnumAttr<
       I32EnumAttrCase<"InexactRound", 2>,
       I32EnumAttrCase<"DoubleRound", 3>,
   ]>;
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Common Constraints.
+//===----------------------------------------------------------------------===//
+
+class SPIRV_ExecutionScopeAttrIs<string operand, list<string> values> : PredOpTrait<
+  operand # " must be '" # !interleave(values, "' or '") # "'",
+  CPred<"::llvm::is_contained({::mlir::spirv::Scope::" # !interleave(values, ", ::mlir::spirv::Scope::") #
+        "}, ::llvm::cast<::mlir::spirv::ScopeAttr>(getProperties()." # operand #
+        ").getValue())">
+>;
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

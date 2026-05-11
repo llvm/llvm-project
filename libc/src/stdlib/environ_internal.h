@@ -122,6 +122,13 @@ public:
   // Look up a variable by name. Returns a pointer to the value string
   // (after the '='), or nullptr if not found.
   char *get(cpp::string_view name);
+
+  // Set or update an environment variable. Builds a "name=value" string,
+  // manages ownership, and updates the environ array. If `overwrite` is
+  // false and the variable already exists, does nothing and returns 0.
+  // Returns 0 on success, -1 on allocation failure (caller should set
+  // errno to ENOMEM).
+  int set(cpp::string_view name, cpp::string_view value, bool overwrite);
 };
 
 } // namespace internal
