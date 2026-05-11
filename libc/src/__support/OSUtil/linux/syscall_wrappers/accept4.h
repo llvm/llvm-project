@@ -26,8 +26,7 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> accept4(int sockfd, struct sockaddr *addr,
                                  socklen_t *addrlen, int flags) {
 #ifdef SYS_accept4
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_accept4, sockfd, addr,
-                                              addrlen, flags);
+  int ret = syscall_impl<int>(SYS_accept4, sockfd, addr, addrlen, flags);
 #elif defined(SYS_socketcall)
   int ret = socketcall<int>(SYS_ACCEPT4, sockfd, addr, addrlen, flags);
 #else

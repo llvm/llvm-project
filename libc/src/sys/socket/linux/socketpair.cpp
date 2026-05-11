@@ -24,7 +24,8 @@ LLVM_LIBC_FUNCTION(int, socketpair,
 #ifdef SYS_socketpair
   int ret = syscall_impl<int>(SYS_socketpair, domain, type, protocol, sv);
 #elif defined(SYS_socketcall)
-  int ret = socketcall(SYS_SOCKETPAIR, domain, type, protocol, sv);
+  int ret = linux_syscalls::socketcall<int>(SYS_SOCKETPAIR, domain, type,
+                                            protocol, sv);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif

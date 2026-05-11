@@ -25,7 +25,8 @@ LLVM_LIBC_FUNCTION(int, bind,
 #ifdef SYS_bind
   int ret = syscall_impl<int>(SYS_bind, socket, address, address_len);
 #elif defined(SYS_socketcall)
-  int ret = socketcall(SYS_BIND, socket, address, address_len);
+  int ret =
+      linux_syscalls::socketcall<int>(SYS_BIND, socket, address, address_len);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif
