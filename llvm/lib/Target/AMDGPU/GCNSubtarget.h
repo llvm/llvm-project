@@ -507,8 +507,6 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return HasGFX940Insts || HasGFX1250Insts; }
-
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return HasGFX1250Insts; }
 

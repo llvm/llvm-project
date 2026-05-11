@@ -603,17 +603,9 @@ Check aliases
    :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
-   :doc:`hicpp-invalid-access-moved <hicpp/invalid-access-moved>`, :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
-   :doc:`hicpp-member-init <hicpp/member-init>`, :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes"
-   :doc:`hicpp-move-const-arg <hicpp/move-const-arg>`, :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`, :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
-   :doc:`hicpp-named-parameter <hicpp/named-parameter>`, :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
-   :doc:`hicpp-new-delete-operators <hicpp/new-delete-operators>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
-   :doc:`hicpp-no-array-decay <hicpp/no-array-decay>`, :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
-   :doc:`hicpp-noexcept-move <hicpp/noexcept-move>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
-   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`, :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
    :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
    :doc:`hicpp-static-assert <hicpp/static-assert>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`hicpp-undelegated-constructor <hicpp/undelegated-constructor>`, :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,

@@ -6401,7 +6401,11 @@ td_library(
 
 td_library(
     name = "NVVMOpsTdFiles",
-    srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
+    srcs = [
+        "include/mlir/Dialect/LLVMIR/NVVMDialect.td",
+        "include/mlir/Dialect/LLVMIR/NVVMEnums.td",
+        "include/mlir/Dialect/LLVMIR/NVVMOps.td",
+    ],
     includes = ["include"],
     deps = [
         ":BasicPtxBuilderIntTdFiles",
