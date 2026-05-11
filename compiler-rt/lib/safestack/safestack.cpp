@@ -16,8 +16,8 @@
 #define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
 
 #include <errno.h>
-#include <string.h>
 #include <signal.h>
+#include <string.h>
 #include <sys/resource.h>
 
 #include "interception/interception.h"
@@ -168,7 +168,7 @@ void StaticSpinMutex::LockSlow() {
 }
 
 // sigactions_mu guarantees atomicity of sigaction() and signal() calls.
-// Access to sigactions[] is gone with relaxed atomics to avoid data race with
+// Access to sigactions[] is done with relaxed atomics to avoid data race with
 // the signal handler.
 const int kMaxSignals = 1024;
 static atomic_uintptr_t* sigactions = nullptr;
@@ -516,9 +516,9 @@ void EnsureInterceptorsInitialized() {
   if (interceptors_inited)
     return;
 
-  sigactions = (atomic_uintptr_t*)Mmap(
-      nullptr, kMaxSignals * sizeof(atomic_uintptr_t), PROT_READ,
-      MAP_PRIVATE | MAP_ANON, -1, 0);
+  sigactions =
+      (atomic_uintptr_t*)Mmap(nullptr, kMaxSignals * sizeof(atomic_uintptr_t),
+                              PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   SFS_CHECK(sigactions != MAP_FAILED);
 
   // Initialize pthread interceptors for thread allocation
