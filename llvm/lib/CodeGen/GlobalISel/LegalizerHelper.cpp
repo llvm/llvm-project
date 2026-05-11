@@ -37,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cassert>
 #include <numeric>
 #include <optional>
 
@@ -4969,7 +4970,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return Legalized;
   }
   case G_SMULFIX:
-    return lowerSmulfix(MI);
+  case G_UMULFIX:
+    return lowerMulfix(MI);
   }
 }
 
@@ -10656,8 +10658,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   return Legalized;
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
+  unsigned OpCode = MI.getOpcode();
+  assert(OpCode == TargetOpcode::G_SMULFIX ||
+         OpCode == TargetOpcode::G_UMULFIX &&
+             "Operator must be either G_SMULFIX or G_UMULFIX!");
   auto [Dst, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
   unsigned Scale = MI.getOperand(3).getImm();
@@ -10669,12 +10674,19 @@ LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
   }
 
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
-  auto SExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
-  auto SExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
-  auto Mul = MIRBuilder.buildMul(WideTy, SExtLHS, SExtRHS);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
-  auto Shifted = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
-  MIRBuilder.buildTrunc(Dst, Shifted);
+  MachineInstrBuilder ExtLHS{}, ExtRHS{};
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
+    ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+  } else {
+    ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+  }
+
+  auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
+  auto Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  MIRBuilder.buildTrunc(Dst, Shift);
 
   MI.eraseFromParent();
   return Legalized;
