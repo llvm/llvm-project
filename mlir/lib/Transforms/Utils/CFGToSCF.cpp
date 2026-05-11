@@ -226,9 +226,21 @@ public:
   static EdgeMultiplexer create(Location loc, ArrayRef<Block *> entryBlocks,
                                 function_ref<Value(unsigned)> getSwitchValue,
                                 function_ref<Value(Type)> getUndefValue,
-                                const llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> &argMappings,
-                                const llvm::SmallMapVector<Block *, SmallVector<Type>, 4> &newArgTypes,
                                 TypeRange extraArgs = {}) {
+    llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> emptyMappings;
+    llvm::SmallMapVector<Block *, SmallVector<Type>, 4> emptyNewArgTypes;
+    return create(loc, entryBlocks, getSwitchValue, getUndefValue,
+                  emptyMappings, emptyNewArgTypes, extraArgs);
+  }
+
+  static EdgeMultiplexer
+  create(Location loc, ArrayRef<Block *> entryBlocks,
+         function_ref<Value(unsigned)> getSwitchValue,
+         function_ref<Value(Type)> getUndefValue,
+         const llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4>
+             &argMappings,
+         const llvm::SmallMapVector<Block *, SmallVector<Type>, 4> &newArgTypes,
+         TypeRange extraArgs = {}) {
     assert(!entryBlocks.empty() && "Require at least one entry block");
 
     auto *multiplexerBlock = new Block;
@@ -243,7 +255,8 @@ public:
         auto it = newArgTypes.find(entryBlock);
         if (it != newArgTypes.end()) {
           blockArgCounts[entryBlock] = it->second.size();
-          multiplexerBlock->addArguments(it->second, SmallVector<Location>(it->second.size(), loc));
+          multiplexerBlock->addArguments(
+              it->second, SmallVector<Location>(it->second.size(), loc));
         } else {
           blockArgCounts[entryBlock] = entryBlock->getNumArguments();
           addBlockArgumentsFromOther(multiplexerBlock, entryBlock);
@@ -260,8 +273,9 @@ public:
         extraArgs, SmallVector<Location>(extraArgs.size(), loc));
 
     return EdgeMultiplexer(multiplexerBlock, getSwitchValue, getUndefValue,
-                           std::move(blockArgMapping), std::move(blockArgCounts),
-                           argMappings, discriminator);
+                           std::move(blockArgMapping),
+                           std::move(blockArgCounts), argMappings,
+                           discriminator);
   }
 
   /// Returns the created multiplexer block.
@@ -288,7 +302,8 @@ public:
 
     SmallVector<Value> newSuccOperands(multiplexerBlock->getNumArguments());
     for (unsigned i = 0; i < newSuccOperands.size(); ++i)
-      newSuccOperands[i] = getUndefValue(multiplexerBlock->getArgument(i).getType());
+      newSuccOperands[i] =
+          getUndefValue(multiplexerBlock->getArgument(i).getType());
 
     auto it = argMappings.find(edge.getSuccessor());
     if (it != argMappings.end()) {
@@ -337,9 +352,11 @@ public:
 
       caseValues.push_back(index);
       auto countIt = blockArgCounts.find(succ);
-      unsigned count = countIt != blockArgCounts.end() ? countIt->second : succ->getNumArguments();
-      caseArguments.push_back(multiplexerBlock->getArguments().slice(
-          offset, count));
+      unsigned count = countIt != blockArgCounts.end()
+                           ? countIt->second
+                           : succ->getNumArguments();
+      caseArguments.push_back(
+          multiplexerBlock->getArguments().slice(offset, count));
       caseDestinations.push_back(succ);
     }
 
@@ -381,13 +398,13 @@ private:
   /// entry block.
   Value discriminator;
 
-  EdgeMultiplexer(Block *multiplexerBlock,
-                  function_ref<Value(unsigned)> getSwitchValue,
-                  function_ref<Value(Type)> getUndefValue,
-                  llvm::SmallMapVector<Block *, unsigned, 4> &&entries,
-                  llvm::SmallMapVector<Block *, unsigned, 4> &&counts,
-                  const llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> &mappings,
-                  Value dispatchFlag)
+  EdgeMultiplexer(
+      Block *multiplexerBlock, function_ref<Value(unsigned)> getSwitchValue,
+      function_ref<Value(Type)> getUndefValue,
+      llvm::SmallMapVector<Block *, unsigned, 4> &&entries,
+      llvm::SmallMapVector<Block *, unsigned, 4> &&counts,
+      const llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> &mappings,
+      Value dispatchFlag)
       : multiplexerBlock(multiplexerBlock), getSwitchValue(getSwitchValue),
         getUndefValue(getUndefValue), blockArgMapping(std::move(entries)),
         blockArgCounts(std::move(counts)), argMappings(mappings),
@@ -472,10 +489,9 @@ private:
   CFGToSCFInterface &interface;
 };
 
-static void findDuplicateArguments(
-    ArrayRef<Edge> edges, Block *block,
-    SmallVectorImpl<unsigned> &argMapping,
-    SmallVectorImpl<Type> &newArgTypes) {
+static void findDuplicateArguments(ArrayRef<Edge> edges, Block *block,
+                                   SmallVectorImpl<unsigned> &argMapping,
+                                   SmallVectorImpl<Type> &newArgTypes) {
   unsigned numArgs = block->getNumArguments();
   argMapping.resize(numArgs);
   for (unsigned i = 0; i < numArgs; ++i)
@@ -492,7 +508,18 @@ static void findDuplicateArguments(
     return;
 
   using ColumnSig = SmallVector<Value>;
-  std::map<ColumnSig, unsigned> sigToNewIndex;
+  struct ColumnSigLess {
+    bool operator()(const ColumnSig &a, const ColumnSig &b) const {
+      if (a.size() != b.size())
+        return a.size() < b.size();
+      for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i].getAsOpaquePointer() != b[i].getAsOpaquePointer())
+          return a[i].getAsOpaquePointer() < b[i].getAsOpaquePointer();
+      }
+      return false;
+    }
+  };
+  std::map<ColumnSig, unsigned, ColumnSigLess> sigToNewIndex;
 
   newArgTypes.clear();
 
@@ -568,7 +595,8 @@ createSingleEntryBlock(Location loc, ArrayRef<Edge> entryEdges,
   SmallVector<Block *> uniqueSuccessors;
   for (Edge edge : entryEdges) {
     Block *succ = edge.getSuccessor();
-    if (std::find(uniqueSuccessors.begin(), uniqueSuccessors.end(), succ) == uniqueSuccessors.end())
+    if (std::find(uniqueSuccessors.begin(), uniqueSuccessors.end(), succ) ==
+        uniqueSuccessors.end())
       uniqueSuccessors.push_back(succ);
   }
 
