@@ -35,7 +35,8 @@ using namespace llvm::advisor;
 static std::string renderJSON(const json::Value &Value) {
   std::string Body;
   raw_string_ostream OS(Body);
-  OS << Value;
+  json::OStream JOS(OS);
+  JOS.value(Value);
   OS.flush();
   return Body;
 }
@@ -369,20 +370,24 @@ static HTTPResult handleGetUnits(CoreClient &Client, StringRef SnapID,
 
 static HTTPResult handleGetInsights(CoreClient &Client, StringRef SnapID,
                                     StringRef InsightName = "",
-                                    StringRef UnitID = "") {
+                                    StringRef UnitID = "",
+                                    StringRef BaselineSnapID = "") {
   if (InsightName.empty()) {
     Expected<json::Array> L = Client.listInsights(SnapID);
     if (!L)
       return makeJSONError(400, L.takeError());
     return makeJSONSuccess(200, std::move(*L));
   }
+  std::string Baseline(BaselineSnapID);
   if (UnitID.empty()) {
-    Expected<json::Object> R = Client.runInsight(InsightName, SnapID);
+    Expected<json::Object> R =
+        Client.runInsight(InsightName, SnapID, StringRef(), Baseline);
     if (!R)
       return makeJSONError(400, R.takeError());
     return makeJSONSuccess(200, std::move(*R));
   }
-  Expected<json::Object> R = Client.runInsight(InsightName, SnapID, UnitID);
+  Expected<json::Object> R =
+      Client.runInsight(InsightName, SnapID, UnitID, Baseline);
   if (!R)
     return makeJSONError(400, R.takeError());
   return makeJSONSuccess(200, std::move(*R));
@@ -397,6 +402,20 @@ static HTTPResult handleGetEntities(CoreClient &Client, StringRef SnapID,
        Client.storage().metadata().listEntities(EntityKind, SnapID))
     Array.push_back(toJSON(Entity));
   return makeJSONSuccess(200, std::move(Array));
+}
+
+// Resolve "latest" to the most-recently-created snapshot ID.
+static std::string resolveSnapshotHTTP(CoreClient &Client, StringRef ID) {
+  if (ID != "latest")
+    return std::string(ID);
+  SmallVector<SnapshotRecord, 16> Snapshots = Client.listSnapshots();
+  if (Snapshots.empty())
+    return std::string(ID);
+  const SnapshotRecord *Best = &Snapshots[0];
+  for (const SnapshotRecord &S : Snapshots)
+    if (S.CreatedUnix > Best->CreatedUnix)
+      Best = &S;
+  return Best->ID;
 }
 
 static HTTPResult handleGetJobs(CoreClient &Client, StringRef ID = "") {
@@ -436,6 +455,15 @@ static HTTPResult handleGetCorrelate(CoreClient &Client, StringRef ID) {
   return makeJSONSuccess(200, std::move(*R));
 }
 
+static bool isSummarySafeCapability(StringRef ID) {
+  return ID == "llvm.ir.summary" || ID == "llvm.ir.function_stats" ||
+         ID == "clang.diag.summary" || ID == "llvm.obj.summary" ||
+         ID == "llvm.remarks.summary" || ID == "llvm.debug.summary" ||
+         ID == "llvm.obj.sections" || ID == "llvm.obj.symbols" ||
+         ID == "build.compile_commands" || ID == "llvm.lto.summary" ||
+         ID == "llvm.lto.function_stats" || ID == "clang.ast.summary";
+}
+
 static HTTPResult handleGetSummary(CoreClient &Client, StringRef SnapID) {
   json::Object Summary;
   Summary["snapshot_id"] = SnapID;
@@ -443,7 +471,7 @@ static HTTPResult handleGetSummary(CoreClient &Client, StringRef SnapID) {
   Summary["unit_count"] = static_cast<int64_t>(Units.size());
   SmallVector<std::string, 32> Caps;
   for (const CapabilitySpec &Spec : Client.listCapabilities())
-    if (shouldQuerySummaryCapability(Spec.ID))
+    if (shouldQuerySummaryCapability(Spec.ID) && isSummarySafeCapability(Spec.ID))
       Caps.push_back(Spec.ID);
   Expected<json::Array> Query = Client.querySnapshot(SnapID, Caps);
   int64_t Instructions = 0;
@@ -485,13 +513,16 @@ static HTTPResult handleGetSummary(CoreClient &Client, StringRef SnapID) {
         if (IsAvailable)
           accumulateSummaryMetrics(*ValueObj, MetricTotals);
         if (*Capability == "llvm.ir.summary") {
-          Instructions += ValueObj->getInteger("instructions").value_or(0);
-          Functions += ValueObj->getInteger("functions").value_or(0);
+          Instructions += ValueObj->getInteger("instructions")
+                              .value_or(ValueObj->getInteger("instruction_count").value_or(0));
+          Functions += ValueObj->getInteger("functions")
+                           .value_or(ValueObj->getInteger("function_count").value_or(0));
         } else if (*Capability == "clang.diag.summary") {
           Warnings += ValueObj->getInteger("warnings").value_or(0);
           Errors += ValueObj->getInteger("errors").value_or(0);
         } else if (*Capability == "llvm.remarks.summary") {
-          Remarks += ValueObj->getInteger("count").value_or(0);
+          Remarks += ValueObj->getInteger("count")
+                         .value_or(ValueObj->getInteger("remark_count").value_or(0));
         }
       }
     }
@@ -573,13 +604,19 @@ static HTTPResult handleInspect(CoreClient &Client, StringRef Mode,
   if (!Object)
     return makeJSONErrorStr(400, "inspect request body must be a JSON object");
 
-  StringRef SnapshotID = Object->getString("snapshot_id").value_or("");
-  StringRef Unit = Object->getString("unit").value_or("");
+  std::string SnapshotID = resolveSnapshotHTTP(
+      Client, Object->getString("snapshot_id").value_or(""));
+  StringRef UnitSelector = Object->getString("unit").value_or("");
   StringRef ExplicitCapability = Object->getString("capability").value_or("");
-  StringRef BaselineSnapshotID =
-      Object->getString("baseline_snapshot_id").value_or("");
+  std::string BaselineSnapshotID = resolveSnapshotHTTP(
+      Client, Object->getString("baseline_snapshot_id").value_or(""));
+
+  Expected<std::string> UnitID = Client.resolveUnitID(SnapshotID, UnitSelector);
+  if (!UnitID)
+    return makeJSONError(400, UnitID.takeError());
+
   if (Mode == "signals") {
-    if (SnapshotID.empty() || Unit.empty())
+    if (SnapshotID.empty() || UnitID->empty())
       return makeJSONErrorStr(400,
                               "inspect signals requires snapshot_id and unit");
     InspectionFilter Filter;
@@ -590,13 +627,13 @@ static HTTPResult handleInspect(CoreClient &Client, StringRef Mode,
     Filter.Line = Object->getInteger("line").value_or(-1);
     Filter.Index = Object->getInteger("index").value_or(-1);
     Expected<json::Object> Result =
-        Client.inspectSignals(SnapshotID, Unit, Filter);
+        Client.inspectSignals(SnapshotID, *UnitID, Filter);
     if (!Result)
       return makeJSONError(400, Result.takeError());
     return makeJSONSuccess(200, std::move(*Result));
   }
   StringRef Capability = inspectModeToCapability(Mode, ExplicitCapability);
-  if (SnapshotID.empty() || Unit.empty() || Capability.empty())
+  if (SnapshotID.empty() || UnitID->empty() || Capability.empty())
     return makeJSONErrorStr(
         400, "inspect requires snapshot_id, unit, and capability");
 
@@ -610,8 +647,8 @@ static HTTPResult handleInspect(CoreClient &Client, StringRef Mode,
 
   Expected<json::Object> Result =
       BaselineSnapshotID.empty()
-          ? Client.inspect(SnapshotID, Unit, Capability, Filter)
-          : Client.inspectCompare(BaselineSnapshotID, SnapshotID, Unit,
+          ? Client.inspect(SnapshotID, *UnitID, Capability, Filter)
+          : Client.inspectCompare(BaselineSnapshotID, SnapshotID, *UnitID,
                                   Capability, Filter);
   if (!Result)
     return makeJSONError(400, Result.takeError());
@@ -715,7 +752,19 @@ Error llvm::advisor::HTTPServer::run() {
 
       StringRef Method(Req.Method);
       StringRef Path(Req.Path);
+      StringRef QueryStr(Req.Query);
       HTTPResult Res = {404, "text/plain", "not found\n"};
+
+      // Parse query parameters into a map.
+      StringMap<std::string> QueryParams;
+      {
+        SmallVector<StringRef, 8> QSegs;
+        QueryStr.split(QSegs, '&', -1, false);
+        for (StringRef QSeg : QSegs) {
+          auto [Key, Val] = QSeg.split('=');
+          QueryParams[Key] = urlDecode(Val);
+        }
+      }
 
       SmallVector<StringRef, 16> Segs;
       Path.split(Segs, '/', -1, false);
@@ -747,25 +796,30 @@ Error llvm::advisor::HTTPServer::run() {
         else if (Path == "/api/v1/snapshots")
           Res = handleGetSnapshots(Client);
         else if (IsAPI && Segs[2] == "snapshots") {
+          std::string ResolvedSnap = resolveSnapshotHTTP(Client, Segs[3]);
           if (Segs.size() == 4)
-            Res = handleGetSnapshots(Client, Segs[3]);
+            Res = handleGetSnapshots(Client, ResolvedSnap);
           else if (Segs.size() == 5 && Segs[4] == "summary")
-            Res = handleGetSummary(Client, Segs[3]);
+            Res = handleGetSummary(Client, ResolvedSnap);
           else if (Segs.size() == 5 && Segs[4] == "units")
-            Res = handleGetUnits(Client, Segs[3]);
+            Res = handleGetUnits(Client, ResolvedSnap);
           else if (Segs.size() == 6 && Segs[4] == "units")
-            Res = handleGetUnits(Client, Segs[3], urlDecode(Segs[5]));
+            Res = handleGetUnits(Client, ResolvedSnap, urlDecode(Segs[5]));
           else if (Segs.size() == 5 && Segs[4] == "insights")
-            Res = handleGetInsights(Client, Segs[3]);
-          else if (Segs.size() == 6 && Segs[4] == "insights")
-            Res = handleGetInsights(Client, Segs[3], Segs[5]);
-          else if (Segs.size() == 8 && Segs[4] == "units" &&
+            Res = handleGetInsights(Client, ResolvedSnap);
+          else if (Segs.size() == 6 && Segs[4] == "insights") {
+            auto BIt = QueryParams.find("baseline");
+            std::string BL = BIt != QueryParams.end()
+                                 ? resolveSnapshotHTTP(Client, BIt->second)
+                                 : "";
+            Res = handleGetInsights(Client, ResolvedSnap, Segs[5], /*UnitID=*/"", BL);
+          } else if (Segs.size() == 8 && Segs[4] == "units" &&
                    Segs[6] == "insights")
-            Res = handleGetInsights(Client, Segs[3], Segs[7], Segs[5]);
+            Res = handleGetInsights(Client, ResolvedSnap, Segs[7], Segs[5]);
           else if (Segs.size() == 5 &&
                    (Segs[4] == "representations" || Segs[4] == "findings" ||
                     Segs[4] == "mappings" || Segs[4] == "link-units"))
-            Res = handleGetEntities(Client, Segs[3], Segs[4]);
+            Res = handleGetEntities(Client, ResolvedSnap, Segs[4]);
         } else if (Path == "/api/v1/jobs")
           Res = handleGetJobs(Client);
         else if (IsAPI && Segs.size() == 4 && Segs[2] == "jobs")
@@ -779,20 +833,20 @@ Error llvm::advisor::HTTPServer::run() {
           Res = handleGetBlob(Client, Segs[3]);
         else if (IsAPI && Segs.size() == 5 && Segs[2] == "runtime" &&
                  Segs[4] == "correlate")
-          Res = handleGetCorrelate(Client, Segs[3]);
+          Res = handleGetCorrelate(Client, resolveSnapshotHTTP(Client, Segs[3]));
         else if (IsAPI && Segs.size() == 6 && Segs[2] == "query" &&
                  Segs[3] == "unit")
           Res = handleGetQueryUnit(Client, urlDecode(Segs[4]), Segs[5]);
         else if (IsAPI && Segs.size() == 6 && Segs[2] == "query" &&
                  Segs[3] == "snapshot")
-          Res = handleGetQuerySnapshot(Client, urlDecode(Segs[4]), Segs[5]);
+          Res = handleGetQuerySnapshot(Client, resolveSnapshotHTTP(Client, urlDecode(Segs[4])), Segs[5]);
         else if (IsAPI && Segs.size() == 5 && Segs[2] == "compare")
           Res =
-              handleGetCompare(Client, urlDecode(Segs[3]), urlDecode(Segs[4]));
+              handleGetCompare(Client, resolveSnapshotHTTP(Client, urlDecode(Segs[3])), resolveSnapshotHTTP(Client, urlDecode(Segs[4])));
         else if (IsAPI && Segs.size() == 7 && Segs[2] == "compare" &&
                  Segs[5] == "capability")
-          Res = handleGetCompareCapability(Client, urlDecode(Segs[3]),
-                                           urlDecode(Segs[4]),
+          Res = handleGetCompareCapability(Client, resolveSnapshotHTTP(Client, urlDecode(Segs[3])),
+                                           resolveSnapshotHTTP(Client, urlDecode(Segs[4])),
                                            urlDecode(Segs[6]));
         else if (!IsAPI)
           Res = {200, "text/html", Index};

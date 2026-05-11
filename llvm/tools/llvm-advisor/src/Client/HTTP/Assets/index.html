@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>llvm-advisor</title>
+  <meta name="description" content="LLVM Advisor — Compilation analysis and optimization insights">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self';">
+  <style>/* STYLES_PLACEHOLDER */</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>/* CORE_PLACEHOLDER */</script>
+  <script>/* SHELL_PLACEHOLDER */</script>
+  <script>/* OVERVIEW_PLACEHOLDER */</script>
+  <script>/* UNITS_PLACEHOLDER */</script>
+  <script>/* UNIT_DETAIL_PLACEHOLDER */</script>
+  <script>/* COMPARE_PLACEHOLDER */</script>
+  <script>/* VIEWS_PLACEHOLDER */</script>
+  <script>
+    // --- App Init ---
+    (function() {
+      Router.register('/', () => OverviewView.render());
+      Router.register('/units', () => UnitsView.render());
+      Router.register('/units/:id', params => UnitDetailView.render(params));
+      Router.register('/compare', params => CompareView.render(params));
+      Router.register('/timeline', () => TimelineView.render());
+      Router.register('/insights', () => InsightsView.render());
+      Router.register('/settings', () => SettingsView.render());
+
+      Shell.init();
+      Keys.init();
+      Router.init();
+    })();
+  </script>
+</body>
+</html>
