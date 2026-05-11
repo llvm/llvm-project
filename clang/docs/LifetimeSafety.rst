@@ -268,28 +268,12 @@ it refers to has gone out of scope.
            (void)*p;
           }
 
-The analysis also covers pointer arithmetic. If the result of pointer
-arithmetic refers to an object whose lifetime has ended, the analysis diagnoses
-the later use.
-
-.. code-block:: c++
-
-  void pointer_arithmetic() {
-    int *p;
-    {
-      int data[4] = {};
-      p = data + 1; // warning: object whose reference is captured does not live long enough
-    }               // note: destroyed here
-    (void)*p;       // note: later used here
-  }
-
 Use after free
 --------------
 
 This check warns when a pointer or reference is used after the object it refers
 to has been freed with ``delete`` or ``delete[]``. Heap allocations created with
-``new`` are checked so that pointers, references and views to the allocation are
-not used after the object is deleted.
+``new`` are checked.
 
 .. list-table::
    :widths: 50 50
@@ -314,26 +298,6 @@ not used after the object is deleted.
            (void)*p;
            delete p; // OK!
          }
-
-The same check applies when a heap-allocated object stores a reference to
-another object. For example, a heap-allocated view object constructed from a
-stack object is diagnosed if the view outlives the object it refers to.
-
-.. code-block:: c++
-
-  struct View {
-    View(const int &i [[clang::lifetimebound]]);
-    void use() const;
-  };
-
-  void bar() {
-    View *v;
-    {
-      int i = 0;
-      v = new View(i); // warning: object whose reference is captured does not live long enough
-    }                  // note: destroyed here
-    v->use();          // note: later used here
-  }
 
 Return of stack address
 -----------------------
@@ -462,19 +426,6 @@ iterators, pointers and references to its elements.
           int* p = &v[0]; // OK!
           *p = 10;
         }
-
-The analysis also covers iterator arithmetic. An iterator produced from another
-iterator is still treated as referring to the same container.
-
-.. code-block:: c++
-
-  #include <vector>
-
-  void iterator_arithmetic(std::vector<int>& v) {
-    auto it = v.begin() + 1; // warning: 'v' is later invalidated
-    v.push_back(4);          // note: invalidated here
-    (void)*it;               // note: later used here
-  }
 
 The analysis also treats explicit destruction as invalidation. Explicit
 destructor calls and ``std::destroy_at`` invalidate pointers, references and
