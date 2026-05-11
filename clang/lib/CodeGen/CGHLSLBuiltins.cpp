@@ -13,6 +13,7 @@
 #include "CGBuiltin.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenFunction.h"
+#include "clang/AST/HLSLResource.h"
 #include "llvm/IR/MatrixBuilder.h"
 
 using namespace clang;
@@ -456,11 +457,24 @@ static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
   return Name;
 }
 
-static llvm::Type *getOffsetType(CodeGenModule &CGM, llvm::Type *CoordTy) {
+static const HLSLAttributedResourceType *
+getHandleAttributedType(QualType HandleQT) {
+  if (const auto *RT = HandleQT->getAs<HLSLAttributedResourceType>())
+    return RT;
+  // If the expr is a texture/sampler record (or similar), peel to __handle.
+  return HLSLAttributedResourceType::findHandleTypeOnResource(
+      HandleQT.getTypePtr());
+}
+
+static llvm::Type *getOffsetType(CodeGenModule &CGM,
+                                 const HLSLAttributedResourceType *RT) {
+  const auto &Attrs = RT->getAttrs();
+  unsigned OffsetSize =
+      clang::hlsl::getResourceDimensions(Attrs.ResourceDimension);
   llvm::Type *Int32Ty = CGM.Int32Ty;
-  if (auto *VT = dyn_cast<llvm::FixedVectorType>(CoordTy))
-    return llvm::FixedVectorType::get(Int32Ty, VT->getNumElements());
-  return Int32Ty;
+  if (OffsetSize == 1)
+    return Int32Ty;
+  return llvm::FixedVectorType::get(Int32Ty, OffsetSize);
 }
 
 static Value *emitHlslOffset(CodeGenFunction &CGF, const CallExpr *E,
@@ -606,13 +620,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 4> Args;
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 3, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 3, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     if (E->getNumArgs() <= 4) {
@@ -631,14 +647,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *BiasOp = EmitScalarExpr(E->getArg(3));
     if (BiasOp->getType() != Builder.getFloatTy())
       BiasOp = Builder.CreateFPCast(BiasOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleBias
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(BiasOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 4, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     if (E->getNumArgs() <= 5)
@@ -655,6 +673,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *DDXOp = EmitScalarExpr(E->getArg(3));
     Value *DDYOp = EmitScalarExpr(E->getArg(4));
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 7> Args;
     Args.push_back(HandleOp);
@@ -662,8 +683,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(CoordOp);
     Args.push_back(DDXOp);
     Args.push_back(DDYOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 5, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 5, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
 
@@ -683,14 +703,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *LODOp = EmitScalarExpr(E->getArg(3));
     if (LODOp->getType() != Builder.getFloatTy())
       LODOp = Builder.CreateFPCast(LODOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 5> Args; // Max 5 arguments for SampleLevel
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(LODOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 4, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -713,13 +735,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
     Value *LODOp =
         Builder.CreateExtractElement(CoordLODOp, NumElts - 1, "hlsl.load.lod");
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 4> Args;
     Args.push_back(HandleOp);
     Args.push_back(CoordOp);
     Args.push_back(LODOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 2, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 2, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -732,14 +756,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
     if (CmpOp->getType() != Builder.getFloatTy())
       CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleCmp
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(CmpOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 4, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     if (E->getNumArgs() <= 5) {
@@ -758,15 +784,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
     if (CmpOp->getType() != Builder.getFloatTy())
       CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 5> Args;
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(CmpOp);
-
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 4, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -800,14 +827,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (ComponentOp->getType() != Builder.getInt32Ty())
       ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
                                           /*isSigned=*/false);
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
 
     SmallVector<Value *, 5> Args;
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(ComponentOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 4, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -835,8 +864,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       Args.push_back(ComponentOp);
     }
 
-    Args.push_back(
-        emitHlslOffset(*this, E, 5, getOffsetType(CGM, CoordOp->getType())));
+    const HLSLAttributedResourceType *RT =
+        getHandleAttributedType(E->getArg(0)->getType());
+    assert(RT && "resource builtin requires attributed handle type");
+    Args.push_back(emitHlslOffset(*this, E, 5, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(

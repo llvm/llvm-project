@@ -94,19 +94,28 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       llvm::dxil::ResourceKind RK = llvm::dxil::ResourceKind::Invalid;
       switch (ResAttrs.ResourceDimension) {
       case llvm::dxil::ResourceDimension::Dim1D:
-        RK = llvm::dxil::ResourceKind::Texture1D;
+        if (ResAttrs.IsArray)
+          RK = llvm::dxil::ResourceKind::Texture1DArray;
+        else
+          RK = llvm::dxil::ResourceKind::Texture1D;
         break;
       case llvm::dxil::ResourceDimension::Dim2D:
-        RK = llvm::dxil::ResourceKind::Texture2D;
+        if (ResAttrs.IsArray)
+          RK = llvm::dxil::ResourceKind::Texture2DArray;
+        else
+          RK = llvm::dxil::ResourceKind::Texture2D;
         break;
       case llvm::dxil::ResourceDimension::Dim3D:
         RK = llvm::dxil::ResourceKind::Texture3D;
         break;
       case llvm::dxil::ResourceDimension::Cube:
-        RK = llvm::dxil::ResourceKind::TextureCube;
+        if (ResAttrs.IsArray)
+          RK = llvm::dxil::ResourceKind::TextureCubeArray;
+        else
+          RK = llvm::dxil::ResourceKind::TextureCube;
         break;
       default:
-        llvm_unreachable("Unsupported resource dimension for textur.");
+        llvm_unreachable("Unsupported resource dimension for texture.");
       }
       Ints.push_back(static_cast<unsigned>(RK));
     }
