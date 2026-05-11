@@ -217,6 +217,17 @@ define void @test.prefetch.unnamed(ptr %ptr) {
   ret void
 }
 
+define void @test.vector.splice(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @test.vector.splice
+; CHECK: @llvm.vector.splice.left.v4i32(<4 x i32> %a, <4 x i32> %b, i32 3)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 3)
+; CHECK: @llvm.vector.splice.right.v4i32(<4 x i32> %a, <4 x i32> %b, i32 2)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 -2)
+; CHECK: @llvm.vector.splice.left.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  call <4 x i32> @llvm.vector.splice.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  ret void
+}
+
 define i32 @ctlz(i32 %A) {
 ; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
   %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A)
@@ -239,6 +250,14 @@ define i32 @cttz_with_isZeroPoison(i32 %A) {
 ; CHECK: %for.body.i = call i32 @llvm.cttz.i32(i32 %A, i1 false)
   %for.body.i = call i32 @llvm.cttz.i32.p0(i32 %A, i1 false)
   ret i32 %for.body.i
+}
+
+define <8 x double> @preserve_fmf_on_x86_intrin(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3){
+; CHECK: %1 = fneg fast
+; CHECK: %2 = call fast
+; CHECK: %4 = select fast
+  %res = call fast <8 x double> @llvm.x86.avx512.mask3.vfmsubadd.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 4)
+  ret <8 x double> %res
 }
 
 ; This is part of @test.objectsize(), since llvm.objectsize declaration gets

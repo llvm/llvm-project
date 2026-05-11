@@ -71,7 +71,7 @@ _Atomic(unsigned long) aul;
 // CHECK: TypeRef=struct Struct:16:8 [type=struct Struct] [typekind=Record] [isPOD=1]
 // CHECK: StructDecl=struct (unnamed at {{.*}}):18:1 (Definition) [type=struct (unnamed at {{.*}}print-type.c:18:1)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1] [isAnonRecDecl=0]
 // CHECK: StructDecl=struct (unnamed at {{.*}}):23:1 (Definition) [type=struct (unnamed at {{.*}}print-type.c:23:1)] [typekind=Record] [isPOD=1] [nbFields=1] [isAnon=1] [isAnonRecDecl=0]
-// CHECK: StructDecl=struct (anonymous at {{.*}}):24:3 (Definition) [type=struct (anonymous struct)::(anonymous at {{.*}}print-type.c:24:3)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1] [isAnonRecDecl=1]
+// CHECK: StructDecl=struct (anonymous at {{.*}}):24:3 (Definition) [type=struct (unnamed struct)::(anonymous at {{.*}}print-type.c:24:3)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1] [isAnonRecDecl=1]
 // CHECK: FieldDecl=x:25:17 (Definition) [type=_Atomic(int)] [typekind=Atomic] [valuetype=int] [valuetypekind=Int] [isPOD=0] [isAnonRecDecl=0]
 // CHECK: FieldDecl=y:26:9 (Definition) [type=int] [typekind=Int] [isPOD=1] [isAnonRecDecl=0]
 // CHECK: StructDecl=struct (unnamed at {{.*}}):30:10 (Definition) [type=struct (unnamed at {{.*}}print-type.c:30:10)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1] [isAnonRecDecl=0]

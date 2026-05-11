@@ -1695,57 +1695,49 @@ _mm512_mask_storeu_epi8 (void *__P, __mmask64 __U, __m512i __A)
              (__mmask64) __U);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS512
-_mm512_test_epi8_mask (__m512i __A, __m512i __B)
-{
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_test_epi8_mask(__m512i __A, __m512i __B) {
   return _mm512_cmpneq_epi8_mask (_mm512_and_epi32 (__A, __B),
                                   _mm512_setzero_si512());
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS512
-_mm512_mask_test_epi8_mask (__mmask64 __U, __m512i __A, __m512i __B)
-{
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_test_epi8_mask(__mmask64 __U, __m512i __A, __m512i __B) {
   return _mm512_mask_cmpneq_epi8_mask (__U, _mm512_and_epi32 (__A, __B),
                                        _mm512_setzero_si512());
 }
 
-static __inline__ __mmask32 __DEFAULT_FN_ATTRS512
-_mm512_test_epi16_mask (__m512i __A, __m512i __B)
-{
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_test_epi16_mask(__m512i __A, __m512i __B) {
   return _mm512_cmpneq_epi16_mask (_mm512_and_epi32 (__A, __B),
                                    _mm512_setzero_si512());
 }
 
-static __inline__ __mmask32 __DEFAULT_FN_ATTRS512
-_mm512_mask_test_epi16_mask (__mmask32 __U, __m512i __A, __m512i __B)
-{
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_test_epi16_mask(__mmask32 __U, __m512i __A, __m512i __B) {
   return _mm512_mask_cmpneq_epi16_mask (__U, _mm512_and_epi32 (__A, __B),
                                         _mm512_setzero_si512());
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS512
-_mm512_testn_epi8_mask (__m512i __A, __m512i __B)
-{
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_testn_epi8_mask(__m512i __A, __m512i __B) {
   return _mm512_cmpeq_epi8_mask (_mm512_and_epi32 (__A, __B), _mm512_setzero_si512());
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS512
-_mm512_mask_testn_epi8_mask (__mmask64 __U, __m512i __A, __m512i __B)
-{
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_testn_epi8_mask(__mmask64 __U, __m512i __A, __m512i __B) {
   return _mm512_mask_cmpeq_epi8_mask (__U, _mm512_and_epi32 (__A, __B),
                                       _mm512_setzero_si512());
 }
 
-static __inline__ __mmask32 __DEFAULT_FN_ATTRS512
-_mm512_testn_epi16_mask (__m512i __A, __m512i __B)
-{
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_testn_epi16_mask(__m512i __A, __m512i __B) {
   return _mm512_cmpeq_epi16_mask (_mm512_and_epi32 (__A, __B),
                                   _mm512_setzero_si512());
 }
 
-static __inline__ __mmask32 __DEFAULT_FN_ATTRS512
-_mm512_mask_testn_epi16_mask (__mmask32 __U, __m512i __A, __m512i __B)
-{
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_testn_epi16_mask(__mmask32 __U, __m512i __A, __m512i __B) {
   return _mm512_mask_cmpeq_epi16_mask (__U, _mm512_and_epi32 (__A, __B),
                                        _mm512_setzero_si512());
 }
@@ -1760,15 +1752,13 @@ _mm512_movepi16_mask(__m512i __A) {
   return (__mmask32) __builtin_ia32_cvtw2mask512 ((__v32hi) __A);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_movm_epi8 (__mmask64 __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_movm_epi8(__mmask64 __A) {
   return (__m512i) __builtin_ia32_cvtmask2b512 (__A);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_movm_epi16 (__mmask32 __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_movm_epi16(__mmask32 __A) {
   return (__m512i) __builtin_ia32_cvtmask2w512 (__A);
 }
 

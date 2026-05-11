@@ -96,6 +96,7 @@ class CommandLineCompletionTestCase(TestBase):
         )
         self.complete_from_to("process load Makef", "process load Makefile")
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     @skipUnlessPlatform(["linux"])
     def test_process_unload(self):
         """Test the completion for "process unload <index>" """
@@ -139,6 +140,12 @@ class CommandLineCompletionTestCase(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
         num_matches = interp.HandleCompletion(input, len(input), 0, -1, match_strings)
+        if match_strings.GetSize() > 0:
+            self.assertEqual(match_strings[0], match_strings.GetStringAtIndex(0))
+            self.assertEqual(
+                match_strings[-1],
+                match_strings.GetStringAtIndex(match_strings.GetSize() - 1),
+            )
         found_needle = False
         for match in match_strings:
             if needle in match:
@@ -910,6 +917,7 @@ class CommandLineCompletionTestCase(TestBase):
         """Test completing a subcommand of an ambiguous command"""
         self.complete_from_to("settings s ta", [])
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     def test_shlib_name(self):
         self.build()
         error = lldb.SBError()

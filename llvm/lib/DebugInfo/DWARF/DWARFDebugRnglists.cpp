@@ -13,6 +13,8 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -189,12 +191,13 @@ void RangeListEntry::dump(
 
   if (DumpOpts.Verbose) {
     // Print the section offset in verbose mode.
-    OS << format("0x%8.8" PRIx64 ":", Offset);
+    OS << formatv("{0:x8}:", Offset);
     auto EncodingString = dwarf::RangeListEncodingString(EntryKind);
     // Unsupported encodings should have been reported during parsing.
     assert(!EncodingString.empty() && "Unknown range entry encoding");
-    OS << format(" [%s%*c", EncodingString.data(),
-                 MaxEncodingStringLength - EncodingString.size() + 1, ']');
+    OS << formatv(" [{0}]",
+                  fmt_pad(EncodingString.data(), 0,
+                          MaxEncodingStringLength - EncodingString.size()));
     if (EntryKind != dwarf::DW_RLE_end_of_list)
       OS << ": ";
   }

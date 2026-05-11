@@ -4,7 +4,7 @@ misc-use-internal-linkage
 =========================
 
 Detects variables, functions, and classes that can be marked as static or
-moved into an anonymous namespace to enforce internal linkage.
+(in C++) moved into an anonymous namespace to enforce internal linkage.
 
 Any entity that's only used within a single file should be given internal
 linkage. Doing so gives the compiler more information, allowing it to better
@@ -17,7 +17,15 @@ Example:
   int v1; // can be marked as static
 
   void fn1() {} // can be marked as static
-  
+
+  // already declared as extern
+  extern int v2;
+
+  void fn3(); // without function body in all declaration, maybe external linkage
+  void fn3();
+
+  // === C++-specific ===
+
   struct S1 {}; // can be moved into anonymous namespace
 
   namespace {
@@ -26,11 +34,6 @@ Example:
     void fn2();
     struct S2 {};
   }
-  // already declared as extern
-  extern int v2;
-
-  void fn3(); // without function body in all declaration, maybe external linkage
-  void fn3();
 
   // export declarations
   export void fn4() {}
@@ -50,3 +53,16 @@ Options
 
   - `UseStatic`
     Add ``static`` for internal linkage variable and function.
+
+.. option:: AnalyzeFunctions
+
+  Whether to suggest giving functions internal linkage. Default is `true`.
+
+.. option:: AnalyzeVariables
+
+  Whether to suggest giving variables internal linkage. Default is `true`.
+
+.. option:: AnalyzeTypes
+
+  (C++ only) Whether to suggest giving user-defined types (structs,
+  classes, unions, and enums) internal linkage. Default is `true`.

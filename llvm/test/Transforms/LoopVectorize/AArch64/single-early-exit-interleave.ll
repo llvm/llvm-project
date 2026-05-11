@@ -19,17 +19,17 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 510, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 510, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 3, [[N_VEC]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[COND_0:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP27:%.*]] = mul nuw nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP27:%.*]] = shl nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw nsw i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP27]]
@@ -60,10 +60,9 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP33:%.*]] = or <vscale x 16 x i1> [[TMP62]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP33]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT3]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP36:%.*]] = or i1 [[TMP12]], [[TMP35]]
-; CHECK-NEXT:    br i1 [[TMP36]], label [[MIDDLE_SPLIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[LOOP_INC:%.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[COND_0]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP35]], label [[LOOP_INC:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 510, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_END:%.*]], label [[SCALAR_PH]]

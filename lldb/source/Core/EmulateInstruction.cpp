@@ -57,11 +57,8 @@ EmulateInstruction::FindPlugin(const ArchSpec &arch,
         return emulate_insn_ptr;
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetEmulateInstructionCreateCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
+    for (auto create_callback :
+         PluginManager::GetEmulateInstructionCreateCallbacks()) {
       EmulateInstruction *emulate_insn_ptr =
           create_callback(arch, supported_inst_type);
       if (emulate_insn_ptr)
@@ -163,8 +160,8 @@ bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
   return false;
 }
 
-size_t EmulateInstruction::ReadMemory(const Context &context, lldb::addr_t addr,
-                                      void *dst, size_t dst_len) {
+bool EmulateInstruction::ReadMemory(const Context &context, lldb::addr_t addr,
+                                    void *dst, size_t dst_len) {
   if (m_read_mem_callback != nullptr)
     return m_read_mem_callback(this, m_baton, context, addr, dst, dst_len) ==
            dst_len;
@@ -201,7 +198,7 @@ uint64_t EmulateInstruction::ReadMemoryUnsigned(const Context &context,
 bool EmulateInstruction::WriteMemoryUnsigned(const Context &context,
                                              lldb::addr_t addr, uint64_t uval,
                                              size_t uval_byte_size) {
-  StreamString strm(Stream::eBinary, GetAddressByteSize(), GetByteOrder());
+  StreamString strm(Stream::eBinary, GetByteOrder());
   strm.PutMaxHex64(uval, uval_byte_size);
 
   size_t bytes_written = m_write_mem_callback(

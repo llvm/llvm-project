@@ -16,11 +16,12 @@
 
 #include "clang/Basic/TypeTraits.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 class APFloat;
-class APInt;
 class APSInt;
+class APInt;
 }
 namespace clang {
 class QualType;
@@ -81,5 +82,11 @@ uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
 uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);
 uint8_t GFNIAffine(uint8_t XByte, const llvm::APInt &AQword,
                    const llvm::APSInt &Imm, bool Inverse = false);
+llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
+                                   const llvm::APSInt &Amount);
+
+std::optional<llvm::APFloat>
+EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
+                   std::optional<llvm::APSInt> RoundingMode, bool IsMin);
 
 #endif

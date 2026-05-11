@@ -225,6 +225,8 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
+
+    removeDebugIntrinsicDeclarations();
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -1056,6 +1058,9 @@ public:
   /// Get how unwind v2 (epilog) information should be generated for x64
   /// Windows.
   WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+
+  /// Gets the Control Flow Guard mode.
+  ControlFlowGuardMode getControlFlowGuardMode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the

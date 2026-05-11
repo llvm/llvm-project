@@ -27,6 +27,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __locale {
 
 using __lconv_t _LIBCPP_NODEBUG = std::lconv;
@@ -230,10 +231,11 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #  if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
-_LIBCPP_EXPORTED_FROM_ABI size_t __strftime(char*, size_t, const char*, const struct tm*, __locale_t);
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char*, size_t, const char*, const struct tm*, __locale_t);
 #  else
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __ret, size_t __n, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __ret, size_t __n, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return ::_strftime_l(__ret, __n, __format, __tm, __loc);
 }
 #  endif
@@ -303,6 +305,7 @@ struct __locale_guard {
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_WINDOWS_H

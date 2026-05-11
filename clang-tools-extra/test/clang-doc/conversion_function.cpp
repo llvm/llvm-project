@@ -14,6 +14,6 @@ struct MyStruct {
 // Output correct conversion names.
 // CHECK-YAML:         Name:            'operator T'
 
-// CHECK-HTML: <div id="{{([0-9A-F]{40})}}">
+// CHECK-HTML: <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // CHECK-HTML:     <pre><code class="language-cpp code-clang-doc">T operator T ()</code></pre>
 // CHECK-HTML: </div>

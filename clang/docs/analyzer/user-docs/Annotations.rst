@@ -174,11 +174,20 @@ If a project uses custom functions for dynamic memory management (that e.g. act 
 Attribute 'ownership_returns' (Clang-specific)
 ----------------------------------------------
 
-Use this attribute to mark functions that return dynamically allocated memory. Takes a single argument, the type of the allocation (e.g. ``malloc`` or ``new``).
+Use this attribute to mark functions that return dynamically allocated memory.
+The first argument is the type of the allocation (e.g. ``malloc``, ``new``, or any other identifier).
+An optional second argument is the 1-based index of the function parameter that specifies the allocation size in bytes.
+The referenced parameter must have an integral type.
+
+This attribute may appear at most once per function declaration.
 
 .. code-block:: c
 
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  // Without size argument:
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
+
+  // With size argument (describes that the 1st parameter represents the allocation size in bytes):
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
 
 Attribute 'ownership_takes' (Clang-specific)
 --------------------------------------------
@@ -198,7 +207,7 @@ Use this attribute to mark functions that take ownership of memory and will deal
 
   void __attribute((ownership_holds(malloc, 2))) store_in_table(int key, record_t *val);
 
-The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory leak reports (concerning the specified argument); the difference between them is that using taken memory is a use-after-free error, while using held memory is assumed to be legitimate.
+The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory leak reports (concerning the specified parameter); the difference between them is that using taken memory is a use-after-free error, while using held memory is assumed to be legitimate.
 
 Mac OS X API Annotations
 ________________________

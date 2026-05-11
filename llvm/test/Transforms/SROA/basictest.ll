@@ -529,7 +529,6 @@ entry:
 define ptr @test10() {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr null to i64
 ; CHECK-NEXT:    ret ptr null
 ;
 entry:
@@ -1083,20 +1082,19 @@ define void @PR14059.1(ptr %d) {
 ; CHECK-NEXT:    [[X_SROA_0_I_2_INSERT_MASK:%.*]] = and i64 [[TMP2]], -281474976645121
 ; CHECK-NEXT:    [[X_SROA_0_I_2_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_2_INSERT_MASK]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[X_SROA_0_I_2_INSERT_INSERT]] to double
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_COPYLOAD:%.*]] = load i32, ptr [[D:%.*]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double 0.000000e+00 to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double 0.000000e+00 to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_EXT:%.*]] = zext i32 [[X_SROA_0_I_4_COPYLOAD]] to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_SHIFT:%.*]] = shl i64 [[X_SROA_0_I_4_INSERT_EXT]], 32
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK3:%.*]] = and i64 [[TMP5]], 4294967295
+; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK3:%.*]] = and i64 [[TMP4]], 4294967295
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT4:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK3]], [[X_SROA_0_I_4_INSERT_SHIFT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT4]] to double
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double [[TMP6]] to i64
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK:%.*]] = and i64 [[TMP7]], 4294967295
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT4]] to double
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double [[TMP5]] to i64
+; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK:%.*]] = and i64 [[TMP6]], 4294967295
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK]], 4607182418800017408
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT]] to double
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT]] to double
 ; CHECK-NEXT:    [[ACCUM_REAL_I:%.*]] = load double, ptr [[D]], align 8
-; CHECK-NEXT:    [[ADD_R_I:%.*]] = fadd double [[ACCUM_REAL_I]], [[TMP8]]
+; CHECK-NEXT:    [[ADD_R_I:%.*]] = fadd double [[ACCUM_REAL_I]], [[TMP7]]
 ; CHECK-NEXT:    store double [[ADD_R_I]], ptr [[D]], align 8
 ; CHECK-NEXT:    ret void
 ;

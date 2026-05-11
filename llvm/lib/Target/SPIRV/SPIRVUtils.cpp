@@ -79,6 +79,32 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
   return FunctionType::get(RetTy, PTys, FTy->isVarArg());
 }
 
+static StringRef extractAsmConstraintsFromMetadata(NamedMDNode *NMD,
+                                                   StringRef Constraints,
+                                                   StringRef Name) {
+  // TODO: unify the extractors.
+  if (!NMD)
+    return Constraints;
+
+  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
+    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
+      return MDS->getString() == Name;
+    return false;
+  });
+
+  if (It == NMD->op_end())
+    return Constraints;
+
+  // By convention, the constraints string is stored in the final MD operand.
+  MDNode *MD = dyn_cast<MDNode>((*It)->getOperand((*It)->getNumOperands() - 1));
+  assert(MD && "MDNode operand is expected");
+
+  if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+    Constraints = MDS->getString();
+
+  return Constraints;
+}
+
 FunctionType *getOriginalFunctionType(const Function &F) {
   return extractFunctionTypeFromMetadata(
       F.getParent()->getNamedMetadata("spv.cloned_funcs"), F.getFunctionType(),
@@ -89,6 +115,13 @@ FunctionType *getOriginalFunctionType(const CallBase &CB) {
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
       CB.getFunctionType(), CB.getName());
+}
+
+StringRef getOriginalAsmConstraints(const CallBase &CB) {
+  return extractAsmConstraintsFromMetadata(
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
+      CB.getName());
 }
 } // Namespace SPIRV
 
@@ -171,15 +204,17 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     // Asm Printer needs this info to print 64-bit operands correctly
     MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
-  } else if (Bitwidth <= 128) {
-    uint32_t LowBits = Imm.getRawData()[0] & 0xffffffff;
-    uint32_t MidBits0 = (Imm.getRawData()[0] >> 32) & 0xffffffff;
-    uint32_t MidBits1 = Imm.getRawData()[1] & 0xffffffff;
-    uint32_t HighBits = (Imm.getRawData()[1] >> 32) & 0xffffffff;
-    MIB.addImm(LowBits).addImm(MidBits0).addImm(MidBits1).addImm(HighBits);
+  } else {
+    // Emit ceil(Bitwidth / 32) words to conform SPIR-V spec.
+    unsigned NumWords = (Bitwidth + 31) / 32;
+    for (unsigned I = 0; I < NumWords; ++I) {
+      unsigned LimbIdx = I / 2;
+      unsigned LimbShift = (I % 2) * 32;
+      uint32_t Word = (Imm.getRawData()[LimbIdx] >> LimbShift) & 0xffffffff;
+      MIB.addImm(Word);
+    }
     return;
   }
-  report_fatal_error("Unsupported constant bitwidth");
 }
 
 void buildOpName(Register Target, const StringRef &Name,
@@ -294,24 +329,29 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
-MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
-  MachineFunction *MF = I.getParent()->getParent();
-  MachineBasicBlock *MBB = &MF->front();
-  MachineBasicBlock::iterator It = MBB->SkipPHIsAndLabels(MBB->begin()),
-                              E = MBB->end();
-  bool IsHeader = false;
-  unsigned Opcode;
-  for (; It != E && It != I; ++It) {
-    Opcode = It->getOpcode();
-    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
-      IsHeader = true;
-    } else if (IsHeader &&
-               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
-      ++It;
-      break;
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineFunction &MF) {
+  MachineBasicBlock &MBB = MF.front();
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  auto IsPreamble = [](const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case SPIRV::OpFunction:
+    case SPIRV::OpFunctionParameter:
+    case SPIRV::OpLabel:
+    case SPIRV::ASSIGN_TYPE:
+      return true;
+    default:
+      return false;
     }
-  }
-  return It;
+  };
+  MachineBasicBlock::iterator VarPos = MBB.SkipPHIsAndLabels(MBB.begin());
+  while (VarPos != MBB.end() && VarPos->getOpcode() != SPIRV::OpFunction)
+    ++VarPos;
+  // Advance past the preamble.
+  while (VarPos != MBB.end() && IsPreamble(*VarPos))
+    ++VarPos;
+  return VarPos;
 }
 
 MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
@@ -861,13 +901,15 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
 
 // Assign SPIR-V type to the register. If the register has no valid assigned
 // class, set register LLT type and class according to the SPIR-V type.
-void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
-                     MachineRegisterInfo *MRI, const MachineFunction &MF,
-                     bool Force) {
+void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
+                     SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
+                     const MachineFunction &MF, bool Force) {
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
   if (!MRI->getRegClassOrNull(Reg) || Force) {
     MRI->setRegClass(Reg, GR->getRegClass(SpvType));
-    MRI->setType(Reg, GR->getRegType(SpvType));
+    LLT RegType = GR->getRegType(SpvType);
+    if (Force || !MRI->getType(Reg).isValid())
+      MRI->setType(Reg, RegType);
   }
 }
 
@@ -885,7 +927,7 @@ void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo *MRI,
                                const MachineFunction &MF) {
   Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
@@ -896,7 +938,7 @@ Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder) {
   return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
                                MIRBuilder.getMF());
@@ -986,31 +1028,41 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
   return Instructions;
 }
 
-SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+SmallVector<unsigned, 1>
+getSpirvLoopControlOperandsFromLoopMetadata(MDNode *LoopMD) {
   unsigned LC = SPIRV::LoopControl::None;
   // Currently used only to store PartialCount value. Later when other
   // LoopControls are added - this map should be sorted before making
   // them loop_merge operands to satisfy 3.23. Loop Control requirements.
   std::vector<std::pair<unsigned, unsigned>> MaskToValueMap;
-  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable")) {
+  if (findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.disable")) {
     LC |= SPIRV::LoopControl::DontUnroll;
   } else {
-    if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable") ||
-        getBooleanLoopAttribute(L, "llvm.loop.unroll.full")) {
+    if (findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.enable") ||
+        findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.full")) {
       LC |= SPIRV::LoopControl::Unroll;
     }
-    std::optional<int> Count =
-        getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
-    if (Count && Count != 1) {
-      LC |= SPIRV::LoopControl::PartialCount;
-      MaskToValueMap.emplace_back(
-          std::make_pair(SPIRV::LoopControl::PartialCount, *Count));
+    if (MDNode *CountMD =
+            findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.count")) {
+      if (auto *CI =
+              mdconst::extract_or_null<ConstantInt>(CountMD->getOperand(1))) {
+        unsigned Count = CI->getZExtValue();
+        if (Count != 1) {
+          LC |= SPIRV::LoopControl::PartialCount;
+          MaskToValueMap.emplace_back(
+              std::make_pair(SPIRV::LoopControl::PartialCount, Count));
+        }
+      }
     }
   }
   SmallVector<unsigned, 1> Result = {LC};
   for (auto &[Mask, Val] : MaskToValueMap)
     Result.push_back(Val);
   return Result;
+}
+
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+  return getSpirvLoopControlOperandsFromLoopMetadata(L->getLoopID());
 }
 
 const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
@@ -1091,29 +1143,6 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
   return foldImm(ResType->getOperand(2), MRI);
 }
 
-MachineBasicBlock::iterator
-getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
-  // Find the position to insert the OpVariable instruction.
-  // We will insert it after the last OpFunctionParameter, if any, or
-  // after OpFunction otherwise.
-  MachineBasicBlock::iterator VarPos = BB.begin();
-  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
-    ++VarPos;
-  }
-  // Advance VarPos to the next instruction after OpFunction, it will either
-  // be an OpFunctionParameter, so that we can start the next loop, or the
-  // position to insert the OpVariable instruction.
-  ++VarPos;
-  while (VarPos != BB.end() &&
-         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
-    ++VarPos;
-  }
-  // VarPos is now pointing at after the last OpFunctionParameter, if any,
-  // or after OpFunction, if no parameters.
-  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
-                                                                     : VarPos;
-}
-
 bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
                              uint64_t &TotalSize) {
   // An array of N padded structs is represented as {[N-1 x <{T, pad}>], T}.
@@ -1185,17 +1214,51 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
-  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+  if (GV.hasLocalLinkage())
     return std::nullopt;
 
-  if (GV.isDeclarationForLinker())
+  if (GV.isDeclarationForLinker()) {
+    // Interface variables must not get Import linkage.
+    if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
+      auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
+      if (SC == SPIRV::StorageClass::Input ||
+          SC == SPIRV::StorageClass::Output ||
+          SC == SPIRV::StorageClass::PushConstant)
+        return std::nullopt;
+    }
     return SPIRV::LinkageType::Import;
+  }
+
+  if (GV.hasHiddenVisibility())
+    return std::nullopt;
 
   if (GV.hasLinkOnceODRLinkage() &&
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
     return SPIRV::LinkageType::LinkOnceODR;
 
+  if (GV.hasWeakLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_AMD_weak_linkage))
+    return SPIRV::LinkageType::Weak;
+
   return SPIRV::LinkageType::Export;
+}
+
+Function *getOrCreateBackendServiceFunction(Module &M) {
+  std::string ServiceFunName = SPIRV_BACKEND_SERVICE_FUN_NAME;
+  if (!getVacantFunctionName(M, ServiceFunName))
+    report_fatal_error(
+        "cannot allocate a name for the internal service function");
+  if (Function *SF = M.getFunction(ServiceFunName)) {
+    if (SF->getInstructionCount() > 0)
+      report_fatal_error(
+          "Unexpected combination of global variables and function pointers");
+    return SF;
+  }
+  Function *SF = Function::Create(
+      FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
+      GlobalValue::PrivateLinkage, ServiceFunName, M);
+  SF->addFnAttr(SPIRV_BACKEND_SERVICE_FUN_NAME, "");
+  return SF;
 }
 
 } // namespace llvm

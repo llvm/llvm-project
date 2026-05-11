@@ -24,8 +24,8 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -133,7 +133,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   for (const BasicBlock &BB : *Fn) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-        Type *Ty = AI->getAllocatedType();
         Align Alignment = AI->getAlign();
 
         // Static allocas can be folded into the initial stack frame
@@ -141,12 +140,11 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         // do this if there is an extra alignment requirement.
         if (AI->isStaticAlloca() &&
             (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
-          const ConstantInt *CUI = cast<ConstantInt>(AI->getArraySize());
-          uint64_t TySize =
-              MF->getDataLayout().getTypeAllocSize(Ty).getKnownMinValue();
-
-          TySize *= CUI->getZExtValue();   // Get total allocated size.
-          if (TySize == 0) TySize = 1; // Don't create zero-sized stack objects.
+          TypeSize AllocaSize = AI->getAllocationSize(MF->getDataLayout())
+                                    .value_or(TypeSize::getZero());
+          uint64_t TySize = AllocaSize.getKnownMinValue();
+          if (TySize == 0)
+            TySize = 1; // Don't create zero-sized stack objects.
           int FrameIndex = INT_MAX;
           auto Iter = CatchObjects.find(AI);
           if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {
@@ -161,7 +159,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           // Scalable vectors and structures that contain scalable vectors may
           // need a special StackID to distinguish them from other (fixed size)
           // stack objects.
-          if (Ty->isScalableTy())
+          if (AllocaSize.isScalable())
             MF->getFrameInfo().setStackID(FrameIndex,
                                           TFI->getStackIDForScalableVectors());
 
@@ -277,8 +275,14 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     // Transfer the address-taken flag. This is necessary because there could
     // be multiple MachineBasicBlocks corresponding to one BasicBlock, and only
     // the first one should be marked.
-    if (BB.hasAddressTaken())
-      MBB->setAddressTakenIRBlock(const_cast<BasicBlock *>(&BB));
+    // Only mark the block if the BlockAddress actually has users. The
+    // hasAddressTaken flag may be stale if the BlockAddress was optimized away
+    // but the constant still exists in the uniquing table.
+    if (BB.hasAddressTaken()) {
+      if (BlockAddress *BA = BlockAddress::lookup(&BB))
+        if (!BA->hasZeroLiveUses())
+          MBB->setAddressTakenIRBlock(const_cast<BasicBlock *>(&BB));
+    }
 
     // Mark landing pad blocks.
     if (BB.isEHPad())
@@ -327,27 +331,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       UME.Handler = getMBB(cast<const BasicBlock *>(UME.Handler));
     for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap)
       CME.Handler = getMBB(cast<const BasicBlock *>(CME.Handler));
-  } else if (Personality == EHPersonality::Wasm_CXX) {
-    WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
-    calculateWasmEHInfo(&fn, EHInfo);
-
-    // Map all BB references in the Wasm EH data to MBBs.
-    DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
-    for (auto &KV : EHInfo.SrcToUnwindDest) {
-      const auto *Src = cast<const BasicBlock *>(KV.first);
-      const auto *Dest = cast<const BasicBlock *>(KV.second);
-      SrcToUnwindDest[getMBB(Src)] = getMBB(Dest);
-    }
-    EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
-    DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
-    for (auto &KV : EHInfo.UnwindDestToSrcs) {
-      const auto *Dest = cast<const BasicBlock *>(KV.first);
-      MachineBasicBlock *DestMBB = getMBB(Dest);
-      auto &Srcs = UnwindDestToSrcs[DestMBB];
-      for (const auto P : KV.second)
-        Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
-    }
-    EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
 }
 

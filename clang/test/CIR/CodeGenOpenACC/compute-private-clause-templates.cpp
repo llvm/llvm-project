@@ -22,7 +22,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.private.recipe @privatization__ZTS14NonDefaultCtor : !cir.ptr<!rec_NonDefaultCtor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_NonDefaultCtor, !cir.ptr<!rec_NonDefaultCtor>, ["openacc.private.init", init]
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1Ev(%[[ALLOCA]]) : (!cir.ptr<!rec_NonDefaultCtor>) -> ()
+// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1Ev(%[[ALLOCA]]) : (!cir.ptr<!rec_NonDefaultCtor> {{.*}}) -> ()
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -32,7 +32,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN7HasDtorD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasDtor>) -> ()
+// CHECK-NEXT: cir.call @_ZN7HasDtorD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasDtor>{{.*}}) -> ()
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -44,12 +44,11 @@ struct HasDtor {
 
 template<typename T, typename U, typename V, typename W>
 void dependent_version(const T &cc, const U &ndc, const V &dtor, const W &someInt) {
-  // CHECK: cir.func {{.*}}@_Z17dependent_versionI13CopyConstruct14NonDefaultCtor7HasDtoriEvRKT_RKT0_RKT1_RKT2_(%[[ARG0:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG1:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG2:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG3:.*]]: !cir.ptr<!s32i> {{.*}}) {
+  // CHECK: cir.func {{.*}}@_Z17dependent_versionI13CopyConstruct14NonDefaultCtor7HasDtoriEvRKT_RKT0_RKT1_RKT2_(%[[ARG0:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG1:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG2:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG3:.*]]: !cir.ptr<!s32i> {{.*}}) {{.*}}{
   // CHECK-NEXT: %[[CC:.*]] = cir.alloca !cir.ptr<!rec_CopyConstruct>, !cir.ptr<!cir.ptr<!rec_CopyConstruct>>, ["cc", init, const]
   // CHECK-NEXT: %[[NDC:.*]] = cir.alloca !cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>, ["ndc", init, const]
   // CHECK-NEXT: %[[DTOR:.*]] = cir.alloca !cir.ptr<!rec_HasDtor>, !cir.ptr<!cir.ptr<!rec_HasDtor>>, ["dtor", init, const]
   // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["someInt", init, const]
-  //             %             3 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["someInt", init, const]
 
 #pragma acc parallel private(cc, ndc, dtor, someInt)
   ;

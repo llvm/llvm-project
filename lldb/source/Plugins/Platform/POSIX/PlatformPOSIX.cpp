@@ -84,7 +84,7 @@ static uint32_t chown_file(Platform *platform, const char *path,
   command.Printf("%s", path);
   int status;
   platform->RunShellCommand(command.GetData(), FileSpec(), &status, nullptr,
-                            nullptr, std::chrono::seconds(10));
+                            nullptr, nullptr, std::chrono::seconds(10));
   return status;
 }
 
@@ -109,7 +109,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
     command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
     RunShellCommand(command.GetData(), FileSpec(), &status, nullptr, nullptr,
-                    std::chrono::seconds(10));
+                    nullptr, std::chrono::seconds(10));
     if (status != 0)
       return Status::FromErrorString("unable to perform copy");
     if (uid == UINT32_MAX && gid == UINT32_MAX)
@@ -140,7 +140,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
       LLDB_LOGF(log, "[PutFile] Running command: %s\n", command.GetData());
       int retcode;
       Host::RunShellCommand(command.GetData(), FileSpec(), &retcode, nullptr,
-                            nullptr, std::chrono::minutes(1));
+                            nullptr, nullptr, std::chrono::minutes(1));
       if (retcode == 0) {
         // Don't chown a local file for a remote system
         //                if (chown_file(this,dst_path.c_str(),uid,gid) != 0)
@@ -178,7 +178,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     cp_command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
     RunShellCommand(cp_command.GetData(), FileSpec(), &status, nullptr, nullptr,
-                    std::chrono::seconds(10));
+                    nullptr, std::chrono::seconds(10));
     if (status != 0)
       return Status::FromErrorString("unable to perform copy");
     return Status();
@@ -199,7 +199,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
       LLDB_LOGF(log, "[GetFile] Running command: %s\n", command.GetData());
       int retcode;
       Host::RunShellCommand(command.GetData(), FileSpec(), &retcode, nullptr,
-                            nullptr, std::chrono::minutes(1));
+                            nullptr, nullptr, std::chrono::minutes(1));
       if (retcode == 0)
         return Status();
       // If we are here, rsync has failed - let's try the slow way before
@@ -741,7 +741,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
 
   // Make sure we deallocate the input string memory:
-  auto path_cleanup = llvm::make_scope_exit([process, path_addr] {
+  llvm::scope_exit path_cleanup([process, path_addr] {
     // Deallocate the buffer.
     process->DeallocateMemory(path_addr);
   });
@@ -768,7 +768,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
   
   // Make sure we deallocate the result structure memory
-  auto return_cleanup = llvm::make_scope_exit([process, return_addr] {
+  llvm::scope_exit return_cleanup([process, return_addr] {
     // Deallocate the buffer
     process->DeallocateMemory(return_addr);
   });
@@ -872,10 +872,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // Make sure we clean up the args structure.  We can't reuse it because the
   // Platform lives longer than the process and the Platforms don't get a
   // signal to clean up cached data when a process goes away.
-  auto args_cleanup =
-      llvm::make_scope_exit([do_dlopen_function, &exe_ctx, func_args_addr] {
-        do_dlopen_function->DeallocateFunctionResults(exe_ctx, func_args_addr);
-      });
+  llvm::scope_exit args_cleanup([do_dlopen_function, &exe_ctx, func_args_addr] {
+    do_dlopen_function->DeallocateFunctionResults(exe_ctx, func_args_addr);
+  });
 
   // Now run the caller:
   EvaluateExpressionOptions options;
@@ -963,7 +962,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
                                   uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
-  if (image_addr == LLDB_INVALID_IMAGE_TOKEN)
+  if (image_addr == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("Invalid image token");
 
   StreamString expr;

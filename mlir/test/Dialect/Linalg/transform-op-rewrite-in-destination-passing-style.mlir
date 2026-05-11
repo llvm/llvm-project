@@ -124,7 +124,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   %[[empty:.*]] = tensor.empty(%[[size0]], %[[size1]]) : tensor<?x?xindex>
 //       CHECK:   %[[generic:.*]] = linalg.generic
 //  CHECK-SAME:       {indexing_maps = [#[[$map2]]], iterator_types = ["parallel", "parallel"]}
-//  CHECK-SAME:       outs(%[[empty]] : tensor<?x?xindex>) {
+//  CHECK-SAME:       outs(%[[empty]] : tensor<?x?xindex>) attrs = {test.discardable.attr = 1 : i64} {
 //       CHECK:     %[[i0:.*]] = linalg.index 0
 //       CHECK:     %[[i1:.*]] = linalg.index 1
 //       CHECK:     %[[mul:.*]] = arith.muli %[[i0]], %[[i1]]
@@ -139,7 +139,7 @@ func.func @tensor_pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   ^bb0(%arg0: index, %arg1: index):
     %m = arith.muli %arg0, %arg1 : index
     tensor.yield %m : index
-  } : tensor<?x10xindex> to tensor<?x?xindex>
+  } { test.discardable.attr = 1 : i64 } : tensor<?x10xindex> to tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
 }
 
@@ -165,7 +165,7 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[dim0]], %[[h1]]]
 //   CHECK-DAG:   %[[size1:.*]] = affine.apply #[[$map1]]()[%[[l2]], %[[h2]]]
 //       CHECK:   %[[empty:.*]] = tensor.empty(%[[size0]], %[[size1]]) : tensor<?x?xindex>
-//       CHECK:   %[[filled:.*]] = linalg.fill ins(%[[c50]] : index) outs(%[[empty]] : tensor<?x?xindex>)
+//       CHECK:   %[[filled:.*]] = linalg.fill {test.discardable.attr = 1 : i64} ins(%[[c50]] : index) outs(%[[empty]] : tensor<?x?xindex>)
 //   CHECK-DAG:   %[[dim0:.*]] = tensor.dim %[[t1]], %[[c0]]
 //       CHECK:   %[[inserted:.*]] = tensor.insert_slice %[[t1]] into %[[filled]][5, %[[l2]]] [%[[dim0]], 10] [1, 1] : tensor<?x10xindex> into tensor<?x?xindex>
 //       CHECK:   return %[[inserted]]
@@ -175,7 +175,7 @@ func.func @tensor_pad_constant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   ^bb0(%arg0: index, %arg1: index):
     %c = arith.constant 50 : index
     tensor.yield %c : index
-  } : tensor<?x10xindex> to tensor<?x?xindex>
+  } { test.discardable.attr = 1 : i64 } : tensor<?x10xindex> to tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
 }
 
@@ -200,7 +200,7 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[dim0]], %[[h1]]]
 //   CHECK-DAG:   %[[size1:.*]] = affine.apply #[[$map1]]()[%[[l2]], %[[h2]]]
 //       CHECK:   %[[empty:.*]] = tensor.empty(%[[size0]], %[[size1]]) : tensor<?x?xindex>
-//       CHECK:   %[[filled:.*]] = linalg.fill ins(%[[padding]] : index) outs(%[[empty]] : tensor<?x?xindex>)
+//       CHECK:   %[[filled:.*]] = linalg.fill {test.discardable.attr = 1 : i64} ins(%[[padding]] : index) outs(%[[empty]] : tensor<?x?xindex>)
 //   CHECK-DAG:   %[[dim0:.*]] = tensor.dim %[[t1]], %[[c0]]
 //       CHECK:   %[[inserted:.*]] = tensor.insert_slice %[[t1]] into %[[filled]][5, %[[l2]]] [%[[dim0]], 10] [1, 1] : tensor<?x10xindex> into tensor<?x?xindex>
 //       CHECK:   return %[[inserted]]
@@ -209,7 +209,7 @@ func.func @tensor_pad_invariant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   %0 = tensor.pad %t1 low[5, %l2] high[%h1, %h2] {
   ^bb0(%arg0: index, %arg1: index):
     tensor.yield %padding : index
-  } : tensor<?x10xindex> to tensor<?x?xindex>
+  } { test.discardable.attr = 1 : i64 } : tensor<?x10xindex> to tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
 }
 

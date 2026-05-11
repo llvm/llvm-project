@@ -29,7 +29,6 @@ static void ConfigureFloatingPoint() {
 extern "C" {
 void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[],
     const EnvironmentDefaultList *envDefaults) {
-  std::atexit(Fortran::runtime::NotifyOtherImagesOfNormalEnd);
   Fortran::runtime::executionEnvironment.Configure(
       argc, argv, envp, envDefaults);
   ConfigureFloatingPoint();

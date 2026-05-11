@@ -1,5 +1,7 @@
 # RUN: llc -mattr=+egpr,+ndd -x mir < %s -x86-enable-apx-for-relocation=true -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs -o - | FileCheck %s --check-prefixes=CHECK,APXREL
+# RUN: llc -mattr=+egpr,+ndd -x mir < %s -x86-enable-apx-for-relocation=true -passes=x86-suppress-apx-for-relocation -o - | FileCheck %s --check-prefixes=CHECK,APXREL
 # RUN: llc -mattr=+egpr,+ndd -x mir < %s -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs -o - | FileCheck %s --check-prefixes=CHECK,NOAPXREL
+# RUN: llc -mattr=+egpr,+ndd -x mir < %s -passes=x86-suppress-apx-for-relocation -o - | FileCheck %s --check-prefixes=CHECK,NOAPXREL
 
 
 --- |

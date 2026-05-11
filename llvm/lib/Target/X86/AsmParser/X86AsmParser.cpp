@@ -1302,9 +1302,8 @@ public:
   };
 
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
-               const MCInstrInfo &mii, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, mii),  InstInfo(nullptr),
-        Code16GCC(false) {
+               const MCInstrInfo &mii)
+      : MCTargetAsmParser(sti, mii), InstInfo(nullptr), Code16GCC(false) {
 
     Parser.addAliasForDirective(".word", ".2byte");
 
@@ -3849,7 +3848,7 @@ static bool convertSSEToAVX(MCInst &Inst) {
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
-  if (MCOptions.X86Sse2Avx && convertSSEToAVX(Inst))
+  if (getTargetOptions().X86Sse2Avx && convertSSEToAVX(Inst))
     return true;
 
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
@@ -4374,6 +4373,13 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     return Error(ErrorLoc, "immediate must be an integer in range [0, 15]",
                  EmptyRange, MatchingInlineAsm);
   }
+  case Match_InvalidImmUnsignedi6: {
+    SMLoc ErrorLoc = ((X86Operand &)*Operands[ErrorInfo]).getStartLoc();
+    if (ErrorLoc == SMLoc())
+      ErrorLoc = IDLoc;
+    return Error(ErrorLoc, "immediate must be an integer in range [0, 63]",
+                 EmptyRange, MatchingInlineAsm);
+  }
   case Match_MissingFeature:
     return ErrorMissingFeature(IDLoc, MissingFeatures, MatchingInlineAsm);
   case Match_InvalidOperand:
@@ -4738,6 +4744,14 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
                  EmptyRange, MatchingInlineAsm);
   }
 
+  if (llvm::count(Match, Match_InvalidImmUnsignedi6) == 1) {
+    SMLoc ErrorLoc = ((X86Operand &)*Operands[ErrorInfo]).getStartLoc();
+    if (ErrorLoc == SMLoc())
+      ErrorLoc = IDLoc;
+    return Error(ErrorLoc, "immediate must be an integer in range [0, 63]",
+                 EmptyRange, MatchingInlineAsm);
+  }
+
   // If all of these were an outright failure, report it in a useless way.
   return Error(IDLoc, "unknown instruction mnemonic", EmptyRange,
                MatchingInlineAsm);
@@ -4862,10 +4876,10 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
 
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   if (!Section) {
-    getStreamer().initSections(false, getSTI());
+    getStreamer().initSections(getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
-  if (getContext().getAsmInfo()->useCodeAlign(*Section))
+  if (getContext().getAsmInfo().useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   else
     getStreamer().emitValueToAlignment(Align(2), 0, 1, 0);

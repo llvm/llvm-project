@@ -381,6 +381,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 class valarray;
@@ -793,7 +794,7 @@ private:
 public:
   // construct/destroy:
   _LIBCPP_HIDE_FROM_ABI valarray() : __begin_(nullptr), __end_(nullptr) {}
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 explicit valarray(size_t __n);
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 explicit valarray(size_t __n);
   _LIBCPP_HIDE_FROM_ABI valarray(const value_type& __x, size_t __n);
   valarray(const value_type* __p, size_t __n);
   valarray(const valarray& __v);
@@ -805,7 +806,7 @@ public:
   valarray(const gslice_array<value_type>& __ga);
   valarray(const mask_array<value_type>& __ma);
   valarray(const indirect_array<value_type>& __ia);
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 ~valarray();
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 ~valarray();
 
   // assignment:
   valarray& operator=(const valarray& __v);
@@ -3300,6 +3301,7 @@ template <class _Tp>
   return __v.__end_;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

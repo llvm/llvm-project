@@ -57,6 +57,9 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processAlign(mlir::omp::AlignClauseOps &result) const;
+  bool processAllocator(lower::StatementContext &stmtCtx,
+                        mlir::omp::AllocatorClauseOps &result) const;
   bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
   bool processCancelDirectiveName(
@@ -68,6 +71,9 @@ public:
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
   bool processSizes(StatementContext &stmtCtx,
                     mlir::omp::SizesClauseOps &result) const;
+  bool processLooprange(StatementContext &stmtCtx,
+                        mlir::omp::LooprangeClauseOps &result,
+                        int64_t &count) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
@@ -86,13 +92,16 @@ public:
       mlir::omp::HasDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
+  bool processInbranch(mlir::omp::InbranchClauseOps &result) const;
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processInitializer(
       lower::SymMap &symMap,
-      ReductionProcessor::GenInitValueCBTy &genInitValueCB) const;
+      ReductionProcessor::GenInitValueCBTy &genInitValueCB,
+      const parser::OmpStylizedInstance *parserInitInstance = nullptr) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
+  bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTasksClauseOps &result) const;
@@ -111,12 +120,14 @@ public:
   bool processSchedule(lower::StatementContext &stmtCtx,
                        mlir::omp::ScheduleClauseOps &result) const;
   bool processSimdlen(mlir::omp::SimdlenClauseOps &result) const;
+  bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
 
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
+  bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
   bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
   bool processCopyin() const;
@@ -136,7 +147,8 @@ public:
   bool processIsDevicePtr(
       lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
-  bool processLinear(mlir::omp::LinearClauseOps &result) const;
+  bool processLinear(mlir::omp::LinearClauseOps &result,
+                     bool isDeclareSimd = false) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 
@@ -155,7 +167,9 @@ public:
   bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms,
+      llvm::DenseMap<const semantics::Symbol *, mlir::Value>
+          *reductionVarCache = nullptr) const;
   bool processTaskReduction(
       mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
@@ -168,6 +182,7 @@ public:
       lower::StatementContext &stmtCtx,
       mlir::omp::UseDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
+  bool processUniform(mlir::omp::UniformClauseOps &result) const;
 
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given
@@ -202,7 +217,8 @@ private:
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-      llvm::StringRef mapperIdNameRef = "") const;
+      llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
+      llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

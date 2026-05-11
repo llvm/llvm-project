@@ -32,6 +32,7 @@ static_library("misc") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AnonymousNamespaceInHeaderCheck.cpp",
     "ConfusableIdentifierCheck.cpp",
     "ConstCorrectnessCheck.cpp",
     "CoroutineHostileRAIICheck.cpp",

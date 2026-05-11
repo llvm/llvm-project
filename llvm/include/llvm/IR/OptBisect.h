@@ -17,7 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
-#include <limits>
+#include "llvm/Support/IntegerInclusiveInterval.h"
 
 namespace llvm {
 
@@ -39,9 +39,10 @@ public:
 };
 
 /// This class implements a mechanism to disable passes and individual
-/// optimizations at compile time based on a command line option
-/// (-opt-bisect-limit) in order to perform a bisecting search for
-/// optimization-related problems.
+/// optimizations at compile time based on two command line options
+/// (-opt-bisect and -opt-disable) in order to perform a bisecting
+/// search for optimization-related problems, and/or disable individual
+/// passes or combinations thereof.
 class LLVM_ABI OptBisect : public OptPassGate {
 public:
   /// Default constructor. Initializes the state to "disabled". The bisection
@@ -53,12 +54,12 @@ public:
 
   ~OptBisect() override = default;
 
-  /// Checks the bisect limit to determine if the specified pass should run.
+  /// Checks the bisect intervals to determine if the specified pass should run.
   ///
   /// The method prints the name of the pass, its assigned bisect number, and
   /// whether or not the pass will be executed. It returns true if the pass
-  /// should run, i.e. if the bisect limit is set to -1 or has not yet been
-  /// exceeded.
+  /// should run, i.e. if no intervals are specified or the current pass number
+  /// falls within one of the specified intervals.
   ///
   /// Most passes should not call this routine directly. Instead, it is called
   /// through helper routines provided by the base classes of the pass. For
@@ -67,49 +68,29 @@ public:
                      StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { return BisectLimit != Disabled; }
+  bool isEnabled() const override {
+    return !BisectIntervals.empty() || !DisabledPasses.empty();
+  }
 
-  /// Set the new optimization limit and reset the counter. Passing
-  /// OptBisect::Disabled disables the limiting.
-  void setLimit(int Limit) {
-    BisectLimit = Limit;
+  /// Set intervals directly from an IntervalList.
+  void setIntervals(IntegerInclusiveIntervalUtils::IntervalList Intervals) {
+    BisectIntervals = std::move(Intervals);
+  }
+
+  /// Clear all intervals, effectively disabling bisection.
+  void clearIntervals() {
+    BisectIntervals.clear();
     LastBisectNum = 0;
   }
 
-  static constexpr int Disabled = std::numeric_limits<int>::max();
-
-private:
-  int BisectLimit = Disabled;
-  mutable int LastBisectNum = 0;
-};
-
-/// This class implements a mechanism to disable passes and individual
-/// optimizations at compile time based on a command line option
-/// (-opt-disable) in order to study how single transformations, or
-/// combinations thereof, affect the IR.
-class LLVM_ABI OptDisable : public OptPassGate {
-public:
-  /// Checks the pass name to determine if the specified pass should run.
-  ///
-  /// It returns true if the pass should run, i.e. if its name is was
-  /// not provided via command line.
-  /// If -opt-disable-enable-verbosity is given, the method prints the
-  /// name of the pass, and whether or not the pass will be executed.
-  ///
-  /// Most passes should not call this routine directly. Instead, it is called
-  /// through helper routines provided by the base classes of the pass. For
-  /// instance, function passes should call FunctionPass::skipFunction().
-  bool shouldRunPass(StringRef PassName,
-                     StringRef IRDescription) const override;
-
   /// Parses the command line argument to extract the names of the passes
   /// to be disabled. Multiple pass names can be provided with comma separation.
-  void setDisabled(StringRef Pass);
-
-  /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { return !DisabledPasses.empty(); }
+  void setDisabled(StringRef Pass) { DisabledPasses.insert(Pass); }
 
 private:
+  mutable int LastBisectNum = 0;
+  IntegerInclusiveIntervalUtils::IntervalList BisectIntervals;
+
   StringSet<> DisabledPasses = {};
 };
 

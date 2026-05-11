@@ -638,14 +638,26 @@ struct CompactUnwindTraits_MachO_arm64
   constexpr static uint32_t EncodingModeMask = 0x0f000000;
   constexpr static uint32_t DWARFSectionOffsetMask = 0x00ffffff;
 
+  constexpr static uint32_t FramelessMode = 0x02000000;
+  constexpr static uint32_t DWARFMode = 0x03000000;
+  constexpr static uint32_t FrameMode = 0x04000000;
+
   using GOTManager = aarch64::GOTTableManager;
 
   static bool encodingSpecifiesDWARF(uint32_t Encoding) {
-    constexpr uint32_t DWARFMode = 0x03000000;
     return (Encoding & EncodingModeMask) == DWARFMode;
   }
 
-  static bool encodingCannotBeMerged(uint32_t Encoding) { return false; }
+  static bool encodingCanBeMerged(uint32_t Encoding) {
+    switch (Encoding & EncodingModeMask) {
+    case FramelessMode:
+    case FrameMode:
+      return true;
+    case DWARFMode:
+    default:
+      return false;
+    }
+  }
 };
 
 void link_MachO_arm64(std::unique_ptr<LinkGraph> G,

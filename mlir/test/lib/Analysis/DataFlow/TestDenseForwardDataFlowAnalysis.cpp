@@ -49,6 +49,8 @@ public:
 class LastModifiedAnalysis
     : public DenseForwardDataFlowAnalysis<LastModification> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LastModifiedAnalysis)
+
   explicit LastModifiedAnalysis(DataFlowSolver &solver, bool assumeFuncWrites)
       : DenseForwardDataFlowAnalysis(solver),
         assumeFuncWrites(assumeFuncWrites) {}
@@ -256,7 +258,13 @@ struct TestLastModifiedPass
       os << "test_tag: " << tag.getValue() << ":\n";
       const LastModification *lastMods =
           solver.lookupState<LastModification>(solver.getProgramPointAfter(op));
-      assert(lastMods && "expected a dense lattice");
+      if (!lastMods) {
+        // The lattice may not be computed for operations in unreachable code
+        // (e.g., private functions not called from anywhere in interprocedural
+        // analysis mode).
+        os << " - <not computed>\n";
+        return;
+      }
       for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
         os << " operand #" << index << "\n";
         std::optional<Value> underlyingValue =

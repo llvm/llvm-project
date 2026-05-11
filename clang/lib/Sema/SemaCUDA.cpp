@@ -84,10 +84,6 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
     return ExprError(
         Diag(LLLLoc, diag::err_cuda_device_kernel_launch_not_supported));
 
-  if (IsDeviceKernelCall && !getLangOpts().GPURelocatableDeviceCode)
-    return ExprError(
-        Diag(LLLLoc, diag::err_cuda_device_kernel_launch_require_rdc));
-
   FunctionDecl *ConfigDecl = IsDeviceKernelCall
                                  ? getASTContext().getcudaLaunchDeviceDecl()
                                  : getASTContext().getcudaConfigureCallDecl();
@@ -252,7 +248,7 @@ SemaCUDA::CUDAVariableTarget SemaCUDA::IdentifyTarget(const VarDecl *Var) {
     return CVT_Unified;
   // Only constexpr and const variabless with implicit constant attribute
   // are emitted on both sides. Such variables are promoted to device side
-  // only if they have static constant intializers on device side.
+  // only if they have static constant initializers on device side.
   if ((Var->isConstexpr() || Var->getType().isConstQualified()) &&
       Var->hasAttr<CUDAConstantAttr>() &&
       !hasExplicitAttr<CUDAConstantAttr>(Var))
@@ -496,7 +492,9 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
 
   // Look for special members in base classes that should be invoked from here.
   // Infer the target of this member base on the ones it should call.
-  // Skip direct and indirect virtual bases for abstract classes.
+  // Skip direct and indirect virtual bases for abstract classes, except for
+  // destructors — the complete destructor variant destroys virtual bases
+  // regardless of whether the class is abstract.
   llvm::SmallVector<const CXXBaseSpecifier *, 16> Bases;
   for (const auto &B : ClassDecl->bases()) {
     if (!B.isVirtual()) {
@@ -504,9 +502,8 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     }
   }
 
-  if (!ClassDecl->isAbstract()) {
+  if (!ClassDecl->isAbstract() || CSM == CXXSpecialMemberKind::Destructor)
     llvm::append_range(Bases, llvm::make_pointer_range(ClassDecl->vbases()));
-  }
 
   for (const auto *B : Bases) {
     auto *BaseClassDecl = B->getType()->getAsCXXRecordDecl();
@@ -989,7 +986,8 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(Callee && "Callee may not be null.");
 
   const auto &ExprEvalCtx = SemaRef.currentEvaluationContext();
-  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
+  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated() ||
+      ExprEvalCtx.isDiscardedStatementContext())
     return true;
 
   // C++ deduction guides participate in overload resolution but are not
@@ -1025,9 +1023,20 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
     }
   }();
 
+  bool IsDeviceKernelCall = Callee == getASTContext().getcudaLaunchDeviceDecl();
+  bool CallerHD = Caller && Caller->hasAttr<CUDAHostAttr>() &&
+                  Caller->hasAttr<CUDADeviceAttr>();
+  bool CallerDiscard = SemaRef.getEmissionStatus(Caller) ==
+                       Sema::FunctionEmissionStatus::TemplateDiscarded;
+  bool RDC = getLangOpts().GPURelocatableDeviceCode;
+  if (IsDeviceKernelCall && !(CallerHD && CallerDiscard) && !RDC) {
+    Diag(Loc, diag::err_cuda_device_kernel_launch_require_rdc);
+    return false;
+  }
+
   if (DiagKind == SemaDiagnosticBuilder::K_Nop) {
     // For -fgpu-rdc, keep track of external kernels used by host functions.
-    if (getLangOpts().CUDAIsDevice && getLangOpts().GPURelocatableDeviceCode &&
+    if (getLangOpts().CUDAIsDevice && RDC &&
         Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined() &&
         (!Caller || (!Caller->getDescribedFunctionTemplate() &&
                      getASTContext().GetGVALinkageForFunction(Caller) ==

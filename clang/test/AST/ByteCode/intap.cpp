@@ -69,6 +69,10 @@ constexpr _BitInt(32) nope = top / bottom;  // both-error {{must be initialized 
 constexpr _BitInt(32) noooo = top % bottom; // both-error {{must be initialized by a constant expression}} \
                                             // both-note {{value 2147483648 is outside the range}}
 
+struct {
+  _BitInt(35) void : 33; // both-error {{cannot combine with previous '_BitInt' declaration specifier}}
+} s;
+
 namespace APCast {
   constexpr _BitInt(10) A = 1;
   constexpr _BitInt(11) B = A;
@@ -100,6 +104,19 @@ namespace PointerArithmeticOverflow {
   int n;
   constexpr int *p = (&n + 1) + (unsigned __int128)-1; // both-error {{constant expression}} \
                                                        // both-note {{cannot refer to element 3402}}
+}
+
+namespace BitfieldWidth {
+  struct S {
+    __int128 foo : 1234;
+#if !defined(_WIN32)
+    // both-warning@-2 {{width of bit-field 'foo' (1'234 bits) exceeds the width of its type; value will be truncated to 128 bits}}
+#else
+    // both-error@-4 {{width of bit-field 'foo' (1234 bits) exceeds the size of its type (128 bits)}}
+#endif
+  };
+  constexpr S s{100};
+  static_assert(s.foo == 100, "");
 }
 
 namespace i128 {

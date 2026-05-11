@@ -72,7 +72,7 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP9]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
@@ -119,7 +119,7 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP9]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
@@ -131,7 +131,7 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 3, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds i32, ptr %v, i64 %0
@@ -142,7 +142,7 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body
 
-exit:                                     ; preds = %for.body
+exit:
   ret i32 %5
 }
 
@@ -166,7 +166,7 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP9]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
@@ -178,7 +178,7 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ %a, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds i32, ptr %v, i64 %0
@@ -189,7 +189,7 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body
 
-exit:                                     ; preds = %for.body
+exit:
   ret i32 %5
 }
 
@@ -213,7 +213,7 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP9]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
@@ -225,7 +225,7 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 2, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds float, ptr %v, i64 %0
@@ -236,33 +236,46 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body
 
-exit:                                     ; preds = %for.body
+exit:
   ret i32 %5
 }
 
 define float @select_const_f32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-LABEL: define float @select_const_f32_from_icmp(
 ; CHECK-SAME: ptr readonly captures(none) [[V:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP6:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi fast float [ 3.000000e+00, %[[ENTRY]] ], [ [[TMP5:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ splat (float 3.000000e+00), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP5]] = select fast i1 [[TMP4]], float [[TMP1]], float 7.000000e+00
-; CHECK-NEXT:    [[TMP6]] = add nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[TMP6]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[EXIT:.*]], label %[[FOR_BODY]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi float [ [[TMP5]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> zeroinitializer, i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x float> splat (float 7.000000e+00), <vscale x 4 x float> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP11]], [[TMP0]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = call float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x i1> [[TMP9]], float 3.000000e+00)
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
 ; CHECK-NEXT:    ret float [[DOTLCSSA]]
 ;
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi fast float [ 3.0, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds i32, ptr %v, i64 %0
@@ -273,7 +286,7 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body
 
-exit:                                     ; preds = %for.body
+exit:
   ret float %5
 }
 
@@ -314,7 +327,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %i.013 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %r.012 = phi i32 [ %r.1, %for.inc ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %src1, i64 %i.013
@@ -322,20 +335,20 @@ for.body:                                         ; preds = %entry, %for.inc
   %cmp1 = icmp sgt i32 %0, 35
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx2 = getelementptr inbounds i32, ptr %src2, i64 %i.013
   %1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp eq i32 %1, 2
   %spec.select = select i1 %cmp3, i32 1, i32 %r.012
   br label %for.inc
 
-for.inc:                                          ; preds = %if.then, %for.body
+for.inc:
   %r.1 = phi i32 [ %r.012, %for.body ], [ %spec.select, %if.then ]
   %inc = add nuw nsw i64 %i.013, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.inc
+for.end.loopexit:
   %r.1.lcssa = phi i32 [ %r.1, %for.inc ]
   ret i32 %r.1.lcssa
 }

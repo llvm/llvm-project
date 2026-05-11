@@ -30,7 +30,7 @@ static void bm_gcd_random(benchmark::State& state) {
       for (auto v1 : data)
         benchmark::DoNotOptimize(std::gcd(v0, v1));
 }
-BENCHMARK(bm_gcd_random);
+BENCHMARK(bm_gcd_random)->Name("std::gcd() (random numbers)");
 
 static void bm_gcd_trivial(benchmark::State& state) {
   int lhs = ~static_cast<int>(0), rhs = 1;
@@ -40,7 +40,7 @@ static void bm_gcd_trivial(benchmark::State& state) {
     benchmark::DoNotOptimize(std::gcd(lhs, rhs));
   }
 }
-BENCHMARK(bm_gcd_trivial);
+BENCHMARK(bm_gcd_trivial)->Name("std::gcd() (trivial inputs)");
 
 static void bm_gcd_complex(benchmark::State& state) {
   long long lhs = 2971215073;
@@ -51,6 +51,6 @@ static void bm_gcd_complex(benchmark::State& state) {
     benchmark::DoNotOptimize(std::gcd(lhs, rhs));
   }
 }
-BENCHMARK(bm_gcd_complex);
+BENCHMARK(bm_gcd_complex)->Name("std::gcd() (adversarial inputs)");
 
 BENCHMARK_MAIN();

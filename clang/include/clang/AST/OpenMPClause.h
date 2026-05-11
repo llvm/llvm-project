@@ -39,6 +39,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
+#include <climits>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -1023,6 +1024,106 @@ public:
   }
 };
 
+/// This represents the 'counts' clause in the '#pragma omp split' directive.
+///
+/// \code
+/// #pragma omp split counts(3, omp_fill, 2)
+/// for (int i = 0; i < n; ++i) { ... }
+/// \endcode
+class OMPCountsClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPCountsClause, Expr *> {
+  friend class OMPClauseReader;
+  friend class llvm::TrailingObjects<OMPCountsClause, Expr *>;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Number of count expressions in the clause.
+  unsigned NumCounts = 0;
+
+  /// 0-based index of the omp_fill list item.
+  std::optional<unsigned> OmpFillIndex;
+
+  /// Source location of the omp_fill keyword.
+  SourceLocation OmpFillLoc;
+
+  /// Build an empty clause.
+  explicit OMPCountsClause(int NumCounts)
+      : OMPClause(llvm::omp::OMPC_counts, SourceLocation(), SourceLocation()),
+        NumCounts(NumCounts) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setOmpFillIndex(std::optional<unsigned> Idx) { OmpFillIndex = Idx; }
+  void setOmpFillLoc(SourceLocation Loc) { OmpFillLoc = Loc; }
+
+  /// Sets the count expressions.
+  void setCountsRefs(ArrayRef<Expr *> VL) {
+    assert(VL.size() == NumCounts);
+    llvm::copy(VL, getCountsRefs().begin());
+  }
+
+public:
+  /// Build a 'counts' AST node.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the 'counts' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Counts    Content of the clause.
+  static OMPCountsClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                 SourceLocation LParenLoc,
+                                 SourceLocation EndLoc, ArrayRef<Expr *> Counts,
+                                 std::optional<unsigned> FillIdx,
+                                 SourceLocation FillLoc);
+
+  /// Build an empty 'counts' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumCounts   Number of items in the clause.
+  static OMPCountsClause *CreateEmpty(const ASTContext &C, unsigned NumCounts);
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the number of list items.
+  unsigned getNumCounts() const { return NumCounts; }
+
+  std::optional<unsigned> getOmpFillIndex() const { return OmpFillIndex; }
+  SourceLocation getOmpFillLoc() const { return OmpFillLoc; }
+  bool hasOmpFill() const { return OmpFillIndex.has_value(); }
+
+  /// Returns the count expressions.
+  MutableArrayRef<Expr *> getCountsRefs() {
+    return getTrailingObjects(NumCounts);
+  }
+  ArrayRef<Expr *> getCountsRefs() const {
+    return getTrailingObjects(NumCounts);
+  }
+
+  child_range children() {
+    MutableArrayRef<Expr *> Counts = getCountsRefs();
+    return child_range(reinterpret_cast<Stmt **>(Counts.begin()),
+                       reinterpret_cast<Stmt **>(Counts.end()));
+  }
+  const_child_range children() const {
+    ArrayRef<Expr *> Counts = getCountsRefs();
+    return const_child_range(reinterpret_cast<Stmt *const *>(Counts.begin()),
+                             reinterpret_cast<Stmt *const *>(Counts.end()));
+  }
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_counts;
+  }
+};
+
 /// This class represents the 'permutation' clause in the
 /// '#pragma omp interchange' directive.
 ///
@@ -1492,6 +1593,83 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_threadset;
+  }
+};
+
+/// This class represents the 'transparent' clause in the '#pragma omp task'
+/// directive.
+///
+/// \code
+/// #pragma omp task transparent(omp_not_impex)
+/// \endcode
+///
+/// In this example, the directive '#pragma omp task' has a 'transparent'
+/// clause with OpenMP keyword 'omp_not_impex`. Other valid keywords that may
+/// appear in this clause are 'omp_import', 'omp_export' and 'omp_impex'.
+///
+class OMPTransparentClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_transparent, OMPClause>,
+      public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Argument of the 'transparent' clause.
+  Expr *ImpexType = nullptr;
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  void setImpexTypeKind(Expr *E) { ImpexType = E; }
+
+public:
+  /// Build 'transparent' clause with argument \a A ('omp_not_impex',
+  /// 'omp_import', 'omp_export' or 'omp_impex')
+  ///
+  /// \param A Argument of the clause ('omp_not_impex', 'omp_import',
+  /// 'omp_export' or 'omp_impex')
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPTransparentClause(Expr *ImpexTypeKind, Stmt *HelperValStmt,
+                       OpenMPDirectiveKind CaptureRegion,
+                       SourceLocation StartLoc, SourceLocation LParenLoc,
+                       SourceLocation EndLoc)
+      : OMPOneStmtClause(ImpexTypeKind, StartLoc, LParenLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc),
+        ImpexType(ImpexTypeKind) {
+    setPreInitStmt(HelperValStmt, CaptureRegion);
+  }
+
+  /// Build an empty clause.
+  OMPTransparentClause() : OMPOneStmtClause(), OMPClauseWithPreInit(this) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns argument of the clause.
+  Expr *getImpexType() const { return ImpexType; }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(&ImpexType),
+                       reinterpret_cast<Stmt **>(&ImpexType) + 1);
+  }
+
+  const_child_range children() const {
+    return const_cast<OMPTransparentClause *>(this)->children();
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_transparent;
   }
 };
 
@@ -7989,6 +8167,13 @@ class OMPUseDevicePtrClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
+  /// Fallback modifier for the clause.
+  OpenMPUseDevicePtrFallbackModifier FallbackModifier =
+      OMPC_USE_DEVICE_PTR_FALLBACK_unknown;
+
+  /// Location of the fallback modifier.
+  SourceLocation FallbackModifierLoc;
+
   /// Build clause with number of variables \a NumVars.
   ///
   /// \param Locs Locations needed to build a mappable clause. It includes 1)
@@ -7999,10 +8184,15 @@ class OMPUseDevicePtrClause final
   /// NumUniqueDeclarations: number of unique base declarations in this clause;
   /// 3) NumComponentLists: number of component lists in this clause; and 4)
   /// NumComponents: total number of expression components in the clause.
-  explicit OMPUseDevicePtrClause(const OMPVarListLocTy &Locs,
-                                 const OMPMappableExprListSizeTy &Sizes)
-      : OMPMappableExprListClause(llvm::omp::OMPC_use_device_ptr, Locs, Sizes) {
-  }
+  /// \param FallbackModifier The fallback modifier for the clause.
+  /// \param FallbackModifierLoc Location of the fallback modifier.
+  explicit OMPUseDevicePtrClause(
+      const OMPVarListLocTy &Locs, const OMPMappableExprListSizeTy &Sizes,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc)
+      : OMPMappableExprListClause(llvm::omp::OMPC_use_device_ptr, Locs, Sizes),
+        FallbackModifier(FallbackModifier),
+        FallbackModifierLoc(FallbackModifierLoc) {}
 
   /// Build an empty clause.
   ///
@@ -8055,6 +8245,14 @@ class OMPUseDevicePtrClause final
     return {getPrivateCopies().end(), varlist_size()};
   }
 
+  /// Set the fallback modifier for the clause.
+  void setFallbackModifier(OpenMPUseDevicePtrFallbackModifier M) {
+    FallbackModifier = M;
+  }
+
+  /// Set the location of the fallback modifier.
+  void setFallbackModifierLoc(SourceLocation Loc) { FallbackModifierLoc = Loc; }
+
 public:
   /// Creates clause with a list of variables \a Vars.
   ///
@@ -8067,11 +8265,15 @@ public:
   /// \param Inits Expressions referring to private copy initializers.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
+  /// \param FallbackModifier The fallback modifier for the clause.
+  /// \param FallbackModifierLoc Location of the fallback modifier.
   static OMPUseDevicePtrClause *
   Create(const ASTContext &C, const OMPVarListLocTy &Locs,
          ArrayRef<Expr *> Vars, ArrayRef<Expr *> PrivateVars,
          ArrayRef<Expr *> Inits, ArrayRef<ValueDecl *> Declarations,
-         MappableExprComponentListsRef ComponentLists);
+         MappableExprComponentListsRef ComponentLists,
+         OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+         SourceLocation FallbackModifierLoc);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -8083,6 +8285,14 @@ public:
   /// NumComponents: total number of expression components in the clause.
   static OMPUseDevicePtrClause *
   CreateEmpty(const ASTContext &C, const OMPMappableExprListSizeTy &Sizes);
+
+  /// Get the fallback modifier for the clause.
+  OpenMPUseDevicePtrFallbackModifier getFallbackModifier() const {
+    return FallbackModifier;
+  }
+
+  /// Get the location of the fallback modifier.
+  SourceLocation getFallbackModifierLoc() const { return FallbackModifierLoc; }
 
   using private_copies_iterator = MutableArrayRef<Expr *>::iterator;
   using private_copies_const_iterator = ArrayRef<const Expr *>::iterator;

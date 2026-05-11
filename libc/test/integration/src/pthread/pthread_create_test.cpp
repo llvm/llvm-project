@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
 #include "src/pthread/pthread_attr_destroy.h"
 #include "src/pthread/pthread_attr_getdetachstate.h"
 #include "src/pthread/pthread_attr_getguardsize.h"

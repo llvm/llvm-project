@@ -38,8 +38,10 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
@@ -55,7 +57,8 @@ enum InlineStrategy {
 enum LoadScriptFromSymFile {
   eLoadScriptFromSymFileTrue,
   eLoadScriptFromSymFileFalse,
-  eLoadScriptFromSymFileWarn
+  eLoadScriptFromSymFileWarn,
+  eLoadScriptFromSymFileTrusted,
 };
 
 enum LoadCWDlldbinitFile {
@@ -237,6 +240,11 @@ public:
 
   LoadScriptFromSymFile GetLoadScriptFromSymbolFile() const;
 
+  /// Set the target-wide target.load-script-from-symbol-file setting.
+  /// See \c SetAutoLoadScriptsForModule for overriding this setting
+  /// per-module.
+  void SetLoadScriptFromSymbolFile(LoadScriptFromSymFile load_style);
+
   LoadCWDlldbinitFile GetLoadCWDlldbinitFile() const;
 
   Disassembler::HexImmediateStyle GetHexImmediateStyle() const;
@@ -277,6 +285,20 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  void SetCheckValueObjectOwnership(bool check);
+
+  bool GetCheckValueObjectOwnership() const;
+
+  std::optional<LoadScriptFromSymFile>
+  GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;
+
+  /// Set the \c LoadScriptFromSymFile for a module called \c module_name
+  /// (excluding file extension). LLDB will prefer this over the target-wide
+  /// target.load-script-from-symbol-file setting
+  /// (see \c SetLoadScriptFromSymbolFile).
+  void SetAutoLoadScriptsForModule(llvm::StringRef module_name,
+                                   LoadScriptFromSymFile load_style);
+
 private:
   std::optional<bool>
   GetExperimentalPropertyValue(size_t prop_idx,
@@ -307,6 +329,8 @@ private:
 
 class EvaluateExpressionOptions {
 public:
+  EvaluateExpressionOptions();
+
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
 // with zeros. Confirmed that MSVC is *not* zero-initializing, it's just a
@@ -322,8 +346,6 @@ public:
 
   static constexpr ExecutionPolicy default_execution_policy =
       eExecutionPolicyOnlyWhenNeeded;
-
-  EvaluateExpressionOptions() = default;
 
   ExecutionPolicy GetExecutionPolicy() const { return m_execution_policy; }
 
@@ -428,6 +450,10 @@ public:
 
   void SetTrapExceptions(bool b) { m_trap_exceptions = b; }
 
+  bool GetStopOnFork() const { return m_stop_on_fork; }
+
+  void SetStopOnFork(bool b) { m_stop_on_fork = b; }
+
   bool GetREPLEnabled() const { return m_repl; }
 
   void SetREPLEnabled(bool b) { m_repl = b; }
@@ -481,7 +507,26 @@ public:
 
   void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
 
+  /// Set language-plugin specific option called \c option_name to
+  /// the specified boolean \c value.
+  llvm::Error SetBooleanLanguageOption(llvm::StringRef option_name, bool value);
+
+  /// Get the language-plugin specific boolean option called \c option_name.
+  ///
+  /// If the option doesn't exist or is not a boolean option, returns false.
+  /// Otherwise returns the boolean value of the option.
+  llvm::Expected<bool>
+  GetBooleanLanguageOption(llvm::StringRef option_name) const;
+
+  void SetCppIgnoreContextQualifiers(bool value);
+
+  bool GetCppIgnoreContextQualifiers() const;
+
 private:
+  const StructuredData::Dictionary &GetLanguageOptions() const;
+
+  StructuredData::Dictionary &GetLanguageOptions();
+
   ExecutionPolicy m_execution_policy = default_execution_policy;
   SourceLanguage m_language;
   std::string m_prefix;
@@ -493,6 +538,7 @@ private:
   bool m_stop_others = true;
   bool m_debug = false;
   bool m_trap_exceptions = true;
+  bool m_stop_on_fork = false;
   bool m_repl = false;
   bool m_generate_debug_info = false;
   bool m_ansi_color_errors = false;
@@ -513,6 +559,10 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  /// Dictionary mapping names of language-plugin specific options
+  /// to values.
+  StructuredData::DictionarySP m_language_options_sp = nullptr;
 
   /// During expression evaluation, any SymbolContext in this list will be
   /// used for symbol/function lookup before any other context (except for
@@ -773,9 +823,15 @@ public:
   void ClearScriptedFrameProviderDescriptors();
 
   /// Get all scripted frame provider descriptors for this target.
-  const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+  const llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor> &
   GetScriptedFrameProviderDescriptors() const;
 
+protected:
+  /// Invalidate all potentially cached frame providers for all threads
+  /// and trigger a stack changed event for all threads.
+  void InvalidateThreadFrameProviders();
+
+public:
   // This part handles the breakpoints.
 
   BreakpointList &GetBreakpointList(bool internal = false);
@@ -1085,10 +1141,9 @@ public:
       LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
 
   bool LoadScriptingResources(std::list<Status> &errors,
-                              Stream &feedback_stream,
                               bool continue_on_error = true) {
-    return m_images.LoadScriptingResourcesInTarget(
-        this, errors, feedback_stream, continue_on_error);
+    return m_images.LoadScriptingResourcesInTarget(this, errors,
+                                                   continue_on_error);
   }
 
   /// Get accessor for the images for this process.
@@ -1611,6 +1666,201 @@ public:
 
   typedef std::shared_ptr<StopHook> StopHookSP;
 
+  // Target Hooks
+  //
+  // Hooks fire on target lifecycle events. There are two flows:
+  //
+  // Command-based hooks: the user specifies which triggers the hook responds
+  //   to (--on-load, --on-unload, --on-stop) and provides a list of commands.
+  //   All commands run for every trigger the hook is signed up for.
+  //
+  // Python class hooks: the user provides a Python class name and optional
+  //   extra_args that will be passed to the hook init method (-k key -v value).
+  //   The class controls which events it handles by implementing the
+  //   corresponding callback methods (handle_module_loaded,
+  //   handle_module_unloaded, handle_stop). Triggers are set automatically
+  //   based on which methods exist.
+  class Hook : public UserID {
+  public:
+    Hook(const Hook &rhs);
+    virtual ~Hook() = default;
+
+    enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
+
+    HookKind GetHookKind() const { return m_kind; }
+
+    /// Individual trigger bits. Combine with bitwise OR to form a trigger mask.
+    // FIXME: Add kProcessExit, kProcessDetach, etc. as needed.
+    enum TriggerBit : uint32_t {
+      kModulesLoaded = (1u << 0),
+      kModulesUnloaded = (1u << 1),
+      kProcessStop = (1u << 2),
+    };
+
+    lldb::TargetSP &GetTarget() { return m_target_sp; }
+
+    bool IsEnabled() { return m_enabled; }
+    void SetIsEnabled(bool enabled) { m_enabled = enabled; }
+
+    /// Return the bitmask of triggers this hook responds to.
+    /// Each bit corresponds to a TriggerBit value.
+    uint32_t GetTriggerMask() const { return m_trigger_mask; }
+
+    /// Return true if this hook fires on the given trigger.
+    bool FiresOn(uint32_t trigger) const { return m_trigger_mask & trigger; }
+
+    // Filter fields
+
+    /// Set the symbol context specifier. The hook takes ownership.
+    void SetSCSpecifier(SymbolContextSpecifier *specifier);
+    SymbolContextSpecifier *GetSCSpecifier() { return m_sc_specifier_sp.get(); }
+
+    /// Check if the execution context passes the specifier and thread spec
+    /// filters. Always returns true if no filters are set.
+    bool ExecutionContextPasses(const ExecutionContext &exe_ctx);
+
+    /// Set the thread specifier. The hook takes ownership.
+    void SetThreadSpecifier(ThreadSpec *specifier);
+    ThreadSpec *GetThreadSpecifier() { return m_thread_spec_up.get(); }
+
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
+    // Reaction settings
+
+    void SetAutoContinue(bool auto_continue) {
+      m_auto_continue = auto_continue;
+    }
+    bool GetAutoContinue() const { return m_auto_continue; }
+
+    void SetSuppressOutput(bool suppress_output) {
+      m_suppress_output = suppress_output;
+    }
+    bool GetSuppressOutput() const { return m_suppress_output; }
+
+    // Event handler methods (default no-ops)
+
+    virtual void HandleModuleLoaded(lldb::StreamSP output) {}
+    virtual void HandleModuleUnloaded(lldb::StreamSP output) {}
+
+    /// Called when the process stops. Returns a StopHookResult indicating
+    /// whether the process should remain stopped or continue.
+    virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                                lldb::StreamSP output) {
+      return StopHook::StopHookResult::NoPreference;
+    }
+
+    virtual void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
+
+  protected:
+    /// Print the filter portion of the description (AutoContinue, Specifier,
+    /// ThreadSpec). Called by subclass GetDescription after printing the
+    /// hook-specific content (commands or class).
+    void GetFilterDescription(Stream &s, lldb::DescriptionLevel level) const;
+    lldb::TargetSP m_target_sp;
+    HookKind m_kind;
+    bool m_enabled = true;
+    uint32_t m_trigger_mask = 0; // No default, triggers must be explicit.
+
+    // Filters
+    lldb::SymbolContextSpecifierSP m_sc_specifier_sp;
+    std::unique_ptr<ThreadSpec> m_thread_spec_up;
+    bool m_at_initial_stop = true;
+
+    // Reaction settings
+    bool m_auto_continue = false;
+    bool m_suppress_output = false;
+
+    Hook(lldb::TargetSP target_sp, lldb::user_id_t uid, HookKind kind);
+  };
+
+  class HookCommandLine : public Hook {
+  public:
+    ~HookCommandLine() override = default;
+
+    /// Replace the trigger mask. \a mask is a bitwise OR of TriggerBit values.
+    void SetTriggerMask(uint32_t mask) { m_trigger_mask = mask; }
+
+    /// Add a trigger to the mask. \a trigger is a single TriggerBit value.
+    void AddTrigger(uint32_t trigger) { m_trigger_mask |= trigger; }
+
+    /// Remove a trigger from the mask. \a trigger is a single TriggerBit value.
+    void RemoveTrigger(uint32_t trigger) { m_trigger_mask &= ~trigger; }
+
+    /// Return the list of commands that this hook runs.
+    StringList &GetCommands() { return m_commands; }
+
+    /// Populate the command list by splitting a single string on newlines.
+    void SetActionFromString(const std::string &string);
+
+    /// Populate the command list from a vector of individual command strings.
+    void SetActionFromStrings(const std::vector<std::string> &strings);
+
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
+
+  private:
+    StringList m_commands;
+
+    HookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid, HookKind::CommandBased) {}
+    friend class Target;
+  };
+
+  class HookScripted : public Hook {
+  public:
+    ~HookScripted() override = default;
+
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
+
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
+
+    Status SetScriptCallback(std::string class_name,
+                             StructuredData::ObjectSP extra_args_sp);
+
+  private:
+    std::string m_class_name;
+    StructuredDataImpl m_extra_args;
+    lldb::ScriptedHookInterfaceSP m_interface_sp;
+
+    HookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid, HookKind::ScriptBased) {}
+    friend class Target;
+  };
+
+  typedef std::shared_ptr<Hook> HookSP;
+
+  HookSP CreateHook(Hook::HookKind kind);
+
+  /// Removes the most recently created hook. Used to roll back a
+  /// hook creation when an error occurs (e.g., invalid script class name
+  /// or empty interactive input).
+  void UndoCreateHook(lldb::user_id_t uid);
+
+  bool RemoveHookByID(lldb::user_id_t uid);
+
+  void RemoveAllHooks();
+
+  HookSP GetHookByID(lldb::user_id_t uid);
+
+  bool SetHookEnabledStateByID(lldb::user_id_t uid, bool enabled);
+
+  void SetAllHooksEnabledState(bool enabled);
+
+  size_t GetNumHooks() const { return m_hooks.size(); }
+
+  HookSP GetHookAtIndex(size_t index);
+
+  void RunModuleHooks(bool is_load);
+
   /// Add an empty stop hook to the Target's stop hook list, and returns a
   /// shared pointer to the new hook.
   StopHookSP CreateStopHook(StopHook::StopHookKind kind, bool internal = false);
@@ -1674,6 +1924,12 @@ public:
   }
 
   void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
+
+  /// Get the list of paths that LLDB will consider automatically loading
+  /// scripting resources from. Currently whether to load scripts
+  /// unconditionally is controlled via the
+  /// `target.load-script-from-symbol-file` setting.
+  FileSpecList GetSafeAutoLoadPaths() const;
 
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
@@ -1776,11 +2032,13 @@ protected:
   TypeSystemMap m_scratch_type_system_map;
 
   /// Map of scripted frame provider descriptors for this target.
-  /// Keys are the provider descriptors ids, values are the descriptors.
-  /// Used to initialize frame providers for new threads.
-  llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor>
+  /// Keys are the provider descriptor IDs, values are the descriptors.
+  /// Insertion order is preserved so that equal-priority providers chain
+  /// in registration order.
+  llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor>
       m_frame_provider_descriptors;
   mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
+  uint32_t m_next_frame_provider_id = 1;
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;
@@ -1796,6 +2054,10 @@ protected:
   bool m_valid;
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
+
+  typedef std::map<lldb::user_id_t, HookSP> HookCollection;
+  HookCollection m_hooks;
+  lldb::user_id_t m_hook_next_id = 0;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
       LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; ///< The globally unique ID
@@ -1812,6 +2074,8 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

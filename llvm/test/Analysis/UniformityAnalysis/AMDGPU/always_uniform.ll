@@ -119,6 +119,22 @@ define void @s_getreg(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 's_get_barrier_state':
+; CHECK: DIVERGENT: i32 %bar
+; CHECK-NOT: DIVERGENT
+define i32 @s_get_barrier_state(i32 %bar) {
+  %result = call i32 @llvm.amdgcn.s.get.barrier.state(i32 %bar)
+  ret i32 %result
+}
+
+; CHECK-LABEL: for function 's_get_named_barrier_state':
+; CHECK: DIVERGENT: ptr addrspace(3) %bar
+; CHECK-NOT: DIVERGENT
+define i32 @s_get_named_barrier_state(ptr addrspace(3) %bar) {
+  %result = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %bar)
+  ret i32 %result
+}
+
 ; CHECK-LABEL: for function 'cluster_workgroup_id_x':
 ; CHECK: ALL VALUES UNIFORM
 define void @cluster_workgroup_id_x(ptr addrspace(1) inreg %out) {
@@ -183,6 +199,15 @@ define void @cluster_workgroup_max_flat_id(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 's_alloc_vgpr':
+; CHECK: ALL VALUES UNIFORM
+define void @s_alloc_vgpr(i32 inreg %n, ptr addrspace(1) inreg %out) {
+  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 %n)
+  %sel = select i1 %scc, i32 1, i32 0
+  store i32 %sel, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK-LABEL: for function 's_memtime':
 ; CHECK: ALL VALUES UNIFORM
 define void @s_memtime(ptr addrspace(1) inreg %out) {
@@ -219,4 +244,4 @@ declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,1" }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" }
