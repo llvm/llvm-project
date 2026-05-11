@@ -57,7 +57,6 @@ static Expected<ParseResult> parseFormatvString(StringRef Fmt) {
     Fmt = Fmt.drop_front(CloseBrace + 1);
 
     // Parse the replacement field: [index] ["," layout] [":" format]
-    // Strip the format part first, since it may contain commas (e.g. {0:$[,]}).
     StringRef IndexStr = Content.substr(0, Content.find_first_of(",:"));
 
     IndexStr = IndexStr.trim();
