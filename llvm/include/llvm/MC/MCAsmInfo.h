@@ -15,7 +15,9 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
@@ -433,18 +435,21 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
-  const MCTargetOptions *TargetOptions = nullptr;
+  // Lowercase identifiers (e.g. register names, dialect keywords) that must be
+  // quoted when used as a symbol name.
+  llvm::DenseSet<llvm::CachedHashStringRef> ReservedIdentifiers;
+
+  const MCTargetOptions &TargetOptions;
 
 public:
-  explicit MCAsmInfo();
+  explicit MCAsmInfo(const MCTargetOptions &Options);
   virtual ~MCAsmInfo();
 
   // Explicitly non-copyable.
   MCAsmInfo(MCAsmInfo const &) = delete;
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
 
-  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
-  void setTargetOptions(const MCTargetOptions &TO) { TargetOptions = &TO; }
+  const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -492,6 +497,14 @@ public:
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
+
+  llvm::DenseSet<llvm::CachedHashStringRef> &getReservedIdentifiers() {
+    return ReservedIdentifiers;
+  }
+  const llvm::DenseSet<llvm::CachedHashStringRef> &
+  getReservedIdentifiers() const {
+    return ReservedIdentifiers;
+  }
 
   virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
                                     const Triple &, raw_ostream &) const {}
@@ -568,7 +581,7 @@ public:
   // Return the assembler dialect that output printing should use. Used by
   // createMCInstPrinter.
   unsigned getOutputAssemblerDialect() const {
-    return TargetOptions->OutputAsmVariant.value_or(AssemblerDialect);
+    return TargetOptions.OutputAsmVariant.value_or(AssemblerDialect);
   }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }

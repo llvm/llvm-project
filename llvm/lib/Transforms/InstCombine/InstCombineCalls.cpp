@@ -3314,7 +3314,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (DS != OtherDS)
         break;
 
-      BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
           break;
@@ -3327,6 +3326,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         AuthDisc = CI->getArgOperand(2);
       } else
         break;
+      BasePtr = CI->getArgOperand(0);
     } else if (const auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr)) {
       // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
       // our purposes, so check for that too.
@@ -3604,44 +3604,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::assume: {
     Value *IIOperand = II->getArgOperand(0);
-    SmallVector<OperandBundleDef, 4> OpBundles;
-    II->getOperandBundlesAsDefs(OpBundles);
-
-    /// This will remove the boolean Condition from the assume given as
-    /// argument and remove the assume if it becomes useless.
-    /// always returns nullptr for use as a return values.
-    auto RemoveConditionFromAssume = [&](Instruction *Assume) -> Instruction * {
-      assert(isa<AssumeInst>(Assume));
-      if (isAssumeWithEmptyBundle(*cast<AssumeInst>(II)))
-        return eraseInstFromFunction(CI);
-      replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
-      return nullptr;
-    };
-    // Remove an assume if it is followed by an identical assume.
-    // TODO: Do we need this? Unless there are conflicting assumptions, the
-    // computeKnownBits(IIOperand) below here eliminates redundant assumes.
-    Instruction *Next = II->getNextNode();
-    if (match(Next, m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))))
-      return RemoveConditionFromAssume(Next);
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
     // the InstCombineIRInserter object.
-    FunctionType *AssumeIntrinsicTy = II->getFunctionType();
-    Value *AssumeIntrinsic = II->getCalledOperand();
     Value *A, *B;
     if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic, A, OpBundles,
-                         II->getName());
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic, B, II->getName());
+      Builder.CreateAssumption(A);
+      Builder.CreateAssumption(B);
       return eraseInstFromFunction(*II);
     }
     // assume(!(a || b)) -> assume(!a); assume(!b);
     if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic,
-                         Builder.CreateNot(A), OpBundles, II->getName());
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic,
-                         Builder.CreateNot(B), II->getName());
+      Builder.CreateAssumption(Builder.CreateNot(A));
+      Builder.CreateAssumption(Builder.CreateNot(B));
       return eraseInstFromFunction(*II);
     }
 
@@ -3685,13 +3661,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!UO || isa<Argument>(UO))
           continue;
 
-        // Compute known bits for the pointer, passing nullptr as context to
-        // avoid computeKnownBits using the assumption we are about to remove
-        // for reasoning.
-        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
-        unsigned TZ = std::min(Known.countMinTrailingZeros(),
-                               Value::MaxAlignmentExponent);
-        if ((1ULL << TZ) < RK.ArgValue)
+        // Compute known bits for the pointer and drop the assume if the
+        // known alignment isn't increased by it.
+        if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
+            RK.ArgValue)
           continue;
         return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
@@ -3728,13 +3701,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(IIOperand,
               m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
         A->getType()->isPointerTy()) {
-      if (auto *Replacement = buildAssumeFromKnowledge(
-              {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
-
-        InsertNewInstBefore(Replacement, Next->getIterator());
-        AC.registerAssumption(Replacement);
-        return RemoveConditionFromAssume(II);
-      }
+      Builder.CreateNonnullAssumption(A);
+      return eraseInstFromFunction(*II);
     }
 
     // Convert alignment assume like:
@@ -3758,15 +3726,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           /// offset and alignment.
           /// TODO: we can generate a GEP instead of merging the alignment with
           /// the offset.
-          RetainedKnowledge RK{Attribute::Alignment,
-                               MinAlign(Offset, AlignMask + 1), A};
-          if (auto *Replacement =
-                  buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
-
-            Replacement->insertAfter(II->getIterator());
-            AC.registerAssumption(Replacement);
-          }
-          return RemoveConditionFromAssume(II);
+          Builder.CreateAlignmentAssumption(getDataLayout(), A,
+                                            MinAlign(Offset, AlignMask + 1));
+          return eraseInstFromFunction(*II);
         }
       }
     }

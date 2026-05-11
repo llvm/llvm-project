@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-signed-bitwise
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/signed-bitwise.html
 
 hicpp-signed-bitwise
 ====================

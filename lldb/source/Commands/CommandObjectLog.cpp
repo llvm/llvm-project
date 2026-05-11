@@ -163,7 +163,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.GetArgumentCount() < 2) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -257,7 +257,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.empty()) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -273,7 +273,8 @@ protected:
       if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
                                  error_stream))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      result.GetErrorStream() << error;
+      else
+        result.AppendError(error);
     }
   }
 };
@@ -372,7 +373,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.empty()) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
