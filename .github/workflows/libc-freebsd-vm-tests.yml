@@ -25,6 +25,7 @@ jobs:
         usesh: true
         sync: nfs
         release: "15.0"
+        mem: 12288
         run: |
           pkg update
           pkg upgrade -y
