@@ -370,7 +370,8 @@ private:
   struct InstructionAllowed : public InstVisitor<InstructionAllowed, bool> {
     InstructionAllowed() = default;
 
-    bool visitBranchInst(BranchInst &BI) { return EnableBranches; }
+    bool visitUncondBrInst(UncondBrInst &BI) { return EnableBranches; }
+    bool visitCondBrInst(CondBrInst &BI) { return EnableBranches; }
     bool visitPHINode(PHINode &PN) { return EnableBranches; }
     // TODO: Handle allocas.
     bool visitAllocaInst(AllocaInst &AI) { return false; }
@@ -405,6 +406,13 @@ private:
         return false;
       // TODO: Update the outliner to capture whether the outlined function
       // needs these extra attributes.
+
+      // `nomerge` states that calls to this function should never be merged
+      // during optimisation. Outlining would have the effect of merging
+      // callsites from separate functions into a single callsite in the
+      // outlined function.
+      if (CI.hasFnAttr(Attribute::NoMerge))
+        return false;
 
       // Functions marked with the swifttailcc and tailcc calling conventions
       // require special handling when outlining musttail functions.  The
@@ -457,7 +465,7 @@ private:
 };
 
 /// Pass to outline similar regions.
-class IROutlinerPass : public PassInfoMixin<IROutlinerPass> {
+class IROutlinerPass : public OptionalPassInfoMixin<IROutlinerPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

@@ -8,10 +8,10 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-LABEL: define i32 @sub_reduction(
 ; CHECK-EPI-SAME: i32 [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-EPI-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-EPI-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[TMP0]], 4
 ; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-EPI-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; CHECK-EPI-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 39, [[TMP1]]
 ; CHECK-EPI-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-EPI:       [[VECTOR_PH]]:
@@ -87,10 +87,10 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-LABEL: define i32 @sub_reduction(
 ; CHECK-PARTIAL-RED-EPI-SAME: i32 [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-PARTIAL-RED-EPI-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[TMP0]], 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 39, [[TMP1]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_PH]]:
@@ -143,7 +143,7 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PARTIAL-RED-EPI:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[STARTVAL]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[LOOP]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

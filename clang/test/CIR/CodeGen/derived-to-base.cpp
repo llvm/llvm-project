@@ -27,14 +27,14 @@ void f() {
 
 // CIR: cir.func {{.*}} @_Z1fv()
 // CIR:   %[[D:.*]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d", init]
-// CIR:   cir.call @_ZN7DerivedC1Ev(%[[D]]) : (!cir.ptr<!rec_Derived>) -> ()
+// CIR:   cir.call @_ZN7DerivedC1Ev(%[[D]]) : (!cir.ptr<!rec_Derived> {{.*}}) -> ()
 // CIR:   %[[D_BASE:.*]] = cir.base_class_addr %[[D]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
-// CIR:   cir.call @_ZN4Base1fEv(%[[D_BASE]]) : (!cir.ptr<!rec_Base>) -> ()
+// CIR:   cir.call @_ZN4Base1fEv(%[[D_BASE]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
 
 // LLVM: define {{.*}}void @_Z1fv()
 // LLVM:   %[[D:.*]] = alloca %struct.Derived
-// LLVM:   call void @_ZN7DerivedC1Ev(ptr %[[D]])
-// LLVM:   call void @_ZN4Base1fEv(ptr %[[D]])
+// LLVM:   call void @_ZN7DerivedC1Ev(ptr {{.*}} %[[D]])
+// LLVM:   call void @_ZN4Base1fEv(ptr {{.*}} %[[D]])
 
 // OGCG: define {{.*}}void @_Z1fv()
 // OGCG:   %[[D:.*]] = alloca %struct.Derived
@@ -52,13 +52,13 @@ void callBaseUsingDerived(Derived *derived) {
 // CIR:   cir.store %[[DERIVED_ARG]], %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED:.*]] = cir.load{{.*}} %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED_BASE:.*]] = cir.base_class_addr %[[DERIVED]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
-// CIR:   cir.call @_Z7useBaseP4Base(%[[DERIVED_BASE]]) : (!cir.ptr<!rec_Base>) -> ()
+// CIR:   cir.call @_Z7useBaseP4Base(%[[DERIVED_BASE]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
 
-// LLVM: define {{.*}} void @_Z20callBaseUsingDerivedP7Derived(ptr %[[DERIVED_ARG:.*]])
+// LLVM: define {{.*}} void @_Z20callBaseUsingDerivedP7Derived(ptr {{.*}} %[[DERIVED_ARG:.*]])
 // LLVM:   %[[DERIVED_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[DERIVED_ARG]], ptr %[[DERIVED_ADDR]]
 // LLVM:   %[[DERIVED:.*]] = load ptr, ptr %[[DERIVED_ADDR]]
-// LLVM:   call void @_Z7useBaseP4Base(ptr %[[DERIVED]])
+// LLVM:   call void @_Z7useBaseP4Base(ptr {{.*}} %[[DERIVED]])
 
 // OGCG: define {{.*}} void @_Z20callBaseUsingDerivedP7Derived(ptr {{.*}} %[[DERIVED_ARG:.*]])
 // OGCG:   %[[DERIVED_ADDR:.*]] = alloca ptr
@@ -80,7 +80,7 @@ Base *returnBaseFromDerived(Derived* derived) {
 // CIR:   %[[BASE:.*]] = cir.load{{.*}} %[[BASE_ADDR]]
 // CIR:   cir.return %[[BASE]] : !cir.ptr<!rec_Base>
 
-// LLVM: define {{.*}} ptr @_Z21returnBaseFromDerivedP7Derived(ptr %[[DERIVED_ARG:.*]])
+// LLVM: define {{.*}} ptr @_Z21returnBaseFromDerivedP7Derived(ptr {{.*}} %[[DERIVED_ARG:.*]])
 // LLVM:   %[[DERIVED_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[DERIVED_ARG]], ptr %[[DERIVED_ADDR]]
 // LLVM:   %[[DERIVED:.*]] = load ptr, ptr %[[DERIVED_ADDR]]

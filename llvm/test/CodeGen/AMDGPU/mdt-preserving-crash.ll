@@ -212,4 +212,4 @@ cleanup.cont:                                     ; preds = %if.end15, %if.end
   ret void
 }
 
-attributes #0 = { "uniform-work-group-size"="true" }
+attributes #0 = { "uniform-work-group-size" }

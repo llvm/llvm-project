@@ -486,20 +486,20 @@ Count leading zeros, trailing zeros, or number of set bits.
 
 .. code-block:: none
 
-  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
-  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTLZ_ZERO_POISON %1
+  %2:_(s33) = G_CTTZ_ZERO_POISON %1
   %2:_(s33) = G_CTPOP %1
 
-G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Count leading zeros or trailing zeros. If the value is zero then the result is
-undefined.
+poison.
 
 .. code-block:: none
 
-  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
-  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTLZ_ZERO_POISON %1
+  %2:_(s33) = G_CTTZ_ZERO_POISON %1
 
 G_CTLS
 ^^^^^^
@@ -930,6 +930,21 @@ Unlike in SelectionDAG, atomic loads are expressed with the same
 opcodes as regular loads. G_LOAD, G_SEXTLOAD and G_ZEXTLOAD may all
 have atomic memory operands.
 
+G_FPEXTLOAD
+^^^^^^^^^^^
+
+Generic floating-point extending load. Expects a MachineMemOperand in addition
+to explicit operands. Loads a floating-point value from memory and extends it
+to a larger floating-point type.
+
+The memory size must be smaller than the result type. For example, loading an
+f32 value from memory and extending it to f64, or loading an f16 value and
+extending it to f32.
+
+.. code-block:: none
+
+  %1:_(s64) = G_FPEXTLOAD %0:_(p0) :: (load (s32))
+
 G_INDEXED_LOAD
 ^^^^^^^^^^^^^^
 
@@ -955,6 +970,21 @@ operands. If the stored value size is greater than the memory size,
 the high bits are implicitly truncated. If this is a vector store, the
 high elements are discarded (i.e. this does not function as a per-lane
 vector, truncating store)
+
+G_FPTRUNCSTORE
+^^^^^^^^^^^^^^
+
+Generic floating-point truncating store. Expects a MachineMemOperand in
+addition to explicit operands. Truncates a floating-point value to a smaller
+floating-point type and stores it to memory.
+
+The memory size must be smaller than the source value type. For example,
+truncating an f64 value to f32 and storing it, or truncating an f32 value
+to f16 and storing it.
+
+.. code-block:: none
+
+  G_FPTRUNCSTORE %0:_(s64), %1:_(p0) :: (store (s32))
 
 G_INDEXED_STORE
 ^^^^^^^^^^^^^^^

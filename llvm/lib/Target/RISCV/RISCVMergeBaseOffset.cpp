@@ -43,6 +43,7 @@ public:
                          MachineInstr &TailShXAdd, Register GSReg);
 
   bool foldIntoMemoryOps(MachineInstr &Hi, MachineInstr &Lo);
+  bool foldShxaddIntoScaledMemory(MachineInstr &Hi, MachineInstr &Lo);
 
   RISCVMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
 
@@ -337,7 +338,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
   MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
   switch (Tail.getOpcode()) {
   default:
-    LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
+    LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr: "
                       << Tail);
     break;
   case RISCV::ADDI:
@@ -384,6 +385,29 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
   }
 
   return false;
+}
+
+static void overwriteMachineOperandInPlace(MachineOperand &MO,
+                                           const MachineOperand &ImmOp) {
+  switch (ImmOp.getType()) {
+  case MachineOperand::MO_ConstantPoolIndex:
+    MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_MCSymbol:
+    MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
+    MO.setOffset(ImmOp.getOffset());
+    break;
+  case MachineOperand::MO_BlockAddress:
+    MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
+                  ImmOp.getTargetFlags());
+    break;
+  default:
+    report_fatal_error("unsupported machine operand type");
+    break;
+  }
 }
 
 bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
@@ -445,6 +469,34 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
              "Expected base address use");
       // All load/store instructions must use the same offset.
       int64_t Offset = UseMI.getOperand(2).getImm();
+      if (CommonOffset && Offset != CommonOffset)
+        return false;
+      CommonOffset = Offset;
+      break;
+    }
+    case RISCV::PseudoCCLD:
+    case RISCV::PseudoCCLW:
+    case RISCV::PseudoCCLWU:
+    case RISCV::PseudoCCLH:
+    case RISCV::PseudoCCLHU:
+    case RISCV::PseudoCCLB:
+    case RISCV::PseudoCCLBU: {
+      // The SFB Pseudos are like their non-SFB counterparts but have more
+      // operands.
+      if (UseMI.getOperand(2).isFI())
+        return false;
+      // Register defined by Lo should not be the (tied) false value, or a
+      // register used in the branch predicate.
+      if (DestReg == UseMI.getOperand(1).getReg() ||
+          DestReg == UseMI.getOperand(5).getReg())
+        return false;
+      if (UseMI.getOperand(6).isReg() &&
+          DestReg == UseMI.getOperand(6).getReg())
+        return false;
+      assert(DestReg == UseMI.getOperand(2).getReg() &&
+             "Expected base address use");
+      // All load/store instructions must use the same offset.
+      int64_t Offset = UseMI.getOperand(3).getImm();
       if (CommonOffset && Offset != CommonOffset)
         return false;
       CommonOffset = Offset;
@@ -537,30 +589,57 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       auto &InlineAsmMemoryOpIndexes = InlineAsmMemoryOpIndexesMap[&UseMI];
       for (unsigned I : InlineAsmMemoryOpIndexes) {
         MachineOperand &MO = UseMI.getOperand(I + 1);
-        switch (ImmOp.getType()) {
-        case MachineOperand::MO_GlobalAddress:
-          MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        case MachineOperand::MO_MCSymbol:
-          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
-          MO.setOffset(ImmOp.getOffset());
-          break;
-        case MachineOperand::MO_BlockAddress:
-          MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        default:
-          report_fatal_error("unsupported machine operand type");
-          break;
-        }
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     } else {
+      unsigned ImmIdx;
+      switch (UseMI.getOpcode()) {
+      case RISCV::INLINEASM:
+      case RISCV::INLINEASM_BR:
+        llvm_unreachable("Should have been dealt with before this else");
+      case RISCV::PseudoCCLD:
+      case RISCV::PseudoCCLW:
+      case RISCV::PseudoCCLWU:
+      case RISCV::PseudoCCLH:
+      case RISCV::PseudoCCLHU:
+      case RISCV::PseudoCCLB:
+      case RISCV::PseudoCCLBU:
+        ImmIdx = 3;
+        break;
+      case RISCV::LB:
+      case RISCV::LH:
+      case RISCV::LH_INX:
+      case RISCV::LW:
+      case RISCV::LW_INX:
+      case RISCV::LBU:
+      case RISCV::LHU:
+      case RISCV::LWU:
+      case RISCV::LD:
+      case RISCV::LD_RV32:
+      case RISCV::FLH:
+      case RISCV::FLW:
+      case RISCV::FLD:
+      case RISCV::SB:
+      case RISCV::SH:
+      case RISCV::SH_INX:
+      case RISCV::SW:
+      case RISCV::SW_INX:
+      case RISCV::SD:
+      case RISCV::SD_RV32:
+      case RISCV::FSH:
+      case RISCV::FSW:
+      case RISCV::FSD:
+        ImmIdx = 2;
+        break;
+      default:
+        llvm_unreachable("Unknown Instruction");
+      }
+
+      MachineOperand &MO = UseMI.getOperand(ImmIdx);
       if (Hi.getOpcode() == RISCV::QC_E_LI) {
-        UseMI.getOperand(2).ChangeToImmediate(0);
+        MO.ChangeToImmediate(0);
       } else {
-        UseMI.removeOperand(2);
-        UseMI.addOperand(ImmOp);
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     }
   }
@@ -572,6 +651,122 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
   MRI->replaceRegWith(Lo.getOperand(0).getReg(), Hi.getOperand(0).getReg());
   Lo.eraseFromParent();
+  return true;
+}
+
+// Try to fold sequences of the form:
+//   Hi/lo:    qc.e.li vreg1, s           -> qc.e.li vreg1, s+imm
+//   TailAdd:  shxadd vreg2, vreg3, vreg1 -> deleted
+//   Tail:     lx vreg4, imm(vreg2)       -> qc.lrx vreg4, vreg1, vreg3, (1-7)
+bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
+                                                         MachineInstr &Lo) {
+  if (!ST->hasVendorXqcisls() || ST->is64Bit())
+    return false;
+
+  if (Hi.getOpcode() != RISCV::QC_E_LI)
+    return false;
+
+  Register BaseReg = Hi.getOperand(0).getReg();
+  if (!BaseReg.isVirtual() || !MRI->hasOneUse(BaseReg))
+    return false;
+
+  MachineInstr &ShxAdd = *MRI->use_instr_begin(BaseReg);
+  unsigned ShxOpc = ShxAdd.getOpcode();
+  unsigned ShAmt = 0;
+  switch (ShxOpc) {
+  default:
+    return false;
+  case RISCV::SH1ADD:
+    ShAmt = 1;
+    break;
+  case RISCV::SH2ADD:
+    ShAmt = 2;
+    break;
+  case RISCV::SH3ADD:
+    ShAmt = 3;
+    break;
+  case RISCV::QC_SHLADD:
+    uint8_t ShlImm = ShxAdd.getOperand(3).getImm();
+    if (ShlImm > 7)
+      return false;
+    ShAmt = ShlImm;
+    break;
+  }
+
+  // shxadd Rd, Rs1, Rs2
+  Register ScaledReg = ShxAdd.getOperand(0).getReg();
+  Register IndexReg = ShxAdd.getOperand(1).getReg();
+
+  if (!IndexReg.isVirtual())
+    return false;
+
+  if (ShxAdd.getOperand(2).getReg() != BaseReg)
+    return false;
+
+  if (!ScaledReg.isVirtual() || !MRI->hasOneUse(ScaledReg))
+    return false;
+
+  MachineInstr &TailMem = *MRI->use_instr_begin(ScaledReg);
+  unsigned Opc = TailMem.getOpcode();
+  unsigned NewOpc = 0;
+
+  switch (Opc) {
+  case RISCV::LB:
+    NewOpc = RISCV::QC_LRB;
+    break;
+  case RISCV::LBU:
+    NewOpc = RISCV::QC_LRBU;
+    break;
+  case RISCV::LH:
+    NewOpc = RISCV::QC_LRH;
+    break;
+  case RISCV::LHU:
+    NewOpc = RISCV::QC_LRHU;
+    break;
+  case RISCV::LW:
+    NewOpc = RISCV::QC_LRW;
+    break;
+  case RISCV::SB:
+    NewOpc = RISCV::QC_SRB;
+    break;
+  case RISCV::SH:
+    NewOpc = RISCV::QC_SRH;
+    break;
+  case RISCV::SW:
+    NewOpc = RISCV::QC_SRW;
+    break;
+  default:
+    return false;
+  }
+
+  if (!TailMem.getOperand(1).isReg() ||
+      TailMem.getOperand(1).getReg() != ScaledReg)
+    return false;
+  if (!TailMem.getOperand(2).isImm())
+    return false;
+  int64_t Imm = TailMem.getOperand(2).getImm();
+
+  // Update QC_E_LI offset.
+  int64_t NewOffset = SignExtend64<32>(Hi.getOperand(1).getOffset() + Imm);
+
+  Hi.getOperand(1).setOffset(NewOffset);
+
+  // Build scaled load/store.
+  auto *TII = ST->getInstrInfo();
+  auto *MBB = TailMem.getParent();
+
+  // Ensure index register satisfies GPRNoX0 class required by QC_LR*/QC_SR*.
+  MRI->constrainRegClass(IndexReg, &RISCV::GPRNoX0RegClass);
+
+  BuildMI(*MBB, TailMem, TailMem.getDebugLoc(), TII->get(NewOpc))
+      .add(TailMem.getOperand(0))
+      .addReg(BaseReg, getKillRegState(ShxAdd.getOperand(2).isKill()))
+      .addReg(IndexReg, getKillRegState(ShxAdd.getOperand(1).isKill()))
+      .addImm(ShAmt)
+      .cloneMemRefs(TailMem);
+
+  TailMem.eraseFromParent();
+  ShxAdd.eraseFromParent();
   return true;
 }
 
@@ -591,6 +786,7 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
         continue;
       MadeChange |= detectAndFoldOffset(Hi, *Lo);
       MadeChange |= foldIntoMemoryOps(Hi, *Lo);
+      MadeChange |= foldShxaddIntoScaledMemory(Hi, *Lo);
     }
   }
 

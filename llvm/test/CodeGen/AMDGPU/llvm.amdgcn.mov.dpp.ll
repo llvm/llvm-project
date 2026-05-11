@@ -1,7 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,PREGFX10,PREGFX10-OPT %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG,PREGFX10,PREGFX10-OPT %s
 ; RUN: llc -O0 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-NOOPT,PREGFX10,PREGFX10-NOOPT %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-GISEL %s
 
 ; FIXME: The register allocator / scheduler should be able to avoid these hazards.
 
@@ -78,10 +79,12 @@ define amdgpu_kernel void @mov_dpp64_test(ptr addrspace(1) %out, i64 %in1) {
 }
 
 ; VI-LABEL: {{^}}mov_dpp64_imm_test:
-; VI-OPT-DAG: s_mov_b32 s[[SOLD_LO:[0-9]+]], 0x3afaedd9
-; VI-OPT-DAG: s_movk_i32 s[[SOLD_HI:[0-9]+]], 0x7047
-; VI-OPT-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], s[[SOLD_LO]]
-; VI-OPT-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], s[[SOLD_HI]]
+; VI-OPT-SDAG-DAG: s_mov_b32 s[[SOLD_LO:[0-9]+]], 0x3afaedd9
+; VI-OPT-SDAG-DAG: s_movk_i32 s[[SOLD_HI:[0-9]+]], 0x7047
+; VI-OPT-SDAG-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], s[[SOLD_LO]]
+; VI-OPT-SDAG-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], s[[SOLD_HI]]
+; VI-OPT-GISEL-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], 0x3afaedd9
+; VI-OPT-GISEL-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], 0x7047
 ; VI-OPT-DAG: v_mov_b32_dpp v[[OLD_LO]], v[[OLD_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; VI-OPT-DAG: v_mov_b32_dpp v[[OLD_HI]], v[[OLD_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; VI-NOOPT-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1

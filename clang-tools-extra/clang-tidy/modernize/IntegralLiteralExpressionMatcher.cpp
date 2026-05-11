@@ -107,9 +107,9 @@ static LiteralSize literalTokenSize(const Token &Tok) {
     if (std::isdigit(Text[End]))
       break;
 
-    if (std::toupper(Text[End]) == 'U')
+    if (std::toupper(Text[End]) == 'U') {
       SeenUnsigned = true;
-    else if (std::toupper(Text[End]) == 'L') {
+    } else if (std::toupper(Text[End]) == 'L') {
       if (SeenLong)
         SeenLongLong = true;
       SeenLong = true;

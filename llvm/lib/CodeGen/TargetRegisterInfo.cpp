@@ -50,15 +50,20 @@ static cl::opt<unsigned>
                      cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(
-    const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-    regclass_iterator RCE, const char *const *SRINames,
-    const SubRegCoveredBits *SubIdxRanges, const LaneBitmask *SRILaneMasks,
-    LaneBitmask SRICoveringLanes, const RegClassInfo *const RCIs,
+    const TargetRegisterInfoDesc *ID,
+    ArrayRef<const TargetRegisterClass *> RegisterClasses,
+    const char *SubRegIndexStrings, ArrayRef<uint32_t> SubRegIndexNameOffsets,
+    const SubRegCoveredBits *SubRegIdxRanges,
+    const LaneBitmask *SubRegIndexLaneMasks, LaneBitmask CoveringLanes,
+    const RegClassInfo *const RCInfos,
     const MVT::SimpleValueType *const RCVTLists, unsigned Mode)
-    : InfoDesc(ID), SubRegIndexNames(SRINames), SubRegIdxRanges(SubIdxRanges),
-      SubRegIndexLaneMasks(SRILaneMasks), RegClassBegin(RCB), RegClassEnd(RCE),
-      CoveringLanes(SRICoveringLanes), RCInfos(RCIs), RCVTLists(RCVTLists),
-      HwMode(Mode) {}
+    : InfoDesc(ID), SubRegIndexStrings(SubRegIndexStrings),
+      SubRegIndexNameOffsets(SubRegIndexNameOffsets),
+      SubRegIdxRanges(SubRegIdxRanges),
+      SubRegIndexLaneMasks(SubRegIndexLaneMasks),
+      RegClassBegin(RegisterClasses.begin()),
+      RegClassEnd(RegisterClasses.end()), CoveringLanes(CoveringLanes),
+      RCInfos(RCInfos), RCVTLists(RCVTLists), HwMode(Mode) {}
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
 
@@ -619,6 +624,27 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
   }
 
   return BestIdx;
+}
+
+bool TargetRegisterInfo::checkSubRegInterference(Register RegA, unsigned SubA,
+                                                 Register RegB,
+                                                 unsigned SubB) const {
+  if (RegA == RegB && SubA == SubB)
+    return true;
+  if (RegA.isVirtual() && RegB.isVirtual()) {
+    if (RegA != RegB)
+      return false;
+    LaneBitmask LA = getSubRegIndexLaneMask(SubA);
+    LaneBitmask LB = getSubRegIndexLaneMask(SubB);
+    return (LA & LB).any();
+  }
+  if (RegA.isPhysical() && RegB.isPhysical()) {
+    MCRegister MCRegA = SubA ? getSubReg(RegA, SubA) : RegA.asMCReg();
+    MCRegister MCRegB = SubB ? getSubReg(RegB, SubB) : RegB.asMCReg();
+    assert(MCRegB.isValid() && MCRegA.isValid() && "invalid subregister");
+    return MCRegisterInfo::regsOverlap(MCRegA, MCRegB);
+  }
+  llvm_unreachable("mixed virtual and physical registers");
 }
 
 unsigned TargetRegisterInfo::getSubRegIdxSize(unsigned Idx) const {

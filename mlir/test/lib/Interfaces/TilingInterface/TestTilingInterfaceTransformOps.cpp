@@ -77,7 +77,7 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
     llvm::SmallDenseSet<Operation *> tiledAndFusedOps =
         collectTiledAndFusedOps(tilingInterfaceOp);
     llvm::DenseSet<Operation *> yieldReplacementsFor;
-    for (auto op : tiledAndFusedOps) {
+    for (auto *op : tiledAndFusedOps) {
       if (llvm::any_of(op->getUsers(), [&](Operation *user) {
             return dominanceInfo.properlyDominates(tilingInterfaceOp, user);
           })) {
@@ -272,7 +272,7 @@ DiagnosedSilenceableFailure transform::TestFuseConsumerUsingSliceOp::apply(
     TransformState &state) {
   SmallVector<Operation *> slices;
   for (auto op : getTargets()) {
-    auto sliceOp = *state.getPayloadOps(op).begin();
+    auto *sliceOp = *state.getPayloadOps(op).begin();
     slices.push_back(sliceOp);
   }
 

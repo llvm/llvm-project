@@ -376,6 +376,12 @@ mlir:llvm:
       - mlir/**/LLVM*
       - mlir/**/LLVM*/**
 
+mlir:nvvm:
+  - changed-files:
+    - any-glob-to-any-file:
+      - mlir/**/NVVM*
+      - mlir/**/NVVM*/**
+
 mlir:linalg:
   - changed-files:
     - any-glob-to-any-file:
@@ -692,10 +698,11 @@ clang:analysis:
 clang:ssaf:
   - changed-files:
     - any-glob-to-any-file:
-      - clang/include/clang/Analysis/Scalable/**
-      - clang/lib/Analysis/Scalable/**
-      - clang/unittests/Analysis/Scalable/**
       - clang/docs/ScalableStaticAnalysisFramework/**
+      - clang/include/clang/ScalableStaticAnalysisFramework/**
+      - clang/lib/ScalableStaticAnalysisFramework/**
+      - clang/test/Analysis/Scalable/**
+      - clang/unittests/ScalableStaticAnalysisFramework/**
 
 clang:static analyzer:
   - changed-files:
@@ -1424,6 +1431,7 @@ clang:temporal-safety:
       - clang/test/Sema/*lifetime-safety*
       - clang/test/Sema/*lifetime-analysis*
       - clang/test/Analysis/LifetimeSafety/**
+      - clang/docs/LifetimeSafety.rst
 
 clang:as-a-library:
   - changed-files:
@@ -1466,3 +1474,9 @@ infrastructure:
   - changed-files:
     - any-glob-to-any-file:
       - .ci/**
+
+tools:llubi:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/tools/llubi/**
+      - llvm/test/tools/llubi/**

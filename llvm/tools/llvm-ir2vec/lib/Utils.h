@@ -84,18 +84,33 @@ enum RelationType {
   ArgRelation = 2   ///< Instruction to operand relationship (ArgRelation + N)
 };
 
+/// Load an IR2Vec vocabulary from a JSON file on disk.
+Expected<std::shared_ptr<Vocabulary>> loadVocabulary(StringRef VocabPath);
+
 /// Helper class for collecting IR triplets and generating embeddings
 class IR2VecTool {
 private:
   Module &M;
   ModuleAnalysisManager MAM;
-  std::unique_ptr<Vocabulary> Vocab;
+
+  /// \note The API around vocab object is not thread-safe.
+  /// Specifically, calling setVocabulary() on an instance while
+  /// another thread reading the Vocab object with the same instance
+  /// can cause a data race on this internal shared_ptr<Vocabulary> member.
+  std::shared_ptr<Vocabulary> Vocab;
 
 public:
   explicit IR2VecTool(Module &M) : M(M) {}
 
-  /// Initialize the IR2Vec vocabulary from the specified file path.
-  Error initializeVocabulary(StringRef VocabPath);
+  /// Creates the embedding object for downstream embedding streaming
+  Expected<std::unique_ptr<Embedder>>
+  createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const;
+
+  /// Sets the vocabulary for this tool instance.
+  /// This allows sharing the same vocabulary instance across multiple
+  /// IR2VecTool instances, which is useful for generating embeddings for
+  /// multiple functions without needing to reload the vocabulary each time.
+  Error setVocabulary(std::shared_ptr<Vocabulary> V);
 
   /// Generate triplets for a single function
   /// Returns a TripletResult with:
@@ -127,6 +142,9 @@ public:
   /// Get embeddings for all basic blocks in a function
   Expected<BBEmbeddingsMap> getBBEmbeddingsMap(const Function &F,
                                                IR2VecKind Kind) const;
+  /// Get embeddings for all instructions in a function
+  Expected<InstEmbeddingsMap> getInstEmbeddingsMap(const Function &F,
+                                                   IR2VecKind Kind) const;
 
   /// Generate embeddings for the entire module
   void writeEmbeddingsToStream(raw_ostream &OS, EmbeddingLevel Level) const;

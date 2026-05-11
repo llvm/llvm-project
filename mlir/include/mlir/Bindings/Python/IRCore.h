@@ -4,13 +4,13 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRCORE_H
 #define MLIR_BINDINGS_PYTHON_IRCORE_H
 
 #include <cstddef>
+#include <exception>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -78,6 +78,18 @@ public:
   }
   PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
+  PyObjectRef &operator=(const PyObjectRef &other) {
+    referrent = other.referrent;
+    object = other.object;
+    return *this;
+  }
+  PyObjectRef &operator=(PyObjectRef &&other) noexcept {
+    referrent = other.referrent;
+    object = std::move(other.object);
+    other.referrent = nullptr;
+    assert(!other.object);
+    return *this;
+  }
   ~PyObjectRef() = default;
 
   int getRefCount() {
@@ -279,7 +291,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Context";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Context";
   static PyMlirContext &resolve();
 };
 
@@ -325,6 +337,10 @@ public:
   /// is taken by calling this function.
   static PyLocation createFromCapsule(nanobind::object capsule);
 
+  /// Returns the most-derived Location subclass registered for this TypeID,
+  /// or self.
+  nanobind::typed<nanobind::object, PyLocation> maybeDownCast();
+
 private:
   MlirLocation loc;
 };
@@ -361,7 +377,7 @@ public:
   PyDiagnosticSeverity getSeverity();
   PyLocation getLocation();
   nanobind::str getMessage();
-  nanobind::tuple getNotes();
+  nanobind::typed<nanobind::tuple, PyDiagnostic> getNotes();
 
   /// Materialized diagnostic information. This is safe to access outside the
   /// diagnostic callback.
@@ -525,7 +541,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Location";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -739,12 +755,12 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object
+  static nanobind::typed<nanobind::object, PyOperation>
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
-               std::optional<nanobind::list> resultTypeList,
-               nanobind::list operandList,
+               std::optional<nanobind::sequence> resultTypeList,
+               nanobind::sequence operandList,
                std::optional<nanobind::dict> attributes,
                std::optional<std::vector<PyBlock *>> successors,
                std::optional<int> regions, PyLocation &location,
@@ -958,16 +974,12 @@ public:
     auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyType &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1101,16 +1113,12 @@ public:
           return PyType(attr.getContext(), mlirAttributeGetType(attr))
               .maybeDownCast();
         });
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) -> PyTypeID {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyAttribute &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1156,6 +1164,131 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStringAttrGetTypeID;
   static inline const MlirStringRef name = mlirStringAttrGetName();
+
+  static void bindDerived(ClassTy &c);
+};
+
+/// CRTP base class for Python classes that subclass Location and should be
+/// castable from it (i.e. via something like FileLineColLoc(loc)).
+template <typename DerivedTy, typename BaseTy = PyLocation>
+class MLIR_PYTHON_API_EXPORTED PyConcreteLocation : public BaseTy {
+public:
+  // Derived classes must define statics for:
+  //   IsAFunctionTy isaFunction
+  //   const char *pyClassName
+  using ClassTy = nanobind::class_<DerivedTy, BaseTy>;
+  using IsAFunctionTy = bool (*)(MlirLocation);
+  using GetTypeIDFunctionTy = MlirTypeID (*)();
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  using Base = PyConcreteLocation;
+
+  PyConcreteLocation() = default;
+  PyConcreteLocation(PyMlirContextRef contextRef, MlirLocation loc)
+      : BaseTy(std::move(contextRef), loc) {}
+  PyConcreteLocation(PyLocation &orig)
+      : PyConcreteLocation(orig.getContext(), castFrom(orig)) {}
+
+  static MlirLocation castFrom(PyLocation &orig) {
+    if (!DerivedTy::isaFunction(orig.get())) {
+      auto origRepr =
+          nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
+      throw nanobind::value_error((std::string("Cannot cast location to ") +
+                                   DerivedTy::pyClassName + " (from " +
+                                   origRepr + ")")
+                                      .c_str());
+    }
+    return orig.get();
+  }
+
+  static void bind(nanobind::module_ &m) {
+    ClassTy cls(m, DerivedTy::pyClassName, nanobind::is_generic());
+    cls.def(nanobind::init<PyLocation &>(), nanobind::keep_alive<0, 1>(),
+            nanobind::arg("cast_from_loc"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
+    cls.def("__repr__", [](DerivedTy &self) {
+      PyPrintAccumulator printAccum;
+      printAccum.parts.append(DerivedTy::pyClassName);
+      printAccum.parts.append("(");
+      mlirLocationPrint(self, printAccum.getCallback(),
+                        printAccum.getUserData());
+      printAccum.parts.append(")");
+      return printAccum.join();
+    });
+    if (DerivedTy::getTypeIdFunction) {
+      PyGlobals::get().registerTypeCaster(
+          DerivedTy::getTypeIdFunction(),
+          nanobind::cast<nanobind::callable>(nanobind::cpp_function(
+              [](PyLocation pyLoc) -> DerivedTy { return pyLoc; })),
+          /*replace*/ true);
+    }
+    DerivedTy::bindDerived(cls);
+  }
+
+  /// Implemented by derived classes to add methods to the Python subclass.
+  static void bindDerived(ClassTy &m) {}
+};
+
+class MLIR_PYTHON_API_EXPORTED PyUnknownLocation
+    : public PyConcreteLocation<PyUnknownLocation> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirLocationIsAUnknown;
+  static constexpr const char *pyClassName = "UnknownLoc";
+  using PyConcreteLocation::PyConcreteLocation;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLocationUnknownGetTypeID;
+
+  static void bindDerived(ClassTy &c);
+};
+
+class MLIR_PYTHON_API_EXPORTED PyFileLineColLocation
+    : public PyConcreteLocation<PyFileLineColLocation> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirLocationIsAFileLineColRange;
+  static constexpr const char *pyClassName = "FileLineColLoc";
+  using PyConcreteLocation::PyConcreteLocation;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLocationFileLineColRangeGetTypeID;
+
+  static void bindDerived(ClassTy &c);
+};
+
+class MLIR_PYTHON_API_EXPORTED PyNameLocation
+    : public PyConcreteLocation<PyNameLocation> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirLocationIsAName;
+  static constexpr const char *pyClassName = "NameLoc";
+  using PyConcreteLocation::PyConcreteLocation;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLocationNameGetTypeID;
+
+  static void bindDerived(ClassTy &c);
+};
+
+class MLIR_PYTHON_API_EXPORTED PyCallSiteLocation
+    : public PyConcreteLocation<PyCallSiteLocation> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirLocationIsACallSite;
+  static constexpr const char *pyClassName = "CallSiteLoc";
+  using PyConcreteLocation::PyConcreteLocation;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLocationCallSiteGetTypeID;
+
+  static void bindDerived(ClassTy &c);
+};
+
+class MLIR_PYTHON_API_EXPORTED PyFusedLocation
+    : public PyConcreteLocation<PyFusedLocation> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirLocationIsAFused;
+  static constexpr const char *pyClassName = "FusedLoc";
+  using PyConcreteLocation::PyConcreteLocation;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLocationFusedGetTypeID;
 
   static void bindDerived(ClassTy &c);
 };
@@ -1322,12 +1455,17 @@ private:
 };
 
 /// Custom exception that allows access to error diagnostic information. This is
-/// converted to the `ir.MLIRError` python exception when thrown.
-struct MLIR_PYTHON_API_EXPORTED MLIRError {
+/// translated to the `ir.MLIRError` python exception when thrown.
+struct MLIR_PYTHON_API_EXPORTED MLIRError : std::exception {
   MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
       : message(std::move(message)),
         errorDiagnostics(std::move(errorDiagnostics)) {}
+  const char *what() const noexcept override { return message.c_str(); }
+
+  /// Bind the MLIRError exception class to the given module.
+  static void bind(nanobind::module_ &m);
+
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
@@ -1351,15 +1489,17 @@ inline MlirStringRef toMlirStringRef(const nanobind::bytes &s) {
 /// Create a block, using the current location context if no locations are
 /// specified.
 MlirBlock MLIR_PYTHON_API_EXPORTED
-createBlock(const nanobind::sequence &pyArgTypes,
-            const std::optional<nanobind::sequence> &pyArgLocs);
+createBlock(const nanobind::typed<nanobind::sequence, PyType> &pyArgTypes,
+            const std::optional<nanobind::typed<nanobind::sequence, PyLocation>>
+                &pyArgLocs);
 
 struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
   static bool dunderContains(const std::string &attributeKind);
   static nanobind::callable
   dunderGetItemNamed(const std::string &attributeKind);
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                 nanobind::callable func, bool replace);
+                                 nanobind::callable func, bool replace,
+                                 bool allow_existing);
 
   static void bind(nanobind::module_ &m);
 };
@@ -1367,22 +1507,6 @@ struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
 //------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
-
-class MLIR_PYTHON_API_EXPORTED PyRegionIterator {
-public:
-  PyRegionIterator(PyOperationRef operation, int nextIndex)
-      : operation(std::move(operation)), nextIndex(nextIndex) {}
-
-  PyRegionIterator &dunderIter() { return *this; }
-
-  nanobind::typed<nanobind::object, PyRegion> dunderNext();
-
-  static void bind(nanobind::module_ &m);
-
-private:
-  PyOperationRef operation;
-  intptr_t nextIndex = 0;
-};
 
 /// Regions of an op are fixed length and indexed numerically so are represented
 /// with a sequence-like container.
@@ -1393,10 +1517,6 @@ public:
 
   PyRegionList(PyOperationRef operation, intptr_t startIndex = 0,
                intptr_t length = -1, intptr_t step = 1);
-
-  PyRegionIterator dunderIter();
-
-  static void bindDerived(ClassTy &c);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -1609,6 +1729,7 @@ class MLIR_PYTHON_API_EXPORTED PyOpResultList
     : public Sliceable<PyOpResultList, PyOpResult> {
 public:
   static constexpr const char *pyClassName = "OpResultList";
+  static constexpr std::array<const char *, 1> typeParams = {"_T"};
   using SliceableT = Sliceable<PyOpResultList, PyOpResult>;
 
   PyOpResultList(PyOperationRef operation, intptr_t startIndex = 0,
@@ -1685,6 +1806,7 @@ class MLIR_PYTHON_API_EXPORTED PyOpOperandList
     : public Sliceable<PyOpOperandList, PyValue> {
 public:
   static constexpr const char *pyClassName = "OpOperandList";
+  static constexpr std::array<const char *, 1> typeParams = {"_T"};
   using SliceableT = Sliceable<PyOpOperandList, PyValue>;
 
   PyOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,
@@ -1851,6 +1973,8 @@ public:
                      const nanobind::object &target, PyMlirContext &context);
 
   static void bind(nanobind::module_ &m);
+
+  static inline const char *typeIDAttr = "_trait_typeid";
 };
 
 namespace PyDynamicOpTraits {
@@ -1877,7 +2001,11 @@ MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
 template <class Func, typename... Args>
 inline nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
-  return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
+  static SafeInit<nanobind::object> classmethodFn([]() {
+    return std::make_unique<nanobind::object>(
+        nanobind::module_::import_("builtins").attr("classmethod"));
+  });
+  return classmethodFn.get()(cf);
 }
 
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

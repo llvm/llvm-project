@@ -354,7 +354,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           if (!S.empty()) {
             const uint64_t ReadSize = 4;
 
-            DataExtractor Extractor(S, /*IsLittleEndian=*/true, 8);
+            DataExtractor Extractor(S, /*IsLittleEndian=*/true);
             DataExtractor::Cursor Offset(0);
             while (Offset && Offset.tell() < S.size()) {
               uint64_t ReadNow = std::min(ReadSize, S.size() - Offset.tell());
@@ -429,10 +429,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
-  Triple TT(M.getTargetTriple());
-  if (TT.getArch() == Triple::r600)
-    return false;
-
   auto *PrintfFunction = M.getFunction("printf");
   if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
       M.getModuleFlag("openmp"))

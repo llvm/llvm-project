@@ -42,7 +42,7 @@ class CXXRecordDecl;
 class DeclaratorDecl;
 class FunctionDecl;
 class LocationContext;
-class StackFrameContext;
+class StackFrame;
 class Stmt;
 
 namespace ento {
@@ -345,10 +345,11 @@ public:
   /// space.
   /// \param type pointer type.
   loc::ConcreteInt makeNullWithType(QualType type) {
+    type =
+        type->isAtomicType() ? type->getAs<AtomicType>()->getValueType() : type;
+
     // We cannot use the `isAnyPointerType()`.
-    assert((type->isPointerType() || type->isObjCObjectPointerType() ||
-            type->isBlockPointerType() || type->isNullPtrType() ||
-            type->isReferenceType()) &&
+    assert((type->isObjCObjectPointerType() || Loc::isLocType(type)) &&
            "makeNullWithType must use pointer type");
 
     // The `sizeof(T&)` is `sizeof(T)`, thus we replace the reference with a
@@ -390,12 +391,10 @@ public:
   }
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D,
-                               const StackFrameContext *SFC);
+  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D, const StackFrame *SF);
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D,
-                               const StackFrameContext *SFC);
+  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D, const StackFrame *SF);
 };
 
 SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,

@@ -23,7 +23,7 @@ entry:
   %a3 = alloca [0 x i8]
   %a4 = alloca i16
   %a5 = alloca [0 x i8]
-  %coro.id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %coro.id = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr null)
   %coro.size = call i64 @llvm.coro.size.i64()
   %coro.alloc = call ptr @malloc(i64 %coro.size)
   %coro.state = call ptr @llvm.coro.begin(token %coro.id, ptr %coro.alloc)
@@ -56,13 +56,13 @@ cleanup:                                          ; preds = %wakeup, %entry
 
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CORO_ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @foo.resumers)
+; CHECK-NEXT:    [[CORO_ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr @foo.resumers)
 ; CHECK-NEXT:    [[CORO_ALLOC:%.*]] = call ptr @malloc(i64 24)
 ; CHECK-NEXT:    [[CORO_STATE:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[CORO_ID]], ptr [[CORO_ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[CORO_STATE]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[FOO_FRAME:%.*]], ptr [[CORO_STATE]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CORO_STATE]], i64 8
 ; CHECK-NEXT:    store ptr @foo.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[FOO_FRAME]], ptr [[CORO_STATE]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[CORO_STATE]], i64 22
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -70,22 +70,24 @@ cleanup:                                          ; preds = %wakeup, %entry
 ; CHECK-LABEL: define internal fastcc void @foo.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[CORO_STATE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
-; CHECK-NEXT:    [[A1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME:%.*]], ptr [[CORO_STATE]], i32 0, i32 2
-; CHECK-NEXT:    [[A4_RELOAD_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[CORO_STATE]], i32 0, i32 3
+; CHECK-NEXT:    [[A1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CORO_STATE]], i64 16
+; CHECK-NEXT:    [[A4_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CORO_STATE]], i64 20
 ; CHECK-NEXT:    call void @usePointer(ptr [[CORO_STATE]])
 ; CHECK-NEXT:    call void @usePointer(ptr [[A1_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @usePointer(ptr [[CORO_STATE]])
 ; CHECK-NEXT:    call void @usePointer(ptr [[CORO_STATE]])
 ; CHECK-NEXT:    call void @usePointer(ptr [[A4_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @usePointer2(ptr [[CORO_STATE]])
-; CHECK-NEXT:    call void @free(ptr [[CORO_STATE]])
+; CHECK-NEXT:    [[CORO_MEMFREE:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[CORO_STATE]])
+; CHECK-NEXT:    call void @free(ptr [[CORO_MEMFREE]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal fastcc void @foo.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[CORO_STATE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    call void @free(ptr [[CORO_STATE]])
+; CHECK-NEXT:    [[CORO_MEMFREE:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[CORO_STATE]])
+; CHECK-NEXT:    call void @free(ptr [[CORO_MEMFREE]])
 ; CHECK-NEXT:    ret void
 ;
 ;

@@ -18,11 +18,11 @@ entry:
   %cmp10 = icmp eq i32 %width, 0
   br i1 %cmp10, label %for.end, label %for.body.lr.ph
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %conv1 = zext i16 %src to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.lr.ph
+for.body:
   %i.012 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
   %sp.011 = phi ptr [ %row, %for.body.lr.ph ], [ %incdec.ptr, %for.inc ]
   %0 = load i8, ptr %sp.011, align 1
@@ -30,21 +30,21 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %cmp2 = icmp eq i32 %conv, %conv1
   br i1 %cmp2, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %1 = load i16, ptr %dst, align 2
   %conv4 = trunc i16 %1 to i8
   store i8 %conv4, ptr %sp.011, align 1
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw i32 %i.012, 1
   %incdec.ptr = getelementptr inbounds i8, ptr %sp.011, i64 1
   %exitcond = icmp eq i32 %inc, %width
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.inc
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }

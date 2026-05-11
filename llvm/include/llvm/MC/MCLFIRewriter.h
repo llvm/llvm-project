@@ -15,12 +15,12 @@
 #ifndef LLVM_MC_MCLFIREWRITER_H
 #define LLVM_MC_MCLFIREWRITER_H
 
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class MCContext;
 class MCInst;
 class MCSubtargetInfo;
 class MCStreamer;
@@ -54,6 +54,8 @@ public:
   LLVM_ABI bool mayStore(const MCInst &Inst) const;
 
   LLVM_ABI bool mayModifyRegister(const MCInst &Inst, MCRegister Reg) const;
+  LLVM_ABI bool explicitlyModifiesRegister(const MCInst &Inst,
+                                           MCRegister Reg) const;
 
   virtual ~MCLFIRewriter() = default;
   virtual bool rewriteInst(const MCInst &Inst, MCStreamer &Out,

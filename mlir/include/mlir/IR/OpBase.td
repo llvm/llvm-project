@@ -141,6 +141,14 @@ class ParentOneOf<list<string> ops>
     : ParamNativeOpTrait<"HasParent", !interleave(ops, ", ")>,
       StructuralOpTrait;
 
+// Op has the provided one as an ancestor (anywhere in the parent chain).
+class HasAncestor<string op> : ParamNativeOpTrait<"HasAncestor", op>,
+                               StructuralOpTrait;
+
+class AncestorOneOf<list<string> ops>
+    : ParamNativeOpTrait<"HasAncestor", !interleave(ops, ", ")>,
+      StructuralOpTrait;
+
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
 // attribute content is used.
@@ -543,9 +551,19 @@ class AnyMatchOperatorTrait<list<string> names, string operator,
   list<string> values = names;
 }
 
+// Verifies that all named operands/results of a shaped type have the same
+// element count. Fails if any operand or result is not a ShapedType or has
+// dynamic dimensions, since the element count cannot be determined statically.
 class AllElementCountsMatch<list<string> names> :
-    AllMatchSameOperatorTrait<names, ElementCount<"_self">.result,
-                              "element count">;
+    PredOpTrait<"all of {" # !interleave(names, ", ") # "} have same element count",
+        And<[
+            // Fail if any type is not a ShapedType or has dynamic dimensions.
+            Neg<AnyMatchOperatorPred<names,
+                "!::mlir::isa<::mlir::ShapedType>($_self.getType()) || "
+                "!::llvm::cast<::mlir::ShapedType>($_self.getType()).hasStaticShape()">>,
+            // All types are statically shaped; verify element counts match.
+            AllMatchSameOperatorPred<names, ElementCount<"_self">.result>
+        ]>>;
 
 class AllElementTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, ElementType<"_self">.result,

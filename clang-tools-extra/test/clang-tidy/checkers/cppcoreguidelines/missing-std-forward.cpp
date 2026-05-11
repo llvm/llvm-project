@@ -1,20 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-missing-std-forward %t -- -- -fno-delayed-template-parsing
 
-// NOLINTBEGIN
-namespace std {
-
-template <typename T> struct remove_reference      { using type = T; };
-template <typename T> struct remove_reference<T&>  { using type = T; };
-template <typename T> struct remove_reference<T&&> { using type = T; };
-
-template <typename T> using remove_reference_t = typename remove_reference<T>::type;
-
-template <typename T> constexpr T &&forward(remove_reference_t<T> &t) noexcept;
-template <typename T> constexpr T &&forward(remove_reference_t<T> &&t) noexcept;
-template <typename T> constexpr remove_reference_t<T> &&move(T &&x);
-
-} // namespace std
-// NOLINTEND
+#include <utility>
 
 struct S {
   S();
@@ -93,6 +79,18 @@ template <class T>
 void lambda_value_capture_copy(T&& t) {
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: forwarding reference parameter 't' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
   [&,t]() { T other = std::forward<T>(t); };
+}
+
+template <class T>
+void lambda_capture_list_brace_init_no_forward(T&& t) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: forwarding reference parameter 't' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+  [t2{t}] { t2(); };
+}
+
+template <class T>
+void lambda_capture_list_paren_init_no_forward(T&& t) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: forwarding reference parameter 't' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+  [t2(t)] { t2(); };
 }
 
 template <typename X>
@@ -180,6 +178,16 @@ void lambda_value_reference_capture_list(T&& t) {
 template <class T>
 void lambda_value_reference_auxiliary_var(T&& t) {
   [&x = t]() { T other = std::forward<T>(x); };
+}
+
+template <typename T>
+void lambda_value_reference_capture_list_brace_init(T&& t) {
+  [t2{std::forward<T>(t)}] { t2(); };
+}
+
+template <typename T>
+void lambda_value_reference_capture_list_paren_init(T&& t) {
+  [t2(std::forward<T>(t))] { t2(); };
 }
 
 } // namespace negative_cases

@@ -39,7 +39,7 @@ define void @test_masked_store_success_v4i8(<4 x i8> %x, ptr %ptr, <4 x i1> %mas
 define void @test_masked_store_success_v4i16(<4 x i16> %x, ptr %ptr, <4 x i1> %mask) {
 ; AVX-LABEL: test_masked_store_success_v4i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,u,4,u,8,u,12,u,8,u,12,u,12,u,14,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX-NEXT:    vpsraw $15, %xmm1, %xmm1
 ; AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -49,7 +49,7 @@ define void @test_masked_store_success_v4i16(<4 x i16> %x, ptr %ptr, <4 x i1> %m
 ;
 ; AVX2-LABEL: test_masked_store_success_v4i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,u,4,u,8,u,12,u,8,u,12,u,12,u,14,u]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsraw $15, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero

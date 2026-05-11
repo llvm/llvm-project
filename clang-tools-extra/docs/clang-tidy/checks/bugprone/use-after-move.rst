@@ -193,16 +193,19 @@ Use
 ---
 
 Any occurrence of the moved variable that is not a reinitialization (see below)
-is considered to be a use.
+or an explicit call to the variable destructor is considered to be a use.
 
-An exception to this are objects of type ``std::unique_ptr``,
-``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``.
 An exception to this are objects of type ``std::unique_ptr``,
 ``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``,
 which can be reinitialized via ``reset``. For smart pointers specifically, the
 moved-from objects have a well-defined state of being ``nullptr``s, and only
 ``operator*``, ``operator->`` and ``operator[]`` are considered bad accesses as
 they would be dereferencing a ``nullptr``.
+
+User-defined types can be annotated as having the same semantics as standard
+smart pointers with ``[[clang::annotate("clang-tidy",
+"bugprone-use-after-move", "null_after_move")]]``. This expresses that a
+moved-from object of this type is a null pointer.
 
 If multiple uses occur after a move, only the first of these is flagged.
 

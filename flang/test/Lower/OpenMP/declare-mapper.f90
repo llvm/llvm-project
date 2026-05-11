@@ -11,6 +11,10 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-7.use.f90 -o - | FileCheck %t/omp-declare-mapper-7.use.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -module-dir %t %t/omp-declare-mapper-8.mod.f90 -o - >/dev/null
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-8.use.f90 -o - | FileCheck %t/omp-declare-mapper-8.use.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %t/omp-declare-mapper-9.f90 -o - | FileCheck %t/omp-declare-mapper-9.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-10.f90 -o - | FileCheck %t/omp-declare-mapper-10.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-11.f90 -o - | FileCheck %t/omp-declare-mapper-11.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-12.f90 -o - | FileCheck %t/omp-declare-mapper-12.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -360,3 +364,162 @@ program use_module_default_mapper
     a%x = 8
   !$omp end target
 end program use_module_default_mapper
+
+!--- omp-declare-mapper-9.f90
+! Test mapper usage in target update to/from clauses
+program target_update_mapper
+  type :: typ
+    integer :: a
+    integer :: b
+  end type typ
+
+  !CHECK: omp.declare_mapper @_QQFcustom : !fir.type<_QFTtyp{a:i32,b:i32}>
+  !CHECK: omp.declare_mapper @_QQFtyp_omp_default_mapper : !fir.type<_QFTtyp{a:i32,b:i32}>
+
+  !$omp declare mapper(typ :: t) map(t%a, t%b)
+  !$omp declare mapper(custom: typ :: t) map(t%a)
+
+  type(typ) :: t
+
+  ! Test target update to with custom mapper
+  !CHECK: %[[MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFcustom) -> {{.*}}
+  !CHECK: omp.target_update map_entries(%[[MAP_INFO]] : {{.*}})
+  !$omp target update to(mapper(custom): t)
+
+  ! Test target update from with custom mapper
+  !CHECK: %[[MAP_INFO2:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(from) capture(ByRef) mapper(@_QQFcustom) -> {{.*}}
+  !CHECK: omp.target_update map_entries(%[[MAP_INFO2]] : {{.*}})
+  !$omp target update from(mapper(custom): t)
+
+  ! Test target update to with default mapper
+  !CHECK: %[[MAP_INFO3:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFtyp_omp_default_mapper) -> {{.*}}
+  !CHECK: omp.target_update map_entries(%[[MAP_INFO3]] : {{.*}})
+  !$omp target update to(mapper(default): t)
+
+end program target_update_mapper
+
+!--- omp-declare-mapper-10.f90
+! Test that default mapper is applied only to the matching type (dtype_a) and not to dtype_b
+subroutine declare_mapper_10
+    type dtype_a
+        real, allocatable :: arr(:)
+        real, allocatable :: arr2(:)
+    end type dtype_a
+
+    type dtype_b
+        real, allocatable :: arr(:)
+        real, allocatable :: arr2(:)
+    end type dtype_b
+
+   ! CHECK: omp.declare_mapper @[[MAPPER_A:_QQFdeclare_mapper_10dtype_a_omp_default_mapper]] : !fir.type<_QFdeclare_mapper_10Tdtype_a
+   !$omp declare mapper(dtype_a :: ty) map(ty%arr, ty%arr2)
+
+    type(dtype_a), pointer :: dtype
+    type(dtype_b), pointer :: dtype2
+    integer :: var_a, var_b
+
+    ! dtype (dtype_a) should have mapper applied via var_ptr_ptr
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_A]]){{.*}}{name = ""}
+    ! CHECK: omp.map.info {{.*}} {name = "dtype"}
+    ! var_a and var_b are integers - no mapper
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) -> !fir.ref<i32> {name = "var_a"}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) -> !fir.ref<i32> {name = "var_b"}
+    ! dtype2 (dtype_b) should NOT have mapper applied
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) -> {{.*}} {name = ""}
+    ! CHECK-NOT: mapper(@
+    ! CHECK: omp.map.info {{.*}} {name = "dtype2"}
+    ! CHECK: omp.target_enter_data
+    !$omp target enter data map(to: dtype, var_a, var_b, dtype2)
+end subroutine
+
+!--- omp-declare-mapper-11.f90
+! Test that named mapper overrides default mapper when explicitly specified
+subroutine declare_mapper_11
+    type dtype_a
+        real, allocatable :: arr(:)
+        real, allocatable :: arr2(:)
+    end type dtype_a
+
+    type dtype_b
+        real, allocatable :: arr(:)
+        real, allocatable :: arr2(:)
+    end type dtype_b
+
+   ! CHECK-DAG: omp.declare_mapper @[[MAPPER_TESTING:_QQFdeclare_mapper_11testing]] : !fir.type<_QFdeclare_mapper_11Tdtype_a
+   ! CHECK-DAG: omp.declare_mapper @[[MAPPER_DEFAULT:_QQFdeclare_mapper_11dtype_a_omp_default_mapper]] : !fir.type<_QFdeclare_mapper_11Tdtype_a
+   !$omp declare mapper(dtype_a :: ty) map(ty%arr, ty%arr2)
+   !$omp declare mapper(testing : dtype_a :: ty) map(ty%arr)
+
+    type(dtype_a), pointer :: dtype
+    type(dtype_b), pointer :: dtype2
+    integer :: var_a, var_b
+
+    ! dtype (dtype_a) should use named mapper "testing" when explicitly specified
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_TESTING]]){{.*}}{name = ""}
+    ! CHECK: omp.map.info {{.*}} {name = "dtype"}
+    ! var_a and var_b are integers - no mapper
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) -> !fir.ref<i32> {name = "var_a"}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) -> !fir.ref<i32> {name = "var_b"}
+    ! dtype2 (dtype_b) should NOT have mapper - no mapper defined for dtype_b
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) -> {{.*}} {name = ""}
+    ! CHECK-NOT: mapper(@
+    ! CHECK: omp.map.info {{.*}} {name = "dtype2"}
+    ! CHECK: omp.target_enter_data
+    !$omp target enter data map(mapper(testing), to: dtype, var_a, var_b, dtype2)
+end subroutine
+
+!--- omp-declare-mapper-12.f90
+! Test multiple types with different mappers - each type gets its appropriate mapper
+subroutine declare_mapper_12
+    type dtype_a
+        real, allocatable :: arr(:)
+        real, allocatable :: arr2(:)
+    end type dtype_a
+
+    type dtype_b
+        real, allocatable :: arr(:)
+        real, allocatable :: arr2(:)
+    end type dtype_b
+
+    type dtype_c
+        real, allocatable :: arr(:)
+    end type dtype_c
+
+    type dtype_d
+        real, allocatable :: arr2(:)
+    end type dtype_d
+
+   ! CHECK-DAG: omp.declare_mapper @[[MAPPER_TESTING:_QQFdeclare_mapper_12testing]] : !fir.type<_QFdeclare_mapper_12Tdtype_c
+   ! CHECK-DAG: omp.declare_mapper @[[MAPPER_B:_QQFdeclare_mapper_12dtype_b_omp_default_mapper]] : !fir.type<_QFdeclare_mapper_12Tdtype_b
+   ! CHECK-DAG: omp.declare_mapper @[[MAPPER_A:_QQFdeclare_mapper_12dtype_a_omp_default_mapper]] : !fir.type<_QFdeclare_mapper_12Tdtype_a
+   !$omp declare mapper(dtype_a :: ty) map(ty%arr, ty%arr2)
+   !$omp declare mapper(dtype_b :: ty) map(ty%arr, ty%arr2)
+   !$omp declare mapper(testing : dtype_c :: ty) map(ty%arr)
+
+    type(dtype_a), pointer :: dtype
+    type(dtype_b), pointer :: dtype2
+    type(dtype_c), pointer :: dtype3
+    type(dtype_d), pointer :: dtype4
+
+    ! When mapper(testing) is specified:
+    ! - dtype (dtype_a): gets default mapper for dtype_a (testing is for dtype_c)
+    ! - dtype2 (dtype_b): gets default mapper for dtype_b
+    ! - dtype3 (dtype_c): gets "testing" mapper (exact match)
+    ! - dtype4 (dtype_d): no mapper (no mapper defined for dtype_d)
+
+    ! dtype should get MAPPER_A (default for dtype_a)
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_A]]){{.*}}{name = ""}
+    ! CHECK: omp.map.info {{.*}} {name = "dtype"}
+    ! dtype2 should get MAPPER_B (default for dtype_b)
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_B]]){{.*}}{name = ""}
+    ! CHECK: omp.map.info {{.*}} {name = "dtype2"}
+    ! dtype3 should get MAPPER_TESTING (explicit match)
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_TESTING]]){{.*}}{name = ""}
+    ! CHECK: omp.map.info {{.*}} {name = "dtype3"}
+    ! dtype4 should NOT have any mapper
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) -> {{.*}} {name = ""}
+    ! CHECK-NOT: mapper(@
+    ! CHECK: omp.map.info {{.*}} {name = "dtype4"}
+    ! CHECK: omp.target_enter_data
+    !$omp target enter data map(mapper(testing), to: dtype, dtype2, dtype3, dtype4)
+end subroutine

@@ -191,15 +191,50 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
-  module @kernels {
+  gpu.module @kernels_container {
     gpu.func @kernel_1(%arg1 : !llvm.ptr) kernel {
       gpu.return
     }
   }
 
   func.func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr) {
-    // expected-error@+1 {{kernel module 'kernels' is undefined}}
+    // expected-error@+1 {{kernel container 'kernels' is undefined}}
     gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  module @kernels {
+    // expected-error@+1 {{'gpu.func' op expects parent op 'gpu.module'}}
+    gpu.func @kernel_1(%arg1 : !llvm.ptr) kernel {
+      gpu.return
+    }
+  }
+
+  func.func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr) {
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    gpu.func @kernel_1() kernel {
+      gpu.return
+    }
+  }
+
+  func.func @launch_func_async_deps_and_async_object(%sz : index,
+                                                     %stream : !llvm.ptr) {
+    %dep = gpu.wait async
+    // expected-error@+1 {{cannot have both async dependencies and an explicit async object}}
+    %t = gpu.launch_func async [%dep] <%stream : !llvm.ptr> @kernels::@kernel_1
+        blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
     return
   }
 }
@@ -1083,6 +1118,23 @@ func.func @warp_mismatch_rank(%laneid: index) {
   %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
     %0 = arith.constant dense<2>: vector<128xi32>
     gpu.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/181450:
+// gpu.warp_execute_on_lane_0 with a wrong terminator used to crash with an
+// unchecked cast in getTerminator(). The verifier should now emit a proper
+// error instead.
+func.func @warp_execute_wrong_terminator() {
+  %laneid = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %v = vector.create_mask %c0 : vector<4xi1>
+  // expected-error @+1 {{'gpu.warp_execute_on_lane_0' op expected body to be terminated with 'gpu.yield'}}
+  %out = gpu.warp_execute_on_lane_0(%laneid)[32] -> vector<4xi1> {
+    affine.yield %v : vector<4xi1>
   }
   return
 }

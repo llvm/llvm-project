@@ -22,12 +22,14 @@ Using Clang as a Compiler
    ClangCommandLineReference
    AttributeReference
    DiagnosticsReference
+   AMDGPUBuiltinReference
    WarningSuppressionMappings
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   LifetimeSafety
    SafeBuffers
-   ScalableStaticAnalysisFramework/Framework
+   ScalableStaticAnalysisFramework/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer
@@ -66,7 +68,9 @@ Using Clang as a Compiler
    APINotes
    DebuggingCoroutines
    AMDGPUSupport
+   RISCVSupport
    CXXTypeAwareAllocators
+   CIR/index
    CommandGuide/index
    FAQ
 
@@ -125,8 +129,6 @@ Design Documents
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
-   ClangIRCodeDuplication
-   ClangIRCleanupAndEHDesign
 
 Indices and tables
 ==================

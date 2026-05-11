@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s
+
 ; Make sure the globals constant initializers are not prone to host endianess 
 ; issues.
 
@@ -29,3 +31,8 @@
 ; CHECK-DAG: .b8 GblU[12] = {7, 6, 0, 0, 5, 4, 3, 2, 1};
 @GblU = global {i16, i32, i8} {i16 1543, i32 33752069, i8 1}
 
+; CHECK-DAG: .b8 Gblv4i16[8] = {205, 171, 205, 171, 205, 171, 205, 171};
+@Gblv4i16 = global <4 x i16> splat(i16 43981)
+
+; CHECK-DAG: .b8 Gblv4f32[16] = {0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63};
+@Gblv4f32 = global <4 x float> splat(float 1.0)

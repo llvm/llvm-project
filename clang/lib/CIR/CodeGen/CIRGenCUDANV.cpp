@@ -49,6 +49,12 @@ private:
   mlir::Value prepareKernelArgs(CIRGenFunction &cgf, mlir::Location loc,
                                 FunctionArgList &args);
   mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) override;
+
+  mlir::Operation *getKernelStub(mlir::Operation *handle) override {
+    auto it = kernelStubs.find(handle);
+    assert(it != kernelStubs.end());
+    return it->second;
+  }
   std::string addPrefixToName(StringRef funcName) const;
   std::string addUnderscoredPrefixToName(StringRef funcName) const;
 
@@ -144,10 +150,14 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
 
   // The default stream is usually stream 0 (the legacy default stream).
   // For per-thread default stream, we need a different LaunchKernel function.
-  StringRef kernelLaunchAPI = "LaunchKernel";
+  std::string kernelLaunchAPI = "LaunchKernel";
   if (cgm.getLangOpts().GPUDefaultStream ==
-      LangOptions::GPUDefaultStreamKind::PerThread)
-    cgm.errorNYI("CUDA/HIP Stream per thread");
+      LangOptions::GPUDefaultStreamKind::PerThread) {
+    if (cgm.getLangOpts().HIP)
+      kernelLaunchAPI += "_spt";
+    else if (cgm.getLangOpts().CUDA)
+      kernelLaunchAPI += "_ptsz";
+  }
 
   std::string launchKernelName = addPrefixToName(kernelLaunchAPI);
   const IdentifierInfo &launchII =

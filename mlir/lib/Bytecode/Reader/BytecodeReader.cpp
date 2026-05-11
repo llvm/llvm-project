@@ -144,6 +144,13 @@ public:
   }
   InFlightDiagnostic emitError() const { return ::emitError(fileLoc); }
 
+  /// Emit a warning using the given arguments.
+  template <typename... Args>
+  InFlightDiagnostic emitWarning(Args &&...args) const {
+    return ::emitWarning(fileLoc).append(std::forward<Args>(args)...);
+  }
+  InFlightDiagnostic emitWarning() const { return ::emitWarning(fileLoc); }
+
   /// Parse a single byte from the stream.
   template <typename T>
   LogicalResult parseByte(T &value) {
@@ -1036,6 +1043,10 @@ public:
     return reader.emitError(msg);
   }
 
+  InFlightDiagnostic emitWarning(const Twine &msg) const override {
+    return reader.emitWarning(msg);
+  }
+
   FailureOr<const DialectVersion *>
   getDialectVersion(StringRef dialectName) const override {
     // First check if the dialect is available in the map.
@@ -1492,6 +1503,7 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
     // Try parsing with callbacks first if available.
     for (const auto &callback :
          parserConfig.getBytecodeReaderConfig().getTypeCallbacks()) {
+      size_t savedWorklistSize = deferredWorklist.size();
       if (failed(
               callback->read(dialectReader, entry.dialect->name, entry.entry)))
         return failure();
@@ -1499,14 +1511,17 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
       if (!!entry.entry)
         return success();
 
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
+      // The callback fell through without consuming the encoding. Reset the
+      // reader and restore the deferred worklist: any entries added during the
+      // callback's partial read are stale and must not persist.
+      deferredWorklist.resize(savedWorklistSize);
       reader = EncodingReader(entry.data, reader.getLoc());
     }
   } else {
     // Try parsing with callbacks first if available.
     for (const auto &callback :
          parserConfig.getBytecodeReaderConfig().getAttributeCallbacks()) {
+      size_t savedWorklistSize = deferredWorklist.size();
       if (failed(
               callback->read(dialectReader, entry.dialect->name, entry.entry)))
         return failure();
@@ -1514,8 +1529,10 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
       if (!!entry.entry)
         return success();
 
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
+      // The callback fell through without consuming the encoding. Reset the
+      // reader and restore the deferred worklist: any entries added during the
+      // callback's partial read are stale and must not persist.
+      deferredWorklist.resize(savedWorklistSize);
       reader = EncodingReader(entry.data, reader.getLoc());
     }
   }
@@ -2292,6 +2309,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   // If the encoding was a pair of indices `(src, dst)` for every permutation,
   // reconstruct the shuffle vector for every use. Initialize the shuffle vector
   // as identity, and then apply the mapping encoded in the indices.
+  // This produces shuffle[oldIdx] = newPos (i.e., old_index -> new_position).
   if (customOrder.isIndexPairEncoding) {
     // Return failure if the number of indices was not representing pairs.
     if (shuffle.size() & 1)
@@ -2320,10 +2338,32 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
       accumulator != (((numUses - 1) * numUses) >> 1))
     return failure();
 
-  // Apply the current ordering map onto the shuffle vector to get the final
-  // use-list sorting indices before shuffling.
-  shuffle = SmallVector<unsigned, 4>(llvm::map_range(
-      currentOrder, [&](auto item) { return shuffle[item.first]; }));
+  // Compose the shuffle with the current memory layout to produce the final
+  // indices for shuffleUseList. shuffleUseList(indices) places the use at
+  // current position i into position indices[i], so we need to compute
+  // finalShuffle[readerMemIdx] = writerMemIdx.
+  //
+  // The two encoding paths have different shuffle conventions:
+  //
+  // Index-pair encoding (already normalized above):
+  //   shuffle[writerMemIdx] = sortedPos  (old_index -> new_position)
+  //
+  // Full-shuffle encoding (writer's native format):
+  //   shuffle[sortedPos] = writerMemIdx  (new_position -> old_index)
+  //
+  // In both cases, currentOrder[sortedPos].first gives the readerMemIdx for
+  // a given sorted position. We fold the permutation inversion for the
+  // full-shuffle case directly into the composition to avoid an extra pass.
+  SmallVector<unsigned, 4> finalShuffle(numUses);
+  if (customOrder.isIndexPairEncoding) {
+    for (size_t writerMemIdx = 0; writerMemIdx < numUses; ++writerMemIdx)
+      finalShuffle[currentOrder[shuffle[writerMemIdx]].first] = writerMemIdx;
+  } else {
+    for (size_t sortedPos = 0; sortedPos < numUses; ++sortedPos)
+      finalShuffle[currentOrder[sortedPos].first] = shuffle[sortedPos];
+  }
+  shuffle = std::move(finalShuffle);
+
   value.shuffleUseList(shuffle);
   return success();
 }

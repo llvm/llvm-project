@@ -118,9 +118,9 @@ void func7() {
 // CHECK:   ret void
 
 void func8(int p[10]) {}
-// CHECK: define{{.*}} void @_Z5func8Pi(ptr {{%.*}})
+// CHECK: define{{.*}} void @_Z5func8Pi(ptr noundef {{%.*}})
 // CHECK-NEXT: alloca ptr, i64 1, align 8
 
 void func9(int pp[10][5]) {}
-// CHECK: define{{.*}} void @_Z5func9PA5_i(ptr {{%.*}})
+// CHECK: define{{.*}} void @_Z5func9PA5_i(ptr noundef {{%.*}})
 // CHECK-NEXT: alloca ptr, i64 1, align 8

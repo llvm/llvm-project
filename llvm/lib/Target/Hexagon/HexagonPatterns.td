@@ -1274,7 +1274,9 @@ def FShl32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
 def FShl64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_lsr_i_p_or (S2_asl_i_p $Rs, $S),  $Rt, (Subi<64> $S))>;
 def FShl64r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (S2_lsr_r_p_or (S2_asl_r_p $Rs, $Ru), $Rt, (A2_subri 64, $Ru))>;
+  (S2_lsl_r_p_or (S2_asl_r_p $Rs, (A2_andir $Ru, 63)),
+                  $Rt,
+                  (A2_addi (A2_andir $Ru, 63), -64))>;
 
 // Combined SDNodeXForm: (Divu8 (Subi<64> $S))
 def Divu64_8: SDNodeXForm<imm, [{
@@ -1314,7 +1316,9 @@ def FShr32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
 def FShr64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_asl_i_p_or (S2_lsr_i_p $Rt, $S),  $Rs, (Subi<64> $S))>;
 def FShr64r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (S2_asl_r_p_or (S2_lsr_r_p $Rt, $Ru), $Rs, (A2_subri 64, $Ru))>;
+  (S2_lsr_r_p_or (S2_lsr_r_p $Rt, (A2_andir $Ru, 63)),
+                  $Rs,
+                  (A2_addi (A2_andir $Ru, 63), -64))>;
 
 // Special cases:
 let AddedComplexity = 100 in {
@@ -1743,9 +1747,17 @@ def n8_0ImmPred: PatLeaf<(i32 imm), [{
   return -255 <= V && V <= 0;
 }]>;
 
+def mulnsw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (mul node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoSignedWrap();
+}]>;
+
 // Change the sign of the immediate for Rd=-mpyi(Rs,#u8)
 def: Pat<(mul I32:$Rs, n8_0ImmPred:$n8),
          (M2_mpysin I32:$Rs, (NegImm8 imm:$n8))>;
+
+def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs), (sext V2I16:$Rt))),
+         (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)>;
 
 def: Pat<(add Sext64:$Rs, I64:$Rt),
          (A2_addsp (LoReg Sext64:$Rs), I64:$Rt)>;
@@ -3457,20 +3469,13 @@ def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
-def: Pat<(debugtrap), (Y2_break)>;
+def: Pat<(debugtrap), (J2_trap0 0xDB)>;
 
 // Read cycle counter.
-def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;
-def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
-  [SDNPHasChain]>;
+def : Pat<(i64 (readcyclecounter)), (PS_readcr64 UPCYCLE)>;
 
-def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
-
-// Read time counter.
-def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
-  [SDNPHasChain]>;
-
-def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
+// Read packet counter
+def : Pat<(i64 (readsteadycounter)), (PS_readcr64 UTIMER)>;
 
 def SDTInt32Leaf : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
 def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTPtrLeaf>;

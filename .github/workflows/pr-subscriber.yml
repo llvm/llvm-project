@@ -10,12 +10,17 @@ permissions:
 
 jobs:
   auto-subscribe:
+    # See https://github.blog/changelog/2025-11-07-actions-pull_request_target-and-environment-branch-protections-changes/
+    environment:
+      name: main-branch-only
+      deployment: false
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Checkout Automation Script
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           sparse-checkout: llvm/utils/git/
           ref: main
 
@@ -24,11 +29,23 @@ jobs:
         run: |
           pip install --require-hashes -r requirements.txt
 
+      - id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        with:
+          client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+          permission-contents: read
+          permission-pull-requests: write
+
       - name: Update watchers
         working-directory: ./llvm/utils/git/
+        env:
+          PR_SUBSCRIBER_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           python3 ./github-automation.py \
-            --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
+            --token "$PR_SUBSCRIBER_TOKEN" \
             pr-subscriber \
             --issue-number "${{ github.event.number }}" \
             --label-name "${{ github.event.label.name }}"
