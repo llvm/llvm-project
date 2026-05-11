@@ -2792,11 +2792,11 @@ Address CIRGenFunction::maybeCastStackAddressSpace(
     return alloca;
 
   mlir::OpBuilder::InsertionGuard guard(builder);
-  if (!arraySize) {
+  if (cir::AllocaOp allocaOp = alloca.getUnderlyingAllocaOp()) {
+    builder.setInsertionPointAfter(allocaOp);
+  } else if (!arraySize) {
     mlir::Block *entryBlock = getCurFunctionEntryBlock();
     builder.restoreInsertionPoint(builder.getBestAllocaInsertPoint(entryBlock));
-  } else if (cir::AllocaOp allocaOp = alloca.getUnderlyingAllocaOp()) {
-    builder.setInsertionPointAfter(allocaOp);
   }
 
   mlir::Type destPtrTy =
