@@ -15663,3 +15663,9 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
   if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
     PFPFieldsWithEvaluatedOffset.insert(FD);
 }
+
+bool ASTContext::shouldIgnoreNotesForConstEval(
+    SmallVectorImpl<PartialDiagnosticAt> &Notes) {
+  return getLangOpts().MSVCCompat && Notes.size() == 1 &&
+         Notes[0].second.getDiagID() == diag::note_constexpr_invalid_cast;
+}

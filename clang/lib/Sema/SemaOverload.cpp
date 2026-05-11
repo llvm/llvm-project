@@ -6715,7 +6715,8 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
     Result = ExprError();
   } else {
     Value = Eval.Val;
-
+    if (getASTContext().shouldIgnoreNotesForConstEval(Notes))
+      Notes.clear();
     if (Notes.empty()) {
       // It's a constant expression.
       Expr *E = Result.get();
