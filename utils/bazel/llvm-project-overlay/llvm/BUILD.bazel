@@ -5769,6 +5769,17 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "llvm-extract-bundle-entry-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
+    tbl_outs = {"tools/llvm-objcopy/ExtractBundleEntryOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-objcopy/ExtractBundleEntryOpts.td",
+    deps = [
+        ":OptParserTdFiles",
+    ],
+)
+
 cc_library(
     name = "llvm-objcopy-lib",
     srcs = glob([
@@ -5787,6 +5798,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":llvm-bitcode-strip-opts",
+        ":llvm-extract-bundle-entry-opts",
         ":llvm-installnametool-opts",
         ":llvm-objcopy-opts",
         ":llvm-strip-opts",
@@ -5811,6 +5823,11 @@ binary_alias(
 
 binary_alias(
     name = "llvm-install-name-tool",
+    binary = ":llvm-objcopy",
+)
+
+binary_alias(
+    name = "llvm-extract-bundle-entry",
     binary = ":llvm-objcopy",
 )
 

@@ -82,7 +82,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV1]], 14
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[SRC]], i32 [[VEC_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:

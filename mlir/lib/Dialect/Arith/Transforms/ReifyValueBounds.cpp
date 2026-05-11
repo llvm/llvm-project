@@ -18,7 +18,8 @@
 using namespace mlir;
 using namespace mlir::arith;
 
-static bool isIndexLikeType(Type type, ValueBoundsOptions options) {
+[[maybe_unused]] static bool isIndexLikeType(Type type,
+                                             ValueBoundsOptions options) {
   return type.isIndex() || (options.allowIntegerType && type.isInteger());
 }
 

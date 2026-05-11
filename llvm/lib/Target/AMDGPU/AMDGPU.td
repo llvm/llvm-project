@@ -491,6 +491,10 @@ defm FormattedMUBUFInsts : AMDGPUSubtargetFeature<"formatted-mubuf-insts",
   "Has formatted memory untyped buffer instructions."
 >;
 
+defm VMovB64Inst : AMDGPUSubtargetFeature<"v-mov-b64-inst",
+  "Has v_mov_b64 instruction"
+>;
+
 defm GFX950Insts : AMDGPUSubtargetFeature<"gfx950-insts",
   "Additional instructions for GFX950+",
   /*GenPredicate=*/1,
@@ -1325,8 +1329,16 @@ defm MadU32Inst : AMDGPUSubtargetFeature<"mad-u32-inst",
   "Has v_mad_u32 instruction"
 >;
 
+defm MadNC64_32Insts : AMDGPUSubtargetFeature<"mad-nc-64-32-insts",
+  "Has v_mad_nc_{u64_u32|i64_i32} instructions"
+>;
+
 defm AddMinMaxInsts : AMDGPUSubtargetFeature<"add-min-max-insts",
   "Has v_add_{min|max}_{i|u}32 instructions"
+>;
+
+defm MinMaxI64Insts : AMDGPUSubtargetFeature<"min-max-i64-insts",
+  "Has v_{min|max}_{i|u}64 instructions"
 >;
 
 defm PkAddMinMaxInsts : AMDGPUSubtargetFeature<"pk-add-min-max-insts",
@@ -1766,6 +1778,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureLshlAddU64Inst,
+   FeatureVMovB64Inst,
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
@@ -2110,7 +2123,9 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureMadU32Inst,
+   FeatureMadNC64_32Insts,
    FeatureAddMinMaxInsts,
+   FeatureMinMaxI64Insts,
    FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
@@ -2123,6 +2138,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureMcastLoadInsts,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
+   FeatureVMovB64Inst,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<

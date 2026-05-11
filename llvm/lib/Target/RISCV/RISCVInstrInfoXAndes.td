@@ -838,9 +838,9 @@ let Predicates = [HasVendorXAndesPerf, IsRV64] in {
   defm : Sh2Add_UWPat<NDS_LEA_W_ZE>;
   defm : Sh3Add_UWPat<NDS_LEA_D_ZE>;
 
-  def : Sh1AddPat<NDS_LEA_H_ZE>;
-  def : Sh2AddPat<NDS_LEA_W_ZE>;
-  def : Sh3AddPat<NDS_LEA_D_ZE>;
+  def : Sh1AddPat<NDS_LEA_H>;
+  def : Sh2AddPat<NDS_LEA_W>;
+  def : Sh3AddPat<NDS_LEA_D>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
 let Predicates = [HasVendorXAndesPerf] in {

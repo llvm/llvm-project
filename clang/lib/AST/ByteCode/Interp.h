@@ -3564,6 +3564,17 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool StartInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingBlocks.push_back(Ptr.block());
+  return true;
+}
+
+inline bool EndInit(InterpState &S, CodePtr OpPC) {
+  S.InitializingBlocks.pop_back();
+  return true;
+}
+
 // This is special-cased in the tablegen opcode emitter.
 // Its dispatch function will NOT call InterpNext
 // and instead simply return true.
