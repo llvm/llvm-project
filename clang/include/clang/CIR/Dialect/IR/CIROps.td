@@ -2863,6 +2863,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModel>:$tls_model,
+                       OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$dyn_tls_refs,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitProp:$comdat,
                        UnitProp:$constant,
@@ -2885,6 +2886,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     $linkage
     (`comdat` $comdat^)?
     ($tls_model^)?
+    (`dyn_tls_refs` `=` $dyn_tls_refs^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
     (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?

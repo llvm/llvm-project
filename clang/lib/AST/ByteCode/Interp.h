@@ -3753,6 +3753,22 @@ inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
   return true;
 }
 
+/// Check if the destination array we're initializing can hold the \p NumElems
+/// elements.
+inline bool CheckArrayDestSize(InterpState &S, CodePtr OpPC, size_t NumElems) {
+  if (!CheckArraySize(S, OpPC, NumElems))
+    return false;
+
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!Ptr.isUnknownSizeArray() && NumElems > Ptr.getNumElems()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_small)
+        << Ptr.getNumElems() << NumElems;
+    return false;
+  }
+
+  return true;
+}
+
 inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
