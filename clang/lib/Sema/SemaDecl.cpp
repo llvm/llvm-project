@@ -14715,6 +14715,20 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInit(RecoveryExpr.get());
     }
 
+    // std::init / uninit_decl: a definition without any initializer (after
+    // attempted default-initialization) must either carry [[uninitialized]] or
+    // be initialized by a language rule. Static / thread storage duration is
+    // excluded -- those are zero-initialized; runtime-init concerns are R3's.
+    if (!Var->isInvalidDecl() && !Var->getInit() &&
+        Var->getStorageDuration() == SD_Automatic &&
+        !Var->hasAttr<CXX11UninitializedAttr>()) {
+      static constexpr StringRef Profile = "std::init";
+      static constexpr StringRef Rule = "uninit_decl";
+      if (shouldEmitProfileViolation(Profile, Rule, Var->getLocation()))
+        Diag(Var->getLocation(), diag::err_init_uninit_decl)
+            << Profile << Var->getDeclName();
+    }
+
     CheckCompleteVariableDeclaration(Var);
   }
 }
@@ -14820,6 +14834,17 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
+
+  // std::init / uninit_with_initializer: [[uninitialized]] documents that
+  // the variable is intentionally left uninitialized, so it contradicts an
+  // explicit initializer.
+  if (var->hasInit() && var->hasAttr<CXX11UninitializedAttr>()) {
+    static constexpr StringRef Profile = "std::init";
+    static constexpr StringRef Rule = "uninit_with_initializer";
+    if (shouldEmitProfileViolation(Profile, Rule, var->getLocation()))
+      Diag(var->getLocation(), diag::err_init_uninit_with_initializer)
+          << Profile << var->getDeclName();
+  }
 
   CUDA().MaybeAddConstantAttr(var);
 
@@ -15057,6 +15082,22 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       for (auto &it : Notes)
         Diag(it.first, it.second);
       var->setInvalidDecl();
+    } else if (IsGlobal && [&] {
+                 // std::init / static_runtime_init: paper says non-local
+                 // statics must be initialized at compile or link time.
+                 // Runs before -Wglobal-constructors so the profile error
+                 // (when enforced) takes precedence over the standalone
+                 // warning.
+                 static constexpr StringRef Profile = "std::init";
+                 static constexpr StringRef Rule = "static_runtime_init";
+                 if (!shouldEmitProfileViolation(Profile, Rule,
+                                                 var->getLocation()))
+                   return false;
+                 Diag(var->getLocation(), diag::err_init_static_runtime_init)
+                     << Profile << var->getDeclName();
+                 return true;
+               }()) {
+      // Diagnostic emitted in the lambda above.
     } else if (IsGlobal &&
                !getDiagnostics().isIgnored(diag::warn_global_constructor,
                                            var->getLocation())) {

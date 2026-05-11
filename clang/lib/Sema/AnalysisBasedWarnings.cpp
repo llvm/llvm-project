@@ -1698,6 +1698,7 @@ struct CFGUninitProfileEntry {
 };
 constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
     {"test::uninit_read", /*Rule=*/"", diag::err_profile_uninit_read},
+    {"std::init", "uninit_read", diag::err_init_uninit_read},
 };
 
 bool anyCFGUninitProfileEnforced(const Sema &S) {

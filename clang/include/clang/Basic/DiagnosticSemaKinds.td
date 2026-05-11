@@ -14138,4 +14138,15 @@ def err_profile_type_cast_reinterpret : ProfileRuleError<
   "'reinterpret_cast' is unsafe under profile '%0'">;
 def err_profile_uninit_read : ProfileRuleError<
   "variable %1 is read before initialization under profile '%0'">;
+def err_init_uninit_read : ProfileRuleError<
+  "variable %1 is read before initialization under profile '%0'">;
+def err_init_uninit_decl : ProfileRuleError<
+  "variable %1 must be initialized or marked '[[uninitialized]]' under "
+  "profile '%0'">;
+def err_init_static_runtime_init : ProfileRuleError<
+  "non-local variable %1 requires constant initialization under "
+  "profile '%0'">;
+def err_init_uninit_with_initializer : ProfileRuleError<
+  "variable %1 cannot be both '[[uninitialized]]' and have an initializer "
+  "under profile '%0'">;
 } // end of sema component.

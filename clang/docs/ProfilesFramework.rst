@@ -351,12 +351,18 @@ The following parts of P3589R2 are deliberately not implemented:
   compatibility check is performed.
 
 
-Built-in Test Profiles
-======================
+Built-in Profiles
+=================
 
-The tree ships two minimal, test-only profiles -- one per implementation
-pattern -- so the framework's behavior can be exercised without depending on
-any user-facing profile.  Both are gated on ``-fprofiles``.
+The tree ships three built-in profiles, all gated on ``-fprofiles``:
+
+- ``test::type_cast`` (test-only) -- pattern-1 example.
+- ``test::uninit_read`` (test-only) -- pattern-2 example riding the existing
+  CFG uninitialized-variables analysis.
+- ``std::init`` (initial slice of the proposed initialization profile from
+  Stroustrup's draft, on top of P3589R2 and P3402R3).  It rides the same
+  CFG dispatch as ``test::uninit_read`` for one of its rules and adds three
+  parse-time (pattern-1) rules.
 
 By convention:
 
@@ -417,6 +423,111 @@ work for this profile: by the time the CFG analysis runs, the parse-time
 directly via ``shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``.
 
 
+The ``std::init`` Profile (initial slice)
+-----------------------------------------
+
+A first slice of the proposed initialization profile, intentionally minimal:
+no ``[[ref_to_uninit]]``, no field-level marker, no class-finalization hook,
+no new dataflow analyses.  See the audit and plan documents in
+``.cursor/plans/`` for the deferred items.
+
+The slice introduces one new attribute and four rules.
+
+Marker attribute
+~~~~~~~~~~~~~~~~
+
+``[[uninitialized]]`` (a standard C++11 attribute, distinct from the Clang
+vendor attribute ``[[clang::uninitialized]]``) marks a ``VarDecl`` as
+intentionally left uninitialized.  Recognised by Clang regardless of
+``-fprofiles``; only carries semantic weight when ``std::init`` is enforced.
+
+- TableGen def: ``CXX11Uninitialized`` in ``clang/include/clang/Basic/Attr.td``.
+- Subjects: ``Var`` only.  Field-level support is the framework gap §2.A.2
+  and is deferred.
+- Behaviour:
+
+  - Suppresses R2 (``uninit_decl``) on the marked declaration.
+  - Does **not** suppress R1 (``uninit_read``).  Per the paper, the marker
+    excuses the declaration but a read before any subsequent assignment is
+    still ill-formed.
+  - Triggers R4 (``uninit_with_initializer``) when combined with an
+    initializer, including a language-synthesized one (e.g., a class-typed
+    variable whose default constructor would run).
+
+Rules
+~~~~~
+
+R1. ``uninit_read`` -- pattern 2 (CFG)
+......................................
+
+Reads of an uninitialized variable.  Implemented as a second row in the
+existing ``CFGUninitProfiles`` table beside ``test::uninit_read``:
+
+.. code-block:: c++
+
+   constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
+       {"test::uninit_read", /*Rule=*/"", diag::err_profile_uninit_read},
+       {"std::init",         "uninit_read", diag::err_init_uninit_read},
+   };
+
+If both ``test::uninit_read`` and ``std::init`` are enforced in the same TU,
+the table-order priority makes ``test::uninit_read`` fire first.  Use
+``[[profiles::suppress(test::uninit_read)]]`` to demote it at a use site
+and surface the ``std::init`` diagnostic.
+
+R2. ``uninit_decl`` -- pattern 1
+.................................
+
+A definition that, after attempted default-initialization, has no
+initializer expression must either carry ``[[uninitialized]]`` or have
+static / thread storage duration (zero-initialized by language rule).
+
+- Diagnostic: ``err_init_uninit_decl``.
+- Check site: end of ``Sema::ActOnUninitializedDecl`` in
+  ``clang/lib/Sema/SemaDecl.cpp``.
+- Conservative classification: a class type whose default constructor
+  produces an initializer expression (``Var->getInit()`` non-null after
+  ``InitSeq.Perform``) is trusted.  Aggregates / POD class types whose
+  default-init leaves members indeterminate are *not* diagnosed in this
+  slice; that is paper §6 ("classes without constructors") work, deferred.
+
+R3. ``static_runtime_init`` -- pattern 1
+.........................................
+
+A non-local variable whose initializer is not a constant expression must
+be ``constinit`` (which is already a hard error from the existing
+``ConstInitAttr`` arm).  Without ``constinit``, the existing
+``-Wglobal-constructors`` warning would fire (off by default); under
+``std::init`` this rule promotes that to a profile error.
+
+- Diagnostic: ``err_init_static_runtime_init``.
+- Check site: in ``Sema::CheckCompleteVariableDeclaration``, in the
+  constinit cascade, immediately before the ``-Wglobal-constructors`` arm
+  (so the profile error takes precedence when both would fire).
+
+R4. ``uninit_with_initializer`` -- pattern 1
+............................................
+
+``[[uninitialized]]`` and an initializer on the same declaration is a
+contradiction (the marker means "no initialization here").
+
+- Diagnostic: ``err_init_uninit_with_initializer``.
+- Check site: top of ``Sema::CheckCompleteVariableDeclaration``.
+- Note: also fires when the initializer is language-synthesized (e.g.,
+  ``WithCtor x [[uninitialized]];`` -- the implicit default-constructor
+  call counts as an initializer).  Combining the marker with class types
+  that have a default constructor is therefore ill-formed.
+
+Diagnostic suppression
+~~~~~~~~~~~~~~~~~~~~~~
+
+All four rules are suppressible per-site with
+``[[profiles::suppress(std::init)]]`` (covers all rules) or
+``[[profiles::suppress(std::init, rule: "rule_name")]]`` (rule-targeted).
+The token-based-dominion limitation noted earlier applies: a suppress
+attribute on a ``VarDecl`` covers only that declaration's tokens.
+
+
 In-Tree Tests
 =============
 
@@ -449,5 +560,24 @@ profiles.  When changing the framework, run them all with
   analysis-based-warnings early-exit-on-first-error does not hide later
   cases; case 0 is the no-violation baseline used by both the
   ``-fprofiles`` and the without-``-fprofiles`` runs.
+- ``clang/test/SemaCXX/safety-profile-init-read.cpp`` -- the ``std::init``
+  profile's ``uninit_read`` rule.  Same ``-DCASE=N`` style as the
+  ``test::uninit_read`` test; CASE=4 additionally enforces
+  ``test::uninit_read`` to exercise the table-order priority.
+- ``clang/test/SemaCXX/safety-profile-init-decl.cpp`` -- the ``std::init``
+  profile's ``uninit_decl`` rule (R2): scalars / pointers / enums require
+  an initializer or ``[[uninitialized]]``; statics / thread-locals are
+  excluded; class types with a user-provided default constructor are
+  trusted; trivial / aggregate types are conservatively *not* diagnosed
+  (deferred to §6 work).
+- ``clang/test/SemaCXX/safety-profile-init-static.cpp`` -- the ``std::init``
+  profile's ``static_runtime_init`` rule (R3): non-local vars need a
+  constant initializer; locals / static-locals / thread-locals are
+  excluded; ``constinit`` failures still produce the existing hard error
+  regardless of ``-fprofiles``.
+- ``clang/test/SemaCXX/safety-profile-init-with-initializer.cpp`` -- the
+  ``std::init`` profile's ``uninit_with_initializer`` rule (R4): every
+  combination of ``[[uninitialized]]`` placement (prefix / postfix) with
+  every initializer form (``= e``, ``{}``, ``(e)``).
 - ``clang/test/PCH/cxx-profiles-enforce.cpp`` -- ``[[profiles::enforce]]``
   state survives PCH serialization round-trip.
