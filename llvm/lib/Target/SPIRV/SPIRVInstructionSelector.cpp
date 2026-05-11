@@ -244,8 +244,8 @@ private:
   bool selectOpIsNan(Register ResVReg, SPIRVTypeInst ResType,
                      MachineInstr &I) const;
 
-  bool selectPopCount(Register ResVReg, SPIRVTypeInst ResType,
-                      MachineInstr &I, unsigned Opcode) const;
+  bool selectPopCount(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
+                      unsigned Opcode) const;
 
   bool selectPopCount16(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, unsigned ExtOpcode,
@@ -506,7 +506,7 @@ private:
   bool loadHandleBeforePosition(Register &HandleReg, SPIRVTypeInst ResType,
                                 GIntrinsic &HandleDef, MachineInstr &Pos) const;
   void decorateUsesAsNonUniform(Register &NonUniformReg) const;
-  void errorIfInstrOutsideShader(MachineInstr &I) const;
+  bool errorIfInstrOutsideShader(MachineInstr &I) const;
 
   std::optional<SplitParts> splitEvenOddLanes(Register PopCountReg,
                                               unsigned ComponentCount,
@@ -1290,8 +1290,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
         //  instruction. We can't use an AccessChain opcode because of the type
         //  mismatch between result and base types.
         if (!GR.isBitcastCompatible(ResType, GVType))
-          report_fatal_error(
-              "incompatible result and operand types in a bitcast");
+          return diagnoseUnsupported(
+              I, "incompatible result and operand types in a bitcast");
         Register ResTypeReg = GR.getSPIRVTypeID(ResType);
         MachineInstrBuilder MIB =
             BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpBitcast))
@@ -1418,8 +1418,8 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
     I.print(OS, true, false, false, false);
-    DiagMsg += " is only supported with the GLSL extended instruction set.\n";
-    report_fatal_error(DiagMsg.c_str(), false);
+    DiagMsg += " is only supported with the GLSL extended instruction set.";
+    return diagnoseUnsupported(I, DiagMsg);
   }
   return selectExtInst(ResVReg, ResType, I,
                        {{SPIRV::InstructionSet::GLSL_std_450, GLInst}},
@@ -1766,7 +1766,7 @@ bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
   case 64:
     return selectPopCount64(ResVReg, ResType, I, OpReg, Opcode);
   default:
-    report_fatal_error("unsupported operand bit width for popcount");
+    return diagnoseUnsupported(I, "unsupported operand bit width for popcount");
   }
 }
 
@@ -1827,7 +1827,8 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
   SPIRVTypeInst OpType =
       OpReg.isValid() ? GR.getSPIRVTypeForVReg(OpReg) : nullptr;
   if (!GR.isBitcastCompatible(ResType, OpType))
-    report_fatal_error("incompatible result and operand types in a bitcast");
+    return diagnoseUnsupported(
+        I, "incompatible result and operand types in a bitcast");
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
@@ -2141,10 +2142,9 @@ bool SPIRVInstructionSelector::selectStackSave(Register ResVReg,
                                                SPIRVTypeInst ResType,
                                                MachineInstr &I) const {
   if (!STI.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array))
-    report_fatal_error(
-        "llvm.stacksave intrinsic: this instruction requires the following "
-        "SPIR-V extension: SPV_INTEL_variable_length_array",
-        false);
+    return diagnoseUnsupported(
+        I, "llvm.stacksave intrinsic: this instruction requires the following "
+           "SPIR-V extension: SPV_INTEL_variable_length_array");
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSaveMemoryINTEL))
       .addDef(ResVReg)
@@ -2155,10 +2155,10 @@ bool SPIRVInstructionSelector::selectStackSave(Register ResVReg,
 
 bool SPIRVInstructionSelector::selectStackRestore(MachineInstr &I) const {
   if (!STI.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array))
-    report_fatal_error(
+    return diagnoseUnsupported(
+        I,
         "llvm.stackrestore intrinsic: this instruction requires the following "
-        "SPIR-V extension: SPV_INTEL_variable_length_array",
-        false);
+        "SPIR-V extension: SPV_INTEL_variable_length_array");
   if (!I.getOperand(0).isReg())
     return false;
   MachineBasicBlock &BB = *I.getParent();
@@ -2216,17 +2216,18 @@ bool SPIRVInstructionSelector::selectCopyMemory(MachineInstr &I,
   SPIRVTypeInst DstTy = GR.getSPIRVTypeForVReg(DstReg);
   SPIRVTypeInst SrcTy = GR.getSPIRVTypeForVReg(SrcReg);
   if (GR.getPointeeType(DstTy) != GR.getPointeeType(SrcTy))
-    report_fatal_error("OpCopyMemory requires operands to have the same type");
+    return diagnoseUnsupported(
+        I, "OpCopyMemory requires operands to have the same type");
   uint64_t CopySize = getIConstVal(I.getOperand(2).getReg(), MRI);
   SPIRVTypeInst PointeeTy = GR.getPointeeType(DstTy);
   const Type *LLVMPointeeTy = GR.getTypeForSPIRVType(PointeeTy);
   if (!LLVMPointeeTy)
-    report_fatal_error(
-        "Unable to determine pointee type size for OpCopyMemory");
+    return diagnoseUnsupported(
+        I, "Unable to determine pointee type size for OpCopyMemory");
   const DataLayout &DL = I.getMF()->getFunction().getDataLayout();
   if (CopySize != DL.getTypeStoreSize(const_cast<Type *>(LLVMPointeeTy)))
-    report_fatal_error(
-        "OpCopyMemory requires the size to match the pointee type size");
+    return diagnoseUnsupported(
+        I, "OpCopyMemory requires the size to match the pointee type size");
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemory))
                  .addUse(DstReg)
                  .addUse(SrcReg);
@@ -2325,8 +2326,8 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
   SPIRVTypeInst SrcType =
       SrcReg.isValid() ? GR.getSPIRVTypeForVReg(SrcReg) : nullptr;
   if (!SrcType || SrcType->getOpcode() != SPIRV::OpTypeVector)
-    report_fatal_error(
-        "cannot select G_UNMERGE_VALUES with a non-vector argument");
+    return diagnoseUnsupported(
+        I, "cannot select G_UNMERGE_VALUES with a non-vector argument");
 
   SPIRVTypeInst ScalarType = GR.getScalarOrVectorComponentType(SrcType);
   MachineBasicBlock &BB = *I.getParent();
@@ -2398,11 +2399,13 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   Type *ResTy = nullptr;
   StringRef ResName;
   if (!GR.findValueAttrs(&I, ResTy, ResName))
-    report_fatal_error(
+    return diagnoseUnsupported(
+        I,
         "Not enough info to select the arithmetic with overflow instruction");
   if (!ResTy || !ResTy->isStructTy())
-    report_fatal_error("Expect struct type result for the arithmetic "
-                       "with overflow instruction");
+    return diagnoseUnsupported(I,
+                               "Expect struct type result for the arithmetic "
+                               "with overflow instruction");
   // "Result Type must be from OpTypeStruct. The struct must have two members,
   // and the two members must be the same type."
   Type *ResElemTy = cast<StructType>(ResTy)->getElementType(0);
@@ -3133,7 +3136,7 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   auto &DL = I.getDebugLoc();
 
   if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
+    return diagnoseUnsupported(I, "Input Type could not be determined.");
 
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
 
@@ -3338,10 +3341,10 @@ bool SPIRVInstructionSelector::selectWavePrefixBitCount(Register ResVReg,
   SPIRVTypeInst InputType = GR.getSPIRVTypeForVReg(InputRegister);
 
   if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
+    return diagnoseUnsupported(I, "Input Type could not be determined.");
 
   if (InputType->getOpcode() != SPIRV::OpTypeBool)
-    report_fatal_error("WavePrefixBitCount requires boolean input");
+    return diagnoseUnsupported(I, "WavePrefixBitCount requires boolean input");
 
   // Types
   SPIRVTypeInst Int32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
@@ -3438,7 +3441,7 @@ bool SPIRVInstructionSelector::selectWaveReduce(
   SPIRVTypeInst InputType = GR.getSPIRVTypeForVReg(InputRegister);
 
   if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
+    return diagnoseUnsupported(I, "Input Type could not be determined.");
 
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   const unsigned Opcode = PickOpcode(InputRegister, IsUnsigned);
@@ -3497,7 +3500,7 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
   SPIRVTypeInst InputType = GR.getSPIRVTypeForVReg(InputRegister);
 
   if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
+    return diagnoseUnsupported(I, "Input Type could not be determined.");
 
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   const unsigned Opcode = PickOpcode(InputRegister, IsUnsigned);
@@ -3854,9 +3857,11 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
   else if (ResType->getOpcode() == SPIRV::OpTypeArray)
     N = getArrayComponentCount(MRI, ResType);
   else
-    report_fatal_error("Cannot select G_BUILD_VECTOR with a non-vector result");
+    return diagnoseUnsupported(
+        I, "Cannot select G_BUILD_VECTOR with a non-vector result");
   if (I.getNumExplicitOperands() - I.getNumExplicitDefs() != N)
-    report_fatal_error("G_BUILD_VECTOR and the result type are inconsistent");
+    return diagnoseUnsupported(
+        I, "G_BUILD_VECTOR and the result type are inconsistent");
 
   // check if we may construct a constant vector
   bool IsConst = true;
@@ -3866,8 +3871,8 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
       IsConst = false;
 
   if (!IsConst && N < 2)
-    report_fatal_error(
-        "There must be at least two constituent operands in a vector");
+    return diagnoseUnsupported(
+        I, "There must be at least two constituent operands in a vector");
 
   MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
@@ -3890,19 +3895,20 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   else if (ResType->getOpcode() == SPIRV::OpTypeArray)
     N = getArrayComponentCount(MRI, ResType);
   else
-    report_fatal_error("Cannot select G_SPLAT_VECTOR with a non-vector result");
+    return diagnoseUnsupported(
+        I, "Cannot select G_SPLAT_VECTOR with a non-vector result");
 
   unsigned OpIdx = I.getNumExplicitDefs();
   if (!I.getOperand(OpIdx).isReg())
-    report_fatal_error("Unexpected argument in G_SPLAT_VECTOR");
+    return diagnoseUnsupported(I, "Unexpected argument in G_SPLAT_VECTOR");
 
   // check if we may construct a constant vector
   Register OpReg = I.getOperand(OpIdx).getReg();
   bool IsConst = isConstReg(MRI, OpReg);
 
   if (!IsConst && N < 2)
-    report_fatal_error(
-        "There must be at least two constituent operands in a vector");
+    return diagnoseUnsupported(
+        I, "There must be at least two constituent operands in a vector");
 
   MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
@@ -4569,7 +4575,8 @@ bool SPIRVInstructionSelector::selectDerivativeInst(
     const unsigned DPdOpCode) const {
   // TODO: This should check specifically for Fragment Execution Model, but STI
   // doesn't provide that information yet. See #167562
-  errorIfInstrOutsideShader(I);
+  if (!errorIfInstrOutsideShader(I))
+    return false;
 
   // If the arg/result types are half then we need to wrap the instr in
   // conversions to float
@@ -4642,7 +4649,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     SPIRVTypeInst OpType =
         OpReg.isValid() ? GR.getSPIRVTypeForVReg(OpReg) : nullptr;
     if (!GR.isBitcastCompatible(ResType, OpType))
-      report_fatal_error("incompatible result and operand types in a bitcast");
+      return diagnoseUnsupported(
+          I, "incompatible result and operand types in a bitcast");
     return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
   }
   case Intrinsic::spv_unref_global:
@@ -4986,8 +4994,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     SPIRV::StorageClass::StorageClass ResSC =
         GR.getPointerStorageClass(ResType);
     if (!isGenericCastablePtr(ResSC))
-      report_fatal_error("The target storage class is not castable from the "
-                         "Generic storage class");
+      return diagnoseUnsupported(I, "The target storage class is not castable "
+                                    "from the Generic storage class");
     BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGenericCastToPtrExplicit))
         .addDef(ResVReg)
         .addUse(GR.getSPIRVTypeID(ResType))
@@ -5190,7 +5198,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     raw_string_ostream OS(DiagMsg);
     I.print(OS);
     DiagMsg = "Intrinsic selection not implemented: " + DiagMsg;
-    report_fatal_error(DiagMsg.c_str(), false);
+    return diagnoseUnsupported(I, DiagMsg);
   }
   }
   return true;
@@ -6331,7 +6339,8 @@ bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
     return selectFirstBitSet64(ResVReg, ResType, I, OpReg, BitSetOpcode,
                                /*SwapPrimarySide=*/false);
   default:
-    report_fatal_error(
+    return diagnoseUnsupported(
+        I,
         "spv_firstbituhigh and spv_firstbitshigh only support 16,32,64 bits.");
   }
 }
@@ -6357,7 +6366,8 @@ bool SPIRVInstructionSelector::selectFirstBitLow(Register ResVReg,
     return selectFirstBitSet64(ResVReg, ResType, I, OpReg, BitSetOpcode,
                                /*SwapPrimarySide=*/true);
   default:
-    report_fatal_error("spv_firstbitlow only supports 16,32,64 bits.");
+    return diagnoseUnsupported(I,
+                               "spv_firstbitlow only supports 16,32,64 bits.");
   }
 }
 
@@ -6956,15 +6966,16 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
   return true;
 }
 
-void SPIRVInstructionSelector::errorIfInstrOutsideShader(
+bool SPIRVInstructionSelector::errorIfInstrOutsideShader(
     MachineInstr &I) const {
   if (!STI.isShader()) {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
     I.print(OS, true, false, false, false);
-    DiagMsg += " is only supported in shaders.\n";
-    report_fatal_error(DiagMsg.c_str(), false);
+    DiagMsg += " is only supported in shaders.";
+    return diagnoseUnsupported(I, DiagMsg);
   }
+  return true;
 }
 
 namespace llvm {
