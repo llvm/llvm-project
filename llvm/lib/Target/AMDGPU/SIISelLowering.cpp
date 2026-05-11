@@ -19790,7 +19790,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
       return !TRI->isSGPRReg(MRI, Reg);
 
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
-      return UA->isDivergentDef(V);
+      return UA->isDivergentAtDef(V);
 
     assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
     return !TRI->isSGPRReg(MRI, Reg);
