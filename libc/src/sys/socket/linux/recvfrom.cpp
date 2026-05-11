@@ -39,8 +39,8 @@ LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
   ssize_t ret = syscall_impl<ssize_t>(SYS_recvfrom, sockfd, buf, len, flags,
                                       src_addr, addrlen);
 #elif defined(SYS_socketcall)
-  ssize_t ret = socketcall<ssize_t>(SYS_RECVFROM, sockfd, buf, len, flags,
-                                    src_addr, addrlen);
+  ssize_t ret = linux_syscalls::socketcall<ssize_t>(
+      SYS_RECVFROM, sockfd, buf, len, flags, src_addr, addrlen);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif

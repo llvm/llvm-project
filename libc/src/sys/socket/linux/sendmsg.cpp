@@ -25,7 +25,8 @@ LLVM_LIBC_FUNCTION(ssize_t, sendmsg,
 #ifdef SYS_sendmsg
   ssize_t ret = syscall_impl<ssize_t>(SYS_sendmsg, sockfd, msg, flags);
 #elif defined(SYS_socketcall)
-  ssize_t ret = socketcall<ssize_t>(SYS_SENDMSG, sockfd, msg, flags);
+  ssize_t ret =
+      linux_syscalls::socketcall<ssize_t>(SYS_SENDMSG, sockfd, msg, flags);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif
