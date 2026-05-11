@@ -3284,3 +3284,76 @@ void assign_non_capturing_to_function_ref(function_ref &r) {
 }
 
 } // namespace GH126600
+
+//===----------------------------------------------------------------------===//
+// lifetime-capture-by
+//===----------------------------------------------------------------------===//
+
+void setCaptureBy(View& in, View out [[clang::lifetime_capture_by(in)]]);
+
+void use_after_free_capture_by() {
+  View res;
+  {
+    MyObj a;      
+    setCaptureBy(res, a); // expected-warning {{object whose reference is captured does not live long enough}}
+  }               // expected-note {{destroyed here}}
+  (void)res;      // expected-note {{later used here}}      
+}
+
+View use_after_return_capture_by() {
+  MyObj a;
+  View res;
+  setCaptureBy(res, a);   // expected-warning {{address of stack memory is returned later}}
+  return res;     // expected-note {{returned here}}  
+                   
+}
+
+void transitive_capture() {
+  View v1, v2;
+  {
+    MyObj local;
+    setCaptureBy(v1, local); // expected-warning {{object whose reference is captured does not live long enough}}
+    setCaptureBy(v2, v1);   
+  }                 // expected-note {{destroyed here}}
+  (void)v2;         // expected-note {{later used here}}   
+}
+
+struct [[gsl::Pointer]] MyContainer {
+  View stored;
+  void set(View s [[clang::lifetime_capture_by(this)]]);
+};
+
+void member_capture() {
+  MyContainer c;
+  {
+    MyObj local;
+    c.set(local);   // expected-warning {{object whose reference is captured does not live long enough}}
+  }                 // expected-note {{destroyed here}}
+  (void)c.stored;   // expected-note {{later used here}}
+}
+
+void captureTwo(View& into, 
+                View a [[clang::lifetime_capture_by(into)]], 
+                View b [[clang::lifetime_capture_by(into)]]);
+
+void multiple_captures() {
+  View res;
+  MyObj val1;
+  {
+    MyObj val2;
+    captureTwo(res, val1, val2); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                              // expected-note {{destroyed here}}
+  (void)res;                     // expected-note {{later used here}}              
+}
+
+void multiple_local_captures() {
+  View res;
+  {
+    MyObj val1;
+    MyObj val2;
+    captureTwo(res, val1, val2); // expected-warning 2 {{object whose reference is captured does not live long enough}}
+  }                              // expected-note 2 {{destroyed here}}
+  (void)res;                     // expected-note 2 {{later used here}}              
+}
+
+

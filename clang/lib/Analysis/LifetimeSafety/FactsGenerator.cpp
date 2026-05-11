@@ -864,6 +864,74 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   });
 }
 
+void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
+                                             ArrayRef<const Expr *> Args) {
+  bool isInstance = false;
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
+    isInstance = true;
+  }
+  auto getArgCaptureBy = [FD,
+                          isInstance](unsigned I) -> LifetimeCaptureByAttr * {
+    const ParmVarDecl *PVD = nullptr;
+    // FIXME: Add support for capture_by on function declarations
+    if (isInstance) {
+      if (I > 0 && I - 1 < FD->getNumParams()) {
+        PVD = FD->getParamDecl(I - 1);
+      }
+    } else {
+      if (I < FD->getNumParams()) {
+        PVD = FD->getParamDecl(I);
+      }
+    }
+    return PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr;
+  };
+  if (Args.empty())
+    return;
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    const LifetimeCaptureByAttr *Attr = getArgCaptureBy(I);
+    if (!Attr)
+      continue;
+    OriginList *CapturedOriginList = getOriginsList(*Args[I]);
+    if (!CapturedOriginList)
+      continue;
+    if (isGslPointerType(Args[I]->getType())) {
+      assert(!Args[I]->isGLValue() || CapturedOriginList->getLength() >= 2);
+      CapturedOriginList = getRValueOrigins(Args[I], CapturedOriginList);
+    }
+    if (!CapturedOriginList)
+      continue;
+    for (int CapturedByIdx : Attr->params()) {
+      if (CapturedByIdx == LifetimeCaptureByAttr::Global) {
+        for (OriginList *L = CapturedOriginList; L != nullptr;
+             L = L->peelOuterOrigin())
+          EscapesInCurrentBlock.push_back(FactMgr.createFact<GlobalEscapeFact>(
+              L->getOuterOriginID(), nullptr));
+        continue;
+      }
+      if (CapturedByIdx == LifetimeCaptureByAttr::Unknown ||
+          CapturedByIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
+      unsigned CapturedByArgIdx =
+          (CapturedByIdx == LifetimeCaptureByAttr::This)
+              ? 0
+              : (unsigned)CapturedByIdx + (isInstance ? 1 : 0);
+      if (CapturedByArgIdx >= Args.size())
+        continue;
+      OriginList *CapturedByOriginList =
+          getOriginsList(*Args[CapturedByArgIdx]);
+      if (CapturedByOriginList) {
+        OriginList *Dest =
+            (isGslPointerType(Args[CapturedByArgIdx]->getType()) ||
+             isGslOwnerType(Args[CapturedByArgIdx]->getType()))
+                ? CapturedByOriginList->peelOuterOrigin()
+                : CapturedByOriginList;
+        flow(Dest, CapturedOriginList, /*Kill=*/false);
+      }
+    }
+  }
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -880,6 +948,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   handleImplicitObjectFieldUses(Call, FD);
+  handleLifetimeCaptureBy(FD, Args);
   if (!CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
