@@ -20,8 +20,12 @@ define void @_Z3fooPiS_S_(ptr %A, ptr %B, ptr %LoopBound) {
 ; CHECK-NEXT:    [[BOUND2:%.*]] = icmp ult ptr [[A]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND3:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT1:%.*]] = and i1 [[BOUND2]], [[BOUND3]]
+; CHECK-NEXT:    [[IVBOUND_WG_LOW_CHK:%.*]] = icmp ule ptr [[A]], [[LOOPBOUND]]
+; CHECK-NEXT:    [[IVBOUND_WG_HIGH_CHK:%.*]] = icmp ult ptr [[LOOPBOUND]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[IVBOUND_IN_WRITE_RANGE:%.*]] = and i1 [[IVBOUND_WG_LOW_CHK]], [[IVBOUND_WG_HIGH_CHK]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[FOUND_CONFLICT1]], false
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[FOR_BODY_PREHEADER_LVER:.*]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK-NEXT:    [[IVBOUND_SAFE3:%.*]] = or i1 [[TMP9]], [[IVBOUND_IN_WRITE_RANGE]]
+; CHECK-NEXT:    br i1 [[IVBOUND_SAFE3]], label %[[FOR_BODY_PREHEADER_LVER:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i32 [[DOTRTCBLOCK_LOAD]] to i64
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP10]], i64 1)

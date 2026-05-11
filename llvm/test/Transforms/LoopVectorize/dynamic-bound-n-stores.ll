@@ -21,8 +21,16 @@ define dso_local void @_Z3fooPiS_S_(ptr noundef captures(none) %A, ptr noundef r
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[IVBOUND_WG_LOW_CHK:%.*]] = icmp ule ptr [[A]], [[LOOPBOUND]]
+; CHECK-NEXT:    [[IVBOUND_WG_HIGH_CHK:%.*]] = icmp ult ptr [[LOOPBOUND]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[IVBOUND_IN_WRITE_RANGE:%.*]] = and i1 [[IVBOUND_WG_LOW_CHK]], [[IVBOUND_WG_HIGH_CHK]]
+; CHECK-NEXT:    [[IVBOUND_WG_LOW_CHK3:%.*]] = icmp ule ptr [[B]], [[LOOPBOUND]]
+; CHECK-NEXT:    [[IVBOUND_WG_HIGH_CHK4:%.*]] = icmp ult ptr [[LOOPBOUND]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[IVBOUND_IN_WRITE_RANGE5:%.*]] = and i1 [[IVBOUND_WG_LOW_CHK3]], [[IVBOUND_WG_HIGH_CHK4]]
+; CHECK-NEXT:    [[IVBOUND_WG_RDX:%.*]] = or i1 [[IVBOUND_IN_WRITE_RANGE]], [[IVBOUND_IN_WRITE_RANGE5]]
 ; CHECK-NEXT:    [[IVBOUND_SAFE:%.*]] = or i1 [[FOUND_CONFLICT]], false
-; CHECK-NEXT:    br i1 [[IVBOUND_SAFE]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_BODY_PREHEADER_LVER:.*]]
+; CHECK-NEXT:    [[IVBOUND_SAFE6:%.*]] = or i1 [[IVBOUND_SAFE]], [[IVBOUND_WG_RDX]]
+; CHECK-NEXT:    br i1 [[IVBOUND_SAFE6]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_BODY_PREHEADER_LVER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER_LVER]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[DOTSPECULATIVELY_HOISTED]] to i64
 ; CHECK-NEXT:    [[SMAX9:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP3]], i64 1)
@@ -155,8 +163,16 @@ define dso_local void @bar(ptr noundef captures(none) %A, ptr noundef readonly c
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[IVBOUND_WG_LOW_CHK:%.*]] = icmp ule ptr [[A]], [[LOOPBOUND]]
+; CHECK-NEXT:    [[IVBOUND_WG_HIGH_CHK:%.*]] = icmp ult ptr [[LOOPBOUND]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[IVBOUND_IN_WRITE_RANGE:%.*]] = and i1 [[IVBOUND_WG_LOW_CHK]], [[IVBOUND_WG_HIGH_CHK]]
+; CHECK-NEXT:    [[IVBOUND_WG_LOW_CHK3:%.*]] = icmp ule ptr [[B]], [[LOOPBOUND]]
+; CHECK-NEXT:    [[IVBOUND_WG_HIGH_CHK4:%.*]] = icmp ult ptr [[LOOPBOUND]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[IVBOUND_IN_WRITE_RANGE5:%.*]] = and i1 [[IVBOUND_WG_LOW_CHK3]], [[IVBOUND_WG_HIGH_CHK4]]
+; CHECK-NEXT:    [[IVBOUND_WG_RDX:%.*]] = or i1 [[IVBOUND_IN_WRITE_RANGE]], [[IVBOUND_IN_WRITE_RANGE5]]
 ; CHECK-NEXT:    [[IVBOUND_SAFE:%.*]] = or i1 [[FOUND_CONFLICT]], false
-; CHECK-NEXT:    br i1 [[IVBOUND_SAFE]], label %[[FOR_BODY_PREHEADER1:.*]], label %[[FOR_BODY_PREHEADER_LVER:.*]]
+; CHECK-NEXT:    [[IVBOUND_SAFE6:%.*]] = or i1 [[IVBOUND_SAFE]], [[IVBOUND_WG_RDX]]
+; CHECK-NEXT:    br i1 [[IVBOUND_SAFE6]], label %[[FOR_BODY_PREHEADER1:.*]], label %[[FOR_BODY_PREHEADER_LVER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER_LVER]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = sext i32 [[DOTSPECULATIVELY_HOISTED]] to i64
 ; CHECK-NEXT:    [[SMAX9:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP19]], i64 1)

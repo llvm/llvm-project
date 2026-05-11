@@ -8209,6 +8209,13 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
   const auto &RtPtrChecking = *PreLAI.getRuntimePointerChecking();
   auto &SE = *PSE.getSE();
 
+  // If LAA could not compute complete pointer bounds (e.g. a gather/scatter
+  // access with an unknown indirect index), we cannot reliably determine the
+  // write ranges needed for the ivbound safety check.  Bail out rather than
+  // proceeding with an incomplete or missing write-range check.
+  if (!PreLAI.canVectorizeMemory())
+    return nullptr;
+
   for (const auto &Check : RtPtrChecking.getChecks()) {
     for (const RuntimeCheckingPtrGroup *Group : {Check.first, Check.second}) {
       for (unsigned Idx : Group->Members) {
@@ -8365,12 +8372,48 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
   const SCEVPredicate &Preds = VerLAI.getPSE().getPredicate();
   Value *SCEVrtc = SCEVEx.expandCodeForPredicate(&Preds, TmpTerm);
 
-  Value *RtCheckCond = nullptr;
-  if (MemRTC && SCEVrtc) {
+  // Check whether BoundPtrOl falls within any write group's [Low, High) byte
+  // range at runtime. If it does, the speculative hoist of the bound load is
+  // unsafe (a store in the loop will overwrite *BoundPtr), so we must fall
+  // back to the scalar loop.
+  SCEVExpander PreExp(SE, "ivbound.wg.check");
+  Value *BoundInWriteRange = nullptr;
+  for (const RuntimeCheckingPtrGroup &Group : RtPtrChecking.CheckingGroups) {
+    bool HasWrite = llvm::any_of(Group.Members, [&](unsigned Idx) {
+      return RtPtrChecking.Pointers[Idx].IsWritePtr;
+    });
+    if (!HasWrite)
+      continue;
+    Type *PtrArithTy = PointerType::get(Ctx, Group.AddressSpace);
+    Value *GroupLow = PreExp.expandCodeFor(Group.Low, PtrArithTy, TmpTerm);
+    Value *GroupHigh = PreExp.expandCodeFor(Group.High, PtrArithTy, TmpTerm);
+    if (Group.NeedsFreeze) {
+      IRBuilder<> FreezeB(TmpTerm);
+      GroupLow = FreezeB.CreateFreeze(GroupLow, "ivbound.wg.low.fr");
+      GroupHigh = FreezeB.CreateFreeze(GroupHigh, "ivbound.wg.high.fr");
+    }
     IRBuilder<> Builder(TmpTerm);
-    RtCheckCond = Builder.CreateOr(MemRTC, SCEVrtc, "ivbound.safe");
-  } else {
-    RtCheckCond = MemRTC ? MemRTC : SCEVrtc;
+    Value *Cmp0 =
+        Builder.CreateICmpULE(GroupLow, BoundPtrOl, "ivbound.wg.low.chk");
+    Value *Cmp1 =
+        Builder.CreateICmpULT(BoundPtrOl, GroupHigh, "ivbound.wg.high.chk");
+    Value *InRange = Builder.CreateAnd(Cmp0, Cmp1, "ivbound.in.write.range");
+    BoundInWriteRange =
+        BoundInWriteRange
+            ? Builder.CreateOr(BoundInWriteRange, InRange, "ivbound.wg.rdx")
+            : InRange;
+  }
+
+  Value *RtCheckCond = nullptr;
+  for (Value *Cond : {MemRTC, SCEVrtc, BoundInWriteRange}) {
+    if (!Cond)
+      continue;
+    if (!RtCheckCond) {
+      RtCheckCond = Cond;
+    } else {
+      IRBuilder<> Builder(TmpTerm);
+      RtCheckCond = Builder.CreateOr(RtCheckCond, Cond, "ivbound.safe");
+    }
   }
 
   TmpTerm->eraseFromParent();
