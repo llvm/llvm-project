@@ -2012,6 +2012,68 @@ void fir::ConvertOp::getCanonicalizationPatterns(
       context);
 }
 
+// Returns the pointee element type of a FIR reference-like type or a memref;
+// returns null if `ty` is not pointer-like or has no extractable element
+// type (e.g. unranked memref, box).
+static mlir::Type slotPointeeElemType(mlir::Type ty) {
+  if (mlir::Type fEle = fir::dyn_cast_ptrEleTy(ty))
+    return fEle;
+  if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(ty))
+    return memrefTy.getElementType();
+  return {};
+}
+
+// Returns true if a `fir.convert` between pointers with element types
+// `srcElem` and `dstElem` is a no-op at the value level or can be replaced by
+// a bicast.
+static bool isAcceptableSlotElemTypePair(mlir::Type srcElem,
+                                         mlir::Type dstElem) {
+  if (srcElem == dstElem)
+    return true;
+  if (!isBitcastCompatibleType(srcElem) || !isBitcastCompatibleType(dstElem))
+    return false;
+  auto srcBits = getBitcastBitSize(srcElem);
+  auto dstBits = getBitcastBitSize(dstElem);
+  return srcBits && dstBits && *srcBits == *dstBits;
+}
+
+std::optional<mlir::PromotableSlotView>
+fir::ConvertOp::getPromotableSlotView() {
+  mlir::Type srcElem = slotPointeeElemType(getValue().getType());
+  mlir::Type dstElem = slotPointeeElemType(getResult().getType());
+  if (!srcElem || !dstElem || !isAcceptableSlotElemTypePair(srcElem, dstElem))
+    return std::nullopt;
+  return mlir::PromotableSlotView{getValue(),
+                                  mlir::MemorySlot{getResult(), dstElem}};
+}
+
+mlir::Value fir::ConvertOp::convertSlotValue(mlir::Value value,
+                                             mlir::Type targetType,
+                                             mlir::OpBuilder &builder) {
+  if (value.getType() == targetType)
+    return value;
+  return fir::BitcastOp::create(builder, getLoc(), targetType, value);
+}
+
+bool fir::ConvertOp::canUsesBeRemoved(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  // Only participate in promotion when this convert is a slot view (if the
+  // address is cast is not used, DCE should have removed it)
+  if (!getPromotableSlotView())
+    return false;
+  for (mlir::OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+mlir::DeletionKind fir::ConvertOp::removeBlockingUses(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder) {
+  return mlir::DeletionKind::Delete;
+}
+
 static bool isI1(mlir::Type ty) {
   if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
     return intTy.getWidth() == 1;
@@ -3588,17 +3650,8 @@ llvm::SmallVector<mlir::Attribute> fir::LenParamIndexOp::getAttributes() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-static bool isSlotOrDeclaredSlot(mlir::Value val,
-                                 const mlir::MemorySlot &slot) {
-  if (val == slot.ptr)
-    return true;
-  if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
-    return declareOp.getMemref() == slot.ptr;
-  return false;
-}
-
 bool fir::LoadOp::loadsFrom(const mlir::MemorySlot &slot) {
-  return isSlotOrDeclaredSlot(getMemref(), slot);
+  return getMemref() == slot.ptr;
 }
 
 bool fir::LoadOp::storesTo(const mlir::MemorySlot &slot) { return false; }
@@ -3618,7 +3671,8 @@ bool fir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return isSlotOrDeclaredSlot(blockingUse, slot) && getMemref() == blockingUse;
+  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
+         getResult().getType() == slot.elemType;
 }
 
 mlir::DeletionKind fir::LoadOp::removeBlockingUses(
@@ -5168,7 +5222,7 @@ llvm::LogicalResult fir::SliceOp::verify() {
 bool fir::StoreOp::loadsFrom(const mlir::MemorySlot &slot) { return false; }
 
 bool fir::StoreOp::storesTo(const mlir::MemorySlot &slot) {
-  return isSlotOrDeclaredSlot(getMemref(), slot);
+  return getMemref() == slot.ptr;
 }
 
 mlir::Value fir::StoreOp::getStored(const mlir::MemorySlot &slot,
@@ -5186,8 +5240,8 @@ bool fir::StoreOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return isSlotOrDeclaredSlot(blockingUse, slot) &&
-         getMemref() == blockingUse && getValue() != blockingUse;
+  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
+         getValue() != slot.ptr && getValue().getType() == slot.elemType;
 }
 
 mlir::DeletionKind fir::StoreOp::removeBlockingUses(
@@ -6050,17 +6104,8 @@ bool fir::DeclareOp::canUsesBeRemoved(
     const mlir::DataLayout &dataLayout) {
   if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
     return false;
-  // MLIR's mem2reg computes defining blocks only from direct users of
-  // the slot pointer. Stores through fir.declare are not direct users,
-  // so they are not registered as defining blocks. This causes missing
-  // phi nodes at join points (e.g., loop headers). Restrict promotion
-  // to the single-block case where no phi nodes are needed.
-  mlir::Block *declBlock = getOperation()->getBlock();
-  for (mlir::OpOperand &use : getResult().getUses()) {
-    if (use.getOwner()->getBlock() != declBlock)
-      return false;
+  for (mlir::OpOperand &use : getResult().getUses())
     newBlockingUses.push_back(&use);
-  }
   return true;
 }
 
@@ -6070,16 +6115,34 @@ mlir::DeletionKind fir::DeclareOp::removeBlockingUses(
   return mlir::DeletionKind::Delete;
 }
 
+std::optional<mlir::PromotableSlotView>
+fir::DeclareOp::getPromotableSlotView() {
+  // fir.declare is a transparent alias of its memref operand at the same
+  // element type.
+  mlir::Type aliasElemType = fir::dyn_cast_ptrEleTy(getResult().getType());
+  if (!aliasElemType)
+    return std::nullopt;
+  return mlir::PromotableSlotView{getMemref(),
+                                  mlir::MemorySlot{getResult(), aliasElemType}};
+}
+
 bool fir::DeclareOp::requiresReplacedValues() { return true; }
 
 void fir::DeclareOp::visitReplacedValues(
     llvm::ArrayRef<std::pair<mlir::Operation *, mlir::Value>> definitions,
     mlir::OpBuilder &builder) {
+  // TODO: extend `fir.declare_value` to carry the variable's declared type
+  // independently of the value's type. Once that is in place the type
+  // mismatch check below can be dropped (a bit-cast equivalent will be
+  // recorded on the op instead of skipping emission).
+  mlir::Type declaredElemType = fir::dyn_cast_ptrEleTy(getResult().getType());
   for (auto [op, value] : definitions) {
     // Do not emit DeclareValue when we have a dummy scope as this can
     // potentially result in us generating it where the DummyScope does not
     // dominate it. This can happen after inlining.
     if (getDummyScope())
+      continue;
+    if (value.getType() != declaredElemType)
       continue;
     builder.setInsertionPointAfter(op);
     fir::DeclareValueOp::create(builder, getLoc(), value, nullptr,
