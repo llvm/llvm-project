@@ -335,10 +335,10 @@ define i128 @atomicrmw_uinc_wrap(ptr %src, i128 %b) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    larl %r4, .LCPI11_0
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    lpq %r0, 0(%r3)
 ; CHECK-NEXT:    vlvgp %v2, %r0, %r1
-; CHECK-NEXT:    larl %r1, .LCPI11_0
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
 ; CHECK-NEXT:    j .LBB11_2
 ; CHECK-NEXT:  .LBB11_1: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB11_2 Depth=1
@@ -376,11 +376,11 @@ define i128 @atomicrmw_udec_wrap(ptr %src, i128 %b) {
 ; CHECK-LABEL: atomicrmw_udec_wrap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r4), 3
-; CHECK-NEXT:    vgbm %v2, 65535
+; CHECK-NEXT:    larl %r4, .LCPI12_0
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    lpq %r0, 0(%r3)
 ; CHECK-NEXT:    vlvgp %v3, %r0, %r1
-; CHECK-NEXT:    larl %r1, .LCPI12_0
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vgbm %v2, 65535
 ; CHECK-NEXT:    j .LBB12_2
 ; CHECK-NEXT:  .LBB12_1: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
