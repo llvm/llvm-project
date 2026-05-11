@@ -33,7 +33,7 @@
 // With CTU, always_zero() is inlined and its return value (0) is known,
 // exposing the division by zero.
 
-// CHECK: fatal error: file '{{.*}}/other.c' has been modified since the precompiled file '{{.*}}/other.c.ast' was built
+// CHECK: fatal error: file '{{.*}}other.c' has been modified since the precompiled file '{{.*}}other.c.ast' was built
 // CHECK: note: mtime changed from expected
 // CHECK: note: earlier input file validation has covered only user files
 // CHECK: import of an external symbol for CTU failed: Failed to load external AST source.
