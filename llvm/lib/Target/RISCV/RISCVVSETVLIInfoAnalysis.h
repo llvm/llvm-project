@@ -414,7 +414,11 @@ public:
            "Can't compare invalid VSETVLIInfos");
     assert(!isUnknown() && !Other.isUnknown() &&
            "Can't compare VTYPE in unknown state");
-    return getSEWLMULRatio() == Other.getSEWLMULRatio();
+    if (getTWiden() != Other.getTWiden())
+      return false;
+    if (getTWiden() == 0)
+      return getSEWLMULRatio() == Other.getSEWLMULRatio();
+    return getSEW() == Other.getSEW();
   }
 
   bool hasCompatibleVTYPE(const DemandedFields &Used,
