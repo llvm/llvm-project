@@ -13,6 +13,6 @@ int test(void) {
 
 // CHECK: test() #0 {
 // CHECK: attributes #0 = {
-// CHECK-SAME: "target-features"="{{|[^"]*,}}+use-ptrgl-helper{{|,[^"]*}}"
+// CHECK-SAME: "target-features"={{"|"[^"]*,}}+use-ptrgl-helper{{"|,[^"]*"}}
 
 // DIS-NOT: +use-ptrgl-helper
