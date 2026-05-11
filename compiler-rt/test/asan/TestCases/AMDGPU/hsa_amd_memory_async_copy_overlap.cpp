@@ -8,31 +8,24 @@
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
+#include "hsa_amd_test_helpers.h"
+
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-static hsa_agent_t g_agent = {};
-
-static hsa_status_t pick_first_agent(hsa_agent_t agent, void * /*data*/) {
-  g_agent = agent;
-  return HSA_STATUS_INFO_BREAK;
-}
-
 int main() {
-  if (hsa_init() != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_init failed\n");
+  if (hsa_amd_test_require_init())
     return 1;
-  }
 
-  hsa_status_t it = hsa_iterate_agents(pick_first_agent, nullptr);
-  if (it != HSA_STATUS_SUCCESS && it != HSA_STATUS_INFO_BREAK) {
-    fprintf(stderr, "hsa_iterate_agents failed\n");
+  HsaAmdAgentPick pick;
+  hsa_amd_test_agent_pick_init(&pick);
+  hsa_status_t it = hsa_iterate_agents(hsa_amd_test_pick_first_agent_cb, &pick);
+  if (hsa_amd_test_iterate_agents_ok(it))
     return 1;
-  }
-  if (g_agent.handle == 0) {
+  if (pick.agent.handle == 0) {
     fprintf(stderr, "no HSA agent found\n");
     return 1;
   }
@@ -50,7 +43,7 @@ int main() {
   char *src = buf + 40;
   // Ranges [buf, buf+64) and [buf+40, buf+104) overlap; dst != src so the
   // interceptor runs CHECK_RANGES_OVERLAP before scheduling the async copy.
-  (void)hsa_amd_memory_async_copy(dst, g_agent, src, g_agent, 64,
+  (void)hsa_amd_memory_async_copy(dst, pick.agent, src, pick.agent, 64,
                                   /*num_dep_signals=*/0,
                                   /*dep_signals=*/nullptr, completion);
   fprintf(stderr, "expected hsa_amd_memory_async_copy overlap report\n");
