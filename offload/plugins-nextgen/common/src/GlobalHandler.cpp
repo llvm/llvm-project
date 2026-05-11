@@ -30,6 +30,19 @@ using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
 
+// Windows/MSVC doesn't support weak symbols properly, so provide a stub
+// implementation that will be used if compiler-rt is not linked.
+#ifdef _WIN32
+extern "C" int __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
+    const uint64_t *VersionOverride) {
+  // Return error code indicating profiling is not available
+  return -1;
+}
+#endif
+
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
   assert(utils::elf::isELF(Image.getMemoryBuffer().getBuffer()) &&
