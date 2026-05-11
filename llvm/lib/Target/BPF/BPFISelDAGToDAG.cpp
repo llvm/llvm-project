@@ -193,6 +193,38 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
+  case BPFISD::LOAD_STACK_ARG: {
+    SDValue Chain = Node->getOperand(0);
+    auto *CN = cast<ConstantSDNode>(Node->getOperand(1));
+    SDValue Off =
+        CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Node), MVT::i64);
+    EVT ValVT = Node->getValueType(0);
+    CurDAG->SelectNodeTo(Node, BPF::LOAD_STACK_ARG_PSEUDO, ValVT, MVT::Other,
+                         Off, Chain);
+    return;
+  }
+
+  case BPFISD::STORE_STACK_ARG: {
+    SDValue Chain = Node->getOperand(0);
+    auto *CN = cast<ConstantSDNode>(Node->getOperand(1));
+    SDValue Off =
+        CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Node), MVT::i64);
+    SDValue Val = Node->getOperand(2);
+
+    // Use store-immediate when the value is a constant that fits in 32 bits.
+    if (auto *ValCN = dyn_cast<ConstantSDNode>(Val);
+        ValCN && Subtarget->hasStoreImm() && isInt<32>(ValCN->getSExtValue())) {
+      SDValue Imm = CurDAG->getTargetConstant(ValCN->getSExtValue(),
+                                              SDLoc(Node), MVT::i64);
+      CurDAG->SelectNodeTo(Node, BPF::STORE_STACK_ARG_IMM_PSEUDO, MVT::Other,
+                           Off, Imm, Chain);
+    } else {
+      CurDAG->SelectNodeTo(Node, BPF::STORE_STACK_ARG_PSEUDO, MVT::Other, Off,
+                           Val, Chain);
+    }
+    return;
+  }
+
   case ISD::FrameIndex: {
     int FI = cast<FrameIndexSDNode>(Node)->getIndex();
     EVT VT = Node->getValueType(0);

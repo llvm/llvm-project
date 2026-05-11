@@ -197,6 +197,7 @@ struct VPTransformState {
   /// Hold the index to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
+  /// TODO: This is now only used in asserts. Remove as follow-up.
   std::optional<VPLane> Lane;
 
   struct DataState {
@@ -372,6 +373,10 @@ struct VPCostContext {
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(const VPReplicateRecipe *R, ElementCount VF);
+
+  /// Returns true if \p ID is a pseudo intrinsic that is dropped via
+  /// scalarization rather than widened.
+  static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

@@ -186,38 +186,32 @@ PredOpTrait<output # " rank must be equal to max(1, rank(" # input # "))",
       And<[CPred<HasRank<input>.result>, CPred<HasRank<input>.result>]>,
       [CPred<"std::max(int64_t(1), " # Rank<input>.result # " - int64_t(1)) == " # Rank<output>.result>]>>;
 
-class AccTypeIn<list<string> allowedValues> :
-  CPred<"llvm::is_contained({" # !interleave(!foreach(value, allowedValues, "::mlir::spirv::TosaExtAccType::" # value), ",") # "}, getAccType())">;
+class DimOfType<string type, int dim> :
+  StrFunc<type # ".getDimSize(" # dim # ")">;
 
-class TypeImpliesAccType<string input, Type type, list<string> allowedAccTypes>:
-  PredOpTrait<"acc_type must be one in [" # !interleave(allowedAccTypes, ",") # "] when type has value " # type.summary,
-  Implies<ElementTypeIsPred<input, type>, [AccTypeIn<allowedAccTypes>]>>;
-
-class MatchBroadcastableShapes<string input1, string input2, string output>:
-  PredOpTrait<"the shape of " # input1 # " and " # input2 # " are compatible for broadcasting and the broadcast shape is equal to the " # output # " shape",
-  Implies<And<[CPred<HasRank<input1>.result>, CPred<HasRank<input2>.result>, CPred<HasRank<output>.result>,
-               CPred<Rank<input1>.result # " == " # Rank<input2>.result # " && " # Rank<input1>.result # " == " # Rank<output>.result>]>,
-    [CPred<"llvm::all_of_zip(" # Shape<input1>.result # ", " # Shape<input2>.result # ", " # Shape<output>.result # ", " #
-    "[](int64_t input1Dim, int64_t input2Dim, int64_t outputDim) { " #
-    "   bool dynamic = ShapedType::isDynamic(input1Dim) || ShapedType::isDynamic(input2Dim) || ShapedType::isDynamic(outputDim);"
-    "   bool broadcastableInputs = input1Dim == input2Dim || input1Dim == 1 || input2Dim == 1;" #
-    "   bool broacastDimMatchesOutputDim = std::max(input1Dim, input2Dim) == outputDim;"
-    "   return dynamic || (broadcastableInputs && broacastDimMatchesOutputDim);" #
-    "})">]>
-  >;
+class ShapedTypeOf<string input> :
+  StrFunc<"::llvm::cast<::mlir::ShapedType>($" # input # ".getType())">;
 
 class DimOf<string input, int dim> :
-  StrFunc<"::llvm::cast<::mlir::ShapedType>($" # input #
-          ".getType()).getDimSize(" # dim # ")">;
+  DimOfType<ShapedTypeOf<input>.result, dim>;
 
 class DimIsDynamic<string input, int dim> :
   CPred<"::mlir::ShapedType::isDynamic(" # DimOf<input, dim>.result # ")">;
+
+class DimOfTypeIsDynamic<string type, int dim> :
+  CPred<"::mlir::ShapedType::isDynamic(" #
+        DimOfType<type, dim>.result # ")">;
 
 class DimIsOne<string input, int dim> :
   CPred<DimOf<input, dim>.result # " == 1">;
 
 class DimsMatch<string lhs, int lhsDim, string rhs, int rhsDim> :
   CPred<DimOf<lhs, lhsDim>.result # " == " # DimOf<rhs, rhsDim>.result>;
+
+class DimsOfTypeMatch<string lhsType, int lhsDim, string rhsType,
+                      int rhsDim> :
+  CPred<DimOfType<lhsType, lhsDim>.result # " == " #
+        DimOfType<rhsType, rhsDim>.result>;
 
 class ProductDimsMatch<string lhs, int lhsDim, string rhs, int rhsDim,
                        string output, int outputDim> :
@@ -246,6 +240,65 @@ class ProductDimOrOneOrDynamicPred<string lhs, int lhsDim, string rhs,
     ProductDimsMatch<lhs, lhsDim, rhs, rhsDim, output, outputDim>,
     DimIsOne<output, outputDim>
   ]>;
+
+class AttrIsFloat<string attr> :
+  CPred<"::llvm::isa<::mlir::FloatAttr>(get" #
+        snakeCaseToCamelCase<attr>.ret # "())">;
+
+class AttrIsInteger<string attr> :
+  CPred<"::llvm::isa<::mlir::IntegerAttr>(get" #
+        snakeCaseToCamelCase<attr>.ret # "())">;
+
+class IntegerAttrValue<string attr> :
+  StrFunc<"::llvm::cast<::mlir::IntegerAttr>(get" #
+          snakeCaseToCamelCase<attr>.ret # "()).getValue()">;
+
+class FloatAttrValue<string attr> :
+  StrFunc<"::llvm::cast<::mlir::FloatAttr>(get" #
+          snakeCaseToCamelCase<attr>.ret # "()).getValue()">;
+
+class FloatAttrIsNaN<string attr> :
+  And<[AttrIsFloat<attr>,
+       CPred<FloatAttrValue<attr>.result # ".isNaN()">]>;
+
+class ReductionDimMatchPred<string input, string output, int dim> :
+  Or<[
+    DimIsDynamic<input, dim>,
+    DimIsDynamic<output, dim>,
+    And<[CPred<"getAxis() == " # dim>, DimIsOne<output, dim>]>,
+    And<[CPred<"getAxis() != " # dim>, DimsMatch<input, dim, output, dim>]>
+  ]>;
+
+class ReductionOutputShapeMatchesInputAndAxis<string input, string output>:
+PredOpTrait<"shape of " # output # " must match the shape of " # input #
+                " with the dimension at axis replaced by 1",
+  And<!foreach(dim, [0, 1, 2, 3, 4, 5],
+               Implies<
+                 And<[CPred<HasRank<input>.result>,
+                      CPred<HasRank<output>.result>,
+                      CPred<Rank<input>.result # " == " # Rank<output>.result>,
+                      CPred<Rank<input>.result # " > " # dim>]>,
+                 [ReductionDimMatchPred<input, output, dim>]>)>>;
+
+class AccTypeIn<list<string> allowedValues> :
+  CPred<"llvm::is_contained({" # !interleave(!foreach(value, allowedValues, "::mlir::spirv::TosaExtAccType::" # value), ",") # "}, getAccType())">;
+
+class TypeImpliesAccType<string input, Type type, list<string> allowedAccTypes>:
+  PredOpTrait<"acc_type must be one in [" # !interleave(allowedAccTypes, ",") # "] when type has value " # type.summary,
+  Implies<ElementTypeIsPred<input, type>, [AccTypeIn<allowedAccTypes>]>>;
+
+class MatchBroadcastableShapes<string input1, string input2, string output>:
+  PredOpTrait<"the shape of " # input1 # " and " # input2 # " are compatible for broadcasting and the broadcast shape is equal to the " # output # " shape",
+  Implies<And<[CPred<HasRank<input1>.result>, CPred<HasRank<input2>.result>, CPred<HasRank<output>.result>,
+               CPred<Rank<input1>.result # " == " # Rank<input2>.result # " && " # Rank<input1>.result # " == " # Rank<output>.result>]>,
+    [CPred<"llvm::all_of_zip(" # Shape<input1>.result # ", " # Shape<input2>.result # ", " # Shape<output>.result # ", " #
+    "[](int64_t input1Dim, int64_t input2Dim, int64_t outputDim) { " #
+    "   bool dynamic = ShapedType::isDynamic(input1Dim) || ShapedType::isDynamic(input2Dim) || ShapedType::isDynamic(outputDim);"
+    "   bool broadcastableInputs = input1Dim == input2Dim || input1Dim == 1 || input2Dim == 1;" #
+    "   bool broacastDimMatchesOutputDim = std::max(input1Dim, input2Dim) == outputDim;"
+    "   return dynamic || (broadcastableInputs && broacastDimMatchesOutputDim);" #
+    "})">]>
+  >;
 
 class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
   PredOpTrait<"shapes of " # values # ", " # indices # ", and " # tensor #
@@ -315,6 +368,85 @@ class Pool2DPadValuesLessThanKernel<string padAttr, string kernelAttr> :
          ElementsAttrValueLessThan<padAttr, 2, kernelAttr, 1>,
          ElementsAttrValueLessThan<padAttr, 3, kernelAttr, 1>]
     >>;
+
+class MatMulShapesMatch<string lhs, string rhs, string output> : PredOpTrait<
+  "shapes of " # lhs # ", " # rhs # ", and " # output #
+      " must satisfy [N,H,C], [N,C,W], [N,H,W]",
+  And<[
+    SameDimsOrDynamicPred<lhs, 0, rhs, 0>,
+    SameDimsOrDynamicPred<lhs, 0, output, 0>,
+    SameDimsOrDynamicPred<lhs, 1, output, 1>,
+    SameDimsOrDynamicPred<lhs, 2, rhs, 1>,
+    SameDimsOrDynamicPred<rhs, 2, output, 2>
+  ]>>;
+
+class DimsOfTypeAllMatchOrDynamic<string lhsType, string rhsType,
+                                  string otherType, int dim> :
+  Or<[
+    DimOfTypeIsDynamic<lhsType, dim>,
+    DimOfTypeIsDynamic<rhsType, dim>,
+    DimOfTypeIsDynamic<otherType, dim>,
+    And<[DimsOfTypeMatch<lhsType, dim, rhsType, dim>,
+         DimsOfTypeMatch<lhsType, dim, otherType, dim>]>
+  ]>;
+
+class DimOfTypeMatchesHalfPlusOne<string inputType, int inputDim,
+                                  string outputType, int outputDim> :
+  Or<[
+    DimOfTypeIsDynamic<inputType, inputDim>,
+    DimOfTypeIsDynamic<outputType, outputDim>,
+    CPred<DimOfType<outputType, outputDim>.result # " == " #
+          DimOfType<inputType, inputDim>.result # " / 2 + 1">
+  ]>;
+
+class Struct2TensorArmShapesMatchInput<string input> : PredOpTrait<
+  "shapes of output_real and output_imag must match the shape of " # input,
+  And<!foreach(dim, [0, 1, 2],
+               DimsOfTypeAllMatchOrDynamic<
+                 ShapedTypeOf<input>.result,
+                 "getResultRealType()", "getResultImagType()", dim>)>>;
+
+class Struct2TensorArmRFFT2DShapesMatchInput<string input> : PredOpTrait<
+  "shapes of output_real and output_imag must satisfy [N,H,W/2 + 1] when " #
+      input # " has shape [N,H,W]",
+  And<[
+    DimsOfTypeAllMatchOrDynamic<ShapedTypeOf<input>.result,
+      "getResultRealType()", "getResultImagType()", 0>,
+    DimsOfTypeAllMatchOrDynamic<ShapedTypeOf<input>.result,
+      "getResultRealType()", "getResultImagType()", 1>,
+    DimOfTypeMatchesHalfPlusOne<ShapedTypeOf<input>.result,
+      2, "getResultRealType()", 2>,
+    DimOfTypeMatchesHalfPlusOne<ShapedTypeOf<input>.result,
+      2, "getResultImagType()", 2>
+  ]>>;
+
+class DimIsPowerOfTwo<string input, int dim> :
+  Or<[DimIsDynamic<input, dim>,
+      CPred<"llvm::isPowerOf2_64(static_cast<uint64_t>(" # DimOf<input, dim>.result # "))">]>;
+
+class TensorDimsArePowerOfTwo<string input, list<int> dims> : PredOpTrait<
+  "dimensions " # !interleave(dims, ", ") # " of " # input # " must be powers of two",
+  And<!foreach(dim, dims, DimIsPowerOfTwo<input, dim>)>>;
+
+class ClampBoundsAreNotNaN<string minVal, string maxVal>:
+  PredOpTrait<minVal # " and " # maxVal # " must not be NaN",
+    Neg<Or<[FloatAttrIsNaN<minVal>, FloatAttrIsNaN<maxVal>]>>>;
+
+class IntegerAttrLessThanOrEqual<string minVal, string maxVal> :
+  Implies<AttrIsInteger<minVal>,
+          [CPred<IntegerAttrValue<minVal>.result # ".sle(" #
+                 IntegerAttrValue<maxVal>.result # ")">]>;
+
+class FloatAttrLessThanOrEqual<string minVal, string maxVal> :
+  Implies<AttrIsFloat<minVal>,
+          [CPred<FloatAttrValue<minVal>.result # ".compare(" #
+                 FloatAttrValue<maxVal>.result #
+                 ") != ::llvm::APFloat::cmpGreaterThan">]>;
+
+class ClampMinValLessThanOrEqualToMaxVal<string minVal, string maxVal>:
+  PredOpTrait<minVal # " must be <= " # maxVal,
+    And<[IntegerAttrLessThanOrEqual<minVal, maxVal>,
+         FloatAttrLessThanOrEqual<minVal, maxVal>]>>;
 
 class TableSizeConstraint<string input, Type type, int size>:
   PredOpTrait<"table must have size " # size # " if " # input # " has element type " # type.summary,
