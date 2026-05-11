@@ -1769,6 +1769,62 @@ TestMultiSlotAlloca::handleDestructuringComplete(
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
 }
 
+//===----------------------------------------------------------------------===//
+// TestTransparentView
+//===----------------------------------------------------------------------===//
+
+std::optional<PromotableSlotView> TestTransparentView::getPromotableSlotView() {
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  return PromotableSlotView{getSource(), MemorySlot{getResult(), elemType}};
+}
+
+bool TestTransparentView::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentView::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// TestTransparentCastView
+//===----------------------------------------------------------------------===//
+
+std::optional<PromotableSlotView>
+TestTransparentCastView::getPromotableSlotView() {
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  return PromotableSlotView{getSource(), MemorySlot{getResult(), elemType}};
+}
+
+bool TestTransparentCastView::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentCastView::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestTransparentCastView::convertSlotValue(Value value, Type targetType,
+                                                OpBuilder &builder) {
+  if (value.getType() == targetType)
+    return value;
+  return UnrealizedConversionCastOp::create(builder, getLoc(), targetType,
+                                            value)
+      .getResult(0);
+}
+
 namespace {
 /// Returns test dialect's memref layout for test dialect's tensor encoding when
 /// applicable.

@@ -263,6 +263,44 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
       (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
            "::mlir::OpBuilder &":$builder), [{}], [{ return; }]
     >,
+    InterfaceMethod<[{
+        Describes this operation as a transparent view of a memory slot
+        reached through one of its operands.
+
+        The returned `view.ptr` must be a result of this operation;
+        `view.elemType` is the type at which `view.ptr` aliases the slot
+        pointed to by `slotPointerOperand`, possibly different from the
+        underlying slot's element type.
+
+        Returning a view here implies `convertSlotValue` can bridge
+        between `slotPointerOperand`'s element type and `view.elemType`
+        in both directions; if no such conversion exists, return
+        `std::nullopt`.
+
+        No IR mutation is allowed in this method.
+      }],
+      "::std::optional<::mlir::PromotableSlotView>",
+      "getPromotableSlotView",
+      (ins), [{}],
+      [{ return std::nullopt; }]
+    >,
+    InterfaceMethod<[{
+        Builds a value of `targetType` from `value`, bridging the
+        underlying slot's element type and the view's element type.
+        Mem2reg calls this in both directions (load: slot → view; store:
+        view → slot).
+      }],
+      "::mlir::Value",
+      "convertSlotValue",
+      (ins "::mlir::Value":$value,
+           "::mlir::Type":$targetType,
+           "::mlir::OpBuilder &":$builder), [{}],
+      [{
+        if (value.getType() == targetType)
+          return value;
+        return ::mlir::Value{};
+      }]
+    >,
   ];
 }
 

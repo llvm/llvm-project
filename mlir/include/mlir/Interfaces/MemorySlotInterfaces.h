@@ -30,6 +30,15 @@ struct DestructurableMemorySlot : public MemorySlot {
   DenseMap<Attribute, Type> subelementTypes;
 };
 
+/// Description of a memory slot view produced by a `PromotableOpInterface`
+/// operation: `slotPointerOperand` is the operand viewed by the op,
+/// `view.ptr` is the result aliasing it, and `view.elemType` is the type
+/// at which `view.ptr` aliases the underlying slot.
+struct PromotableSlotView {
+  Value slotPointerOperand;
+  MemorySlot view;
+};
+
 /// Returned by operation promotion logic requesting the deletion of an
 /// operation.
 enum class DeletionKind {
@@ -43,5 +52,39 @@ enum class DeletionKind {
 
 #include "mlir/Interfaces/MemorySlotOpInterfaces.h.inc"
 #include "mlir/Interfaces/MemorySlotTypeInterfaces.h.inc"
+
+namespace mlir {
+
+/// Returns true if `value` is `rootSlot.ptr` or a transitive view of it,
+/// following `PromotableOpInterface::getPromotableSlotView` chains. The
+/// element type at which `value` aliases the slot is written to
+/// `*outViewElemType` (equal to `rootSlot.elemType` when the chain is empty).
+bool isPromotableSlotView(Value value, const MemorySlot &rootSlot,
+                          Type *outViewElemType = nullptr);
+
+/// Returns a MemorySlot whose `ptr` is the operand of `op` that is a
+/// (possibly transitive) view of `rootSlot.ptr`, with `elemType` equal to
+/// the type at which that operand aliases the slot. Mem2Reg uses this to
+/// hand each `PromotableMemOpInterface` op a slot description tailored to
+/// its memref operand. Returns `nullopt` if no operand is a view of
+/// `rootSlot`.
+std::optional<MemorySlot> getOpViewSlot(Operation *op,
+                                        const MemorySlot &rootSlot);
+
+/// Converts `slotValue` (typed at `rootSlot.elemType`) to the type at which
+/// `viewPtr` aliases `rootSlot`, by chaining
+/// `PromotableOpInterface::convertSlotValue` calls along the view chain
+/// root-to-leaf. Returns `nullptr` if any step's converter fails.
+Value convertSlotValueToViewValue(Value slotValue, Value viewPtr,
+                                  const MemorySlot &rootSlot,
+                                  OpBuilder &builder);
+
+/// Inverse of `convertSlotValueToViewValue`: converts `viewValue` back to
+/// `rootSlot.elemType` along the chain leaf-to-root.
+Value convertViewValueToSlotValue(Value viewValue, Value viewPtr,
+                                  const MemorySlot &rootSlot,
+                                  OpBuilder &builder);
+
+} // namespace mlir
 
 #endif // MLIR_INTERFACES_MEMORYSLOTINTERFACES_H

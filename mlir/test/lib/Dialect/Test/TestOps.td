@@ -3941,6 +3941,32 @@ def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
   let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
 }
 
+// Same-element-type transparent view of a memref slot. Exercises the
+// view-chain handling in mem2reg with an identity convertSlotValue.
+def TestTransparentView : TEST_Op<"transparent_view",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses",
+                                "getPromotableSlotView"]>]> {
+  let arguments = (ins MemRefOf<[I32]>:$source);
+  let results = (outs MemRefOf<[I32]>:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Type-changing transparent view of a memref slot. The result aliases the
+// source at a different element type; convertSlotValue bridges between
+// the two element types using `builtin.unrealized_conversion_cast`.
+def TestTransparentCastView : TEST_Op<"transparent_cast_view",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses",
+                                "getPromotableSlotView",
+                                "convertSlotValue"]>]> {
+  let arguments = (ins MemRefOf<[I32, F32]>:$source);
+  let results = (outs MemRefOf<[I32, F32]>:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
 //===----------------------------------------------------------------------===//
 // Test allocation Ops
 //===----------------------------------------------------------------------===//
