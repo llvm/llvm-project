@@ -1,0 +1,78 @@
+## Test --verbose / -v option for llvm-objcopy and llvm-strip.
+## The output should match GNU strip's format:
+##   copy from `<input>' [<format>] to `<output>' [<format>]
+
+# RUN: yaml2obj %s -o %t.o
+
+## llvm-objcopy --verbose and -v both print the copy message to stdout.
+# RUN: llvm-objcopy --verbose %t.o %t.out 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=OBJCOPY -DIN=%t.o -DOUT=%t.out
+# RUN: llvm-objcopy -v %t.o %t.out 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=OBJCOPY -DIN=%t.o -DOUT=%t.out
+# OBJCOPY: copy from `[[IN]]' [elf64-x86-64] to `[[OUT]]' [elf64-x86-64]
+
+## Each run produces exactly one line.
+# RUN: llvm-objcopy --verbose %t.o %t.out 2>/dev/null | count 1
+
+## llvm-objcopy with a single positional argument modifies the file in-place;
+## input and output file names in the message match.
+# RUN: cp %t.o %t.inplace.o
+# RUN: llvm-objcopy --verbose %t.inplace.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=INPLACE -DF=%t.inplace.o
+# INPLACE: copy from `[[F]]' [elf64-x86-64] to `[[F]]' [elf64-x86-64]
+
+## llvm-strip --verbose and -v print one line per input file.
+# RUN: cp %t.o %t.strip1.o
+# RUN: cp %t.o %t.strip2.o
+# RUN: llvm-strip --verbose %t.strip1.o %t.strip2.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=STRIP \
+# RUN:     -DF1=%t.strip1.o -DF2=%t.strip2.o
+# RUN: cp %t.o %t.strip3.o
+# RUN: cp %t.o %t.strip4.o
+# RUN: llvm-strip -v %t.strip3.o %t.strip4.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=STRIP \
+# RUN:     -DF1=%t.strip3.o -DF2=%t.strip4.o
+# STRIP:      copy from `[[F1]]' [elf64-x86-64] to `[[F1]]' [elf64-x86-64]
+# STRIP-NEXT: copy from `[[F2]]' [elf64-x86-64] to `[[F2]]' [elf64-x86-64]
+
+## Two inputs produce exactly two lines.
+# RUN: cp %t.o %t.cnt1.o
+# RUN: cp %t.o %t.cnt2.o
+# RUN: llvm-strip --verbose %t.cnt1.o %t.cnt2.o 2>/dev/null | count 2
+
+## For archives, one line is printed per member using <archive>(<member>) as
+## the file identifier. Unlike GNU objcopy (which uses a temp-file path),
+## llvm-objcopy uses the output archive name.
+# RUN: cp %t.o %t.member2.o
+# RUN: rm -f %t.a
+# RUN: llvm-ar crs %t.a %t.o %t.member2.o
+# RUN: llvm-objcopy --verbose %t.a %t.ar.out 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=ARCHIVE \
+# RUN:     -DAR=%t.a -DOUT=%t.ar.out
+# ARCHIVE:      copy from `[[AR]]({{[^)]+}})' [elf64-x86-64] to `[[OUT]]({{[^)]+}})' [elf64-x86-64]
+# ARCHIVE-NEXT: copy from `[[AR]]({{[^)]+}})' [elf64-x86-64] to `[[OUT]]({{[^)]+}})' [elf64-x86-64]
+
+## Two-member archive produces exactly two lines.
+# RUN: rm -f %t.cnt.a
+# RUN: llvm-ar crs %t.cnt.a %t.o %t.member2.o
+# RUN: llvm-objcopy --verbose %t.cnt.a %t.cnt.ar.out 2>/dev/null | count 2
+
+## llvm-strip on an archive modifies in-place; input and output archive names
+## match in the per-member messages.
+# RUN: rm -f %t.strip.a
+# RUN: llvm-ar crs %t.strip.a %t.o %t.member2.o
+# RUN: llvm-strip --verbose %t.strip.a 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=STRIP-AR \
+# RUN:     -DAR=%t.strip.a
+# STRIP-AR:      copy from `[[AR]]({{[^)]+}})' [elf64-x86-64] to `[[AR]]({{[^)]+}})' [elf64-x86-64]
+# STRIP-AR-NEXT: copy from `[[AR]]({{[^)]+}})' [elf64-x86-64] to `[[AR]]({{[^)]+}})' [elf64-x86-64]
+
+## No output without the flag.
+# RUN: llvm-objcopy %t.o %t.out 2>/dev/null | count 0
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

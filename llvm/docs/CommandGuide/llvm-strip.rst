@@ -110,6 +110,14 @@ multiple file formats.
  Remove from the output all local or undefined symbols that are not required by
  relocations. Also remove all debug sections.
 
+.. option:: --verbose, -v
+
+ Print a line for each file stripped. For regular objects, the output is:
+ ``copy from `<input>' [<format>] to `<output>' [<format>]``.
+ For archives, one line is printed per member in the same format using
+ ``<archive>(<member>)`` as the file name. Multiple input files each produce
+ one line (or one line per archive member).
+
 .. option:: --version, -V
 
  Display the version of the :program:`llvm-strip` executable.

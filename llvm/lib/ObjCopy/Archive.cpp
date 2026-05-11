@@ -11,8 +11,10 @@
 #include "llvm/ObjCopy/MultiFormatConfig.h"
 #include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::objcopy;
@@ -32,6 +34,16 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
     if (!ChildOrErr)
       return createFileError(Ar.getFileName() + "(" + *ChildNameOrErr + ")",
                              ChildOrErr.takeError());
+
+    const CommonConfig &CC = Config.getCommonConfig();
+    if (CC.Verbose) {
+      StringRef FormatName;
+      if (auto *OF = dyn_cast<object::ObjectFile>(ChildOrErr->get()))
+        FormatName = OF->getFileFormatName();
+      outs() << "copy from `" << Ar.getFileName() << "(" << *ChildNameOrErr
+             << ")' [" << FormatName << "] to `" << CC.OutputFilename << "("
+             << *ChildNameOrErr << ")' [" << FormatName << "]\n";
+    }
 
     SmallVector<char, 0> Buffer;
     raw_svector_ostream MemStream(Buffer);

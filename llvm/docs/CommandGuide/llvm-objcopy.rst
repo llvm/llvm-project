@@ -294,6 +294,13 @@ multiple file formats.
  ``<file>``. If the section ``<name>`` is part of a segment, the new contents
  cannot be larger than the existing section.
 
+.. option:: --verbose, -v
+
+ Print a line for each file copied. For regular objects, the output is:
+ ``copy from `<input>' [<format>] to `<output>' [<format>]``.
+ For archives, one line is printed per member in the same format using
+ ``<archive>(<member>)`` as the file name.
+
 .. option:: --version, -V
 
  Display the version of the :program:`llvm-objcopy` executable.

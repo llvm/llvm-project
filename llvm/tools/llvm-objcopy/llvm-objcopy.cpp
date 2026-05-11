@@ -163,21 +163,20 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
       return createFileError(Config.InputFilename, BinaryOrErr.takeError());
     BinaryHolder = std::move(*BinaryOrErr);
 
-    if (Config.Verbose) {
-      StringRef FormatName;
-      if (auto *OF =
-              dyn_cast<object::ObjectFile>(BinaryHolder.getBinary()))
-        FormatName = OF->getFileFormatName();
-      outs() << "copy from `" << Config.InputFilename << "' [" << FormatName
-             << "] to `" << Config.OutputFilename << "' [" << FormatName
-             << "]\n";
-    }
-
     if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
-      // Handle Archive.
+      // Handle Archive. Per-member verbose output is emitted inside
+      // executeObjcopyOnArchive.
       if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
         return E;
     } else {
+      if (Config.Verbose) {
+        StringRef FormatName;
+        if (auto *OF = dyn_cast<object::ObjectFile>(BinaryHolder.getBinary()))
+          FormatName = OF->getFileFormatName();
+        outs() << "copy from `" << Config.InputFilename << "' [" << FormatName
+               << "] to `" << Config.OutputFilename << "' [" << FormatName
+               << "]\n";
+      }
       // Handle llvm::object::Binary.
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),
