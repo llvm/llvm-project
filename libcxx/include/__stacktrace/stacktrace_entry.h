@@ -52,9 +52,9 @@ struct _StringWrapper {
 
   std::string __str_;
 
-  _LIBCPP_HIDE_FROM_ABI std::string_view view() const { return __str_; }
+  _LIBCPP_HIDE_FROM_ABI std::string_view __view() const { return __str_; }
 
-  _LIBCPP_HIDE_FROM_ABI _StringWrapper& assign(std::string_view __view) {
+  _LIBCPP_HIDE_FROM_ABI _StringWrapper& __assign(std::string_view __view) {
     __str_ = __view;
     return *this;
   }
@@ -84,7 +84,7 @@ struct _Entry {
   _LIBCPP_HIDE_FROM_ABI static _Entry& __entry_base(stacktrace_entry& __entry);
   _LIBCPP_HIDE_FROM_ABI static _Entry const& __entry_base(stacktrace_entry const& __entry);
 
-  _LIBCPP_HIDE_FROM_ABI uintptr_t adjusted_addr() const;
+  _LIBCPP_HIDE_FROM_ABI uintptr_t __adjusted_addr() const;
 
   _LIBCPP_HIDE_FROM_ABI ~_Entry()                                  = default;
   _LIBCPP_HIDE_FROM_ABI constexpr _Entry()                         = default;
@@ -117,8 +117,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return native_handle() != 0; }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_.view()); }
-  _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_.view()); }
+  _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_.__view()); }
+  _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_.__view()); }
   _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison

@@ -57,7 +57,7 @@ _LIBCPP_EXPORTED_FROM_ABI string _Trace::__to_string() const {
 _LIBCPP_EXPORTED_FROM_ABI size_t _Trace::__hash_code() const {
   size_t __ret = size_t(0xc3a5c85c97cb3127ull); // taken from __functional/hash.h
   for (_Entry const& __e : __entry_iters_()) {
-    __ret = (__ret << 1) ^ __e.hash();
+    __ret = (__ret << 1) ^ __e.__hash_code();
   }
   return __ret;
 }

@@ -62,7 +62,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::__populate_images() {
     if (auto& image = images[i]) {
       entry.__image_ = &image;
       // While we're in this loop, get the executable's path, and tentatively use this for source file.
-      entry.__file_.assign(image.name_);
+      entry.__file_.__assign(image.name_);
     }
   }
 }

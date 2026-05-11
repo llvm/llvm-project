@@ -22,7 +22,7 @@ namespace __stacktrace {
 
 _Images::_Images() {
   std::vector<char> buf(512);
-  while(loadquery(L_GETINFO, buf.data(), buf.size()) == -1) {
+  while (loadquery(L_GETINFO, buf.data(), buf.size()) == -1) {
     if (errno == ENOMEM)
       buf.resize(buf.size() * 2);
     else
@@ -47,7 +47,7 @@ _Images::_Images() {
 
     if (ldi->ldinfo_next == 0)
       break;
-    
+
     ldi = reinterpret_cast<struct ld_info*>(reinterpret_cast<char*>(ldi) + ldi->ldinfo_next);
   }
 
@@ -65,7 +65,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::populate_images() {
     if (auto& image = images[i]) {
       entry.__image_ = &image;
       // While we're in this loop, get the executable's path, and tentatively use this for source file.
-      entry.__file_.assign(image.name_);
+      entry.__file_.__assign(image.name_);
     }
   }
 }

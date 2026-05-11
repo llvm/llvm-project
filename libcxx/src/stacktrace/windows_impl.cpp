@@ -247,7 +247,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
     IMAGEHLP_MODULE mod_info{};
     mod_info.SizeOfStruct = sizeof(mod_info);
     if (SymGetModuleInfo(proc, frame.AddrPC.Offset, &mod_info)) {
-      entry.__file_.assign(mod_info.LoadedImageName);
+      entry.__file_.__assign(mod_info.LoadedImageName);
     }
 
     --max_depth;
@@ -275,13 +275,13 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
 #  endif
     IMAGEHLP_LINE line;
     if (SymGetSymFromAddr(proc, entry.__addr_, &symdisp, sym)) {
-      entry.__desc_.assign(sym->Name);
+      entry.__desc_.__assign(sym->Name);
     }
 
     DWORD linedisp{};
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
     if (SymGetLineFromAddr(proc, entry.__addr_, &linedisp, &line)) {
-      entry.__file_.assign(line.FileName);
+      entry.__file_.__assign(line.FileName);
       entry.__line_ = line.LineNumber;
     }
   }
