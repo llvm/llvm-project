@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_ARPA_INET_INET_ATON_H
 #define LLVM_LIBC_SRC_ARPA_INET_INET_ATON_H
 
-#include "include/llvm-libc-types/in_addr.h"
+#include "include/llvm-libc-types/struct_in_addr.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-int inet_aton(const char *cp, in_addr *inp);
+int inet_aton(const char *cp, struct in_addr *inp);
 
 } // namespace LIBC_NAMESPACE_DECL
 

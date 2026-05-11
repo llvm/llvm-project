@@ -1881,17 +1881,17 @@ bool FileCheck::readCheckFile(
     assert(UsedPrefix.data() == Buffer.data() &&
            "Failed to move Buffer's start forward, or pointed prefix outside "
            "of the buffer!");
+
+    const char *BufferEnd = Buffer.data() + Buffer.size();
     assert(AfterSuffix.data() >= Buffer.data() &&
-           AfterSuffix.data() < Buffer.data() + Buffer.size() &&
+           AfterSuffix.data() <= BufferEnd &&
            "Parsing after suffix doesn't start inside of buffer!");
+
+    // Skip the buffer to the end of the parsed directive suffix.
+    Buffer = AfterSuffix;
 
     // Location to use for error messages.
     const char *UsedPrefixStart = UsedPrefix.data();
-
-    // Skip the buffer to the end of parsed suffix (or just prefix, if no good
-    // suffix was processed).
-    Buffer = AfterSuffix.empty() ? Buffer.drop_front(UsedPrefix.size())
-                                 : AfterSuffix;
 
     // Complain about misspelled directives.
     if (CheckTy == Check::CheckMisspelled) {

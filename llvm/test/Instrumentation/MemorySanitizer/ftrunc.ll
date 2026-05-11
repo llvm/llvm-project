@@ -3,8 +3,9 @@
 ;
 ; Forked from llvm/test/Instrumentation/MemorySanitizer/ftrunc.ll
 ;
-; Handled strictly:
-; - llvm.fptoui.sat, llvm.fptosi.sat
+; Handled strictly: (none)
+;
+; Handled heuristically: (none)
 ;
 ; REQUIRES: x86-registered-target
 
@@ -235,15 +236,10 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[I]] to float
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %x)
@@ -256,15 +252,10 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[I:%.*]] = call i64 @llvm.fptosi.sat.i64.f64(double [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i64 [[I]] to double
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %x)
@@ -273,6 +264,3 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 }
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.

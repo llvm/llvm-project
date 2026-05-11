@@ -3188,7 +3188,8 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
           CanQualType::CreateUnsafe(ReturnTy));
   LookupResult ConvR(SemaRef, ConvName, SourceLocation(),
                      Sema::LookupOrdinaryName);
-  bool LookupSucceeded = SemaRef.LookupQualifiedName(ConvR, RD);
+  [[maybe_unused]] bool LookupSucceeded =
+      SemaRef.LookupQualifiedName(ConvR, RD);
   assert(LookupSucceeded);
 
   for (NamedDecl *D : ConvR) {
@@ -4697,6 +4698,19 @@ static void BuildFlattenedTypeList(QualType BaseTy,
     }
     List.push_back(T);
   }
+}
+
+bool SemaHLSL::IsConstantBufferElementCompatible(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  // Must be a class/struct.
+  const auto *RD = QT->getAsCXXRecordDecl();
+  if (!RD || RD->isUnion())
+    return false;
+
+  // Cannot be a resource type or contain one.
+  return !QT->isHLSLIntangibleType();
 }
 
 bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
