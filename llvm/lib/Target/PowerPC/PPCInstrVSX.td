@@ -4063,9 +4063,8 @@ def : Pat<(i32 (fp_to_f16 f32:$A)),
           (i32 (MFVSRWZ (XSCVDPHP (COPY_TO_REGCLASS $A, VSFRC))))>;
 def : Pat<(i32 (fp_to_f16 f64:$A)), (i32 (MFVSRWZ (XSCVDPHP $A)))>;
 
-// P9 f16 patterns (HasFloat16, HasP9Vector)
 // P9 has dedicated halfword VSX memory ops and scalar conversion instructions.
-let Predicates = [HasFloat16, HasP9Vector] in {
+let Predicates = [HasP9Vector] in {
   // Load halfword into VSX half container (no conversion on load).
   def : Pat<(f16 (load ForceXForm:$src)),
             (COPY_TO_REGCLASS (LXSIHZX ForceXForm:$src), VHFRC)>;
@@ -4099,12 +4098,10 @@ let Predicates = [HasFloat16, HasP9Vector] in {
   // corrupted). These operations must be pure bit moves. See llvm/llvm-project#97981.
 }
 
-
-// P8 f16 patterns (HasFloat16, HasP8Vector) 
 // P8 has no halfword VSX memory ops. Load/store goes through GPR roundtrip.
 // These patterns also fire on P9 (P9 satisfies HasP8Vector), providing
 // the fabs/fneg/fcopysign patterns for all hardware.
-let Predicates = [HasFloat16, HasP8Vector] in {
+let Predicates = [HasP8Vector] in {
   // Store f16: Move VSX half container -> GPR, then Store Halfword.
   def : Pat<(store f16:$src, xoaddr:$dst),
             (STHX (MFVSRWZ (COPY_TO_REGCLASS $src, VHFRC)), xoaddr:$dst)>;

@@ -7059,7 +7059,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 // So far, this function is only used by LowerFormalArguments_AIX()
 static const TargetRegisterClass *
 getRegClassForSVT(MVT::SimpleValueType SVT, bool IsPPC64, bool HasP8Vector,
-                  bool HasVSX, bool HasFloat16) {
+                  bool HasVSX) {
   assert((IsPPC64 || SVT != MVT::i64) &&
          "i64 should have been split for 32-bit codegen.");
 
@@ -7071,7 +7071,7 @@ getRegClassForSVT(MVT::SimpleValueType SVT, bool IsPPC64, bool HasP8Vector,
   case MVT::i64:
     return IsPPC64 ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
   case MVT::f16:
-    if (HasFloat16 && HasP8Vector)
+    if (HasP8Vector)
       return &PPC::VHFRCRegClass;
     llvm_unreachable("f16 requires Power8 or later");
   case MVT::f32:
@@ -7220,7 +7220,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     if (SaveParams && VA.isRegLoc() && !Flags.isByVal() && !VA.needsCustom()) {
       const TargetRegisterClass *RegClass =
           getRegClassForSVT(LocVT.SimpleTy, IsPPC64, Subtarget.hasP8Vector(),
-                            Subtarget.hasVSX(), Subtarget.hasFloat16());
+                            Subtarget.hasVSX());
       // On PPC64, debugger assumes extended 8-byte values are stored from GPR.
       MVT SaveVT = RegClass == &PPC::G8RCRegClass ? MVT::i64 : LocVT;
       const Register VReg = MF.addLiveIn(VA.getLocReg(), RegClass);
@@ -7306,8 +7306,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
         MVT::SimpleValueType SVT = VA.getLocVT().SimpleTy;
         MF.addLiveIn(VA.getLocReg(),
                      getRegClassForSVT(SVT, IsPPC64, Subtarget.hasP8Vector(),
-                                       Subtarget.hasVSX(),
-                                       Subtarget.hasFloat16()));
+                                       Subtarget.hasVSX()));
       };
 
       HandleMemLoc();
@@ -7449,7 +7448,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       Register VReg = MF.addLiveIn(
           VA.getLocReg(),
           getRegClassForSVT(SVT, IsPPC64, Subtarget.hasP8Vector(),
-                            Subtarget.hasVSX(), Subtarget.hasFloat16()));
+                            Subtarget.hasVSX()));
       SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
       if (ValVT.isScalarInteger() &&
           (ValVT.getFixedSizeInBits() < LocVT.getFixedSizeInBits())) {
