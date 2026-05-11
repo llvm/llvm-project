@@ -91,6 +91,7 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_entrypoint_object(
@@ -634,6 +635,13 @@ add_entrypoint_object(
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
+
+add_entrypoint_object(
+  setenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setenv
+)
 
 if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(

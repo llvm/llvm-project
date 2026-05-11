@@ -2718,7 +2718,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPGroupprivate &x) {
+  void Unparse(const OmpGroupprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2742,7 +2742,7 @@ public:
   void Unparse(const OpenMPMisplacedEndDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
   }
-  void Unparse(const OpenMPRequiresConstruct &x) {
+  void Unparse(const OmpRequiresDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2772,7 +2772,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPThreadprivate &x) {
+  void Unparse(const OmpThreadprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
