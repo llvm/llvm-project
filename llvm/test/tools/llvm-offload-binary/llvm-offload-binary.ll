@@ -62,14 +62,14 @@
 ; Test extracting nested images.
 ; RUN: llvm-offload-binary %t6 | FileCheck --check-prefix=EXTRACT-NESTED %s
 
-; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
+; EXTRACT-NESTED:      Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
 ; EXTRACT-NESTED-NEXT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
 
 ; Test mixed nested and non-nested images.
 ; RUN: llvm-offload-binary -o %t7 --image=file=%t5,arch=nested,triple=x-y-z --image=file=%s,arch=ghi,triple=x-y-z
 ; RUN: llvm-offload-binary %t7 | FileCheck --check-prefix=EXTRACT-MIXED %s
 
-; EXTRACT-MIXED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
+; EXTRACT-MIXED:      Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
 ; EXTRACT-MIXED-NEXT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
 ; EXTRACT-MIXED-NEXT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-ghi.2.
 
@@ -78,12 +78,13 @@
 ; RUN: diff %t5 %t8
 
 ; Test malformed outer OffloadBinary is handled gracefully.
-; RUN: not llvm-offload-binary %S/bad-offload.input 2>&1 | FileCheck --check-prefix=MALFORMED-OUTER %s
+; RUN: printf "\x10\xff\x10\xad\x0a" > %t9
+; RUN: not llvm-offload-binary %t9 2>&1 | FileCheck --check-prefix=MALFORMED-OUTER %s
 
 ; MALFORMED-OUTER: llvm-offload-binary: error: Invalid data was encountered while parsing the file
 
 ; Test malformed inner OffloadBinary is handled gracefully.
-; RUN: llvm-offload-binary -o %t9 --image=file=%S/bad-offload.input,arch=nested,triple=x-y-z
-; RUN: not llvm-offload-binary %t9 2>&1 | FileCheck --check-prefix=MALFORMED-INNER %s
+; RUN: llvm-offload-binary -o %t10 --image=file=%t9,arch=nested,triple=x-y-z
+; RUN: not llvm-offload-binary %t10 2>&1 | FileCheck --check-prefix=MALFORMED-INNER %s
 
 ; MALFORMED-INNER: llvm-offload-binary: error: Invalid data was encountered while parsing the file
