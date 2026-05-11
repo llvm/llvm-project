@@ -16,6 +16,7 @@
 #include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -42,6 +43,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <cassert>
 #include <cstdint>
@@ -257,11 +260,19 @@ bool InstrumentorImpl::instrument() {
   return Changed;
 }
 
+InstrumentorPass::InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                                   InstrumentationConfig *IC,
+                                   InstrumentorIRBuilderTy *IIRB)
+    : FS(FS), UserIConf(IC), UserIIRB(IIRB) {
+  if (!FS)
+    this->FS = vfs::getRealFileSystem();
+}
+
 PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB,
                                         bool ReadConfig) {
   InstrumentorImpl Impl(IConf, IIRB, M);
-  if (ReadConfig && !readConfigFromJSON(IConf, ReadConfigFile, IIRB.Ctx))
+  if (ReadConfig && !readConfigFromJSON(IConf, ReadConfigFile, IIRB.Ctx, *FS))
     return PreservedAnalyses::all();
 
   writeConfigToJSON(IConf, WriteConfigFile, IIRB.Ctx);
