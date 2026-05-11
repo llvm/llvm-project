@@ -12,4 +12,4 @@ runs:
       RELEASE_VERSON: ${{ inputs.release-version }}
 
       run: |
-        echo $RELEASE_VERSION | grep -e '^[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
+        grep -e '^[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$' <<< "$RELEASE_VERSION"
