@@ -186,7 +186,7 @@ static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
 // so the lookup goes through `RecordKeeper::getDef`.
 static void CheckKnownOverloadConflictExistence(const RecordKeeper &RC) {
   for (const Record *Def : RC.getAllDerivedDefinitions("Intrinsic")) {
-    const StringRef Allow = Def->getValueAsString("KnownOverloadConflict");
+    StringRef Allow = Def->getValueAsString("KnownOverloadConflict");
     if (Allow.empty())
       continue;
 
@@ -290,7 +290,7 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
         // not the mangled name (`OverloadName == Overloaded->Name`,
         // which is "llvm.foo"). The comparison must therefore use
         // `Overloaded->TheDef->getName()`.
-        const StringRef Allow =
+        StringRef Allow =
             Int.TheDef->getValueAsString("KnownOverloadConflict");
         if (!Allow.empty() && Allow == Overloaded->TheDef->getName())
           continue;
@@ -304,9 +304,8 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
         PrintNote(Overloaded->TheDef->getLoc(),
                   "Overloaded intrinsic `" + OverloadName + "` defined here");
         PrintNote(Int.TheDef->getLoc(),
-                  "if intentional, add `let KnownOverloadConflict = \"" +
-                      Overloaded->TheDef->getName() +
-                      "\" in` to this intrinsic's definition");
+                  "if intentional, add `let KnownOverloadConflict = \"xxx\" "
+                  "in` to this intrinsic's definition");
         continue;
       }
 
