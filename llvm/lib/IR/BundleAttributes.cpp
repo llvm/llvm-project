@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/BundleAttributes.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
 
@@ -34,9 +34,12 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
          OBU.Inputs.size() <= 3);
   AssumeAlignInfo Ret{};
   Ret.Ptr = OBU.Inputs[0];
-  Ret.Alignment = OBU.Inputs[1];
-  if (OBU.Inputs.size() == 3)
-    Ret.Offset = OBU.Inputs[2];
+  if (auto *Align = dyn_cast<ConstantInt>(OBU.Inputs[1]))
+    Ret.Alignment = Align->getZExtValue();
+  if (OBU.Inputs.size() == 3) {
+    if (auto *Offset = dyn_cast<ConstantInt>(OBU.Inputs[2]))
+      Ret.Offset = Offset->getZExtValue();
+  }
   return Ret;
 }
 

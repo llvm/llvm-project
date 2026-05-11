@@ -3630,14 +3630,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Try to remove redundant alignment assumptions.
         auto [Ptr, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-        if (Offset || !isa<ConstantInt>(Alignment))
-          break;
-        auto AlignVal = cast<ConstantInt>(Alignment)->getZExtValue();
-        if (!isPowerOf2_64(AlignVal))
+        if (Offset || !Alignment || !isPowerOf2_64(*Alignment))
           break;
 
         // Remove align 1 bundles; they don't add any useful information.
-        if (AlignVal == 1)
+        if (*Alignment == 1)
           return CallBase::removeOperandBundle(II, OBU.getTagID());
 
         // Don't try to remove align assumptions for pointers derived from
@@ -3650,7 +3647,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
         if ((1ULL << computeKnownBits(Ptr, II).countMinTrailingZeros()) <
-            AlignVal)
+            *Alignment)
           break;
         return CallBase::removeOperandBundle(II, OBU.getTagID());
       }

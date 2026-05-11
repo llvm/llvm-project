@@ -29,8 +29,8 @@ inline BundleAttr getBundleAttrFromOBU(OperandBundleUse OBU) {
 
 struct AssumeAlignInfo {
   Value *Ptr;
-  Value *Alignment;
-  Value *Offset;
+  std::optional<uint64_t> Alignment;
+  std::optional<uint64_t> Offset;
 };
 
 LLVM_ABI AssumeAlignInfo getAssumeAlignInfo(OperandBundleUse);
