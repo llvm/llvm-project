@@ -54,6 +54,7 @@ define void @test2(ptr %addr.i) {
   ret void
 }
 
+; TODO:
 ; We DSE stack alloc'ed and byval locations, in the presence of fences.
 ; Fence does not make an otherwise thread local store visible.
 ; Right now the DSE in presence of fence is only done in end blocks (with no successors),
@@ -62,6 +63,7 @@ define void @test2(ptr %addr.i) {
 define void @test3(ptr byval(i32) %addr.i) {
 ; CHECK-LABEL: define void @test3(
 ; CHECK-SAME: ptr byval(i32) [[ADDR_I:%.*]]) {
+; CHECK-NEXT:    store i32 5, ptr [[ADDR_I]], align 4
 ; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    ret void
 ;
@@ -74,11 +76,13 @@ declare void @foo(ptr nocapture %p)
 
 declare noalias ptr @malloc(i32)
 
+; TODO:
 ; DSE of stores in locations allocated through library calls.
 define void @test_nocapture() {
 ; CHECK-LABEL: define void @test_nocapture() {
 ; CHECK-NEXT:    [[M:%.*]] = call ptr @malloc(i32 24)
 ; CHECK-NEXT:    call void @foo(ptr [[M]])
+; CHECK-NEXT:    store i8 4, ptr [[M]], align 1
 ; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    ret void
 ;
@@ -89,10 +93,14 @@ define void @test_nocapture() {
   ret void
 }
 
+
+; TODO:
 ; This is a full fence, but it does not make a thread local store visible.
 ; We can DSE the store in presence of the fence.
 define void @fence_seq_cst() {
 ; CHECK-LABEL: define void @fence_seq_cst() {
+; CHECK-NEXT:    [[P1:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[P1]], align 4
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    ret void
 ;

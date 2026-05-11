@@ -5156,6 +5156,15 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::visitLValueExpr(const Expr *E,
+                                        bool DestroyToplevelScope) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/true);
+
+  return this->visitExpr(E, DestroyToplevelScope);
+}
+
+template <class Emitter>
 VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
 
   auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true);

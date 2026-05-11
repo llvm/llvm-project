@@ -7577,10 +7577,6 @@ multiclass ExtPat<ValueType VT64, ValueType VT128, int N> {
             (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
   def : Pat<(VT128 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
             (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-  // We use EXT to handle extract_subvector to copy the upper 64-bits of a
-  // 128-bit vector.
-  def : Pat<(VT64 (extract_subvector V128:$Rn, (i64 N))),
-            (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
   // A 64-bit EXT of two halves of the same 128-bit register can be done as a
   // single 128-bit EXT.
   def : Pat<(VT64 (AArch64ext (extract_subvector V128:$Rn, (i64 0)),
@@ -10976,14 +10972,22 @@ def : Pat<(v1i64 (extract_subvector V128:$Rn, (i64 0))),
 def : Pat<(v1f64 (extract_subvector V128:$Rn, (i64 0))),
            (EXTRACT_SUBREG V128:$Rn, dsub)>;
 
-def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
-def : Pat<(v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
-def : Pat<(v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
+def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 8))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+          (DUPi64 FPR128:$Rn, 1)>;
 def : Pat<(v1i64 (extract_subvector (v2i64 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4bf16 (extract_subvector (v8bf16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v2f32 (extract_subvector (v4f32 FPR128:$Rn), (i64 2))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v1f64 (extract_subvector (v2f64 FPR128:$Rn), (i64 1))),
+          (DUPi64 FPR128:$Rn, 1)>;
 
 // A 64-bit subvector insert to the first 128-bit vector position
 // is a subregister copy that needs no instruction.

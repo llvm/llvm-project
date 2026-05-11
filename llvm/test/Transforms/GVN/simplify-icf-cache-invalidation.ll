@@ -28,6 +28,8 @@ define hidden void @eggs(ptr %arg, i1 %arg2, ptr %arg3, i32 %arg4, ptr %arg5) un
 ; CHECK-NEXT:    br label %[[BB9]]
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    tail call void @quux(ptr [[ARG]], i1 [[ARG2]])
+; CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq ptr [[TMP17]], null
 ; CHECK-NEXT:    ret void
 ;
 bb:
