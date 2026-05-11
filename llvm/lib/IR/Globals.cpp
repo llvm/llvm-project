@@ -130,7 +130,6 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   if (getParent() == nullptr)
     return {};
   const Module &M = *getParent();
-
   return M.getGUID(this);
 }
 
