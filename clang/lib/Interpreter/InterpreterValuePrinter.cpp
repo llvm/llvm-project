@@ -31,6 +31,21 @@
 #include <sstream>
 #include <string>
 
+// MSan cannot track value shadow across the JIT/native varargs boundary in
+// __clang_Interpreter_SetValueNoAlloc: the JIT-emitted caller does not set
+// up MSan TLS shadow, so writes via va_arg propagate uninit shadow into the
+// resulting Value. Unpoison the written Value before returning.
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+#define CLANG_INTERP_MSAN_UNPOISON(p, n) __msan_unpoison((p), (n))
+#else
+#define CLANG_INTERP_MSAN_UNPOISON(p, n) ((void)0)
+#endif
+#else
+#define CLANG_INTERP_MSAN_UNPOISON(p, n) ((void)0)
+#endif
+
 #define DEBUG_TYPE "interp-value"
 
 using namespace clang;
@@ -651,8 +666,10 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
   Value &VRef = *(Value *)OutVal;
   Interpreter *I = static_cast<Interpreter *>(This);
   VRef = Value(I, OpaqueType);
-  if (VRef.isVoid())
+  if (VRef.isVoid()) {
+    CLANG_INTERP_MSAN_UNPOISON(OutVal, sizeof(Value));
     return;
+  }
 
   va_list args;
   va_start(args, /*last named param*/ OpaqueType);
@@ -721,6 +738,7 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
     }
   }
   va_end(args);
+  CLANG_INTERP_MSAN_UNPOISON(OutVal, sizeof(Value));
 }
 }
 
