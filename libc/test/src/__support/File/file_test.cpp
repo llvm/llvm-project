@@ -772,3 +772,89 @@ TEST(LlvmLibcFileTest, UngetwcWEOF) {
 
   ASSERT_EQ(f->close(), 0);
 }
+
+// A File subclass with a platform_write that simulates short writes.
+// This models the behavior of write(2) on pipes, sockets, or FIFOs where
+// the kernel may write fewer bytes than requested.
+class ShortWriteFile : public File {
+  static constexpr size_t SIZE = 512;
+  size_t pos;
+  char str[SIZE] = {0};
+  size_t max_write;
+
+  static FileIOResult short_write(LIBC_NAMESPACE::File *f, const void *data,
+                                  size_t len) {
+    ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
+    // Simulate a short write: write at most max_write bytes per call.
+    size_t to_write = len < sf->max_write ? len : sf->max_write;
+    for (size_t i = 0; i < to_write && sf->pos < SIZE; ++i, ++sf->pos)
+      sf->str[sf->pos] = reinterpret_cast<const char *>(data)[i];
+    return to_write;
+  }
+
+  static FileIOResult short_read(LIBC_NAMESPACE::File *f, void *data,
+                                 size_t len) {
+    ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
+    size_t i = 0;
+    for (i = 0; i < len && sf->pos < SIZE; ++i)
+      reinterpret_cast<char *>(data)[i] = sf->str[sf->pos + i];
+    sf->pos += i;
+    return i;
+  }
+
+  static ErrorOr<off_t> short_seek(LIBC_NAMESPACE::File *f, off_t offset,
+                                   int whence) {
+    ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
+    if (whence == SEEK_SET)
+      sf->pos = offset;
+    if (whence == SEEK_CUR)
+      sf->pos += offset;
+    if (whence == SEEK_END)
+      sf->pos = SIZE + offset;
+    return sf->pos;
+  }
+
+  static int short_close(LIBC_NAMESPACE::File *f) {
+    delete reinterpret_cast<ShortWriteFile *>(f);
+    return 0;
+  }
+
+public:
+  explicit ShortWriteFile(char *buffer, size_t buflen, int bufmode, bool owned,
+                          ModeFlags modeflags, size_t max_write_bytes)
+      : LIBC_NAMESPACE::File(&short_write, &short_read, &short_seek,
+                             &short_close, reinterpret_cast<uint8_t *>(buffer),
+                             buflen, bufmode, owned, modeflags),
+        pos(0), max_write(max_write_bytes) {}
+
+  void reset() { pos = 0; }
+  size_t get_pos() const { return pos; }
+  char *get_str() { return str; }
+};
+
+// Verify that a short platform_write of a multi-byte UTF-8 character is
+// detected and reported as a failure. POSIX write(2) may perform short
+// writes on pipes, sockets, and FIFOs, so a 3-byte character could have
+// only 2 bytes accepted by the kernel.
+TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
+  LIBC_NAMESPACE::AllocChecker ac;
+  // Unbuffered so writes go directly to platform_write, limited to 2 bytes.
+  ShortWriteFile *f = new (ac) ShortWriteFile(
+      nullptr, 0, _IONBF, true, LIBC_NAMESPACE::File::mode_flags("w"),
+      /*max_write_bytes=*/2);
+  ASSERT_FALSE(f == nullptr);
+
+  // € (U+20AC) encodes to 3 UTF-8 bytes: 0xE2 0x82 0xAC.
+  // With max_write=2, only 2 of the 3 bytes will be accepted.
+  const wchar_t euro = L'€';
+  auto result = f->write(&euro, 1);
+
+  // The incomplete character must not be counted as written.
+  EXPECT_TRUE(result.has_error());
+  EXPECT_EQ(result.value, size_t(0));
+
+  // The error indicator on the stream should be set.
+  EXPECT_TRUE(f->error());
+
+  ASSERT_EQ(f->close(), 0);
+}
