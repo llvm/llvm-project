@@ -67,7 +67,7 @@ void UseStaticLambdaCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     const SourceLocation InsertLoc =
         Lexer::getLocForEndOfToken(RParenLoc, 0, SM, LangOpts);
-    diag(LambdaLoc, "lambda with empty capture list can be marked static")
+    diag(LambdaLoc, "lambda with empty capture list can be marked 'static'")
         << FixItHint::CreateInsertion(InsertLoc, " static");
   } else {
     // Lambda has no explicit parameter list: [...] { ... }.
