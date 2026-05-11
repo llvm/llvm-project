@@ -263,6 +263,12 @@ New check aliases
   <clang-tidy/checks/misc/explicit-constructor>`. The
   `google-explicit-constructor` name is kept as an alias.
 
+- Renamed :doc:`hicpp-multiway-paths-covered
+  <clang-tidy/checks/hicpp/multiway-paths-covered>`
+  to :doc:`bugprone-unhandled-code-paths
+  <clang-tidy/checks/bugprone/unhandled-code-paths>`.
+  The `hicpp-multiway-paths-covered` name is kept as an alias.
+
 - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
   to :doc:`portability-no-assembler
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
@@ -278,8 +284,14 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`bugprone-argument-comment
-  <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
-  inherited constructors.
+  <clang-tidy/checks/bugprone/argument-comment>`:
+
+  - Checks for C++11 inherited constructors.
+
+  - Adds `CommentAnonymousInitLists`, `CommentTypedInitLists`, and
+    `CommentParenthesizedTemporaries` options to comment braced-init list
+    arguments and explicit temporary constructions (for example, ``{}``,
+    ``Type{}``, and ``Type()``).
 
 - Improved :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
@@ -551,6 +563,9 @@ Changes in existing checks
 
   - Reduce verbosity by removing the note indicating source location of the
     ``empty`` function.
+
+  - Fixed a false positive with suggesting ``empty`` when comparing a container
+    to a default-constructed object of an unrelated type.
 
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check:

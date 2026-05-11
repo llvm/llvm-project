@@ -174,6 +174,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
+   :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
@@ -241,7 +242,6 @@ Clang-Tidy Checks
    :doc:`google-runtime-int <google/runtime-int>`,
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
-   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
@@ -603,6 +603,7 @@ Check aliases
    :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
+   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`, :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
