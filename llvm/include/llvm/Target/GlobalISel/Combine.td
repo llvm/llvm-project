@@ -359,6 +359,17 @@ def sub_to_add : GICombineRule<
          [{ return Helper.matchCombineSubToAdd(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${mi}, ${matchinfo}); }])>;
 
+// Fold (sub a, (mul x, C)) -> (add a, (mul x, -C)), if mul has one use.
+def sub_of_mul_const : GICombineRule<
+  (defs root:$d),
+  (match (G_CONSTANT $c, $imm),
+         (G_MUL $mul, $x, $c),
+         (G_SUB $d, $a, $mul),
+         [{ return MRI.hasOneNonDBGUse(${mul}.getReg()); }]),
+  (apply (G_SUB $negc, 0, $c),
+         (G_MUL $newmul, $x, $negc),
+         (G_ADD $d, $a, $newmul))>;
+
 // (sub -1, x) -> (xor x, -1)
 def sub_minus_one : GICombineRule<
   (defs root:$root),
@@ -1393,7 +1404,7 @@ def constant_fold_cast_op : GICombineRule<
 def unary_int_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op,
-           [G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP,
+           [G_CTLZ, G_CTLZ_ZERO_POISON, G_CTTZ, G_CTTZ_ZERO_POISON, G_CTPOP,
             G_ABS, G_BSWAP, G_BITREVERSE],
            (pattern (op $dst, $src)))>;
 
@@ -2219,11 +2230,11 @@ class ctlz_to_ctls_op<Instruction ctlzOpcode> : GICombineRule <
   (apply [{Helper.applyBuildFn(*${root}, ${matchinfo});}])>;
 
 def ctlz_to_ctls : ctlz_to_ctls_op<G_CTLZ>;
-def ctlz_zero_undef_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_UNDEF>;
+def ctlz_zero_poison_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_POISON>;
 
 def ctls_combines : GICombineGroup<[
   ctlz_to_ctls,
-  ctlz_zero_undef_to_ctls,
+  ctlz_zero_poison_to_ctls,
 ]>;
 
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;
@@ -2389,7 +2400,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
-    binop_with_neg, sub_minus_one]>;
+    binop_with_neg, sub_minus_one, sub_of_mul_const]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

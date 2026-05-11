@@ -88,8 +88,7 @@ ProgramStateManager::~ProgramStateManager() {
 }
 
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
-    ProgramStateRef state, const StackFrameContext *LCtx,
-    SymbolReaper &SymReaper) {
+    ProgramStateRef state, const StackFrame *SF, SymbolReaper &SymReaper) {
 
   // This code essentially performs a "mark-and-sweep" of the VariableBindings.
   // The roots are any Block-level exprs and Decls that our liveness algorithm
@@ -102,8 +101,8 @@ ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
   NewState.Env = EnvMgr.removeDeadBindings(NewState.Env, SymReaper, state);
 
   // Clean up the store.
-  StoreRef newStore = StoreMgr->removeDeadBindings(NewState.getStore(), LCtx,
-                                                   SymReaper);
+  StoreRef newStore =
+      StoreMgr->removeDeadBindings(NewState.getStore(), SF, SymReaper);
   NewState.setStore(newStore);
   SymReaper.setReapedStore(newStore);
 
@@ -231,7 +230,7 @@ SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
 
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
-                              const StackFrameContext *CalleeCtx) const {
+                              const StackFrame *CalleeCtx) const {
   return makeWithStore(
       getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx));
 }

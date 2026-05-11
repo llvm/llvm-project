@@ -38,14 +38,20 @@ public:
   }
 
   void handleFileDependency(StringRef File) override {
-    Dependencies.push_back(std::string(File));
+    SmallString<128> NormalizedFile = File;
+    llvm::sys::path::remove_dots(NormalizedFile, /*remove_dot_dot=*/true);
+    Dependencies.emplace_back(NormalizedFile.str());
   }
 
   // These are ignored for the make format as it can't support the full
   // set of deps, and handleFileDependency handles enough for implicitly
   // built modules to work.
   void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
-  void handleModuleDependency(ModuleDeps MD) override {}
+  void handleModuleDependency(ModuleDeps MD) override {
+    MD.forEachFileDep([this](StringRef File) {
+      DependenciesFromModules.push_back(std::string(File));
+    });
+  }
   void handleDirectModuleDependency(ModuleID ID) override {}
   void handleVisibleModule(std::string ModuleName) override {}
   void handleContextHash(std::string Hash) override {}
@@ -56,9 +62,12 @@ public:
     class DependencyPrinter : public DependencyFileGenerator {
     public:
       DependencyPrinter(DependencyOutputOptions &Opts,
-                        ArrayRef<std::string> Dependencies)
+                        ArrayRef<std::string> Dependencies,
+                        ArrayRef<std::string> ModuleDependencies)
           : DependencyFileGenerator(Opts) {
         for (const auto &Dep : Dependencies)
+          addDependency(Dep);
+        for (const auto &Dep : ModuleDependencies)
           addDependency(Dep);
       }
 
@@ -68,13 +77,14 @@ public:
       }
     };
 
-    DependencyPrinter Generator(*Opts, Dependencies);
+    DependencyPrinter Generator(*Opts, Dependencies, DependenciesFromModules);
     Generator.printDependencies(S);
   }
 
 protected:
   std::unique_ptr<DependencyOutputOptions> Opts;
   std::vector<std::string> Dependencies;
+  std::vector<std::string> DependenciesFromModules;
 };
 } // anonymous namespace
 
@@ -187,12 +197,12 @@ bool tooling::computeDependencies(
                           Controller, DiagConsumer, OverlayFS);
 }
 
-std::optional<std::string>
-DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
-                                          StringRef CWD,
-                                          DiagnosticConsumer &DiagConsumer) {
+std::optional<std::string> DependencyScanningTool::getDependencyFile(
+    ArrayRef<std::string> CommandLine, StringRef CWD,
+    LookupModuleOutputCallback LookupModuleOutput,
+    DiagnosticConsumer &DiagConsumer) {
   MakeDependencyPrinterConsumer DepConsumer;
-  CallbackActionController Controller(nullptr);
+  CallbackActionController Controller(LookupModuleOutput);
   if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, Controller,
                            DiagConsumer))
     return std::nullopt;
@@ -540,7 +550,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   });
 
   auto MDC = initializeScanInstanceDependencyCollector(
-      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), Consumer,
       Worker.Service,
       /* The MDC's constructor makes a copy of the OriginalInvocation, so
       we can pass it in without worrying that it might be changed across

@@ -998,11 +998,10 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-INTERLEAVE1:       pred.load.if:
-; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVE1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP20:%.*]] = insertelement <16 x i8> poison, i8 [[TMP19]], i64 0
-; CHECK-INTERLEAVE1-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP101:%.*]] = load i8, ptr [[TMP99]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP102:%.*]] = insertelement <16 x i8> poison, i8 [[TMP101]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -1254,11 +1253,10 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if:
-; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = insertelement <16 x i8> poison, i8 [[TMP19]], i64 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP101:%.*]] = load i8, ptr [[TMP99]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP102:%.*]] = insertelement <16 x i8> poison, i8 [[TMP101]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -1510,11 +1508,10 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i64 0
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-MAXBW:       pred.load.if:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP20:%.*]] = insertelement <16 x i8> poison, i8 [[TMP19]], i64 0
-; CHECK-MAXBW-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-MAXBW-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[TMP101:%.*]] = load i8, ptr [[TMP99]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP102:%.*]] = insertelement <16 x i8> poison, i8 [[TMP101]], i64 0
 ; CHECK-MAXBW-NEXT:    br label [[PRED_LOAD_CONTINUE]]

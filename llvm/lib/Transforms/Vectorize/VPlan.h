@@ -535,6 +535,10 @@ public:
   /// Returns true if the recipe may have side-effects.
   bool mayHaveSideEffects() const;
 
+  /// Return true if we can safely execute this recipe unconditionally even if
+  /// it is masked originally.
+  bool isSafeToSpeculativelyExecute() const;
+
   /// Returns true for PHI-like recipes.
   bool isPhi() const;
 
@@ -3246,11 +3250,6 @@ public:
     return true;
   }
 
-  /// Returns true if the recipe is used by a widened recipe via an intervening
-  /// VPPredInstPHIRecipe. In this case, the scalar values should also be packed
-  /// in a vector.
-  bool shouldPack() const;
-
   /// Return the mask of a predicated VPReplicateRecipe.
   VPValue *getMask() {
     assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
@@ -3478,13 +3477,6 @@ public:
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
-  }
-
-  /// Returns true if the recipe uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
   }
 
 protected:
@@ -4616,6 +4608,10 @@ public:
   /// Returns the VPRegionBlock of the vector loop.
   LLVM_ABI_FOR_TEST VPRegionBlock *getVectorLoopRegion();
   LLVM_ABI_FOR_TEST const VPRegionBlock *getVectorLoopRegion() const;
+
+  /// Returns true if this VPlan is for an outer loop, i.e., its vector
+  /// loop region contains a nested loop region.
+  LLVM_ABI_FOR_TEST bool isOuterLoop() const;
 
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop

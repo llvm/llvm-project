@@ -1237,6 +1237,44 @@ TARGET_BUILTIN(__builtin_altivec_vupkint4tofp32, "V16UcV16UcIi", "",
 TARGET_BUILTIN(__builtin_altivec_vupkint8tofp32, "V16UcV16UcIi", "",
                "isa-future-instructions")
 
+// AES Encrypt Paired builtins
+UNALIASED_CUSTOM_BUILTIN(aes_encrypt_paired, "W256W256W256i2", false,
+                         "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes128_encrypt_paired, aes_encrypt_paired, "W256W256W256", false,
+               "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes192_encrypt_paired, aes_encrypt_paired, "W256W256W256", false,
+               "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes256_encrypt_paired, aes_encrypt_paired, "W256W256W256", false,
+               "future-vector,paired-vector-memops")
+
+// AES Decrypt Paired builtins
+UNALIASED_CUSTOM_BUILTIN(aes_decrypt_paired, "W256W256W256i2", false,
+                         "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes128_decrypt_paired, aes_decrypt_paired, "W256W256W256", false,
+               "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes192_decrypt_paired, aes_decrypt_paired, "W256W256W256", false,
+               "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes256_decrypt_paired, aes_decrypt_paired, "W256W256W256", false,
+               "future-vector,paired-vector-memops")
+
+// AES Generate Last Key Paired builtins
+UNALIASED_CUSTOM_BUILTIN(aes_genlastkey_paired, "W256W256i2", false,
+                         "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes128_genlastkey_paired, aes_genlastkey_paired, "W256W256", false,
+               "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes192_genlastkey_paired, aes_genlastkey_paired, "W256W256", false,
+               "future-vector,paired-vector-memops")
+CUSTOM_BUILTIN(aes256_genlastkey_paired, aes_genlastkey_paired, "W256W256", false,
+               "future-vector,paired-vector-memops")
+
+// Galois Field Multiplication builtins
+UNALIASED_CUSTOM_BUILTIN(galois_field_mult, "VVVi1", false,
+                         "future-vector")
+CUSTOM_BUILTIN(galois_field_mult_gcm, galois_field_mult, "VVV", false,
+               "future-vector")
+CUSTOM_BUILTIN(galois_field_mult_xts, galois_field_mult, "VVV", false,
+               "future-vector")
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN

@@ -1427,7 +1427,7 @@ bool PeepholeOptimizer::foldImmediate(
       continue;
     if (ImmDefRegs.count(Reg) == 0)
       continue;
-    DenseMap<Register, MachineInstr *>::iterator II = ImmDefMIs.find(Reg);
+    auto II = ImmDefMIs.find(Reg);
     assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
     if (TII->foldImmediate(MI, *II->second, Reg, MRI)) {
       ++NumImmFold;
@@ -1440,6 +1440,7 @@ bool PeepholeOptimizer::foldImmediate(
         if (DstReg.isVirtual() &&
             MRI->getRegClass(DstReg) == MRI->getRegClass(Reg)) {
           MRI->replaceRegWith(DstReg, Reg);
+          MRI->clearKillFlags(Reg);
           MI.eraseFromParent();
           Deleted = true;
         }

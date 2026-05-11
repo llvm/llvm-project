@@ -85,6 +85,7 @@ public:
     bool hasFPModifiers() const { return Abs || Neg; }
     bool hasIntModifiers() const { return Sext; }
     bool hasModifiers() const { return hasFPModifiers() || hasIntModifiers(); }
+    bool isForcedLit64() const { return Lit == LitModifier::Lit64; }
 
     int64_t getFPModifiersOperand() const {
       int64_t Operand = 0;
@@ -1051,6 +1052,10 @@ public:
     return getModifiers().hasIntModifiers();
   }
 
+  bool isForcedLit64() const {
+    return isImmLiteral() && getModifiers().isForcedLit64();
+  }
+
   uint64_t applyInputFPModifiers(uint64_t Val, unsigned Size) const;
 
   void addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers = true) const;
@@ -1826,6 +1831,9 @@ private:
 
   ParseStatus parseHwregFunc(OperandInfoTy &HwReg, OperandInfoTy &Offset,
                              OperandInfoTy &Width);
+
+  const AMDGPUOperand &findMCOperand(const OperandVector &Operands,
+                                     int MCOpIdx) const;
 
   static SMLoc getLaterLoc(SMLoc a, SMLoc b);
 
@@ -5120,10 +5128,11 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       Imm = getLitValue(MO.getExpr());
 
     bool IsAnotherLiteral = false;
+    bool IsForcedLit64 = findMCOperand(Operands, OpIdx).isForcedLit64();
     if (!Imm.has_value()) {
       // Literal value not known, so we conservately assume it's different.
       IsAnotherLiteral = true;
-    } else if (!isInlineConstant(Inst, OpIdx)) {
+    } else if (IsForcedLit64 || !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = *Imm;
       bool IsForcedFP64 =
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
@@ -5133,8 +5142,10 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
                     AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
       bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
-      if (!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
-          !IsForcedFP64 && (!has64BitLiterals() || Desc.getSize() != 4)) {
+      if (((!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
+            !IsForcedFP64) ||
+           (IsForcedLit64 && !HasMandatoryLiteral)) &&
+          (!has64BitLiterals() || Desc.getSize() != 4)) {
         Error(getOperandLoc(Operands, OpIdx),
               "invalid operand for instruction");
         return false;
@@ -8559,6 +8570,17 @@ AMDGPUAsmParser::lex() {
   Parser.Lex();
 }
 
+const AMDGPUOperand &
+AMDGPUAsmParser::findMCOperand(const OperandVector &Operands,
+                               int MCOpIdx) const {
+  for (const auto &Op : Operands) {
+    const AMDGPUOperand &TargetOp = static_cast<AMDGPUOperand &>(*Op);
+    if (TargetOp.getMCOpIdx() == MCOpIdx)
+      return TargetOp;
+  }
+  llvm_unreachable("no such MC operand!");
+}
+
 SMLoc AMDGPUAsmParser::getInstLoc(const OperandVector &Operands) const {
   return ((AMDGPUOperand &)*Operands[0]).getStartLoc();
 }
@@ -8570,12 +8592,7 @@ SMLoc AMDGPUAsmParser::getLaterLoc(SMLoc a, SMLoc b) {
 
 SMLoc AMDGPUAsmParser::getOperandLoc(const OperandVector &Operands,
                                      int MCOpIdx) const {
-  for (const auto &Op : Operands) {
-    const auto TargetOp = static_cast<AMDGPUOperand &>(*Op);
-    if (TargetOp.getMCOpIdx() == MCOpIdx)
-      return TargetOp.getStartLoc();
-  }
-  llvm_unreachable("No such MC operand!");
+  return findMCOperand(Operands, MCOpIdx).getStartLoc();
 }
 
 SMLoc
@@ -9584,49 +9601,13 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     Inst.addOperand(Inst.getOperand(0));
   }
 
-  // Adding vdst_in operand is already covered for these DPP instructions in
-  // cvtVOP3DPP.
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in) &&
-      !(Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_t16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_fake16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_t16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_fake16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_t16_e64_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_fake16_e64_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_t16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_fake16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_t16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_fake16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_t16_e64_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_fake16_e64_gfx1250)) {
+  // Append vdst_in only if a previous converter (cvtVOP3DPP for DPP variants,
+  // cvtVOP3 for byte_sel variants) hasn't already placed it. Use the position
+  // of the named operand to detect that, the same way cvtVOP3DPP does
+  // internally.
+  int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+  if (VdstInIdx != -1 && VdstInIdx == static_cast<int>(Inst.getNumOperands()))
     Inst.addOperand(Inst.getOperand(0));
-  }
 
   int BitOp3Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::bitop3);
   if (BitOp3Idx != -1) {
