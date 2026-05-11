@@ -15,7 +15,7 @@ module @gemm attributes {gpu.container_module} {
       %a_trunc = xegpu.load_nd %tdesc_a[0, 0] : !xegpu.tensor_desc<8x64xf4E2M1FN> -> vector<32xf4E2M1FN>
 
       %tdesc_b = xegpu.create_nd_tdesc %b : memref<32x16xi8> -> !xegpu.tensor_desc<32x16xi8>
-      %b_loaded = xegpu.load_nd %tdesc_b[0, 0] : !xegpu.tensor_desc<32x16xi8> -> vector<32xi8>
+      %b_loaded = xegpu.load_nd %tdesc_b[0, 0] <{packed}> : !xegpu.tensor_desc<32x16xi8> -> vector<32xi8>
       %b_trunc = vector.bitcast %b_loaded : vector<32xi8> to vector<64xf4E2M1FN>
 
       %tdesc_c = xegpu.create_nd_tdesc %c : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -32,7 +32,7 @@ module @gemm attributes {gpu.container_module} {
       //%scale_a_loaded = xegpu.load_nd %tdesc_scale_a[0, 0] : !xegpu.tensor_desc<8x2xf8E8M0FNU> -> vector<2xf8E8M0FNU>
       // Option 2: Use load + insert
       %id_x = gpu.thread_id x
-      %c8 = arith.constant 16 : index
+      %c8 = arith.constant 8 : index
       %idx_x = arith.remui %id_x, %c8 : index
       %c0 = arith.constant 0 : index
       %c1 = arith.constant 1 : index
