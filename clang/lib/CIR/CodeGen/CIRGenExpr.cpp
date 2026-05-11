@@ -2284,13 +2284,6 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   // That is, in the general case, we should assume that a call through an
   // unprototyped function type works like a *non-variadic* call. The way we
   // make this work is to cast to the exxact type fo the promoted arguments.
-  //
-  // The redirected-callee case (two declarations sharing a mangled name via
-  // __asm__ renaming, e.g. glibc's __REDIRECT_NTH pattern, where the existing
-  // FuncOp's signature differs from this call site's expected signature) is
-  // handled in CIRGenFunction::emitCall (the funcInfo workhorse below) by
-  // demoting a direct call to an indirect call when the FuncOp signature
-  // doesn't match cirFuncTy.
   if (isa<FunctionNoProtoType>(fnType)) {
     assert(!cir::MissingFeatures::opCallChain());
     assert(!cir::MissingFeatures::addressSpace());
