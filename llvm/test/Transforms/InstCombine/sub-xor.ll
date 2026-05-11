@@ -161,8 +161,7 @@ define <2 x i8> @xor_add_splat_undef(<2 x i8> %x) {
 define i32 @xor_notmask_add(i32 %x) {
 ; CHECK-LABEL: @xor_notmask_add(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 28
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 61
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[XOR]], -10
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw i32 51, [[AND]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %and = and i32 %x, 28
@@ -176,7 +175,7 @@ define i32 @xor_notmask_add_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 28
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 29
 ; CHECK-NEXT:    call void @use(i32 [[XOR]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[XOR]], 10
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw i32 39, [[AND]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %and = and i32 %x, 28
@@ -189,8 +188,7 @@ define i32 @xor_notmask_add_multiuse(i32 %x) {
 define <2 x i8> @xor_notmask_add_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @xor_notmask_add_splat(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 24)
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[AND]], splat (i8 61)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[XOR]], splat (i8 42)
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw <2 x i8> splat (i8 103), [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[ADD]]
 ;
   %and = and <2 x i8> %x, <i8 24, i8 24>
