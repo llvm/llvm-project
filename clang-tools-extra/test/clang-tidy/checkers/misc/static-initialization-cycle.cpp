@@ -9,7 +9,7 @@ int S::A = B;
 // CHECK-NOTES: :[[@LINE-3]]:5: warning: static variable initialization cycle detected involving 'B'
 // CHECK-NOTES: :[[@LINE-4]]:9: note: value of 'A' may be used to initialize variable 'B' here
 // CHECK-NOTES: :[[@LINE-4]]:12: note: value of 'B' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: B - A - B
+// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: B -> A -> B
 
 namespace self_init {
 struct S { static int A; };
@@ -17,7 +17,7 @@ int S::A = S::A;
 }
 // CHECK-NOTES: :[[@LINE-3]]:23: warning: static variable initialization cycle detected involving 'A'
 // CHECK-NOTES: :[[@LINE-3]]:12: note: value of 'A' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-5]]:23: note: possible cyclical initialization: A - A
+// CHECK-NOTES: :[[@LINE-5]]:23: note: possible cyclical initialization: A -> A
 
 namespace cycle_at_end {
 struct S { static int A; };
@@ -29,7 +29,7 @@ int S::A = C;
 // CHECK-NOTES: :[[@LINE-3]]:5: warning: static variable initialization cycle detected involving 'C'
 // CHECK-NOTES: :[[@LINE-4]]:13: note: value of 'A' may be used to initialize variable 'C' here
 // CHECK-NOTES: :[[@LINE-4]]:12: note: value of 'C' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: C - A - C
+// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: C -> A -> C
 
 namespace cycle_at_start {
 struct S { static int A; };
@@ -41,7 +41,7 @@ int C = B + 1;
 // CHECK-NOTES: :[[@LINE-4]]:5: warning: static variable initialization cycle detected involving 'B'
 // CHECK-NOTES: :[[@LINE-5]]:9: note: value of 'A' may be used to initialize variable 'B' here
 // CHECK-NOTES: :[[@LINE-5]]:12: note: value of 'B' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-7]]:5: note: possible cyclical initialization: B - A - B
+// CHECK-NOTES: :[[@LINE-7]]:5: note: possible cyclical initialization: B -> A -> B
 
 namespace multiple_cycle {
 struct S { static int A; };
@@ -53,7 +53,7 @@ int S::A = B + C;
 // CHECK-NOTES: :[[@LINE-3]]:5: warning: static variable initialization cycle detected involving 'C'
 // CHECK-NOTES: :[[@LINE-4]]:9: note: value of 'A' may be used to initialize variable 'C' here
 // CHECK-NOTES: :[[@LINE-4]]:16: note: value of 'C' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: C - A - C
+// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: C -> A -> C
 
 namespace long_cycle {
 struct S { static int A; };
@@ -66,7 +66,7 @@ int S::A = C;
 // CHECK-NOTES: :[[@LINE-5]]:9: note: value of 'A' may be used to initialize variable 'B' here
 // CHECK-NOTES: :[[@LINE-4]]:12: note: value of 'C' may be used to initialize variable 'A' here
 // CHECK-NOTES: :[[@LINE-6]]:9: note: value of 'B' may be used to initialize variable 'C' here
-// CHECK-NOTES: :[[@LINE-8]]:5: note: possible cyclical initialization: B - A - C - B
+// CHECK-NOTES: :[[@LINE-8]]:5: note: possible cyclical initialization: B -> A -> C -> B
 
 namespace no_cycle {
 int A = 2;
@@ -84,7 +84,7 @@ int S::A = f1(B, 2);
 // CHECK-NOTES: :[[@LINE-3]]:5: warning: static variable initialization cycle detected involving 'B'
 // CHECK-NOTES: :[[@LINE-4]]:9: note: value of 'A' may be used to initialize variable 'B' here
 // CHECK-NOTES: :[[@LINE-4]]:15: note: value of 'B' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: B - A - B
+// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: B -> A -> B
 
 namespace func_static_ref_1 {
 struct S { static int A; };
@@ -96,7 +96,7 @@ int S::A = f1();
 // CHECK-NOTES: :[[@LINE-6]]:23: warning: static variable initialization cycle detected involving 'A'
 // CHECK-NOTES: :[[@LINE-5]]:10: note: value of 'A' may be used to compute result of 'f1'
 // CHECK-NOTES: :[[@LINE-4]]:12: note: result of 'f1' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-9]]:23: note: possible cyclical initialization: f1 - A - f1
+// CHECK-NOTES: :[[@LINE-9]]:23: note: possible cyclical initialization: f1 -> A -> f1
 
 namespace func_static_ref_2 {
 struct S { static int A; };
@@ -109,7 +109,7 @@ int S::A = f1();
 // CHECK-NOTES: :[[@LINE-7]]:23: warning: static variable initialization cycle detected involving 'A'
 // CHECK-NOTES: :[[@LINE-6]]:18: note: value of 'A' may be used to compute result of 'f1'
 // CHECK-NOTES: :[[@LINE-4]]:12: note: result of 'f1' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-10]]:23: note: possible cyclical initialization: f1 - A - f1
+// CHECK-NOTES: :[[@LINE-10]]:23: note: possible cyclical initialization: f1 -> A -> f1
 
 namespace func_static_ref_3 {
 struct S { static int A; };
@@ -150,7 +150,7 @@ int f(int i) {
 // CHECK-NOTES: :[[@LINE-6]]:14: warning: static variable initialization cycle detected involving 'A'
 // CHECK-NOTES: :[[@LINE-7]]:18: note: result of 'f' may be used to initialize variable 'A' here
 // CHECK-NOTES: :[[@LINE-5]]:10: note: value of 'A' may be used to compute result of 'f'
-// CHECK-NOTES: :[[@LINE-9]]:14: note: possible cyclical initialization: A - f - A
+// CHECK-NOTES: :[[@LINE-9]]:14: note: possible cyclical initialization: A -> f -> A
 
 namespace singleton {
 struct S { int X; };
@@ -176,7 +176,7 @@ int S::A = f();
 // CHECK-NOTES: :[[@LINE-8]]:23: warning: static variable initialization cycle detected involving 'A'
 // CHECK-NOTES: :[[@LINE-6]]:12: note: value of 'A' may be used to compute result of 'f'
 // CHECK-NOTES: :[[@LINE-4]]:12: note: result of 'f' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-11]]:23: note: possible cyclical initialization: f - A - f
+// CHECK-NOTES: :[[@LINE-11]]:23: note: possible cyclical initialization: f -> A -> f
 
 namespace compound_assign_lhs {
 struct S { static int A; };
@@ -190,7 +190,7 @@ int f() {
 // CHECK-NOTES: :[[@LINE-6]]:5: warning: static variable initialization cycle detected involving 'B'
 // CHECK-NOTES: :[[@LINE-5]]:11: note: value of 'B' may be used to compute result of 'f'
 // CHECK-NOTES: :[[@LINE-8]]:16: note: result of 'f' may be used to initialize variable 'B' here
-// CHECK-NOTES: :[[@LINE-9]]:5: note: possible cyclical initialization: f - B - f
+// CHECK-NOTES: :[[@LINE-9]]:5: note: possible cyclical initialization: f -> B -> f
 
 namespace template_test {
 template <class T>
@@ -210,7 +210,7 @@ S<int> X;
 // CHECK-NOTES: :[[@LINE-11]]:12: warning: static variable initialization cycle detected involving 'A'
 // CHECK-NOTES: :[[@LINE-6]]:10: note: value of 'A' may be used to compute result of 'f1'
 // CHECK-NOTES: :[[@LINE-10]]:13: note: result of 'f1' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-14]]:12: note: possible cyclical initialization: f1 - A - f1
+// CHECK-NOTES: :[[@LINE-14]]:12: note: possible cyclical initialization: f1 -> A -> f1
 
 namespace test_lambda_1 {
 struct S { static int A; };
@@ -220,7 +220,7 @@ int S::A = B;
 // CHECK-NOTES: :[[@LINE-3]]:5: warning: static variable initialization cycle detected involving 'B'
 // CHECK-NOTES: :[[@LINE-4]]:23: note: value of 'A' may be used to initialize variable 'B' here
 // CHECK-NOTES: :[[@LINE-4]]:12: note: value of 'B' may be used to initialize variable 'A' here
-// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: B - A - B
+// CHECK-NOTES: :[[@LINE-6]]:5: note: possible cyclical initialization: B -> A -> B
 
 namespace test_lambda_2 {
 struct S { static int A; };
@@ -244,7 +244,7 @@ int S::A = B;
 // CHECK-NOTES: :[[@LINE-6]]:28: note: value of 'A' may be used to compute result of 'f'
 // CHECK-NOTES: :[[@LINE-4]]:12: note: value of 'B' may be used to initialize variable 'A' here
 // CHECK-NOTES: :[[@LINE-6]]:9: note: result of 'f' may be used to initialize variable 'B' here
-// CHECK-NOTES: :[[@LINE-7]]:5: note: possible cyclical initialization: f - A - B - f
+// CHECK-NOTES: :[[@LINE-7]]:5: note: possible cyclical initialization: f -> A -> B -> f
 
 namespace test_lambda_4 {
 template <class L>
@@ -274,4 +274,4 @@ int S::A = []() { return D + 1; }();
 // CHECK-NOTES: :[[@LINE-6]]:9: note: value of 'C' may be used to initialize variable 'D' here
 // CHECK-NOTES: :[[@LINE-8]]:9: note: result of 'f_b' may be used to initialize variable 'C' here
 // CHECK-NOTES: :[[@LINE-10]]:20: note: value of 'B' may be used to compute result of 'f_b'
-// CHECK-NOTES: :[[@LINE-12]]:5: note: possible cyclical initialization: B - A - D - C - f_b - B
+// CHECK-NOTES: :[[@LINE-12]]:5: note: possible cyclical initialization: B -> A -> D -> C -> f_b -> B

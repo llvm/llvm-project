@@ -354,19 +354,13 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
   for (const VarUseNode *N : FoundPath) {
     const VarUseRecord &U = *NextNode[N];
     // 'U' is the source of the value, 'N->getDecl()' is the destination
-    const char *VarFuncUseStr = U.Node->isVar() ? "value" : "result";
-    if (N->isVar())
-      Chk.diag(U.Ref->getBeginLoc(),
-               "%0 of %1 may be used to initialize variable %2 here",
-               DiagnosticIDs::Note)
-          << VarFuncUseStr << U.Node->getDecl() << N->getDecl();
-    else
-      Chk.diag(U.Ref->getBeginLoc(),
-               "%0 of %1 may be used to compute result of %2",
-               DiagnosticIDs::Note)
-          << VarFuncUseStr << U.Node->getDecl() << N->getDecl();
+    Chk.diag(U.Ref->getBeginLoc(),
+             "%select{result|value}2 of %0 may be used to %select{compute "
+             "result of|initialize variable}3 %1 here",
+             DiagnosticIDs::Note)
+        << U.Node->getDecl() << N->getDecl() << U.Node->isVar() << N->isVar();
 
-    CycleOs << *N->getDecl() << " - ";
+    CycleOs << *N->getDecl() << " -> ";
   }
   CycleOs << *(FoundPath.front()->getDecl());
 
