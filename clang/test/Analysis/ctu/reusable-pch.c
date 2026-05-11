@@ -18,7 +18,6 @@
 // Step 3: Set mtime of the source from which PCH was built to the year 3000 (way in the future).
 // RUN: touch -t 300001010000 %t/other.c
 
-// Step 4: Run CTU using the "stale" PCH
 // Step 4: Run CTU using the "stale" PCH, and it should still load it and find the division by zero bug.
 // RUN: %clang_analyze_cc1 \
 // RUN:   -fvalidate-ast-input-files-content \
