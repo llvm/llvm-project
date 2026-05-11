@@ -23,7 +23,7 @@ namespace __stacktrace {
 
 #if _LIBCPP_HAS_LOCALIZATION
 
-_LIBCPP_EXPORTED_FROM_ABI ostream& _Trace::__write_to(std::ostream& __os) const {
+ostream& _Trace::__write_to(std::ostream& __os) const {
   auto iters = __entry_iters_();
   auto count = iters.size();
   if (!count) {
@@ -46,7 +46,7 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& _Trace::__write_to(std::ostream& __os) const 
   return __os;
 }
 
-_LIBCPP_EXPORTED_FROM_ABI string _Trace::__to_string() const {
+string _Trace::__to_string() const {
   stringstream __ss;
   __write_to(__ss);
   return __ss.str();
@@ -54,7 +54,7 @@ _LIBCPP_EXPORTED_FROM_ABI string _Trace::__to_string() const {
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-_LIBCPP_EXPORTED_FROM_ABI size_t _Trace::__hash_code() const {
+size_t _Trace::__hash_code() const {
   size_t __ret = size_t(0xc3a5c85c97cb3127ull); // taken from __functional/hash.h
   for (_Entry const& __e : __entry_iters_()) {
     __ret = (__ret << 1) ^ __e.__hash_code();

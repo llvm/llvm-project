@@ -128,7 +128,7 @@ struct SymInitScope {
 
 } // namespace
 
-_LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_depth) {
+void _Trace::windows_impl(size_t skip, size_t max_depth) {
   static BOOL loadedDLLFuncs = loadFuncs();
   if (!loadedDLLFuncs) {
     return;
