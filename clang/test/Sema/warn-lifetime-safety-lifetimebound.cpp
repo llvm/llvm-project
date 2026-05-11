@@ -104,7 +104,6 @@ struct GoodThisReturn {
   }
 };
 
-// FIXME: Wrong warning loc
 struct RedeclaredThis {
   MyObj data;
   View get() const [[clang::lifetimebound]]; // expected-warning {{could not verify that the return value can be lifetime bound to an implicit this parameter}}
