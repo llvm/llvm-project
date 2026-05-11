@@ -3750,11 +3750,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
       State = State->bindLoc(*AsLoc, Val, LC, /*notifyChanges=*/!AtDeclInit);
     }
 
-    const MemRegion *LocReg = nullptr;
-    if (auto LocRegVal = Location.getAs<loc::MemRegionVal>())
-      LocReg = LocRegVal->getRegion();
-
-    PostStore PS(StoreE, LC, LocReg, /*tag=*/nullptr);
+    PostStore PS(StoreE, LC, Location.getAsRegion(), /*tag=*/nullptr);
     Dst.insert(Engine.makeNode(PS, State, PredI));
   }
 }
