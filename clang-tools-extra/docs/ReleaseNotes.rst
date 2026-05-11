@@ -145,6 +145,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-static-lambda
+  <clang-tidy/checks/modernize/use-static-lambda>` check.
+
+  Finds lambdas with an empty capture list (``[]``) that are not marked
+  ``static`` and suggests adding the specifier (C++23).
+
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 
