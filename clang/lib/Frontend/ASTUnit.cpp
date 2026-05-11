@@ -780,7 +780,6 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
-  bool ValidateASTInputFilesContent = HSOpts.ValidateASTInputFilesContent;
 
   AST->Reader = llvm::makeIntrusiveRefCnt<ASTReader>(
       *AST->PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr,
@@ -789,7 +788,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors,
       /*AllowConfigurationMismatch=*/false,
       /*ValidateSystemInputs=*/false,
-      /*ForceValidateUserInputs=*/true, ValidateASTInputFilesContent);
+      /*ForceValidateUserInputs=*/true, HSOpts.ValidateASTInputFilesContent);
 
   // Attach the AST reader to the AST context as an external AST source, so that
   // declarations will be deserialized from the AST file as needed.
