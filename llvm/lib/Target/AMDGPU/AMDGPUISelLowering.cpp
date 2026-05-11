@@ -5596,6 +5596,7 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
 
   APInt Val = SDFPConstant->getValueAPF().bitcastToAPInt();
   return isUInt<32>(Val.getZExtValue()) || TII->isInlineConstant(Val);
+}
 
 SDValue AMDGPUTargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
                                         bool IsNegative) const {
