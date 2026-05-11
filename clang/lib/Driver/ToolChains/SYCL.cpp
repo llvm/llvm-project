@@ -127,8 +127,7 @@ void SYCLToolChain::addClangTargetOptions(
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   // Link SYCL device libraries at compile time for SPIR/SPIRV targets.
-  // The new offloading driver is the default in upstream LLVM, so we always
-  // perform compile-time linking for SPIR/SPIRV targets.
+  // We perform compile-time linking for SPIR/SPIRV targets.
   // Other targets (like NVPTX, AMD) would link at link time.
   if (getTriple().isSPIROrSPIRV()) {
     // Get the device libraries for this offloading kind.
@@ -251,13 +250,28 @@ SYCLToolChain::getDeviceLibNames(const Driver &D,
     LibraryList.emplace_back(BitCodeLibrary);
   };
 
-  // For now, support only SPIR/SPIRV targets with a minimal set of libraries.
-  // This is a starting point that can be expanded later.
+  // Add all SYCL device libraries for SPIR/SPIRV targets.
   if (TargetTriple.isSPIROrSPIRV()) {
-    // Core SYCL device libraries - start with the essential ones
+    // Core SYCL device libraries
     addLibToList("libsycl-crt.bc");
     addLibToList("libsycl-complex.bc");
+    addLibToList("libsycl-complex-fp64.bc");
     addLibToList("libsycl-cmath.bc");
+    addLibToList("libsycl-cmath-fp64.bc");
+#if defined(_WIN32)
+    addLibToList("libsycl-msvc-math.bc");
+#endif
+    addLibToList("libsycl-imf.bc");
+    addLibToList("libsycl-imf-fp64.bc");
+    addLibToList("libsycl-imf-bf16.bc");
+    addLibToList("libsycl-fallback-cstring.bc");
+    addLibToList("libsycl-fallback-complex.bc");
+    addLibToList("libsycl-fallback-complex-fp64.bc");
+    addLibToList("libsycl-fallback-cmath.bc");
+    addLibToList("libsycl-fallback-cmath-fp64.bc");
+    addLibToList("libsycl-fallback-imf.bc");
+    addLibToList("libsycl-fallback-imf-fp64.bc");
+    addLibToList("libsycl-fallback-imf-bf16.bc");
   }
 
   return LibraryList;

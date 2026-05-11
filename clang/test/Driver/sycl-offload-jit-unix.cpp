@@ -9,7 +9,10 @@
 // Check LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON case: library is in lib/<triple>/
 // RUN: rm -rf %t && mkdir -p %t/bin %t/lib/x86_64-unknown-linux-gnu %t/lib
 // RUN: touch %t/lib/x86_64-unknown-linux-gnu/libLLVMSYCL.so
-// RUN: touch %t/lib/libsycl-crt.bc %t/lib/libsycl-complex.bc %t/lib/libsycl-cmath.bc
+// RUN: touch %t/lib/libsycl-crt.bc %t/lib/libsycl-complex.bc %t/lib/libsycl-complex-fp64.bc %t/lib/libsycl-cmath.bc %t/lib/libsycl-cmath-fp64.bc
+// RUN: touch %t/lib/libsycl-imf.bc %t/lib/libsycl-imf-fp64.bc %t/lib/libsycl-imf-bf16.bc
+// RUN: touch %t/lib/libsycl-fallback-cstring.bc %t/lib/libsycl-fallback-complex.bc %t/lib/libsycl-fallback-complex-fp64.bc
+// RUN: touch %t/lib/libsycl-fallback-cmath.bc %t/lib/libsycl-fallback-cmath-fp64.bc %t/lib/libsycl-fallback-imf.bc %t/lib/libsycl-fallback-imf-fp64.bc %t/lib/libsycl-fallback-imf-bf16.bc
 // RUN: ln -s %clang %t/bin/clang
 // RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
@@ -20,7 +23,10 @@
 // Check LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF case: library is in lib/ (no triple subdir)
 // RUN: rm -rf %t && mkdir -p %t/bin %t/lib
 // RUN: touch %t/lib/libLLVMSYCL.so
-// RUN: touch %t/lib/libsycl-crt.bc %t/lib/libsycl-complex.bc %t/lib/libsycl-cmath.bc
+// RUN: touch %t/lib/libsycl-crt.bc %t/lib/libsycl-complex.bc %t/lib/libsycl-complex-fp64.bc %t/lib/libsycl-cmath.bc %t/lib/libsycl-cmath-fp64.bc
+// RUN: touch %t/lib/libsycl-imf.bc %t/lib/libsycl-imf-fp64.bc %t/lib/libsycl-imf-bf16.bc
+// RUN: touch %t/lib/libsycl-fallback-cstring.bc %t/lib/libsycl-fallback-complex.bc %t/lib/libsycl-fallback-complex-fp64.bc
+// RUN: touch %t/lib/libsycl-fallback-cmath.bc %t/lib/libsycl-fallback-cmath-fp64.bc %t/lib/libsycl-fallback-imf.bc %t/lib/libsycl-fallback-imf-fp64.bc %t/lib/libsycl-fallback-imf-bf16.bc
 // RUN: ln -s %clang %t/bin/clang
 // RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LSYCL-FLAT %s
