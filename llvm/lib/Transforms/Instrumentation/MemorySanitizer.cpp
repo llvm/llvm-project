@@ -2635,12 +2635,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// For x86 SSE vector convert intrinsics, see
   /// handleSSEVectorConvertIntrinsic().
   void handleGenericVectorConvertIntrinsic(Instruction &I, bool FixedPoint) {
-    unsigned NumExtraOperands = isa<CallInst>(&I) ? 1 : 0;
+    [[maybe_unused]] unsigned NumArgs = I.getNumOperands();
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      NumArgs = CI->arg_size();
 
     if (FixedPoint)
-      assert(I.getNumOperands() == 2 + NumExtraOperands);
+      assert(NumArgs == 2);
     else
-      assert(I.getNumOperands() == 1 + NumExtraOperands);
+      assert(NumArgs == 1);
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
