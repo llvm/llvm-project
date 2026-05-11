@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
-#include <vector>
 
 using namespace clang::ast_matchers;
 
