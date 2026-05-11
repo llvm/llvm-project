@@ -12,8 +12,10 @@
 #include <optional>
 #include <string>
 
+// clang-format off
 // LLDB Python header must be included first
 #include "lldb-python.h"
+//clang-format on
 
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
 #include "lldb/lldb-forward.h"
