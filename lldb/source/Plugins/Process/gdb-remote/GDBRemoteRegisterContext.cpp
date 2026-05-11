@@ -41,11 +41,12 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
   // Resize our vector of bools to contain one bool for every register. We will
   // use these boolean values to know when a register value is valid in
   // m_reg_data.
-  m_reg_valid.resize(m_reg_info_sp->GetNumRegisters(), eLazyBoolCalculate);
+  m_reg_valid.resize(m_reg_info_sp->GetNumRegisters());
+  SetAllRegistersValidState(eLazyBoolCalculate);
 
   // Make a heap based buffer that is big enough to store all registers
-  DataBufferSP reg_data_sp(new DataBufferHeap(
-      m_reg_info_sp->GetRegisterDataByteSize(), eLazyBoolCalculate));
+  DataBufferSP reg_data_sp(
+      new DataBufferHeap(m_reg_info_sp->GetRegisterDataByteSize(), 0));
   m_reg_data.SetData(reg_data_sp);
   m_reg_data.SetByteOrder(thread.GetProcess()->GetByteOrder());
 }
@@ -281,6 +282,8 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
       bool success = true;
       for (uint32_t idx = 0; success; ++idx) {
         const uint32_t prim_reg = reg_info->value_regs[idx];
+        // We've fetched all primordial registers that provide
+        // data for this reg.
         if (prim_reg == LLDB_INVALID_REGNUM)
           break;
         // We have a valid primordial register as our constituent. Grab the
