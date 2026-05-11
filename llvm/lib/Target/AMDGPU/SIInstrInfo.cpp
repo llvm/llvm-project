@@ -7111,10 +7111,12 @@ static void emitLoadScalarOpsFromVGPRLoop(
   MachineBasicBlock::iterator I = LoopBB.begin();
   Register CondReg;
 
-  Register PhiExec = MRI.createVirtualRegister(BoolXExecRC);
-  Register NewExec = MRI.createVirtualRegister(BoolXExecRC);
+  Register PhiExec;
+  Register NewExec;
 
   if (UseNewExecInstructions) {
+    PhiExec = MRI.createVirtualRegister(BoolXExecRC);
+    NewExec = MRI.createVirtualRegister(BoolXExecRC);
     Register InitExec = MRI.createVirtualRegister(BoolXExecRC);
     BuildMI(PredBB, PredBB.end(), DL, TII.get(LMC.MovOpc), InitExec)
         .addReg(LMC.ExecReg);
