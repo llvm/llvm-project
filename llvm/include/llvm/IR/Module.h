@@ -597,6 +597,9 @@ public:
   }
 
 private:
+  /// A mapping directly from Value to GUID. Populated from bitcode
+  /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
+  /// don't load metadata.
   DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
 
   /// @}
