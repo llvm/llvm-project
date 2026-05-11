@@ -3157,8 +3157,7 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
     Value *NewLower = Builder.CreateZExt(Lo, Ty);
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
-    Value *BinOp =
-        Builder.CreateOr(NewLower, NewUpper, "", /*IsDisjoint=*/true);
+    Value *BinOp = Builder.CreateDisjointOr(NewLower, NewUpper);
     return Builder.CreateIntrinsic(id, Ty, BinOp);
   };
 
@@ -3968,16 +3967,16 @@ Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS) {
   Value *X, *Y;
   if (match(RHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(LHS, X))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(LHS, Y))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(X, RHS))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(Y, RHS))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   return nullptr;

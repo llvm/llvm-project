@@ -1921,9 +1921,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(B)))) &&
       haveNoCommonBitsSet(A, B, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(
-        I, Builder.CreateIntrinsic(
-               Intrinsic::ctpop, {I.getType()},
-               {Builder.CreateOr(A, B, "", /*IsDisjoint=*/true)}));
+        I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
+                                   {Builder.CreateDisjointOr(A, B)}));
 
   // Fold the log2_ceil idiom:
   // zext(ctpop(A) >u/!= 1) + (ctlz(A, true) ^ (BW - 1))
