@@ -3167,6 +3167,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
     TII.loadRegFromStackSlot(MBB, MI, Reg, I.getFrameIdx(), RC, Register());
+    std::prev(MI)->setFlag(MachineInstr::FrameDestroy);
   }
 
   // Clear the stack slot for spill base pointer register.
