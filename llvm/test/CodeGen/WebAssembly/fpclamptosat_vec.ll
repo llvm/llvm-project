@@ -612,190 +612,42 @@ entry:
 define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-LABEL: stest_f64i64:
 ; CHECK:         .functype stest_f64i64 (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i64, i64, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 0
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label0
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label1
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label0
-; CHECK-NEXT:  .LBB18_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label1:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB18_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label0:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 7
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label2
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label3
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label2
-; CHECK-NEXT:  .LBB18_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label3:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB18_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label2:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
 ; CHECK-NEXT:    local.get 4
@@ -806,9 +658,9 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
 ; CHECK-NEXT:    local.get 4
@@ -824,15 +676,15 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
@@ -842,14 +694,14 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.eq
 ; CHECK-NEXT:    i32.select
@@ -869,142 +721,46 @@ entry:
 define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i64:
 ; CHECK:         .functype utest_f64i64 (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i64, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 0
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label4
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label5
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    br 1 # 1: down to label4
-; CHECK-NEXT:  .LBB19_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label5:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call __fixunsdfti
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call __fixunsdfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
 ; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB19_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label4:
-; CHECK-NEXT:    block
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.ge_u
-; CHECK-NEXT:    br_if 0 # 0: down to label7
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    br 1 # 1: down to label6
-; CHECK-NEXT:  .LBB19_6: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    end_block # label7:
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label8
-; CHECK-NEXT:  # %bb.7: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    br 1 # 1: down to label6
-; CHECK-NEXT:  .LBB19_8: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label8:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.set 4
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:  .LBB19_9: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label6:
+; CHECK-NEXT:    local.set 5
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
@@ -1022,197 +778,49 @@ entry:
 define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i64:
 ; CHECK:         .functype ustest_f64i64 (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i64, i64, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 0
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label9
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label10
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label9
-; CHECK-NEXT:  .LBB20_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label10:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB20_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label9:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 7
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label11
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label12
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label11
-; CHECK-NEXT:  .LBB20_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label12:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB20_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label11:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.ne
 ; CHECK-NEXT:    local.get 4
@@ -1227,9 +835,9 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    local.tee 1
@@ -1239,14 +847,14 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.ne
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
@@ -1265,194 +873,42 @@ entry:
 define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: stest_f32i64:
 ; CHECK:         .functype stest_f32i64 (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i32, i32, i32, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 0
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label13
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label14
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label13
-; CHECK-NEXT:  .LBB21_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label14:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB21_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label13:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label15
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 8
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label16
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label15
-; CHECK-NEXT:  .LBB21_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label16:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB21_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label15:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
 ; CHECK-NEXT:    local.get 4
@@ -1463,9 +919,9 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
 ; CHECK-NEXT:    local.get 4
@@ -1481,15 +937,15 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
@@ -1499,14 +955,14 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.eq
 ; CHECK-NEXT:    i32.select
@@ -1526,144 +982,46 @@ entry:
 define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: utest_f32i64:
 ; CHECK:         .functype utest_f32i64 (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i32, i32, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 0
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label17
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label18
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    br 1 # 1: down to label17
-; CHECK-NEXT:  .LBB22_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label18:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call __fixunssfti
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call __fixunssfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
 ; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB22_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label17:
-; CHECK-NEXT:    block
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.ge_u
-; CHECK-NEXT:    br_if 0 # 0: down to label20
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    br 1 # 1: down to label19
-; CHECK-NEXT:  .LBB22_6: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    end_block # label20:
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label21
-; CHECK-NEXT:  # %bb.7: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    br 1 # 1: down to label19
-; CHECK-NEXT:  .LBB22_8: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label21:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.set 4
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:  .LBB22_9: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label19:
+; CHECK-NEXT:    local.set 5
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
@@ -1681,201 +1039,49 @@ entry:
 define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: ustest_f32i64:
 ; CHECK:         .functype ustest_f32i64 (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i32, i32, i32, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 0
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label22
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label23
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label22
-; CHECK-NEXT:  .LBB23_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label23:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB23_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label22:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label24
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 8
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label25
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label24
-; CHECK-NEXT:  .LBB23_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label25:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB23_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label24:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.ne
 ; CHECK-NEXT:    local.get 4
@@ -1890,9 +1096,9 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    local.tee 1
@@ -1902,14 +1108,14 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.ne
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
@@ -1928,76 +1134,91 @@ entry:
 define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-LABEL: stest_f16i64:
 ; CHECK:         .functype stest_f16i64 (i32, i32) -> (v128)
-; CHECK-NEXT:    .local f32, i64, i64
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    global.get __stack_pointer
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.sub
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    call __fixsfti
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    call __fixsfti
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 24
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 16
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 6
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 6
 ; CHECK-NEXT:    i64.const -9223372036854775808
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.eq
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
 ; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    i64.const -1
@@ -2022,20 +1243,51 @@ entry:
 define <2 x i64> @utest_f16i64(<2 x half> %x) {
 ; CHECK-LABEL: utest_f16i64:
 ; CHECK:         .functype utest_f16i64 (i32, i32) -> (v128)
-; CHECK-NEXT:    .local v128
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    global.get __stack_pointer
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.sub
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 0
+; CHECK-NEXT:    call __fixunssfti
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64x2.replace_lane 0
+; CHECK-NEXT:    call __fixunssfti
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 24
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 16
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 6
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    i64.eqz
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    i64x2.splat
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.eqz
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    i64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <2 x half> %x to <2 x i128>
@@ -2048,63 +1300,78 @@ entry:
 define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-LABEL: ustest_f16i64:
 ; CHECK:         .functype ustest_f16i64 (i32, i32) -> (v128)
-; CHECK-NEXT:    .local f32, i64, i64
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    global.get __stack_pointer
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.sub
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    call __fixsfti
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    call __fixsfti
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 24
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 16
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 6
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 6
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.ne
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.ne
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    i64.const 0
@@ -2708,190 +1975,42 @@ entry:
 define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-LABEL: stest_f64i64_mm:
 ; CHECK:         .functype stest_f64i64_mm (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i64, i64, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 0
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label26
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label27
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label26
-; CHECK-NEXT:  .LBB45_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label27:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB45_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label26:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 7
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label28
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label29
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label28
-; CHECK-NEXT:  .LBB45_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label29:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB45_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label28:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
 ; CHECK-NEXT:    local.get 4
@@ -2902,9 +2021,9 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
 ; CHECK-NEXT:    local.get 4
@@ -2920,15 +2039,15 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
@@ -2938,14 +2057,14 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.eq
 ; CHECK-NEXT:    i32.select
@@ -2963,142 +2082,46 @@ entry:
 define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i64_mm:
 ; CHECK:         .functype utest_f64i64_mm (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i64, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 0
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label30
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label31
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    br 1 # 1: down to label30
-; CHECK-NEXT:  .LBB46_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label31:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call __fixunsdfti
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call __fixunsdfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
 ; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB46_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label30:
-; CHECK-NEXT:    block
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.ge_u
-; CHECK-NEXT:    br_if 0 # 0: down to label33
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    br 1 # 1: down to label32
-; CHECK-NEXT:  .LBB46_6: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    end_block # label33:
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label34
-; CHECK-NEXT:  # %bb.7: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    br 1 # 1: down to label32
-; CHECK-NEXT:  .LBB46_8: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label34:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.set 4
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:  .LBB46_9: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label32:
+; CHECK-NEXT:    local.set 5
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
@@ -3115,189 +2138,41 @@ entry:
 define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i64_mm:
 ; CHECK:         .functype ustest_f64i64_mm (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i64, i64, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 0
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label35
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label36
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label35
-; CHECK-NEXT:  .LBB47_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label36:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB47_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label35:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    i64.reinterpret_f64
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i64.const 52
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 2047
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    local.tee 7
-; CHECK-NEXT:    i64.const 1023
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label37
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 4503599627370495
-; CHECK-NEXT:    i64.and
-; CHECK-NEXT:    i64.const 4503599627370496
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.const 1074
-; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label38
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 1075
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.sub
-; CHECK-NEXT:    i64.shr_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label37
-; CHECK-NEXT:  .LBB47_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label38:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.wrap_i64
-; CHECK-NEXT:    i32.const -1075
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call __fixdfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB47_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label37:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 1
@@ -3313,14 +2188,14 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
@@ -3340,194 +2215,42 @@ entry:
 define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: stest_f32i64_mm:
 ; CHECK:         .functype stest_f32i64_mm (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i32, i32, i32, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 0
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label39
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label40
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label39
-; CHECK-NEXT:  .LBB48_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label40:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB48_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label39:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label41
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 8
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label42
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label41
-; CHECK-NEXT:  .LBB48_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label42:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB48_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label41:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
 ; CHECK-NEXT:    local.get 4
@@ -3538,9 +2261,9 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.tee 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
 ; CHECK-NEXT:    local.get 4
@@ -3556,15 +2279,15 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 9223372036854775807
 ; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.tee 1
@@ -3574,14 +2297,14 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const -9223372036854775808
 ; CHECK-NEXT:    i64.gt_u
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.gt_s
-; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const -1
 ; CHECK-NEXT:    i64.eq
 ; CHECK-NEXT:    i32.select
@@ -3599,144 +2322,46 @@ entry:
 define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: utest_f32i64_mm:
 ; CHECK:         .functype utest_f32i64_mm (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i32, i32, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 0
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label43
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label44
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    br 1 # 1: down to label43
-; CHECK-NEXT:  .LBB49_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label44:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call __fixunssfti
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call __fixunssfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
 ; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB49_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label43:
-; CHECK-NEXT:    block
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.ge_u
-; CHECK-NEXT:    br_if 0 # 0: down to label46
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    br 1 # 1: down to label45
-; CHECK-NEXT:  .LBB49_6: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    end_block # label46:
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 5
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label47
-; CHECK-NEXT:  # %bb.7: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    br 1 # 1: down to label45
-; CHECK-NEXT:  .LBB49_8: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label47:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.set 4
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:  .LBB49_9: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label45:
+; CHECK-NEXT:    local.set 5
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.eqz
@@ -3753,193 +2378,41 @@ entry:
 define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: ustest_f32i64_mm:
 ; CHECK:         .functype ustest_f32i64_mm (v128) -> (v128)
-; CHECK-NEXT:    .local i32, i64, i64, i64, i32, i32, i32, i64
-; CHECK-NEXT:  # %bb.0: # %entryfp-to-i-entryfp-to-i-entry
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 0
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label48
-; CHECK-NEXT:  # %bb.1: # %fp-to-i-if-check.exp.size2
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label49
-; CHECK-NEXT:  # %bb.2: # %fp-to-i-if-exp.small3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 56
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 48
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    br 1 # 1: down to label48
-; CHECK-NEXT:  .LBB50_3: # %fp-to-i-if-exp.large4
-; CHECK-NEXT:    end_block # label49:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 80
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 64
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 80
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 88
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 72
-; CHECK-NEXT:    local.set 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 64
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:  .LBB50_4: # %fp-to-i-cleanup1
-; CHECK-NEXT:    end_block # label48:
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    i32.reinterpret_f32
-; CHECK-NEXT:    local.tee 5
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.tee 6
-; CHECK-NEXT:    i32.const 127
-; CHECK-NEXT:    i32.lt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label50
-; CHECK-NEXT:  # %bb.5: # %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 8388607
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 8388608
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    local.set 7
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 8
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    i64.or
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    block
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const 149
-; CHECK-NEXT:    i32.gt_u
-; CHECK-NEXT:    br_if 0 # 0: down to label51
-; CHECK-NEXT:  # %bb.6: # %fp-to-i-if-exp.small
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i32.const 150
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    br 1 # 1: down to label50
-; CHECK-NEXT:  .LBB50_7: # %fp-to-i-if-exp.large
-; CHECK-NEXT:    end_block # label51:
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i64.extend_i32_u
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    i32.const -150
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    call __ashlti3
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 32
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 40
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    call __multi3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 24
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.load 16
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:  .LBB50_8: # %fp-to-i-cleanup
-; CHECK-NEXT:    end_block # label50:
+; CHECK-NEXT:    local.set 3
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 96
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    global.set __stack_pointer
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 1
@@ -3955,14 +2428,14 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.select
@@ -3982,19 +2455,100 @@ entry:
 define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-LABEL: stest_f16i64_mm:
 ; CHECK:         .functype stest_f16i64_mm (i32, i32) -> (v128)
-; CHECK-NEXT:    .local f32
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    global.get __stack_pointer
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.sub
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    call __fixsfti
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    i64x2.splat
+; CHECK-NEXT:    call __fixsfti
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
+; CHECK-NEXT:    i64.load 24
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 16
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 6
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    i64.const 9223372036854775807
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    i64.const 9223372036854775807
+; CHECK-NEXT:    i64.lt_u
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.lt_s
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    i64.eqz
+; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    local.tee 6
+; CHECK-NEXT:    i64.const -9223372036854775808
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    i64.const -9223372036854775808
+; CHECK-NEXT:    i64.gt_u
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.gt_s
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.eq
+; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    i64x2.splat
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i64.const 9223372036854775807
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i64.const 9223372036854775807
+; CHECK-NEXT:    i64.lt_u
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.lt_s
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.eqz
+; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    i64.const -9223372036854775808
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    i64.const -9223372036854775808
+; CHECK-NEXT:    i64.gt_u
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.gt_s
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.eq
+; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
@@ -4008,16 +2562,51 @@ entry:
 define <2 x i64> @utest_f16i64_mm(<2 x half> %x) {
 ; CHECK-LABEL: utest_f16i64_mm:
 ; CHECK:         .functype utest_f16i64_mm (i32, i32) -> (v128)
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    v128.const 0, 0, 0, 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 0
+; CHECK-NEXT:    global.get __stack_pointer
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.sub
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    call __fixunssfti
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    call __fixunssfti
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 24
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 16
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 6
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    i64.eqz
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    i64x2.splat
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.eqz
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    i64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <2 x half> %x to <2 x i128>
@@ -4029,51 +2618,66 @@ entry:
 define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-LABEL: ustest_f16i64_mm:
 ; CHECK:         .functype ustest_f16i64_mm (i32, i32) -> (v128)
-; CHECK-NEXT:    .local f32, i64
+; CHECK-NEXT:    .local i32, i64, i64, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    global.get __stack_pointer
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.sub
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    call __fixsfti
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    call __fixsfti
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 24
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 16
+; CHECK-NEXT:    local.set 4
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 8
+; CHECK-NEXT:    local.set 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.load 0
+; CHECK-NEXT:    local.set 6
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    global.set __stack_pointer
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.trunc_sat_f32_s
-; CHECK-NEXT:    i64.extend_i32_s
-; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 63
-; CHECK-NEXT:    i64.shr_s
-; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
