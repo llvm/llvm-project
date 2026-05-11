@@ -85,6 +85,17 @@ findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> intrinsicMap,
 //===----------------------------------------------------------------------===//
 //  Generic helpers
 //===----------------------------------------------------------------------===//
+// Emit an intrinsic where all operands are of the same type as the result.
+// Depending on mode, this may be a constrained floating-point intrinsic.
+static mlir::Value
+emitCallMaybeConstrainedBuiltin(CIRGenBuilderTy &builder, mlir::Location loc,
+                                StringRef intrName, mlir::Type retTy,
+                                llvm::SmallVector<mlir::Value> &ops) {
+  assert(!cir::MissingFeatures::emitConstrainedFPCall());
+
+  return builder.emitIntrinsicCallOp(loc, intrName, retTy, ops);
+}
+
 static llvm::StringRef getLLVMIntrNameNoPrefix(llvm::Intrinsic::ID intrID) {
   llvm::StringRef llvmIntrName = llvm::Intrinsic::getBaseName(intrID);
   assert(llvmIntrName.starts_with("llvm.") && "Not an LLVM intrinsic!");
@@ -703,7 +714,21 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vext_v:
   case NEON::BI__builtin_neon_vextq_v:
   case NEON::BI__builtin_neon_vfma_v:
-  case NEON::BI__builtin_neon_vfmaq_v:
+    cgf.cgm.errorNYI(expr->getSourceRange(),
+                     std::string("unimplemented AArch64 builtin call: ") +
+                         ctx.BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vfmaq_v: {
+    // NEON intrinsic: vfmaq(accumulator, multiplicand1, multiplicand2)
+    // LLVM intrinsic: fma(multiplicand1, multiplicand2, accumulator)
+    // Reorder arguments to match LLVM fma signature
+    mlir::Value op0 = cgf.getBuilder().createBitcast(ops[0], ty);
+    mlir::Value op1 = cgf.getBuilder().createBitcast(ops[1], ty);
+    mlir::Value op2 = cgf.getBuilder().createBitcast(ops[2], ty);
+    llvm::SmallVector<mlir::Value> fmaOps = {op1, op2, op0};
+    return emitCallMaybeConstrainedBuiltin(cgf.getBuilder(), loc, "fma", ty,
+                                           fmaOps);
+  }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v:
   case NEON::BI__builtin_neon_vld1_x2_v:
@@ -886,17 +911,6 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
-}
-
-// Emit an intrinsic where all operands are of the same type as the result.
-// Depending on mode, this may be a constrained floating-point intrinsic.
-static mlir::Value
-emitCallMaybeConstrainedBuiltin(CIRGenBuilderTy &builder, mlir::Location loc,
-                                StringRef intrName, mlir::Type retTy,
-                                llvm::SmallVector<mlir::Value> &ops) {
-  assert(!cir::MissingFeatures::emitConstrainedFPCall());
-
-  return builder.emitIntrinsicCallOp(loc, intrName, retTy, ops);
 }
 
 bool CIRGenFunction::getAArch64SVEProcessedOperands(

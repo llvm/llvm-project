@@ -180,11 +180,12 @@ public:
 
   void reportLifetimeboundViolation(
       const ParmVarDecl *ParmWithLifetimebound) override {
+    const auto *Attr = ParmWithLifetimebound->getAttr<LifetimeBoundAttr>();
     StringRef ParamName = ParmWithLifetimebound->getName();
     bool HasName = ParamName.size() > 0;
-    S.Diag(ParmWithLifetimebound->getLocation(),
+    S.Diag(Attr->getLocation(),
            diag::warn_lifetime_safety_param_lifetimebound_violation)
-        << HasName << ParamName << ParmWithLifetimebound->getSourceRange();
+        << HasName << ParamName << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
