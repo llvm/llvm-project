@@ -1137,10 +1137,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasPackedFP32Ops())
     FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
 
-  FSubActions
-    .clampMaxNumElements(0, S16, 2)
-    .scalarize(0)
-    .clampScalar(0, S32, S64);
+  FSubActions.clampMaxNumElements(0, S16, 2).scalarize(0).clampScalar(0, S32,
+                                                                      S64);
 
   // Whether this is legal depends on the floating point mode for the function.
   auto &FMad = getActionDefinitionsBuilder(G_FMAD);
