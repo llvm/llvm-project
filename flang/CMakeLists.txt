@@ -510,6 +510,7 @@ if (FLANG_INCLUDE_TESTS)
   if (FLANG_GTEST_AVAIL)
     add_subdirectory(unittests)
   endif ()
+  add_subdirectory(utils/perf-training)
 endif()
 
 option(FLANG_INCLUDE_DOCS "Generate build targets for the Flang docs."

@@ -1,0 +1,10 @@
+RUN: rm -rf %t && mkdir -p %t
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/__fortran_builtins.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/__fortran_ieee_exceptions.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/flang_debug.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/ieee_arithmetic.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/ieee_exceptions.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/ieee_features.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/iso_c_binding.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/iso_fortran_env_impl.f90
+RUN: %perf_wrapper %flang -DFLANG_SUPPORT_R16 -I%t -cpp -fsyntax-only -module-dir %t %module_src_dir/iso_fortran_env.f90

@@ -1,0 +1,19 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.flang_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
+config.perf_helper_dir = "@LLVM_MAIN_SRC_DIR@/../clang/utils/perf-training"
+config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
+config.test_source_root = "@FLANG_PGO_TRAINING_DATA@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.flang_obj_root = path(r"@FLANG_BINARY_DIR@")
+config.flang_bolt_mode = "@FLANG_BOLT@"
+config.flang_bolt_name = "@FLANG_BOLT_INSTRUMENTED@"
+config.cmake_exe = "@CMAKE_COMMAND@"
+config.llvm_src_dir = "@CMAKE_SOURCE_DIR@"
+config.module_src_dir = "@LLVM_MAIN_SRC_DIR@/../flang-rt/lib/runtime"
+config.cmake_generator = "@CMAKE_GENERATOR@"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@FLANG_SOURCE_DIR@/utils/perf-training/bolt.lit.cfg")
