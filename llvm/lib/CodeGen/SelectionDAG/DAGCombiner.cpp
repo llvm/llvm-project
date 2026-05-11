@@ -23890,7 +23890,6 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
 
   SDValue Chain = ST->getChain();
   SDValue Value = ST->getValue();
-  SDValue Ptr = ST->getBasePtr();
 
   unsigned Opc = Value.getOpcode();
   if (Opc != ISD::CONCAT_VECTORS)
@@ -23907,8 +23906,6 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   if (!T1->hasOneUse() || !T2.hasOneUse())
     return SDValue();
 
-  EVT LoVT = T1.getOperand(0).getValueType();
-  EVT HiVT = T2.getOperand(0).getValueType();
   EVT LoMemVT = T1.getValueType();
   EVT HiMemVT = T2.getValueType();
   unsigned LoBytes = LoMemVT.getStoreSize();
@@ -23918,21 +23915,16 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
 
   if (!TLI.canCombineTruncStore(T1.getOperand(0).getValueType(),
                                 T1.getValueType(), LoAlign,
-                                ST->getAddressSpace(), LegalOperations))
-    return SDValue();
-
-  if (!TLI.canCombineTruncStore(T2.getOperand(0).getValueType(),
+                                ST->getAddressSpace(), LegalOperations) ||
+      !TLI.canCombineTruncStore(T2.getOperand(0).getValueType(),
                                 T2.getValueType(), HiAlign,
                                 ST->getAddressSpace(), LegalOperations))
     return SDValue();
 
   SDLoc DL(ST);
-  SDValue LoPtr = Ptr;
+  SDValue LoPtr = ST->getBasePtr();
   SDValue HiPtr =
       DAG.getMemBasePlusOffset(LoPtr, TypeSize::getFixed(LoBytes), DL);
-
-  MachinePointerInfo LoPI = ST->getPointerInfo();
-  MachinePointerInfo HiPI = ST->getPointerInfo().getWithOffset(LoBytes);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *LoMMO =
