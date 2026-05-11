@@ -1834,7 +1834,6 @@ TEST_F(VPRecipeTest, UFAddUsersBeforeMaterialization) {
   Latch->appendRecipe(Br);
 
   Plan.getVFxUF().markMaterialized();
-  Plan.dump();
   EXPECT_EQ(Increment, LoopRegion->getOrCreateCanonicalIVIncrement());
 }
 
