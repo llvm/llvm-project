@@ -1,4 +1,4 @@
-# ADMGPU runtime headers discovery for compiler-rt when SANITIZER_AMDGPU is enabled.
+# AMDGPU runtime headers discovery for compiler-rt when SANITIZER_AMDGPU is enabled.
 #
 #  Usage: Include this module and call
 #   `compiler_rt_find_amdgpu_runtime_headers()`
@@ -39,6 +39,8 @@ macro(compiler_rt_find_amdgpu_runtime_headers)
     PATH_SUFFIXES hsa
   )
 
+  # If SANITIZER_HSA_INCLUDE_PATH points at the leaf `hsa` directory,
+  # retry without PATH_SUFFIXES.
   if(NOT HSA_INCLUDE_DIR AND SANITIZER_HSA_INCLUDE_PATH)
     find_path(
       HSA_INCLUDE_DIR
@@ -84,6 +86,8 @@ macro(compiler_rt_find_amdgpu_runtime_headers)
     )
   endif()
 
+  # If SANITIZER_COMGR_INCLUDE_PATH points at the leaf `amd_comgr` directory,
+  # retry without PATH_SUFFIXES.
   if(NOT AMDComgr_INCLUDE_DIR AND SANITIZER_COMGR_INCLUDE_PATH)
     find_path(
       AMDComgr_INCLUDE_DIR
