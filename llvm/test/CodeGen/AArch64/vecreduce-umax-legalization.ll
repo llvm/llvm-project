@@ -98,7 +98,7 @@ define i128 @test_v1i128(<1 x i128> %a) nounwind {
 define i64 @test_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-SD-LABEL: test_v2i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    cmhi d2, d0, d1
 ; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NEXT:    fmov x0, d0

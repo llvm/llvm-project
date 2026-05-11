@@ -118,6 +118,18 @@ struct IRTCallDescription {
                            InstrumentorIRBuilderTy &IIRB, const DataLayout &DL,
                            InstrumentationCaches &ICaches);
 
+  /// Create a string representation of the function declaration in C. Two
+  /// strings are returned: the function definition with direct arguments and
+  /// the function with any indirect argument.
+  std::pair<std::string, std::string>
+  createCSignature(const InstrumentationConfig &IConf) const;
+
+  /// Create a string representation of the function definition in C. The
+  /// function body implements a stub and only prints the passed arguments. Two
+  /// strings are returned: the function definition with direct arguments and
+  /// the function with any indirect argument.
+  std::pair<std::string, std::string> createCBodies() const;
+
   /// Return whether the \p IRTA argument can be replaced.
   bool isReplacable(IRTArg &IRTA) const {
     return (IRTA.Flags & (IRTArg::REPLACABLE | IRTArg::REPLACABLE_CUSTOM));
@@ -338,6 +350,9 @@ struct InstrumentationConfig {
   InstrumentationConfig() : SS(StringAllocator) {
     RuntimePrefix = BaseConfigurationOption::createStringOption(
         *this, "runtime_prefix", "The runtime API prefix.", "__instrumentor_");
+    RuntimeStubsFile = BaseConfigurationOption::createStringOption(
+        *this, "runtime_stubs_file",
+        "The file into which runtime stubs should be written.", "");
     TargetRegex = BaseConfigurationOption::createStringOption(
         *this, "target_regex",
         "Regular expression to be matched against the module target. "
@@ -384,6 +399,7 @@ struct InstrumentationConfig {
 
   /// The base configuration options.
   std::unique_ptr<BaseConfigurationOption> RuntimePrefix;
+  std::unique_ptr<BaseConfigurationOption> RuntimeStubsFile;
   std::unique_ptr<BaseConfigurationOption> TargetRegex;
   std::unique_ptr<BaseConfigurationOption> HostEnabled;
   std::unique_ptr<BaseConfigurationOption> GPUEnabled;

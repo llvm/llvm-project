@@ -9,6 +9,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
@@ -5686,4 +5687,159 @@ TEST(GSYMTest, TestMergedFunctionsInfoLargeOffsets) {
   ASSERT_EQ(DecResult->MergedFunctions.size(), 2u);
   EXPECT_EQ(DecResult->MergedFunctions[0].Name, LargeName1);
   EXPECT_EQ(DecResult->MergedFunctions[1].Name, LargeName2);
+}
+
+TEST(GSYMTest, TestDWARFTypedefCycleDoesNotCrash) {
+  // Test that a self-referencing typedef cycle in DWARF does not cause
+  // infinite recursion in DWARFTypePrinter::unwrapReferencedTypedefType().
+  // This can happen when dsymutil's classic linker incorrectly deduplicates
+  // typedefs with the same name but different underlying types (e.g. from
+  // preferred_name), creating a typedef that points to itself.
+  //
+  // The crash path: DWARFTypePrinter::appendUnqualifiedNameBefore sees a
+  // DW_AT_name with the _STN| prefix (simplified template name), calls
+  // appendTemplateParameters, which for each DW_TAG_template_type_parameter
+  // calls unwrapReferencedTypedefType. With a cyclic typedef, this recurses
+  // infinitely.
+  //
+  // debug_info layout (DWARF32, AddrSize=8):
+  //   0x00: unit_length (4 bytes)
+  //   0x04: version=4 (2), abbrev_offset (4), addr_size=8 (1) = 7 bytes
+  //   0x0B: CU DIE (abbrev 1): strp(4) + addr(8) + addr(8) + data2(2) = 23
+  //   0x22: Subprogram DIE (abbrev 2): strp(4) + addr(8) + addr(8) = 21
+  //   0x37: Template param DIE (abbrev 3): strp(4) + ref4(4) = 9
+  //   0x40: null terminator (1 byte, end of subprogram children)
+  //   0x41: Typedef DIE (abbrev 4): strp(4) + ref4(4) = 9
+  //   0x4A: null terminator (1 byte, end of CU children)
+  //
+  // Template param's DW_AT_type -> 0x41 (typedef)
+  // Typedef's DW_AT_type -> 0x41 (self-referencing cycle)
+
+  // String table: "" (0x00), "/tmp/main.cpp" (0x01), "_STN|foo|<MyType>"
+  // (0x0F), "T" (0x21), "MyType" (0x23)
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.cpp
+    - '_STN|foo|<MyType>'
+    - T
+    - MyType
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x00000003
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x00000004
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000F
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000021
+            - Value:           0x0000000000000041
+        - AbbrCode:        0x00000000
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000023
+            - Value:           0x0000000000000041
+        - AbbrCode:        0x00000000
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+
+  // Verify the typedef DIE is at offset 0x41 and self-references.
+  auto &CUDie = *DwarfContext->compile_units().begin();
+  DWARFDie CURoot = CUDie->getUnitDIE(false);
+  ASSERT_TRUE(CURoot.isValid());
+  // Walk children to find the typedef and verify the cycle.
+  bool FoundTypedef = false;
+  for (DWARFDie Child : CURoot.children()) {
+    if (Child.getTag() == dwarf::DW_TAG_typedef) {
+      EXPECT_EQ(Child.getOffset(), 0x41u);
+      auto TypeAttr = Child.find(dwarf::DW_AT_type);
+      ASSERT_TRUE(TypeAttr.has_value());
+      auto RefDie = Child.getAttributeValueAsReferencedDie(*TypeAttr);
+      EXPECT_EQ(RefDie.getOffset(), Child.getOffset());
+      FoundTypedef = true;
+    }
+  }
+  ASSERT_TRUE(FoundTypedef);
+
+  // Exercise DWARFTypePrinter on the subprogram with the _STN| name.
+  // appendUnqualifiedName -> appendTemplateParameters ->
+  // unwrapReferencedTypedefType must not infinitely recurse.
+  for (DWARFDie Child : CURoot.children()) {
+    if (Child.getTag() == dwarf::DW_TAG_subprogram) {
+      std::string Result;
+      raw_string_ostream StrOS(Result);
+      DWARFTypePrinter<DWARFDie>(StrOS).appendUnqualifiedName(Child);
+      EXPECT_FALSE(Result.empty());
+    }
+  }
+
+  // Also verify DwarfTransformer::convert() succeeds.
+  auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
+  GsymCreatorV1 GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  ASSERT_THAT_ERROR(DT.convert(1, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, llvm::endianness::native);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
 }
