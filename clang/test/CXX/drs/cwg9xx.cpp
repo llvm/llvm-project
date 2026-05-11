@@ -51,6 +51,13 @@ namespace cwg948 { // cwg948: 3.7
 #endif
 } // namespace cwg948
 
+namespace cwg950 { // cwg950: 3.1
+#if __cplusplus >= 201103L
+struct A {};
+struct B : decltype(A()) {};
+#endif
+} // namespace cwg950
+
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
 struct A {
