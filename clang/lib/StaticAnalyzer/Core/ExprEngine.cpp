@@ -3741,6 +3741,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   for (ExplodedNode *PredI : CheckedSet) {
     ProgramStateRef State = PredI->getState();
 
+    // Check and record that 'Val' may escape:
     State = processPointerEscapedOnBind(State, Location, Val, LC);
 
     if (auto AsLoc = Location.getAs<Loc>()) {
