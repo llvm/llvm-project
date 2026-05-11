@@ -19,6 +19,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
@@ -218,10 +219,9 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
-                                  /*insertIntoFnEntryBlock=*/false);
-    fnRetAlloca = addr;
-    returnValue = Address(addr, alignment);
+    Address allocaAddr = Address::invalid();
+    returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
+    fnRetAlloca = allocaAddr.getPointer();
   }
 }
 
@@ -231,7 +231,8 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  Address addr(addrVal, convertTypeForMem(ty), alignment);
+  cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   assert(allocaOp && "expected cir::AllocaOp");
 
   if (isParam)
@@ -239,7 +240,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
-  symbolTable.insert(var, allocaOp);
+  symbolTable.insert(var, addrVal);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
