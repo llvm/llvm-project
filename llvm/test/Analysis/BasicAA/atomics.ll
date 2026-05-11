@@ -210,7 +210,7 @@ define ptr @malloc_escape_after(ptr %x) {
 }
 
 ; CHECK-LABEL: Function: inline_asm
-; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"()
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"()
 ; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"() #0
 ; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"() #1
 ; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"() #2
