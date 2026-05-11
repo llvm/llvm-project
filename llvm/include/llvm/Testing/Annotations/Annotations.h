@@ -26,7 +26,8 @@ class raw_ostream;
 ///       $definition^class Foo{};          // points can be named: "definition"
 ///       $(foo)^class Foo{};               // ...or have a payload: "foo"
 ///       $definition(foo)^class Foo{};     // ...or both
-///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads too
+///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads
+///                                         // too
 ///    )cpp");
 ///
 ///    StringRef Code = Example.code();             // annotations stripped.
