@@ -148,7 +148,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
   std::lock_guard<std::mutex> api_guard(api_mutex);
 
   HANDLE proc = GetCurrentProcess();
-  HMODULE exe = GetModuleHandleA(nullptr);
+  HMODULE exe = GetModuleHandleW(nullptr);
   if (!exe) {
     return;
   }
