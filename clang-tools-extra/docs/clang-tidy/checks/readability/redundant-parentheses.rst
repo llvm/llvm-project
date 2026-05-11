@@ -41,8 +41,9 @@ Options
   macro. For example, ``std::max`` and ``max`` macro. A workaround to distinguish
   them is adding parentheses around functions to prevent function-like macro.
 
-The check diagnoses redundant parentheses in declarations and keeps earlier changes as it is
+The check also diagnoses redundant parentheses in simple declarations:
+
 .. code-block:: c++
 
-  int (x);             // becomes int x;
-  void f(int (arg));   // becomes void f(int arg);
+  int (x);           // becomes int x;
+  void f(int (arg)); // becomes void f(int arg);

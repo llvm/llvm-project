@@ -617,6 +617,11 @@ Changes in existing checks
   `IgnoreMacros` option to suppress warnings when the initializer involves
   macros that may expand differently in other configurations.
 
+- Improved :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check to diagnose
+  redundant parentheses in declarations such as ``int (x)`` and
+  ``int f(int (arg))``.
+
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
   false positive for nested ``#if`` directives using different builtin
@@ -641,9 +646,6 @@ Changes in existing checks
   note to suggest materializing the temporary range when iterating over temporary
   range expressions or initializer lists, as reusing them directly could be unsafe.
 
-- Improved :doc:`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check to diagnose
-  redundant parentheses in declarations such as int (x) and int (f(int(arg)))
 Removed checks
 ^^^^^^^^^^^^^^
 
