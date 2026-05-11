@@ -61,7 +61,7 @@ struct HardwareLoopOptions {
   }
 };
 
-class HardwareLoopsPass : public PassInfoMixin<HardwareLoopsPass> {
+class HardwareLoopsPass : public OptionalPassInfoMixin<HardwareLoopsPass> {
   HardwareLoopOptions Opts;
 
 public:

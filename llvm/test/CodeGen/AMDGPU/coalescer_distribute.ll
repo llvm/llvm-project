@@ -18,11 +18,9 @@ define amdgpu_kernel void @hoge(i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK-NEXT:    s_bitcmp1_b32 s2, 24
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; CHECK-NEXT:  .LBB0_1: ; %bb25
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb30
 ; CHECK-NEXT:    s_endpgm

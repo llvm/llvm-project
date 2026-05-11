@@ -138,11 +138,11 @@ static uint64_t getPGMRSrc1Reg(const SIProgramInfo &ProgInfo,
 
 static uint64_t getComputePGMRSrc2Reg(const GCNSubtarget &ST,
                                       const SIProgramInfo &ProgInfo) {
-  uint64_t MaxNumerUserSGRPs = AMDGPU::getMaxNumUserSGPRs(ST);
+  uint64_t MaxNumUserSGRPs = AMDGPU::getMaxNumUserSGPRs(ST);
   uint64_t Reg = 0;
-  if (MaxNumerUserSGRPs == 32) {
+  if (MaxNumUserSGRPs == 32) {
     Reg = S_00B84C_USER_SGPR_GFX1250(ProgInfo.UserSGPR);
-  } else if (MaxNumerUserSGRPs == 16) {
+  } else if (MaxNumUserSGRPs == 16) {
     Reg = (S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
            S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable));
   } else {

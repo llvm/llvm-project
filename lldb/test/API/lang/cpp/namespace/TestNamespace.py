@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class NamespaceBreakpointTestCase(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])

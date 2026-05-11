@@ -2918,6 +2918,33 @@ VarDecl::setInstantiationOfStaticDataMember(VarDecl *VD,
   getASTContext().setInstantiatedFromStaticDataMember(this, VD, TSK);
 }
 
+void VarDecl::assignAddressSpace(const ASTContext &Ctxt, LangAS AS) {
+  QualType Type = getType();
+  if (Type.hasAddressSpace())
+    return;
+  if (Type->isDependentType())
+    return;
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this)
+             ? !Type->isArrayType()
+             : !isa<DecayedType>(Type));
+  Type = Ctxt.getAddrSpaceQualType(Type, AS);
+  // Apply any qualifiers (including address space) from the array type to
+  // the element type. This implements C99 6.7.3p8: "If the specification of
+  // an array type includes any type qualifiers, the element type is so
+  // qualified, not the array type."
+  if (Type->isArrayType())
+    Type = QualType(Ctxt.getAsArrayType(Type), 0);
+  setType(Type);
+}
+
+void VarDecl::deduceParmAddressSpace(const ASTContext &Ctxt) {
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this));
+  if (Ctxt.getLangOpts().OpenCL)
+    assignAddressSpace(Ctxt, LangAS::opencl_private);
+}
+
 //===----------------------------------------------------------------------===//
 // ParmVarDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -5569,14 +5596,19 @@ void ImplicitParamDecl::anchor() {}
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation IdLoc,
-                                             IdentifierInfo *Id, QualType Type,
+                                             const IdentifierInfo *Id,
+                                             QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  auto *Parm = new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  auto *Parm = new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::CreateDeserialized(ASTContext &C,
