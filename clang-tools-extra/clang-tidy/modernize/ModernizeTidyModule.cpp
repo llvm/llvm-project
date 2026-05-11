@@ -51,6 +51,7 @@
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
+#include "UseStaticLambdaCheck.h"
 #include "UseStringViewCheck.h"
 #include "UseStructuredBindingCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
@@ -97,6 +98,8 @@ public:
         "modernize-use-scoped-lock");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
+    CheckFactories.registerCheck<UseStaticLambdaCheck>(
+        "modernize-use-static-lambda");
     CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
     CheckFactories.registerCheck<UseStdNumbersCheck>(
