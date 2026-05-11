@@ -5541,17 +5541,12 @@ namespace {
 ///   ->
 ///     %r = ub.poison : vector<128xf16>
 ///
-///   Case 2 — fully in-bounds, masked:
-///     %e = tensor.empty() : tensor<128xf16>
-///     %r = vector.transfer_read %e[%c0], %pad, %mask {in_bounds = [true]}
-///   ->
-///     %poison = ub.poison : vector<128xf16>
-///     %bcast  = vector.broadcast %pad : f16 to vector<128xf16>
-///     %r = arith.select %mask, %poison, %bcast
-///
-///   Case 3 — not fully in-bounds (with or without mask):
-///     Out-of-bounds lanes produce pad, in-bounds lanes read unspecified
-///     contents from tensor.empty, so we may choose pad for all lanes.
+///   Case 2 — has mask, or not fully in-bounds (or both):
+///     In-bounds lanes read unspecified (poison-refinable) contents from
+///     tensor.empty, so we may replace them with pad. Out-of-bounds lanes
+///     already produce pad. For masked in-bounds reads, a
+///     select(mask, poison, pad) is also equivalent to pad because poison
+///     can be refined to any value.
 ///   ->
 ///     %r = vector.broadcast %pad : f16 to vector<128xf16>
 struct FoldTransferReadOfEmptyTensor : public OpRewritePattern<TransferReadOp> {
@@ -5570,29 +5565,13 @@ struct FoldTransferReadOfEmptyTensor : public OpRewritePattern<TransferReadOp> {
 
     bool fullyInBounds =
         llvm::all_of(op.getInBoundsValues(), [](bool v) { return v; });
-    TypedValue<VectorType> mask = op.getMask();
 
-    if (mask && fullyInBounds) {
-      Value rPad = op.getPadding();
-      assert(!isa<VectorType>(rPad.getType()) &&
-             "masked transfers on vector element types are not supported; "
-             "see verifyTransferOp");
-      Value poison = ub::PoisonOp::create(rewriter, op.getLoc(), op.getType());
-      Value padVal = vector::BroadcastOp::create(rewriter, rPad.getLoc(),
-                                                 op.getType(), rPad);
-      rewriter.replaceOpWithNewOp<arith::SelectOp>(op, mask, poison, padVal);
-      return success();
-    }
-
-    if (!mask && fullyInBounds) {
+    if (!op.getMask() && fullyInBounds) {
       rewriter.replaceOp(
           op, ub::PoisonOp::create(rewriter, op.getLoc(), op.getType()));
       return success();
     }
 
-    // Not fully in-bounds (with or without mask): out-of-bounds lanes
-    // produce pad, and in-bounds lanes read unspecified contents from
-    // tensor.empty, so we may choose pad for those too.
     Value rPad = op.getPadding();
     rewriter.replaceOp(op, vector::BroadcastOp::create(rewriter, rPad.getLoc(),
                                                        op.getType(), rPad));

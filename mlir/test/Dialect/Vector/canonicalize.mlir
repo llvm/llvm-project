@@ -4487,8 +4487,8 @@ func.func @fold_read_empty_unmasked_outofbounds() -> vector<256xf16> {
 // -----
 
 // Masked, in-bounds read from tensor.empty with a concrete pad value ->
-// select(mask, poison, broadcast(pad)).
-// The canonicalizer also folds select(mask, poison, x) -> x.
+// broadcast(pad).  (select(mask, poison, x) == x, so we emit broadcast
+// directly without going through select.)
 // CHECK-LABEL: func.func @fold_read_empty_masked_real_pad
 // CHECK:         %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<128xf16>
 // CHECK:         return %[[CST]]
@@ -4503,7 +4503,8 @@ func.func @fold_read_empty_masked_real_pad(%mask: vector<128xi1>) -> vector<128x
 
 // -----
 
-// Masked read from tensor.empty where padding is ub.poison -> just ub.poison.
+// Masked read from tensor.empty where padding is ub.poison ->
+// broadcast(poison_scalar) which folds to ub.poison vector.
 // CHECK-LABEL: func.func @fold_read_empty_masked_poison_pad
 // CHECK-NOT:     tensor.empty
 // CHECK-NOT:     vector.transfer_read
