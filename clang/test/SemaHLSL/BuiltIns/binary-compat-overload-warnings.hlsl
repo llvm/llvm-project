@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=atan2 %s 2>&1 | FileCheck %s -DFUNC=atan2 --check-prefixes=CHECK,ATAN2
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=atan2 %s 2>&1 | FileCheck %s -DFUNC=atan2 --check-prefixes=CHECK,CHECK-MAT
 // RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=pow %s 2>&1 | FileCheck %s -DFUNC=pow
 // RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=step %s 2>&1 | FileCheck %s -DFUNC=step
 
@@ -51,21 +51,21 @@ float test_binary_int(uint64_t p0) {
 }
 
 float4x4 test_binary_uint4x4(uint4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // CHECK-MAT: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
 
 float4x4 test_binary_int4x4(int4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // CHECK-MAT: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
 
 float4x4 test_binary_int64_t4x4(int64_t4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // CHECK-MAT: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
 
 float4x4 test_binary_uint64_t4x4(uint64_t4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
+  // CHECK-MAT: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x int lowering for [[FUNC]] is deprecated. Explicitly cast parameters to float types.
   return FUNC(p0, p0);
 }
