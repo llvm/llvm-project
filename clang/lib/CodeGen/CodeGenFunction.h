@@ -5540,9 +5540,6 @@ private:
     bool ReadOnly = true;
     bool ReadNone = true;
 
-    // Prefer to use registers to memory for constraints that allow both.
-    bool PreferRegs = false;
-
     AsmConstraintsInfo(
         SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
         SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos)
