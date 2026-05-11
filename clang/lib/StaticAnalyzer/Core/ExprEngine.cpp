@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "PrettyStackTraceLocationContext.h"
+#include "PrettyStackTraceStackFrame.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -961,7 +961,7 @@ void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
 
 void ExprEngine::processEndWorklist() {
   // This prints the name of the top-level function if we crash.
-  PrettyStackTraceLocationContext CrashInfo(getRootStackFrame());
+  PrettyStackTraceStackFrame CrashInfo(getRootStackFrame());
   getCheckerManager().runCheckersForEndAnalysis(G, BR, *this);
 }
 

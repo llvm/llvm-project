@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
-#include "PrettyStackTraceLocationContext.h"
+#include "PrettyStackTraceStackFrame.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
@@ -216,7 +216,7 @@ void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
   llvm::TimeTraceScope tcs{timeTraceScopeName(Loc), [Loc, Pred]() {
                              return timeTraceMetadata(Pred, Loc);
                            }};
-  PrettyStackTraceLocationContext CrashInfo(Pred->getStackFrame());
+  PrettyStackTraceStackFrame CrashInfo(Pred->getStackFrame());
 
   // This work item is not necessarily related to the previous one, so
   // the old current LocationContext and Block is no longer relevant.
