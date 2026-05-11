@@ -12,7 +12,7 @@ body:             |
     ; GCN-LABEL: name: highest_reg_shift_amt_v7
     ; GCN: $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr0, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr0, implicit $exec
     ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 undef $vgpr0, killed $vgpr2_vgpr3, implicit $exec
     ; GCN-NEXT: $vgpr7, $vgpr0 = V_SWAP_B32 $vgpr0, $vgpr7, implicit $exec
@@ -30,7 +30,7 @@ body:             |
     ; GCN-LABEL: name: highest_reg_shift_amt_v15
     ; GCN: $vgpr15 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr0, $vgpr15 = V_SWAP_B32 undef $vgpr15, undef $vgpr0, implicit $exec
     ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 undef $vgpr0, killed $vgpr2_vgpr3, implicit $exec
     ; GCN-NEXT: $vgpr15, $vgpr0 = V_SWAP_B32 $vgpr0, $vgpr15, implicit $exec
@@ -48,7 +48,7 @@ body:             |
     ; GCN-LABEL: name: highest_reg_shift_amt_v255
     ; GCN: $vgpr255 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr0, $vgpr255 = V_SWAP_B32 undef $vgpr255, undef $vgpr0, implicit $exec
     ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 undef $vgpr0, killed $vgpr2_vgpr3, implicit $exec
     ; GCN-NEXT: $vgpr255, $vgpr0 = V_SWAP_B32 $vgpr0, $vgpr255, implicit $exec
@@ -98,7 +98,7 @@ body:             |
     ; GCN-LABEL: name: highest_reg_shift_amt_used_v0_both
     ; GCN: $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr0_vgpr1 = IMPLICIT_DEF
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr2, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr2, implicit $exec
     ; GCN-NEXT: renamable $vgpr0_vgpr1 = V_LSHRREV_B64_e64 undef $vgpr2, killed $vgpr0_vgpr1, implicit $exec
     ; GCN-NEXT: $vgpr7, $vgpr2 = V_SWAP_B32 $vgpr2, $vgpr7, implicit $exec
@@ -148,7 +148,7 @@ body:             |
     ; GCN-LABEL: name: highest_reg_shift_amt_overlapped_both
     ; GCN: $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr6_vgpr7 = IMPLICIT_DEF
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr0, $vgpr6 = V_SWAP_B32 undef $vgpr6, undef $vgpr0, implicit $exec
     ; GCN-NEXT: $vgpr1, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr1, implicit $exec
     ; GCN-NEXT: $vgpr0_vgpr1 = V_LSHRREV_B64_e64 undef $vgpr1, undef $vgpr0_vgpr1, implicit $exec
@@ -188,7 +188,7 @@ body:             |
     ; GCN-NEXT: $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr6_vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr1 = V_DOT4C_I32_I8_e32 $vgpr7, $vgpr7, $vgpr1, implicit $exec
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr0, $vgpr6 = V_SWAP_B32 undef $vgpr6, undef $vgpr0, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $vgpr1, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr1, implicit $exec
@@ -212,7 +212,7 @@ body:             |
     ; GCN: $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
     ; GCN-NEXT: BUNDLE implicit-def $vgpr2_vgpr3, implicit-def $vgpr7 {
-    ; GCN-NEXT:   S_WAITCNT 0
+    ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT:   $vgpr0, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr0, implicit $exec
     ; GCN-NEXT:   renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 undef $vgpr0, killed $vgpr2_vgpr3, implicit $exec
     ; GCN-NEXT: }
@@ -239,7 +239,7 @@ body:             |
     ; GCN-NEXT:   $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT:   $vgpr6_vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT:   $vgpr1 = V_DOT4C_I32_I8_e32 $vgpr7, $vgpr7, $vgpr1, implicit $exec
-    ; GCN-NEXT:   S_WAITCNT 0
+    ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT:   $vgpr0, $vgpr6 = V_SWAP_B32 undef $vgpr6, undef $vgpr0, implicit $exec
     ; GCN-NEXT:   S_NOP 0
     ; GCN-NEXT:   $vgpr1, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr1, implicit $exec
@@ -269,7 +269,7 @@ body:             |
     ; GCN: $vgpr0 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr0, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr0, implicit $exec
     ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 undef $vgpr0, killed $vgpr2_vgpr3, implicit $exec
     ; GCN-NEXT: $vgpr7, $vgpr0 = V_SWAP_B32 $vgpr0, $vgpr7, implicit $exec
@@ -291,7 +291,7 @@ body:             |
     ; GCN-NEXT: $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr6_vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr1 = V_DOT4C_I32_I8_e32 $vgpr7, $vgpr7, $vgpr1, implicit $exec
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $vgpr0, $vgpr6 = V_SWAP_B32 undef $vgpr6, undef $vgpr0, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $vgpr1, $vgpr7 = V_SWAP_B32 undef $vgpr7, undef $vgpr1, implicit $exec

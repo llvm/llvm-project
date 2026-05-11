@@ -1304,6 +1304,18 @@ void MachineCopyPropagation::backwardCopyPropagateBlock(
 // Reg is defined by a COPY, we untrack this Reg via
 // CopyTracker::clobberRegister(Reg, ...).
 void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
+
+  // Perform some cost modelling to ensure that only MBB's with more
+  // than 6 copies are checked. To create a chain that can be optimised,
+  // 6 copies are needed.
+  unsigned CopyCount = 0;
+  for (const MachineInstr &MI : MBB) {
+    if (isCopyInstr(MI, *TII, UseCopyInstr) && ++CopyCount > 6)
+      break;
+  }
+  if (CopyCount < 6)
+    return;
+
   // ChainLeader maps MI inside a spill-reload chain to its innermost reload COPY.
   // Thus we can track if a MI belongs to an existing spill-reload chain.
   DenseMap<MachineInstr *, MachineInstr *> ChainLeader;

@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
 
@@ -100,13 +101,13 @@ class LLVM_ABI CodeExtractor {
   /// entry block of the function.
   BasicBlock *AllocationBlock;
 
-  /// A block outside of the extraction set where deallocations for intermediate
-  /// allocations can be placed inside. Not used for automatically deallocated
-  /// memory (e.g. `alloca`), which is the default.
+  /// A set of blocks outside of the extraction set where deallocations for
+  /// intermediate allocations should be placed. Not used for automatically
+  /// deallocated memory (e.g. `alloca`), which is the default.
   ///
-  /// If it is null and needed, the end of the replacement basic block will be
+  /// If it is empty and needed, the end of the replacement basic block will be
   /// used to place deallocations.
-  BasicBlock *DeallocationBlock;
+  SmallVector<BasicBlock *> DeallocationBlocks;
 
   /// If true, varargs functions can be extracted.
   bool AllowVarArgs;
@@ -162,9 +163,9 @@ public:
   /// allocations will be placed in the AllocationBlock, unless it is null, in
   /// which case it will be placed in the entry block of the function from which
   /// the code is being extracted. Explicit deallocations for the aforementioned
-  /// allocations will be placed in the DeallocationBlock or the end of the
-  /// replacement block, if needed. If ArgsInZeroAddressSpace param is set to
-  /// true, then the aggregate param pointer of the outlined function is
+  /// allocations will be placed, if needed, in all blocks in DeallocationBlocks
+  /// or the end of the replacement block. If ArgsInZeroAddressSpace param is
+  /// set to true, then the aggregate param pointer of the outlined function is
   /// declared in zero address space. If VoidReturnWithSingleOutput is set to
   /// true, then the return type of the outlined function is set void even if
   /// there is only one output.
@@ -173,7 +174,7 @@ public:
                 BranchProbabilityInfo *BPI = nullptr,
                 AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                 bool AllowAlloca = false, BasicBlock *AllocationBlock = nullptr,
-                BasicBlock *DeallocationBlock = nullptr,
+                ArrayRef<BasicBlock *> DeallocationBlocks = {},
                 std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
                 bool VoidReturnWithSingleOutput = true);
 
@@ -260,15 +261,14 @@ public:
 
 protected:
   /// Allocate an intermediate variable at the specified point.
-  virtual Instruction *allocateVar(BasicBlock *BB, BasicBlock::iterator AllocIP,
+  virtual Instruction *allocateVar(IRBuilder<>::InsertPoint AllocaIP,
                                    Type *VarType, const Twine &Name = Twine(""),
                                    AddrSpaceCastInst **CastedAlloc = nullptr);
 
   /// Deallocate a previously-allocated intermediate variable at the specified
   /// point.
-  virtual Instruction *deallocateVar(BasicBlock *BB,
-                                     BasicBlock::iterator DeallocIP, Value *Var,
-                                     Type *VarType);
+  virtual Instruction *deallocateVar(IRBuilder<>::InsertPoint DeallocIP,
+                                     Value *Var, Type *VarType);
 
 private:
   struct LifetimeMarkerInfo {

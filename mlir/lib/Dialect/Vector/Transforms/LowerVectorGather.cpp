@@ -98,6 +98,11 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
 ///     : memref<100x3xf32> (...)
 /// ```
 ///
+/// The subview's static offset (the linearized position of the first element
+/// in the source memref) must be folded into the gather's base offsets, so a
+/// subview that selects e.g. column `j_sub` of a row-major `MxN` memref still
+/// reads from `M_base + j_sub + idx * N` instead of `M_base + idx * N`.
+///
 /// ATM this is effectively limited to reading a 1D Vector from a 2D MemRef,
 /// but should be fairly straightforward to extend beyond that.
 struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {

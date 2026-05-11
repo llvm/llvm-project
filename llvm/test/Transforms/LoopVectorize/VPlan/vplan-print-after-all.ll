@@ -6,12 +6,14 @@
 ; CHECK: VPlan for loop in 'foo' after printAfterInitialConstruction
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createHeaderPhiRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::simplifyRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleEarlyExits
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addMiddleCheck
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createLoopRegions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::introduceMasksAndLinearize
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInLoopReductionRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeMemOpWideningDecisions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeScalarizationDecisions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::clearReductionWrapFlags
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimizeFindIVReductions
@@ -28,7 +30,6 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::hoistPredicatedLoads
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::sinkPredicatedStores
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::truncateToMinimalBitwidths
-; CHECK: VPlan for loop in 'foo' after removeRedundantCanonicalIVs
 ; CHECK: VPlan for loop in 'foo' after removeRedundantInductionCasts
 ; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
 ; CHECK: VPlan for loop in 'foo' after simplifyRecipes
