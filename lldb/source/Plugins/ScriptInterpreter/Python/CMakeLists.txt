@@ -69,6 +69,13 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   )
   target_include_directories(lldbStaticScriptInterpreterPython
     PUBLIC ${Python3_INCLUDE_DIRS})
+
+  if (WIN32)
+    # Add the library directories to allow Python to use #pragma comment(lib, "python3.lib").
+    # FIXME: We should use Python3_SABI_LIBRARY_DIRS here, but this requires CMake 3.26.
+    target_link_directories(lldbPluginScriptInterpreterPython PRIVATE ${Python3_LIBRARY_DIRS})
+    target_link_directories(lldbStaticScriptInterpreterPython PUBLIC ${Python3_LIBRARY_DIRS})
+  endif()
 else()
   add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     ${python_plugin_sources}
@@ -85,6 +92,11 @@ else()
       ${Python3_LIBRARIES}
       ${LLDB_LIBEDIT_LIBS}
   )
+  if (WIN32)
+    # Add the library directories to allow Python to use #pragma comment(lib, "python3.lib").
+    # FIXME: We should use Python3_SABI_LIBRARY_DIRS here, but this requires CMake 3.26.
+    target_link_directories(lldbPluginScriptInterpreterPython PUBLIC ${Python3_LIBRARY_DIRS})
+  endif()
 endif()
 
 target_include_directories(lldbPluginScriptInterpreterPython
