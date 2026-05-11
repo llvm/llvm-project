@@ -83,7 +83,7 @@ private:
 };
 
 class SCEVDivisionPrinterPass
-    : public OptionalPassInfoMixin<SCEVDivisionPrinterPass> {
+    : public RequiredPassInfoMixin<SCEVDivisionPrinterPass> {
   raw_ostream &OS;
   void runImpl(Function &F, ScalarEvolution &SE);
 

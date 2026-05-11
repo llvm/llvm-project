@@ -193,7 +193,7 @@ public:
 };
 
 class GISelValueTrackingPrinterPass
-    : public OptionalPassInfoMixin<GISelValueTrackingPrinterPass> {
+    : public RequiredPassInfoMixin<GISelValueTrackingPrinterPass> {
   raw_ostream &OS;
 
 public:

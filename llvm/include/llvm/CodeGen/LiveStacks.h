@@ -125,7 +125,7 @@ public:
 };
 
 class LiveStacksPrinterPass
-    : public OptionalPassInfoMixin<LiveStacksPrinterPass> {
+    : public RequiredPassInfoMixin<LiveStacksPrinterPass> {
   raw_ostream &OS;
 
 public:

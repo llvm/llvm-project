@@ -72,10 +72,17 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return SetResultTyFromOp();
 
   switch (Opcode) {
+  case Instruction::PHI:
+    for (VPValue *Op : R->operands()) {
+      if (auto *VIR = dyn_cast<VPIRValue>(Op))
+        return VIR->getType();
+      if (auto *Ty = CachedTypes.lookup(Op))
+        return Ty;
+    }
+  LLVM_FALLTHROUGH;
   case Instruction::ExtractElement:
   case Instruction::InsertElement:
   case Instruction::Freeze:
-  case Instruction::PHI:
   case VPInstruction::Broadcast:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExitingIVValue:
