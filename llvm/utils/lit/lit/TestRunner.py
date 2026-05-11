@@ -662,12 +662,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
-            for i, arg in enumerate(args):
+            for arg_index, arg in enumerate(args):
                 if isinstance(arg, str) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)
-                    args[i] = arg.replace(kDevNull, f.name)
+                    args[arg_index] = arg.replace(kDevNull, f.name)
 
         # Expand all glob expressions.
         args = expand_glob_expressions(args, cmd_shenv.cwd)
