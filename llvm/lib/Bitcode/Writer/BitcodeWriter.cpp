@@ -4941,11 +4941,10 @@ void ModuleBitcodeWriterBase::writeGUIDList() {
 
   std::vector<GlobalValue::GUID> GUIDs(Max, 0);
   for (const GlobalValue &GV : M.global_values()) {
-    GlobalValue::GUID GUID;
-    if (auto MaybeGUID = GV.getGUIDIfAssigned(); MaybeGUID)
-      GUID = *MaybeGUID;
-    else
+    auto MaybeGUID = GV.getGUIDIfAssigned();
+    if (!MaybeGUID)
       continue;
+    auto GUID = *MaybeGUID;
 
     const auto ValueID = VE.getValueID(&GV);
     GUIDs[ValueID] = GUID;
