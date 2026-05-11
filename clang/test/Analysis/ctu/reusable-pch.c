@@ -1,37 +1,32 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
+//
+// DEFINE: %{ctu_analysis} =  %clang_analyze_cc1 \
+// DEFINE:                        -analyzer-checker=core \
+// DEFINE:                        -analyzer-config experimental-enable-naive-ctu-analysis=true \
+// DEFINE:                        -analyzer-config ctu-dir=%t \
+// DEFINE:                        -verify
 
 // Step 1: Build PCH and defmap.
 // RUN: %clang_cc1 -x c -emit-pch -fvalidate-ast-input-files-content -o %t/other.c.ast %t/other.c
 // RUN: %clang_extdef_map %t/other.c -- -c -x c > %t/externalDefMap.tmp.txt
 // RUN: sed -e 's| .*other\.c| other.c.ast|' %t/externalDefMap.tmp.txt > %t/externalDefMap.txt
 
-// Step 2: Run CTU using the PCH - the division by zero is found via inlining.
-// RUN: %clang_analyze_cc1 \
-// RUN:   -fvalidate-ast-input-files-content \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
-// RUN:   -analyzer-config ctu-dir=%t \
-// RUN:   -verify %t/main.c
+// Step 2a: Run CTU using the PCH - the division by zero is found via inlining.
+// RUN: %{ctu_analysis} %t/main.c
+
+// Step 2b: Run with content validation - no difference.
+// RUN: %{ctu_analysis} %t/main.c -fvalidate-ast-input-files-content
 
 // Step 3: Set mtime of the source from which PCH was built to the year 3000 (way in the future).
 // RUN: touch -t 300001010000 %t/other.c
 
-// Step 4: Run CTU using the "stale" PCH, and it should still load it and find the division by zero bug.
-// RUN: %clang_analyze_cc1 \
-// RUN:   -fvalidate-ast-input-files-content \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
-// RUN:   -analyzer-config ctu-dir=%t \
-// RUN:   -verify %t/main.c
+// Step 4a: Run CTU using the "stale" PCH, and it should still load it and find the division by zero bug.
+// RUN: %{ctu_analysis} -fvalidate-ast-input-files-content %t/main.c
 
-// Step 4': Run without content validation: CTU import failure
-// RUN: not %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
-// RUN:   -analyzer-config ctu-dir=%t \
-// RUN:   -verify %t/main.c 2>&1 | FileCheck %s
+// Step 4b: Run without content validation: CTU import failure
+// RUN: not %{ctu_analysis} %t/main.c 2>&1 | FileCheck %s
 
 //--- main.c
 // Without CTU, always_zero() has an unknown return value so no bug is found.
