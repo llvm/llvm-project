@@ -1135,6 +1135,8 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStream(
   assert(args.size() == 1);
   mlir::Value stream = fir::getBase(args[0]);
   mlir::Type i64Ty = builder.getI64Type();
+  // Widen to i64 to accept smaller integer-kind actuals (e.g. literal 0).
+  stream = builder.createConvert(loc, i64Ty, stream);
   auto ctx = builder.getContext();
   mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
   auto funcOp =
@@ -1172,6 +1174,7 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamDestroy(
   assert(args.size() == 1);
   mlir::Value stream = fir::getBase(args[0]);
   mlir::Type i64Ty = builder.getI64Type();
+  stream = builder.createConvert(loc, i64Ty, stream);
   auto ctx = builder.getContext();
   mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
   auto funcOp =
