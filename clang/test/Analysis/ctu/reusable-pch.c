@@ -5,7 +5,7 @@
 // Step 1: Build PCH and defmap.
 // RUN: %clang_cc1 -x c -emit-pch -fvalidate-ast-input-files-content -o %t/other.c.ast %t/other.c
 // RUN: %clang_extdef_map %t/other.c -- -c -x c > %t/externalDefMap.tmp.txt
-// RUN: sed 's| .*other\.c| other.c.ast|' %t/externalDefMap.tmp.txt > %t/externalDefMap.txt
+// RUN: sed -e 's| .*other\.c| other.c.ast|' %t/externalDefMap.tmp.txt > %t/externalDefMap.txt
 
 // Step 2: Run CTU using the PCH - the division by zero is found via inlining.
 // RUN: %clang_analyze_cc1 \
