@@ -190,7 +190,7 @@ def : WriteRes<WriteHint, [C1NanoUnitB]>;
 //   As WriteF result is produced in F5 and it can be mostly forwarded
 //   to consumer at F1, the effectively Latency is set as 4.
 def : WriteRes<WriteF, [C1NanoUnitVALU]> { let Latency = 4; }
-def : WriteRes<WriteFCmp, [C1NanoUnitVALU, C1NanoUnitVALU]> { let Latency = 1; }
+def : WriteRes<WriteFCmp, [C1NanoUnitVALU, C1NanoUnitVALU]> { let Latency = 3; }
 def : WriteRes<WriteFCvt, [C1NanoUnitVALU]> { let Latency = 4; }
 def : WriteRes<WriteFCopy, [C1NanoUnitVALU]> { let Latency = 3; }
 def : WriteRes<WriteFImm, [C1NanoUnitVALU]> { let Latency = 3; }
@@ -325,7 +325,7 @@ def C1NanoWriteISFastSBFMImm : SchedWriteVariant<[
 def : InstRW<[C1NanoWriteISFastSBFMImm], (instrs SBFMWri, SBFMXri)>;
 
 // FP conditional compare
-def : InstRW<[C1NanoMC2Write<5, 5, C1NanoUnitVALU>], (instregex "FCCMP")>;
+// def : InstRW<[C1NanoMC2Write<5, 5, C1NanoUnitVALU>], (instregex "FCCMP")>;
 
 def C1NanoWriteISReg : SchedWriteVariant<[
        SchedVar<RegShiftedPred, [WriteISReg]>,
@@ -344,6 +344,9 @@ def : InstRW<[C1NanoMCWrite<6, 4, C1NanoUnitMAC>], (instregex "[SU]MULHr")>;
 // ASIMD FP compare
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>],
              (instregex "^(FACGE|FACGT|FCMEQ|FCMGE|FCMGT|FCMLE|FCMLT)(v|16|32|64)")>;
+
+// ASIMD FP, complex add
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^FCADDv")>;
 
 // ASIMD reverse bits.
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "RBITv")>;
@@ -673,9 +676,6 @@ def : InstRW<[C1NanoMCWrite<25, 19, C1NanoUnit4VMC>], (instrs FSQRTDr)>;
 // ASIMD FP, arith, normal
 def : InstRW<[C1NanoWriteVMAC], (instregex "^FN?M(ADD|SUB)")>;
 
-// ASIMD FP, complex add
-def : InstRW<[C1NanoWriteVMAC], (instregex "^FCADDv")>;
-
 // ASIMD FP, complex multiply add
 def : InstRW<[C1NanoWriteVMAC], (instregex "^FCMLAv")>;
 
@@ -831,23 +831,23 @@ def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^ML[AS]v4i32
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "SQRDML[AS]H[vi]")>;
 // ASIMD multiply accumulate long
 def : InstRW<[C1NanoWriteVMACH128, C1NanoReadVMACH128],
-             (instregex "^[SU]ML[AS]Lv(8i8|16i8)_v8i16$")>;
+             (instregex "^[SU]ML[AS]Lv(8i8|16i8)_(v8i16|indexed)$")>;
 def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128],
-             (instregex "^[SU]ML[AS]Lv(4i16|8i16)_v4i32$")>;
+             (instregex "^[SU]ML[AS]Lv(4i16|8i16)_(v4i32|indexed)$")>;
 def : InstRW<[C1NanoWriteVMACD128, C1NanoReadVMACD128],
-             (instregex "^[SU]ML[AS]Lv(2i32|4i32)_v2i64$")>;
+             (instregex "^[SU]ML[AS]Lv(2i32|4i32)_(v2i64|indexed)$")>;
 // ASIMD multiply accumulate long #2
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>, ReadVMACAccum], (instregex "SQDML[AS]L[iv]")>;
 // ASIMD dot product
-def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^[SU]DOTv8i8$")>;
-def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^[SU]DOTv16i8$")>;
+def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^(S|U|SU|US)DOTv8i8$")>;
+def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^(S|U|SU|US)DOTv16i8$")>;
 // ASIMD dot product, by scalar
-def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^[SU]DOTlanev8i8$")>;
-def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^[SU]DOTlanev16i8$")>;
+def : InstRW<[C1NanoWriteVMACS64, C1NanoReadVMACS64], (instregex "^(S|U|SU|US)DOTlanev8i8$")>;
+def : InstRW<[C1NanoWriteVMACS128, C1NanoReadVMACS128], (instregex "^(S|U|SU|US)DOTlanev16i8$")>;
 // ASIMD multiply long
-def : InstRW<[C1NanoWriteVMACH128], (instregex "^[SU]MULLv(8i8|16i8)_v8i16$")>;
-def : InstRW<[C1NanoWriteVMACS128], (instregex "^[SU]MULLv(4i16|8i16)_v4i32$")>;
-def : InstRW<[C1NanoWriteVMACD128], (instregex "^[SU]MULLv(2i32|4i32)_v2i64$")>;
+def : InstRW<[C1NanoWriteVMACH128], (instregex "^[SU]MULLv(8i8|16i8)_(v8i16|indexed)$")>;
+def : InstRW<[C1NanoWriteVMACS128], (instregex "^[SU]MULLv(4i16|8i16)_(v4i32|indexed)$")>;
+def : InstRW<[C1NanoWriteVMACD128], (instregex "^[SU]MULLv(2i32|4i32)_(v2i64|indexed)$")>;
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "SQDMULL[iv]")>;
 // ASIMD polynomial (8x8) multiply long
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instrs PMULLv8i8, PMULLv16i8)>;
@@ -910,22 +910,21 @@ def : InstRW<[C1NanoMCWrite<3, 2, C1NanoUnitVMC>], (instrs PMULLv1i64, PMULLv2i6
 def : InstRW<[C1NanoMC2Write<3, 1, C1NanoUnitVALU>], (instregex "^SHA1H")>;
 
 // Crypto SHA1 schedule acceleration ops
-def : InstRW<[C1NanoMCWrite<3, 2, C1NanoUnitVMC>], (instregex "^SHA1(SU0|SU1)")>;
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^SHA1(SU0|SU1)")>;
 
 // Crypto SHA1 hash acceleration ops
 // Crypto SHA256 hash acceleration ops
-def : InstRW<[C1NanoMCWrite<4, 2, C1NanoUnitVMC>], (instregex "^SHA1[CMP]", "^SHA256H2?")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^SHA1[CMP]", "^SHA256H2?")>;
 
 // Crypto SHA256 schedule acceleration ops
-def : InstRW<[C1NanoMCWrite<4, 2, C1NanoUnitVMC>], (instregex "^SHA256SU[01]")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^SHA256SU[01]")>;
 
 // Crypto SHA512 hash acceleration ops
 def : InstRW<[C1NanoMCWrite<9, 7, C1NanoUnitVMC>], (instregex "^SHA512(H|H2|SU0|SU1)")>;
 
 // Crypto SHA3 ops
-def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instrs BCAX, EOR3)>;
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instrs BCAX, EOR3, RAX1)>;
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instrs XAR)>;
-def : InstRW<[C1NanoMCWrite<3, 1, C1NanoUnit2VMC>], (instrs RAX1)>;
 
 
 // Crypto SM3 ops
@@ -1488,7 +1487,7 @@ def : InstRW<[C1NanoMC2Write<4, 1, C1NanoUnitVALU>], (instregex "^FACG[ET]_PPzZZ
                                             "^FCMUO_PPzZZ_[HSD]")>;
 
 // Floating point complex add
-def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^FCADD_ZPmZ_[HSD]")>;
+def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "^FCADD_ZPmZ_[HSD]")>;
 
 // Floating point complex multiply add
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^FCMLA_ZPmZZ_[HSD]",

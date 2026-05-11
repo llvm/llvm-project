@@ -32,11 +32,11 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00   2.00    -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	v0.4s, v0.4s, v0.4s, #270
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	v0.2s, v0.2s, v0.2s, #90
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	v0.4s, v0.4s, v0.4s, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	v0.2s, v0.2s, v0.2s, #90
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	v0.4s, v0.4s, v0.s[1], #0

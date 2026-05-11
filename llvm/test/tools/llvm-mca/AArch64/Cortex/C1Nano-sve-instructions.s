@@ -3442,7 +3442,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 393.00 54.00  9.00    -     221.00 2425.00  -     -     1375.50 1305.50 215.00 215.00 676.00
+# CHECK-NEXT: 393.00 54.00  9.00    -     221.00 2425.00  -     -     1378.50 1308.50 212.00 212.00 676.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -4025,12 +4025,12 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     faddv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     faddv	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     faddv	s0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z0.d, p0/m, z0.d, z0.d, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z0.h, p0/m, z0.h, z0.h, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z0.s, p0/m, z0.s, z0.s, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z31.d, p7/m, z31.d, z31.d, #270
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z31.h, p7/m, z31.h, z31.h, #270
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z31.s, p7/m, z31.s, z31.s, #270
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z0.d, p0/m, z0.d, z0.d, #90
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z0.h, p0/m, z0.h, z0.h, #90
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z0.s, p0/m, z0.s, z0.s, #90
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z31.d, p7/m, z31.d, z31.d, #270
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z31.h, p7/m, z31.h, z31.h, #270
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z31.s, p7/m, z31.s, z31.s, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, z1.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.h, p0/z, z0.h, #0.0
