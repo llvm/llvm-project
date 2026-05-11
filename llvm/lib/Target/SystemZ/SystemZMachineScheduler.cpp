@@ -155,10 +155,8 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
     DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
 
-  if (RegionPolicy.ShouldTrackPressure) {
-    float Ratio = DAG->SUnits.size() < 50 ? 0.25 : 0.5;
-    LivenessHeightCutOff = std::floor(Ratio * float(DAGHeight));
-  }
+  if (RegionPolicy.ShouldTrackPressure)
+    LivenessHeightCutOff = DAGHeight / (DAG->SUnits.size() < 50 ? 4 : 2);
 
   if (DisableLatency)
     RegionPolicy.DisableLatencyHeuristic = true;
