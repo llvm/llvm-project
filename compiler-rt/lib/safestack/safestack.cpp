@@ -16,8 +16,8 @@
 #define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
 
 #include <errno.h>
-#include <string.h>
 #include <signal.h>
+#include <string.h>
 #include <sys/resource.h>
 
 #include "interception/interception.h"
@@ -477,9 +477,9 @@ void EnsureInterceptorsInitialized() {
   if (interceptors_inited)
     return;
 
-  sigactions = (atomic_uintptr_t*)Mmap(
-      nullptr, kMaxSignals * sizeof(atomic_uintptr_t), PROT_READ,
-      MAP_PRIVATE | MAP_ANON, -1, 0);
+  sigactions =
+      (atomic_uintptr_t*)Mmap(nullptr, kMaxSignals * sizeof(atomic_uintptr_t),
+                              PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   SFS_CHECK(sigactions != MAP_FAILED);
 
   // Initialize pthread interceptors for thread allocation
