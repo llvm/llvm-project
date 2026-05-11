@@ -3723,9 +3723,9 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
                                                        RHSCst->getAPInt());
         if (!Factor.isIntN(1)) {
           LHSOperands[0] =
-            cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
+              cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
           RHSOperands[RHSIdx] =
-            cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
+              cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
           MulOptimized = true;
         }
         continue;
@@ -3743,7 +3743,8 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
     }
   }
   if (MulOptimized)
-    return getUDivExpr(getMulExpr(LHSOperands, SCEV::FlagNUW), getMulExpr(RHSOperands, SCEV::FlagNUW));
+    return getUDivExpr(getMulExpr(LHSOperands, SCEV::FlagNUW),
+                       getMulExpr(RHSOperands, SCEV::FlagNUW));
 
   // The Insertion Point (IP) might be invalid by now (due to UniqueSCEVs
   // changes). Make sure we get a new one.
