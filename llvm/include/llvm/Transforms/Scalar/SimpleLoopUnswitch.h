@@ -65,7 +65,8 @@ class raw_ostream;
 /// Because partial unswitching of switches is extremely unlikely to be possible
 /// in practice and significantly complicates the implementation, this pass does
 /// not currently implement that in any mode.
-class SimpleLoopUnswitchPass : public PassInfoMixin<SimpleLoopUnswitchPass> {
+class SimpleLoopUnswitchPass
+    : public OptionalPassInfoMixin<SimpleLoopUnswitchPass> {
   bool NonTrivial;
   bool Trivial;
 

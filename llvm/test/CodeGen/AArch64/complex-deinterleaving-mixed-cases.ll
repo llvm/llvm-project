@@ -44,9 +44,9 @@ define <4 x float> @add_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fsub v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fsub v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d3, v2.d[1]
+; CHECK-NEXT:    mov d4, v0.d[1]
+; CHECK-NEXT:    mov d5, v1.d[1]
 ; CHECK-NEXT:    zip2 v0.2s, v0.2s, v4.2s
 ; CHECK-NEXT:    zip2 v4.2s, v2.2s, v3.2s
 ; CHECK-NEXT:    zip1 v1.2s, v1.2s, v5.2s
@@ -79,13 +79,13 @@ entry:
 define <4 x float> @mul_mul270_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: mul_mul270_mul:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d3, v2.d[1]
+; CHECK-NEXT:    mov d4, v1.d[1]
 ; CHECK-NEXT:    zip1 v5.2s, v2.2s, v3.2s
 ; CHECK-NEXT:    zip1 v6.2s, v1.2s, v4.2s
 ; CHECK-NEXT:    zip2 v2.2s, v2.2s, v3.2s
 ; CHECK-NEXT:    zip2 v1.2s, v1.2s, v4.2s
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d3, v0.d[1]
 ; CHECK-NEXT:    fmul v7.2s, v6.2s, v5.2s
 ; CHECK-NEXT:    fneg v4.2s, v7.2s
 ; CHECK-NEXT:    zip2 v7.2s, v0.2s, v3.2s
@@ -258,12 +258,12 @@ entry:
 define <4 x float> @mul_triangle_addmul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: mul_triangle_addmul:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d3, v0.d[1]
+; CHECK-NEXT:    mov d4, v1.d[1]
 ; CHECK-NEXT:    zip1 v5.2s, v0.2s, v3.2s
 ; CHECK-NEXT:    zip1 v6.2s, v1.2s, v4.2s
 ; CHECK-NEXT:    zip2 v1.2s, v1.2s, v4.2s
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    mov d4, v2.d[1]
 ; CHECK-NEXT:    zip2 v0.2s, v0.2s, v3.2s
 ; CHECK-NEXT:    fmul v7.2s, v6.2s, v5.2s
 ; CHECK-NEXT:    fmul v5.2s, v1.2s, v5.2s
@@ -311,8 +311,8 @@ entry:
 define <4 x float> @mul_triangle_multiuses(<4 x float> %a, <4 x float> %b, ptr %p) {
 ; CHECK-LABEL: mul_triangle_multiuses:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
 ; CHECK-NEXT:    zip2 v4.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    zip1 v5.2s, v1.2s, v3.2s
 ; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
@@ -442,13 +442,13 @@ entry:
 define <4 x float> @mul_divequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: mul_divequal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d3, v0.d[1]
+; CHECK-NEXT:    mov d4, v1.d[1]
 ; CHECK-NEXT:    zip2 v5.2s, v0.2s, v3.2s
 ; CHECK-NEXT:    zip2 v6.2s, v1.2s, v4.2s
 ; CHECK-NEXT:    zip1 v0.2s, v0.2s, v3.2s
 ; CHECK-NEXT:    zip1 v1.2s, v1.2s, v4.2s
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    mov d3, v2.d[1]
 ; CHECK-NEXT:    fmul v7.2s, v5.2s, v6.2s
 ; CHECK-NEXT:    fneg v4.2s, v7.2s
 ; CHECK-NEXT:    zip1 v7.2s, v2.2s, v3.2s

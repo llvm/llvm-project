@@ -282,8 +282,8 @@ define void @test_v2i64(ptr %p) {
 
 ;------------------------------------------------------------------------------
 
-define void @test_v1i8_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v1i8_zero_undef:
+define void @test_v1i8_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v1i8_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldrb r1, [r0]
 ; CHECK-NEXT:    rbit r1, r1
@@ -296,8 +296,8 @@ define void @test_v1i8_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v2i8_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v2i8_zero_undef:
+define void @test_v2i8_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v2i8_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.16 {d16[0]}, [r0:16]
 ; CHECK-NEXT:    vmovl.u8 q8, d16
@@ -318,8 +318,8 @@ define void @test_v2i8_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v4i8_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v4i8_zero_undef:
+define void @test_v4i8_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v4i8_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    vmovl.u8 q8, d16
@@ -337,8 +337,8 @@ define void @test_v4i8_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v8i8_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v8i8_zero_undef:
+define void @test_v8i8_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v8i8_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vmov.i8 d18, #0x1
@@ -354,8 +354,8 @@ define void @test_v8i8_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v16i8_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v16i8_zero_undef:
+define void @test_v16i8_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v16i8_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vmov.i8 q10, #0x1
@@ -371,8 +371,8 @@ define void @test_v16i8_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v1i16_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v1i16_zero_undef:
+define void @test_v1i16_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v1i16_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldrh r1, [r0]
 ; CHECK-NEXT:    rbit r1, r1
@@ -385,8 +385,8 @@ define void @test_v1i16_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v2i16_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v2i16_zero_undef:
+define void @test_v2i16_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v2i16_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    vmovl.u16 q8, d16
@@ -404,8 +404,8 @@ define void @test_v2i16_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v4i16_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v4i16_zero_undef:
+define void @test_v4i16_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v4i16_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vneg.s16 d17, d16
@@ -421,8 +421,8 @@ define void @test_v4i16_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v8i16_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v8i16_zero_undef:
+define void @test_v8i16_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v8i16_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vneg.s16 q9, q8
@@ -438,8 +438,8 @@ define void @test_v8i16_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v1i32_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v1i32_zero_undef:
+define void @test_v1i32_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v1i32_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r1, [r0]
 ; CHECK-NEXT:    rbit r1, r1
@@ -452,8 +452,8 @@ define void @test_v1i32_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v2i32_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v2i32_zero_undef:
+define void @test_v2i32_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v2i32_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vneg.s32 d17, d16
@@ -469,8 +469,8 @@ define void @test_v2i32_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v4i32_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v4i32_zero_undef:
+define void @test_v4i32_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v4i32_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vneg.s32 q9, q8
@@ -486,8 +486,8 @@ define void @test_v4i32_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v1i64_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v1i64_zero_undef:
+define void @test_v1i64_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v1i64_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 d16, #0x0
 ; CHECK-NEXT:    vldr d17, [r0]
@@ -507,8 +507,8 @@ define void @test_v1i64_zero_undef(ptr %p) {
   ret void
 }
 
-define void @test_v2i64_zero_undef(ptr %p) {
-; CHECK-LABEL: test_v2i64_zero_undef:
+define void @test_v2i64_zero_poison(ptr %p) {
+; CHECK-LABEL: test_v2i64_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x0
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]

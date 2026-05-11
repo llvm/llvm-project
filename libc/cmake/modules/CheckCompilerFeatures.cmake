@@ -7,6 +7,7 @@ set(
     "builtin_ceil_floor_rint_trunc"
     "builtin_fmax_fmin"
     "builtin_fmaxf16_fminf16"
+    "builtin_isnan"
     "builtin_round"
     "builtin_roundeven"
     "float16"
@@ -123,6 +124,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN TRUE)
     elseif(${feature} STREQUAL "builtin_fmaxf16_fminf16")
       set(LIBC_COMPILER_HAS_BUILTIN_FMAXF16_FMINF16 TRUE)
+    elseif(${feature} STREQUAL "builtin_isnan")
+      set(LIBC_COMPILER_HAS_BUILTIN_ISNAN TRUE)
     elseif(${feature} STREQUAL "builtin_round")
       set(LIBC_COMPILER_HAS_BUILTIN_ROUND TRUE)
     elseif(${feature} STREQUAL "builtin_roundeven")

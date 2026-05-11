@@ -212,8 +212,8 @@ template <bool Invert> struct Process {
   /// Given the current outbox and inbox values, wait until the inbox changes
   /// to indicate that this thread owns the buffer element.
   RPC_ATTRS void wait_for_ownership(uint64_t lane_mask, uint32_t index,
-                                    uint32_t outbox, uint32_t in) {
-    while (buffer_unavailable(in, outbox)) {
+                                    uint32_t out, uint32_t in) {
+    while (buffer_unavailable(in, out)) {
       sleep_briefly();
       in = load_inbox(lane_mask, index);
     }

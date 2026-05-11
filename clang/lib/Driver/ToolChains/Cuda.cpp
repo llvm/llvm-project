@@ -645,6 +645,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
+  addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
 
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});

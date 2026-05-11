@@ -300,8 +300,13 @@ void ScriptInterpreterPython::Initialize() {
   setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
 #endif
 
+  // When the plugin is a separate shared library, the SWIG wrapper lives in
+  // the plugin library, so the path helper that redirects lookups back to
+  // liblldb is unnecessary.
+#if !LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
+#endif
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(),
       lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
@@ -422,6 +427,14 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   run_string.Printf("run_one_line (%s, 'import lldb.embedded_interpreter; from "
                     "lldb.embedded_interpreter import run_python_interpreter; "
                     "from lldb.embedded_interpreter import run_one_line')",
+                    m_dictionary_name.c_str());
+  RunSimpleString(run_string.GetData());
+  run_string.Clear();
+
+  // Configure pydoc (built-in module) to use the "plain" pager. The default one
+  // doesn't play nice with the statusline.
+  run_string.Printf("run_one_line (%s, 'import pydoc; pydoc.pager = "
+                    "pydoc.plainpager')",
                     m_dictionary_name.c_str());
   RunSimpleString(run_string.GetData());
   run_string.Clear();
@@ -590,7 +603,10 @@ bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
 
   auto new_file = PythonFile::FromFile(file, mode);
   if (!new_file) {
-    llvm::consumeError(new_file.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), new_file.takeError(),
+                   "ScriptInterpreterPythonImpl::SetStdHandle failed to wrap "
+                   "sys.{1}: {0}",
+                   py_name);
     return false;
   }
 
@@ -859,8 +875,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
 
     // The one-liner failed.  Append the error message.
     if (result) {
-      result->AppendErrorWithFormat(
-          "python failed attempting to evaluate '%s'\n", command_str.c_str());
+      result->AppendErrorWithFormat("python failed attempting to evaluate '%s'",
+                                    command_str.c_str());
     }
     return false;
   }
@@ -1520,6 +1536,11 @@ ScriptInterpreterPythonImpl::CreateScriptedProcessInterface() {
 ScriptedStopHookInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedStopHookInterface() {
   return std::make_shared<ScriptedStopHookPythonInterface>(*this);
+}
+
+ScriptedHookInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedHookInterface() {
+  return std::make_shared<ScriptedHookPythonInterface>(*this);
 }
 
 ScriptedBreakpointInterfaceSP

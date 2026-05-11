@@ -182,12 +182,14 @@ bb3:
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "landingpad.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "instruction_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
-!4 = distinct !DISubprogram(name: "callee", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "instruction_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
+!4 = distinct !DISubprogram(name: "callee", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !5 = !DILocation(line: 1, column: 2, scope: !3)
 !6 = !DILocation(line: 2, column: 2, scope: !3)
 !7 = !DILocation(line: 7, column: 4, scope: !4, inlinedAt: !6)
 !8 = !DILocalVariable(scope: !4, name: "size")
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 

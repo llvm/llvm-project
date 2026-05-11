@@ -1,11 +1,11 @@
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan -force-vector-width=4 \
 ; RUN: -force-tail-folding-style=data-with-evl \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -mtriple=x86_64 -mattr=+avx512f -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan -force-vector-width=4 \
 ; RUN: -force-tail-folding-style=none \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -tail-folding-policy=prefer-fold-tail \
 ; RUN: -mtriple=x86_64 -mattr=+avx512f -disable-output < %s 2>&1 | FileCheck --check-prefix=NO-VP %s
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {

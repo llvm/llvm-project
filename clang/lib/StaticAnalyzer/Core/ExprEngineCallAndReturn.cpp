@@ -78,7 +78,7 @@ static std::pair<const Stmt*,
                  const CFGBlock*> getLastStmt(const ExplodedNode *Node) {
   const Stmt *S = nullptr;
   const CFGBlock *Blk = nullptr;
-  const StackFrameContext *SF = Node->getStackFrame();
+  const StackFrame *SF = Node->getStackFrame();
 
   // Back up through the ExplodedGraph until we reach a statement node in this
   // stack frame.
@@ -185,7 +185,7 @@ void ExprEngine::removeDeadOnEndOfFunction(ExplodedNode *Pred,
 }
 
 static bool wasDifferentDeclUsedForInlining(CallEventRef<> Call,
-    const StackFrameContext *calleeCtx) {
+                                            const StackFrame *calleeCtx) {
   const Decl *RuntimeCallee = calleeCtx->getDecl();
   const Decl *StaticDecl = Call->getDecl();
   assert(RuntimeCallee);
@@ -253,13 +253,13 @@ ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
 /// steps 4-5. happen in the caller context.
 void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // Step 1 CEBNode was generated before the call.
-  const StackFrameContext *CalleeCtx = CEBNode->getStackFrame();
+  const StackFrame *CalleeSF = CEBNode->getStackFrame();
 
   // The parent context might not be a stack frame, so make sure we
   // look up the first enclosing stack frame.
-  const StackFrameContext *CallerCtx = CalleeCtx->getParent()->getStackFrame();
+  const StackFrame *CallerSF = CalleeSF->getParent()->getStackFrame();
 
-  const Expr *CE = CalleeCtx->getCallSite();
+  const Expr *CE = CalleeSF->getCallSite();
   ProgramStateRef State = CEBNode->getState();
   // Find the last statement in the function and the corresponding basic block.
   auto [LastSt, Blk] = getLastStmt(CEBNode);
@@ -267,12 +267,12 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   const CFGBlock *PrePurgeBlock =
       isa_and_nonnull<ReturnStmt>(LastSt) ? Blk : &CEBNode->getCFG().getExit();
   // The first half of this process happens in the callee context:
-  setCurrLocationContextAndBlock(CalleeCtx, PrePurgeBlock);
+  setCurrLocationContextAndBlock(CalleeSF, PrePurgeBlock);
 
   // Generate a CallEvent /before/ cleaning the State, so that we can get the
   // correct value for 'this' (if necessary).
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
-  CallEventRef<> Call = CEMgr.getCaller(CalleeCtx, State);
+  CallEventRef<> Call = CEMgr.getCaller(CalleeSF, State);
 
   // Step 2: generate node with bound return value: CEBNode -> BoundRetNode.
 
@@ -285,10 +285,10 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
   if (const auto *DtorDecl =
           dyn_cast_or_null<CXXDestructorDecl>(Call->getDecl())) {
-    if (auto Idx = getPendingArrayDestruction(State, CallerCtx)) {
+    if (auto Idx = getPendingArrayDestruction(State, CallerSF)) {
       ShouldRepeatCall = *Idx > 0;
 
-      auto ThisVal = svalBuilder.getCXXThis(DtorDecl->getParent(), CalleeCtx);
+      auto ThisVal = svalBuilder.getCXXThis(DtorDecl->getParent(), CalleeSF);
       State = State->killBinding(ThisVal);
     }
   }
@@ -297,34 +297,33 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
       const LocationContext *LCtx = CEBNode->getLocationContext();
-      // FIXME: This tries to look up the return statement in the environment,
-      // which is special cased to look up the subexpression RS->getRetValue()
-      // in environment. Instead of relying on this hack, pass
-      // RS->getRetValue() to getSVal() after checking it for nullness.
-      SVal V = State->getSVal(RS, LCtx);
+
+      SVal V = UndefinedVal();
+      if (RS->getRetValue())
+        V = State->getSVal(RS->getRetValue(), LCtx);
 
       // Ensure that the return type matches the type of the returned Expr.
-      if (wasDifferentDeclUsedForInlining(Call, CalleeCtx)) {
+      if (wasDifferentDeclUsedForInlining(Call, CalleeSF)) {
         QualType ReturnedTy =
-            CallEvent::getDeclaredResultType(CalleeCtx->getDecl());
+            CallEvent::getDeclaredResultType(CalleeSF->getDecl());
         if (!ReturnedTy.isNull()) {
           V = adjustReturnValue(V, CE->getType(), ReturnedTy,
                                 getStoreManager());
         }
       }
 
-      State = State->BindExpr(CE, CallerCtx, V);
+      State = State->BindExpr(CE, CallerSF, V);
     }
 
     // Bind the constructed object value to CXXConstructExpr.
     if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(CE)) {
       loc::MemRegionVal This =
-          svalBuilder.getCXXThis(CCE->getConstructor()->getParent(), CalleeCtx);
+          svalBuilder.getCXXThis(CCE->getConstructor()->getParent(), CalleeSF);
       SVal ThisV = State->getSVal(This);
       ThisV = State->getSVal(ThisV.castAs<Loc>());
-      State = State->BindExpr(CCE, CallerCtx, ThisV);
+      State = State->BindExpr(CCE, CallerSF, ThisV);
 
-      ShouldRepeatCall = shouldRepeatCtorCall(State, CCE, CallerCtx);
+      ShouldRepeatCall = shouldRepeatCtorCall(State, CCE, CallerSF);
     }
 
     if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
@@ -333,19 +332,19 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       // region for later use.
       // Additionally cast the return value of the inlined operator new
       // (which is of type 'void *') to the correct object type.
-      SVal AllocV = State->getSVal(CNE, CallerCtx);
+      SVal AllocV = State->getSVal(CNE, CallerSF);
       AllocV = svalBuilder.evalCast(
           AllocV, CNE->getType(),
           getContext().getPointerType(getContext().VoidTy));
 
-      State = addObjectUnderConstruction(State, CNE, CalleeCtx->getParent(),
-                                         AllocV);
+      State =
+          addObjectUnderConstruction(State, CNE, CalleeSF->getParent(), AllocV);
     }
   }
 
   if (!ShouldRepeatCall) {
     State = removeStateTraitsUsedForArrayEvaluation(
-        State, dyn_cast_or_null<CXXConstructExpr>(CE), CallerCtx);
+        State, dyn_cast_or_null<CXXConstructExpr>(CE), CallerSF);
   }
 
   // Step 3: BoundRetNode -> CleanedNodes
@@ -357,8 +356,8 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   if (LastSt && Blk && AMgr.options.AnalysisPurgeOpt != PurgeNone) {
     static SimpleProgramPointTag RetValBind("ExprEngine", "Bind Return Value");
     auto Loc = isa<ReturnStmt>(LastSt)
-                   ? ProgramPoint{PostStmt(LastSt, CalleeCtx, &RetValBind)}
-                   : ProgramPoint{EpsilonPoint(CalleeCtx, /*Data1=*/nullptr,
+                   ? ProgramPoint{PostStmt(LastSt, CalleeSF, &RetValBind)}
+                   : ProgramPoint{EpsilonPoint(CalleeSF, /*Data1=*/nullptr,
                                                /*Data2=*/nullptr, &RetValBind)};
 
     ExplodedNode *BoundRetNode = Engine.makeNode(Loc, State, CEBNode);
@@ -366,10 +365,9 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       return;
 
     // We call removeDead in the context of the callee.
-    removeDead(
-        BoundRetNode, CleanedNodes, /*ReferenceStmt=*/nullptr, CalleeCtx,
-        /*DiagnosticStmt=*/CalleeCtx->getAnalysisDeclContext()->getBody(),
-        ProgramPoint::PostStmtPurgeDeadSymbolsKind);
+    removeDead(BoundRetNode, CleanedNodes, /*ReferenceStmt=*/nullptr, CalleeSF,
+               /*DiagnosticStmt=*/CalleeSF->getAnalysisDeclContext()->getBody(),
+               ProgramPoint::PostStmtPurgeDeadSymbolsKind);
   } else {
     CleanedNodes.insert(CEBNode);
   }
@@ -378,13 +376,13 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // exception to the general rule that the current LocationContext and Block
   // stay the same within a single call to dispatchWorkItem.
   resetCurrLocationContextAndBlock();
-  setCurrLocationContextAndBlock(CallerCtx, CalleeCtx->getCallSiteBlock());
-  SaveAndRestore CBISave(currStmtIdx, CalleeCtx->getIndex());
+  setCurrLocationContextAndBlock(CallerSF, CalleeSF->getCallSiteBlock());
+  SaveAndRestore CBISave(currStmtIdx, CalleeSF->getIndex());
 
   for (ExplodedNode *N : CleanedNodes) {
     // Step 4: Generate the CallExitEnd node.
     // CleanedNodes -> CEENode
-    CallExitEnd Loc(CalleeCtx, CallerCtx);
+    CallExitEnd Loc(CalleeSF, CallerSF);
     ProgramStateRef CEEState = (N == CEBNode) ? State : N->getState();
 
     ExplodedNode *CEENode = Engine.makeNode(Loc, CEEState, N);
@@ -428,10 +426,9 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
     // Enqueue the next element in the block.
     for (ExplodedNode *DstNode : Dst) {
-      unsigned Idx = CalleeCtx->getIndex() + (ShouldRepeatCall ? 0 : 1);
+      unsigned Idx = CalleeSF->getIndex() + (ShouldRepeatCall ? 0 : 1);
 
-      Engine.getWorkList()->enqueue(DstNode, CalleeCtx->getCallSiteBlock(),
-                                    Idx);
+      Engine.getWorkList()->enqueue(DstNode, CalleeSF->getCallSiteBlock(), Idx);
     }
   }
 }
@@ -462,8 +459,8 @@ void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
   StackDepth = 0;
 
   while (LCtx) {
-    if (const StackFrameContext *SFC = dyn_cast<StackFrameContext>(LCtx)) {
-      const Decl *DI = SFC->getDecl();
+    if (const StackFrame *SF = dyn_cast<StackFrame>(LCtx)) {
+      const Decl *DI = SF->getDecl();
 
       // Mark recursive (and mutually recursive) functions and always count
       // them when measuring the stack depth.
@@ -534,16 +531,13 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   assert(D);
 
   const LocationContext *CurLC = Pred->getLocationContext();
-  const StackFrameContext *CallerSFC = CurLC->getStackFrame();
-  const LocationContext *ParentOfCallee = CallerSFC;
+  const StackFrame *CallerSF = CurLC->getStackFrame();
+  const BlockDataRegion *BlockInvocationData = nullptr;
   if (Call.getKind() == CE_Block &&
       !cast<BlockCall>(Call).isConversionFromLambda()) {
-    const BlockDataRegion *BR = cast<BlockCall>(Call).getBlockRegion();
-    assert(BR && "If we have the block definition we should have its region");
-    AnalysisDeclContext *BlockCtx = AMgr.getAnalysisDeclContext(D);
-    ParentOfCallee = BlockCtx->getBlockInvocationContext(CallerSFC,
-                                                         cast<BlockDecl>(D),
-                                                         BR);
+    BlockInvocationData = cast<BlockCall>(Call).getBlockRegion();
+    assert(BlockInvocationData &&
+           "If we have the block definition we should have its region");
   }
 
   // This may be NULL, but that's fine.
@@ -551,15 +545,15 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
 
   // Construct a new stack frame for the callee.
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
-  const StackFrameContext *CalleeSFC =
-      CalleeADC->getStackFrame(ParentOfCallee, CallE, getCurrBlock(),
-                               getNumVisitedCurrent(), currStmtIdx);
+  const StackFrame *CalleeSF = CalleeADC->getStackFrame(
+      CallerSF, BlockInvocationData, CallE, getCurrBlock(),
+      getNumVisitedCurrent(), currStmtIdx);
 
-  CallEnter Loc(CallE, CalleeSFC, CurLC);
+  CallEnter Loc(CallE, CalleeSF, CurLC);
 
   // Construct a new state which contains the mapping from actual to
   // formal arguments.
-  State = State->enterStackFrame(Call, CalleeSFC);
+  State = State->enterStackFrame(Call, CalleeSF);
 
   bool isNew;
   if (ExplodedNode *N = G.getNode(Loc, State, false, &isNew)) {
@@ -667,11 +661,9 @@ void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
 
   const Expr *E = Call.getOriginExpr();
   const LocationContext *LC = Call.getLocationContext();
-  NodeBuilder B(Pred, Dst, *currBldrCtx);
   static SimpleProgramPointTag Tag("ExprEngine",
                                    "Finish argument construction");
-  PreStmt PP(E, LC, &Tag);
-  B.generateNode(PP, CleanedState, Pred);
+  Dst.insert(Engine.makeNode(PreStmt(E, LC, &Tag), CleanedState, Pred));
 }
 
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -713,7 +705,6 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   for (ExplodedNode *I : dstPostCall) {
     ProgramStateRef State = I->getState();
     CallEventRef<> Call = CallTemplate.cloneWithState(State);
-    NodeBuilder B(I, Dst, *currBldrCtx);
     Escaped.clear();
     {
       unsigned Arg = -1;
@@ -734,10 +725,10 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
     State = processPointerEscapedOnBind(State, Escaped, I->getLocationContext(),
                                         PSK_EscapeOutParameters, &*Call);
 
-    if (State == I->getState())
-      Dst.insert(I);
-    else
-      B.generateNode(I->getLocation(), State, I);
+    if (State != I->getState())
+      I = Engine.makeNode(I->getLocation(), State, I);
+
+    Dst.insert(I);
   }
 }
 
@@ -847,7 +838,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
                               AnalyzerOptions &Opts,
                               const EvalCallOptions &CallOpts) {
   const LocationContext *CurLC = Pred->getLocationContext();
-  const StackFrameContext *CallerSFC = CurLC->getStackFrame();
+  const StackFrame *CallerSF = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
   case CE_CXXStaticOperator:
@@ -880,7 +871,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     }
 
     // Inlining constructors requires including initializers in the CFG.
-    const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
+    const AnalysisDeclContext *ADC = CallerSF->getAnalysisDeclContext();
     assert(ADC->getCFGBuildOptions().AddInitializers && "No CFG initializers");
     (void)ADC;
 
@@ -924,7 +915,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
       return CIP_DisallowedAlways;
 
     // Inlining destructors requires building the CFG correctly.
-    const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
+    const AnalysisDeclContext *ADC = CallerSF->getAnalysisDeclContext();
     assert(ADC->getCFGBuildOptions().AddImplicitDtors && "No CFG destructors");
     (void)ADC;
 

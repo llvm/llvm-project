@@ -161,12 +161,12 @@ define i32 @clz32(i32 %x) {
   ret i32 %a
 }
 
-; CHECK-LABEL: clz32_zero_undef:
-; CHECK-NEXT: .functype clz32_zero_undef (i32) -> (i32){{$}}
+; CHECK-LABEL: clz32_zero_poison:
+; CHECK-NEXT: .functype clz32_zero_poison (i32) -> (i32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.clz $push0=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
-define i32 @clz32_zero_undef(i32 %x) {
+define i32 @clz32_zero_poison(i32 %x) {
   %a = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   ret i32 %a
 }
@@ -181,12 +181,12 @@ define i32 @ctz32(i32 %x) {
   ret i32 %a
 }
 
-; CHECK-LABEL: ctz32_zero_undef:
-; CHECK-NEXT: .functype ctz32_zero_undef (i32) -> (i32){{$}}
+; CHECK-LABEL: ctz32_zero_poison:
+; CHECK-NEXT: .functype ctz32_zero_poison (i32) -> (i32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.ctz $push0=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
-define i32 @ctz32_zero_undef(i32 %x) {
+define i32 @ctz32_zero_poison(i32 %x) {
   %a = call i32 @llvm.cttz.i32(i32 %x, i1 true)
   ret i32 %a
 }
