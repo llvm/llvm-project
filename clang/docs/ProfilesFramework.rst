@@ -29,10 +29,10 @@ The framework is profile-agnostic.  It handles attribute parsing, enforcement
 tracking, suppression scoping, module integration, and serialization.
 Individual profiles only need to call a single API at the appropriate semantic
 check sites (``Sema::checkProfileViolation`` for parse-time checks, or
-``Sema::tryEmitCFGUninitAnalysisDiagnostic``-style helpers for post-parse
-analyses).  Everything else -- suppression, template instantiation, SFINAE
-exclusion, module propagation, and PCH/BMI serialization -- is handled by the
-framework automatically.
+``Sema::shouldEmitProfileViolation`` from a per-pass dispatch table for
+post-parse analyses).  Everything else -- suppression, template instantiation,
+SFINAE exclusion, module propagation, and PCH/BMI serialization -- is handled
+by the framework automatically.
 
 
 Driver Flag
@@ -179,40 +179,62 @@ after a function body is complete.  ``test::uninit_read`` is the in-tree
 example: it diagnoses reads of uninitialized variables on top of Clang's
 existing CFG-based uninitialized-variables analysis.
 
-This pattern needs three pieces:
+This pattern needs three pieces, all colocated with the analysis pass (the
+framework intentionally does not learn the profile name).
 
-1. **Opt the function into the analysis pass.**
+1. **Add the profile to the analysis pass's per-pass opt-in table.**
+   Each post-parse analysis owns a small table of the profiles that ride it,
+   one row per profile (profile name, rule name, diagnostic id).  The
+   in-tree example is ``CFGUninitProfiles`` in
+   ``clang/lib/Sema/AnalysisBasedWarnings.cpp``:
+
+   .. code-block:: c++
+
+      struct CFGUninitProfileEntry {
+        StringRef Name;
+        StringRef Rule;
+        unsigned DiagID;
+      };
+      constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
+          {"my::profile", /*Rule=*/"", diag::err_my_profile_rule},
+      };
+
+2. **Gate the analysis pass on the table.**
    Analysis-based passes in ``AnalysisBasedWarnings.cpp::IssueWarnings`` are
-   normally run only when their corresponding warning flag is enabled.
-   To run the pass for an enforced profile even when the underlying warning
-   is silenced, add a check in
-   ``Sema::anyProfileRequestsCFGUninitAnalysis()`` (or its equivalent for
-   another analysis) that returns true when the profile is enforced.  The
-   pass guard then becomes
-   ``S.anyProfileRequestsCFGUninitAnalysis() || !Diags.isIgnored(...)``.
+   normally run only when their corresponding warning flag is enabled.  To
+   run the pass for an enforced profile even when the underlying warning is
+   silenced, OR a ``llvm::any_of(Table, [&](const auto &E) { return
+   S.isProfileEnforced(E.Name); })`` check into the existing pass guard.
+   The in-tree example wraps this as ``anyCFGUninitProfileEnforced(S)`` and
+   the pass guard becomes
+   ``anyCFGUninitProfileEnforced(S) || !Diags.isIgnored(...)``.
 
-2. **Consult the framework in the analysis's diagnostic reporter.**
-   Add a Sema helper such as ``tryEmitCFGUninitAnalysisDiagnostic`` that:
-
-   - Uses ``Sema::shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``
-     to decide whether to emit, walking parent statements and lexical
-     declaration contexts to honor ``[[profiles::suppress]]`` placed on
-     enclosing AST nodes (this is the post-parse counterpart to
-     ``ProfileSuppressStack``).
-   - Emits the diagnostic and any companion notes when it returns true.
-   - Returns whether a diagnostic was emitted.
-
-   The analysis's reporter (``UninitValsDiagReporter`` in the in-tree
-   example) calls this helper before its own warning path:
+3. **Walk the table in the analysis's diagnostic reporter.**
+   For each use site the analysis would have warned about, iterate the
+   table and call
+   ``Sema::shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``,
+   which walks parent statements and lexical declaration contexts to honor
+   ``[[profiles::suppress]]`` on enclosing AST nodes (the post-parse
+   counterpart to ``ProfileSuppressStack``).  Emit the entry's diagnostic
+   when it returns true, and skip the default warning path.  In the
+   in-tree example (``UninitValsDiagReporter`` in
+   ``AnalysisBasedWarnings.cpp``):
 
    .. code-block:: c++
 
       for (const auto &U : *vec) {
-        if (S.tryEmitCFGUninitAnalysisDiagnostic(vd, U.getUser(), AC))
+        for (const CFGUninitProfileEntry &E : CFGUninitProfiles) {
+          if (!S.shouldEmitProfileViolation(E.Name, E.Rule, U.getUser(), AC))
+            continue;
+          S.Diag(U.getUser()->getBeginLoc(), E.DiagID)
+              << E.Name << vd->getDeclName();
+          S.Diag(vd->getLocation(), diag::note_var_declared_here)
+              << vd->getDeclName();
           return;
+        }
       }
 
-3. **Define the diagnostic** with ``ProfileRuleError`` as in pattern 1.
+The diagnostic itself is defined with ``ProfileRuleError`` as in pattern 1.
 
 The post-parse Stmt-walking suppression check is intentionally separate from
 the parse-time stack check: by the time CFG analysis runs, the parse stack
@@ -380,13 +402,14 @@ CFG-based uninitialized-variables analysis.
   ("variable %1 is read before initialization under profile '%0'").
   A companion ``note_var_declared_here`` is emitted at the variable's
   declaration.
-- **Opt-in to CFG analysis**: ``Sema::anyProfileRequestsCFGUninitAnalysis``
-  in ``clang/lib/Sema/Sema.cpp``, consulted by ``IssueWarnings`` in
-  ``clang/lib/Sema/AnalysisBasedWarnings.cpp`` so that the analysis pass
-  runs even when ``-Wuninitialized`` is silenced.
-- **Check site**: ``Sema::tryEmitCFGUninitAnalysisDiagnostic``, called from
-  ``UninitValsDiagReporter::diagnoseUnitializedVar`` *before* the default
-  warning path.  When it emits, the default warning is skipped entirely.
+- **Opt-in table**: ``CFGUninitProfiles`` in
+  ``clang/lib/Sema/AnalysisBasedWarnings.cpp``.  The ``IssueWarnings`` pass
+  guard consults it via ``anyCFGUninitProfileEnforced(S)`` so the analysis
+  runs even when ``-Wuninitialized`` is silenced, and
+  ``UninitValsDiagReporter::diagnoseUnitializedVar`` walks it *before* the
+  default warning path -- when an entry's
+  ``Sema::shouldEmitProfileViolation`` returns true the entry's diagnostic
+  fires and the default warning is skipped entirely.
 
 The Stmt-tree suppression walker is what makes ``[[profiles::suppress]]``
 work for this profile: by the time the CFG analysis runs, the parse-time

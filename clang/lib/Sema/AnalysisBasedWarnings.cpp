@@ -1686,6 +1686,26 @@ struct SortDiagBySourceLocation {
 } // namespace clang
 
 namespace {
+// Profiles that opt into Clang's CFG-uninitialized-variables analysis. Each
+// entry pairs the profile name with the diagnostic to emit when an
+// uninitialized read is found and not suppressed at the use site. Adding a
+// new profile that wants to ride this analysis is a single row here plus a
+// ProfileRuleError diagnostic in DiagnosticSemaKinds.td.
+struct CFGUninitProfileEntry {
+  StringRef Name;
+  StringRef Rule;
+  unsigned DiagID;
+};
+constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
+    {"test::uninit_read", /*Rule=*/"", diag::err_profile_uninit_read},
+};
+
+bool anyCFGUninitProfileEnforced(const Sema &S) {
+  return llvm::any_of(CFGUninitProfiles, [&](const CFGUninitProfileEntry &E) {
+    return S.isProfileEnforced(E.Name);
+  });
+}
+
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
   AnalysisDeclContext &AC;
@@ -1750,8 +1770,15 @@ private:
     // use site and is not suppressed there, emit the profile diagnostic
     // and skip the default warning path entirely.
     for (const auto &U : *vec) {
-      if (S.tryEmitCFGUninitAnalysisDiagnostic(vd, U.getUser(), AC))
+      for (const CFGUninitProfileEntry &E : CFGUninitProfiles) {
+        if (!S.shouldEmitProfileViolation(E.Name, E.Rule, U.getUser(), AC))
+          continue;
+        S.Diag(U.getUser()->getBeginLoc(), E.DiagID)
+            << E.Name << vd->getDeclName();
+        S.Diag(vd->getLocation(), diag::note_var_declared_here)
+            << vd->getDeclName();
         return;
+      }
     }
 
     // Specially handle the case where we have uses of an uninitialized
@@ -3311,7 +3338,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     Analyzer.run(AC);
   }
 
-  if (S.anyProfileRequestsCFGUninitAnalysis() ||
+  if (anyCFGUninitProfileEnforced(S) ||
       !Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||

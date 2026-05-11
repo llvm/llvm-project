@@ -1081,10 +1081,6 @@ public:
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
 
-  bool anyProfileRequestsCFGUninitAnalysis() const;
-  bool tryEmitCFGUninitAnalysisDiagnostic(const VarDecl *VD, const Expr *UseExpr,
-                                          AnalysisDeclContext &AC);
-
   class ProfileSuppressScope {
     Sema &S;
     unsigned Count = 0;
