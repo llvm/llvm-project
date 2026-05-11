@@ -20,8 +20,7 @@ namespace internal {
 #ifdef LIBC_TARGET_ARCH_IS_X86
 __attribute__((no_stack_protector))
 #endif
-__attribute__((noreturn)) void
-exit(int status) {
+__attribute__((noreturn)) void exit(int status) {
   for (;;) {
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, status);
   }
