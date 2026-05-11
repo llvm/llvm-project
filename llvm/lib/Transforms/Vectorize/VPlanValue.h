@@ -278,8 +278,7 @@ struct VPConstantInt : public VPIRValue {
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue(Type *Ty = nullptr)
-      : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
+  VPSymbolicValue(Type *Ty) : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;

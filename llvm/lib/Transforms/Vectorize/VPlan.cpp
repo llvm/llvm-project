@@ -874,7 +874,7 @@ VPlan::VPlan(Loop *L, Type *IdxTy)
 }
 
 VPlan::~VPlan() {
-  VPSymbolicValue DummyValue;
+  VPSymbolicValue DummyValue(nullptr);
 
   for (auto *VPB : CreatedBlocks) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
@@ -1238,7 +1238,7 @@ VPlan *VPlan::duplicate() {
   }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan =
-      new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader, VF.getType());
+      new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader, getIndexType());
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
