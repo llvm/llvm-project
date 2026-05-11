@@ -18,7 +18,7 @@
 // Step 3: Advance mtime of the source from which PCH was built.
 // RUN: %python -c "import os, sys, time; os.utime(sys.argv[1], (time.time() + 120, time.time() + 120))" %t/other.c
 
-// Step 4: Run CTU using the "stale" PCH
+// Step 4: Run CTU using the "stale" PCH, and it should still load it and find the division by zero bug.
 // RUN: %clang_cc1 -analyze \
 // RUN:   -fvalidate-ast-input-files-content \
 // RUN:   -analyzer-checker=core \
