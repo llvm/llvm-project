@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-objcopy --strip-debug %S/Inputs/inline-noprobe.perfbin %t1
 ; RUN: llvm-objcopy --only-keep-debug %S/Inputs/inline-noprobe.perfbin %t2
 ; RUN: echo -e "0\n0" > %t

@@ -30,6 +30,8 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/MachO.h"
+#include "llvm/Object/MachOUniversal.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
@@ -343,6 +345,7 @@ class ProfiledBinary {
   bool MissingMMapWarned = false;
 
   bool IsCOFF = false;
+  bool IsMachO = false;
 
   // Whether the binary has a PT_INTERP program header (PIE executables do,
   // true shared libraries don't). Used to distinguish PIE from .so since
@@ -370,6 +373,8 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::ELFFile<ELFT> &Obj,
                                         StringRef FileName);
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
+                                        StringRef FileName);
+  void setPreferredTextSegmentAddresses(const object::MachOObjectFile *Obj,
                                         StringRef FileName);
 
   // Return true if pseudo probe in Obj is usable.
@@ -428,7 +433,7 @@ public:
   ///   2. The .debug_line section, used by Dwarf-based profile generation.
   ///   3. Pseudo probe related sections, used by probe-based profile
   ///   generation.
-  void load(StringRef TripleStr = "");
+  void load(StringRef TripleStr = "", StringRef MachOArch = "");
 
   /// Symbolize an address and return the symbol name. The returned StringRef is
   /// owned by this ProfiledBinary object.
@@ -444,6 +449,8 @@ public:
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
 
   bool isCOFF() const { return IsCOFF; }
+
+  bool isMachO() const { return IsMachO; }
 
   // Return the build ID used for filtering perfscript addresses.
   StringRef getFilterBuildID() const { return FilterBuildID; }

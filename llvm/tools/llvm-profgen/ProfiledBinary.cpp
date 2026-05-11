@@ -21,10 +21,13 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/MachO.h"
+#include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -227,16 +230,53 @@ void ProfiledBinary::warnNoFuncEntry() {
                      "inconsistent name from symbol table and dwarf info.");
 }
 
-void ProfiledBinary::load(StringRef TripleStr) {
-  // Attempt to open the binary.
-  OBinary = unwrapOrError(createBinary(Path), Path);
-  Binary &ExeBinary = *OBinary.getBinary();
+static object::OwningBinary<object::Binary>
+openBinaryForArch(StringRef Path, StringRef MachOArch) {
+  auto OB = unwrapOrError(createBinary(Path), Path);
+  auto *Fat = dyn_cast<object::MachOUniversalBinary>(OB.getBinary());
+  if (!Fat)
+    return OB;
 
-  IsCOFF = isa<COFFObjectFile>(&ExeBinary);
-  if (!isa<ELFObjectFileBase>(&ExeBinary) && !IsCOFF)
-    exitWithError("not a valid ELF/COFF image", Path);
+  auto SelectSlice = [&] {
+    if (!MachOArch.empty())
+      return Fat->getMachOObjectForArch(MachOArch);
+    // Prefer the host arch slice. Otherwise fall back to the first slice.
+    std::string Host =
+        Triple(sys::getDefaultTargetTriple()).getArchName().str();
+    auto HostSlice = Fat->getMachOObjectForArch(Host);
+    if (HostSlice)
+      return HostSlice;
+    consumeError(HostSlice.takeError());
+    return Fat->begin_objects()->getAsObjectFile();
+  };
 
-  auto *Obj = cast<ObjectFile>(&ExeBinary);
+  Expected<std::unique_ptr<MachOObjectFile>> Slice = SelectSlice();
+  if (!Slice) {
+    consumeError(Slice.takeError());
+    exitWithError("no matching slice in universal binary", Path);
+  }
+  if (MachOArch.empty() && Fat->getNumberOfObjects() > 1)
+    WithColor::warning() << "--arch was not specified and " << Path << " has "
+                         << Fat->getNumberOfObjects()
+                         << " slices. Defaulting to "
+                         << (*Slice)->getArchTriple().getArchName() << "\n";
+
+  auto Pair = OB.takeBinary();
+  return object::OwningBinary<object::Binary>(std::move(*Slice),
+                                              std::move(Pair.second));
+}
+
+void ProfiledBinary::load(StringRef TripleStr, StringRef MachOArch) {
+  OBinary = openBinaryForArch(Path, MachOArch);
+  ObjectFile *Obj = dyn_cast<ObjectFile>(OBinary.getBinary());
+  if (!Obj)
+    exitWithError("not a valid ELF/COFF/Mach-O image", Path);
+
+  IsCOFF = isa<COFFObjectFile>(Obj);
+  IsMachO = isa<MachOObjectFile>(Obj);
+  if (!isa<ELFObjectFileBase>(Obj) && !IsCOFF && !IsMachO)
+    exitWithError("not a valid ELF/COFF/Mach-O image", Path);
+
   if (!TripleStr.empty())
     TheTriple = Triple(TripleStr);
   else
@@ -269,7 +309,8 @@ void ProfiledBinary::load(StringRef TripleStr) {
   OwningBinary<Binary> DebugBinary;
   ObjectFile *PseudoProbeObj = nullptr;
   if (!DebugBinaryPath.empty()) {
-    DebugBinary = unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
+    // For MachO, a .dSYM companion can itself be a univeral binary.
+    DebugBinary = openBinaryForArch(DebugBinaryPath, MachOArch);
     ObjectFile *DebugObj = cast<ObjectFile>(DebugBinary.getBinary());
     loadSymbolsFromDWARF(*DebugObj);
     if (checkPseudoProbe(DebugObj, DebugBinaryPath))
@@ -438,6 +479,36 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
   }
 }
 
+void ProfiledBinary::setPreferredTextSegmentAddresses(
+    const MachOObjectFile *Obj, StringRef FileName) {
+  for (const auto &Load : Obj->load_commands()) {
+    // 32-bit Mach-O (LC_SEGMENT) is not supported
+    if (Load.C.cmd != MachO::LC_SEGMENT_64)
+      continue;
+    MachO::segment_command_64 Seg = Obj->getSegment64LoadCommand(Load);
+
+    // Skip __PAGEZERO and any other non-loaded segment so FirstLoadableAddress
+    // reflects the first real loadable segment.
+    if (Seg.initprot == 0)
+      continue;
+
+    if (!FirstLoadableAddress)
+      FirstLoadableAddress = Seg.vmaddr;
+
+    // FIXME: Record only the first executable segment: downstream code rebases
+    // all text sections against PreferredTextSegmentAddresses[0], so shared
+    // dyld cache and the kernel will likely get the wrong base address.
+    if ((Seg.initprot & MachO::VM_PROT_EXECUTE) &&
+        PreferredTextSegmentAddresses.empty()) {
+      PreferredTextSegmentAddresses.push_back(Seg.vmaddr);
+      TextSegmentOffsets.push_back(Seg.fileoff);
+    }
+  }
+
+  if (PreferredTextSegmentAddresses.empty())
+    exitWithError("no executable segment found", FileName);
+}
+
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
@@ -449,6 +520,8 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *COFFObj = dyn_cast<COFFObjectFile>(Obj))
     setPreferredTextSegmentAddresses(COFFObj, Obj->getFileName());
+  else if (const auto *MachOObj = dyn_cast<MachOObjectFile>(Obj))
+    setPreferredTextSegmentAddresses(MachOObj, Obj->getFileName());
   else
     llvm_unreachable("invalid object format");
 }
@@ -783,8 +856,14 @@ void ProfiledBinary::disassemble(const ObjectFile *Obj) {
     const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
     section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
-    if (SecI != Obj->section_end())
-      AllSymbols[*SecI].push_back(SymbolInfoTy(Addr, Name, ELF::STT_NOTYPE));
+    if (SecI == Obj->section_end())
+      continue;
+    // Skip symbols whose address is outside their attached section: Mach-O
+    // SF_Undefined symbols report Addr=0 with a valid section.
+    uint64_t SecAddr = SecI->getAddress();
+    if (Addr < SecAddr || Addr >= SecAddr + SecI->getSize())
+      continue;
+    AllSymbols[*SecI].push_back(SymbolInfoTy(Addr, Name, ELF::STT_NOTYPE));
   }
 
   // Sort all the symbols. Use a stable sort to stabilize the output.

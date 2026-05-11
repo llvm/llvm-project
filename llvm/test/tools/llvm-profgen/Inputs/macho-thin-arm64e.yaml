@@ -1,0 +1,91 @@
+# Minimal arm64e Mach-O executable, used together with macho-thin.yaml to
+# construct a Mach-O universal (fat) binary containing both an arm64 and an
+# arm64e slice (arm64e is the same ISA; what distinguishes the slices is
+# the cpusubtype field used by `llvm-lipo` / `getMachOObjectForArch`).
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x2
+  filetype:        0x2
+  ncmds:           4
+  sizeofcmds:      400
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100003F80
+        size:            48
+        offset:          0x3F80
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         C0035FD6FF8300D1FD7B01A9FD43009108008052E80B00B9BFC31FB8F9FFFF97E00B40B9FD7B41A9FF830091C0035FD6
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294983680
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        72
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16384
+    nsyms:           3
+    stroff:          16432
+    strsize:         24
+LinkEditData:
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983552
+    - n_strx:          27
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983556
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _foo
+    - _main
+...

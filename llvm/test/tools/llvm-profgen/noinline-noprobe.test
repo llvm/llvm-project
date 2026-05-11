@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noprobe.perfscript --binary=%S/Inputs/noprobe.perfbin --output=%t --skip-symbolization
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noprobe.mmap.perfscript --binary=%S/Inputs/noprobe.perfbin --output=%t --skip-symbolization

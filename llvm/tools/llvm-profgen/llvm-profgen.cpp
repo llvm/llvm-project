@@ -100,6 +100,12 @@ static cl::opt<std::string>
                  cl::desc("Override the target triple for the binary"),
                  cl::cat(ProfGenCategory));
 
+static cl::opt<std::string>
+    MachOArch("arch", cl::value_desc("arch"),
+              cl::desc("Select the architecture slice from Mach-O universal "
+                       "binary and companion .dSYM."),
+              cl::cat(ProfGenCategory));
+
 // Validate the command line input.
 static void validateCommandLine() {
   // Allow the missing perfscript if we only use to show binary disassembly.
@@ -188,7 +194,7 @@ int main(int argc, const char *argv[]) {
   // Load symbols and disassemble the code of a given binary.
   std::unique_ptr<ProfiledBinary> Binary =
       std::make_unique<ProfiledBinary>(BinaryPath, DebugBinPath);
-  Binary->load(TargetTriple);
+  Binary->load(TargetTriple, MachOArch);
 
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;

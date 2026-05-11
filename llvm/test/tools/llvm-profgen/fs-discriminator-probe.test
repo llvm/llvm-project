@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --unsymbolized-profile=%S/Inputs/fs-discriminator-probe.raw.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --output=%t1
 ; RUN: llvm-profdata show --sample --show-sec-info-only %t1 | FileCheck %s --check-prefix=CHECK-SECTION
 ; RUN: llvm-profdata merge --sample %t1 -o %t2 --text

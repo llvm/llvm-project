@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/external-address.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-hot-count=0 --compress-recursion=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
 

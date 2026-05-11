@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; Test unique linkage name decoding and canonicalization from dwarf debug info
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-dwarf.perfscript --binary=%S/Inputs/unique-linkage-name-dwarf.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-DWARF-FNAME

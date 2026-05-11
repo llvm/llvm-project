@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; Used the data from recursion-compression.test, refer it for the unmerged output
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t1 --compress-recursion=-1 --profile-summary-hot-count=8 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t1

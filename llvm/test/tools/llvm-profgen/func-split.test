@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --ignore-stack-samples --gen-cs-nested-profile=0

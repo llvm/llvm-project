@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0 --use-offset=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0 --use-offset=1

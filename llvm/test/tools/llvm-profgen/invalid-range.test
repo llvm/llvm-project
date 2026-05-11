@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; In the perfscript input, the consecutive branch pairs 0x2017bf/0x201760 and 0x2017d8/0x2017e3 form an invalid execution range [0x2017e3, 0x2017bf].
 ; We are testing only the invalid range is dropped to avoid bogus instruction ranges. All other ranges and all branch samples should be kept.
 ;

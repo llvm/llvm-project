@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0 --show-density -profile-density-threshold=10  --trim-cold-profile=0 &> %t2
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-DENSITY
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density-cs.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t3 --show-density -profile-density-threshold=1 -profile-density-threshold=10000 &> %t4

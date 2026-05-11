@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; Test default llvm-profgen with preinline off
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t1
 

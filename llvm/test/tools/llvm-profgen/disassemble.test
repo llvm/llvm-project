@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --perfscript=%s  --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --show-disassembly-only | FileCheck %s
 
 ; CHECK:      <bar>:

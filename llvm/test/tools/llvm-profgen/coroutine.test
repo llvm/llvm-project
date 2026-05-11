@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coroutine.perfscript --binary=%S/Inputs/coroutine.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 

@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 RUN: llvm-profgen --perfscript=%p/Inputs/pie-lbr-perf.script \
 RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
 RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=1725662 \
