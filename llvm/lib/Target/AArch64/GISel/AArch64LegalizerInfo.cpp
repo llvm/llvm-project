@@ -397,7 +397,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .scalarSameSizeAs(0, 1);
 
-  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_CTTZ)
       .lowerIf(isVector(0))
@@ -407,7 +407,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasCSSC, {s32, s64})
       .customFor(!HasCSSC, {s32, s64});
 
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({i32, i64, v8i8, v16i8})

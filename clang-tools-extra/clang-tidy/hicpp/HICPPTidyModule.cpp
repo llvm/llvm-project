@@ -8,15 +8,11 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../bugprone/SignedBitwiseCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
-#include "../bugprone/UseAfterMoveCheck.h"
+#include "../bugprone/UnhandledCodePathsCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
-#include "../cppcoreguidelines/ProBoundsArrayToPointerDecayCheck.h"
-#include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
 #include "../cppcoreguidelines/ProTypeVarargCheck.h"
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
-#include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../modernize/UseAutoCheck.h"
 #include "../modernize/UseEmplaceCheck.h"
@@ -25,12 +21,8 @@
 #include "../modernize/UseNoexceptCheck.h"
 #include "../modernize/UseNullptrCheck.h"
 #include "../modernize/UseOverrideCheck.h"
-#include "../performance/MoveConstArgCheck.h"
-#include "../performance/NoexceptMoveConstructorCheck.h"
 #include "../portability/NoAssemblerCheck.h"
-#include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "MultiwayPathsCoveredCheck.h"
 
 namespace clang::tidy {
 namespace hicpp {
@@ -39,25 +31,8 @@ namespace {
 class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
+    CheckFactories.registerCheck<bugprone::UnhandledCodePathsCheck>(
         "hicpp-multiway-paths-covered");
-    CheckFactories.registerCheck<bugprone::SignedBitwiseCheck>(
-        "hicpp-signed-bitwise");
-    CheckFactories.registerCheck<readability::NamedParameterCheck>(
-        "hicpp-named-parameter");
-    CheckFactories.registerCheck<bugprone::UseAfterMoveCheck>(
-        "hicpp-invalid-access-moved");
-    CheckFactories.registerCheck<cppcoreguidelines::ProTypeMemberInitCheck>(
-        "hicpp-member-init");
-    CheckFactories.registerCheck<performance::MoveConstArgCheck>(
-        "hicpp-move-const-arg");
-    CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
-        "hicpp-new-delete-operators");
-    CheckFactories.registerCheck<performance::NoexceptMoveConstructorCheck>(
-        "hicpp-noexcept-move");
-    CheckFactories
-        .registerCheck<cppcoreguidelines::ProBoundsArrayToPointerDecayCheck>(
-            "hicpp-no-array-decay");
     CheckFactories.registerCheck<portability::NoAssemblerCheck>(
         "hicpp-no-assembler");
     CheckFactories.registerCheck<cppcoreguidelines::NoMallocCheck>(

@@ -272,17 +272,9 @@ FAST(google-runtime-float, 1.0)
 FAST(google-runtime-int, 2.0)
 FAST(google-runtime-operator, 1.0)
 FAST(google-upgrade-googletest-case, 1.0)
-FAST(hicpp-invalid-access-moved, 9.0)
-FAST(hicpp-member-init, 2.0)
-FAST(hicpp-move-const-arg, 2.0)
 FAST(hicpp-multiway-paths-covered, -0.0)
-FAST(hicpp-named-parameter, 1.0)
-FAST(hicpp-new-delete-operators, 1.0)
-FAST(hicpp-no-array-decay, 2.0)
 FAST(hicpp-no-assembler, 1.0)
 FAST(hicpp-no-malloc, 1.0)
-FAST(hicpp-noexcept-move, -0.0)
-FAST(hicpp-signed-bitwise, -1.0)
 FAST(hicpp-special-member-functions, -1.0)
 FAST(hicpp-static-assert, 2.0)
 FAST(hicpp-undelegated-constructor, 1.0)
@@ -492,4 +484,3 @@ FAST(zircon-temporary-objects, 1.0)
 
 #undef FAST
 #undef SLOW
-
