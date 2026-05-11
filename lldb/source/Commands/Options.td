@@ -56,6 +56,14 @@ let Command = "settings clear" in {
     Desc<"Clear all settings.">;
 }
 
+let Command = "settings show" in {
+  def setshow_defaults : Option<"defaults", "d">,
+                        Desc<"Include default values if defined.">;
+  def setshow_changed : Option<"changed", "c">,
+                        Desc<"Only show settings whose value differs from the "
+                             "default.">;
+}
+
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.

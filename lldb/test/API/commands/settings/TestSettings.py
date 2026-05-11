@@ -238,6 +238,111 @@ class SettingsCommandTestCase(TestBase):
             startstr="auto-confirm (boolean) = false",
         )
 
+    def test_settings_show_changed(self):
+        """Test `settings show --changed` filters the listing to non-default values."""
+        setting = "target.max-children-count"
+
+        def cleanup():
+            self.runCmd("settings clear %s" % setting, check=False)
+
+        self.addTearDownHook(cleanup)
+
+        # Ensure a clean slate for this setting.
+        self.runCmd("settings clear %s" % setting)
+
+        # With the setting at its default, it should not show up under --changed.
+        self.expect(
+            "settings show --changed",
+            matching=False,
+            substrs=[setting],
+        )
+
+        # After explicitly changing the setting, it should show up along with
+        # the default value.
+        self.runCmd("settings set %s 42" % setting)
+        self.expect(
+            "settings show --changed",
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+
+        # After clearing, it should no longer show up.
+        self.runCmd("settings clear %s" % setting)
+        self.expect(
+            "settings show --changed",
+            matching=False,
+            substrs=[setting],
+        )
+
+        # An explicit property path at its default prints nothing.
+        self.expect(
+            "settings show --changed %s" % setting,
+            matching=False,
+            substrs=[setting],
+        )
+
+        # When the value has been changed, the explicit path prints the
+        # current value and default.
+        self.runCmd("settings set %s 42" % setting)
+        self.expect(
+            "settings show --changed %s" % setting,
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+
+    def test_settings_show_changed_per_target(self):
+        """Test that `settings show --changed` reflects per-target values: a
+        per-target setting changed in target A should show as changed when A is
+        selected, and as unchanged when target B is selected."""
+        setting = "target.max-children-count"
+
+        def cleanup():
+            self.runCmd("settings clear %s" % setting, check=False)
+
+        self.addTearDownHook(cleanup)
+        self.runCmd("settings clear %s" % setting)
+
+        target_a = self.dbg.CreateTarget("")
+        self.assertTrue(target_a.IsValid(), "Created target A")
+        target_b = self.dbg.CreateTarget("")
+        self.assertTrue(target_b.IsValid(), "Created target B")
+
+        index_a = self.dbg.GetIndexOfTarget(target_a)
+        index_b = self.dbg.GetIndexOfTarget(target_b)
+
+        # Select target A and override the per-target setting there.
+        self.runCmd("target select %d" % index_a)
+        self.runCmd("settings set %s 42" % setting)
+
+        # With A selected, the changed listing should include the override.
+        self.expect(
+            "settings show --changed",
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+        self.expect(
+            "settings show --changed %s" % setting,
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+
+        # Switch to target B: the same setting is still at its default for B,
+        # so it must not appear in either form of the changed listing.
+        self.runCmd("target select %d" % index_b)
+        self.expect(
+            "settings show --changed",
+            matching=False,
+            substrs=[setting],
+        )
+        self.expect(
+            "settings show --changed %s" % setting,
+            matching=False,
+            substrs=[setting],
+        )
+
+        # Sanity check: switching back to A still shows the override.
+        self.runCmd("target select %d" % index_a)
+        self.expect(
+            "settings show --changed %s" % setting,
+            substrs=["%s (unsigned) = 42 (default: 24)" % setting],
+        )
+
     @skipIf(archs=no_match(["x86_64", "i386", "i686"]))
     def test_disassembler_settings(self):
         """Test that user options for the disassembler take effect."""
@@ -971,6 +1076,123 @@ class SettingsCommandTestCase(TestBase):
 
         # A known option should fail if its argument is invalid.
         self.expect("settings set auto-confirm bogus", error=True)
+
+    def test_settings_show_defaults(self):
+        # boolean
+        self.expect(
+            "settings show --defaults auto-one-line-summaries",
+            matching=False,
+            substrs=["(default: true)"],
+        )
+        self.runCmd("settings set auto-one-line-summaries false")
+        self.expect(
+            "settings show --defaults auto-one-line-summaries",
+            substrs=["= false (default: true)"],
+        )
+        # unsigned
+        self.expect(
+            "settings show --defaults stop-line-count-before",
+            matching=False,
+            patterns=[r"\(default: \d+\)"],
+        )
+        self.runCmd("settings set stop-line-count-before 99")
+        self.expect(
+            "settings show --defaults stop-line-count-before",
+            patterns=[r"= 99 \(default: \d+\)"],
+        )
+        # string
+        self.expect(
+            "settings show --defaults prompt",
+            matching=False,
+            patterns=[r'\(default: ".+"\)'],
+        )
+        self.runCmd("settings set prompt '<LlDb> '")
+        self.expect(
+            "settings show --defaults prompt",
+            patterns=[r'= "<LlDb> " \(default: ".+"\)'],
+        )
+        # enum
+        self.expect(
+            "settings show --defaults stop-disassembly-display",
+            matching=False,
+            patterns=[r"\(default: .+\)"],
+        )
+        self.runCmd("settings set stop-disassembly-display no-source")
+        self.expect(
+            "settings show --defaults stop-disassembly-display",
+            patterns=[r"= no-source \(default: .+\)"],
+        )
+        # regex
+        self.expect(
+            "settings show --defaults target.process.thread.step-avoid-regexp",
+            matching=False,
+            patterns=[r"\(default: .+\)"],
+        )
+        self.runCmd("settings set target.process.thread.step-avoid-regexp dotstar")
+        self.expect(
+            "settings show --defaults target.process.thread.step-avoid-regexp",
+            patterns=[r"= dotstar \(default: .+\)"],
+        )
+        # format-string
+        self.expect(
+            "settings show --defaults disassembly-format",
+            matching=False,
+            patterns=[r'\(default: ".+"\)'],
+        )
+        self.runCmd("settings set disassembly-format dollar")
+        self.expect(
+            "settings show --defaults disassembly-format",
+            patterns=[r'= "dollar" \(default: ".+"\)'],
+        )
+        # arrays
+        self.expect(
+            "settings show --defaults target.unset-env-vars",
+            matching=False,
+            substrs=["(default: empty)"],
+        )
+        self.runCmd("settings set target.unset-env-vars PATH")
+        self.expect(
+            "settings show --defaults target.unset-env-vars",
+            substrs=["(default: empty)", '[0]: "PATH"'],
+        )
+        # dictionaries
+        self.runCmd("settings clear target.env-vars")
+        self.expect(
+            "settings show --defaults target.env-vars",
+            matching=False,
+            substrs=["(default: empty)"],
+        )
+        self.runCmd("settings set target.env-vars THING=value")
+        self.expect(
+            "settings show --defaults target.env-vars",
+            substrs=["(default: empty)", "THING=value"],
+        )
+        pwd = os.getcwd()
+        # file list
+        self.expect(
+            "settings show --defaults target.exec-search-paths",
+            matching=False,
+            substrs=["(default: empty)"],
+        )
+        self.runCmd(f"settings set target.exec-search-paths {pwd}")
+        self.expect(
+            "settings show --defaults target.exec-search-paths",
+            substrs=["(default: empty)", f"[0]: {pwd}"],
+        )
+        # path map
+        self.expect(
+            "settings show --defaults target.source-map",
+            matching=False,
+            substrs=["(default: empty)"],
+        )
+        self.runCmd(f"settings set target.source-map /abc {pwd}")
+        self.expect(
+            "settings show --defaults target.source-map",
+            patterns=[
+                r"\(default: empty\)",
+                rf'\[0\] "[/\\]abc" -> "{re.escape(pwd)}"',
+            ],
+        )
 
     def get_setting_json(self, setting_path=None):
         settings_data = self.dbg.GetSetting(setting_path)

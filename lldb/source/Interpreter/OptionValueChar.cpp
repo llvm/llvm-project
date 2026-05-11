@@ -9,12 +9,20 @@
 #include "lldb/Interpreter/OptionValueChar.h"
 
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+static void DumpChar(Stream &strm, char value) {
+  if (value != '\0')
+    strm.PutChar(value);
+  else
+    strm.PutCString("(null)");
+}
 
 void OptionValueChar::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                                 uint32_t dump_mask) {
@@ -24,10 +32,12 @@ void OptionValueChar::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
-    if (m_current_value != '\0')
-      strm.PutChar(m_current_value);
-    else
-      strm.PutCString("(null)");
+    DumpChar(strm, m_current_value);
+    if (dump_mask & eDumpOptionDefaultValue &&
+        m_current_value != m_default_value) {
+      DefaultValueFormat label(strm);
+      DumpChar(strm, m_default_value);
+    }
   }
 }
 
