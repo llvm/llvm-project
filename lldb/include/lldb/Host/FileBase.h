@@ -403,11 +403,11 @@ public:
   off_t SeekFromStart(off_t offset, Status *error_ptr = nullptr) override;
   off_t SeekFromCurrent(off_t offset, Status *error_ptr = nullptr) override;
   off_t SeekFromEnd(off_t offset, Status *error_ptr = nullptr) override;
-  virtual Status Read(void *dst, size_t &num_bytes, off_t &offset) override;
+  virtual Status Read(void *dst, size_t &num_bytes, off_t &offset) override = 0;
   virtual Status Write(const void *src, size_t &num_bytes,
-                       off_t &offset) override;
+                       off_t &offset) override = 0;
   Status Flush() override;
-  virtual Status Sync() override;
+  virtual Status Sync() override = 0;
   size_t PrintfVarArg(const char *format, va_list args) override;
   llvm::Expected<OpenOptions> GetOptions() const override;
 
