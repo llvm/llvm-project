@@ -18,19 +18,16 @@
 
 using namespace ompx;
 
-namespace {
 static constexpr uint32_t kmpc_min(uint32_t a, uint32_t b) {
   return a < b ? a : b;
 }
 
-[[clang::always_inline]]
 static uint32_t round_to_warpsize(uint32_t s) {
   if (s < mapping::getWarpSize())
     return 1;
   return (s & ~static_cast<uint32_t>(mapping::getWarpSize() - 1u));
 }
 
-[[clang::always_inline]]
 static void gpu_regular_warp_reduce(void *reduce_data,
                                     ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
@@ -39,7 +36,6 @@ static void gpu_regular_warp_reduce(void *reduce_data,
   }
 }
 
-[[clang::always_inline]]
 static void gpu_irregular_warp_reduce(void *reduce_data,
                                       ShuffleReductFnTy shflFct, uint32_t size,
                                       uint32_t tid) {
@@ -54,7 +50,6 @@ static void gpu_irregular_warp_reduce(void *reduce_data,
   }
 }
 
-[[clang::always_inline]]
 static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
                                           ShuffleReductFnTy shflFct) {
   uint32_t size, remote_id, physical_lane_id;
@@ -97,7 +92,6 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
 // in a way that suits the callers situation.
 //
 template <bool checkLiveness = true>
-[[clang::always_inline]]
 static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
                                  InterWarpCopyFnTy cpyFct, uint32_t NumThreads,
                                  uint32_t BlockThreadId) {
@@ -138,7 +132,6 @@ static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
   return BlockThreadId == 0;
 }
 
-[[clang::always_inline]]
 static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
                                             ShuffleReductFnTy shflFct,
                                             InterWarpCopyFnTy cpyFct) {
@@ -199,8 +192,6 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   return gpu_block_reduce(reduce_data, shflFct, cpyFct, NumThreads,
                           BlockThreadId);
 }
-
-} // namespace
 
 extern "C" {
 [[clang::always_inline]]
