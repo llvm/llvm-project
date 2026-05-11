@@ -430,7 +430,7 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
                           Twine(Offset));
     return;
   }
-  RawMemberName.assign(RawNameRef);
+  RawMemberName = RawNameRef;
 
   // Set MemberName.
   if (StringRef(RawNameRef).starts_with("#1/")) {
@@ -442,52 +442,48 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
     StringRef Name = NameOrErr.get();
     SmallString<64> ConvertedName;
     ConverterEBCDIC::convertToUTF8(Name, ConvertedName);
-    MemberName.assign(ConvertedName.str());
+    MemberName = std::string(ConvertedName);
   } else {
     MemberName = RawMemberName;
   }
 
   // LastModified
-  std::string LastModifiedRef = ebcdicFieldToASCII(ArMemHdr->LastModified);
-  if (LastModifiedRef.empty()) {
+  LastModified = ebcdicFieldToASCII(ArMemHdr->LastModified);
+  if (LastModified.empty()) {
     *Err =
         malformedError("LastModified field is empty or contains only spaces in "
                        "archive member header at offset " +
                        Twine(Offset));
     return;
   }
-  LastModified.assign(LastModifiedRef);
 
   // UID
-  std::string UIDRef = ebcdicFieldToASCII(ArMemHdr->UID);
-  if (UIDRef.empty()) {
+  UID = ebcdicFieldToASCII(ArMemHdr->UID);
+  if (UID.empty()) {
     *Err = malformedError("UID field is empty or contains only spaces in "
                           "archive member header at offset " +
                           Twine(Offset));
     return;
   }
-  UID.assign(UIDRef);
 
   // GID
-  std::string GIDRef = ebcdicFieldToASCII(ArMemHdr->GID);
-  if (GIDRef.empty()) {
+  GID = ebcdicFieldToASCII(ArMemHdr->GID);
+  if (GID.empty()) {
     *Err = malformedError("GID field is empty or contains only spaces in "
                           "archive member header at offset " +
                           Twine(Offset));
     return;
   }
-  GID.assign(GIDRef);
 
   // AccessMode
-  std::string AccessModeRef = ebcdicFieldToASCII(ArMemHdr->AccessMode);
-  if (AccessModeRef.empty()) {
+  AccessMode = ebcdicFieldToASCII(ArMemHdr->AccessMode);
+  if (AccessMode.empty()) {
     *Err =
         malformedError("AccessMode field is empty or contains only spaces in "
                        "archive member header at offset " +
                        Twine(Offset));
     return;
   }
-  AccessMode.assign(AccessModeRef);
 }
 
 Expected<uint64_t> BigArchiveMemberHeader::getRawNameSize() const {
@@ -1633,7 +1629,7 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
     if (EbcdicSymbolTable.size() < sizeof(uint32_t)) {
       Err = malformedError(
           "z/OS archive symbol table is too small to read the symbol count, "
-          "size is " +
+          "symbol table size is " +
           Twine(EbcdicSymbolTable.size()));
       return;
     }
