@@ -12,9 +12,6 @@
 
 ; CHECK: {{^}}kernel_illegal_agpr_use_asm:
 ; CHECK: ; use a0
-
-; CHECK: NumVgprs: 0
-; CHECK: NumAgprs: 1
 define amdgpu_kernel void @kernel_illegal_agpr_use_asm() #0 {
   call void asm sideeffect "; use $0", "a"(i32 poison)
   ret void
@@ -22,9 +19,6 @@ define amdgpu_kernel void @kernel_illegal_agpr_use_asm() #0 {
 
 ; CHECK: {{^}}func_illegal_agpr_use_asm:
 ; CHECK: ; use a0
-
-; CHECK: NumVgprs: 0
-; CHECK: NumAgprs: 1
 define void @func_illegal_agpr_use_asm() #0 {
   call void asm sideeffect "; use $0", "a"(i32 poison)
   ret void
@@ -34,6 +28,19 @@ define void @func_illegal_agpr_use_asm() #0 {
 ; GFX908: v_accvgpr_write_b32
 ; GFX90A-NOT: v_accvgpr_write_b32
 
+define amdgpu_kernel void @kernel_calls_mfma.f32.32x32x1f32(ptr addrspace(1) %out, float %a, float %b, <32 x float> %c) #0 {
+  %result = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float %a, float %b, <32 x float> %c, i32 0, i32 0, i32 0)
+  store <32 x float> %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: ; kernel_illegal_agpr_use_asm Kernel info:
+; CHECK: NumVgprs: 0
+; CHECK: NumAgprs: 1
+; CHECK: ; func_illegal_agpr_use_asm Function info:
+; CHECK: NumVgprs: 0
+; CHECK: NumAgprs: 1
+; CHECK: ; kernel_calls_mfma.f32.32x32x1f32 Kernel info:
 ; GFX908: NumVgprs: 5
 ; GFX908: NumAgprs: 32
 ; GFX90A: NumVgprs: 35
@@ -41,10 +48,5 @@ define void @func_illegal_agpr_use_asm() #0 {
 
 ; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 35
-define amdgpu_kernel void @kernel_calls_mfma.f32.32x32x1f32(ptr addrspace(1) %out, float %a, float %b, <32 x float> %c) #0 {
-  %result = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float %a, float %b, <32 x float> %c, i32 0, i32 0, i32 0)
-  store <32 x float> %result, ptr addrspace(1) %out
-  ret void
-}
 
 attributes #0 = { "amdgpu-agpr-alloc"="0" }

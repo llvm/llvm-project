@@ -1145,7 +1145,6 @@ define amdgpu_kernel void @copy_v3i32_align4(ptr addrspace(1) noalias %out, ptr 
   store <3 x i32> %vec, ptr addrspace(1) %out
   ret void
 }
-; GCN: ScratchSize: 0{{$}}
 
 define amdgpu_kernel void @copy_v3i64_align4(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
 ; GCN-LABEL: copy_v3i64_align4:
@@ -1171,7 +1170,6 @@ define amdgpu_kernel void @copy_v3i64_align4(ptr addrspace(1) noalias %out, ptr 
   store <3 x i64> %vec, ptr addrspace(1) %out
   ret void
 }
-; GCN: ScratchSize: 0{{$}}
 
 define amdgpu_kernel void @copy_v3f32_align4(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
 ; SI-LABEL: copy_v3f32_align4:
@@ -1221,7 +1219,6 @@ define amdgpu_kernel void @copy_v3f32_align4(ptr addrspace(1) noalias %out, ptr 
   store <3 x float> %fadd, ptr addrspace(1) %out
   ret void
 }
-; GCN: ScratchSize: 0{{$}}
 
 define amdgpu_kernel void @copy_v3f64_align4(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
 ; GCN-LABEL: copy_v3f64_align4:
@@ -1251,9 +1248,17 @@ define amdgpu_kernel void @copy_v3f64_align4(ptr addrspace(1) noalias %out, ptr 
   store <3 x double> %fadd, ptr addrspace(1) %out
   ret void
 }
-; GCN: ScratchSize: 0{{$}}
 
 declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }
+
+; GCN: ; merge_global_store_2_constants_i8 Kernel info:
+; GCN: ScratchSize: 0{{$}}
+; GCN: ; merge_global_store_2_constants_i8_natural_align Kernel info:
+; GCN: ScratchSize: 0{{$}}
+; GCN: ; merge_global_store_2_constants_i16 Kernel info:
+; GCN: ScratchSize: 0{{$}}
+; GCN: ; merge_global_store_2_constants_0_i16 Kernel info:
+; GCN: ScratchSize: 0{{$}}

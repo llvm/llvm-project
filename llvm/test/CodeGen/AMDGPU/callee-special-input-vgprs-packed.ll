@@ -1992,7 +1992,6 @@ define void @too_many_args_use_workitem_id_x_stack_yz(
 
   ret void
 }
-; GCN: ScratchSize: 0
 
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_stack_yz() #1 {
 ; GFX7-LABEL: kern_call_too_many_args_use_workitem_id_x_stack_yz:
@@ -2106,3 +2105,6 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 
 attributes #0 = { nounwind readnone speculatable "amdgpu-flat-work-group-size"="1,512" }
 attributes #1 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }
+
+; GCN: ; too_many_args_use_workitem_id_x_stack_yz Function info:
+; GCN: ScratchSize: 0

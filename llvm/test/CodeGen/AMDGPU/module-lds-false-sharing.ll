@@ -22,7 +22,6 @@ define amdgpu_kernel void @nocall_ideal() {
 store i32 0, ptr addrspace(3) @used_by_kernel
   ret void
 }
-; CHECK: ; LDSByteSize: 4 bytes
 
 define void @nonkernel() {
 ; GFX9-LABEL: nonkernel:
@@ -214,7 +213,6 @@ define amdgpu_kernel void @withcall() {
   call void @nonkernel()
   ret void
 }
-; CHECK: ; LDSByteSize: 16 bytes
 
 ; Previous lowering was less efficient here than necessary as the i32 used
 ; by the kernel is also used by an unrelated non-kernel function. Codegen
@@ -228,5 +226,10 @@ define amdgpu_kernel void @nocall_false_sharing() {
   store i32 0, ptr addrspace(3) @used_by_both
   ret void
 }
-; CHECK: ; LDSByteSize: 4 bytes
 
+; CHECK: ; nocall_ideal Kernel info:
+; CHECK: ; LDSByteSize: 4 bytes
+; CHECK: ; withcall Kernel info:
+; CHECK: ; LDSByteSize: 16 bytes
+; CHECK: ; nocall_false_sharing Kernel info:
+; CHECK: ; LDSByteSize: 4 bytes

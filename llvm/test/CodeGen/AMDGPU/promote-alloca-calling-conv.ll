@@ -5,7 +5,6 @@
 ; IR: alloca [5 x i32]
 
 ; ASM-LABEL: {{^}}promote_alloca_shaders:
-; ASM: ; ScratchSize: 24
 define amdgpu_vs void @promote_alloca_shaders(ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
@@ -30,8 +29,6 @@ entry:
 ; OPT: extractelement <2 x i32> %{{[0-9]+}}, i32 %in
 
 ; ASM-LABEL: {{^}}promote_to_vector_call_c:
-; ASM-NOT: LDSByteSize
-; ASM: ; ScratchSize: 12
 define void @promote_to_vector_call_c(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %tmp = alloca [2 x i32], addrspace(5)
@@ -50,8 +47,6 @@ entry:
 ; OPT: alloca
 
 ; ASM-LABEL: {{^}}no_promote_to_lds_c:
-; ASM-NOT: LDSByteSize
-; ASM: ; ScratchSize: 24
 define void @no_promote_to_lds_c(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
@@ -77,7 +72,6 @@ declare i32 @foo(ptr addrspace(5)) #0
 ; ASM: buffer_store_dword
 ; ASM: buffer_store_dword
 ; ASM: s_swappc_b64
-; ASM: ScratchSize: 16
 define amdgpu_kernel void @call_private(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %tmp = alloca [2 x i32], addrspace(5)
@@ -91,6 +85,20 @@ entry:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
+
+; ASM: .section .AMDGPU.csdata
+; promote_alloca_shaders (Kernel info):
+; ASM: ; ScratchSize: 24
+; promote_to_vector_call_c (Function info):
+; ASM: ; promote_to_vector_call_c Function info:
+; ASM-NOT: LDSByteSize
+; ASM: ; ScratchSize: 12
+; no_promote_to_lds_c (Function info):
+; ASM: ; no_promote_to_lds_c Function info:
+; ASM-NOT: LDSByteSize
+; ASM: ; ScratchSize: 24
+; call_private (Kernel info):
+; ASM: ; ScratchSize: 16
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
 attributes #1 = { nounwind readnone }

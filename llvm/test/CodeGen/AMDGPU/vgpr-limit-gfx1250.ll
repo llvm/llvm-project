@@ -548,18 +548,12 @@ define internal void @use512vgprs_asm() {
 ; GCN-DAG: def v[64:95]
 ; GCN-DAG: def v[32:63]
 ; GCN-DAG: def v[0:31]
-; GFX1250: NumVgprs: 256
-; GFX1250-NOT: NumAgprs:
-; GFX1250-NOT: TotalNumVgprs:
-; GFX1250: VGPRBlocks: 15
 define amdgpu_kernel void @k256_w1_asm() #2561 {
   call void @use512vgprs_asm()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use512vgprs_codegen:
-; GFX1250: NumVgprs: 482
-; GFX1250: VGPRBlocks: 30
 define amdgpu_kernel void @use512vgprs_codegen(ptr %p) #2561 {
   %r0 = load volatile <512 x float>, ptr %p, align 1
   store volatile <512 x float> %r0, ptr %p
@@ -567,8 +561,6 @@ define amdgpu_kernel void @use512vgprs_codegen(ptr %p) #2561 {
 }
 
 ; GCN-LABEL: {{^}}use1024vgprs_codegen:
-; GFX1250: NumVgprs: 998
-; GFX1250: VGPRBlocks: 62
 define amdgpu_kernel void @use1024vgprs_codegen(ptr %p) #1281 {
   %r0 = load volatile <1024 x float>, ptr %p, align 1
   store volatile <1024 x float> %r0, ptr %p
@@ -577,3 +569,15 @@ define amdgpu_kernel void @use1024vgprs_codegen(ptr %p) #1281 {
 
 attributes #2561 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" }
 attributes #1281 = { nounwind "amdgpu-flat-work-group-size"="128,128" "amdgpu-waves-per-eu"="1" }
+
+; GCN: ; k256_w1_asm Kernel info:
+; GFX1250: NumVgprs: 256
+; GFX1250-NOT: NumAgprs:
+; GFX1250-NOT: TotalNumVgprs:
+; GFX1250: VGPRBlocks: 15
+; GCN: ; use512vgprs_codegen Kernel info:
+; GFX1250: NumVgprs: 482
+; GFX1250: VGPRBlocks: 30
+; GCN: ; use1024vgprs_codegen Kernel info:
+; GFX1250: NumVgprs: 998
+; GFX1250: VGPRBlocks: 62

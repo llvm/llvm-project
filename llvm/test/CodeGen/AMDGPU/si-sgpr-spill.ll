@@ -30,7 +30,6 @@
 
 ; GCN: s_endpgm
 
-; TOVGPR: ScratchSize: 0{{$}}
 define amdgpu_ps void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
 main_body:
   %lds = inttoptr i32 0 to ptr addrspace(3)
@@ -647,7 +646,6 @@ ENDIF66:                                          ; preds = %LOOP65
 
 ; GCN-LABEL: {{^}}main1:
 ; GCN: s_endpgm
-; TOVGPR: ScratchSize: 0{{$}}
 define amdgpu_ps void @main1(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 main_body:
   %tmp21 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
@@ -1690,6 +1688,11 @@ declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }
+
+; TOVGPR: ; main Kernel info:
+; TOVGPR: ScratchSize: 0{{$}}
+; TOVGPR: ; main1 Kernel info:
+; TOVGPR: ScratchSize: 0{{$}}
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

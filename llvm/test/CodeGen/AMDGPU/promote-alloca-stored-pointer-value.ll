@@ -63,6 +63,7 @@ entry:
 
 ; GCN-LABEL: {{^}}stored_fi_to_self:
 ; GCN-NOT: ds_
+; GCN: {{^}}.Lfunc_end
 define amdgpu_kernel void @stored_fi_to_self() #0 {
   %tmp = alloca ptr addrspace(5), addrspace(5)
   store volatile ptr addrspace(5) inttoptr (i32 1234 to ptr addrspace(5)), ptr addrspace(5) %tmp

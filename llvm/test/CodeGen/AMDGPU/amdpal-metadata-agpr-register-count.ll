@@ -6,7 +6,6 @@
 
 
 ; CHECK:      .type          kernel_32_agprs
-; CHECK:      NumAgprs:       32
 define amdgpu_kernel void @kernel_32_agprs() #0 {
 bb:
   call void asm sideeffect "", "~{v8}" ()
@@ -15,7 +14,6 @@ bb:
 }
 
 ; CHECK:      .type          kernel_0_agprs
-; CHECK:      NumAgprs:       0
 define amdgpu_kernel void @kernel_0_agprs() #0 {
 bb:
   call void asm sideeffect "", "~{v0}" ()
@@ -23,7 +21,6 @@ bb:
 }
 
 ; CHECK:      .type           kernel_40_vgprs
-; CHECK:      NumAgprs:       16
 define amdgpu_kernel void @kernel_40_vgprs() #0 {
 bb:
   call void asm sideeffect "", "~{v39}" ()
@@ -32,7 +29,6 @@ bb:
 }
 
 ; CHECK:      .type          kernel_max_gprs
-; CHECK:      NumAgprs:       256
 define amdgpu_kernel void @kernel_max_gprs() #0 {
 bb:
   call void asm sideeffect "", "~{v255}" ()
@@ -41,7 +37,6 @@ bb:
 }
 
 ; CHECK:      .type          func_32_agprs
-; CHECK:      NumAgprs:       32
 define void @func_32_agprs() #0 {
 bb:
   call void asm sideeffect "", "~{v8}" ()
@@ -50,7 +45,6 @@ bb:
 }
 
 ; CHECK:      .type          kernel_call_func_32_agprs
-; CHECK:      NumAgprs:       32
 define amdgpu_kernel void @kernel_call_func_32_agprs() #0 {
 bb:
   call void @func_32_agprs() #0
@@ -61,13 +55,27 @@ declare void @undef_func()
 
 ; CHECK:      .type          kernel_call_undef_func
 ; CHECK:      .set .Lkernel_call_undef_func.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK:      NumAgprs: .Lkernel_call_undef_func.num_agpr
-; CHECK:      .set amdgpu.max_num_agpr, 32
 define amdgpu_kernel void @kernel_call_undef_func() #0 {
 bb:
   call void @undef_func()
   ret void
 }
+
+; CHECK: ; kernel_32_agprs Kernel info:
+; CHECK:      NumAgprs:       32
+; CHECK: ; kernel_0_agprs Kernel info:
+; CHECK:      NumAgprs:       0
+; CHECK: ; kernel_40_vgprs Kernel info:
+; CHECK:      NumAgprs:       16
+; CHECK: ; kernel_max_gprs Kernel info:
+; CHECK:      NumAgprs:       256
+; CHECK: ; func_32_agprs Function info:
+; CHECK:      NumAgprs:       32
+; CHECK: ; kernel_call_func_32_agprs Kernel info:
+; CHECK:      NumAgprs:       32
+; CHECK: ; kernel_call_undef_func Kernel info:
+; CHECK:      NumAgprs:       32
+; CHECK:      .set amdgpu.max_num_agpr, 32
 
 ; CHECK: ---
 ; CHECK:  amdpal.pipelines:

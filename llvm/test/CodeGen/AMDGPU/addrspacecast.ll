@@ -33,7 +33,6 @@ target triple = "amdgcn-amd-amdhsa"
 ; At most 2 digits. Make sure src_shared_base is not counted as a high
 ; number SGPR.
 
-; HSA: NumSgprs: {{[0-9]+}}
 define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) #0 {
   %stof = addrspacecast ptr addrspace(3) %ptr to ptr
   store volatile i32 7, ptr %stof
@@ -92,7 +91,6 @@ define void @use_group_to_flat_addrspacecast_func(ptr addrspace(3) %ptr) #0 {
 ; CI:   .amdhsa_user_sgpr_queue_ptr 1
 ; GFX9: .amdhsa_user_sgpr_queue_ptr 0
 
-; HSA: NumSgprs: {{[0-9]+}}
 define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
   %stof = addrspacecast ptr addrspace(5) %ptr to ptr
   store volatile i32 7, ptr %stof
@@ -1598,3 +1596,8 @@ attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
+
+; HSA: ; use_group_to_flat_addrspacecast Kernel info:
+; HSA: NumSgprs: {{[0-9]+}}
+; HSA: ; use_private_to_flat_addrspacecast Kernel info:
+; HSA: NumSgprs: {{[0-9]+}}

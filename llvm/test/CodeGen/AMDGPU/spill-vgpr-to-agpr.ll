@@ -10,10 +10,6 @@
 ; GFX908:     v_accvgpr_read_b32 [[V_REG]], [[A_REG]]
 ; GFX908-NOT: buffer_
 
-; GFX908: NumVgprs: 10
-; GFX908: ScratchSize: 0
-; GFX908: VGPRBlocks: 2
-; GFX908: NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_11_vgprs_used_9a(ptr addrspace(1) %p) #0 {
   %tid = load volatile i32, ptr addrspace(1) poison
   call void asm sideeffect "", "a,a,a,a,a,a,a,a,a"(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
@@ -79,10 +75,6 @@ define amdgpu_kernel void @max_11_vgprs_used_9a(ptr addrspace(1) %p) #0 {
 ; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a9
 ; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a10
 
-; GFX908: NumVgprs: 10
-; GFX908: ScratchSize: 12
-; GFX908: VGPRBlocks: 2
-; GFX908: NumVGPRsForWavesPerEU: 11
 define amdgpu_kernel void @max_11_vgprs_used_1a_partial_spill(ptr addrspace(1) %p) #0 {
   %tid = load volatile i32, ptr addrspace(1) poison
   call void asm sideeffect "", "a"(i32 1)
@@ -104,5 +96,16 @@ define amdgpu_kernel void @max_11_vgprs_used_1a_partial_spill(ptr addrspace(1) %
   store volatile i64 %v5, ptr addrspace(1) %p1
   ret void
 }
+
+; GFX908: ; max_11_vgprs_used_9a Kernel info:
+; GFX908: NumVgprs: 10
+; GFX908: ScratchSize: 0
+; GFX908: VGPRBlocks: 2
+; GFX908: NumVGPRsForWavesPerEU: 10
+; GFX908: ; max_11_vgprs_used_1a_partial_spill Kernel info:
+; GFX908: NumVgprs: 10
+; GFX908: ScratchSize: 12
+; GFX908: VGPRBlocks: 2
+; GFX908: NumVGPRsForWavesPerEU: 11
 
 attributes #0 = { nounwind "amdgpu-num-vgpr"="11" }

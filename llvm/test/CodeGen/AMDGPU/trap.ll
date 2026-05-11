@@ -40,11 +40,9 @@ declare void @llvm.debugtrap() #1
 ; GCN-LABEL: {{^}}hsa_trap:
 ; HSA-TRAP: s_mov_b64 s[0:1], s[6:7]
 ; HSA-TRAP: s_trap 2
-; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
 
 ; for llvm.trap in hsa path without ABI, direct generate s_endpgm instruction without any warning information
 ; NO-HSA-TRAP: s_endpgm
-; NO-HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
 
 ; TRAP-BIT: enable_trap_handler = 1
 ; NO-TRAP-BIT: enable_trap_handler = 0
@@ -68,7 +66,6 @@ define amdgpu_kernel void @hsa_trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; GCN-LABEL: {{^}}hsa_debugtrap:
 ; HSA-TRAP: s_trap 3
 ; HSA-TRAP: flat_store_dword v[0:1], v3
-; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
 
 ; for llvm.debugtrap in non-hsa path without ABI, generate a warning and a s_endpgm instruction
 ; NO-HSA-TRAP: s_endpgm
@@ -147,3 +144,9 @@ attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
+
+; GCN: ; hsa_trap Kernel info:
+; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
+; NO-HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
+; GCN: ; hsa_debugtrap Kernel info:
+; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0

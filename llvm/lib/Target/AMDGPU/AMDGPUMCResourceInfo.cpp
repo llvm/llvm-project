@@ -400,9 +400,14 @@ const MCExpr *MCResourceInfo::createTotalNumVGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
+  return createTotalNumVGPRs(FnSym->getName(), Ctx);
+}
+
+const MCExpr *MCResourceInfo::createTotalNumVGPRs(StringRef FuncName,
+                                                  MCContext &Ctx) {
   return AMDGPUMCExpr::createTotalNumVGPR(
-      getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx),
-      getSymRefExpr(FnSym->getName(), RIK_NumVGPR, Ctx), Ctx);
+      getSymRefExpr(FuncName, RIK_NumAGPR, Ctx),
+      getSymRefExpr(FuncName, RIK_NumVGPR, Ctx), Ctx);
 }
 
 const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
@@ -410,11 +415,16 @@ const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
+  return createTotalNumSGPRs(FnSym->getName(), hasXnack, Ctx);
+}
+
+const MCExpr *MCResourceInfo::createTotalNumSGPRs(StringRef FuncName,
+                                                  bool hasXnack,
+                                                  MCContext &Ctx) {
   return MCBinaryExpr::createAdd(
-      getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx),
+      getSymRefExpr(FuncName, RIK_NumSGPR, Ctx),
       AMDGPUMCExpr::createExtraSGPRs(
-          getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx),
-          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx), hasXnack,
-          Ctx),
+          getSymRefExpr(FuncName, RIK_UsesVCC, Ctx),
+          getSymRefExpr(FuncName, RIK_UsesFlatScratch, Ctx), hasXnack, Ctx),
       Ctx);
 }

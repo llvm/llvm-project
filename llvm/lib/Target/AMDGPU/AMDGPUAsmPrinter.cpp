@@ -724,6 +724,9 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // known.
   RI.finalize(OutContext);
 
+  if (isVerbose())
+    emitDeferredComments();
+
   // Switch section and emit all GPR maximums within the processed module.
   OutStreamer->pushSection();
   MCSectionELF *MaxGPRSection =
@@ -763,7 +766,7 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
     const MCExpr *NumVGPR, const MCExpr *NumAGPR, const MCExpr *TotalNumVGPR,
     const MCExpr *NumSGPR, const MCExpr *ScratchSize, uint64_t CodeSize,
-    const AMDGPUMachineFunctionInfo *MFI) {
+    bool IsMemoryBound) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
   OutStreamer->emitRawComment(" TotalNumSgprs: " + getMCExprStr(NumSGPR),
                               false);
@@ -775,8 +778,139 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
   }
   OutStreamer->emitRawComment(" ScratchSize: " + getMCExprStr(ScratchSize),
                               false);
-  OutStreamer->emitRawComment(" MemoryBound: " + Twine(MFI->isMemoryBound()),
-                              false);
+  OutStreamer->emitRawComment(" MemoryBound: " + Twine(IsMemoryBound), false);
+}
+
+void AMDGPUAsmPrinter::emitDeferredComments() {
+  for (const auto &Info : DeferredComments) {
+    const Function &F = *Info.F;
+    const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
+    MCSymbol *FnSym = TM.getSymbol(&F);
+    StringRef FuncName = FnSym->getName();
+    bool IsMemoryBound = F.getFnAttribute("amdgpu-memory-bound").getValueAsBool();
+
+    MCSectionELF *CommentSection = OutContext.getELFSection(
+        ".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
+    OutStreamer->switchSection(CommentSection);
+
+    if (!AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
+      using RIK = MCResourceInfo::ResourceInfoKind;
+      OutStreamer->emitRawComment(" " + Twine(FuncName) + " Function info:",
+                                  false);
+
+      emitCommonFunctionComments(
+          RI.getSymbol(FuncName, RIK::RIK_NumVGPR, OutContext)
+              ->getVariableValue(),
+          STM.hasMAIInsts()
+              ? RI.getSymbol(FuncName, RIK::RIK_NumAGPR, OutContext)
+                    ->getVariableValue()
+              : nullptr,
+          RI.createTotalNumVGPRs(FuncName, OutContext),
+          RI.createTotalNumSGPRs(
+              FuncName,
+              STM.getTargetID().isXnackOnOrAny(), OutContext),
+          RI.getSymbol(FuncName, RIK::RIK_PrivateSegSize, OutContext)
+              ->getVariableValue(),
+          Info.CodeSize, IsMemoryBound);
+      continue;
+    }
+
+    const SIProgramInfo &PI = Info.ProgInfo;
+    OutStreamer->emitRawComment(" " + Twine(FuncName) + " Kernel info:", false);
+    emitCommonFunctionComments(
+        PI.NumArchVGPR,
+        STM.hasMAIInsts() ? PI.NumAccVGPR : nullptr,
+        PI.NumVGPR, PI.NumSGPR, PI.ScratchSize,
+        Info.CodeSize, IsMemoryBound);
+
+    OutStreamer->emitRawComment(
+        " FloatMode: " + Twine(PI.FloatMode), false);
+    OutStreamer->emitRawComment(
+        " IeeeMode: " + Twine(PI.IEEEMode), false);
+    OutStreamer->emitRawComment(
+        " LDSByteSize: " + Twine(PI.LDSSize) +
+            " bytes/workgroup (compile time only)",
+        false);
+
+    OutStreamer->emitRawComment(
+        " SGPRBlocks: " + getMCExprStr(PI.SGPRBlocks), false);
+    OutStreamer->emitRawComment(
+        " VGPRBlocks: " + getMCExprStr(PI.VGPRBlocks), false);
+
+    OutStreamer->emitRawComment(
+        " NumSGPRsForWavesPerEU: " +
+            getMCExprStr(PI.NumSGPRsForWavesPerEU),
+        false);
+    OutStreamer->emitRawComment(
+        " NumVGPRsForWavesPerEU: " +
+            getMCExprStr(PI.NumVGPRsForWavesPerEU),
+        false);
+
+    if (STM.hasGFX90AInsts()) {
+      const MCExpr *AdjustedAccum = MCBinaryExpr::createAdd(
+          PI.AccumOffset, MCConstantExpr::create(1, OutContext), OutContext);
+      AdjustedAccum = MCBinaryExpr::createMul(
+          AdjustedAccum, MCConstantExpr::create(4, OutContext), OutContext);
+      OutStreamer->emitRawComment(
+          " AccumOffset: " + getMCExprStr(AdjustedAccum), false);
+    }
+
+    if (STM.hasGFX1250Insts())
+      OutStreamer->emitRawComment(
+          " NamedBarCnt: " + getMCExprStr(PI.NamedBarCnt), false);
+
+    OutStreamer->emitRawComment(
+        " Occupancy: " + getMCExprStr(PI.Occupancy), false);
+
+    bool NeedsWaveLimiter =
+        F.getFnAttribute("amdgpu-wave-limiter").getValueAsBool();
+    OutStreamer->emitRawComment(
+        " WaveLimiterHint : " + Twine(NeedsWaveLimiter), false);
+
+    OutStreamer->emitRawComment(
+        " COMPUTE_PGM_RSRC2:SCRATCH_EN: " +
+            getMCExprStr(PI.ScratchEnable),
+        false);
+    OutStreamer->emitRawComment(
+        " COMPUTE_PGM_RSRC2:USER_SGPR: " + Twine(PI.UserSGPR), false);
+    OutStreamer->emitRawComment(
+        " COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
+            Twine(PI.TrapHandlerEnable),
+        false);
+    OutStreamer->emitRawComment(
+        " COMPUTE_PGM_RSRC2:TGID_X_EN: " + Twine(PI.TGIdXEnable), false);
+    OutStreamer->emitRawComment(
+        " COMPUTE_PGM_RSRC2:TGID_Y_EN: " + Twine(PI.TGIdYEnable), false);
+    OutStreamer->emitRawComment(
+        " COMPUTE_PGM_RSRC2:TGID_Z_EN: " + Twine(PI.TGIdZEnable), false);
+    OutStreamer->emitRawComment(
+        " COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " + Twine(PI.TIdIGCompCount),
+        false);
+
+    [[maybe_unused]] int64_t PGMRSrc3;
+    assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+           STM.hasGFX90AInsts() || STM.hasGFX1250Insts() ||
+           (PI.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
+            static_cast<uint64_t>(PGMRSrc3) == 0));
+    if (STM.hasGFX90AInsts()) {
+      OutStreamer->emitRawComment(
+          " COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: " +
+              getMCExprStr(MCKernelDescriptor::bits_get(
+                  PI.ComputePGMRSrc3,
+                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
+                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET, OutContext)),
+          false);
+      OutStreamer->emitRawComment(
+          " COMPUTE_PGM_RSRC3_GFX90A:TG_SPLIT: " +
+              getMCExprStr(MCKernelDescriptor::bits_get(
+                  PI.ComputePGMRSrc3,
+                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
+                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, OutContext)),
+          false);
+    }
+  }
+
+  DeferredComments.clear();
 }
 
 const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
@@ -884,7 +1018,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   const AMDGPUMachineFunctionInfo *MFI =
       MF.getInfo<AMDGPUMachineFunctionInfo>();
-  MCContext &Ctx = MF.getContext();
 
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
@@ -973,129 +1106,12 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitDVgprSymbol(MF);
 
   if (isVerbose()) {
-    MCSectionELF *CommentSection =
-        Context.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
-    OutStreamer->switchSection(CommentSection);
+    DeferredComments.push_back(
+        {&MF.getFunction(), CurrentProgramInfo,
+         CurrentProgramInfo.getFunctionCodeSize(MF)});
 
-    if (!MFI->isEntryFunction()) {
-      using RIK = MCResourceInfo::ResourceInfoKind;
-      OutStreamer->emitRawComment(" Function info:", false);
-
-      emitCommonFunctionComments(
-          RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext)
-              ->getVariableValue(),
-          STM.hasMAIInsts() ? RI.getSymbol(CurrentFnSym->getName(),
-                                           RIK::RIK_NumAGPR, OutContext)
-                                  ->getVariableValue()
-                            : nullptr,
-          RI.createTotalNumVGPRs(MF, Ctx),
-          RI.createTotalNumSGPRs(
-              MF,
-              MF.getSubtarget<GCNSubtarget>().getTargetID().isXnackOnOrAny(),
-              Ctx),
-          RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
-                       OutContext)
-              ->getVariableValue(),
-          CurrentProgramInfo.getFunctionCodeSize(MF), MFI);
+    if (!MFI->isEntryFunction())
       return false;
-    }
-
-    OutStreamer->emitRawComment(" Kernel info:", false);
-    emitCommonFunctionComments(
-        CurrentProgramInfo.NumArchVGPR,
-        STM.hasMAIInsts() ? CurrentProgramInfo.NumAccVGPR : nullptr,
-        CurrentProgramInfo.NumVGPR, CurrentProgramInfo.NumSGPR,
-        CurrentProgramInfo.ScratchSize,
-        CurrentProgramInfo.getFunctionCodeSize(MF), MFI);
-
-    OutStreamer->emitRawComment(
-        " FloatMode: " + Twine(CurrentProgramInfo.FloatMode), false);
-    OutStreamer->emitRawComment(
-        " IeeeMode: " + Twine(CurrentProgramInfo.IEEEMode), false);
-    OutStreamer->emitRawComment(
-        " LDSByteSize: " + Twine(CurrentProgramInfo.LDSSize) +
-            " bytes/workgroup (compile time only)",
-        false);
-
-    OutStreamer->emitRawComment(
-        " SGPRBlocks: " + getMCExprStr(CurrentProgramInfo.SGPRBlocks), false);
-
-    OutStreamer->emitRawComment(
-        " VGPRBlocks: " + getMCExprStr(CurrentProgramInfo.VGPRBlocks), false);
-
-    OutStreamer->emitRawComment(
-        " NumSGPRsForWavesPerEU: " +
-            getMCExprStr(CurrentProgramInfo.NumSGPRsForWavesPerEU),
-        false);
-    OutStreamer->emitRawComment(
-        " NumVGPRsForWavesPerEU: " +
-            getMCExprStr(CurrentProgramInfo.NumVGPRsForWavesPerEU),
-        false);
-
-    if (STM.hasGFX90AInsts()) {
-      const MCExpr *AdjustedAccum = MCBinaryExpr::createAdd(
-          CurrentProgramInfo.AccumOffset, MCConstantExpr::create(1, Ctx), Ctx);
-      AdjustedAccum = MCBinaryExpr::createMul(
-          AdjustedAccum, MCConstantExpr::create(4, Ctx), Ctx);
-      OutStreamer->emitRawComment(
-          " AccumOffset: " + getMCExprStr(AdjustedAccum), false);
-    }
-
-    if (STM.hasGFX1250Insts())
-      OutStreamer->emitRawComment(
-          " NamedBarCnt: " + getMCExprStr(CurrentProgramInfo.NamedBarCnt),
-          false);
-
-    OutStreamer->emitRawComment(
-        " Occupancy: " + getMCExprStr(CurrentProgramInfo.Occupancy), false);
-
-    OutStreamer->emitRawComment(
-        " WaveLimiterHint : " + Twine(MFI->needsWaveLimiter()), false);
-
-    OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:SCRATCH_EN: " +
-            getMCExprStr(CurrentProgramInfo.ScratchEnable),
-        false);
-    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:USER_SGPR: " +
-                                    Twine(CurrentProgramInfo.UserSGPR),
-                                false);
-    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
-                                    Twine(CurrentProgramInfo.TrapHandlerEnable),
-                                false);
-    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TGID_X_EN: " +
-                                    Twine(CurrentProgramInfo.TGIdXEnable),
-                                false);
-    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TGID_Y_EN: " +
-                                    Twine(CurrentProgramInfo.TGIdYEnable),
-                                false);
-    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TGID_Z_EN: " +
-                                    Twine(CurrentProgramInfo.TGIdZEnable),
-                                false);
-    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " +
-                                    Twine(CurrentProgramInfo.TIdIGCompCount),
-                                false);
-
-    [[maybe_unused]] int64_t PGMRSrc3;
-    assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-           STM.hasGFX90AInsts() || STM.hasGFX1250Insts() ||
-           (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
-            static_cast<uint64_t>(PGMRSrc3) == 0));
-    if (STM.hasGFX90AInsts()) {
-      OutStreamer->emitRawComment(
-          " COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: " +
-              getMCExprStr(MCKernelDescriptor::bits_get(
-                  CurrentProgramInfo.ComputePGMRSrc3,
-                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
-                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET, Ctx)),
-          false);
-      OutStreamer->emitRawComment(
-          " COMPUTE_PGM_RSRC3_GFX90A:TG_SPLIT: " +
-              getMCExprStr(MCKernelDescriptor::bits_get(
-                  CurrentProgramInfo.ComputePGMRSrc3,
-                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
-                  amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Ctx)),
-          false);
-    }
   }
 
   if (DumpCodeInstEmitter) {

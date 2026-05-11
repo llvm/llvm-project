@@ -528,18 +528,6 @@ define internal void @use256vgprs() {
 }
 
 ; GCN-LABEL: {{^}}f256:
-; GFX9: NumVgprs: 256
-; GFX90A: NumVgprs: 256
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 256
-; GFX10WGP-WAVE32: NumVgprs: 256
-; GFX10WGP-WAVE64: NumVgprs: 256
-; GFX10CU-WAVE32: NumVgprs: 256
-; GFX10CU-WAVE64: NumVgprs: 256
-; GFX11WGP-WAVE32: NumVgprs: 256
-; GFX11WGP-WAVE64: NumVgprs: 256
-; GFX11CU-WAVE32: NumVgprs: 256
-; GFX11CU-WAVE64: NumVgprs: 256
 define amdgpu_kernel void @f256() #256 {
   call void @use256vgprs()
   ret void
@@ -558,9 +546,6 @@ attributes #256 = { nounwind "amdgpu-flat-work-group-size"="256,256" }
 ; GFX11WGP-WAVE64:  .set .Lf512.num_vgpr, max(256, amdgpu.max_num_vgpr)
 ; GFX11CU-WAVE32:   .set .Lf512.num_vgpr, max(192, amdgpu.max_num_vgpr)
 ; GFX11CU-WAVE64:   .set .Lf512.num_vgpr, max(192, amdgpu.max_num_vgpr)
-; GCN:              NumVgprs: .Lf512.num_vgpr
-; GFX90A:           NumAgprs: .Lf512.num_agpr
-; GFX90A:           TotalNumVgprs: totalnumvgprs(.Lf512.num_agpr, .Lf512.num_vgpr)
 define amdgpu_kernel void @f512() #512 {
   call void @foo()
   call void @use256vgprs()
@@ -580,9 +565,6 @@ attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 ; GFX11WGP-WAVE64:  .set .Lf1024.num_vgpr, max(192, amdgpu.max_num_vgpr)
 ; GFX11CU-WAVE32:   .set .Lf1024.num_vgpr, max(96, amdgpu.max_num_vgpr)
 ; GFX11CU-WAVE64:   .set .Lf1024.num_vgpr, max(96, amdgpu.max_num_vgpr)
-; GCN:              NumVgprs: .Lf1024.num_vgpr
-; GFX90A:           NumAgprs: .Lf1024.num_agpr
-; GFX90A:           TotalNumVgprs: totalnumvgprs(.Lf1024.num_agpr, .Lf1024.num_vgpr)
 define amdgpu_kernel void @f1024() #1024 {
   call void @foo()
   call void @use256vgprs()
@@ -592,3 +574,43 @@ define amdgpu_kernel void @f1024() #1024 {
 attributes #1024 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }
 
 declare void @foo()
+
+; GCN: ; f256 Kernel info:
+; GFX9: NumVgprs: 256
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 256
+; GFX10WGP-WAVE32: NumVgprs: 256
+; GFX10WGP-WAVE64: NumVgprs: 256
+; GFX10CU-WAVE32: NumVgprs: 256
+; GFX10CU-WAVE64: NumVgprs: 256
+; GFX11WGP-WAVE32: NumVgprs: 256
+; GFX11WGP-WAVE64: NumVgprs: 256
+; GFX11CU-WAVE32: NumVgprs: 256
+; GFX11CU-WAVE64: NumVgprs: 256
+; GCN: ; f512 Kernel info:
+; GFX9:             NumVgprs: 128
+; GFX90A:           NumVgprs: 128
+; GFX90A:           NumAgprs: 128
+; GFX90A:           TotalNumVgprs: 256
+; GFX10WGP-WAVE32:  NumVgprs: 256
+; GFX10WGP-WAVE64:  NumVgprs: 256
+; GFX10CU-WAVE32:   NumVgprs: 128
+; GFX10CU-WAVE64:   NumVgprs: 128
+; GFX11WGP-WAVE32:  NumVgprs: 256
+; GFX11WGP-WAVE64:  NumVgprs: 256
+; GFX11CU-WAVE32:   NumVgprs: 192
+; GFX11CU-WAVE64:   NumVgprs: 192
+; GCN: ; f1024 Kernel info:
+; GFX9:             NumVgprs: 64
+; GFX90A:           NumVgprs: 64
+; GFX90A:           NumAgprs: 64
+; GFX90A:           TotalNumVgprs: 128
+; GFX10WGP-WAVE32:  NumVgprs: 128
+; GFX10WGP-WAVE64:  NumVgprs: 128
+; GFX10CU-WAVE32:   NumVgprs: 64
+; GFX10CU-WAVE64:   NumVgprs: 64
+; GFX11WGP-WAVE32:  NumVgprs: 192
+; GFX11WGP-WAVE64:  NumVgprs: 192
+; GFX11CU-WAVE32:   NumVgprs: 96
+; GFX11CU-WAVE64:   NumVgprs: 96

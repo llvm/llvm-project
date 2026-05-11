@@ -33,8 +33,8 @@
 ; ELF: }
 
 ; HSA: .text
-; HSA-CI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx700" 
-; HSA-VI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx801" 
+; HSA-CI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx700"
+; HSA-VI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx801"
 
 ; HSA-NOT: .amdgpu_hsa_kernel simple
 ; HSA: .globl simple
@@ -49,8 +49,6 @@
 
 ; HSA: .Lfunc_end0:
 ; HSA: .size   simple, .Lfunc_end0-simple
-; HSA: ; Function info:
-; HSA-NOT: COMPUTE_PGM_RSRC2
 define void @simple(ptr addrspace(4) %ptr.out) {
 entry:
   %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out
@@ -67,6 +65,9 @@ entry:
   store i32 0, ptr addrspace(1) %out
   ret void
 }
+
+; HSA: ; {{.*}} Function info:
+; HSA-NOT: COMPUTE_PGM_RSRC2
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

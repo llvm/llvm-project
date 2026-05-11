@@ -1063,9 +1063,6 @@ define void @foo() #0 {
 attributes #0 = { noinline }
 
 ; GCN-LABEL: {{^}}k256_w8:
-; GFX90A: NumVgprs: 32
-; GFX90A: NumAgprs: 32
-; GFX90A: TotalNumVgprs: 64
 define amdgpu_kernel void @k256_w8() #2568 {
   call void @foo()
   call void @use256vgprs()
@@ -1073,9 +1070,6 @@ define amdgpu_kernel void @k256_w8() #2568 {
 }
 
 ; GCN-LABEL: {{^}}k256_w8_no_agprs:
-; GFX90A: NumVgprs: 64
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 64
 define amdgpu_kernel void @k256_w8_no_agprs() #2569 {
   call void @use256vgprs()
   ret void
@@ -1085,9 +1079,6 @@ attributes #2568 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-wa
 attributes #2569 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="8" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k256_w4:
-; GFX90A: NumVgprs: 64
-; GFX90A: NumAgprs: 64
-; GFX90A: TotalNumVgprs: 128
 define amdgpu_kernel void @k256_w4() #2564 {
   call void @foo()
   call void @use256vgprs()
@@ -1095,9 +1086,6 @@ define amdgpu_kernel void @k256_w4() #2564 {
 }
 
 ; GCN-LABEL: {{^}}k256_w4_no_agprs:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 128
 define amdgpu_kernel void @k256_w4_no_agprs() #2565 {
   call void @use256vgprs()
   ret void
@@ -1107,9 +1095,6 @@ attributes #2564 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-wa
 attributes #2565 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="4" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k256_w2:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 128
-; GFX90A: TotalNumVgprs: 256
 define amdgpu_kernel void @k256_w2() #2562 {
   call void @foo()
   call void @use256vgprs()
@@ -1117,9 +1102,6 @@ define amdgpu_kernel void @k256_w2() #2562 {
 }
 
 ; GCN-LABEL: {{^}}k256_w2_no_agprs:
-; GFX90A: NumVgprs: 256
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 256
 define amdgpu_kernel void @k256_w2_no_agprs() #2563 {
   call void @use256vgprs()
   ret void
@@ -1129,9 +1111,6 @@ attributes #2562 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-wa
 attributes #2563 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k256_w1:
-; GFX90A: NumVgprs: 256
-; GFX90A: NumAgprs: 256
-; GFX90A: TotalNumVgprs: 512
 define amdgpu_kernel void @k256_w1() #2561 {
   call void @foo()
   call void @use512vgprs()
@@ -1139,9 +1118,6 @@ define amdgpu_kernel void @k256_w1() #2561 {
 }
 
 ; GCN-LABEL: {{^}}k256_w1_no_agprs:
-; GFX90A: NumVgprs: 256
-; GFX90A: NumAgprs: 256
-; GFX90A: TotalNumVgprs: 512
 define amdgpu_kernel void @k256_w1_no_agprs() #2561 {
   call void @use512vgprs()
   ret void
@@ -1150,18 +1126,12 @@ define amdgpu_kernel void @k256_w1_no_agprs() #2561 {
 attributes #2561 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" }
 
 ; GCN-LABEL: {{^}}k512_no_agprs:
-; GFX90A: NumVgprs: 256
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 256
 define amdgpu_kernel void @k512_no_agprs() #513 {
   call void @use256vgprs()
   ret void
 }
 
 ; GCN-LABEL: {{^}}k512_call:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 128
-; GFX90A: TotalNumVgprs: 256
 define amdgpu_kernel void @k512_call() #512 {
   call void @foo()
   call void @use256vgprs()
@@ -1169,9 +1139,6 @@ define amdgpu_kernel void @k512_call() #512 {
 }
 
 ; GCN-LABEL: {{^}}k512_virtual_agpr:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 128
-; GFX90A: TotalNumVgprs: 256
 define amdgpu_kernel void @k512_virtual_agpr() #512 {
   %a0 = call i32 asm sideeffect "; def $0", "=a"()
   call void @use256vgprs()
@@ -1179,9 +1146,6 @@ define amdgpu_kernel void @k512_virtual_agpr() #512 {
 }
 
 ; GCN-LABEL: {{^}}k512_physical_agpr:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 128
-; GFX90A: TotalNumVgprs: 256
 define amdgpu_kernel void @k512_physical_agpr() #512 {
   call void asm sideeffect "", "~{a8}" ()
   call void @use256vgprs()
@@ -1189,24 +1153,18 @@ define amdgpu_kernel void @k512_physical_agpr() #512 {
 }
 
 ; GCN-LABEL: {{^}}f512:
-; GFX90A: NumVgprs: 12{{[0-9]}}
-; GFX90A: NumAgprs: {{[1-9]}}
 define void @f512() #512 {
   call void @use256vgprs()
   ret void
 }
 
 ; GCN-LABEL: {{^}}f512_no_agpr:
-; GFX90A: NumVgprs: 256
-; GFX90A: NumAgprs: 0
 define void @f512_no_agpr() #513 {
   call void @use256vgprs_no_agpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}f512_no_agpr_ub:
-; GFX90A: NumVgprs: 256
-; GFX90A: NumAgprs: 0
 define void @f512_no_agpr_ub() #513 {
   call void @use256vgprs()
   ret void
@@ -1216,27 +1174,18 @@ attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 attributes #513 = { nounwind "amdgpu-flat-work-group-size"="512,512" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k1024:
-; GFX90A: NumVgprs: 64
-; GFX90A: NumAgprs: 64
-; GFX90A: TotalNumVgprs: 128
 define amdgpu_kernel void @k1024() #1024 {
   call void @use256vgprs()
   ret void
 }
 
 ; GCN-LABEL: {{^}}k1024_no_agprs:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 128
 define amdgpu_kernel void @k1024_no_agprs() #1025 {
   call void @use256vgprs()
   ret void
 }
 
 ; GCN-LABEL: {{^}}k1024_call:
-; GFX90A: NumVgprs: 64
-; GFX90A: NumAgprs: 64
-; GFX90A: TotalNumVgprs: 128
 define amdgpu_kernel void @k1024_call() #1024 {
   call void @foo()
   call void @use256vgprs()
@@ -1244,9 +1193,6 @@ define amdgpu_kernel void @k1024_call() #1024 {
 }
 
 ; GCN-LABEL: {{^}}k1024_call_no_agprs:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 128
 define amdgpu_kernel void @k1024_call_no_agprs() #1025 {
   call void @use256vgprs()
   ret void
@@ -1254,9 +1200,6 @@ define amdgpu_kernel void @k1024_call_no_agprs() #1025 {
 
 ; @foo uses an AGPRs so amdgpu-no-agpr is undefined
 ; GCN-LABEL: {{^}}k1024_call_no_agprs_ub_callee:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 1
-; GFX90A: TotalNumVgprs: 129
 define amdgpu_kernel void @k1024_call_no_agprs_ub_callee() #1025 {
   call void @foo()
   call void @use256vgprs()
@@ -1264,36 +1207,24 @@ define amdgpu_kernel void @k1024_call_no_agprs_ub_callee() #1025 {
 }
 
 ; GCN-LABEL: {{^}}f1024_0:
-; GFX90A: NumVgprs: 1
-; GFX90A: NumAgprs: 1
-; GFX90A: TotalNumVgprs: 5
 define void @f1024_0() #1024 {
   call void @foo()
   ret void
 }
 
 ; GCN-LABEL: {{^}}f1024_1:
-; GFX90A: NumVgprs: 64
-; GFX90A: NumAgprs: 32
-; GFX90A: TotalNumVgprs: 96
 define void @f1024_1() #1024 {
   call void @use256vgprs()
   ret void
 }
 
 ; GCN-LABEL: {{^}}f1024_call_no_agprs:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 128
 define void @f1024_call_no_agprs() #1025 {
   call void @use256vgprs_no_agpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}f1024_call_no_agprs_ub:
-; GFX90A: NumVgprs: 128
-; GFX90A: NumAgprs: 0
-; GFX90A: TotalNumVgprs: 128
 define void @f1024_call_no_agprs_ub() #1025 {
   call void @use256vgprs()
   ret void
@@ -1301,3 +1232,97 @@ define void @f1024_call_no_agprs_ub() #1025 {
 
 attributes #1024 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }
 attributes #1025 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="0" }
+
+; GFX90A: ; k256_w8 Kernel info:
+; GFX90A: NumVgprs: 32
+; GFX90A: NumAgprs: 32
+; GFX90A: TotalNumVgprs: 64
+; GFX90A: ; k256_w8_no_agprs Kernel info:
+; GFX90A: NumVgprs: 64
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 64
+; GFX90A: ; k256_w4 Kernel info:
+; GFX90A: NumVgprs: 64
+; GFX90A: NumAgprs: 64
+; GFX90A: TotalNumVgprs: 128
+; GFX90A: ; k256_w4_no_agprs Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 128
+; GFX90A: ; k256_w2 Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 128
+; GFX90A: TotalNumVgprs: 256
+; GFX90A: ; k256_w2_no_agprs Kernel info:
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 256
+; GFX90A: ; k256_w1 Kernel info:
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 256
+; GFX90A: TotalNumVgprs: 512
+; GFX90A: ; k256_w1_no_agprs Kernel info:
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 256
+; GFX90A: TotalNumVgprs: 512
+; GFX90A: ; k512_no_agprs Kernel info:
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 256
+; GFX90A: ; k512_call Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 128
+; GFX90A: TotalNumVgprs: 256
+; GFX90A: ; k512_virtual_agpr Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 128
+; GFX90A: TotalNumVgprs: 256
+; GFX90A: ; k512_physical_agpr Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 128
+; GFX90A: TotalNumVgprs: 256
+; GFX90A: ; f512 Function info:
+; GFX90A: NumVgprs: 12{{[0-9]}}
+; GFX90A: NumAgprs: {{[1-9]}}
+; GFX90A: ; f512_no_agpr Function info:
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 0
+; GFX90A: ; f512_no_agpr_ub Function info:
+; GFX90A: NumVgprs: 256
+; GFX90A: NumAgprs: 0
+; GFX90A: ; k1024 Kernel info:
+; GFX90A: NumVgprs: 64
+; GFX90A: NumAgprs: 64
+; GFX90A: TotalNumVgprs: 128
+; GFX90A: ; k1024_no_agprs Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 128
+; GFX90A: ; k1024_call Kernel info:
+; GFX90A: NumVgprs: 64
+; GFX90A: NumAgprs: 64
+; GFX90A: TotalNumVgprs: 128
+; GFX90A: ; k1024_call_no_agprs Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 128
+; GFX90A: ; k1024_call_no_agprs_ub_callee Kernel info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 1
+; GFX90A: TotalNumVgprs: 129
+; GFX90A: ; f1024_0 Function info:
+; GFX90A: NumVgprs: 1
+; GFX90A: NumAgprs: 1
+; GFX90A: TotalNumVgprs: 5
+; GFX90A: ; f1024_1 Function info:
+; GFX90A: NumVgprs: 64
+; GFX90A: NumAgprs: 32
+; GFX90A: TotalNumVgprs: 96
+; GFX90A: ; f1024_call_no_agprs Function info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 128
+; GFX90A: ; f1024_call_no_agprs_ub Function info:
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 0
+; GFX90A: TotalNumVgprs: 128

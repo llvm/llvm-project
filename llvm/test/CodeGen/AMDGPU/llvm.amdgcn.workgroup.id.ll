@@ -26,13 +26,6 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #0
 ; MESA3D: v_mov_b32_e32 [[VCOPY:v[0-9]+]], s6{{$}}
 
 ; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
-
-; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
-; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
-; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
-; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
-; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
-; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
 define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   store i32 %id, ptr addrspace(1) %out
@@ -53,13 +46,6 @@ define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
 ; HSA: v_mov_b32_e32 [[VCOPY:v[0-9]+]], s7{{$}}
 
 ; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
-
-; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
-; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
-; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
-; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
-; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
-; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
 define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.y()
   store i32 %id, ptr addrspace(1) %out
@@ -88,18 +74,33 @@ define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
 ; HSA: v_mov_b32_e32 [[VCOPY:v[0-9]+]], s7{{$}}
 
 ; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
+define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) #1 {
+  %id = call i32 @llvm.amdgcn.workgroup.id.z()
+  store i32 %id, ptr addrspace(1) %out
+  ret void
+}
 
+; ALL: ; test_workgroup_id_x Kernel info:
+; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
+; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
+; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
+; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
+; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
+; ALL: ; test_workgroup_id_y Kernel info:
+; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
+; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
+; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
+; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
+; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
+; ALL: ; test_workgroup_id_z Kernel info:
 ; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
 ; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) #1 {
-  %id = call i32 @llvm.amdgcn.workgroup.id.z()
-  store i32 %id, ptr addrspace(1) %out
-  ret void
-}
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

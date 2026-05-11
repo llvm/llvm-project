@@ -24,7 +24,6 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_16(i32 %val) #0 {
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 8
 
 define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_32(i32 %val) #1 {
 ; CHECK-LABEL: sponentry_cs_dvgpr_32:
@@ -44,7 +43,6 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_32(i32 %val) #1 {
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 8
 
 ; If we're not in dynamic VGPR mode, then sponentry can just return 0.
 
@@ -61,7 +59,6 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_no_dvgpr(i32 %val) #2 {
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 8
 
 define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_control_flow(i32 %val, ptr addrspace(5) %ptr) #0 {
 ; CHECK-LABEL: sponentry_cs_dvgpr_control_flow:
@@ -100,7 +97,6 @@ if.end:
   ret ptr addrspace(5) %ret
 }
 
-; CHECK: ScratchSize: 8
 
 declare amdgpu_gfx i32 @callee()
 
@@ -149,7 +145,6 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_calls(i32 %val) #0 {
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 16
 
 define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_realign(i32 %val) #0 {
 ; CHECK-LABEL: sponentry_cs_dvgpr_realign:
@@ -170,7 +165,6 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_realign(i32 %val) #0 {
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 128
 
 define amdgpu_gfx ptr addrspace(5) @sponentry_gfx(i32 %val, ptr addrspace(5) %ptr) #0 {
 ; DAGISEL-LABEL: sponentry_gfx:
@@ -231,7 +225,6 @@ if.end:
 }
 
 ; FIXME: Optimize away the 4 bytes for the sponentry frame index.
-; CHECK: ScratchSize: 12
 
 define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dvgpr_realign(i32 %val) #0 {
 ; CHECK-LABEL: sponentry_gfx_dvgpr_realign:
@@ -266,7 +259,6 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dvgpr_realign(i32 %val) #0 {
 }
 
 ; FIXME: Optimize away the sponentry fixed object.
-; CHECK: ScratchSize: 384
 
 define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_stack_args(<32 x i32> %fill.vgprs, i32 %val, ptr addrspace(5) %ptr) #0 {
 ; DAGISEL-LABEL: sponentry_gfx_stack_args:
@@ -307,7 +299,6 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_stack_args(<32 x i32> %fill.vg
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 12
 
 define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dyn_alloc(i32 %val) #0 {
 ; DAGISEL-LABEL: sponentry_gfx_dyn_alloc:
@@ -424,7 +415,6 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dyn_alloc(i32 %val) #0 {
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 16
 
 define amdgpu_cs_chain void @sponentry_cs_chain(i32 %val, ptr addrspace(5) %ptr) #0 {
 ; DAGISEL-LABEL: sponentry_cs_chain:
@@ -490,7 +480,6 @@ if.end:
 }
 
 ; FIXME: Optimize away the 4 bytes for the sponentry frame index.
-; CHECK: ScratchSize: 12
 
 define amdgpu_cs_chain void @sponentry_cs_chain_dvgpr_realign(i32 %val) #0 {
 ; CHECK-LABEL: sponentry_cs_chain_dvgpr_realign:
@@ -522,7 +511,6 @@ define amdgpu_cs_chain void @sponentry_cs_chain_dvgpr_realign(i32 %val) #0 {
 }
 
 ; FIXME: Optimize away the sponentry fixed object.
-; CHECK: ScratchSize: 384
 
 define amdgpu_cs_chain void @sponentry_cs_chain_dyn_alloc(i32 %val) #0 {
 ; DAGISEL-LABEL: sponentry_cs_chain_dyn_alloc:
@@ -611,8 +599,34 @@ define amdgpu_cs_chain void @sponentry_cs_chain_dyn_alloc(i32 %val) #0 {
   ret void
 }
 
-; CHECK: ScratchSize: 16
 
 attributes #0 = { nounwind "amdgpu-dynamic-vgpr-block-size"="16" }
 attributes #1 = { nounwind "amdgpu-dynamic-vgpr-block-size"="32" }
 attributes #2 = { nounwind "amdgpu-dynamic-vgpr-block-size"="0" }
+
+; CHECK: ; sponentry_cs_dvgpr_16 Kernel info:
+; CHECK: ScratchSize: 8
+; CHECK: ; sponentry_cs_dvgpr_32 Kernel info:
+; CHECK: ScratchSize: 8
+; CHECK: ; sponentry_cs_no_dvgpr Kernel info:
+; CHECK: ScratchSize: 8
+; CHECK: ; sponentry_cs_dvgpr_control_flow Kernel info:
+; CHECK: ScratchSize: 8
+; CHECK: ; sponentry_cs_dvgpr_calls Kernel info:
+; CHECK: ScratchSize: 16
+; CHECK: ; sponentry_cs_dvgpr_realign Kernel info:
+; CHECK: ScratchSize: 128
+; CHECK: ; sponentry_gfx Function info:
+; CHECK: ScratchSize: 12
+; CHECK: ; sponentry_gfx_dvgpr_realign Function info:
+; CHECK: ScratchSize: 384
+; CHECK: ; sponentry_gfx_stack_args Function info:
+; CHECK: ScratchSize: 12
+; CHECK: ; sponentry_gfx_dyn_alloc Function info:
+; CHECK: ScratchSize: 16
+; CHECK: ; sponentry_cs_chain Function info:
+; CHECK: ScratchSize: 12
+; CHECK: ; sponentry_cs_chain_dvgpr_realign Function info:
+; CHECK: ScratchSize: 384
+; CHECK: ; sponentry_cs_chain_dyn_alloc Function info:
+; CHECK: ScratchSize: 16

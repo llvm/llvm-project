@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_default_si:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_default_si(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #0 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -10,8 +8,6 @@ define amdgpu_kernel void @test_default_si(ptr addrspace(1) %out0, ptr addrspace
 }
 
 ; GCN-LABEL: {{^}}test_default_vi:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #1 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -19,8 +15,6 @@ define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace
 }
 
 ; GCN-LABEL: {{^}}test_f64_denormals:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #2 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -28,8 +22,6 @@ define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_f32_denormals:
-; GCNL: FloatMode: 48
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #3 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -37,8 +29,6 @@ define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_f32_f64_denormals:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #4 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -46,8 +36,6 @@ define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr ad
 }
 
 ; GCN-LABEL: {{^}}test_no_denormals
-; GCN: FloatMode: 0
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #5 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -55,8 +43,6 @@ define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspa
 }
 
 ; GCN-LABEL: {{^}}test_f16_f64_denormals:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f16_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #6 {
   store half 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -64,8 +50,6 @@ define amdgpu_kernel void @test_f16_f64_denormals(ptr addrspace(1) %out0, ptr ad
 }
 
 ; GCN-LABEL: {{^}}test_no_f16_f64_denormals:
-; GCN: FloatMode: 48
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_no_f16_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #7 {
   store half 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -73,8 +57,6 @@ define amdgpu_kernel void @test_no_f16_f64_denormals(ptr addrspace(1) %out0, ptr
 }
 
 ; GCN-LABEL: {{^}}test_f32_f16_f64_denormals:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f32_f16_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2) #8 {
   store half 0.0, ptr addrspace(1) %out0
   store float 0.0, ptr addrspace(1) %out1
@@ -83,8 +65,6 @@ define amdgpu_kernel void @test_f32_f16_f64_denormals(ptr addrspace(1) %out0, pt
 }
 
 ; GCN-LABEL: {{^}}test_just_f32_attr_flush
-; GCN: FloatMode: 192
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_just_f32_attr_flush(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #9 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -92,8 +72,6 @@ define amdgpu_kernel void @test_just_f32_attr_flush(ptr addrspace(1) %out0, ptr 
 }
 
 ; GCN-LABEL: {{^}}test_flush_all_outputs:
-; GCN: FloatMode: 80
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_flush_all_outputs(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #10 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -101,8 +79,6 @@ define amdgpu_kernel void @test_flush_all_outputs(ptr addrspace(1) %out0, ptr ad
 }
 
 ; GCN-LABEL: {{^}}test_flush_all_inputs:
-; GCN: FloatMode: 160
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_flush_all_inputs(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #11 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -110,8 +86,6 @@ define amdgpu_kernel void @test_flush_all_inputs(ptr addrspace(1) %out0, ptr add
 }
 
 ; GCN-LABEL: {{^}}test_flush_f32_inputs:
-; GCN: FloatMode: 224
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_flush_f32_inputs(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #12 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -119,8 +93,6 @@ define amdgpu_kernel void @test_flush_f32_inputs(ptr addrspace(1) %out0, ptr add
 }
 
 ; GCN-LABEL: {{^}}test_flush_f32_outputs:
-; GCN: FloatMode: 208
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_flush_f32_outputs(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #13 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -128,8 +100,6 @@ define amdgpu_kernel void @test_flush_f32_outputs(ptr addrspace(1) %out0, ptr ad
 }
 
 ; GCN-LABEL: {{^}}test_flush_f64_inputs:
-; GCN: FloatMode: 176
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_flush_f64_inputs(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #14 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -137,8 +107,6 @@ define amdgpu_kernel void @test_flush_f64_inputs(ptr addrspace(1) %out0, ptr add
 }
 
 ; GCN-LABEL: {{^}}test_flush_f64_outputs:
-; GCN: FloatMode: 112
-; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_flush_f64_outputs(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #15 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -146,8 +114,6 @@ define amdgpu_kernel void @test_flush_f64_outputs(ptr addrspace(1) %out0, ptr ad
 }
 
 ; GCN-LABEL: {{^}}kill_gs_const:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 0
 define amdgpu_gs void @kill_gs_const() {
 main_body:
   %cmp0 = icmp ule i32 0, 3
@@ -158,8 +124,6 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}kill_vcc_implicit_def:
-; GCN: FloatMode: 240
-; GCN: IeeeMode: 0
 define amdgpu_ps float @kill_vcc_implicit_def(ptr addrspace(4) inreg, ptr addrspace(4) inreg, ptr addrspace(4) inreg, ptr addrspace(4) inreg, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) {
 entry:
   %tmp0 = fcmp olt float %13, 0.0
@@ -187,3 +151,58 @@ attributes #12 = { nounwind denormal_fpenv(ieee, float:ieee|preservesign) }
 attributes #13 = { nounwind denormal_fpenv(ieee, float:preservesign|ieee) }
 attributes #14 = { nounwind denormal_fpenv(ieee|preservesign, float:ieee) }
 attributes #15 = { nounwind denormal_fpenv(preservesign|ieee, float:ieee) }
+
+; GCN: ; test_default_si Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 1
+; GCN: ; test_default_vi Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 1
+; GCN: ; test_f64_denormals Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 1
+; GCNL: ; test_f32_denormals Kernel info:
+; GCNL: FloatMode: 48
+; GCN: IeeeMode: 1
+; GCN: ; test_f32_f64_denormals Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 1
+; GCN: ; test_no_denormals Kernel info:
+; GCN: FloatMode: 0
+; GCN: IeeeMode: 1
+; GCN: ; test_f16_f64_denormals Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 1
+; GCN: ; test_no_f16_f64_denormals Kernel info:
+; GCN: FloatMode: 48
+; GCN: IeeeMode: 1
+; GCN: ; test_f32_f16_f64_denormals Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 1
+; GCN: ; test_just_f32_attr_flush Kernel info:
+; GCN: FloatMode: 192
+; GCN: IeeeMode: 1
+; GCN: ; test_flush_all_outputs Kernel info:
+; GCN: FloatMode: 80
+; GCN: IeeeMode: 1
+; GCN: ; test_flush_all_inputs Kernel info:
+; GCN: FloatMode: 160
+; GCN: IeeeMode: 1
+; GCN: ; test_flush_f32_inputs Kernel info:
+; GCN: FloatMode: 224
+; GCN: IeeeMode: 1
+; GCN: ; test_flush_f32_outputs Kernel info:
+; GCN: FloatMode: 208
+; GCN: IeeeMode: 1
+; GCN: ; test_flush_f64_inputs Kernel info:
+; GCN: FloatMode: 176
+; GCN: IeeeMode: 1
+; GCN: ; test_flush_f64_outputs Kernel info:
+; GCN: FloatMode: 112
+; GCN: IeeeMode: 1
+; GCN: ; kill_gs_const Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 0
+; GCN: ; kill_vcc_implicit_def Kernel info:
+; GCN: FloatMode: 240
+; GCN: IeeeMode: 0

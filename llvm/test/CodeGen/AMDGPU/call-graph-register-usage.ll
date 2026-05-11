@@ -12,8 +12,6 @@
 ; Make sure to run a GPU with the SGPR allocation bug.
 
 ; GCN-LABEL: {{^}}use_vcc:
-; GCN: ; TotalNumSgprs: 34
-; GCN: ; NumVgprs: 0
 define void @use_vcc() #1 {
   call void asm sideeffect "", "~{vcc}" () #0
   ret void
@@ -30,53 +28,36 @@ define void @use_vcc() #1 {
 ; GCN: v_readlane_b32 s4, v40, 2
 ; GCN: s_mov_b32 s33, s4
 ; GCN: s_setpc_b64 s[30:31]
-; GCN: ; TotalNumSgprs: 36
-; GCN: ; NumVgprs: 41
 define void @indirect_use_vcc() #1 {
   call void @use_vcc()
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_2level_use_vcc_kernel:
-; CI: ; TotalNumSgprs: 38
-; VI-NOBUG: ; TotalNumSgprs: 40
-; VI-BUG: ; TotalNumSgprs: 96
-; GCN: ; NumVgprs: 41
 define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_vcc()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_flat_scratch:
-; CI: ; TotalNumSgprs: 36
-; VI: ; TotalNumSgprs: 38
-; GCN: ; NumVgprs: 0
 define void @use_flat_scratch() #1 {
   call void asm sideeffect "", "~{flat_scratch}" () #0
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_flat_scratch:
-; CI: ; TotalNumSgprs: 38
-; VI: ; TotalNumSgprs: 40
-; GCN: ; NumVgprs: 41
 define void @indirect_use_flat_scratch() #1 {
   call void @use_flat_scratch()
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_2level_use_flat_scratch_kernel:
-; CI: ; TotalNumSgprs: 38
-; VI-NOBUG: ; TotalNumSgprs: 40
-; VI-BUG: ; TotalNumSgprs: 96
-; GCN: ; NumVgprs: 41
 define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_flat_scratch()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_10_vgpr:
-; GCN: ; NumVgprs: 10
 define void @use_10_vgpr() #1 {
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4}"() #0
   call void asm sideeffect "", "~{v5},~{v6},~{v7},~{v8},~{v9}"() #0
@@ -84,51 +65,42 @@ define void @use_10_vgpr() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_use_10_vgpr:
-; GCN: ; NumVgprs: 41
 define void @indirect_use_10_vgpr() #0 {
   call void @use_10_vgpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_10_vgpr:
-; GCN: ; NumVgprs: 41
 define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
   call void @indirect_use_10_vgpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_50_vgpr:
-; GCN: ; NumVgprs: 50
 define void @use_50_vgpr() #1 {
   call void asm sideeffect "", "~{v49}"() #0
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_50_vgpr:
-; GCN: ; NumVgprs: 50
 define void @indirect_use_50_vgpr() #0 {
   call void @use_50_vgpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_80_sgpr:
-; GCN: ; TotalNumSgprs: 80
 define void @use_80_sgpr() #1 {
   call void asm sideeffect "", "~{s79}"() #0
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_80_sgpr:
-; GCN: ; TotalNumSgprs: 82
 define void @indirect_use_80_sgpr() #1 {
   call void @use_80_sgpr()
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_80_sgpr:
-; CI: ; TotalNumSgprs: 84
-; VI-NOBUG: ; TotalNumSgprs: 86
-; VI-BUG: ; TotalNumSgprs: 96
 define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
   call void @indirect_use_80_sgpr()
   ret void
@@ -136,7 +108,6 @@ define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
 
 
 ; GCN-LABEL: {{^}}use_stack0:
-; GCN: ScratchSize: 2052
 define void @use_stack0() #1 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -144,7 +115,6 @@ define void @use_stack0() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_stack1:
-; GCN: ScratchSize: 404
 define void @use_stack1() #1 {
   %alloca = alloca [100 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -152,7 +122,6 @@ define void @use_stack1() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_use_stack:
-; GCN: ScratchSize: 2132
 define void @indirect_use_stack() #1 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -161,7 +130,6 @@ define void @indirect_use_stack() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_stack:
-; GCN: ScratchSize: 2132
 define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
   call void @indirect_use_stack()
   ret void
@@ -170,7 +138,6 @@ define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
 
 ; Should be maximum of callee usage
 ; GCN-LABEL: {{^}}multi_call_use_use_stack:
-; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_use_use_stack() #0 {
   call void @use_stack0()
   call void @use_stack1()
@@ -183,10 +150,8 @@ declare void @external() #0
 ; GCN-LABEL: {{^}}usage_external:
 ; TotalNumSgprs: 48
 ; NumVgprs: 24
-; GCN: ScratchSize: 16384
 ;
 ; GCN-V5-LABEL: {{^}}usage_external:
-; GCN-V5: ScratchSize: 0
 define amdgpu_kernel void @usage_external() #0 {
   call void @external()
   ret void
@@ -197,20 +162,16 @@ declare void @external_recurse() #2
 ; GCN-LABEL: {{^}}usage_external_recurse:
 ; TotalNumSgprs: 48
 ; NumVgprs: 24
-; GCN: ScratchSize: 16384
 ;
 ; GCN-V5-LABEL: {{^}}usage_external_recurse:
-; GCN-V5: ScratchSize: 0
 define amdgpu_kernel void @usage_external_recurse() #0 {
   call void @external_recurse()
   ret void
 }
 
 ; GCN-LABEL: {{^}}direct_recursion_use_stack:
-; GCN: ScratchSize: 18448{{$}}
 ;
 ; GCN-V5-LABEL: {{^}}direct_recursion_use_stack:
-; GCN-V5: ScratchSize: 2064{{$}}
 define void @direct_recursion_use_stack(i32 %val) #2 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -241,9 +202,6 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; GCN: ; sgpr96 s[{{[0-9]+}}:{{[0-9]+}}]
 ; GCN: .set .Lcount_use_sgpr96_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
 ; GCN: .set .Lcount_use_sgpr96_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
-; CI: TotalNumSgprs: .Lcount_use_sgpr96_external_call.numbered_sgpr+4
-; VI-BUG: TotalNumSgprs: 96
-; GCN: NumVgprs: .Lcount_use_sgpr96_external_call.num_vgpr
 define amdgpu_kernel void @count_use_sgpr96_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
@@ -256,9 +214,6 @@ entry:
 ; GCN: ; sgpr160 s[{{[0-9]+}}:{{[0-9]+}}]
 ; GCN: .set .Lcount_use_sgpr160_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
 ; GCN: .set .Lcount_use_sgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
-; CI: TotalNumSgprs: .Lcount_use_sgpr160_external_call.numbered_sgpr+4
-; VI-BUG: TotalNumSgprs: 96
-; GCN: NumVgprs: .Lcount_use_sgpr160_external_call.num_vgpr
 define amdgpu_kernel void @count_use_sgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
@@ -271,15 +226,89 @@ entry:
 ; GCN: ; vgpr160 v[{{[0-9]+}}:{{[0-9]+}}]
 ; GCN: .set .Lcount_use_vgpr160_external_call.num_vgpr, max(5, amdgpu.max_num_vgpr)
 ; GCN: .set .Lcount_use_vgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
-; CI: TotalNumSgprs: .Lcount_use_vgpr160_external_call.numbered_sgpr+4
-; VI-BUG: TotalNumSgprs: 96
-; GCN: NumVgprs: .Lcount_use_vgpr160_external_call.num_vgpr
 define amdgpu_kernel void @count_use_vgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
   call void @external()
   ret void
 }
+
+; GCN: ; use_vcc Function info:
+; GCN: ; TotalNumSgprs: 34
+; GCN: ; NumVgprs: 0
+; GCN: ; indirect_use_vcc Function info:
+; GCN: ; TotalNumSgprs: 36
+; GCN: ; NumVgprs: 41
+; GCN: ; indirect_2level_use_vcc_kernel Kernel info:
+; CI: ; TotalNumSgprs: 38
+; VI-NOBUG: ; TotalNumSgprs: 40
+; VI-BUG: ; TotalNumSgprs: 96
+; GCN: ; NumVgprs: 41
+; GCN: ; use_flat_scratch Function info:
+; CI: ; TotalNumSgprs: 36
+; VI: ; TotalNumSgprs: 38
+; GCN: ; NumVgprs: 0
+; GCN: ; indirect_use_flat_scratch Function info:
+; CI: ; TotalNumSgprs: 38
+; VI: ; TotalNumSgprs: 40
+; GCN: ; NumVgprs: 41
+; GCN: ; indirect_2level_use_flat_scratch_kernel Kernel info:
+; CI: ; TotalNumSgprs: 38
+; VI-NOBUG: ; TotalNumSgprs: 40
+; VI-BUG: ; TotalNumSgprs: 96
+; GCN: ; NumVgprs: 41
+; GCN: ; use_10_vgpr Function info:
+; GCN: ; NumVgprs: 10
+; GCN: ; indirect_use_10_vgpr Function info:
+; GCN: ; NumVgprs: 41
+; GCN: ; indirect_2_level_use_10_vgpr Kernel info:
+; GCN: ; NumVgprs: 41
+; GCN: ; use_50_vgpr Function info:
+; GCN: ; NumVgprs: 50
+; GCN: ; indirect_use_50_vgpr Function info:
+; GCN: ; NumVgprs: 50
+; GCN: ; use_80_sgpr Function info:
+; GCN: ; TotalNumSgprs: 80
+; GCN: ; indirect_use_80_sgpr Function info:
+; GCN: ; TotalNumSgprs: 82
+; GCN: ; indirect_2_level_use_80_sgpr Kernel info:
+; CI: ; TotalNumSgprs: 84
+; VI-NOBUG: ; TotalNumSgprs: 86
+; VI-BUG: ; TotalNumSgprs: 96
+; GCN: ; use_stack0 Function info:
+; GCN: ScratchSize: 2052
+; GCN: ; use_stack1 Function info:
+; GCN: ScratchSize: 404
+; GCN: ; indirect_use_stack Function info:
+; GCN: ScratchSize: 2132
+; GCN: ; indirect_2_level_use_stack Kernel info:
+; GCN: ScratchSize: 2132
+; GCN: ; multi_call_use_use_stack Kernel info:
+; GCN: ScratchSize: 2052
+; GCN: ; usage_external Kernel info:
+; GCN: ScratchSize: 16384
+;
+; GCN-V5: ScratchSize: 0
+; GCN: ; usage_external_recurse Kernel info:
+; GCN: ScratchSize: 16384
+;
+; GCN-V5: ScratchSize: 0
+; GCN: ; direct_recursion_use_stack Function info:
+; GCN: ScratchSize: 18448{{$}}
+;
+; GCN-V5: ScratchSize: 2064{{$}}
+; GCN: ; count_use_sgpr96_external_call Kernel info:
+; CI: TotalNumSgprs: 84
+; VI-BUG: TotalNumSgprs: 96
+; GCN: NumVgprs: 50
+; GCN: ; count_use_sgpr160_external_call Kernel info:
+; CI: TotalNumSgprs: 84
+; VI-BUG: TotalNumSgprs: 96
+; GCN: NumVgprs: 50
+; GCN: ; count_use_vgpr160_external_call Kernel info:
+; CI: TotalNumSgprs: 84
+; VI-BUG: TotalNumSgprs: 96
+; GCN: NumVgprs: 50
 
 ; GCN: .set amdgpu.max_num_vgpr, 50
 ; GCN: .set amdgpu.max_num_agpr, 0

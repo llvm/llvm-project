@@ -3,7 +3,6 @@
 ; GCN-LABEL: {{^}}test_default_ci:
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
-; GCN: FloatMode: 240
 define amdgpu_kernel void @test_default_ci(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #0 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -13,7 +12,6 @@ define amdgpu_kernel void @test_default_ci(ptr addrspace(1) %out0, ptr addrspace
 ; GCN-LABEL: {{^}}test_default_vi:
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
-; GCN: FloatMode: 240
 define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #1 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -23,7 +21,6 @@ define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace
 ; GCN-LABEL: {{^}}test_f64_denormals:
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
-; GCN: FloatMode: 192
 define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #2 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -33,7 +30,6 @@ define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrsp
 ; GCN-LABEL: {{^}}test_f32_denormals:
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
-; GCN: FloatMode: 48
 define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #3 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -43,7 +39,6 @@ define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrsp
 ; GCN-LABEL: {{^}}test_f32_f64_denormals:
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
-; GCN: FloatMode: 240
 define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #4 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -53,7 +48,6 @@ define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr ad
 ; GCN-LABEL: {{^}}test_no_denormals:
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 1
-; GCN: FloatMode: 0
 define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #5 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -63,7 +57,6 @@ define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-LABEL: {{^}}test_no_dx10_clamp_vi:
 ; GCN: .amdhsa_dx10_clamp 0
 ; GCN: .amdhsa_ieee_mode 1
-; GCN: FloatMode: 240
 define amdgpu_kernel void @test_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #6 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -73,7 +66,6 @@ define amdgpu_kernel void @test_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr add
 ; GCN-LABEL: {{^}}test_no_ieee_mode_vi:
 ; GCN: .amdhsa_dx10_clamp 1
 ; GCN: .amdhsa_ieee_mode 0
-; GCN: FloatMode: 240
 define amdgpu_kernel void @test_no_ieee_mode_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #7 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -83,7 +75,6 @@ define amdgpu_kernel void @test_no_ieee_mode_vi(ptr addrspace(1) %out0, ptr addr
 ; GCN-LABEL: {{^}}test_no_ieee_mode_no_dx10_clamp_vi:
 ; GCN: .amdhsa_dx10_clamp 0
 ; GCN: .amdhsa_ieee_mode 0
-; GCN: FloatMode: 240
 define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #8 {
   store float 0.0, ptr addrspace(1) %out0
   store double 0.0, ptr addrspace(1) %out1
@@ -102,3 +93,22 @@ attributes #8 = { nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "ta
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
+
+; GCN: ; test_default_ci Kernel info:
+; GCN: FloatMode: 240
+; GCN: ; test_default_vi Kernel info:
+; GCN: FloatMode: 240
+; GCN: ; test_f64_denormals Kernel info:
+; GCN: FloatMode: 192
+; GCN: ; test_f32_denormals Kernel info:
+; GCN: FloatMode: 48
+; GCN: ; test_f32_f64_denormals Kernel info:
+; GCN: FloatMode: 240
+; GCN: ; test_no_denormals Kernel info:
+; GCN: FloatMode: 0
+; GCN: ; test_no_dx10_clamp_vi Kernel info:
+; GCN: FloatMode: 240
+; GCN: ; test_no_ieee_mode_vi Kernel info:
+; GCN: FloatMode: 240
+; GCN: ; test_no_ieee_mode_no_dx10_clamp_vi Kernel info:
+; GCN: FloatMode: 240

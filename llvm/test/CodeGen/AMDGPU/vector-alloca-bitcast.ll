@@ -18,7 +18,6 @@
 ; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], [[IND1]], 2
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
 ; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
-; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_read_alloca_bitcast(ptr addrspace(1) %out, i32 %index) {
 entry:
@@ -48,7 +47,6 @@ entry:
 
 ; GCN-PROMOTE-COUNT-7: s_cselect_b32
 
-; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_alloca_bitcast(ptr addrspace(1) %out, i32 %w_index, i32 %r_index) {
 entry:
@@ -87,7 +85,6 @@ entry:
 
 ; GCN-ALLOCA: buffer_load_dword
 
-; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_read_bitcast_to_float(ptr addrspace(1) %arg) {
 bb:
@@ -149,7 +146,6 @@ bb15:                                             ; preds = %.preheader
 ; GCN-ALLOCA-COUNT-2: buffer_load_dword
 ; GCN-PROMOTE-COUNT-2: v_movrels_b32_e32
 
-; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_read_bitcast_to_double(ptr addrspace(1) %arg) {
 bb:
@@ -209,7 +205,6 @@ bb15:                                             ; preds = %.preheader
 ; GCN-ALLOCA-COUNT-2: buffer_load_dword
 ; GCN-PROMOTE-COUNT-2: v_movrels_b32_e32
 
-; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_read_bitcast_to_i64(ptr addrspace(1) %arg) {
 bb:
@@ -295,7 +290,6 @@ entry:
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
 ; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
 
-; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_read_alloca_multiuse(ptr addrspace(1) %out, i32 %index) {
 entry:
@@ -327,7 +321,6 @@ entry:
 ; GCN: v_mov_b32_e32 v2, 3
 ; GCN: v_mov_b32_e32 v3, 4
 
-; GCN: ScratchSize: 0
 
 define amdgpu_kernel void @bitcast_vector_to_vector(ptr addrspace(1) %out)  {
 .entry:
@@ -348,7 +341,6 @@ define amdgpu_kernel void @bitcast_vector_to_vector(ptr addrspace(1) %out)  {
 ; GCN: v_mov_b32_e32 v2, 3
 ; GCN: v_mov_b32_e32 v3, 4
 
-; GCN: ScratchSize: 0
 
 define amdgpu_kernel void @vector_bitcast_from_alloca_array(ptr addrspace(1) %out)  {
 .entry:
@@ -375,7 +367,6 @@ define amdgpu_kernel void @vector_bitcast_from_alloca_array(ptr addrspace(1) %ou
 ; GCN: v_mov_b32_e32 v2, 3
 ; GCN: v_mov_b32_e32 v3, 4
 
-; GCN: ScratchSize: 0
 
 define amdgpu_kernel void @vector_bitcast_to_array_from_alloca_array(ptr addrspace(1) %out)  {
   %alloca = alloca [4 x float], align 16, addrspace(5)
@@ -401,7 +392,6 @@ define amdgpu_kernel void @vector_bitcast_to_array_from_alloca_array(ptr addrspa
 ; GCN: v_mov_b32_e32 v2, 3
 ; GCN: v_mov_b32_e32 v3, 4
 
-; GCN: ScratchSize: 0
 
 %struct.v4 = type { i32, i32, i32, i32 }
 
@@ -418,3 +408,24 @@ declare void @llvm.lifetime.start.p5(i64 immarg, ptr addrspace(5) nocapture)
 declare void @llvm.lifetime.end.p5(i64 immarg, ptr addrspace(5) nocapture)
 
 declare void @llvm.assume(i1)
+
+; GCN-PROMOTE: ; vector_read_alloca_bitcast Kernel info:
+; GCN-PROMOTE: ScratchSize: 0
+; GCN-PROMOTE: ; vector_write_alloca_bitcast Kernel info:
+; GCN-PROMOTE: ScratchSize: 0
+; GCN-PROMOTE: ; vector_write_read_bitcast_to_float Kernel info:
+; GCN-PROMOTE: ScratchSize: 0
+; GCN-PROMOTE: ; vector_write_read_bitcast_to_double Kernel info:
+; GCN-PROMOTE: ScratchSize: 0
+; GCN-PROMOTE: ; vector_write_read_bitcast_to_i64 Kernel info:
+; GCN-PROMOTE: ScratchSize: 0
+; GCN-PROMOTE: ; vector_read_alloca_bitcast_assume Kernel info:
+; GCN-PROMOTE: ScratchSize: 0
+; GCN: ; bitcast_vector_to_vector Kernel info:
+; GCN: ScratchSize: 0
+; GCN: ; vector_bitcast_from_alloca_array Kernel info:
+; GCN: ScratchSize: 0
+; GCN: ; vector_bitcast_to_array_from_alloca_array Kernel info:
+; GCN: ScratchSize: 0
+; GCN: ; vector_bitcast_to_struct_from_alloca_array Kernel info:
+; GCN: ScratchSize: 0

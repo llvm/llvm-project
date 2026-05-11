@@ -112,7 +112,10 @@ public:
       MCContext &OutContext);
 
   const MCExpr *createTotalNumVGPRs(const MachineFunction &MF, MCContext &Ctx);
+  const MCExpr *createTotalNumVGPRs(StringRef FuncName, MCContext &Ctx);
   const MCExpr *createTotalNumSGPRs(const MachineFunction &MF, bool hasXnack,
+                                    MCContext &Ctx);
+  const MCExpr *createTotalNumSGPRs(StringRef FuncName, bool hasXnack,
                                     MCContext &Ctx);
 };
 } // namespace llvm

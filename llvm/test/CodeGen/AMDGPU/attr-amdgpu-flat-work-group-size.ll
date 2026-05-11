@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=HSAMD %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
-; CHECK: SGPRBlocks: 0
-; CHECK: VGPRBlocks: 0
-; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @min_64_max_64() #0 {
 entry:
   ret void
@@ -13,10 +9,6 @@ entry:
 attributes #0 = {"amdgpu-flat-work-group-size"="64,64"}
 
 ; CHECK-LABEL: {{^}}min_64_max_128:
-; CHECK: SGPRBlocks: 0
-; CHECK: VGPRBlocks: 0
-; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 1
 define amdgpu_kernel void @min_64_max_128() #1 {
 entry:
   ret void
@@ -24,10 +16,6 @@ entry:
 attributes #1 = {"amdgpu-flat-work-group-size"="64,128"}
 
 ; CHECK-LABEL: {{^}}min_128_max_128:
-; CHECK: SGPRBlocks: 8
-; CHECK: VGPRBlocks: 7
-; CHECK: NumSGPRsForWavesPerEU: 65
-; CHECK: NumVGPRsForWavesPerEU: 29
 define amdgpu_kernel void @min_128_max_128() #2 {
 entry:
   ret void
@@ -35,10 +23,6 @@ entry:
 attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 
 ; CHECK-LABEL: {{^}}min_1024_max_1024
-; CHECK: SGPRBlocks: 8
-; CHECK: VGPRBlocks: 10
-; CHECK: NumSGPRsForWavesPerEU: 65
-; CHECK: NumVGPRsForWavesPerEU: 43
 @var = addrspace(1) global float 0.0
 define amdgpu_kernel void @min_1024_max_1024() #3 {
   %val0 = load volatile float, ptr addrspace(1) @var
@@ -141,3 +125,24 @@ attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 ; HSAMD:  .name: min_128_max_128
 ; HSAMD:  .max_flat_workgroup_size: 1024
 ; HSAMD:  .name: min_1024_max_1024
+
+; CHECK: ; min_64_max_64 Kernel info:
+; CHECK: SGPRBlocks: 0
+; CHECK: VGPRBlocks: 0
+; CHECK: NumSGPRsForWavesPerEU: 1
+; CHECK: NumVGPRsForWavesPerEU: 1
+; CHECK: ; min_64_max_128 Kernel info:
+; CHECK: SGPRBlocks: 0
+; CHECK: VGPRBlocks: 0
+; CHECK: NumSGPRsForWavesPerEU: 1
+; CHECK: NumVGPRsForWavesPerEU: 1
+; CHECK: ; min_128_max_128 Kernel info:
+; CHECK: SGPRBlocks: 8
+; CHECK: VGPRBlocks: 7
+; CHECK: NumSGPRsForWavesPerEU: 65
+; CHECK: NumVGPRsForWavesPerEU: 29
+; CHECK: ; min_1024_max_1024 Kernel info:
+; CHECK: SGPRBlocks: 8
+; CHECK: VGPRBlocks: 10
+; CHECK: NumSGPRsForWavesPerEU: 65
+; CHECK: NumVGPRsForWavesPerEU: 43

@@ -70,7 +70,6 @@ define amdgpu_kernel void @v_cmp_asm(ptr addrspace(1) %out, i32 %in) {
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm:
-; CHECK: codeLenInByte = 12
 define amdgpu_kernel void @code_size_inline_asm(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "v_nop_e64", ""()
@@ -79,7 +78,6 @@ entry:
 
 ; All inlineasm instructions are assumed to be the maximum size
 ; CHECK-LABEL: {{^}}code_size_inline_asm_small_inst:
-; CHECK: codeLenInByte = 12
 define amdgpu_kernel void @code_size_inline_asm_small_inst(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "v_nop_e32", ""()
@@ -87,7 +85,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_inst:
-; CHECK: codeLenInByte = 20
 define amdgpu_kernel void @code_size_inline_asm_2_inst(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "
@@ -98,7 +95,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_inst_extra_newline:
-; CHECK: codeLenInByte = 20
 define amdgpu_kernel void @code_size_inline_asm_2_inst_extra_newline(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "
@@ -110,7 +106,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_0_inst:
-; CHECK: codeLenInByte = 4
 define amdgpu_kernel void @code_size_inline_asm_0_inst(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "", ""()
@@ -118,7 +113,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_1_comment:
-; CHECK: codeLenInByte = 4
 define amdgpu_kernel void @code_size_inline_asm_1_comment(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment", ""()
@@ -126,7 +120,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_newline_1_comment:
-; CHECK: codeLenInByte = 4
 define amdgpu_kernel void @code_size_inline_asm_newline_1_comment(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "
@@ -135,7 +128,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_1_comment_newline:
-; CHECK: codeLenInByte = 4
 define amdgpu_kernel void @code_size_inline_asm_1_comment_newline(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
@@ -144,7 +136,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_comments_line:
-; CHECK: codeLenInByte = 4
 define amdgpu_kernel void @code_size_inline_asm_2_comments_line(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; first comment ; second comment", ""()
@@ -152,7 +143,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_2_comments_line_nospace:
-; CHECK: codeLenInByte = 4
 define amdgpu_kernel void @code_size_inline_asm_2_comments_line_nospace(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; first comment;second comment", ""()
@@ -160,7 +150,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments0:
-; CHECK: codeLenInByte = 20
 define amdgpu_kernel void @code_size_inline_asm_mixed_comments0(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
@@ -175,7 +164,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments1:
-; CHECK: codeLenInByte = 20
 define amdgpu_kernel void @code_size_inline_asm_mixed_comments1(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "v_nop_e64 ; inline comment
@@ -189,7 +177,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments_operands:
-; CHECK: codeLenInByte = 20
 define amdgpu_kernel void @code_size_inline_asm_mixed_comments_operands(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
@@ -363,3 +350,40 @@ define void @mixed_def_sgpr_vgpr_def_asm() {
   call void asm sideeffect "; use $0 ", "{s[4:5]}"(i64 %sgpr.add)
   ret void
 }
+
+; CHECK: ; inline_asm Kernel info:
+; CHECK: codeLenInByte = {{[0-9]+}}
+; CHECK: ; inline_asm_shader Kernel info:
+; CHECK: codeLenInByte = {{[0-9]+}}
+; CHECK: ; branch_on_asm_vgpr Kernel info:
+; CHECK: codeLenInByte = {{[0-9]+}}
+; CHECK: ; branch_on_asm_sgpr Kernel info:
+; CHECK: codeLenInByte = {{[0-9]+}}
+; CHECK: ; v_cmp_asm Kernel info:
+; CHECK: codeLenInByte = {{[0-9]+}}
+; CHECK: ; code_size_inline_asm Kernel info:
+; CHECK: codeLenInByte = 12
+; CHECK: ; code_size_inline_asm_small_inst Kernel info:
+; CHECK: codeLenInByte = 12
+; CHECK: ; code_size_inline_asm_2_inst Kernel info:
+; CHECK: codeLenInByte = 20
+; CHECK: ; code_size_inline_asm_2_inst_extra_newline Kernel info:
+; CHECK: codeLenInByte = 20
+; CHECK: ; code_size_inline_asm_0_inst Kernel info:
+; CHECK: codeLenInByte = 4
+; CHECK: ; code_size_inline_asm_1_comment Kernel info:
+; CHECK: codeLenInByte = 4
+; CHECK: ; code_size_inline_asm_newline_1_comment Kernel info:
+; CHECK: codeLenInByte = 4
+; CHECK: ; code_size_inline_asm_1_comment_newline Kernel info:
+; CHECK: codeLenInByte = 4
+; CHECK: ; code_size_inline_asm_2_comments_line Kernel info:
+; CHECK: codeLenInByte = 4
+; CHECK: ; code_size_inline_asm_2_comments_line_nospace Kernel info:
+; CHECK: codeLenInByte = 4
+; CHECK: ; code_size_inline_asm_mixed_comments0 Kernel info:
+; CHECK: codeLenInByte = 20
+; CHECK: ; code_size_inline_asm_mixed_comments1 Kernel info:
+; CHECK: codeLenInByte = 20
+; CHECK: ; code_size_inline_asm_mixed_comments_operands Kernel info:
+; CHECK: codeLenInByte = 20

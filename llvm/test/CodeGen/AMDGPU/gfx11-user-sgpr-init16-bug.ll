@@ -47,8 +47,6 @@
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
-; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @minimal_kernel_inputs() #0 {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   store volatile i32 %id, ptr addrspace(1) poison
@@ -76,8 +74,6 @@ define amdgpu_kernel void @minimal_kernel_inputs() #0 {
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
-; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
   %alloca = alloca i32, addrspace(5)
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -110,8 +106,6 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
-; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 4
 define amdgpu_kernel void @queue_ptr() #1 {
   %queue.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
   %load = load volatile i8, ptr addrspace(4) %queue.ptr
@@ -161,8 +155,6 @@ define amdgpu_kernel void @queue_ptr() #1 {
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 13
-; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 8
 define amdgpu_kernel void @all_inputs() #2 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
@@ -205,3 +197,15 @@ attributes #1 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-ld
 attributes #2 = { "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
+; GCN: ; minimal_kernel_inputs Kernel info:
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
+; GCN: ; minimal_kernel_inputs_with_stack Kernel info:
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
+; GCN: ; queue_ptr Kernel info:
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 4
+; GCN: ; all_inputs Kernel info:
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 13
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 8

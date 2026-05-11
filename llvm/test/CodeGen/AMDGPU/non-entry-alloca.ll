@@ -107,13 +107,10 @@ bb.2:
   ret void
 }
 ; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4112
-; DEFAULTSIZE: ; ScratchSize: 4112
 ; DEFAULTSIZE-V5: .amdhsa_private_segment_fixed_size 16
 ; DEFAULTSIZE-V5: .amdhsa_uses_dynamic_stack 1
-; DEFAULTSIZE-V5: ; ScratchSize: 16
 
 ; ASSUME1024: .amdhsa_private_segment_fixed_size 1040
-; ASSUME1024: ; ScratchSize: 1040
 
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) #2 {
 ; MUBUF-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
@@ -200,13 +197,10 @@ bb.1:
 }
 
 ; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4160
-; DEFAULTSIZE: ; ScratchSize: 4160
 ; DEFAULTSIZE-V5: .amdhsa_private_segment_fixed_size 64
 ; DEFAULTSIZE-V5: .amdhsa_uses_dynamic_stack 1
-; DEFAULTSIZE-V5: ; ScratchSize: 64
 
 ; ASSUME1024: .amdhsa_private_segment_fixed_size 1088
-; ASSUME1024: ; ScratchSize: 1088
 
 
 define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) #2 {
@@ -410,3 +404,12 @@ attributes #2 = { nounwind }
 ; ASSUME1024: {{.*}}
 ; DEFAULTSIZE: {{.*}}
 ; DEFAULTSIZE-V5: {{.*}}
+
+; DEFAULTSIZE: ; kernel_non_entry_block_static_alloca_uniformly_reached_align4 Kernel info:
+; DEFAULTSIZE: ; ScratchSize: 4112
+; DEFAULTSIZE-V5: ; ScratchSize: 16
+; ASSUME1024: ; ScratchSize: 1040
+; DEFAULTSIZE: ; kernel_non_entry_block_static_alloca_uniformly_reached_align64 Kernel info:
+; DEFAULTSIZE: ; ScratchSize: 4160
+; DEFAULTSIZE-V5: ; ScratchSize: 64
+; ASSUME1024: ; ScratchSize: 1088

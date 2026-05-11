@@ -11,7 +11,6 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}func:
-; GCN: ; NumVgprs: 8
 define hidden void @func() #1 {
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
   ret void
@@ -30,8 +29,6 @@ define hidden void @func() #1 {
 ; GCN-NOT: writelane
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 
-; GCN: ; TotalNumSgprs: 37
-; GCN: ; NumVgprs: 9
 define amdgpu_kernel void @kernel_call() #0 {
   %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
@@ -48,8 +45,6 @@ define amdgpu_kernel void @kernel_call() #0 {
 ; GCN-NOT: readlane
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 
-; GCN: ; TotalNumSgprs: 34
-; GCN: ; NumVgprs: 10
 define void @func_regular_call() #1 {
   %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
@@ -64,8 +59,6 @@ define void @func_regular_call() #1 {
 ; GCN-NEXT: s_addc_u32 s17,
 ; GCN-NEXT: s_setpc_b64 s[16:17]
 
-; GCN: ; TotalNumSgprs: 32
-; GCN: ; NumVgprs: 8
 define void @func_tail_call() #1 {
   tail call void @func()
   ret void
@@ -77,8 +70,6 @@ define void @func_tail_call() #1 {
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 ; GCN: s_setpc_b64
 
-; GCN: ; TotalNumSgprs: 34
-; GCN: ; NumVgprs: 10
 define void @func_call_tail_call() #1 {
   %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
@@ -134,3 +125,20 @@ declare dso_local void @eggs()
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #2 = { norecurse }
+
+; GCN: ; kernel Kernel info:
+; GCN: ; NumVgprs: 3
+; GCN: ; func Function info:
+; GCN: ; NumVgprs: 8
+; GCN: ; kernel_call Kernel info:
+; GCN: ; TotalNumSgprs: 37
+; GCN: ; NumVgprs: 9
+; GCN: ; func_regular_call Function info:
+; GCN: ; TotalNumSgprs: 34
+; GCN: ; NumVgprs: 10
+; GCN: ; func_tail_call Function info:
+; GCN: ; TotalNumSgprs: 32
+; GCN: ; NumVgprs: 8
+; GCN: ; func_call_tail_call Function info:
+; GCN: ; TotalNumSgprs: 34
+; GCN: ; NumVgprs: 10

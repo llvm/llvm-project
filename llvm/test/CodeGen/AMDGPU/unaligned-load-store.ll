@@ -567,7 +567,6 @@ define amdgpu_kernel void @constant_align4_merge_load_2_i32(ptr addrspace(4) %p,
 ; SI: ds_read_u8
 ; SI: ds_read_u8
 
-; SI: ScratchSize: 0{{$}}
 define amdgpu_kernel void @local_load_align1_v16i8(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %ld = load <16 x i8>, ptr addrspace(3) %in, align 1
   store <16 x i8> %ld, ptr addrspace(1) %out
@@ -592,7 +591,6 @@ define amdgpu_kernel void @local_load_align1_v16i8(ptr addrspace(1) %out, ptr ad
 ; SI: ds_write_b8
 ; SI: ds_write_b8
 
-; SI: ScratchSize: 0{{$}}
 define amdgpu_kernel void @local_store_align1_v16i8(ptr addrspace(3) %out) #0 {
   store <16 x i8> zeroinitializer, ptr addrspace(3) %out, align 1
   ret void
@@ -710,3 +708,8 @@ define i32 @load_2xi16_align2(ptr addrspace(1) %p) #0 {
 }
 
 attributes #0 = { nounwind }
+
+; SI: ; local_unaligned_load_store_i16 Kernel info:
+; SI: ScratchSize: 0{{$}}
+; SI: ; global_unaligned_load_store_i16 Kernel info:
+; SI: ScratchSize: 0{{$}}

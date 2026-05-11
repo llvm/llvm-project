@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_membound:
-; GCN: MemoryBound: 1
-; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_membound(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_membound(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -39,7 +37,6 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_membound_1:
-; GCN: MemoryBound: 1
 define amdgpu_kernel void @test_membound_1(ptr addrspace(1) nocapture readonly %ptr.0,
 ; CHECK-LABEL: define amdgpu_kernel void @test_membound_1(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[PTR_0:%.*]], ptr addrspace(1) captures(none) [[PTR_1:%.*]], <2 x double> [[ARG_0:%.*]], i32 [[ARG_1:%.*]], <4 x double> [[ARG_2:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -163,8 +160,6 @@ bb.ret:
 }
 
 ; GCN-LABEL: {{^}}test_large_stride:
-; GCN: MemoryBound: 0
-; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_large_stride(ptr addrspace(1) nocapture %arg) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_large_stride(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
@@ -206,8 +201,6 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_indirect:
-; GCN: MemoryBound: 1
-; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_indirect(ptr addrspace(1) nocapture %arg) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_indirect(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR2]] {
@@ -267,8 +260,6 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_indirect_through_phi:
-; GCN: MemoryBound: 0
-; GCN: WaveLimiterHint : 0
 define amdgpu_kernel void @test_indirect_through_phi(ptr addrspace(1) %arg) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_indirect_through_phi(
 ; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]]) {
@@ -346,8 +337,6 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}kernel_call_test_membound_func:
-; GCN: MemoryBound: 1
-; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @kernel_call_test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_call_test_membound_func(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR0]] {
@@ -360,8 +349,6 @@ define amdgpu_kernel void @kernel_call_test_membound_func(ptr addrspace(1) nocap
 
 ; TODO: Probably should assume yes?
 ; GCN-LABEL: {{^}}kernel_indirect_call:
-; GCN: MemoryBound: 0
-; GCN: WaveLimiterHint : 0
 define amdgpu_kernel void @kernel_indirect_call(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, ptr %fptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_indirect_call(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]], ptr [[FPTR:%.*]]) {
@@ -409,8 +396,6 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}kernel_call_maybe_recursive_test_membound_func:
-; GCN: MemoryBound: 1
-; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @kernel_call_maybe_recursive_test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, ptr %fptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_call_maybe_recursive_test_membound_func(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]], ptr [[FPTR:%.*]]) #[[ATTR0]] {
@@ -468,8 +453,6 @@ define void @mutually_recursive_test_membound_func_1(ptr addrspace(1) nocapture 
 }
 
 ; GCN-LABEL: {{^}}kernel_call_mutually_recursive_test_membound_func_0:
-; GCN: MemoryBound: 1
-; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @kernel_call_mutually_recursive_test_membound_func_0(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, ptr %fptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_call_mutually_recursive_test_membound_func_0(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]], ptr [[FPTR:%.*]]) #[[ATTR0]] {
@@ -489,3 +472,30 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-wave-limiter"="true" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
+
+; GCN: ; test_membound Kernel info:
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1
+; GCN: ; test_membound_1 Kernel info:
+; GCN: MemoryBound: 1
+; GCN: ; test_large_stride Kernel info:
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 1
+; GCN: ; test_indirect Kernel info:
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1
+; GCN: ; test_indirect_through_phi Kernel info:
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 0
+; GCN: ; kernel_call_test_membound_func Kernel info:
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1
+; GCN: ; kernel_indirect_call Kernel info:
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 0
+; GCN: ; kernel_call_maybe_recursive_test_membound_func Kernel info:
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1
+; GCN: ; kernel_call_mutually_recursive_test_membound_func_0 Kernel info:
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1

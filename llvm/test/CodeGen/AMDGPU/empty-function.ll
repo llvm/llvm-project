@@ -6,16 +6,19 @@
 ; SI: .text
 ; SI-LABEL: {{^}}empty_function_ret:
 ; SI: s_endpgm
-; SI: codeLenInByte = 4
 define amdgpu_kernel void @empty_function_ret() #0 {
   ret void
 }
 
 ; SI: .text
 ; SI-LABEL: {{^}}empty_function_unreachable:
-; SI: codeLenInByte = 0
 define amdgpu_kernel void @empty_function_unreachable() #0 {
   unreachable
 }
 
 attributes #0 = { nounwind }
+
+; SI: ; empty_function_ret Kernel info:
+; SI: codeLenInByte = 4
+; SI: ; empty_function_unreachable Kernel info:
+; SI: codeLenInByte = 0

@@ -13,9 +13,6 @@
 ; GCN: .set .Luse_vcc.has_dyn_sized_stack, 0
 ; GCN: .set .Luse_vcc.has_recursion, 0
 ; GCN: .set .Luse_vcc.has_indirect_call, 0
-; GCN: TotalNumSgprs: 36
-; GCN: NumVgprs: 0
-; GCN: ScratchSize: 0
 define void @use_vcc() #1 {
   call void asm sideeffect "", "~{vcc}" () #0
   ret void
@@ -31,9 +28,6 @@ define void @use_vcc() #1 {
 ; GCN: .set .Lindirect_use_vcc.has_dyn_sized_stack, or(0, .Luse_vcc.has_dyn_sized_stack)
 ; GCN: .set .Lindirect_use_vcc.has_recursion, or(0, .Luse_vcc.has_recursion)
 ; GCN: .set .Lindirect_use_vcc.has_indirect_call, or(0, .Luse_vcc.has_indirect_call)
-; GCN: TotalNumSgprs: 38
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define void @indirect_use_vcc() #1 {
   call void @use_vcc()
   ret void
@@ -49,9 +43,6 @@ define void @indirect_use_vcc() #1 {
 ; GCN: .set .Lindirect_2level_use_vcc_kernel.has_dyn_sized_stack, or(0, .Lindirect_use_vcc.has_dyn_sized_stack)
 ; GCN: .set .Lindirect_2level_use_vcc_kernel.has_recursion, or(0, .Lindirect_use_vcc.has_recursion)
 ; GCN: .set .Lindirect_2level_use_vcc_kernel.has_indirect_call, or(0, .Lindirect_use_vcc.has_indirect_call)
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_vcc()
   ret void
@@ -67,9 +58,6 @@ define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out)
 ; GCN: .set .Luse_flat_scratch.has_dyn_sized_stack, 0
 ; GCN: .set .Luse_flat_scratch.has_recursion, 0
 ; GCN: .set .Luse_flat_scratch.has_indirect_call, 0
-; GCN: TotalNumSgprs: 38
-; GCN: NumVgprs: 0
-; GCN: ScratchSize: 0
 define void @use_flat_scratch() #1 {
   call void asm sideeffect "", "~{flat_scratch}" () #0
   ret void
@@ -85,9 +73,6 @@ define void @use_flat_scratch() #1 {
 ; GCN: .set .Lindirect_use_flat_scratch.has_dyn_sized_stack, or(0, .Luse_flat_scratch.has_dyn_sized_stack)
 ; GCN: .set .Lindirect_use_flat_scratch.has_recursion, or(0, .Luse_flat_scratch.has_recursion)
 ; GCN: .set .Lindirect_use_flat_scratch.has_indirect_call, or(0, .Luse_flat_scratch.has_indirect_call)
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define void @indirect_use_flat_scratch() #1 {
   call void @use_flat_scratch()
   ret void
@@ -103,9 +88,6 @@ define void @indirect_use_flat_scratch() #1 {
 ; GCN: .set .Lindirect_2level_use_flat_scratch_kernel.has_dyn_sized_stack, or(0, .Lindirect_use_flat_scratch.has_dyn_sized_stack)
 ; GCN: .set .Lindirect_2level_use_flat_scratch_kernel.has_recursion, or(0, .Lindirect_use_flat_scratch.has_recursion)
 ; GCN: .set .Lindirect_2level_use_flat_scratch_kernel.has_indirect_call, or(0, .Lindirect_use_flat_scratch.has_indirect_call)
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_flat_scratch()
   ret void
@@ -121,9 +103,6 @@ define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace
 ; GCN: .set .Luse_10_vgpr.has_dyn_sized_stack, 0
 ; GCN: .set .Luse_10_vgpr.has_recursion, 0
 ; GCN: .set .Luse_10_vgpr.has_indirect_call, 0
-; GCN: TotalNumSgprs: 36
-; GCN: NumVgprs: 10
-; GCN: ScratchSize: 0
 define void @use_10_vgpr() #1 {
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4}"() #0
   call void asm sideeffect "", "~{v5},~{v6},~{v7},~{v8},~{v9}"() #0
@@ -140,9 +119,6 @@ define void @use_10_vgpr() #1 {
 ; GCN: .set .Lindirect_use_10_vgpr.has_dyn_sized_stack, or(0, .Luse_10_vgpr.has_dyn_sized_stack)
 ; GCN: .set .Lindirect_use_10_vgpr.has_recursion, or(0, .Luse_10_vgpr.has_recursion)
 ; GCN: .set .Lindirect_use_10_vgpr.has_indirect_call, or(0, .Luse_10_vgpr.has_indirect_call)
-; GCN: TotalNumSgprs: 38
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define void @indirect_use_10_vgpr() #0 {
   call void @use_10_vgpr()
   ret void
@@ -158,9 +134,6 @@ define void @indirect_use_10_vgpr() #0 {
 ; GCN:	.set .Lindirect_2_level_use_10_vgpr.has_dyn_sized_stack, or(0, .Lindirect_use_10_vgpr.has_dyn_sized_stack)
 ; GCN:	.set .Lindirect_2_level_use_10_vgpr.has_recursion, or(0, .Lindirect_use_10_vgpr.has_recursion)
 ; GCN:	.set .Lindirect_2_level_use_10_vgpr.has_indirect_call, or(0, .Lindirect_use_10_vgpr.has_indirect_call)
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
   call void @indirect_use_10_vgpr()
   ret void
@@ -176,9 +149,6 @@ define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
 ; GCN:	.set .Luse_50_vgpr.has_dyn_sized_stack, 0
 ; GCN:	.set .Luse_50_vgpr.has_recursion, 0
 ; GCN:	.set .Luse_50_vgpr.has_indirect_call, 0
-; GCN: TotalNumSgprs: 36
-; GCN: NumVgprs: 50
-; GCN: ScratchSize: 0
 define void @use_50_vgpr() #1 {
   call void asm sideeffect "", "~{v49}"() #0
   ret void
@@ -194,9 +164,6 @@ define void @use_50_vgpr() #1 {
 ; GCN:	.set .Lindirect_use_50_vgpr.has_dyn_sized_stack, or(0, .Luse_50_vgpr.has_dyn_sized_stack)
 ; GCN:	.set .Lindirect_use_50_vgpr.has_recursion, or(0, .Luse_50_vgpr.has_recursion)
 ; GCN:	.set .Lindirect_use_50_vgpr.has_indirect_call, or(0, .Luse_50_vgpr.has_indirect_call)
-; GCN: TotalNumSgprs: 38
-; GCN: NumVgprs: 50
-; GCN: ScratchSize: 16
 define void @indirect_use_50_vgpr() #0 {
   call void @use_50_vgpr()
   ret void
@@ -212,9 +179,6 @@ define void @indirect_use_50_vgpr() #0 {
 ; GCN:	.set .Luse_80_sgpr.has_dyn_sized_stack, 0
 ; GCN:	.set .Luse_80_sgpr.has_recursion, 0
 ; GCN:	.set .Luse_80_sgpr.has_indirect_call, 0
-; GCN: TotalNumSgprs: 84
-; GCN: NumVgprs: 0
-; GCN: ScratchSize: 0
 define void @use_80_sgpr() #1 {
   call void asm sideeffect "", "~{s79}"() #0
   ret void
@@ -230,9 +194,6 @@ define void @use_80_sgpr() #1 {
 ; GCN:	.set .Lindirect_use_80_sgpr.has_dyn_sized_stack, or(0, .Luse_80_sgpr.has_dyn_sized_stack)
 ; GCN:	.set .Lindirect_use_80_sgpr.has_recursion, or(0, .Luse_80_sgpr.has_recursion)
 ; GCN:	.set .Lindirect_use_80_sgpr.has_indirect_call, or(0, .Luse_80_sgpr.has_indirect_call)
-; GCN: TotalNumSgprs: 84
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define void @indirect_use_80_sgpr() #1 {
   call void @use_80_sgpr()
   ret void
@@ -248,9 +209,6 @@ define void @indirect_use_80_sgpr() #1 {
 ; GCN:	.set .Lindirect_2_level_use_80_sgpr.has_dyn_sized_stack, or(0, .Lindirect_use_80_sgpr.has_dyn_sized_stack)
 ; GCN:	.set .Lindirect_2_level_use_80_sgpr.has_recursion, or(0, .Lindirect_use_80_sgpr.has_recursion)
 ; GCN:	.set .Lindirect_2_level_use_80_sgpr.has_indirect_call, or(0, .Lindirect_use_80_sgpr.has_indirect_call)
-; GCN: TotalNumSgprs: 86
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
   call void @indirect_use_80_sgpr()
   ret void
@@ -266,9 +224,6 @@ define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
 ; GCN:	.set .Luse_stack0.has_dyn_sized_stack, 0
 ; GCN:	.set .Luse_stack0.has_recursion, 0
 ; GCN:	.set .Luse_stack0.has_indirect_call, 0
-; GCN: TotalNumSgprs: 37
-; GCN: NumVgprs: 1
-; GCN: ScratchSize: 2052
 define void @use_stack0() #1 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -285,9 +240,6 @@ define void @use_stack0() #1 {
 ; GCN:	.set .Luse_stack1.has_dyn_sized_stack, 0
 ; GCN:	.set .Luse_stack1.has_recursion, 0
 ; GCN:	.set .Luse_stack1.has_indirect_call, 0
-; GCN: TotalNumSgprs: 37
-; GCN: NumVgprs: 1
-; GCN: ScratchSize: 404
 define void @use_stack1() #1 {
   %alloca = alloca [100 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -304,9 +256,6 @@ define void @use_stack1() #1 {
 ; GCN:	.set .Lindirect_use_stack.has_dyn_sized_stack, or(0, .Luse_stack0.has_dyn_sized_stack)
 ; GCN:	.set .Lindirect_use_stack.has_recursion, or(0, .Luse_stack0.has_recursion)
 ; GCN:	.set .Lindirect_use_stack.has_indirect_call, or(0, .Luse_stack0.has_indirect_call)
-; GCN: TotalNumSgprs: 38
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 2132
 define void @indirect_use_stack() #1 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -324,9 +273,6 @@ define void @indirect_use_stack() #1 {
 ; GCN:	.set .Lindirect_2_level_use_stack.has_dyn_sized_stack, or(0, .Lindirect_use_stack.has_dyn_sized_stack)
 ; GCN:	.set .Lindirect_2_level_use_stack.has_recursion, or(0, .Lindirect_use_stack.has_recursion)
 ; GCN:	.set .Lindirect_2_level_use_stack.has_indirect_call, or(0, .Lindirect_use_stack.has_indirect_call)
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 2132
 define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
   call void @indirect_use_stack()
   ret void
@@ -344,9 +290,6 @@ define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
 ; GCN:	.set .Lmulti_call_use_use_stack.has_dyn_sized_stack, or(0, .Luse_stack0.has_dyn_sized_stack, .Luse_stack1.has_dyn_sized_stack)
 ; GCN:	.set .Lmulti_call_use_use_stack.has_recursion, or(0, .Luse_stack0.has_recursion, .Luse_stack1.has_recursion)
 ; GCN:	.set .Lmulti_call_use_use_stack.has_indirect_call, or(0, .Luse_stack0.has_indirect_call, .Luse_stack1.has_indirect_call)
-; GCN: TotalNumSgprs: 58
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_use_use_stack() #0 {
   call void @use_stack0()
   call void @use_stack1()
@@ -365,9 +308,6 @@ declare void @external() #0
 ; GCN:	.set .Lmulti_call_with_external.has_dyn_sized_stack, 1
 ; GCN:	.set .Lmulti_call_with_external.has_recursion, 0
 ; GCN:	.set .Lmulti_call_with_external.has_indirect_call, 1
-; GCN: TotalNumSgprs: .Lmulti_call_with_external.numbered_sgpr+6
-; GCN: NumVgprs: .Lmulti_call_with_external.num_vgpr
-; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_with_external() #0 {
   call void @use_stack0()
   call void @use_stack1()
@@ -385,9 +325,6 @@ define amdgpu_kernel void @multi_call_with_external() #0 {
 ; GCN:	.set .Lmulti_call_with_external_and_duplicates.has_dyn_sized_stack, 1
 ; GCN:	.set .Lmulti_call_with_external_and_duplicates.has_recursion, 0
 ; GCN:	.set .Lmulti_call_with_external_and_duplicates.has_indirect_call, 1
-; GCN: TotalNumSgprs: .Lmulti_call_with_external_and_duplicates.numbered_sgpr+6
-; GCN: NumVgprs: .Lmulti_call_with_external_and_duplicates.num_vgpr
-; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_with_external_and_duplicates() #0 {
   call void @use_stack0()
   call void @use_stack0()
@@ -408,9 +345,6 @@ define amdgpu_kernel void @multi_call_with_external_and_duplicates() #0 {
 ; GCN:	.set .Lusage_external.has_dyn_sized_stack, 1
 ; GCN:	.set .Lusage_external.has_recursion, 0
 ; GCN:	.set .Lusage_external.has_indirect_call, 1
-; GCN: TotalNumSgprs: .Lusage_external.numbered_sgpr+6
-; GCN: NumVgprs: .Lusage_external.num_vgpr
-; GCN: ScratchSize: 0
 define amdgpu_kernel void @usage_external() #0 {
   call void @external()
   ret void
@@ -428,9 +362,6 @@ declare void @external_recurse() #2
 ; GCN:	.set .Lusage_external_recurse.has_dyn_sized_stack, 1
 ; GCN:	.set .Lusage_external_recurse.has_recursion, 1
 ; GCN:	.set .Lusage_external_recurse.has_indirect_call, 1
-; GCN: TotalNumSgprs: .Lusage_external_recurse.numbered_sgpr+6
-; GCN: NumVgprs: .Lusage_external_recurse.num_vgpr
-; GCN: ScratchSize: 0
 define amdgpu_kernel void @usage_external_recurse() #0 {
   call void @external_recurse()
   ret void
@@ -446,9 +377,6 @@ define amdgpu_kernel void @usage_external_recurse() #0 {
 ; GCN: .set .Ldirect_recursion_use_stack.has_dyn_sized_stack, 0
 ; GCN: .set .Ldirect_recursion_use_stack.has_recursion, 1
 ; GCN: .set .Ldirect_recursion_use_stack.has_indirect_call, 0
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 2064
 define void @direct_recursion_use_stack(i32 %val) #2 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca) #0
@@ -474,9 +402,6 @@ ret:
 ; GCN:  .set .Lusage_direct_recursion.has_dyn_sized_stack, or(0, .Ldirect_recursion_use_stack.has_dyn_sized_stack)
 ; GCN:  .set .Lusage_direct_recursion.has_recursion, or(1, .Ldirect_recursion_use_stack.has_recursion)
 ; GCN:  .set .Lusage_direct_recursion.has_indirect_call, or(0, .Ldirect_recursion_use_stack.has_indirect_call)
-; GCN: TotalNumSgprs: 42
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 2064
 define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
   call void @direct_recursion_use_stack(i32 %n)
   ret void
@@ -492,9 +417,6 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; GCN: .set .Lmulti_stage_recurse2.has_dyn_sized_stack, or(0, .Lmulti_stage_recurse1.has_dyn_sized_stack)
 ; GCN: .set .Lmulti_stage_recurse2.has_recursion, or(1, .Lmulti_stage_recurse1.has_recursion)
 ; GCN: .set .Lmulti_stage_recurse2.has_indirect_call, or(0, .Lmulti_stage_recurse1.has_indirect_call)
-; GCN: TotalNumSgprs: .Lmulti_stage_recurse2.numbered_sgpr+extrasgprs(.Lmulti_stage_recurse2.uses_vcc, .Lmulti_stage_recurse2.uses_flat_scratch, 1)
-; GCN: NumVgprs: max(43, .Lmulti_stage_recurse1.num_vgpr)
-; GCN: ScratchSize: 16+max(.Lmulti_stage_recurse1.private_seg_size)
 ; GCN-LABEL: {{^}}multi_stage_recurse1:
 ; GCN: .set .Lmulti_stage_recurse1.num_vgpr, max(48, 43)
 ; GCN: .set .Lmulti_stage_recurse1.num_agpr, max(0, 0)
@@ -505,9 +427,6 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; GCN: .set .Lmulti_stage_recurse1.has_dyn_sized_stack, 0
 ; GCN: .set .Lmulti_stage_recurse1.has_recursion, 1
 ; GCN: .set .Lmulti_stage_recurse1.has_indirect_call, 0
-; GCN: TotalNumSgprs: 38
-; GCN: NumVgprs: 48
-; GCN: ScratchSize: 16
 define void @multi_stage_recurse1(i32 %val) #2 {
   call void @multi_stage_recurse2(i32 %val)
   call void asm sideeffect "", "~{v47}"() #0
@@ -529,9 +448,6 @@ define void @multi_stage_recurse2(i32 %val) #2 {
 ; GCN: .set .Lusage_multi_stage_recurse.has_dyn_sized_stack, or(0, .Lmulti_stage_recurse1.has_dyn_sized_stack)
 ; GCN: .set .Lusage_multi_stage_recurse.has_recursion, or(1, .Lmulti_stage_recurse1.has_recursion)
 ; GCN: .set .Lusage_multi_stage_recurse.has_indirect_call, or(0, .Lmulti_stage_recurse1.has_indirect_call)
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 48
-; GCN: ScratchSize: 16
 define amdgpu_kernel void @usage_multi_stage_recurse(i32 %n) #0 {
   call void @multi_stage_recurse1(i32 %n)
   ret void
@@ -547,9 +463,6 @@ define amdgpu_kernel void @usage_multi_stage_recurse(i32 %n) #0 {
 ; GCN: .set .Lmulti_stage_recurse_noattr2.has_dyn_sized_stack, or(0, .Lmulti_stage_recurse_noattr1.has_dyn_sized_stack)
 ; GCN: .set .Lmulti_stage_recurse_noattr2.has_recursion, or(0, .Lmulti_stage_recurse_noattr1.has_recursion)
 ; GCN: .set .Lmulti_stage_recurse_noattr2.has_indirect_call, or(0, .Lmulti_stage_recurse_noattr1.has_indirect_call)
-; GCN: TotalNumSgprs: .Lmulti_stage_recurse_noattr2.numbered_sgpr+extrasgprs(.Lmulti_stage_recurse_noattr2.uses_vcc, .Lmulti_stage_recurse_noattr2.uses_flat_scratch, 1)
-; GCN: NumVgprs: max(41, .Lmulti_stage_recurse_noattr1.num_vgpr)
-; GCN: ScratchSize: 16+max(.Lmulti_stage_recurse_noattr1.private_seg_size)
 ; GCN-LABEL: {{^}}multi_stage_recurse_noattr1:
 ; GCN: .set .Lmulti_stage_recurse_noattr1.num_vgpr, max(41, 41)
 ; GCN: .set .Lmulti_stage_recurse_noattr1.num_agpr, max(0, 0)
@@ -560,9 +473,6 @@ define amdgpu_kernel void @usage_multi_stage_recurse(i32 %n) #0 {
 ; GCN: .set .Lmulti_stage_recurse_noattr1.has_dyn_sized_stack, 0
 ; GCN: .set .Lmulti_stage_recurse_noattr1.has_recursion, 0
 ; GCN: .set .Lmulti_stage_recurse_noattr1.has_indirect_call, 0
-; GCN: TotalNumSgprs: 61
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define void @multi_stage_recurse_noattr1(i32 %val) #0 {
   call void @multi_stage_recurse_noattr2(i32 %val)
   call void asm sideeffect "", "~{s56}"() #0
@@ -584,9 +494,6 @@ define void @multi_stage_recurse_noattr2(i32 %val) #0 {
 ; GCN: .set .Lusage_multi_stage_recurse_noattrs.has_dyn_sized_stack, or(0, .Lmulti_stage_recurse_noattr1.has_dyn_sized_stack)
 ; GCN: .set .Lusage_multi_stage_recurse_noattrs.has_recursion, or(0, .Lmulti_stage_recurse_noattr1.has_recursion)
 ; GCN: .set .Lusage_multi_stage_recurse_noattrs.has_indirect_call, or(0, .Lmulti_stage_recurse_noattr1.has_indirect_call)
-; GCN: TotalNumSgprs: 63
-; GCN: NumVgprs: 41
-; GCN: ScratchSize: 16
 define amdgpu_kernel void @usage_multi_stage_recurse_noattrs(i32 %n) #0 {
   call void @multi_stage_recurse_noattr1(i32 %n)
   ret void
@@ -602,9 +509,6 @@ define amdgpu_kernel void @usage_multi_stage_recurse_noattrs(i32 %n) #0 {
 ; GCN:  .set .Lmulti_call_with_multi_stage_recurse.has_dyn_sized_stack, or(0, .Luse_stack0.has_dyn_sized_stack, .Luse_stack1.has_dyn_sized_stack, .Lmulti_stage_recurse1.has_dyn_sized_stack)
 ; GCN:  .set .Lmulti_call_with_multi_stage_recurse.has_recursion, or(1, .Luse_stack0.has_recursion, .Luse_stack1.has_recursion, .Lmulti_stage_recurse1.has_recursion)
 ; GCN:  .set .Lmulti_call_with_multi_stage_recurse.has_indirect_call, or(0, .Luse_stack0.has_indirect_call, .Luse_stack1.has_indirect_call, .Lmulti_stage_recurse1.has_indirect_call)
-; GCN: TotalNumSgprs: 59
-; GCN: NumVgprs:  48
-; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_with_multi_stage_recurse(i32 %n) #0 {
   call void @use_stack0()
   call void @use_stack1()
@@ -623,9 +527,6 @@ define amdgpu_kernel void @multi_call_with_multi_stage_recurse(i32 %n) #0 {
 ; GCN:	.set .Lcount_use_sgpr96_external_call.has_dyn_sized_stack, 1
 ; GCN:	.set .Lcount_use_sgpr96_external_call.has_recursion, 0
 ; GCN:	.set .Lcount_use_sgpr96_external_call.has_indirect_call, 1
-; GCN: TotalNumSgprs: .Lcount_use_sgpr96_external_call.numbered_sgpr+6
-; GCN: NumVgprs: .Lcount_use_sgpr96_external_call.num_vgpr
-; GCN: ScratchSize: 0
 define amdgpu_kernel void @count_use_sgpr96_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
@@ -644,9 +545,6 @@ entry:
 ; GCN:	.set .Lcount_use_sgpr160_external_call.has_dyn_sized_stack, 1
 ; GCN:	.set .Lcount_use_sgpr160_external_call.has_recursion, 0
 ; GCN:	.set .Lcount_use_sgpr160_external_call.has_indirect_call, 1
-; GCN: TotalNumSgprs: .Lcount_use_sgpr160_external_call.numbered_sgpr+6
-; GCN: NumVgprs: .Lcount_use_sgpr160_external_call.num_vgpr
-; GCN: ScratchSize: 0
 define amdgpu_kernel void @count_use_sgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
@@ -665,9 +563,6 @@ entry:
 ; GCN:	.set .Lcount_use_vgpr160_external_call.has_dyn_sized_stack, 1
 ; GCN:	.set .Lcount_use_vgpr160_external_call.has_recursion, 0
 ; GCN:	.set .Lcount_use_vgpr160_external_call.has_indirect_call, 1
-; GCN: TotalNumSgprs: .Lcount_use_vgpr160_external_call.numbered_sgpr+6
-; GCN: NumVgprs: .Lcount_use_vgpr160_external_call.num_vgpr
-; GCN: ScratchSize: 0
 define amdgpu_kernel void @count_use_vgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
@@ -685,7 +580,148 @@ define internal void @ctor_func() {
   ret void
 }
 
-; Added at the of the .s are the module level maximums
+; GCN: ; use_vcc Function info:
+; GCN: TotalNumSgprs: 36
+; GCN: NumVgprs: 0
+; GCN: ScratchSize: 0
+; GCN: ; indirect_use_vcc Function info:
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; indirect_2level_use_vcc_kernel Kernel info:
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; use_flat_scratch Function info:
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 0
+; GCN: ScratchSize: 0
+; GCN: ; indirect_use_flat_scratch Function info:
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; indirect_2level_use_flat_scratch_kernel Kernel info:
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; use_10_vgpr Function info:
+; GCN: TotalNumSgprs: 36
+; GCN: NumVgprs: 10
+; GCN: ScratchSize: 0
+; GCN: ; indirect_use_10_vgpr Function info:
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; indirect_2_level_use_10_vgpr Kernel info:
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; use_50_vgpr Function info:
+; GCN: TotalNumSgprs: 36
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 0
+; GCN: ; indirect_use_50_vgpr Function info:
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 16
+; GCN: ; use_80_sgpr Function info:
+; GCN: TotalNumSgprs: 84
+; GCN: NumVgprs: 0
+; GCN: ScratchSize: 0
+; GCN: ; indirect_use_80_sgpr Function info:
+; GCN: TotalNumSgprs: 84
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; indirect_2_level_use_80_sgpr Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; use_stack0 Function info:
+; GCN: TotalNumSgprs: 37
+; GCN: NumVgprs: 1
+; GCN: ScratchSize: 2052
+; GCN: ; use_stack1 Function info:
+; GCN: TotalNumSgprs: 37
+; GCN: NumVgprs: 1
+; GCN: ScratchSize: 404
+; GCN: ; indirect_use_stack Function info:
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 2132
+; GCN: ; indirect_2_level_use_stack Kernel info:
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 2132
+; GCN: ; multi_call_use_use_stack Kernel info:
+; GCN: TotalNumSgprs: 58
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 2052
+; GCN: ; multi_call_with_external Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 2052
+; GCN: ; multi_call_with_external_and_duplicates Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 2052
+; GCN: ; usage_external Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 0
+; GCN: ; usage_external_recurse Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 0
+; GCN: ; direct_recursion_use_stack Function info:
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 2064
+; GCN: ; usage_direct_recursion Kernel info:
+; GCN: TotalNumSgprs: 42
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 2064
+; GCN: ; multi_stage_recurse2 Function info:
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 48
+; GCN: ScratchSize: 32
+; GCN: ; multi_stage_recurse1 Function info:
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 48
+; GCN: ScratchSize: 16
+; GCN: ; usage_multi_stage_recurse Kernel info:
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 48
+; GCN: ScratchSize: 16
+; GCN: ; multi_stage_recurse_noattr2 Function info:
+; GCN: TotalNumSgprs: 61
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 32
+; GCN: ; multi_stage_recurse_noattr1 Function info:
+; GCN: TotalNumSgprs: 61
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; usage_multi_stage_recurse_noattrs Kernel info:
+; GCN: TotalNumSgprs: 63
+; GCN: NumVgprs: 41
+; GCN: ScratchSize: 16
+; GCN: ; multi_call_with_multi_stage_recurse Kernel info:
+; GCN: TotalNumSgprs: 59
+; GCN: NumVgprs:  48
+; GCN: ScratchSize: 2052
+; GCN: ; count_use_sgpr96_external_call Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 0
+; GCN: ; count_use_sgpr160_external_call Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 0
+; GCN: ; count_use_vgpr160_external_call Kernel info:
+; GCN: TotalNumSgprs: 86
+; GCN: NumVgprs: 50
+; GCN: ScratchSize: 0
+
+; Added at the end of the .s are the module level maximums
 ; GCN:	.set amdgpu.max_num_vgpr, 50
 ; GCN:	.set amdgpu.max_num_agpr, 0
 ; GCN:	.set amdgpu.max_num_sgpr, 80

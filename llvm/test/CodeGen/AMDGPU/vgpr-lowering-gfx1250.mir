@@ -246,7 +246,6 @@ body:             |
     ; GCN-NEXT: v_wmma_f32_16x16x32_bf16 v[14:21] /*v[270:277]*/, v[26:33] /*v[282:289]*/, v[34:41] /*v[290:297]*/, v[14:21] /*v[270:277]*/
     early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, 0, 0, implicit $exec
 
-    ; ASM: NumVgprs: 1024
 
 ...
 
@@ -323,7 +322,6 @@ body:             |
     ; GCN-NEXT: v_dual_fmac_f32 v7 /*v263*/, v1, v1 /*v257*/ :: v_dual_fmamk_f32 v244 /*v500*/, v0, 0xa, v44 /*v300*/
     $vgpr263, $vgpr500 = V_DUAL_FMAC_F32_e32_X_FMAMK_F32_gfx1250 undef $vgpr1, undef $vgpr257, $vgpr263, undef $vgpr0, 10, undef $vgpr300, implicit $mode, implicit $exec
 
-    ; ASM: NumVgprs: 777
 
 ...
 
@@ -412,7 +410,6 @@ body:             |
     ; GCN-NEXT: v_fmamk_f16 v5, v2, 0x1, v4
     $vgpr5 = V_FMAMK_F16_fake16 undef $vgpr2, 1, undef $vgpr4, implicit $exec, implicit $mode
 
-    ; ASM: NumVgprs: 358
 
 ...
 
@@ -434,7 +431,6 @@ body:             |
     ; GCN-NEXT: v_fmac_f32_e32 v1 /*v257*/, v0, v1
     $vgpr257 = V_FMAC_F32_e32 undef $vgpr0, undef $vgpr1, undef $vgpr257, implicit $mode, implicit $exec
 
-    ; ASM: NumVgprs: 258
 
 ...
 
@@ -481,7 +477,6 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 0x100
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 
-    ; ASM: NumVgprs: 513
 ...
 
 # ASM-LABEL: {{^}}minimal_mode_change:
@@ -549,7 +544,6 @@ body:             |
     $vgpr8 = V_MOV_B32_e32 undef $vgpr530, implicit $exec
     $vgpr9 = V_ADD_U32_e32 4660, undef $vgpr531, implicit $exec
 
-    ; ASM: NumVgprs: 532
 
 ...
 
@@ -666,7 +660,6 @@ body:             |
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     S_SETPC_B64_return undef $sgpr0_sgpr1, implicit-def $exec
 
-    ; ASM: NumVgprs: 257
 ...
 
 # ASM-LABEL: {{^}}control_flow:
@@ -737,7 +730,6 @@ body:             |
     INLINEASM &"; no vgprs, mode preserved", 1, 327690, undef $sgpr0
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
 
-    ; ASM: NumVgprs: 257
 ...
 
 # ASM-LABEL: {{^}}bundle:
@@ -763,7 +755,6 @@ body:             |
       $vgpr1 = V_MOV_B32_e32 $vgpr256, implicit $exec
     }
 
-    ; ASM: NumVgprs: 257
 ...
 
 # ASM-LABEL: {{^}}hard_clauses:
@@ -899,7 +890,6 @@ body:             |
       $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     }
 
-    ; ASM: NumVgprs: 259
 ...
 
 # ASM-LABEL: {{^}}pseudo:
@@ -1008,7 +998,6 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 0x4a00
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 
-    ; ASM: NumVgprs: 514
 ...
 
 # ASM-LABEL: {{^}}redundant_xcnt:
@@ -1043,3 +1032,34 @@ body: |
     ; GCN-NEXT: s_set_vgpr_msb 0x400
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 ...
+
+# ASM: ; high_vgprs Function info:
+# ASM: NumVgprs: 1024
+# ASM: ; vopd Function info:
+# ASM: NumVgprs: 777
+# ASM: ; fmaak_fmamk Function info:
+# ASM: NumVgprs: 358
+# ASM: ; fmac Function info:
+# ASM: NumVgprs: 258
+# ASM: ; rev_opcodes Function info:
+# ASM: NumVgprs: 513
+# ASM: ; minimal_mode_change Function info:
+# ASM: NumVgprs: 532
+# ASM: ; terminators Function info:
+# ASM: NumVgprs: 257
+# ASM: ; control_flow Function info:
+# ASM: NumVgprs: 259
+# ASM: ; inline_asm Function info:
+# ASM: NumVgprs: 257
+# ASM: ; bundle Function info:
+# ASM: NumVgprs: 257
+# ASM: ; hard_clauses Function info:
+# ASM: NumVgprs: 259
+# ASM: ; pseudo Function info:
+# ASM: NumVgprs: 1
+# ASM: ; ld_scale Function info:
+# ASM: NumVgprs: 516
+# ASM: ; commute_no_piggyback Function info:
+# ASM: NumVgprs: 514
+# ASM: ; redundant_xcnt Function info:
+# ASM: NumVgprs: 258

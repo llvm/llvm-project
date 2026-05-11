@@ -10,13 +10,6 @@
 ; GFX908-DAG: v_mov_b32_e32 v{{[0-9]}}, [[V_REG:v[0-9]+]]
 ; GFX908-DAG: v_accvgpr_read_b32 [[V_REG]], [[A_REG]]
 
-; GFX900: NumVgprs: 11
-; GFX908: NumVgprs: 10
-; GFX900: ScratchSize: 0
-; GFX908: ScratchSize: 0
-; GCN:    VGPRBlocks: 2
-; GFX900: NumVGPRsForWavesPerEU: 11
-; GFX908: NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_11_vgprs(ptr addrspace(1) %p) #2 {
   %tid = load volatile i32, ptr addrspace(1) poison
   %p1 = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %tid
@@ -61,11 +54,6 @@ define amdgpu_kernel void @max_11_vgprs(ptr addrspace(1) %p) #2 {
 ; GFX908-DAG: v_accvgpr_write_b32 a9, v{{[0-9]}}
 ; GCN-NOT:    a10
 
-; GFX908: NumVgprs: 10
-; GFX900: ScratchSize: 100
-; GFX908: ScratchSize: 68
-; GFX908: VGPRBlocks: 2
-; GFX908: NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_10_vgprs_spill_v32(ptr addrspace(1) %p) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid
@@ -84,14 +72,6 @@ define amdgpu_kernel void @max_10_vgprs_spill_v32(ptr addrspace(1) %p) #0 {
 ; GFX908-NOT: buffer_
 ; GFX908-DAG: v_accvgpr_read_b32
 
-; GFX900: NumVgprs: 256
-; GFX900: ScratchSize: 132
-; GFX908: NumVgprs: 252
-; GFX908: ScratchSize: 0
-; GFX900:    VGPRBlocks: 63
-; GFX908:    VGPRBlocks: 62
-; GFX900:    NumVGPRsForWavesPerEU: 256
-; GFX908:    NumVGPRsForWavesPerEU: 252
 define amdgpu_kernel void @max_256_vgprs_spill_9x32(ptr addrspace(1) %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid
@@ -135,14 +115,6 @@ define amdgpu_kernel void @max_256_vgprs_spill_9x32(ptr addrspace(1) %p) #1 {
 ; GFX908-NOT: buffer_
 ; GFX908-DAG: v_accvgpr_read_b32
 
-; GFX900: NumVgprs: 256
-; GFX908: NumVgprs: 254
-; GFX900: ScratchSize: 132
-; GFX908: ScratchSize: 0
-; GFX900: VGPRBlocks: 63
-; GFX908: VGPRBlocks: 63
-; GFX900: NumVGPRsForWavesPerEU: 256
-; GFX908: NumVGPRsForWavesPerEU: 254
 define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(ptr addrspace(1) %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid
@@ -218,6 +190,39 @@ st:
 
 
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+; GCN: ; max_11_vgprs Kernel info:
+; GFX900: NumVgprs: 11
+; GFX908: NumVgprs: 10
+; GFX900: ScratchSize: 0
+; GFX908: ScratchSize: 0
+; GCN:    VGPRBlocks: 2
+; GFX900: NumVGPRsForWavesPerEU: 11
+; GFX908: NumVGPRsForWavesPerEU: 10
+; GCN: ; max_10_vgprs_spill_v32 Kernel info:
+; GFX908: NumVgprs: 10
+; GFX900: ScratchSize: 100
+; GFX908: ScratchSize: 68
+; GFX908: VGPRBlocks: 2
+; GFX908: NumVGPRsForWavesPerEU: 10
+; GCN: ; max_256_vgprs_spill_9x32 Kernel info:
+; GFX900: NumVgprs: 256
+; GFX900: ScratchSize: 132
+; GFX908: NumVgprs: 252
+; GFX908: ScratchSize: 0
+; GFX900:    VGPRBlocks: 63
+; GFX908:    VGPRBlocks: 62
+; GFX900:    NumVGPRsForWavesPerEU: 256
+; GFX908:    NumVGPRsForWavesPerEU: 252
+; GCN: ; max_256_vgprs_spill_9x32_2bb Kernel info:
+; GFX900: NumVgprs: 256
+; GFX908: NumVgprs: 254
+; GFX900: ScratchSize: 132
+; GFX908: ScratchSize: 0
+; GFX900: VGPRBlocks: 63
+; GFX908: VGPRBlocks: 63
+; GFX900: NumVGPRsForWavesPerEU: 256
+; GFX908: NumVGPRsForWavesPerEU: 254
 
 attributes #0 = { nounwind "amdgpu-num-vgpr"="10" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,256" }

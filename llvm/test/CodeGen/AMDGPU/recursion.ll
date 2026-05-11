@@ -4,7 +4,6 @@
 
 ; CHECK-LABEL: {{^}}recursive:
 ; CHECK: .set .Lrecursive.private_seg_size, 16+max(16384)
-; CHECK: ScratchSize: 16
 
 ; V5-LABEL: {{^}}recursive:
 ; V5: .set .Lrecursive.has_recursion, 1
@@ -16,7 +15,6 @@ define void @recursive() {
 
 ; CHECK-LABEL: {{^}}tail_recursive:
 ; CHECK: .set .Ltail_recursive.private_seg_size, 0
-; CHECK: ScratchSize: 0
 define void @tail_recursive() {
   tail call void @tail_recursive()
   ret void
@@ -85,6 +83,11 @@ define amdgpu_kernel void @kernel_calls_tail_recursive_with_stack() {
   call void @tail_recursive_with_stack()
   ret void
 }
+
+; CHECK: ; recursive Function info:
+; CHECK: ScratchSize: 16
+; CHECK: ; tail_recursive Function info:
+; CHECK: ScratchSize: 0
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

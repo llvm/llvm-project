@@ -6,8 +6,6 @@
 # test, from 11 down to 7.
 
 # GCN-LABEL: test1:
-# OLD: NumVgprs: 11{{$}}
-# NEW: NumVgprs: 7{{$}}
 ---
 name: test1
 tracksRegLiveness: true
@@ -48,8 +46,6 @@ body: |
 ...
 
 # GCN-LABEL: test2:
-# OLD: NumVgprs: 7{{$}}
-# NEW: NumVgprs: 11{{$}}
 ---
 name: test2
 tracksRegLiveness: true
@@ -102,3 +98,10 @@ body: |
   bb.3:
     S_ENDPGM 0
 ...
+
+# GCN: ; test1 Function info:
+# OLD: NumVgprs: 11{{$}}
+# NEW: NumVgprs: 7{{$}}
+# GCN: ; test2 Function info:
+# OLD: NumVgprs: 7{{$}}
+# NEW: NumVgprs: 11{{$}}

@@ -10,7 +10,6 @@
 
 ; GCN-LABEL: test_lds_array_size_131076:
 ; GCN: .amdhsa_group_segment_fixed_size 131076
-; GCN: ; LDSByteSize: 131076 bytes/workgroup
 ; MESA: granulated_lds_size = 65
 define amdgpu_kernel void @test_lds_array_size_131076() {
   %gep = getelementptr inbounds [32768 x i32], ptr addrspace(3) @lds.array.size.131076, i32 0, i32 20
@@ -21,7 +20,6 @@ define amdgpu_kernel void @test_lds_array_size_131076() {
 
 ; GCN-LABEL: test_lds_array_size_163840:
 ; GCN: .amdhsa_group_segment_fixed_size 163840
-; GCN: ; LDSByteSize: 163840 bytes/workgroup
 ; MESA: granulated_lds_size = 80
 define amdgpu_kernel void @test_lds_array_size_163840() {
   %gep = getelementptr inbounds [40959 x i32], ptr addrspace(3) @lds.array.size.163840 , i32 0, i32 20
@@ -29,3 +27,8 @@ define amdgpu_kernel void @test_lds_array_size_163840() {
   store i32 %val, ptr addrspace(3) @lds.i32
   ret void
 }
+
+; GCN: ; test_lds_array_size_131076 Kernel info:
+; GCN: ; LDSByteSize: 131076 bytes/workgroup
+; GCN: ; test_lds_array_size_163840 Kernel info:
+; GCN: ; LDSByteSize: 163840 bytes/workgroup

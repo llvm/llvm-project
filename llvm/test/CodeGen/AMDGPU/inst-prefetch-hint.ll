@@ -24,9 +24,7 @@
 
 ; GCN-LABEL: .amdhsa_kernel large
 ; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large)<<4)&1008)>>4
-; GFX11: codeLenInByte = {{[0-9]+}}
 ; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end0-large)<<4)&4080)>>4
-; GFX12: codeLenInByte = {{[0-9]+}}
 ;; Object: kernel descriptor at 0x00, COMPUTE_PGM_RSRC3 at 0x2C:
 ;; gfx11 pref=3 (0x30), gfx12 pref=4 (0x40)
 ; OBJ-GFX11: 0020 {{.*}}30000000
@@ -40,7 +38,6 @@ bb:
 ; GCN-LABEL: .amdhsa_kernel small
 ; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small)<<4)&1008)>>4
 ; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end1-small)<<4)&4080)>>4
-; GCN: codeLenInByte = {{[0-9]+}}
 ;; Object: kernel descriptor at 0x40, COMPUTE_PGM_RSRC3 at 0x6C:
 ;; pref=1 (0x10) for both
 ; OBJ-GFX11: 0060 {{.*}}10000000
@@ -56,7 +53,6 @@ bb:
 ; GCN-LABEL: .amdhsa_kernel inline_asm
 ; GFX11: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm)<<4)&1008)>>4
 ; GFX12: .amdhsa_inst_pref_size ((instprefsize(.Lfunc_end2-inline_asm)<<4)&4080)>>4
-; GCN: codeLenInByte = {{[0-9]+}}
 ;; Object: kernel descriptor at 0x80, COMPUTE_PGM_RSRC3 at 0xAC:
 ;; pref=9 (0x90) for both
 ;; (.fill 256, 4, 0 = 1024 bytes + 4 s_endpgm = 1028 -> divideCeil(1028,128) = 9)
@@ -67,3 +63,11 @@ bb:
   call void asm sideeffect ".fill 256, 4, 0", ""()
   ret void
 }
+
+; GCN: ; large Kernel info:
+; GFX11: codeLenInByte = 3{{[0-9][0-9]$}}
+; GFX12: codeLenInByte = 4{{[0-9][0-9]$}}
+; GCN: ; small Kernel info:
+; GCN: codeLenInByte = {{[0-9]$}}
+; GCN: ; inline_asm Kernel info:
+; GCN: codeLenInByte = 24
