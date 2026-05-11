@@ -1648,16 +1648,16 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 define i16 @test_v64i16(<64 x i16> %a0) {
 ; SSE2-LABEL: test_v64i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psubusw %xmm1, %xmm5
-; SSE2-NEXT:    paddw %xmm1, %xmm5
-; SSE2-NEXT:    psubusw %xmm3, %xmm7
-; SSE2-NEXT:    paddw %xmm3, %xmm7
 ; SSE2-NEXT:    psubusw %xmm0, %xmm4
 ; SSE2-NEXT:    paddw %xmm0, %xmm4
 ; SSE2-NEXT:    psubusw %xmm2, %xmm6
 ; SSE2-NEXT:    paddw %xmm2, %xmm6
 ; SSE2-NEXT:    psubusw %xmm4, %xmm6
 ; SSE2-NEXT:    paddw %xmm4, %xmm6
+; SSE2-NEXT:    psubusw %xmm1, %xmm5
+; SSE2-NEXT:    paddw %xmm1, %xmm5
+; SSE2-NEXT:    psubusw %xmm3, %xmm7
+; SSE2-NEXT:    paddw %xmm3, %xmm7
 ; SSE2-NEXT:    psubusw %xmm5, %xmm7
 ; SSE2-NEXT:    paddw %xmm5, %xmm7
 ; SSE2-NEXT:    psubusw %xmm6, %xmm7
@@ -2145,24 +2145,24 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 define i8 @test_v128i8(<128 x i8> %a0) {
 ; SSE2-LABEL: test_v128i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pmaxub %xmm6, %xmm2
-; SSE2-NEXT:    pmaxub %xmm4, %xmm0
-; SSE2-NEXT:    pmaxub %xmm2, %xmm0
 ; SSE2-NEXT:    pmaxub %xmm7, %xmm3
 ; SSE2-NEXT:    pmaxub %xmm5, %xmm1
 ; SSE2-NEXT:    pmaxub %xmm3, %xmm1
-; SSE2-NEXT:    pmaxub %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-NEXT:    pmaxub %xmm6, %xmm2
+; SSE2-NEXT:    pmaxub %xmm4, %xmm0
+; SSE2-NEXT:    pmaxub %xmm2, %xmm0
 ; SSE2-NEXT:    pmaxub %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    pmaxub %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    pmaxub %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrlw $8, %xmm1
+; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    pmaxub %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    psrlw $8, %xmm0
+; SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;

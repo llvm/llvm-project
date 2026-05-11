@@ -1798,6 +1798,8 @@ public:
     virtual ~cxxTryBodyEmitter() = default;
   };
 
+  void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
+
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
                                      cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);

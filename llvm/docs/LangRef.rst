@@ -5760,10 +5760,13 @@ Clobber constraints
 A clobber constraint is indicated by a "``~``" prefix. A clobber does not
 consume an input operand, nor generate an output. Clobbers cannot use any of the
 general constraint code letters -- they may use only explicit register
-constraints, e.g., "``~{eax}``". The one exception is that a clobber string of
-"``~{memory}``" indicates that the assembly writes to arbitrary undeclared
-memory locations -- not only the memory pointed to by a declared indirect
-output.
+constraints, e.g., "``~{eax}``".
+
+The one exception is that a clobber string of "``~{memory}``" indicates that the
+assembly reads and writes to arbitrary undeclared memory locations -- not only
+the memory pointed to by a declared indirect output. Furthermore, the assembly
+may also cause synchronization with other threads, such as via release/acquire
+fences and atomic memory accesses.
 
 Note that clobbering named registers that are also present in output
 constraints is not legal.
@@ -8901,6 +8904,25 @@ function that has had all calls to it inlined.
     call void @foo(), !inline_history !0
 
     !0 = !{ptr @bar, null, ptr @baz}
+
+'``elf_section_properties``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The '``elf_section_properties``' metadata is attached to a function or
+global variable and is used when writing an object file in ELF format to
+specify the values of the global's section type (`sh_type`) and entry
+size (`sh_entsize`) fields. The first operand specifies the type, and
+the second operand specifies the entry size.
+
+Example:
+
+.. code-block:: llvm
+
+    @global = global i32 1, !elf_section_properties !{i32 1879002126, i32 8}
+
+This defines a global with type ``SHT_LLVM_CFI_JUMP_TABLE`` and entry
+size 8.
+
 
 Module Flags Metadata
 =====================

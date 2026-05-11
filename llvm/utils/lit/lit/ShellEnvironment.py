@@ -108,19 +108,19 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     redirects = [(0,), (1,), (2,)]
     for op, filename in cmd.redirects:
         if op == (">", 2):
-            redirects[2] = [filename, "w", None]
+            redirects[2] = [filename, "wb", None]
         elif op == (">>", 2):
-            redirects[2] = [filename, "a", None]
+            redirects[2] = [filename, "ab", None]
         elif op == (">&", 2) and filename in "012":
             redirects[2] = redirects[int(filename)]
         elif op == (">&",) or op == ("&>",):
-            redirects[1] = redirects[2] = [filename, "w", None]
+            redirects[1] = redirects[2] = [filename, "wb", None]
         elif op == (">",):
-            redirects[1] = [filename, "w", None]
+            redirects[1] = [filename, "wb", None]
         elif op == (">>",):
-            redirects[1] = [filename, "a", None]
+            redirects[1] = [filename, "ab", None]
         elif op == ("<",):
-            redirects[0] = [filename, "r", None]
+            redirects[0] = [filename, "rb", None]
         else:
             raise InternalShellError(
                 cmd, "Unsupported redirect: %r" % ((op, filename),)
@@ -173,11 +173,12 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
-            fd = open(redir_filename, mode, encoding="utf-8")
+            fd = open(redir_filename, mode)
+
         # Workaround a Win32 and/or subprocess bug when appending.
         #
         # FIXME: Actually, this is probably an instance of PR6753.
-        if mode == "a":
+        if mode == "ab":
             fd.seek(0, 2)
         # Mutate the underlying redirect list so that we can redirect stdout
         # and stderr to the same place without opening the file twice.

@@ -22,6 +22,7 @@
 #include <arm_acle.h>
 #endif
 
+#include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/stdint_proxy.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
@@ -282,6 +283,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   attrib->owned_stack = owned_stack;
   attrib->tls = tls.addr;
   attrib->tls_size = tls.size;
+  attrib->joiner = nullptr;
 
   start_args->thread_attrib = attrib;
   start_args->runner = runner;
@@ -340,6 +342,26 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 }
 
 int Thread::join(ThreadReturnValue &retval) {
+  if (self.attrib) {
+    // Reject self join.
+    if (self.attrib == attrib)
+      return EDEADLK;
+
+    // Do a best-effort check of concurrent/repeated join.
+    // This cmpxchg establishes exclusive joiner role by setting the joiner
+    // field iff there is no previous joiner
+    ThreadAttributes *expected = nullptr;
+    if (!attrib->joiner.compare_exchange_strong(expected, self.attrib,
+                                                cpp::MemoryOrder::ACQ_REL))
+      return EINVAL;
+
+    // Reject mutual join.
+    if (self.attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) == attrib) {
+      attrib->joiner.store(nullptr, cpp::MemoryOrder::RELEASE);
+      return EDEADLK;
+    }
+  }
+
   wait();
 
   if (attrib->style == ThreadStyle::POSIX)

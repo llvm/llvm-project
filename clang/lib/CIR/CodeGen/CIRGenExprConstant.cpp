@@ -1414,9 +1414,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (isa<MSGuidDecl>(d))
       cgm.errorNYI(d->getSourceRange(), "ConstantLValueEmitter: MSGuidDecl");
 
-    if (isa<UnnamedGlobalConstantDecl>(d))
-      cgm.errorNYI(d->getSourceRange(),
-                   "ConstantLValueEmitter: Unnamed global constant");
+    if (const auto *gcd = dyn_cast<UnnamedGlobalConstantDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfUnnamedGlobalConstantDecl(gcd));
 
     if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(d))
       return cgm.getBuilder().getGlobalViewAttr(
@@ -1762,6 +1762,16 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
 
     assert(innerSize < outerSize && "emitted over-large constant for atomic");
     cgm.errorNYI("emitForMemory: tail padding in atomic initializer");
+  }
+
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if (destType->isExtVectorBoolType() &&
+      !destType->isPackedVectorBoolType(cgm.getASTContext())) {
+    cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
+  }
+
+  if (destType->isBitIntType()) {
+    cgm.errorNYI("emitForMemory: _BitInt type");
   }
 
   return c;
