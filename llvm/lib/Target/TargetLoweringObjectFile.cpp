@@ -212,7 +212,8 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
     auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
     auto *Name = cast<MDString>(MD->getOperand(2));
     auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
-        TM->getFunctionSections() ? Name->getString() : StringRef());
+        TM->getFunctionSections() ? Name->getString() : StringRef(),
+        Hash->getZExtValue());
 
     Streamer.switchSection(S);
 

@@ -92,10 +92,12 @@ static bool hasTransposeLaneLayout(xegpu::TensorDescType tdescType) {
 }
 
 /// Rewrite `xegpu.create_nd_tdesc` to fold an array_length attribute into the
-/// resulting tensor descriptor type. Only applies when the source is a static
-/// memref; dynamic-shape sources are left unchanged. Skipped if any consumer
-/// load_nd carries a non-identity transpose, since stacking the array blocks
-/// along the non-FCD dimension would invalidate that load.
+/// resulting tensor descriptor type. Supports static memref, dynamic-shape
+/// memref, and raw-pointer (integer) sources — the memory region described by
+/// `shape`/`strides` is unchanged; only the tensor_desc view is narrowed along
+/// the FCD and tagged with `array_length`. Skipped if any consumer load_nd
+/// carries a non-identity transpose, since stacking the array blocks along the
+/// non-FCD dimension would invalidate that load.
 class OptimizeCreateNdDescOp : public OpRewritePattern<xegpu::CreateNdDescOp> {
 public:
   using OpRewritePattern<xegpu::CreateNdDescOp>::OpRewritePattern;
@@ -112,11 +114,8 @@ public:
     if (hasTransposeLaneLayout(tdescType))
       return failure();
 
-    // Only static memref sources are supported for now.
-    // TODO: extend to dynamic-shape memrefs and raw pointer sources by
-    // rewriting the `shape`/`strides` operands of create_nd_tdesc.
-    auto memrefSource = dyn_cast<TypedValue<MemRefType>>(op.getSource());
-    if (!memrefSource || !memrefSource.getType().hasStaticShape())
+    Value source = op.getSource();
+    if (!isa<MemRefType, IntegerType>(source.getType()))
       return failure();
 
     // Bail out if any consumer is a transposing load_nd.
@@ -135,8 +134,12 @@ public:
         tdescType.getBoundaryCheck(), tdescType.getMemorySpace(),
         tdescType.getLayout());
 
-    auto newOp = xegpu::CreateNdDescOp::create(rewriter, op.getLoc(),
-                                               newTdescType, memrefSource);
+    // The memory region is unchanged; pass through the existing shape/strides.
+    // The general builder recognizes the static-memref case and drops the
+    // redundant attributes.
+    auto newOp = xegpu::CreateNdDescOp::create(
+        rewriter, op.getLoc(), newTdescType, source, op.getMixedSizes(),
+        op.getMixedStrides());
     rewriter.replaceOp(op, newOp.getResult());
     return success();
   }

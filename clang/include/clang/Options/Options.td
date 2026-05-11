@@ -3578,6 +3578,10 @@ defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
+def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
+
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Embed the contents of all files read by this compilation into "
@@ -6410,7 +6414,7 @@ def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;
 def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
   HelpText<"Print the full library path of <file>">, MetaVarName<"<file>">,
-  Visibility<[ClangOption, CLOption]>;
+  Visibility<[ClangOption, FlangOption, CLOption]>;
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">,
