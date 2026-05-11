@@ -7340,9 +7340,12 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
-  Type *Ty = AI->getValOperand()->getType();
+/// Returns how NVPTX should expand a scalar atomicrmw with the given op and
+/// value type.
+static TargetLoweringBase::AtomicExpansionKind
+getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
+                            const NVPTXSubtarget &STI) {
+  using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
 
   // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
   // by the weird FTZ behavior PTX atom.add has:
@@ -7392,19 +7395,22 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 
-  assert(Ty->isIntegerTy() && "Ty should be integer at this point");
+  assert(Ty->isIntegerTy() &&
+         "Ty should be integer at this point. Integer operations must act on "
+         "an integer operand. We already cast non-integer CmpXChg operands to "
+         "integer.");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
-  switch (AI->getOperation()) {
+  switch (Op) {
   default:
     return AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::BinOp::Xchg:
+  case AtomicRMWInst::Xchg:
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
     [[fallthrough]];
-  case AtomicRMWInst::BinOp::And:
-  case AtomicRMWInst::BinOp::Or:
-  case AtomicRMWInst::BinOp::Xor:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor:
     switch (BitWidth) {
     case 8:
     case 16:
@@ -7420,12 +7426,12 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::Add:
-  case AtomicRMWInst::BinOp::Sub:
-  case AtomicRMWInst::BinOp::Max:
-  case AtomicRMWInst::BinOp::Min:
-  case AtomicRMWInst::BinOp::UMax:
-  case AtomicRMWInst::BinOp::UMin:
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
     switch (BitWidth) {
     case 8:
     case 16:
@@ -7441,8 +7447,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::UIncWrap:
-  case AtomicRMWInst::BinOp::UDecWrap:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
     switch (BitWidth) {
     case 32:
       return AtomicExpansionKind::None;
@@ -7459,11 +7465,49 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 
+NVPTXTargetLowering::AtomicExpansionKind
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  // TODO: once we support native elementwise vector atoms,
+  // return `AtomicExpansionKind::None` to preserve and lower them.
+  if (AI->isElementwise()) {
+    auto *VecTy = cast<FixedVectorType>(AI->getType());
+    Type *LaneTy = VecTy->getElementType();
+
+    // Collapse <1 x T> elementwise RMWs to scalar RMWs
+    if (VecTy->getNumElements() == 1)
+      return AtomicExpansionKind::Elementwise;
+
+    // If the scalar lane op is natively supported, return
+    // Elementwise so halving eventually bottoms out at the scalar base
+    // case, where this hook returns None for each scalar lane and the
+    // scalar `atom.*` instruction is preserved.
+    if (getScalarAtomicRMWExpansion(AI->getOperation(), LaneTy, STI) ==
+        AtomicExpansionKind::None)
+      return AtomicExpansionKind::Elementwise;
+
+    // If the whole vector fits a single native cmpxchg, emit one wide
+    // cmpxchg loop at the current width.
+    const DataLayout &DL = AI->getDataLayout();
+    uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+      return AtomicExpansionKind::CmpXChg;
+
+    // If the vector is too wide for a single native cmpxchg, halve further to
+    // emit multiple cmpxchg loops.
+    return AtomicExpansionKind::Elementwise;
+  }
+
+  return getScalarAtomicRMWExpansion(AI->getOperation(),
+                                     AI->getValOperand()->getType(), STI);
+}
+
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  // This function returns true iff the operation is emulated using a CAS-loop,
-  // or if it has the memory order seq_cst (which is not natively supported in
-  // the PTX `atom` instruction).
+  // This function returns true iff AtomicExpandPass should enforce the
+  // instruction's ordering with fences instead of leaving that ordering on the
+  // atomic instruction itself. This covers CAS-loop emulation, seq_cst
+  // operations (which are not natively supported by the PTX `atom`
+  // instruction), and elementwise atomicrmw expansion.
   //
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
   // are lowered to CAS emulation loops that preserve their memory order,
@@ -7471,8 +7515,13 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   // atom.cas.relaxed.sco instructions within the loop, and fences before and
   // after the loop to restore order.
   //
+  // For ordered elementwise atomicrmw, if we expand elementwise, it is also
+  // more efficient to insert fences around the whole split sequence once and
+  // downgrade the ordering for the entire sequence, rather than having the
+  // stronger ordering on every expanded atomicrmw.
+  //
   // Atomic instructions efficiently supported by PTX are lowered to
-  // `atom.<op>.<sem>.<scope` instruction with their corresponding memory order
+  // `atom.<op>.<sem>.<scope>` instruction with their corresponding memory order
   // and scope. Since PTX does not support seq_cst, we emulate it by lowering to
   // a fence.sc followed by an atom according to the PTX atomics ABI
   // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
@@ -7480,9 +7529,12 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     return (cast<IntegerType>(CI->getCompareOperand()->getType())
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
-  if (auto *RI = dyn_cast<AtomicRMWInst>(I))
-    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
+    AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
+    return Expansion == AtomicExpansionKind::CmpXChg ||
+           Expansion == AtomicExpansionKind::Elementwise ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  }
   return false;
 }
 
@@ -7511,9 +7563,9 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
           STI.getMinCmpXchgSizeInBits())
     return AtomicOrdering::Acquire;
-  else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
-           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+      RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+      shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
     return AtomicOrdering::Acquire;
 
   return AtomicOrdering::Monotonic;
@@ -7558,12 +7610,21 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   auto SSID = getAtomicSyncScopeID(Inst);
   assert(SSID.has_value() && "Expected an atomic operation");
 
-  bool IsEmulated =
-      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
-                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+  if (!isAcquireOrStronger(Ord))
+    return nullptr;
 
-  if (isAcquireOrStronger(Ord) && IsEmulated)
+  bool NeedsTrailingAcquireFence = false;
+  if (CI)
+    NeedsTrailingAcquireFence =
+        cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+        STI.getMinCmpXchgSizeInBits();
+  else {
+    AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
+    NeedsTrailingAcquireFence = Expansion == AtomicExpansionKind::CmpXChg ||
+                                Expansion == AtomicExpansionKind::Elementwise;
+  }
+
+  if (NeedsTrailingAcquireFence)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
 
   return nullptr;
