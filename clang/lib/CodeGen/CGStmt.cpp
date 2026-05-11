@@ -2867,16 +2867,21 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     const Expr *OutExpr = S.getOutputExpr(i);
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
-    std::string GCCReg;
-    OutputConstraint = S.addVariableConstraints(
-        OutputConstraint, *OutExpr, getTarget(), Info.earlyClobber(),
+    SmallVector<std::string> GCCRegs;
+    OutputConstraint = S.AddVariableConstraints(
+        getContext(), OutputConstraint, *OutExpr, getTarget(),
+        Info.earlyClobber(),
         [&](const Stmt *UnspStmt, StringRef Msg) {
           CGM.ErrorUnsupported(UnspStmt, Msg);
         },
-        &GCCReg);
+        &GCCRegs);
     // Give an error on multiple outputs to same physreg.
-    if (!GCCReg.empty() && !PhysRegOutputs.insert(GCCReg).second)
-      CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + GCCReg);
+    if (!GCCRegs.empty()) {
+      for (auto R : GCCRegs) {
+        if (!PhysRegOutputs.insert(R).second)
+          CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + R);
+      }
+    }
 
     OutputConstraints.push_back(OutputConstraint);
     LValue Dest = EmitLValue(OutExpr);
@@ -2987,7 +2992,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
             std::max((uint64_t)LargestVectorWidth,
                      VT->getPrimitiveSizeInBits().getKnownMinValue());
       // Only tie earlyclobber physregs.
-      if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
+      if (Info.allowsRegister() && (GCCRegs.empty() || Info.earlyClobber()))
         InOutConstraints += llvm::utostr(i);
       else
         InOutConstraints += OutputConstraint;
@@ -3028,9 +3033,10 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     InputConstraint =
         getTarget().simplifyConstraint(InputConstraint, &OutputConstraintInfos);
 
-    InputConstraint = S.addVariableConstraints(
-        InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
-        getTarget(), false /* No EarlyClobber */,
+    InputConstraint = S.AddVariableConstraints(
+        getContext(), InputConstraint,
+        *InputExpr->IgnoreParenNoopCasts(getContext()), getTarget(),
+        false /* No EarlyClobber */,
         [&](const Stmt *UnspStmt, std::string_view Msg) {
           CGM.ErrorUnsupported(UnspStmt, Msg);
         });
