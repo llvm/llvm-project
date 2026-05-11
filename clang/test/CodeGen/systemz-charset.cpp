@@ -21,6 +21,9 @@ char32_t UnicodeChar32 = U'1';
 //CHECK: i32 49
 //CHECK-UTF8: i32 49
 
+int FourChar = '1234';
+//CHECK: i32 -235736076
+
 const char *EscapeCharacters8 = u8"\a\b\f\n\r\t\v\\\'\"\?";
 //CHECK: c"\07\08\0C\0A\0D\09\0B\\'\22?\00"
 //CHECK-UTF8: c"\07\08\0C\0A\0D\09\0B\\'\22?\00"
