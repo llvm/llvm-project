@@ -57,7 +57,7 @@ _Images::_Images() {
   std::sort(images_.begin(), images_.begin() + count_);
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void _Trace::populate_images() {
+_LIBCPP_EXPORTED_FROM_ABI void _Trace::__populate_images() {
   _Images images;
   size_t i = 0;
   for (auto& entry : __entry_iters_()) {
