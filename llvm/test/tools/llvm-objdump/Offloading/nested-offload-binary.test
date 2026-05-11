@@ -1,23 +1,5 @@
 ## Test that llvm-objdump can display nested OffloadBinary images.
 
-## The content blobs below were generated from the following YAML Input
-##!Offload
-##Members:
-##  - ImageKind:      IMG_Bitcode
-##    OffloadKind:    OFK_OpenMP
-##    String:
-##    - Key:            "triple"
-##      Value:          "x-y-z"
-##    - Key:            "arch"
-##      Value:          "arch1"
-##  - ImageKind:      IMG_Bitcode
-##    OffloadKind:    OFK_OpenMP
-##    String:
-##    - Key:            "triple"
-##      Value:          "x-y-z"
-##    - Key:            "arch"
-##      Value:          "arch2"
-
 # RUN: yaml2obj %S/Inputs/inner.yaml -o %t-inner.bin
 # RUN: %python -c "import sys; hex = open('%t-inner.bin', 'rb').read().hex(); test = open('%s', 'r').read(); sys.stdout.write(test.replace('INNER_IMAGE', hex))" | yaml2obj - -o %t.bin
 # RUN: llvm-objdump --offloading %t.bin | FileCheck --match-full-lines --strict-whitespace --implicit-check-not={{.}} %s
