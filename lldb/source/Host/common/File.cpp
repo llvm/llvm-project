@@ -448,13 +448,6 @@ Status NativeFileBase::Flush() {
   return error;
 }
 
-Status NativeFileBase::Sync() {
-  // Flushing dirty file data to disk uses platform-specific calls
-  // (fsync on POSIX, FlushFileBuffers on Windows).  Subclasses override.
-  return Status::FromErrorString(
-      "Sync is not supported on this NativeFile implementation");
-}
-
 #if defined(__APPLE__)
 // Darwin kernels only can read/write <= INT_MAX bytes
 #define MAX_READ_SIZE INT_MAX
@@ -597,22 +590,6 @@ Status NativeFileBase::Write(const void *buf, size_t &num_bytes) {
   num_bytes = 0;
   error = Status::FromErrorString("invalid file handle");
   return error;
-}
-
-Status NativeFileBase::Read(void *buf, size_t &num_bytes, off_t &offset) {
-  // Default: not supported.  POSIX subclass implements this with pread();
-  // Windows subclass emulates it with lseek/Read since Win32 lacks pread.
-  num_bytes = 0;
-  return Status::FromErrorString(
-      "positional Read is not supported on this platform");
-}
-
-Status NativeFileBase::Write(const void *buf, size_t &num_bytes,
-                             off_t &offset) {
-  // Default: not supported.  See Read(off_t) above.
-  num_bytes = 0;
-  return Status::FromErrorString(
-      "positional Write is not supported on this platform");
 }
 
 size_t NativeFileBase::PrintfVarArg(const char *format, va_list args) {

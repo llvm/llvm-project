@@ -99,30 +99,46 @@ bool NativeFileWindows::TryWriteStreamUnlocked(const void *buf,
 }
 
 Status NativeFileWindows::Read(void *buf, size_t &num_bytes, off_t &offset) {
-  // Win32 has no pread(); emulate it by saving the current offset, seeking,
-  // reading, and restoring.
-  std::lock_guard<std::mutex> guard(offset_access_mutex);
-  long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
-  SeekFromStart(offset);
-  Status error = NativeFileBase::Read(buf, num_bytes);
-  if (!error.Fail())
-    SeekFromStart(cur);
+  Status error;
+
+  int fd = GetDescriptor();
+  if (fd != kInvalidDescriptor) {
+    // Win32 has no pread(); emulate it by saving the current offset, seeking,
+    // reading, and restoring.
+    std::lock_guard<std::mutex> guard(offset_access_mutex);
+    long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
+    SeekFromStart(offset);
+    error = NativeFileBase::Read(buf, num_bytes);
+    if (!error.Fail())
+      SeekFromStart(cur);
+  } else {
+    num_bytes = 0;
+    error = Status::FromErrorString("invalid file handle");
+  }
   return error;
 }
 
 Status NativeFileWindows::Write(const void *buf, size_t &num_bytes,
                                 off_t &offset) {
-  // Win32 has no pwrite(); same trick as Read above, but the post-write
-  // file position is what the caller wants reported back via `offset`.
-  std::lock_guard<std::mutex> guard(offset_access_mutex);
-  long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
-  SeekFromStart(offset);
-  Status error = NativeFileBase::Write(buf, num_bytes);
-  long after = ::lseek(m_descriptor, 0, SEEK_CUR);
+  Status error;
 
-  if (!error.Fail())
-    SeekFromStart(cur);
+  int fd = GetDescriptor();
+  if (fd != kInvalidDescriptor) {
+    // Win32 has no pwrite(); same trick as Read above, but the post-write
+    // file position is what the caller wants reported back via `offset`.
+    std::lock_guard<std::mutex> guard(offset_access_mutex);
+    long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
+    SeekFromStart(offset);
+    error = NativeFileBase::Write(buf, num_bytes);
+    long after = ::lseek(m_descriptor, 0, SEEK_CUR);
 
-  offset = after;
+    if (!error.Fail())
+      SeekFromStart(cur);
+
+    offset = after;
+  } else {
+    num_bytes = 0;
+    error = Status::FromErrorString("invalid file handle");
+  }
   return error;
 }

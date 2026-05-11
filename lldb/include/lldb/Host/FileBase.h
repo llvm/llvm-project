@@ -88,7 +88,6 @@ public:
   ///
   /// \return
   ///    success, ENOTSUP, or another error.
-
   Status Read(void *buf, size_t &num_bytes) override;
 
   /// Write bytes from buf to a file at the current file position.
@@ -392,14 +391,6 @@ public:
     Unowned = false,
   };
 
-  NativeFileBase();
-
-  NativeFileBase(FILE *fh, OpenOptions options, bool transfer_ownership);
-
-  NativeFileBase(int fd, OpenOptions options, bool transfer_ownership);
-
-  ~NativeFileBase() override { Close(); }
-
   bool IsValid() const override;
 
   Status Read(void *buf, size_t &num_bytes) override;
@@ -412,10 +403,11 @@ public:
   off_t SeekFromStart(off_t offset, Status *error_ptr = nullptr) override;
   off_t SeekFromCurrent(off_t offset, Status *error_ptr = nullptr) override;
   off_t SeekFromEnd(off_t offset, Status *error_ptr = nullptr) override;
-  Status Read(void *dst, size_t &num_bytes, off_t &offset) override;
-  Status Write(const void *src, size_t &num_bytes, off_t &offset) override;
+  virtual Status Read(void *dst, size_t &num_bytes, off_t &offset) override;
+  virtual Status Write(const void *src, size_t &num_bytes,
+                       off_t &offset) override;
   Status Flush() override;
-  Status Sync() override;
+  virtual Status Sync() override;
   size_t PrintfVarArg(const char *format, va_list args) override;
   llvm::Expected<OpenOptions> GetOptions() const override;
 
@@ -426,6 +418,14 @@ public:
   static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
+  NativeFileBase();
+
+  NativeFileBase(FILE *fh, OpenOptions options, bool transfer_ownership);
+
+  NativeFileBase(int fd, OpenOptions options, bool transfer_ownership);
+
+  ~NativeFileBase() override { Close(); }
+
   struct ValueGuard {
     ValueGuard(std::mutex &m, bool b) : guard(m, std::adopt_lock), value(b) {}
     std::lock_guard<std::mutex> guard;
