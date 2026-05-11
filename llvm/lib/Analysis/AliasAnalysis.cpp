@@ -458,34 +458,12 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
 // Helper method implementation
 //===----------------------------------------------------------------------===//
 
-/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
-/// than monotonic atomic load/store.
-static ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
-                                 AAQueryInfo &AAQI) {
-  if (!Loc.Ptr)
-    return ModRefInfo::ModRef;
-
-  // If the location is *never* captured, it cannot be affected by
-  // synchronizing operations. However, we cannot ignore locations that are
-  // only captured after the operation, as the synchronization may still have
-  // an effect if the object is only captured *later*. As such, set I to null
-  // and ReturnCaptures to true here.
-  const Value *Obj = getUnderlyingObject(Loc.Ptr);
-  if (capturesNothing(AAQI.CA->getCapturesBefore(
-          Obj, /*I=*/nullptr, /*OrAt=*/true, /*ReturnCaptures=*/true)))
-    return ModRefInfo::NoModRef;
-
-  // If Loc is a constant memory location, the synchronization operation
-  // definitely could not modify it.
-  return AA->getModRefInfoMask(Loc);
-}
-
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
   if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
-    return getSyncEffects(this, Loc, AAQI);
+    return ModRefInfo::ModRef;
 
   // If the load address doesn't alias the given address, it doesn't read
   // or write the specified memory.
@@ -503,7 +481,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
   if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
-    return getSyncEffects(this, Loc, AAQI);
+    return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(S), Loc, AAQI, S);
@@ -537,9 +515,14 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *F,
         return ModRefInfo::NoModRef;
     }
 
-    return Result & getSyncEffects(this, Loc, AAQI);
-  }
+    // Apply the ModRef mask. This ensures that if Loc is a constant memory
+    // location, we take into account the fact that the fence definitely could
+    // not modify the memory location.
+    if (!isNoModRef(Result))
+      Result &= getModRefInfoMask(Loc);
 
+    return Result;
+  }
   return ModRefInfo::ModRef;
 }
 
@@ -593,7 +576,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     AAQueryInfo &AAQI) {
   // Acquire/Release cmpxchg has properties that matter for arbitrary addresses.
   if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
-    return getSyncEffects(this, Loc, AAQI);
+    return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(CX), Loc, AAQI, CX);
@@ -611,7 +594,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     AAQueryInfo &AAQI) {
   // Acquire/Release atomicrmw has properties that matter for arbitrary addresses.
   if (isStrongerThanMonotonic(RMW->getOrdering()))
-    return getSyncEffects(this, Loc, AAQI);
+    return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(RMW), Loc, AAQI, RMW);

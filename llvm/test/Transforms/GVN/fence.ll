@@ -37,9 +37,9 @@ define i32 @test2(ptr %addr.i) {
 ; ordering property (though it is that too), but a liveness
 ; property.  We expect to eventually see the value of store by
 ; another thread when spinning on that location.
-define i32 @test3(ptr %addr.i) {
+define i32 @test3(ptr noalias %addr.i, ptr noalias %otheraddr) {
 ; CHECK-LABEL: define i32 @test3
-; CHECK-SAME: (ptr [[ADDR_I:%.*]]) {
+; CHECK-SAME: (ptr noalias [[ADDR_I:%.*]], ptr noalias [[OTHERADDR:%.*]]) {
 ; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[ADDR_I]], align 4
 ; CHECK-NEXT:    fence acquire
