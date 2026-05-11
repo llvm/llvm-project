@@ -164,7 +164,8 @@ private:
     Futex shared_futex;
   };
 
-  bool is_shared;
+  const bool is_shared;
+  const bool is_realtime;
 
   LIBC_INLINE void notify(bool is_broadcast) {
     if (LIBC_UNLIKELY(is_shared)) {
@@ -173,9 +174,9 @@ private:
       // increase the sequence number
       shared_futex.fetch_add(1);
       if (is_broadcast)
-        shared_futex.notify_all();
+        shared_futex.notify_all(/*is_shared=*/true);
       else
-        shared_futex.notify_one();
+        shared_futex.notify_one(/*is_shared=*/true);
       return;
     }
 
@@ -225,8 +226,9 @@ private:
   }
 
 public:
-  LIBC_INLINE constexpr CndVar(bool is_shared)
-      : waiter_queue{}, queue_lock{}, is_shared(is_shared) {
+  LIBC_INLINE constexpr CndVar(bool is_shared, bool is_realtime = false)
+      : waiter_queue{}, queue_lock{}, is_shared(is_shared),
+        is_realtime(is_realtime) {
     if (is_shared) {
       new (&shared_waiters) cpp::Atomic<size_t>(0);
       new (&shared_futex) Futex(0);
@@ -243,6 +245,10 @@ public:
     waiter_queue.prev = nullptr;
     waiter_queue.next = nullptr;
   }
+
+  // The is_realtime field is just a field we spared for pthread_cond_t
+  // It is not used in wait directly.
+  LIBC_INLINE bool default_clock_is_realtime() const { return is_realtime; }
 
   // TODO: register callback for pthread cancellation
   LIBC_INLINE CndVarResult wait(Mutex *mutex,

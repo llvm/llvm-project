@@ -420,7 +420,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
   if (m_command_options.top_level && !m_command_options.allow_jit) {
     result.AppendErrorWithFormat(
-        "Can't disable JIT compilation for top-level expressions.");
+        "Can't disable JIT compilation for top-level expressions");
     return false;
   }
 
@@ -593,6 +593,8 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
 
   if (command.empty()) {
     GetMultilineExpression();
+    // Still gathering input; the IOHandler will set the final status.
+    result.SetStatus(eReturnStatusStarted);
     return;
   }
 
@@ -660,6 +662,8 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     // No expression following options
     else if (expr.empty()) {
       GetMultilineExpression();
+      // Still gathering input; the IOHandler will set the final status.
+      result.SetStatus(eReturnStatusStarted);
       return;
     }
   }

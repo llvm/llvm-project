@@ -938,8 +938,7 @@ public:
   const ValueLatticeElement &getLatticeValueFor(Value *V) const {
     assert(!V->getType()->isStructTy() &&
            "Should use getStructLatticeValueFor");
-    DenseMap<Value *, ValueLatticeElement>::const_iterator I =
-        ValueState.find(V);
+    auto I = ValueState.find(V);
     assert(I != ValueState.end() &&
            "V not found in ValueState nor Paramstate map!");
     return I->second;
