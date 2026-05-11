@@ -19,8 +19,8 @@
 // Step 2b: Run with content validation - no difference.
 // RUN: %{ctu_analysis} %t/main.c -fvalidate-ast-input-files-content
 
-// Step 3: Advance the modification time of the source from which the PCH was derived.
-// RUN: touch -d "+2 hours" %t/other.c
+// Step 3: Advance mtime of the source from which PCH was built.
+// RUN: %python -c "import os, sys, time; os.utime(sys.argv[1], (time.time() + 120, time.time() + 120))" %t/other.c
 
 // Step 4a: Run CTU using the "stale" PCH, and it should still load it and find the division by zero bug.
 // RUN: %{ctu_analysis} -fvalidate-ast-input-files-content %t/main.c
