@@ -780,7 +780,6 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
-
   AST->Reader = llvm::makeIntrusiveRefCnt<ASTReader>(
       *AST->PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr,
       *AST->CodeGenOpts, ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
