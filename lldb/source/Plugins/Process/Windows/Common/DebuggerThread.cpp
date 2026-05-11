@@ -605,7 +605,8 @@ DWORD
 DebuggerThread::HandleODSEvent(const OUTPUT_DEBUG_STRING_INFO &info,
                                DWORD thread_id) {
   m_debug_delegate->OnDebugString(
-      llvm::bit_cast<lldb::addr_t>(info.lpDebugStringData),
+      static_cast<lldb::addr_t>(
+          reinterpret_cast<uintptr_t>(info.lpDebugStringData)),
       info.fUnicode == TRUE, info.nDebugStringLength);
   return DBG_CONTINUE;
 }
