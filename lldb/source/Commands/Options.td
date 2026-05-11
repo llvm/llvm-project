@@ -71,6 +71,9 @@ let Command = "settings clear" in {
 let Command = "settings show" in {
   def setshow_defaults : Option<"defaults", "d">,
                          Desc<"Include ${d}efault values if defined.">;
+  def setshow_changed : Option<"changed", "c">,
+                        Desc<"Only show settings whose value differs from the "
+                             "default.">;
 }
 
 let Command = "breakpoint list" in {
@@ -867,7 +870,8 @@ let Command = "log enable" in {
   def log_file : Option<"file", "f">,
                  Group<1>,
                  Arg<"Filename">,
-                 Desc<"Set the destination file to log to.">;
+                 Desc<"Set the destination file that all the enabled "
+                      "categories in the specified log channel will log to.">;
   def log_handler : Option<"log-handler", "h">,
                     Group<1>,
                     EnumArg<"LogHandler">,

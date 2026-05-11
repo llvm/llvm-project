@@ -960,6 +960,14 @@ namespace ranges {
     requires constructible_from<range_value_t<R>, range_reference_t<R>>
     constexpr auto ranges::fold_left_first(R&& r, F f);                                             // since C++23
 
+  template<bidirectional_iterator I, sentinel_for<I> S, class T = iter_value_t<I>,
+          indirectly-binary-right-foldable<T, I> F>
+    constexpr auto ranges::fold_right(I first, S last, T init, F f);
+
+  template<bidirectional_range R, class T = range_value_t<R>,
+          indirectly-binary-right-foldable<T, iterator_t<R>> F>
+    constexpr auto ranges::fold_right(R&& r, T init, F f);
+
   template<class I, class T>
     using fold_left_with_iter_result = in_value_result<I, T>;                                       // since C++23
 

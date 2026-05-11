@@ -1053,7 +1053,7 @@ attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
 ; CHECK: attributes #[[ATTR23]] = { "amdgpu-agpr-alloc"="7" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR24]] = { "amdgpu-agpr-alloc"="3" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR25:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR26:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR26:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR27:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR28:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR29:[0-9]+]] = { nocallback nounwind "target-cpu"="gfx90a" }

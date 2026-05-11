@@ -212,3 +212,12 @@ function(libomp_string_to_list str return_list)
   set(${return_list} "${outstr}" PARENT_SCOPE)
 endfunction()
 
+# Register built targets with the top-level `openmp` meta-target in openmp/CMakeLists.txt.
+function(openmp_register_meta_dep)
+  foreach(tgt IN LISTS ARGN)
+    if(TARGET openmp AND TARGET "${tgt}")
+      add_dependencies(openmp "${tgt}")
+    endif()
+  endforeach()
+endfunction()
+
