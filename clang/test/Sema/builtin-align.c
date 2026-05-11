@@ -25,6 +25,10 @@ void test_parameter_types(char *ptr, size_t size) {
   (void)ALIGN_BUILTIN((int)e, 2); // but with a cast it is fine
   (void)ALIGN_BUILTIN((int)b, 2); // but with a cast it is fine
 
+  // Floating point types are not allowed:
+  (void)ALIGN_BUILTIN(1.0, 4);    // expected-error {{operand of type 'double' where arithmetic or pointer type is required}} expected-note {{floating point types are not allowed here}}
+  (void)ALIGN_BUILTIN(1.0f, 4);   // expected-error {{operand of type 'float' where arithmetic or pointer type is required}} expected-note {{floating point types are not allowed here}}
+
   // The second parameter must be an integer type (but not enum or _Bool):
   (void)ALIGN_BUILTIN(ptr, size);
   (void)ALIGN_BUILTIN(ptr, ptr);    // expected-error {{used type 'char *' where integer is required}}
@@ -129,5 +133,5 @@ char *test_array_and_fnptr(void) {
   (void)(ALIGN_BUILTIN(buf, 16));
   // But not on functions and function pointers:
   (void)(ALIGN_BUILTIN(test_array_and_fnptr, 16));  // expected-error{{operand of type 'char *(void)' where arithmetic or pointer type is required}}
-  (void)(ALIGN_BUILTIN(&test_array_and_fnptr, 16)); // expected-error{{operand of type 'char *(*)(void)' where arithmetic or pointer type is required}}
+  (void)(ALIGN_BUILTIN(&test_array_and_fnptr, 16)); // expected-error{{operand of type 'char *(*)(void)' where arithmetic or pointer type is required}} expected-note{{function pointers are not allowed here}}
 }

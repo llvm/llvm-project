@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_SCOREBOARDHAZARDRECOGNIZER_H
 #define LLVM_CODEGEN_SCOREBOARDHAZARDRECOGNIZER_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include <cassert>

@@ -111,14 +111,14 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // EXTENDED-LABEL: // LLT Objects.
 // EXTENDED-NEXT:  enum {
+// EXTENDED-NEXT:    GILLT_s32,
 // EXTENDED-NEXT:    GILLT_i32,
-// EXTENDED-NEXT:    GILLT_f32,
 // EXTENDED-NEXT:    GILLT_p0s32,
 // EXTENDED-NEXT:  };
 // EXTENDED-NEXT:  const static size_t NumTypeObjects = 3;
 // EXTENDED-NEXT:  const static LLT TypeObjects[] = {
+// EXTENDED-NEXT:    LLT::scalar(32),
 // EXTENDED-NEXT:    LLT(LLT::Kind::INTEGER, ElementCount::getFixed(0), 32),
-// EXTENDED-NEXT:    LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 32, LLT::FpSemantics::S_IEEEsingle),
 // EXTENDED-NEXT:    LLT::pointer(0, 32),
 // EXTENDED-NEXT:  };
 
@@ -570,7 +570,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 1926 bytes
+// R00O-NEXT:  }; // Size: 1934 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,

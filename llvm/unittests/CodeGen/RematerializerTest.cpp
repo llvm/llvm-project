@@ -7,96 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Rematerializer.h"
-#include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/CodeGen/MIRParser/MIRParser.h"
-#include "llvm/CodeGen/MachineDomTreeUpdater.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/SourceMgr.h"
+#include "CodeGenTestBase.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
-#include "gtest/gtest.h"
-#include <memory>
 
 using namespace llvm;
 using RegisterIdx = Rematerializer::RegisterIdx;
 
-class RematerializerTest : public testing::Test {
+class RematerializerTest : public CodeGenTestBase {
 public:
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<Module> M;
-  std::unique_ptr<MachineModuleInfo> MMI;
-
-  std::unique_ptr<MIRParser> MIR;
   std::unique_ptr<SmallVector<Rematerializer::RegionBoundaries>> Regions;
   std::unique_ptr<Rematerializer> Remater;
   MachineFunction *MF;
-
-  LoopAnalysisManager LAM;
-  MachineFunctionAnalysisManager MFAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-
-  ModulePassManager MPM;
-  FunctionPassManager FPM;
-  MachineFunctionPassManager MFPM;
-  ModuleAnalysisManager MAM;
 
   static void SetUpTestCase() {
     InitializeAllTargets();
     InitializeAllTargetMCs();
   }
 
-  void SetUp() override {
-    Triple TargetTriple("amdgcn--");
-    std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    if (!T)
-      GTEST_SKIP();
-    TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        TargetTriple, "gfx950", "", Options, std::nullopt));
-    if (!TM)
-      GTEST_SKIP();
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
-
-    PassBuilder PB(TM.get());
-    PB.registerModuleAnalyses(MAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerLoopAnalyses(LAM);
-    PB.registerMachineFunctionAnalyses(MFAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-    MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
-  }
+  void SetUp() override { setUpImpl("amdgcn--", "gfx950", ""); }
 
   bool parseMIRAndInit(StringRef MIRCode, StringRef FunName) {
-    SMDiagnostic Diagnostic;
-    std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
-    MIR = createMIRParser(std::move(MBuffer), Context);
-    if (!MIR)
+    if (!parseMIR(MIRCode))
       return false;
 
-    M = MIR->parseIRModule();
-    M->setDataLayout(TM->createDataLayout());
-
-    if (MIR->parseMachineFunctions(*M, MAM)) {
-      M.reset();
-      return false;
-    }
-
-    MF = &FAM.getResult<MachineFunctionAnalysis>(*M->getFunction(FunName))
-              .getMF();
+    MF = &CodeGenTestBase::getMF(FunName);
     LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(*MF);
 
     // Create regions for the rematerializer. Both MBBs and terminator MIs

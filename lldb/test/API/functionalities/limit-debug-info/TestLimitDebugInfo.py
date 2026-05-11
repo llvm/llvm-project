@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class LimitDebugInfoTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 

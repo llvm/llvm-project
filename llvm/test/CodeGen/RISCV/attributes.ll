@@ -149,6 +149,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+supm %s -o - | FileCheck --check-prefix=RV32SUPM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smctr  %s -o - | FileCheck --check-prefix=RV32SMCTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssctr  %s -o - | FileCheck --check-prefix=RV32SSCTR %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-p %s -o - | FileCheck --check-prefix=RV32P %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zibi %s -o - | FileCheck --check-prefix=RV32ZIBI %s
 
 ; RUN: llc -mtriple=riscv64 %s -o - | FileCheck %s
@@ -241,6 +242,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zcmt %s -o - | FileCheck --check-prefixes=CHECK,RV64ZCMT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ziccamoa %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCAMOA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ziccamoc %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCAMOC %s
+; RUN: llc -mtriple=riscv64 -mattr=+ziccid %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCID %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ziccif %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCIF %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicclsm %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCLSM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ziccrse %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCRSE %s
@@ -472,7 +474,7 @@
 ; RV32SUPM: .attribute 5, "rv32i2p1_supm1p0"
 ; RV32SMCTR: .attribute 5, "rv32i2p1_smctr1p0_sscsrind1p0"
 ; RV32SSCTR: .attribute 5, "rv32i2p1_sscsrind1p0_ssctr1p0"
-; RV32P: .attribute 5, "rv32i2p1_p0p18"
+; RV32P: .attribute 5, "rv32i2p1_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0"
 ; RV32ZIBI: .attribute 5, "rv32i2p1_zibi0p1"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0_zmmul1p0"
@@ -562,6 +564,7 @@
 ; RV64ZCMT: .attribute 5, "rv64i2p1_c2p0_zicsr2p0_zca1p0_zcmt1p0"
 ; RV64ZICCAMOA: .attribute 5, "rv64i2p1_ziccamoa1p0"
 ; RV64ZICCAMOC: .attribute 5, "rv64i2p1_ziccamoc1p0"
+; RV64ZICCID: .attribute 5, "rv64i2p1_ziccid1p0_ziccif1p0"
 ; RV64ZICCIF: .attribute 5, "rv64i2p1_ziccif1p0"
 ; RV64ZICCLSM: .attribute 5, "rv64i2p1_zicclsm1p0"
 ; RV64ZICCRSE: .attribute 5, "rv64i2p1_ziccrse1p0"

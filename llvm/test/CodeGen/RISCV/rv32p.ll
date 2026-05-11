@@ -58,6 +58,16 @@ define void @pli_b_store_i32(ptr %p) {
   ret void
 }
 
+define void @pli_b_store_i16(ptr %p) {
+; CHECK-LABEL: pli_b_store_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, -127
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i16 u0x8181, ptr %p
+  ret void
+}
+
 define i32 @plui_h_i32(ptr %p) {
 ; CHECK-LABEL: plui_h_i32:
 ; CHECK:       # %bb.0:
@@ -190,16 +200,16 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-LABEL: cls_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 31
-; CHECK-NEXT:    bne a1, a2, .LBB16_2
+; CHECK-NEXT:    bne a1, a2, .LBB17_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    clz a0, a0
 ; CHECK-NEXT:    addi a0, a0, 32
-; CHECK-NEXT:    j .LBB16_3
-; CHECK-NEXT:  .LBB16_2:
+; CHECK-NEXT:    j .LBB17_3
+; CHECK-NEXT:  .LBB17_2:
 ; CHECK-NEXT:    xor a1, a1, a2
 ; CHECK-NEXT:    clz a0, a1
-; CHECK-NEXT:  .LBB16_3:
+; CHECK-NEXT:  .LBB17_3:
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    wsubu a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -217,7 +227,7 @@ define i64 @cls_i64_2(i64 %x) {
 ; CHECK-NEXT:    xor a1, a1, a2
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    nsrli a1, a0, 31
-; CHECK-NEXT:    bnez a1, .LBB17_2
+; CHECK-NEXT:    bnez a1, .LBB18_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, 1
@@ -225,7 +235,7 @@ define i64 @cls_i64_2(i64 %x) {
 ; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:  .LBB18_2:
 ; CHECK-NEXT:    clz a0, a1
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
@@ -1988,4 +1998,139 @@ define i8 @usati_i8_from_i16(i16 %x) {
   %trunc = trunc i16 %x to i8
   %sel = select i1 %cmp1, i8 %cmp2.ext, i8 %trunc
   ret i8 %sel
+}
+
+; Test that pli.b is rematerialized rather than spilled
+define i32 @test_pli_b_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_pli_b_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    pli.b a1, -8
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    pli.b a0, -8
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  store volatile i32 u0xf8f8f8f8, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i32 u0xf8f8f8f8
+}
+
+; Test that pli.h is rematerialized rather than spilled
+define i32 @test_pli_h_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_pli_h_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    pli.h a1, -64
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    pli.h a0, -64
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  store volatile i32 u0xffc0ffc0, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i32 u0xffc0ffc0
+}
+
+; Test that plui.h is rematerialized rather than spilled
+define i32 @test_plui_h_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_plui_h_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    plui.h a1, 511
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    plui.h a0, 511
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  store volatile i32 u0x7fc07fc0, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i32 u0x7fc07fc0
 }

@@ -285,7 +285,9 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
 
   emitAggExpr(baseInit->getInit(), aggSlot);
 
-  assert(!cir::MissingFeatures::requiresCleanups());
+  if (cgm.getLangOpts().Exceptions && !baseClassDecl->hasTrivialDestructor())
+    ehStack.pushCleanup<CallBaseDtor>(EHCleanup, baseClassDecl,
+                                      /*baseIsVirtual=*/isBaseVirtual);
 }
 
 /// This routine generates necessary code to initialize base classes and
@@ -397,10 +399,14 @@ static Address applyNonVirtualAndVirtualOffset(
   mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
-      cgf.cgm.errorNYI(
-          loc,
-          "applyNonVirtualAndVirtualOffset: virtual and non-virtual offset");
-      return Address::invalid();
+      mlir::Type offsetType =
+          (cgf.cgm.getTarget().getCXXABI().isItaniumFamily() &&
+           cgf.cgm.getLangOpts().RelativeCXXABIVTables)
+              ? cgf.sInt32Ty
+              : cgf.ptrDiffTy;
+      baseOffset = cgf.getBuilder().getConstInt(loc, offsetType,
+                                                nonVirtualOffset.getQuantity());
+      baseOffset = cgf.getBuilder().createAdd(loc, virtualOffset, baseOffset);
     } else {
       assert(baseValueTy && "expected base type");
       // If no virtualOffset is present this is the final stop.
@@ -618,8 +624,7 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   // Ensure that we destroy this object if an exception is thrown later in the
   // constructor.
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
-  (void)dtorKind;
-  assert(!cir::MissingFeatures::requiresCleanups());
+  pushEHDestroyIfNeeded(dtorKind, lhs.getAddress(), fieldType);
 }
 
 Address CIRGenFunction::emitCXXMemberDataPointerAddress(
@@ -921,8 +926,7 @@ void CIRGenFunction::emitForwardingCallToLambda(
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
     emitReturnOfRValue(*currSrcLoc, rv, resultType);
   } else {
-    cgm.errorNYI(callOperator->getSourceRange(),
-                 "emitForwardingCallToLambda: return slot is not null");
+    cir::ReturnOp::create(builder, *currSrcLoc);
   }
 }
 

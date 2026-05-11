@@ -22,8 +22,8 @@ DisassemblerHelper::DisassemblerHelper(const LLVMState &State) : State_(State) {
       Triple, 0 /*default variant*/, *AsmInfo_, State_.getInstrInfo(),
       State_.getRegInfo()));
 
-  Context_ = std::make_unique<MCContext>(
-      Triple, AsmInfo_.get(), &State_.getRegInfo(), &State_.getSubtargetInfo());
+  Context_ = std::make_unique<MCContext>(Triple, *AsmInfo_, State_.getRegInfo(),
+                                         State_.getSubtargetInfo());
   Disasm_.reset(TM.getTarget().createMCDisassembler(State_.getSubtargetInfo(),
                                                     *Context_));
   assert(Disasm_ && "cannot create MCDisassembler. missing call to "

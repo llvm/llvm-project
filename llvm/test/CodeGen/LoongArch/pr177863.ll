@@ -15,8 +15,7 @@ define <4 x i1> @test(<4 x i64> %shuffle2, <4 x i64> %shuffle4) {
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 2
 ; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 6
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA32-NEXT:    vrepli.b $vr0, -1
-; LA32-NEXT:    vxor.v $vr0, $vr1, $vr0
+; LA32-NEXT:    vxori.b $vr0, $vr1, 255
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test:
@@ -30,8 +29,7 @@ define <4 x i1> @test(<4 x i64> %shuffle2, <4 x i64> %shuffle4) {
 ; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 2
 ; LA64-NEXT:    xvpickve2gr.d $a0, $xr0, 3
 ; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA64-NEXT:    vrepli.b $vr0, -1
-; LA64-NEXT:    vxor.v $vr0, $vr1, $vr0
+; LA64-NEXT:    vxori.b $vr0, $vr1, 255
 ; LA64-NEXT:    ret
 entry:
   %conv5 = trunc nuw <4 x i64> %shuffle4 to <4 x i32>

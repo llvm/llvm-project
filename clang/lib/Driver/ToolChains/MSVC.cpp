@@ -819,9 +819,8 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
   return MSVT;
 }
 
-std::string
-MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
-                                           types::ID InputType) const {
+std::string MSVCToolChain::ComputeEffectiveClangTriple(
+    const ArgList &Args, llvm::StringRef BoundArch, types::ID InputType) const {
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
@@ -830,7 +829,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
 
   // For the rest of the triple, however, a computed architecture name may
   // be needed.
-  llvm::Triple Triple(ToolChain::ComputeEffectiveClangTriple(Args, InputType));
+  llvm::Triple Triple(
+      ToolChain::ComputeEffectiveClangTriple(Args, BoundArch, InputType));
   if (Triple.getEnvironment() == llvm::Triple::MSVC) {
     StringRef ObjFmt = Triple.getEnvironmentName().split('-').second;
     if (ObjFmt.empty())
