@@ -592,6 +592,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_getthreadid_np
+  SRCS
+    pthread_getthreadid_np.cpp
+  HDRS
+    pthread_getthreadid_np.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_getunique_np
+  SRCS
+    pthread_getunique_np.cpp
+  HDRS
+    pthread_getunique_np.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   pthread_key_create
   SRCS
     pthread_key_create.cpp
