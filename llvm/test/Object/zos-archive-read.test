@@ -35,8 +35,7 @@
 # RUN: %python %p/Inputs/generate_zos_archive.py --output %t.trunc_sym.a \
 # RUN:   --symtab-truncated
 # RUN: not llvm-ar t %t.trunc_sym.a 2>&1 | FileCheck %s --check-prefix=ERR-TRUNC
-# ERR-TRUNC: z/OS archive symbol table is too small to read the symbol count, size is 2
-
+# ERR-TRUNC: z/OS archive symbol table is too small to read the symbol count, symbol table size is 2
 ## Test z/OS symbol table where count exceeds buffer.
 # RUN: %python %p/Inputs/generate_zos_archive.py --output %t.bad_count.a \
 # RUN:   --symtab-bad-count
