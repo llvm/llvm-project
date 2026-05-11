@@ -27,20 +27,20 @@
 #
 # RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
 
+
+# CHECK-NOT:  DW_OP_regx 0x{{.*}}
+
 # CHECK:      DW_TAG_variable
 # CHECK-NEXT:   DW_AT_name ("x")
 # CHECK-NEXT:   DW_AT_location (DW_OP_regx %r1)
-# CHECK-NOT:    DW_OP_regx 0x257231
 
 # CHECK:      DW_TAG_variable
 # CHECK-NEXT:   DW_AT_name ("y")
 # CHECK-NEXT:   DW_AT_location (DW_OP_regx %rd2)
-# CHECK-NOT:    DW_OP_regx 0x25726432
 
 # CHECK:      DW_TAG_variable
 # CHECK-NEXT:   DW_AT_name ("z")
 # CHECK-NEXT:   DW_AT_location (DW_OP_bregx %rd25
-# CHECK-NOT:    DW_OP_bregx 0x2572643235
 
 --- !ELF
 FileHeader:

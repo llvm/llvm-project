@@ -67,12 +67,12 @@ static std::string resolveRegName(
   if (GetNameForDWARFReg) {
     StringRef R = GetNameForDWARFReg(DwarfRegNum, IsEH);
     if (!R.empty())
-      return std::string(R);
+      return R.str();
   }
   SmallString<8> Decoded;
   if (decodeVirtualRegisterName(DwarfRegNum, Decoded))
-    return std::string(Decoded);
-  return {};
+    return Decoded.str().str();
+  return "";
 }
 
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
@@ -305,7 +305,7 @@ static bool printCompactDWARFExpr(
     }
     case dwarf::DW_OP_bregx: {
       const uint64_t DwarfRegNum = Op.getRawOperand(0);
-      const int64_t Offset = Op.getRawOperand(1);
+      const uint64_t Offset = Op.getRawOperand(1);
       std::string RegName =
           resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
       if (RegName.empty())
