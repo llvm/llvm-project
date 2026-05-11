@@ -76,11 +76,11 @@ struct _Entry {
   _Image const* __image_{};
 
 #  if _LIBCPP_HAS_LOCALIZATION
-  _LIBCPP_EXPORTED_FROM_ABI std::ostream& __write_to(std::ostream& __os) const;
-  _LIBCPP_EXPORTED_FROM_ABI string __to_string() const;
+  _LIBCPP_HIDE_FROM_ABI std::ostream& __write_to(std::ostream& __os) const;
+  _LIBCPP_HIDE_FROM_ABI string __to_string() const;
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-  _LIBCPP_EXPORTED_FROM_ABI size_t __hash_code() const;
+  _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const;
   _LIBCPP_HIDE_FROM_ABI static _Entry& __entry_base(stacktrace_entry& __entry);
   _LIBCPP_HIDE_FROM_ABI static _Entry const& __entry_base(stacktrace_entry const& __entry);
 
