@@ -890,9 +890,13 @@ bool ODRDiagsEmitter::diagnoseMismatch(
 
   auto PopulateHashes = [](DeclHashes &Hashes, const RecordDecl *Record,
                            const DeclContext *DC) {
-    for (const Decl *D : Record->decls()) {
+    for (Decl *D : Record->decls()) {
       if (!ODRHash::isSubDeclToBeProcessed(D, DC))
         continue;
+      if (auto *Function = dyn_cast<FunctionDecl>(D)) {
+        // Compute/Preload ODRHash into FunctionDecl.
+        Function->getODRHash();
+      }
       Hashes.emplace_back(D, computeODRHash(D));
     }
   };
