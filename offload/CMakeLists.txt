@@ -292,7 +292,11 @@ set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
 add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
-add_subdirectory(plugins-nextgen)
+if(LIBOMPTARGET_PLUGINS_TO_BUILD)
+  add_subdirectory(plugins-nextgen)
+else()
+  message(STATUS "Skipping plugin implementations (no plugins enabled)")
+endif()
 add_subdirectory(tools)
 add_subdirectory(docs)
 
