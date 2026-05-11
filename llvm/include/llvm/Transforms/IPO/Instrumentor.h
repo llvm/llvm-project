@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EnumeratedArray.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -697,6 +698,9 @@ class InstrumentorPass : public RequiredPassInfoMixin<InstrumentorPass> {
   using InstrumentationConfig = instrumentor::InstrumentationConfig;
   using InstrumentorIRBuilderTy = instrumentor::InstrumentorIRBuilderTy;
 
+  /// File system to be used for read operations.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+
   /// The configuration and IR builder provided by the user.
   InstrumentationConfig *UserIConf;
   InstrumentorIRBuilderTy *UserIIRB;
@@ -710,9 +714,9 @@ public:
   /// provided, a default builder is used. When the configuration is not
   /// provided, it is read from the config file if available and otherwise a
   /// default configuration is used.
-  InstrumentorPass(InstrumentationConfig *IC = nullptr,
-                   InstrumentorIRBuilderTy *IIRB = nullptr)
-      : UserIConf(IC), UserIIRB(IIRB) {}
+  InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr,
+                   InstrumentationConfig *IC = nullptr,
+                   InstrumentorIRBuilderTy *IIRB = nullptr);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
