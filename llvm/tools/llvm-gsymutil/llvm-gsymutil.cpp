@@ -398,11 +398,13 @@ resolveSymtabObject(StringRef ArchName, Binary *SymtabBinary,
 
   if (auto *SymtabFat = dyn_cast<MachOUniversalBinary>(SymtabBinary)) {
     auto SymtabObjOrErr = SymtabFat->getMachOObjectForArch(ArchName);
-    if (!SymtabObjOrErr)
+    if (!SymtabObjOrErr) {
+      consumeError(SymtabObjOrErr.takeError());
       return createStringError(
           std::errc::invalid_argument,
           "symbol table file '%s' does not contain architecture '%s'",
           SymtabPath.str().c_str(), ArchName.str().c_str());
+    }
 
     OwnedSymtabObj = std::move(*SymtabObjOrErr);
     return OwnedSymtabObj.get();
