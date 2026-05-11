@@ -114,6 +114,9 @@ do_configure() {
       -DCMAKE_SHARED_LINKER_FLAGS=\"-Wl,--gc-sections -Wl,--strip-all\""
   else
     log "Configuring: release ${arch} → ${build_dir}"
+    extra_flags+="
+      -DLLVM_ENABLE_ZSTD=OFF
+      -DLLVM_ENABLE_ZLIB=OFF"
   fi
 
   # shellcheck disable=SC2086
