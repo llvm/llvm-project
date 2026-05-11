@@ -900,17 +900,38 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vbfdot_f32:
   case NEON::BI__builtin_neon_vbfdotq_f32:
   case NEON::BI__builtin_neon___a32_vcvt_bf16_f32:
-  default:
-    cgf.cgm.errorNYI(expr->getSourceRange(),
-                     std::string("unimplemented AArch64 builtin call: ") +
-                         ctx.BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
-
     cgf.cgm.errorNYI(expr->getSourceRange(),
                      std::string("unimplemented AArch64 builtin call: ") +
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
+
+  // The switch stmt is intended to help catch NYI cases and will be removed
+  // once the CIR implementation is complete. Avoid adding specialized
+  // code in cases - that should only be required for a handful of examples.
+  switch (builtinID) {
+  default:
+    cgf.cgm.errorNYI(expr->getSourceRange(),
+                     std::string("unimplemented AArch64 builtin call: ") +
+                         cgf.getContext().BuiltinInfo.getName(builtinID));
+    break;
+  case NEON::BI__builtin_neon_vshl_v:
+  case NEON::BI__builtin_neon_vshlq_v: {
+    llvm::StringRef llvmIntrName =
+        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
+            usgn ? llvmIntrinsic : altLLVMIntrinsic));
+
+    mlir::Value result =
+        emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
+                     /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
+                     /*funcResTy=*/vTy, loc);
+    mlir::Type resultType = cgf.convertType(expr->getType());
+    return cgf.getBuilder().createBitcast(result, resultType);
+  }
+  }
+
+  // NYI
+  return nullptr;
 }
 
 bool CIRGenFunction::getAArch64SVEProcessedOperands(
