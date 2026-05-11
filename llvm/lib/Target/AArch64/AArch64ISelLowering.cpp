@@ -8096,10 +8096,8 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
          "Unexpected Type");
 
   if (VT == MVT::nxv8i16) {
-    // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
-    //                       lsl(eorbt(pmul(trn2(a, b),
-    //                                      trn1(b, a))),
-    //                           8))
+    // clmul.i16(a, b) = eortb(pmullb(a_lo, b_lo),
+    //                         pmul(trn2(a, b), trn1(b, a)))
     SDValue OpA = Op.getOperand(0);
     SDValue OpB = Op.getOperand(1);
     // Bitcast to i8 for byte-wise PMUL and PMULLB.
@@ -8107,8 +8105,7 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
     OpB = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpB);
 
     // Form adjacent byte pairs {a_hi, b_hi} and {b_lo, a_lo}. PMUL then
-    // computes {a_hi * b_lo, b_hi * a_lo}, and EORTB xors those pairs into
-    // the low byte of each half-word.
+    // computes {a_hi * b_lo, b_hi * a_lo}, and EORBT xors those pairs.
     SDValue LoBytes = DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv16i8, OpB, OpA);
     SDValue HiBytes = DAG.getNode(AArch64ISD::TRN2, DL, MVT::nxv16i8, OpA, OpB);
     SDValue PMUL = DAG.getNode(ISD::CLMUL, DL, MVT::nxv16i8, HiBytes, LoBytes);
@@ -8117,17 +8114,17 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
         DAG.getTargetConstant(Intrinsic::aarch64_sve_eorbt, DL, MVT::i64);
     EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, OpB,
                         PMUL, PMUL);
-    SDValue SHL = DAG.getNode(ISD::SHL, DL, VT,
-                              DAG.getNode(AArch64ISD::NVCAST, DL, VT, EORBT),
-                              DAG.getConstant(8, DL, VT));
 
     SDValue PMULLB =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
     PMULLB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, PMULLB, OpA,
                          OpB);
-    PMULLB = DAG.getNode(AArch64ISD::NVCAST, DL, VT, PMULLB);
 
-    return DAG.getNode(ISD::XOR, DL, VT, PMULLB, SHL);
+    SDValue EORTB =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_eortb, DL, MVT::i64);
+    EORTB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORTB,
+                        PMULLB, PMULLB, EORBT);
+    return DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv8i16, EORTB);
   }
 
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), VT, 64 / VT.getSizeInBits());
