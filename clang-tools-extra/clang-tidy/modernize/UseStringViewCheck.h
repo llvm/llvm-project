@@ -35,17 +35,14 @@ private:
   StringRef toStringViewTypeStr(StringRef Type) const;
   void parseReplacementStringViewClass(StringRef Options);
 
+  bool CheckOverloadedFunctions = false;
+  const std::vector<StringRef> IgnoredFunctions;
+
   StringRef StringViewClass = "std::string_view";
   StringRef WStringViewClass = "std::wstring_view";
   StringRef U8StringViewClass = "std::u8string_view";
   StringRef U16StringViewClass = "std::u16string_view";
   StringRef U32StringViewClass = "std::u32string_view";
-
-  const std::vector<StringRef> IgnoredFunctions;
-  // If true, the check will also consider overloaded functions for
-  // string_view conversion suggestions. When false (default), overloaded
-  // functions are skipped to avoid potential issues with ambiguous conversions.
-  bool CheckOverloadedFunctions = false;
 };
 
 } // namespace clang::tidy::modernize

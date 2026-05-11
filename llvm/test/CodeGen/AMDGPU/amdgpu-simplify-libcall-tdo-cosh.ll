@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_cosh() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_cosh() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH3C00
+; CHECK-NEXT:    ret half 1.000000e+00
 ;
 entry:
   %c = call half @_Z4coshDh(half 0.000000e+00)
@@ -34,7 +34,7 @@ entry:
 define <2 x half> @test_tdo_v2_f16_cosh() {
 ; CHECK-LABEL: define <2 x half> @test_tdo_v2_f16_cosh() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x half> splat (half 0xH3C00)
+; CHECK-NEXT:    ret <2 x half> splat (half 1.000000e+00)
 ;
 entry:
   %c = call <2 x half> @_Z4coshDv2_Dh(<2 x half> <half 0.000000e+00, half -0.000000e+00>)
