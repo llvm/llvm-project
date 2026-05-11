@@ -20,5 +20,6 @@ void main () {
   constexpr vector<int16_t,2> I16 = F2; // #range
   // both-warning@#range {{implicit conversion turns floating-point number into integer: 'const float2' (aka 'const vector<float, 2>') to 'vector<int16_t, 2>' (vector of 2 'int16_t' values)}}
   // both-error@#range {{constexpr variable 'I16' must be initialized by a constant expression}}
-  // both-note@#range {{value 4.8E+6 is outside the range of representable values of type 'int16_t' (aka 'short')}}
+  // ref-note@#range {{value 4.8E+6 is outside the range of representable values of type 'int16_t' (aka 'short')}}
+  // expected-note@#range {{value 4.8E+6 is outside the range of representable values of type 'vector<int16_t, 2>' (vector of 2 'int16_t' values)}}
 }
