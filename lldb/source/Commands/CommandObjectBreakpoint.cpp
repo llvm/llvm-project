@@ -2959,6 +2959,7 @@ protected:
                                        m_bp_opts.GetBreakpointOptions(),
                                        m_access_options.GetPermissions());
     }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
 private:

@@ -3904,8 +3904,8 @@ def warn_cmse_nonsecure_union : Warning<
   InGroup<DiagGroup<"cmse-union-leak">>;
 def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
-def err_attribute_selectany_non_extern_var : Error<
-  "'selectany' can only be applied to variables with external linkage">;
+def err_attribute_selectany_non_extern_data : Error<
+  "'selectany' can only be applied to data items with external linkage">;
 def warn_attribute_hybrid_patchable_non_extern : Warning<
   "'hybrid_patchable' is ignored on functions without external linkage">,
   InGroup<IgnoredAttributes>;
@@ -5231,14 +5231,14 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
     "candidate template ignored: deduced values %diff{"
     "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
     "%1 and %3 of conflicting types for parameter %0}2,4">;
-def note_ovl_candidate_explicit_arg_mismatch_named : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0">;
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;
-def note_ovl_candidate_explicit_arg_mismatch_unnamed : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for %ordinal0 template parameter">;
+def note_ovl_candidate_explicit_arg_mismatch : Note<
+    "candidate template ignored: %enum_select<ExplicitArgMismatchReasonKind>{"
+    "%Vague{invalid explicitly-specified argument}|"
+    "%Detailed{%3}}2 for %enum_select<ExplicitArgMismatchNameKind>{"
+    "%Named{template parameter %1}|"
+    "%Unnamed{%ordinal1 template parameter}}0">;
 def note_ovl_candidate_instantiation_depth : Note<
     "candidate template ignored: substitution exceeded maximum template "
     "instantiation depth">;
@@ -8951,8 +8951,8 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx11_compat_generic_lambda : Warning<
     "generic lambdas are incompatible with C++11">,
     InGroup<CXXPre14Compat>, DefaultIgnore;
-  def err_lambda_explicit_spec : Error<
-    "lambda call operator should not be explicitly specialized or instantiated">;
+  def err_lambda_explicit_temp_spec : Error<
+    "a member of a lambda should not be explicitly %select{specialized|instantiated}0">;
 
   // C++17 '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<
@@ -11005,6 +11005,11 @@ def warn_lifetime_safety_dangling_global_moved
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_param_lifetimebound_violation
+    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'}0">,
+      InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
