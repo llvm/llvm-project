@@ -182,7 +182,7 @@ define void @load_volatile_release(ptr nocapture %0) norecurse nounwind uwtable 
 
 ; volatile store.
 define void @volatile_store(ptr %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
 ; CHECK-LABEL: @volatile_store(
 ; CHECK-NEXT:    store volatile i32 14, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -194,7 +194,7 @@ define void @volatile_store(ptr %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; volatile load.
 define i32 @volatile_load(ptr %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
 ; CHECK-LABEL: @volatile_load(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -208,7 +208,7 @@ declare void @nosync_function() noinline nounwind uwtable nosync
 define void @call_nosync_function() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nosync nounwind uwtable
 ; CHECK-LABEL: @call_nosync_function(
-; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR10:[0-9]+]]
+; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR11:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @nosync_function() noinline nounwind uwtable
@@ -220,7 +220,7 @@ declare void @might_sync() noinline nounwind uwtable
 define void @call_might_sync() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: @call_might_sync(
-; CHECK-NEXT:    tail call void @might_sync() #[[ATTR10]]
+; CHECK-NEXT:    tail call void @might_sync() #[[ATTR11]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @might_sync() noinline nounwind uwtable
@@ -232,7 +232,7 @@ declare void @llvm.memset(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 
 ; negative, checking volatile intrinsics.
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: @memcpy_volatile(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], i32 8, i1 true)
 ; CHECK-NEXT:    ret i32 4

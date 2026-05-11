@@ -83,16 +83,13 @@ define void @test_volatile_load(ptr %a, ptr %b, ptr %c) {
 ; Don't vectorize volatile stores.
 define void @test_volatile_store(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @test_volatile_store(
-; CHECK-NEXT:    [[I0:%.*]] = load double, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[I1:%.*]] = load double, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[I0]], [[I1]]
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
-; CHECK-NEXT:    [[I3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
-; CHECK-NEXT:    [[I4:%.*]] = load double, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[MUL5:%.*]] = fmul double [[I3]], [[I4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[MUL:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
 ; CHECK-NEXT:    store volatile double [[MUL]], ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
+; CHECK-NEXT:    [[MUL5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
 ; CHECK-NEXT:    store volatile double [[MUL5]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    ret void
 ;

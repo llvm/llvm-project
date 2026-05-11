@@ -2811,8 +2811,8 @@ define <8 x i16> @clmul_v8i16_neon_zext(<8 x i8> %x, <8 x i8> %y) {
 define <16 x i16> @clmul_v16i16_neon_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: clmul_v16i16_neon_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
 ; CHECK-NEXT:    rbit v4.8b, v1.8b
 ; CHECK-NEXT:    rbit v5.8b, v0.8b
 ; CHECK-NEXT:    pmul v0.8b, v0.8b, v1.8b
@@ -2928,8 +2928,8 @@ define <8 x i32> @clmul_v8i32_neon_zext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT:    .cfi_offset b10, -24
 ; CHECK-NEXT:    .cfi_offset b11, -32
 ; CHECK-NEXT:    .cfi_offset b12, -48
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
 ; CHECK-NEXT:    rev16 v5.8b, v1.8b
 ; CHECK-NEXT:    rev16 v6.8b, v0.8b
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
@@ -5456,8 +5456,8 @@ define <2 x i128> @clmul_v2i128_neon_zext(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-AES-NEXT:    fmov x11, d1
 ; CHECK-AES-NEXT:    mov x8, v0.d[1]
 ; CHECK-AES-NEXT:    mov x9, v1.d[1]
-; CHECK-AES-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-AES-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-AES-NEXT:    mov d2, v1.d[1]
+; CHECK-AES-NEXT:    mov d3, v0.d[1]
 ; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-AES-NEXT:    rbit x11, x11
 ; CHECK-AES-NEXT:    rbit x10, x10

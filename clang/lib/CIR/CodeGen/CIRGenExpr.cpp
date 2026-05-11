@@ -1551,9 +1551,19 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
                                     base.getBaseInfo());
   }
 
-  cgm.errorNYI(e->getSourceRange(),
-               "emitExtVectorElementExpr: isSimple is false");
-  return {};
+  if (base.isMatrixRow()) {
+    cgm.errorNYI(e->getSourceRange(), "emitExtVectorElementExpr: isMatrixRow");
+    return {};
+  }
+
+  assert(base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
+  mlir::ArrayAttr baseElts = base.getExtVectorElts();
+  SmallVector<int64_t> elts;
+  for (unsigned idx : indices)
+    elts.push_back(getAccessedFieldNo(idx, baseElts));
+  mlir::ArrayAttr cv = builder.getI64ArrayAttr(elts);
+  return LValue::makeExtVectorElt(base.getAddress(), cv, type,
+                                  base.getBaseInfo());
 }
 
 LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,

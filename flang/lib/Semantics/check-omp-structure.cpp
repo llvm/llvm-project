@@ -777,7 +777,12 @@ void OmpStructureChecker::CheckMultListItems() {
   for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_nontemporal)) {
     const auto &nontempClause{
         std::get<parser::OmpClause::Nontemporal>(clause->u)};
-    const auto &nontempNameList{nontempClause.v};
+    std::list<parser::Name> nontempNameList;
+    for (auto &ompObject : nontempClause.v.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        nontempNameList.push_back(*name);
+      }
+    }
     CheckMultipleOccurrence(
         listVars, nontempNameList, clause->source, "NONTEMPORAL");
   }
@@ -886,7 +891,7 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OpenMPGroupprivate &x) {
+  bool Pre(const parser::OmpGroupprivateDirective &x) {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
     return false;
   }
@@ -1569,7 +1574,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
+void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
   PushContextAndClauseSets(
       x.v.DirName().source, llvm::omp::Directive::OMPD_groupprivate);
 
@@ -1621,16 +1626,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
+void OmpStructureChecker::Leave(const parser::OmpGroupprivateDirective &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &x) {
+void OmpStructureChecker::Enter(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &x) {
+void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.v};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
@@ -1876,7 +1881,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpRequiresDirective &x) {
   const auto &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
   unsigned version{context_.langOptions().OpenMPVersion};
@@ -1919,7 +1924,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpRequiresDirective &) {
   dirContext_.pop_back();
 }
 
@@ -4281,7 +4286,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckCrayPointee(x.v, "FIRSTPRIVATE");
-  CheckIsLoopIvPartOfClause(llvm::omp::Clause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
@@ -4317,20 +4321,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_firstprivate);
-}
-
-void OmpStructureChecker::CheckIsLoopIvPartOfClause(
-    llvm::omp::Clause clause, const parser::OmpObjectList &ompObjectList) {
-  unsigned version{context_.langOptions().OpenMPVersion};
-  for (const auto &ompObject : ompObjectList.v) {
-    if (const parser::Name *name{parser::Unwrap<parser::Name>(ompObject)}) {
-      if (name->symbol == GetContext().loopIV) {
-        context_.Say(name->source,
-            "DO iteration variable %s is not allowed in %s clause."_err_en_US,
-            name->ToString(), parser::omp::GetUpperName(clause, version));
-      }
-    }
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Align &x) {
