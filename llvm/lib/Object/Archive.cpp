@@ -423,17 +423,16 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
       reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
 
   // Set RawMemberName
-  std::string RawNameRef = ebcdicFieldToASCII(ArMemHdr->Name);
-  if (RawNameRef.empty() || RawNameRef[0] == ' ') {
+  RawMemberName = ebcdicFieldToASCII(ArMemHdr->Name);
+  if (RawMemberName.empty() || RawMemberName[0] == ' ') {
     *Err = malformedError("name contains a leading space for archive member "
                           "header at offset " +
                           Twine(Offset));
     return;
   }
-  RawMemberName = RawNameRef;
 
   // Set MemberName.
-  if (StringRef(RawNameRef).starts_with("#1/")) {
+  if (StringRef(RawMemberName).starts_with("#1/")) {
     Expected<StringRef> NameOrErr = ArchiveMemberHeader::getName(Size);
     if (!NameOrErr) {
       *Err = NameOrErr.takeError();
