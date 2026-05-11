@@ -12,11 +12,13 @@
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <algorithm>
-#  include <link.h>
 #  include <unistd.h>
 
 #  if __has_include("dlfcn.h")
 #    include <dlfcn.h>
+#  endif
+#  if __has_include("link.h")
+#    include <link.h>
 #  endif
 
 #  include "stacktrace/images.h"
@@ -28,7 +30,7 @@ namespace __stacktrace {
 
 namespace {
 
-#  if __has_include("dlfcn.h")
+#  if __has_include("dlfcn.h") && __has_include("link.h")
 int add_image(dl_phdr_info* info, size_t, void* images_v) {
   auto& imgs = *(_Images*)images_v;
   if (imgs.count_ == _Images::k_max_images) {
@@ -57,7 +59,7 @@ int add_image(dl_phdr_info* info, size_t, void* images_v) {
 } // namespace
 
 _Images::_Images() {
-#  if __has_include("dlfcn.h")
+#  if __has_include("dlfcn.h") && __has_include("link.h")
   dl_iterate_phdr(add_image, this);
 #  endif
   images_[count_++] = {0uz, 0};  // sentinel at low end
