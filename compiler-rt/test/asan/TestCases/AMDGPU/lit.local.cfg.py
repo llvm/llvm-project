@@ -44,6 +44,29 @@ def rocm_is_available(rocm_root):
     return rocm_lib_dir(rocm_root) is not None
 
 
+def append_detect_leaks_off_asan_subst(substitutions):
+    """Append detect_leaks=0 to %env_asan_opts= / %export_asan_opts= default prefixes."""
+
+    def patch_body(body):
+        if body:
+            return (
+                body + "detect_leaks=0:"
+                if body.endswith(":")
+                else body + ":detect_leaks=0:"
+            )
+        return "detect_leaks=0:"
+
+    pairs = (
+        ("%env_asan_opts=", "env ASAN_OPTIONS="),
+        ("%export_asan_opts=", "export ASAN_OPTIONS="),
+    )
+    for i, (pat, repl) in enumerate(substitutions):
+        for sub_pat, opt_prefix in pairs:
+            if pat == sub_pat and repl.startswith(opt_prefix):
+                body = repl[len(opt_prefix) :]
+                substitutions[i] = (pat, opt_prefix + patch_body(body))
+
+
 root = getRoot(config)
 # AMDGPU ASan tests are only run with the dynamic ASan runtime (-shared-libasan).
 if "asan-static-runtime" in root.available_features:
@@ -70,6 +93,13 @@ else:
             config.unsupported = True
         else:
             config.available_features.add("rocm")
+            # Linux ASan defaults to leak detection; disable for ROCm/HSA tests.
+            _asan = config.environment.get("ASAN_OPTIONS", "")
+            if _asan:
+                config.environment["ASAN_OPTIONS"] = _asan + ":detect_leaks=0"
+            else:
+                config.environment["ASAN_OPTIONS"] = "detect_leaks=0"
+            append_detect_leaks_off_asan_subst(config.substitutions)
             rocm_lib = rocm_lib_dir(rocm_root)
             rocm_include = os.path.join(rocm_root, "include")
             config.substitutions.append(("%rocm_root", rocm_root))
