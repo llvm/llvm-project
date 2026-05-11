@@ -544,7 +544,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   });
 
   auto MDC = initializeScanInstanceDependencyCollector(
-      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), Consumer,
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts),
       Worker.Service,
       /* The MDC's constructor makes a copy of the OriginalInvocation, so
       we can pass it in without worrying that it might be changed across
@@ -610,7 +610,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   if (CI.getDiagnostics().hasErrorOccurred())
     return false;
 
-  MDC->run();
+  MDC->run(Consumer);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
   if (!Controller.finalize(CI, ModuleInvocation))

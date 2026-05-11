@@ -113,15 +113,15 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(DependencyScanningService &Service,
                      std::unique_ptr<DependencyOutputOptions> Opts,
-                     CompilerInstance &ScanInstance, DependencyConsumer &C,
+                     CompilerInstance &ScanInstance,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
                      const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
                      const ArrayRef<StringRef> StableDirs);
 
   /// Processes the accumulated dependency information and reports it to the
-  /// \c DependencyConsumer.
-  void run();
+  /// \c Consumer.
+  void run(DependencyConsumer &Consumer);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -139,8 +139,6 @@ private:
   DependencyScanningService &Service;
   /// The compiler instance for scanning the current translation unit.
   CompilerInstance &ScanInstance;
-  /// The consumer of collected dependency information.
-  DependencyConsumer &Consumer;
   /// Callbacks for computing dependency information.
   DependencyActionController &Controller;
   /// Mapping from prebuilt AST filepaths to their attributes referenced during
