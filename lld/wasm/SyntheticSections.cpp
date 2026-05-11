@@ -61,6 +61,7 @@ void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
     writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
   }
 }
+
 } // namespace
 
 bool DylinkSection::isNeeded() const {
