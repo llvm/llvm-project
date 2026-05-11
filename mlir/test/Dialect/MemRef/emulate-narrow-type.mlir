@@ -1,5 +1,5 @@
-// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=8" --cse --verify-diagnostics --split-input-file %s | FileCheck %s
-// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=32" --cse --verify-diagnostics --split-input-file %s | FileCheck %s --check-prefix=CHECK32
+// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=8 assume-aligned=true" --cse --verify-diagnostics --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=32 assume-aligned=true" --cse --verify-diagnostics --split-input-file %s | FileCheck %s --check-prefix=CHECK32
 
 // Expect no conversions.
 func.func @memref_i8() -> i8 {
