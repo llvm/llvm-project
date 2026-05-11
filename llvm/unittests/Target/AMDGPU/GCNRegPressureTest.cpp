@@ -83,16 +83,17 @@ body:             |
     //
     // There aren't any non-debug instruction between the beginning of bb1 and
     // Dbg1 (exclusive), the reset is therefore unsuccessful. The advance caller
-    // returns early on a failure to reset.
+    // returns early on a failure to reset. Calling advance after this does
+    // nothing and produces false because the internal iterator already points
+    // to the second debug instruction.
     EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), Dbg1, &MBB1LiveIns));
     EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), Dbg1, nullptr));
     EXPECT_FALSE(RPTracker.advance(Dbg1));
     EXPECT_FALSE(RPTrackerNoLiveIns.advance(Dbg1));
 
-    // In that case, the maximum pressure is unchanged from the beginning since
-    // reset was unsuccessful.
-    EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 0U);
-    EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 0U);
+    // Register pressure should be the one at the block's live-ins.
+    EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 2U);
+    EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 2U);
   }
 }
 
@@ -129,15 +130,18 @@ body:             |
 
   // The following unpacks a call to
   // advance(MBB1.begin(), MBB1.end(), [MBB1LiveIns|nullptr])
-  // which would return true in this case.
+  // which would return false in this case.
   //
   // There aren't any non-debug instruction in bb.2, the reset is therefore
   // unsuccessful. The advance caller returns early on a failure to reset.
+  // Calling advance after this does nothing and produces false because the
+  // internal iterator is already at the block's end.
   EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), MBB1.end(), &MBB1LiveIns));
   EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), MBB1.end(), nullptr));
+  EXPECT_FALSE(RPTracker.advance(MBB1.end()));
+  EXPECT_FALSE(RPTrackerNoLiveIns.advance(MBB1.end()));
 
-  // In that case, the maximum pressure is unchanged from the beginning since
-  // reset was unsuccessful.
-  EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 0U);
-  EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 0U);
+  // Register pressure should be the one at the block's live-ins.
+  EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 1U);
+  EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 1U);
 }

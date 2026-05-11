@@ -331,8 +331,15 @@ protected:
 
   GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
 
-  void reset(const MachineInstr &MI, const LiveRegSet *LiveRegsCopy,
-             bool After);
+  /// Resets tracker before or \p After the provided \p MI, which can be a debug
+  /// instruction.
+  void reset(const MachineInstr &MI, bool After);
+
+  /// Resets tracker at the start or \p End of the \p MBB.
+  void reset(const MachineBasicBlock &MBB, bool End);
+
+  /// Resets tracker at the specified slot index \p SI.
+  void reset(const MachineRegisterInfo &MRI, SlotIndex SI);
 
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
   void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
@@ -340,8 +347,9 @@ protected:
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
-  // reset tracker and set live register set to the specified value.
-  void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);
+  /// Resets tracker with the provided \p LiveRegs.
+  void reset(const MachineRegisterInfo &MRI, const LiveRegSet &LiveRegs);
+
   // live regs for the current state
   const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
@@ -369,21 +377,9 @@ public:
 
   using GCNRPTracker::reset;
 
-  /// reset tracker at the specified slot index \p SI.
-  void reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
-    GCNRPTracker::reset(MRI, llvm::getLiveRegs(SI, LIS, MRI));
-  }
-
-  /// reset tracker to the end of the \p MBB.
-  void reset(const MachineBasicBlock &MBB) {
-    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
-    reset(MBB.getParent()->getRegInfo(), MBBLastSlot);
-  }
-
-  /// reset tracker to the point just after \p MI (in program order).
-  void reset(const MachineInstr &MI) {
-    reset(MI.getMF()->getRegInfo(), LIS.getInstructionIndex(MI).getDeadSlot());
-  }
+  /// Resets tracker to the point just after \p MI (in program order), which can
+  /// be a debug instruction.
+  void reset(const MachineInstr &MI) { reset(MI, /*After=*/true); }
 
   /// Move to the state of RP just before the \p MI . If \p UseInternalIterator
   /// is set, also update the internal iterators. Setting \p UseInternalIterator
@@ -431,17 +427,9 @@ public:
   /// Reset tracker to the point before the \p MI filling \p LiveRegs upon this
   /// point using LIS. \p End must be between the MI and the end of its parent
   /// block (inclusive). \p returns false if the range [MI, End) is empty except
-  /// debug values, in which case the current/maximum pressure are not changed.
+  /// debug values.
   bool reset(const MachineInstr &MI, MachineBasicBlock::const_iterator End,
              const LiveRegSet *LiveRegs = nullptr);
-
-  /// Reset tracker to the point before the \p MI filling \p LiveRegs upon this
-  /// point using LIS. \p returns false if there are only debug values between
-  /// \p MI (inclusive) and end of its parent block, in which case the
-  /// current/maximum pressure are not changed.
-  bool reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr) {
-    return reset(MI, MI.getParent()->end(), LiveRegs);
-  }
 
   /// Move to the state right before the next MI or after the end of MBB.
   /// \p returns false if reached end of the block.
@@ -480,8 +468,7 @@ public:
   /// Reset tracker to \p Begin (filling \p LiveRegs upon this point using LIS)
   /// and advance to \p End, which must be between \p Begin and the end of its
   /// parent block (inclusive). \p returns false if the range [Begin, End) is
-  /// empty except debug values, in which case the current/maximum pressure are
-  /// not changed.
+  /// empty except debug values.
   bool advance(MachineBasicBlock::const_iterator Begin,
                MachineBasicBlock::const_iterator End,
                const LiveRegSet *LiveRegsCopy = nullptr);
