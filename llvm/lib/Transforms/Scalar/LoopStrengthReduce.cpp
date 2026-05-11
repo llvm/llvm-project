@@ -935,7 +935,16 @@ static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
   SCEVUse *Op = nullptr;
   Immediate Result = Immediate::getZero();
 
-  if (EnableVScaleImmediates) {
+  // Constant SCEV operands are always sorted to the LHS.
+  SCEVUse &S = Ops.front();
+  if (match(S, m_scev_APInt(C)) && !C->isZero()) {
+    if (C->getSignificantBits() <= 64) {
+      Op = &S;
+      Result = Immediate::getFixed(C->getSExtValue());
+    }
+  }
+
+  if (EnableVScaleImmediates && (Result.isZero() || PreferScalable)) {
     // A vscale immediate is a scMulExpr, which when sorted by complexity, can
     // occur after casted operands (truncate/sext/zext).
     for (SCEVUse &S : Ops) {
@@ -946,17 +955,6 @@ static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
         Op = &S;
         Result = Immediate::getScalable(C->getZExtValue());
         break;
-      }
-    }
-  }
-
-  if (Result.isZero() || !PreferScalable) {
-    // A constant SCEV operands are always sorted to the LHS.
-    SCEVUse &S = Ops.front();
-    if (match(S, m_scev_APInt(C)) && !C->isZero()) {
-      if (C->getSignificantBits() <= 64) {
-        Op = &S;
-        Result = Immediate::getFixed(C->getSExtValue());
       }
     }
   }
