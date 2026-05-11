@@ -439,6 +439,10 @@ protected:
 
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
+  bool shouldTrackPhysReg(Register Reg) const {
+    return TrackPhysRegs && Reg.isPhysical() && MRI->isAllocatable(Reg);
+  }
+
   // Check if a register unit is live at a given slot index per LIS.
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 

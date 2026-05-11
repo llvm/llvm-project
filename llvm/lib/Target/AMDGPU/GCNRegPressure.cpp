@@ -101,8 +101,7 @@ void GCNRegPressure::inc(unsigned Reg, LaneBitmask PrevMask,
 
 void GCNRegPressure::adjustPhysRegPressure(MCRegister Reg, bool IsAdd,
                                            const MachineRegisterInfo &MRI) {
-  if (!MRI.isAllocatable(Reg))
-    return;
+  assert(MRI.isAllocatable(Reg) && "expected allocatable physical register");
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
   if (!RC)
@@ -691,7 +690,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
       CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
       if (LiveMask.none())
         VirtLiveRegs.erase(I);
-    } else if (TrackPhysRegs && Reg.isPhysical() && MRI->isAllocatable(Reg)) {
+    } else if (shouldTrackPhysReg(Reg)) {
       if (MO.isEarlyClobber()) {
         ECDefPressure.inc(Reg.asMCReg(), *MRI);
         HasECDefs = true;
@@ -723,10 +722,10 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
     // Physical register handling needs the register directly to avoid aliasing,
     // so we need to iterate over all uses.
     for (const MachineOperand &MO : MI.all_uses()) {
-      if (!MO.isReg() || !MO.getReg().isPhysical() || !MO.readsReg())
+      if (!MO.isReg() || !MO.readsReg())
         continue;
       Register Reg = MO.getReg();
-      if (!MRI->isAllocatable(Reg))
+      if (!shouldTrackPhysReg(Reg))
         continue;
       bool NewlyLive = insertIfNotLive(Reg.asMCReg());
       if (NewlyLive)
@@ -825,7 +824,7 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
         CurPressure.inc(Reg, It->second, LaneBitmask::getNone(), *MRI);
         VirtLiveRegs.erase(It);
       }
-    } else if (TrackPhysRegs && Reg.isPhysical() && MRI->isAllocatable(Reg)) {
+    } else if (shouldTrackPhysReg(Reg)) {
       if (!SeenRegs.insert(Reg).second)
         continue;
       if (eraseKilledUnits(Reg.asMCReg(), SI))
@@ -860,7 +859,7 @@ void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
       auto PrevMask = LiveMask;
       LiveMask |= getDefRegMask(MO, *MRI);
       CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
-    } else if (TrackPhysRegs && Reg.isPhysical() && MRI->isAllocatable(Reg)) {
+    } else if (shouldTrackPhysReg(Reg)) {
       bool WasNotLive = isAnyRegUnitNotLive(Reg.asMCReg());
       if (WasNotLive && !MO.isDead()) {
         PhysLiveRegs.add(Reg.asMCReg());
@@ -991,8 +990,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
     // aliasing, so we need to iterate over the defs and uses separately.
     for (const auto &MO : MI->all_defs()) {
       Register Reg = MO.getReg();
-      if (!Reg.isPhysical() || !MRI->isAllocatable(Reg) ||
-          !SeenRegs.insert(Reg).second)
+      if (!shouldTrackPhysReg(Reg) || !SeenRegs.insert(Reg).second)
         continue;
 
       bool WasNotLive = isAnyRegUnitNotLive(Reg.asMCReg());
@@ -1005,8 +1003,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
       if (!MO.isReg() || !MO.getReg().isPhysical())
         continue;
       Register Reg = MO.getReg();
-      if (!Reg.isPhysical() || !MRI->isAllocatable(Reg) ||
-          !SeenRegs.insert(Reg).second)
+      if (!shouldTrackPhysReg(Reg) || !SeenRegs.insert(Reg).second)
         continue;
 
       bool IsKilled = checkRegKilled(Reg.asMCReg(), SlotIdx);
