@@ -968,8 +968,11 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef mlir::Value ValueTy;
     typedef mlir::Value RValueTy;
     static RValue get(CIRGenFunction &cgf, ValueTy v) {
-      while (auto castOp = v.getDefiningOp<cir::CastOp>())
+      while (cir::CastOp castOp = v.getDefiningOp<cir::CastOp>()) {
+        if (castOp.getKind() != cir::CastKind::address_space)
+          break;
         v = castOp.getSrc();
+      }
       cir::AllocaOp alloca = v.getDefiningOp<cir::AllocaOp>();
       return RValue::get(cgf.getBuilder().createAlignedLoad(
           alloca.getLoc(), alloca.getAllocaType(), alloca,
