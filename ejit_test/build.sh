@@ -111,6 +111,7 @@ ALL_TESTS=(
   ejit_nested_struct_test
   ejit_opt_level_test
   ejit_perf_bench
+  ejit_ptr_period_test
   ejit_trace_test
 )
 
@@ -127,6 +128,7 @@ TEST_ARGS[ejit_trace_test]="0"
 TEST_ARGS[ejit_attr_test]="0"
 TEST_ARGS[ejit_config_api_test]="0"
 TEST_ARGS[ejit_perf_bench]="0 1"
+TEST_ARGS[ejit_ptr_period_test]="0 1 3"
 
 if [[ ${#SELECTED[@]} -eq 0 ]]; then
   SELECTED=("${ALL_TESTS[@]}")

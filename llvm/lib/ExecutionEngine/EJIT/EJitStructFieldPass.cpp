@@ -201,22 +201,102 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
       // Walk the full GEP chain (may be multiple GEPs: array index + field)
       {
         const GlobalVariable *GV = findRootGV(PtrOp);
-        if (!GV)
+        if (GV) {
+          auto it = gvPeriodMap.find(GV);
+          if (it == gvPeriodMap.end())
+            continue;
+
+          auto byteOffset = accumulateFullOffset(DL, PtrOp);
+          if (!byteOffset)
+            continue;
+
+          void *base = resolveBase(GV, it->second);
+          if (!base)
+            continue;
+
+          uint8_t *fieldAddr = static_cast<uint8_t *>(base) + *byteOffset;
+          if (auto *C = createConstantFromMemory(fieldAddr, LI->getType(), DL))
+            replacements.push_back({LI, C});
+          continue;
+        }
+
+        // Indirect path: load ptr from GV, then GEP into pointed-to data.
+        // Pattern A: %ptr = load ptr, ptr @g_ptr  → GEP %S, ptr %ptr, ...
+        // Pattern B: %ptr = load ptr, ptr @ptrArr[idx] → GEP %S, ptr %ptr, ...
+        // Supported for pointer-type ejit_period and ejit_period_arr globals.
+        const Value *V = PtrOp;
+        SmallVector<const GEPOperator *, 4> FieldGEPs;
+        while (V) {
+          V = V->stripPointerCasts();
+          if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+            FieldGEPs.push_back(GEP);
+            V = GEP->getPointerOperand();
+            continue;
+          }
+          break;
+        }
+
+        auto *BaseLoad = dyn_cast<LoadInst>(V);
+        if (!BaseLoad)
           continue;
 
-        auto it = gvPeriodMap.find(GV);
+        // Resolve which GV the load reads from (direct or via ptr-array GEP).
+        Value *LoadPtr = BaseLoad->getPointerOperand()->stripPointerCasts();
+        const GlobalVariable *PtrGV = nullptr;
+        uint64_t ptrArrayByteOff = 0;
+
+        if (auto *DirectGV = dyn_cast<GlobalVariable>(LoadPtr)) {
+          PtrGV = DirectGV;
+        } else if (auto *PtrGEP = dyn_cast<GEPOperator>(LoadPtr)) {
+          PtrGV = dyn_cast<GlobalVariable>(
+              PtrGEP->getPointerOperand()->stripPointerCasts());
+          if (PtrGV) {
+            SmallVector<Value *, 4> PtrIdxList;
+            bool allConst = true;
+            for (auto I = PtrGEP->idx_begin(), E = PtrGEP->idx_end();
+                 I != E; ++I) {
+              if (!isa<ConstantInt>(*I)) { allConst = false; break; }
+              PtrIdxList.push_back(*I);
+            }
+            if (!allConst) continue;
+            ptrArrayByteOff = DL.getIndexedOffsetInType(
+                PtrGEP->getSourceElementType(), PtrIdxList);
+          }
+        }
+        if (!PtrGV)
+          continue;
+
+        auto it = gvPeriodMap.find(PtrGV);
         if (it == gvPeriodMap.end())
           continue;
 
-        auto byteOffset = accumulateFullOffset(DL, PtrOp);
-        if (!byteOffset)
+        void *gvBase = resolveBase(PtrGV, it->second);
+        if (!gvBase)
           continue;
 
-        void *base = resolveBase(GV, it->second);
-        if (!base)
+        // Read the pointer value stored in the GV: *(void**)(gvBase + ptrArrayByteOff)
+        uintptr_t ptrSlot = reinterpret_cast<uintptr_t>(gvBase) + ptrArrayByteOff;
+        void *dataBase = nullptr;
+        std::memcpy(&dataBase, reinterpret_cast<void *>(ptrSlot), sizeof(void *));
+        if (!dataBase)
           continue;
 
-        uint8_t *fieldAddr = static_cast<uint8_t *>(base) + *byteOffset;
+        // Compute field offset from GEPs past the pointer dereference.
+        uint64_t fieldOff = 0;
+        for (auto It = FieldGEPs.rbegin(); It != FieldGEPs.rend(); ++It) {
+          SmallVector<Value *, 4> IdxList;
+          for (auto I = (*It)->idx_begin(), E = (*It)->idx_end(); I != E; ++I) {
+            if (!isa<ConstantInt>(*I)) { fieldOff = UINT64_MAX; break; }
+            IdxList.push_back(*I);
+          }
+          if (fieldOff == UINT64_MAX) break;
+          fieldOff += DL.getIndexedOffsetInType(
+              (*It)->getSourceElementType(), IdxList);
+        }
+        if (fieldOff == UINT64_MAX)
+          continue;
+
+        uint8_t *fieldAddr = static_cast<uint8_t *>(dataBase) + fieldOff;
         if (auto *C = createConstantFromMemory(fieldAddr, LI->getType(), DL))
           replacements.push_back({LI, C});
       }

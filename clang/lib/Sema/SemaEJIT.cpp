@@ -123,7 +123,7 @@ void handleEjitPeriodAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 /// Checks:
 ///   1. Applies only to VarDecl
 ///   2. Must have global storage
-///   3. Must be an array type with constant size < 100
+///   3. Must be an array type (constant size < 100) OR pointer-to-struct
 ///   4. No duplicate period/period_arr attributes
 void handleEjitPeriodArrAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto *VD = dyn_cast<VarDecl>(D);
@@ -140,23 +140,31 @@ void handleEjitPeriodArrAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Must be an array type
-  const ArrayType *AT = S.Context.getAsArrayType(VD->getType());
-  if (!AT) {
-    S.Diag(AL.getLoc(), diag::err_ejit_period_arr_not_scalar) << VD;
-    return;
-  }
-
-  // Check array size < 100
-  if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-    uint64_t Size = CAT->getSize().getZExtValue();
-    if (Size > 100) {
-      S.Diag(AL.getLoc(), diag::err_ejit_period_arr_too_large)
-          << VD << static_cast<unsigned>(Size);
+  // Check type: array (with constant size < 100) or pointer-to-struct
+  QualType VT = VD->getType();
+  if (const ArrayType *AT = S.Context.getAsArrayType(VT)) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+      uint64_t Size = CAT->getSize().getZExtValue();
+      if (Size > 100) {
+        S.Diag(AL.getLoc(), diag::err_ejit_period_arr_too_large)
+            << VD << static_cast<unsigned>(Size);
+        return;
+      }
+    } else {
+      // Non-constant array size (VLA, etc.) — error
+      S.Diag(AL.getLoc(), diag::err_ejit_period_arr_not_scalar) << VD;
       return;
     }
+  } else if (VT->isPointerType()) {
+    // Pointer type — must point to a structure/class type.
+    // Array size is dynamic (user guarantees correctness); Size=0 in metadata.
+    QualType Pointee = VT->getPointeeType();
+    if (!Pointee->isStructureOrClassType()) {
+      S.Diag(AL.getLoc(), diag::err_ejit_period_arr_not_scalar) << VD;
+      return;
+    }
+    // No size validation for pointer types.
   } else {
-    // Non-constant array size (VLA, etc.) — error
     S.Diag(AL.getLoc(), diag::err_ejit_period_arr_not_scalar) << VD;
     return;
   }
