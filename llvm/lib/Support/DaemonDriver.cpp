@@ -206,7 +206,7 @@ struct ArgCommand {
   size_t ExpectedLength;
 };
 
-// Command providing standard input for the tool as a framed string.
+// Command providing a framed string to use as standard input for the tool.
 struct InputStringCommand {
   static constexpr StringRef Prefix = "input_string";
 
@@ -226,7 +226,8 @@ struct InputStringCommand {
   size_t ExpectedLength;
 };
 
-// Command providing standard input for the tool to be loaded from a file.
+// Command providing a file path whose contents will be used as the standard
+// input for the tool.
 struct InputFileCommand {
   static constexpr StringRef Prefix = "input_file";
 
@@ -447,7 +448,7 @@ private:
   }
 
   int runTool() const {
-    // Convert arguments to C strings, so that they can be passed through
+    // Convert arguments to C strings, so that they can be passed via
     // `argc`.
     SmallVector<char *, 16> ArgsCStr;
     ArgsCStr.reserve(NextInvocation.Args.size());
