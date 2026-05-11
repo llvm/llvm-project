@@ -9601,49 +9601,13 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     Inst.addOperand(Inst.getOperand(0));
   }
 
-  // Adding vdst_in operand is already covered for these DPP instructions in
-  // cvtVOP3DPP.
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in) &&
-      !(Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx11 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx11 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_t16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_t16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_BF8_F32_fake16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_fake16_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_t16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_fake16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_t16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_fake16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_t16_e64_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F16_fake16_e64_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_t16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_fake16_e64_dpp_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_t16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_fake16_e64_dpp8_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_t16_e64_gfx1250 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F16_fake16_e64_gfx1250)) {
+  // Append vdst_in only if a previous converter (cvtVOP3DPP for DPP variants,
+  // cvtVOP3 for byte_sel variants) hasn't already placed it. Use the position
+  // of the named operand to detect that, the same way cvtVOP3DPP does
+  // internally.
+  int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+  if (VdstInIdx != -1 && VdstInIdx == static_cast<int>(Inst.getNumOperands()))
     Inst.addOperand(Inst.getOperand(0));
-  }
 
   int BitOp3Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::bitop3);
   if (BitOp3Idx != -1) {

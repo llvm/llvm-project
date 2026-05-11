@@ -82,8 +82,25 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   return matchIConstant(State.MIs[0]->getOperand(1), 0);
 // CHECK-NEXT: }
 
-// Verify we reset MatchData on each tryCombineAll
+// Verify we gate on opcodes with generated combines and reset MatchData on each
+// tryCombineAll.
+// CHECK:      static bool GenMyCombiner_canMatchOpcode(unsigned Opc) {
+// CHECK-NEXT:   switch (Opc) {
+// CHECK-DAG:    case TargetOpcode::COPY:
+// CHECK-DAG:    case TargetOpcode::G_AND:
+// CHECK-DAG:    case TargetOpcode::G_STORE:
+// CHECK-DAG:    case TargetOpcode::G_TRUNC:
+// CHECK-DAG:    case TargetOpcode::G_SEXT:
+// CHECK-DAG:    case TargetOpcode::G_ZEXT:
+// CHECK:        return true;
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return false;
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK-EMPTY:
 // CHECK:      bool GenMyCombiner::tryCombineAll(MachineInstr &I) const {
+// CHECK-NEXT:   if (!GenMyCombiner_canMatchOpcode(I.getOpcode()))
+// CHECK-NEXT:     return false;
 // CHECK-NEXT:   const PredicateBitset AvailableFeatures = getAvailableFeatures();
 // CHECK-NEXT:   State.MIs.clear();
 // CHECK-NEXT:   State.MIs.push_back(&I);

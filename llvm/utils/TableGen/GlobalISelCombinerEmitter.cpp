@@ -41,6 +41,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -2404,6 +2405,9 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   // combine rule used to disable/enable it.
   std::vector<std::pair<unsigned, std::string>> AllCombineRules;
 
+  // Opcodes handled by the generated matcher.
+  SmallSetVector<const CodeGenInstruction *, 32> MatchOpcodes;
+
   // Keep track of all rules we've seen so far to ensure we don't process
   // the same rule twice.
   StringSet<> RulesSeen;
@@ -2411,6 +2415,8 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules);
 
   void emitRuleConfigImpl(raw_ostream &OS);
+  void collectMatchOpcodes(ArrayRef<RuleMatcher> Rules);
+  void emitCanMatchOpcodeFn(raw_ostream &OS, StringRef FnName) const;
 
   void emitAdditionalImpl(raw_ostream &OS) override;
 
@@ -2557,9 +2563,41 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
      << "}\n\n";
 }
 
+void GICombinerEmitter::collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) {
+  for (const RuleMatcher &Rule : Rules) {
+    for (const CodeGenInstruction *I :
+         Rule.insnmatchers_front().getOpcodeMatcher().getAlternativeOpcodes())
+      MatchOpcodes.insert(I);
+  }
+}
+
+void GICombinerEmitter::emitCanMatchOpcodeFn(raw_ostream &OS,
+                                             StringRef FnName) const {
+  OS << "static bool " << FnName << "(unsigned Opc) {\n";
+  if (MatchOpcodes.empty()) {
+    OS << "  (void)Opc;\n"
+       << "  return false;\n"
+       << "}\n\n";
+    return;
+  }
+
+  OS << "  switch (Opc) {\n";
+  for (const CodeGenInstruction *I : MatchOpcodes)
+    OS << "  case " << I->Namespace << "::" << I->getName() << ":\n";
+  OS << "    return true;\n"
+     << "  default:\n"
+     << "    return false;\n"
+     << "  }\n"
+     << "}\n\n";
+}
+
 void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
+  std::string CanMatchOpcodeFnName = (getClassName() + "_canMatchOpcode").str();
+  emitCanMatchOpcodeFn(OS, CanMatchOpcodeFnName);
   OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
      << "(MachineInstr &I) const {\n"
+     << "  if (!" << CanMatchOpcodeFnName << "(I.getOpcode()))\n"
+     << "    return false;\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
      << "  State.MIs.clear();\n"
@@ -2780,6 +2818,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     return false;
   });
 
+  collectMatchOpcodes(Rules);
   const MatchTable Table = buildMatchTable(Rules);
 
   Timer.startTimer("Emit combiner");
