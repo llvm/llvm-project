@@ -11793,7 +11793,7 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     for (unsigned I = 0; I < NElts; ++I) {
       if (!handleScalarCast(Info, FPO, E, SrcEltTy, DstEltTy,
                             SrcVal.getVectorElt(I), ResultEls[I]))
-        return false;
+        return Error(E);
     }
     return Success(ResultEls, E);
   }
