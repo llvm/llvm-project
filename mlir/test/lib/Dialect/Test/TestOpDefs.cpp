@@ -1062,11 +1062,15 @@ LogicalResult ReifyBoundOp::verify() {
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
-  } else if (getVar().getType().isIndex()) {
+  } else if (getVar().getType().isIndex() || getVar().getType().isInteger()) {
+    if (getVar().getType().isInteger() && !getAllowIntegerType())
+      return emitOpError("integer variable requires 'allow_integer_type'");
     if (getDim().has_value())
-      return emitOpError("unexpected 'dim' attribute for index variable");
+      return emitOpError(
+          "unexpected 'dim' attribute for index/integer variable");
   } else {
-    return emitOpError("expected index-typed variable or shape type variable");
+    return emitOpError(
+        "expected index-typed/integer-typed variable or shape type variable");
   }
   if (getConstant() && getScalable())
     return emitOpError("'scalable' and 'constant' are mutually exlusive");

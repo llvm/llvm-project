@@ -253,7 +253,7 @@ define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], <vscale x 4 x i32> [[VEC_IND2]], i32 3
 ; IF-EVL-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[VEC_IND2]], <vscale x 4 x ptr> align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT5]] = add <vscale x 4 x i32> [[VEC_IND2]], [[BROADCAST_SPLAT]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT5]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND2]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       middle.block:
@@ -365,7 +365,7 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = add <vscale x 4 x i32> [[TMP9]], [[WIDE_MASKED_GATHER2]]
 ; IF-EVL-NEXT:    [[TMP12]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP11]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP4]])
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
@@ -483,7 +483,7 @@ define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], <vscale x 4 x i32> [[VEC_IND2]], i32 2
 ; IF-EVL-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[VEC_IND2]], <vscale x 4 x ptr> align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT5]] = add <vscale x 4 x i32> [[VEC_IND2]], [[BROADCAST_SPLAT]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT5]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND2]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       middle.block:

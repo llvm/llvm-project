@@ -34,6 +34,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <tuple>
 
@@ -116,6 +117,18 @@ struct IRTCallDescription {
   CallInst *createLLVMCall(Value *&V, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB, const DataLayout &DL,
                            InstrumentationCaches &ICaches);
+
+  /// Create a string representation of the function declaration in C. Two
+  /// strings are returned: the function definition with direct arguments and
+  /// the function with any indirect argument.
+  std::pair<std::string, std::string>
+  createCSignature(const InstrumentationConfig &IConf) const;
+
+  /// Create a string representation of the function definition in C. The
+  /// function body implements a stub and only prints the passed arguments. Two
+  /// strings are returned: the function definition with direct arguments and
+  /// the function with any indirect argument.
+  std::pair<std::string, std::string> createCBodies() const;
 
   /// Return whether the \p IRTA argument can be replaced.
   bool isReplacable(IRTArg &IRTA) const {
@@ -273,17 +286,15 @@ struct BaseConfigurationOption {
 
   /// Create a boolean option with \p Name name, \p Description description and
   /// \p DefaultValue as boolean default value.
-  static BaseConfigurationOption *createBoolOption(InstrumentationConfig &IC,
-                                                   StringRef Name,
-                                                   StringRef Description,
-                                                   bool DefaultValue);
+  static std::unique_ptr<BaseConfigurationOption>
+  createBoolOption(InstrumentationConfig &IC, StringRef Name,
+                   StringRef Description, bool DefaultValue);
 
   /// Create a string option with \p Name name, \p Description description and
   /// \p DefaultValue as string default value.
-  static BaseConfigurationOption *createStringOption(InstrumentationConfig &IC,
-                                                     StringRef Name,
-                                                     StringRef Description,
-                                                     StringRef DefaultValue);
+  static std::unique_ptr<BaseConfigurationOption>
+  createStringOption(InstrumentationConfig &IC, StringRef Name,
+                     StringRef Description, StringRef DefaultValue);
 
   /// Helper union that holds any possible option type.
   union ValueTy {
@@ -339,6 +350,9 @@ struct InstrumentationConfig {
   InstrumentationConfig() : SS(StringAllocator) {
     RuntimePrefix = BaseConfigurationOption::createStringOption(
         *this, "runtime_prefix", "The runtime API prefix.", "__instrumentor_");
+    RuntimeStubsFile = BaseConfigurationOption::createStringOption(
+        *this, "runtime_stubs_file",
+        "The file into which runtime stubs should be written.", "");
     TargetRegex = BaseConfigurationOption::createStringOption(
         *this, "target_regex",
         "Regular expression to be matched against the module target. "
@@ -384,10 +398,11 @@ struct InstrumentationConfig {
   SmallVector<BaseConfigurationOption *> BaseConfigurationOptions;
 
   /// The base configuration options.
-  BaseConfigurationOption *RuntimePrefix;
-  BaseConfigurationOption *TargetRegex;
-  BaseConfigurationOption *HostEnabled;
-  BaseConfigurationOption *GPUEnabled;
+  std::unique_ptr<BaseConfigurationOption> RuntimePrefix;
+  std::unique_ptr<BaseConfigurationOption> RuntimeStubsFile;
+  std::unique_ptr<BaseConfigurationOption> TargetRegex;
+  std::unique_ptr<BaseConfigurationOption> HostEnabled;
+  std::unique_ptr<BaseConfigurationOption> GPUEnabled;
 
   /// The map registered instrumentation opportunities. The map is indexed by
   /// the instrumentation location kind and then by the opportunity name. Notice
@@ -678,7 +693,7 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
 } // namespace instrumentor
 
 /// The Instrumentor pass.
-class InstrumentorPass : public PassInfoMixin<InstrumentorPass> {
+class InstrumentorPass : public RequiredPassInfoMixin<InstrumentorPass> {
   using InstrumentationConfig = instrumentor::InstrumentationConfig;
   using InstrumentorIRBuilderTy = instrumentor::InstrumentorIRBuilderTy;
 
