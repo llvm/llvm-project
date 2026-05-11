@@ -452,5 +452,5 @@ functions:
   - name: pthread_getunique_np
     return_type: int
     arguments:
-      - type: pthread_t *
-      - type: pthread_id_np_t *
+      - type: const pthread_t *__restrict
+      - type: pthread_id_np_t *__restrict

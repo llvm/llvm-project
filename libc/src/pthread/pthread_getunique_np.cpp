@@ -17,7 +17,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_getunique_np,
-                   (pthread_t * thread, pthread_id_np_t *id)) {
+                   (const pthread_t *__restrict thread,
+                    pthread_id_np_t *__restrict id)) {
   LIBC_CRASH_ON_NULLPTR(id);
   // We assume that unique thread ID is an integer value of a pointer to TCB.
   *id = (thread == nullptr)
