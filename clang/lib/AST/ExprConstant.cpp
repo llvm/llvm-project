@@ -16874,13 +16874,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_rotateright64:
   case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI__builtin_stdc_rotate_right:
-  case Builtin::BIstdc_rotate_left:
   case Builtin::BIstdc_rotate_left_uc:
   case Builtin::BIstdc_rotate_left_us:
   case Builtin::BIstdc_rotate_left_ui:
   case Builtin::BIstdc_rotate_left_ul:
   case Builtin::BIstdc_rotate_left_ull:
-  case Builtin::BIstdc_rotate_right:
   case Builtin::BIstdc_rotate_right_uc:
   case Builtin::BIstdc_rotate_right_us:
   case Builtin::BIstdc_rotate_right_ui:
@@ -16909,7 +16907,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BI__builtin_rotateright32:
     case Builtin::BI__builtin_rotateright64:
     case Builtin::BI__builtin_stdc_rotate_right:
-    case Builtin::BIstdc_rotate_right:
     case Builtin::BIstdc_rotate_right_uc:
     case Builtin::BIstdc_rotate_right_us:
     case Builtin::BIstdc_rotate_right_ui:

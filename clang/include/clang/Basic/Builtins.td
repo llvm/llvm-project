@@ -970,18 +970,6 @@ def StdcBitCeilLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
   let Prototype = "void(...)";
 }
 
-def StdcRotateLeftLib: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
-  let Spellings = ["stdc_rotate_left"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcRotateRightLib: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
-  let Spellings = ["stdc_rotate_right"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
 // Typed variants of the C23 stdbit.h builtins (e.g. stdc_leading_zeros_uc).
 // IntBitUtilTemplate generates the _uc/_us/_ui/_ul/_ull spellings with
 // concrete prototypes so the compiler can match the <stdbit.h> declarations.

@@ -3770,7 +3770,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
   case Builtin::BI__builtin_stdc_rotate_left:
-  case Builtin::BIstdc_rotate_left:
   case Builtin::BIstdc_rotate_left_uc:
   case Builtin::BIstdc_rotate_left_us:
   case Builtin::BIstdc_rotate_left_ui:
@@ -3788,7 +3787,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
   case Builtin::BI__builtin_stdc_rotate_right:
-  case Builtin::BIstdc_rotate_right:
   case Builtin::BIstdc_rotate_right_uc:
   case Builtin::BIstdc_rotate_right_us:
   case Builtin::BIstdc_rotate_right_ui:
