@@ -35,6 +35,8 @@ struct BBAddrMap {
 #include "llvm/Object/BBAddrMap.def"
       NumBits,
     };
+    static_assert(NumBits <= 16,
+                  "BBAddrMap::Features is encoded as a uint16_t");
 
 #define HANDLE_BB_ADDR_MAP_FEATURE(Name) bool Name : 1;
 #include "llvm/Object/BBAddrMap.def"
@@ -60,7 +62,7 @@ struct BBAddrMap {
     static Expected<Features> decode(uint16_t Val) {
       Features Feat{
 #define HANDLE_BB_ADDR_MAP_FEATURE(Name)                                       \
-  static_cast<bool>(Val & (1 << Name##Bit)),
+  static_cast<bool>(Val & (uint16_t{1} << Name##Bit)),
 #include "llvm/Object/BBAddrMap.def"
       };
       if (Feat.encode() != Val)
@@ -82,6 +84,8 @@ struct BBAddrMap {
 #include "llvm/Object/BBAddrMap.def"
         NumBits,
       };
+      static_assert(NumBits <= 32,
+                    "BBAddrMap::BBEntry::Metadata is encoded as a uint32_t");
 
 #define HANDLE_BB_ADDR_MAP_BB_METADATA(Name) bool Name : 1;
 #include "llvm/Object/BBAddrMap.def"
@@ -103,7 +107,7 @@ struct BBAddrMap {
       static Expected<Metadata> decode(uint32_t V) {
         Metadata MD{
 #define HANDLE_BB_ADDR_MAP_BB_METADATA(Name)                                   \
-  static_cast<bool>(V & (1 << Name##Bit)),
+  static_cast<bool>(V & (uint32_t{1} << Name##Bit)),
 #include "llvm/Object/BBAddrMap.def"
         };
         if (MD.encode() != V)
