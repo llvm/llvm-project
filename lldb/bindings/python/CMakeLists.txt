@@ -140,10 +140,18 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
             "${LLDB_SOURCE_DIR}/examples/python/diagnose_nsstring.py")
   endif()
 
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/LLDB")
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    # The SWIG wrapper lives in the plugin library in this mode.
+    set(liblldb_filename "liblldbPluginScriptInterpreterPython${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  elseif (LLDB_BUILD_FRAMEWORK)
+    set(liblldb_filename "LLDB")
   else()
-    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(liblldb_filename "liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  endif()
+  if(LLDB_BUILD_FRAMEWORK)
+    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/${liblldb_filename}")
+  else()
+    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/${liblldb_filename}")
   endif()
   set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb${LLDB_PYTHON_EXT_SUFFIX}")
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}

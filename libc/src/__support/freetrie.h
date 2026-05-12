@@ -87,9 +87,9 @@ public:
 
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.
-  LIBC_INLINE void set_range(FreeTrie::SizeRange range) {
+  LIBC_INLINE void set_range(FreeTrie::SizeRange new_range) {
     LIBC_ASSERT(empty() && "cannot change the range of a preexisting trie");
-    this->range = range;
+    range = new_range;
   }
 
   /// @returns Whether the trie contains any blocks.

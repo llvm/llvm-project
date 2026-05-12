@@ -37,25 +37,25 @@ define void @T() {
 ; CHECK-NEXT:    [[SLOT:%.*]] = alloca double, align 8
 ; CHECK-NEXT:    [[SLOTF:%.*]] = alloca float, align 4
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[SLOT]], align 8
-; CHECK-NEXT:    store double 0x3FF921FB54442D18, ptr [[SLOT]], align 8
-; CHECK-NEXT:    store double 0x3FE4978FA3269EE1, ptr [[SLOT]], align 8
-; CHECK-NEXT:    store double 0x402422A497D6185E, ptr [[SLOT]], align 8
-; CHECK-NEXT:    store double 0x403415E5BF6FB106, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double f0x3FF921FB54442D18, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double f0x3FE4978FA3269EE1, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double f0x402422A497D6185E, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double f0x403415E5BF6FB106, ptr [[SLOT]], align 8
 ; CHECK-NEXT:    store double 8.000000e+00, ptr [[SLOT]], align 8
-; CHECK-NEXT:    store double 0x3FF193EA7AAD030{{[AB]}}, ptr [[SLOT]], align 8
-; CHECK-NEXT:    store double 0x3FDE8927964FD5FD, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double f0x3FF193EA7AAD030{{[AB]}}, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double f0x3FDE8927964FD5FD, ptr [[SLOT]], align 8
 ; CHECK-NEXT:    store double 1.000000e+00, ptr [[SLOT]], align 8
-; CHECK-NEXT:    store double 0x40240926E70949AE, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double f0x40240926E70949AE, ptr [[SLOT]], align 8
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[SLOTF]], align 4
-; CHECK-NEXT:    store float 0x3FF921FB60000000, ptr [[SLOTF]], align 4
-; CHECK-NEXT:    store float 0x3FE4978FA0000000, ptr [[SLOTF]], align 4
-; CHECK-NEXT:    store float 0x402422A4A0000000, ptr [[SLOTF]], align 4
-; CHECK-NEXT:    store float 0x403415E5C0000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float f0x3FC90FDB, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float f0x3F24BC7D, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float f0x41211525, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float f0x41A0AF2E, ptr [[SLOTF]], align 4
 ; CHECK-NEXT:    store float 8.000000e+00, ptr [[SLOTF]], align 4
-; CHECK-NEXT:    store float 0x3FF193EA80000000, ptr [[SLOTF]], align 4
-; CHECK-NEXT:    store float 0x3FDE8927A0000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float f0x3F8C9F54, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float f0x3EF4493D, ptr [[SLOTF]], align 4
 ; CHECK-NEXT:    store float 8.100000e+01, ptr [[SLOTF]], align 4
-; CHECK-NEXT:    store float 0x40240926E0000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float f0x41204937, ptr [[SLOTF]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; MUSL-LABEL: @T(

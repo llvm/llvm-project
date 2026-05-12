@@ -145,7 +145,8 @@ constexpr static uint8_t CharRoles[] = {
     // clang-format on
 };
 
-template <typename T> static T packedLookup(const uint8_t *Data, int I) {
+template <typename T>
+static T packedLookup(const uint8_t *Data, unsigned char I) {
   return static_cast<T>((Data[I >> 2] >> ((I & 3) * 2)) & 3);
 }
 CharTypeSet calculateRoles(llvm::StringRef Text,

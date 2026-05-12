@@ -160,7 +160,7 @@ define void @main() {
 ; CHECK-NEXT:   half %x = half 1.000000e+00
 ; CHECK-NEXT:   ret half %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass
-; CHECK-NEXT:   %nofpclass_valid = call half @identity_nofpclass(half 0xH3C00) => half 1.000000e+00
+; CHECK-NEXT:   %nofpclass_valid = call half @identity_nofpclass(half 1.000000e+00) => half 1.000000e+00
 ; CHECK-NEXT: Entering function: identity_nofpclass
 ; CHECK-NEXT:   half %x = poison
 ; CHECK-NEXT:   ret half %x
@@ -170,32 +170,32 @@ define void @main() {
 ; CHECK-NEXT:   half %x = poison
 ; CHECK-NEXT:   ret half %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass
-; CHECK-NEXT:   %nofpclass_invalid_input = call half @identity_nofpclass(half 0xH7C00) => poison
+; CHECK-NEXT:   %nofpclass_invalid_input = call half @identity_nofpclass(half +inf) => poison
 ; CHECK-NEXT: Entering function: identity_nofpclass
 ; CHECK-NEXT:   half %x = half NaN
 ; CHECK-NEXT:   ret half %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass
-; CHECK-NEXT:   %nofpclass_invalid_output = call half @identity_nofpclass(half 0xH7E00) => poison
+; CHECK-NEXT:   %nofpclass_invalid_output = call half @identity_nofpclass(half +qnan) => poison
 ; CHECK-NEXT: Entering function: identity_nofpclass_vec
 ; CHECK-NEXT:   <4 x half> %x = { half 1.000000e+00, poison, poison, half NaN }
 ; CHECK-NEXT:   ret <4 x half> %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass_vec
-; CHECK-NEXT:   %nofpclass_vec = call <4 x half> @identity_nofpclass_vec(<4 x half> <half 0xH3C00, half poison, half 0xH7C00, half 0xH7E00>) => { half 1.000000e+00, poison, poison, poison }
+; CHECK-NEXT:   %nofpclass_vec = call <4 x half> @identity_nofpclass_vec(<4 x half> <half 1.000000e+00, half poison, half +inf, half +qnan>) => { half 1.000000e+00, poison, poison, poison }
 ; CHECK-NEXT: Entering function: identity_nofpclass
 ; CHECK-NEXT:   half %x = poison
 ; CHECK-NEXT:   ret half %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass
-; CHECK-NEXT:   %nofpclass_callsite_invalid_input = call half @identity_nofpclass(half nofpclass(norm) 0xH3C00) => poison
+; CHECK-NEXT:   %nofpclass_callsite_invalid_input = call half @identity_nofpclass(half nofpclass(norm) 1.000000e+00) => poison
 ; CHECK-NEXT: Entering function: identity_nofpclass
 ; CHECK-NEXT:   half %x = half 1.000000e+00
 ; CHECK-NEXT:   ret half %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass
-; CHECK-NEXT:   %nofpclass_callsite_invalid_output = call nofpclass(norm) half @identity_nofpclass(half 0xH3C00) => poison
+; CHECK-NEXT:   %nofpclass_callsite_invalid_output = call nofpclass(norm) half @identity_nofpclass(half 1.000000e+00) => poison
 ; CHECK-NEXT: Entering function: identity_nofpclass_agg
 ; CHECK-NEXT:   { <2 x half>, <2 x half> } %x = { { half 1.000000e+00, poison }, { poison, half NaN } }
 ; CHECK-NEXT:   ret { <2 x half>, <2 x half> } %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass_agg
-; CHECK-NEXT:   %nofpclass_agg = call { <2 x half>, <2 x half> } @identity_nofpclass_agg({ <2 x half>, <2 x half> } { <2 x half> <half 0xH3C00, half poison>, <2 x half> <half 0xH7C00, half 0xH7E00> }) => { { half 1.000000e+00, poison }, { poison, poison } }
+; CHECK-NEXT:   %nofpclass_agg = call { <2 x half>, <2 x half> } @identity_nofpclass_agg({ <2 x half>, <2 x half> } { <2 x half> <half 1.000000e+00, half poison>, <2 x half> <half +inf, half +qnan> }) => { { half 1.000000e+00, poison }, { poison, poison } }
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %ptr_one = getelementptr i8, ptr null, i32 1 => ptr 0x1 [dangling]
 ; CHECK-NEXT: Entering function: gep_nonnull
