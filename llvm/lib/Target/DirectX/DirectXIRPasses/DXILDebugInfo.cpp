@@ -21,6 +21,25 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
+  for (DICompileUnit *CU : DIF.compile_units()) {
+    DISourceLanguageName Lang = CU->getSourceLanguage();
+    if (Lang.hasVersionedName()) {
+      auto LangName = static_cast<dwarf::SourceLanguageName>(Lang.getName());
+      Lang = dwarf::toDW_LANG(LangName, Lang.getVersion())
+                 .value_or(dwarf::SourceLanguage{});
+      auto *NewCU = DICompileUnit::getDistinct(
+          M.getContext(), Lang, CU->getFile(), CU->getProducer(),
+          CU->isOptimized(), CU->getFlags(), CU->getRuntimeVersion(),
+          CU->getSplitDebugFilename(), CU->getEmissionKind(),
+          CU->getEnumTypes(), CU->getRetainedTypes(), CU->getGlobalVariables(),
+          CU->getImportedEntities(), CU->getMacros(), CU->getDWOId(),
+          CU->getSplitDebugInlining(), CU->getDebugInfoForProfiling(),
+          CU->getNameTableKind(), CU->getRangesBaseAddress(), CU->getSysRoot(),
+          CU->getSDK());
+      Res.MDReplace.insert({CU, NewCU});
+    }
+  }
+
   std::vector<std::pair<const DICompileUnit *, const Metadata *>> CUSubprograms;
 
   for (const Function &F : M) {
