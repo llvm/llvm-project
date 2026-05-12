@@ -412,7 +412,7 @@ WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
     // TI_GLOBAL_RELOC would produce a bogus relocation. We take care to ensure
     // that this code is not reached in that case, but assert here to be sure.
     assert(!MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext());
-    
+
     // TODO: This should work on a breakpoint at a function with no frame,
     // but probably won't work for traversing up the stack.
     Loc.Location.WasmLoc = {WebAssembly::TI_GLOBAL_RELOC, 0};
