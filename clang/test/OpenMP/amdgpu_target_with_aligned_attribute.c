@@ -31,7 +31,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
-// CHECK-AMD-NEXT:    [[APTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[APTR_ADDR]] to ptr
+// CHECK-AMD-NEXT:    [[APTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[APTR_ADDR]] to ptr addrspace(1)
 // CHECK-AMD-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-AMD-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
@@ -40,7 +40,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IV]] to ptr
 // CHECK-AMD-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
-// CHECK-AMD-NEXT:    store ptr [[APTR]], ptr [[APTR_ADDR_ASCAST]], align 8
+// CHECK-AMD-NEXT:    store ptr [[APTR]], ptr addrspace(1) [[APTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-AMD-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
@@ -78,7 +78,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK-AMD-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-AMD-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[APTR_ADDR_ASCAST]], align 8
+// CHECK-AMD-NEXT:    [[TMP14:%.*]] = load ptr, ptr addrspace(1) [[APTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    [[TMP15:%.*]] = load i32, ptr [[I_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP15]] to i64
 // CHECK-AMD-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[IDXPROM]]

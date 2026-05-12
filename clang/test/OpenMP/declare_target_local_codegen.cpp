@@ -349,11 +349,11 @@ int use_new_local_vars() {
 // DEVICE-NEXT:  entry:
 // DEVICE-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // DEVICE-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// DEVICE-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr
+// DEVICE-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr addrspace(1)
 // DEVICE-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
-// DEVICE-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
+// DEVICE-NEXT:    store ptr [[RESULT]], ptr addrspace(1) [[RESULT_ADDR_ASCAST]], align 8
 // DEVICE-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
-// DEVICE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META7:![0-9]+]], !align [[META8:![0-9]+]]
+// DEVICE-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META7:![0-9]+]], !align [[META8:![0-9]+]]
 // DEVICE-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14use_local_varsv_l70_kernel_environment to ptr), ptr [[DYN_PTR]])
 // DEVICE-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // DEVICE-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -385,11 +385,11 @@ int use_new_local_vars() {
 // DEVICE-NEXT:  entry:
 // DEVICE-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // DEVICE-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// DEVICE-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr
+// DEVICE-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr addrspace(1)
 // DEVICE-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
-// DEVICE-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
+// DEVICE-NEXT:    store ptr [[RESULT]], ptr addrspace(1) [[RESULT_ADDR_ASCAST]], align 8
 // DEVICE-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
-// DEVICE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
+// DEVICE-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // DEVICE-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z21use_nohost_local_varsv_l86_kernel_environment to ptr), ptr [[DYN_PTR]])
 // DEVICE-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // DEVICE-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -408,11 +408,11 @@ int use_new_local_vars() {
 // DEVICE-NEXT:  entry:
 // DEVICE-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // DEVICE-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// DEVICE-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr
+// DEVICE-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr addrspace(1)
 // DEVICE-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
-// DEVICE-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
+// DEVICE-NEXT:    store ptr [[RESULT]], ptr addrspace(1) [[RESULT_ADDR_ASCAST]], align 8
 // DEVICE-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
-// DEVICE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
+// DEVICE-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // DEVICE-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18use_new_local_varsv_l99_kernel_environment to ptr), ptr [[DYN_PTR]])
 // DEVICE-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // DEVICE-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]

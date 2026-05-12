@@ -24,7 +24,7 @@ int CheckMultipleArgs(int a) {
 // CHECK:   [[A_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // CHECK:   [[DYN_PTR_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK:   [[T_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[T_ADDR]] to ptr
-// CHECK:   store ptr %test, ptr [[TEST_CAST]], align 8
+// CHECK:   store ptr %test, ptr addrspace(1) [[TEST_CAST]], align 8
 // CHECK:   store i64 %a, ptr [[A_CAST]], align 8
 // CHECK:   store ptr %dyn_ptr, ptr [[DYN_PTR_CAST]], align 8
 // CHECK:   [[INIT_CALL:%[a-zA-Z0-9_.]+]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) {{.*}} to ptr), ptr %dyn_ptr)
@@ -32,13 +32,13 @@ int CheckMultipleArgs(int a) {
 // CHECK:   br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.+]], label %[[WORKER_EXIT:.+]]
 
 // CHECK: [[USER_CODE_ENTRY]]:
-// CHECK:   [[LOAD_TEST:%[0-9]+]] = load ptr, ptr [[TEST_CAST]], align 8
+// CHECK:   [[LOAD_TEST:%[0-9]+]] = load ptr, ptr
 // CHECK:   [[LOAD_A:%[0-9]+]] = load i32, ptr [[A_CAST]], align 4
 // CHECK:   %idx.ext = sext i32 [[LOAD_A]] to i64
 // CHECK:   %add.ptr = getelementptr inbounds i8, ptr [[LOAD_TEST]], i64 %idx.ext
 // CHECK:   store ptr %add.ptr, ptr [[T_CAST]], align 8
 // CHECK:   [[LOAD_T:%[0-9]+]] = load ptr, ptr [[T_CAST]], align 8
-// CHECK:   [[LOAD_TEST_AGAIN:%[0-9]+]] = load ptr, ptr [[TEST_CAST]], align 8
+// CHECK:   [[LOAD_TEST_AGAIN:%[0-9]+]] = load ptr, ptr
 // CHECK:   call ptr @__llvm_omp_emissary_premalloc(i32 %total_buffer_size)
 // CHECK:   call void @__kmpc_target_deinit()
 // CHECK:   ret void
