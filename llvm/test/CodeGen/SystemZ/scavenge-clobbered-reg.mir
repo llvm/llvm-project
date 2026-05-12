@@ -2,16 +2,7 @@
 # RUN: llc %s -mtriple=s390x-ibm-linux -mcpu=z15 -run-pass=prologepilog -o - | FileCheck %s
 ---
 name:            repro
-alignment:       16
-
 tracksRegLiveness: true
-registers:       []
-liveins:
-  - { reg: '$r2d', virtual-reg: '' }
-  - { reg: '$r3d', virtual-reg: '' }
-frameInfo:
-  stackSize:       0
-  maxAlignment:    1
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 16384, alignment: 1,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
