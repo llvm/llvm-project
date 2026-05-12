@@ -729,10 +729,10 @@ define void @irregular_type(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP0]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP2]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP4]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP6]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP0]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP2]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP4]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -772,10 +772,10 @@ define void @irregular_type(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[TMP2:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP1]]
 ; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP5]]
 ; INTER-NEXT:    [[TMP6:%.*]] = getelementptr inbounds x86_fp80, ptr [[A]], i64 [[TMP3]]
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP0]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP2]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP4]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP6]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP0]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP2]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP4]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[TMP6]], align 16
 ; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
 ; INTER-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTER-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -977,7 +977,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP25]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP25]], i64 2
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[TMP25]], i64 3
-; CHECK-NEXT:    [[TMP39:%.*]] = sub <4 x i32> [[TMP40]], [[TMP40]]
+; CHECK-NEXT:    [[TMP39:%.*]] = sub <4 x i32> [[TMP12]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP39]], i64 0
 ; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP39]], i64 1
 ; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP39]], i64 2
@@ -1019,7 +1019,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[UNNAMEDTMP05:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 5
 ; CHECK-NEXT:    [[UNNAMEDTMP06:%.*]] = load i32, ptr [[UNNAMEDTMP05]], align 8
 ; CHECK-NEXT:    [[UNNAMEDTMP07:%.*]] = sub i32 [[UNNAMEDTMP4]], [[UNNAMEDTMP00]]
-; CHECK-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP04]], [[UNNAMEDTMP04]]
+; CHECK-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP00]], [[UNNAMEDTMP04]]
 ; CHECK-NEXT:    [[UNNAMEDTMP09:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 2
 ; CHECK-NEXT:    store i32 [[UNNAMEDTMP07]], ptr [[UNNAMEDTMP09]], align 8
 ; CHECK-NEXT:    [[UNNAMEDTMP10:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 3
@@ -1071,7 +1071,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP17]], i64 1
 ; INTER-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP17]], i64 2
 ; INTER-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP17]], i64 3
-; INTER-NEXT:    [[TMP18:%.*]] = sub <4 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC4]]
+; INTER-NEXT:    [[TMP18:%.*]] = sub <4 x i32> [[STRIDED_VEC]], [[STRIDED_VEC4]]
 ; INTER-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP18]], i64 0
 ; INTER-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP18]], i64 1
 ; INTER-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP18]], i64 2
@@ -1112,7 +1112,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[UNNAMEDTMP05:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 5
 ; INTER-NEXT:    [[UNNAMEDTMP06:%.*]] = load i32, ptr [[UNNAMEDTMP05]], align 8
 ; INTER-NEXT:    [[UNNAMEDTMP07:%.*]] = sub i32 [[UNNAMEDTMP4]], [[UNNAMEDTMP00]]
-; INTER-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP04]], [[UNNAMEDTMP04]]
+; INTER-NEXT:    [[UNNAMEDTMP08:%.*]] = sub i32 [[UNNAMEDTMP00]], [[UNNAMEDTMP04]]
 ; INTER-NEXT:    [[UNNAMEDTMP09:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 2
 ; INTER-NEXT:    store i32 [[UNNAMEDTMP07]], ptr [[UNNAMEDTMP09]], align 8
 ; INTER-NEXT:    [[UNNAMEDTMP10:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 3
@@ -1137,7 +1137,7 @@ for.body:
   %tmp05 = getelementptr inbounds i32, ptr %p, i32 5
   %tmp06 = load i32, ptr %tmp05, align 8
   %tmp07 = sub i32 %tmp04, %tmp00
-  %tmp08 = sub i32 %tmp02, %tmp02
+  %tmp08 = sub i32 %tmp00, %tmp02
   %tmp09 = getelementptr inbounds i32, ptr %p, i32 2
   store i32 %tmp07, ptr %tmp09, align 8
   %tmp10 = getelementptr inbounds i32, ptr %p, i32 3
@@ -1177,10 +1177,10 @@ define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP1]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP2]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP3]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP1]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP2]], align 16
+; CHECK-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP3]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
@@ -1225,10 +1225,10 @@ define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; INTER-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; INTER-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP1]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP2]], align 16
-; INTER-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[NEXT_GEP3]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP1]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP2]], align 16
+; INTER-NEXT:    store x86_fp80 1.000000e+00, ptr [[NEXT_GEP3]], align 16
 ; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTER-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTER-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]

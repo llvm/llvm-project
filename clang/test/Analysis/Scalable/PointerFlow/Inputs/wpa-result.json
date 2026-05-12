@@ -1,0 +1,128 @@
+{
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "1",
+        "usr": "c:@F@foo#"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "2",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "results": [
+    {
+      "analysis_name": "PointerFlowAnalysisResult",
+      "result": {
+        "PointerFlowAnalysisResult": [
+          {
+            "@": 0
+          },
+          [
+            [
+              [
+                {
+                  "@": 1
+                },
+                1
+              ],
+              [
+                {
+                  "@": 0
+                },
+                2
+              ],
+              [
+                {
+                  "@": 2
+                },
+                1
+              ],
+              [
+                {
+                  "@": 2
+                },
+                2
+              ]
+            ],
+            [
+              [
+                {
+                  "@": 2
+                },
+                1
+              ],
+              [
+                {
+                  "@": 1
+                },
+                2
+              ]
+            ]
+          ],
+          {
+            "@": 1
+          },
+          [
+            [
+              [
+                {
+                  "@": 0
+                },
+                1
+              ],
+              [
+                {
+                  "@": 1
+                },
+                1
+              ],
+              [
+                {
+                  "@": 2
+                },
+                1
+              ],
+              [
+                {
+                  "@": 2
+                },
+                3
+              ]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

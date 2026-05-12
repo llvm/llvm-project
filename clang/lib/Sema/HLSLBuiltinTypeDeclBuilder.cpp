@@ -554,6 +554,11 @@ void BuiltinTypeMethodBuilder::createDecl() {
         AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo,
         ExplicitSpecifier(), false, /*IsInline=*/true, false,
         ConstexprSpecKind::Unspecified);
+  else if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName)
+    Method = CXXConversionDecl::Create(
+        AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo,
+        false, /*isInline=*/true, ExplicitSpecifier(),
+        ConstexprSpecKind::Unspecified, SourceLocation());
   else
     Method = CXXMethodDecl::Create(
         AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo, SC,
@@ -879,7 +884,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
 
   QualType Ty = ReturnValueExpr->getType();
-  if (Ty->isRecordType()) {
+  if (Ty->isRecordType() && !Method->getReturnType()->isReferenceType()) {
     // For record types, create a call to copy constructor to ensure proper copy
     // semantics.
     auto *ICE =
@@ -1053,6 +1058,28 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSamplerHandle() {
   addHandleMember(ResourceClass::Sampler, ResourceDimension::Unknown,
                   /*IsROV=*/false, /*RawBuffer=*/false, getHandleElementType());
   return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addConstantBufferConversionToType() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  QualType ElemTy = getHandleElementType();
+  QualType AddrSpaceElemTy = AST.getCanonicalType(
+      AST.getAddrSpaceQualType(ElemTy.withConst(), LangAS::hlsl_constant));
+  QualType ReturnTy =
+      AST.getCanonicalType(AST.getLValueReferenceType(AddrSpaceElemTy));
+
+  DeclarationName Name = AST.DeclarationNames.getCXXConversionFunctionName(
+      AST.getCanonicalType(ReturnTy));
+
+  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, /*IsConst=*/true)
+      .callBuiltin("__builtin_hlsl_resource_getpointer",
+                   AST.getPointerType(AddrSpaceElemTy), PH::Handle)
+      .dereference(PH::LastStmt)
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &
@@ -2159,7 +2186,7 @@ Expr *BuiltinTypeDeclBuilder::getConstantUnsignedIntExpr(unsigned value) {
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
-                                                ConceptDecl *CD = nullptr) {
+                                                ConceptDecl *CD) {
   return addSimpleTemplateParams(Names, {}, CD);
 }
 
