@@ -27,5 +27,5 @@ void *f2(long N) {
 }
 
 // ALL: declare noundef nonnull ptr @_Znaj(
-// SANE: attributes [[ATTR]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite) }
+// SANE: attributes [[ATTR]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) }
 // SANENOT: attributes [[ATTR]] = { builtin allocsize(0) }

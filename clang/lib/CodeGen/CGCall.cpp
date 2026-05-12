@@ -2621,7 +2621,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         if (getCodeGenOpts().AssumeSaneOperatorNew &&
             (Kind == OO_New || Kind == OO_Array_New)) {
           RetAttrs.addAttribute(llvm::Attribute::NoAlias);
-          FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleMemOnly());
+          FuncAttrs.addMemoryAttr(
+              llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
+                  llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
         }
       }
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
