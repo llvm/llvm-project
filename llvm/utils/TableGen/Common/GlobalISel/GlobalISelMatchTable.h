@@ -47,6 +47,7 @@ class CodeGenRegisterClass;
 namespace gi {
 class MatchTable;
 class Matcher;
+class RuleMatcher;
 class OperandMatcher;
 class MatchAction;
 class PredicateMatcher;
@@ -70,8 +71,7 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 /// they share. \p MatcherStorage is used as a memory container
 /// for the group that are created as part of this process.
 ///
-/// What this optimization does looks like if GroupT = GroupMatcher:
-/// Output without optimization:
+/// Example of GroupMatcher formation via this function:
 /// \verbatim
 /// # R1
 ///  # predicate A
@@ -91,10 +91,9 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 ///  # R2
 ///   # predicate C
 /// \endverbatim
-template <class GroupT>
 std::vector<Matcher *>
-optimizeRules(ArrayRef<Matcher *> Rules,
-              std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
+optimizeRuleset(MutableArrayRef<RuleMatcher> Rules,
+                std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
 /// A record to be stored in a MatchTable.
 ///
@@ -323,6 +322,7 @@ public:
 
   virtual bool hasFirstCondition() const = 0;
   virtual const PredicateMatcher &getFirstCondition() const = 0;
+  virtual LLTCodeGen getFirstConditionAsRootType() const = 0;
   virtual std::unique_ptr<PredicateMatcher> popFirstCondition() = 0;
 
   /// Check recursively if the matcher records named operands for use in C++
@@ -394,6 +394,7 @@ public:
            "Trying to get a condition from a condition-less group");
     return *Conditions.front();
   }
+  LLTCodeGen getFirstConditionAsRootType() const override;
   bool hasFirstCondition() const override { return !Conditions.empty(); }
 
   bool recordsOperand() const override;
@@ -469,7 +470,11 @@ public:
   }
 
   const PredicateMatcher &getFirstCondition() const override {
-    llvm_unreachable("Trying to pop a condition from a condition-less group");
+    llvm_unreachable("Trying to get a condition from a condition-less group");
+  }
+
+  LLTCodeGen getFirstConditionAsRootType() const override {
+    llvm_unreachable("Trying to get a condition from a condition-less group");
   }
 
   bool hasFirstCondition() const override { return false; }
@@ -720,7 +725,7 @@ public:
 
   std::unique_ptr<PredicateMatcher> popFirstCondition() override;
   const PredicateMatcher &getFirstCondition() const override;
-  LLTCodeGen getFirstConditionAsRootType();
+  LLTCodeGen getFirstConditionAsRootType() const override;
   bool hasFirstCondition() const override;
   StringRef getOpcode() const;
 
