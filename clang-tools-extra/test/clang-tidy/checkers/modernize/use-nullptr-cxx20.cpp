@@ -1,28 +1,20 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -DGCC
-// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -DCLANG
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -D UNSPECIFIED_TYPE=_CmpUnspecifiedParam
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -D UNSPECIFIED_TYPE=__cmp_cat::__unspec
 
 namespace std {
 class strong_ordering;
 
 // Mock how STD defined unspecified parameters for the operators below.
-#ifdef CLANG
 struct _CmpUnspecifiedParam {
   consteval
   _CmpUnspecifiedParam(int _CmpUnspecifiedParam::*) noexcept {}
 };
 
-#define UNSPECIFIED_TYPE _CmpUnspecifiedParam
-#endif
-
-#ifdef GCC
 namespace __cmp_cat {
   struct __unspec {
     constexpr __unspec(__unspec*) noexcept { }
   };
 }
-
-#define UNSPECIFIED_TYPE __cmp_cat::__unspec
-#endif
 
 struct strong_ordering {
   signed char value;
