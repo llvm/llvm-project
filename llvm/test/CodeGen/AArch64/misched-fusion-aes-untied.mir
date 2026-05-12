@@ -1,0 +1,45 @@
+# REQUIRES: asserts
+
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=+fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=generic -mattr=+crypto -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a53 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a57 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a65 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a72 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a73 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a76 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a77 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78c -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-x1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-e1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-n1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-v1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-512tvb -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m3 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m4 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m5 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1a -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1b -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -misched-print-dags 2>&1 | FileCheck %s
+
+# Verify that untied AES pairs (where dest registers differ) are not being fused.
+
+---
+name: func
+body: |
+  bb.0:
+    ; CHECK: SU(0): %0:fpr128 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): dead %1:fpr128 = AESMCrr %0:fpr128
+    %0:fpr128 = AESErr undef $q0, undef $q1
+    %1:fpr128 = AESMCrr %0
+
+    ; CHECK: SU(2): %2:fpr128 = AESDrr undef $q2(tied-def 0), undef $q3
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(3): dead %3:fpr128 = AESIMCrr %2:fpr128
+    %2:fpr128 = AESDrr undef $q2, undef $q3
+    %3:fpr128 = AESIMCrr %2
