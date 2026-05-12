@@ -8355,12 +8355,9 @@ struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
 
   LogicalResult matchAndRewrite(InterleaveOp interleaveOp,
                                 PatternRewriter &rewriter) const override {
-    auto lhsDefOp = interleaveOp.getLhs().getDefiningOp();
-    auto rhsDefOp = interleaveOp.getRhs().getDefiningOp();
+    auto lhsDefOp = interleaveOp.getLhs().getDefiningOp<DeinterleaveOp>();
+    auto rhsDefOp = interleaveOp.getRhs().getDefiningOp<DeinterleaveOp>();
     if (!lhsDefOp || !rhsDefOp)
-      return rewriter.notifyMatchFailure(
-          interleaveOp, "expected both operands to be defined by an op");
-    if (!isa<DeinterleaveOp>(lhsDefOp) || !isa<DeinterleaveOp>(rhsDefOp))
       return rewriter.notifyMatchFailure(
           interleaveOp,
           "expected both operands to be defined by a deinterleave op");
@@ -8378,8 +8375,7 @@ struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
       return rewriter.notifyMatchFailure(
           interleaveOp, "expected the rhs operand to be the second result of "
                         "the deinterleave op");
-    rewriter.replaceOp(interleaveOp,
-                       cast<DeinterleaveOp>(lhsDefOp).getSource());
+    rewriter.replaceOp(interleaveOp, lhsDefOp.getSource());
     return success();
   }
 };
