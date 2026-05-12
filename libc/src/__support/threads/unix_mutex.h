@@ -101,13 +101,20 @@ public:
   }
 
   LIBC_INLINE MutexError unlock() {
-    if (is_recursive() && owner == internal::gettid()) {
+    if (is_recursive()) {
+      // lock_count == 0 can happen if previous unlock is
+      // suspended before signal frame
+      if (owner != internal::gettid() || lock_count == 0)
+        return MutexError::UNLOCK_WITHOUT_LOCK;
+
       lock_count--;
       if (lock_count == 0)
         owner = 0;
       else
         return MutexError::NONE;
-    } else if (is_error_checking() && owner == internal::gettid()) {
+    } else if (is_error_checking()) {
+      if (owner != internal::gettid())
+        return MutexError::UNLOCK_WITHOUT_LOCK;
       owner = 0;
     }
     if (this->RawMutex::unlock(this->pshared))
