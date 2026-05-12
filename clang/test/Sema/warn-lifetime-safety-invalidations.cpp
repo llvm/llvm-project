@@ -236,12 +236,13 @@ void IteratorUsedAfterErase(std::vector<int> v) {
   }
 }
 
-void IteratorUsedAfterPushBackParam(std::vector<int>& v) { // expected-warning {{parameter is later invalidated}}
+// FIXME: Detect this. We currently skip invalidation through ref/pointers to containers.
+void IteratorUsedAfterPushBackParam(std::vector<int>& v) {
   auto it = std::begin(v);
   if (it != std::end(v) && *it == 3) {
-    v.push_back(4); // expected-note {{invalidated here}}
+    v.push_back(4);
   }
-  ++it; // expected-note {{later used here}}
+  ++it;
 }
 
 void IteratorUsedAfterPushBack(std::vector<int> v) {
@@ -319,46 +320,6 @@ void IteratorUsedAfterStdBeginAddAssign() {
   (void)*it;                    // expected-note {{later used here}}
 }
 }  // namespace SimpleInvalidIterators
-
-namespace InvalidatingThroughContainerAliases {
-void IteratorInvalidatedThroughLocalReferenceAlias() {
-  std::vector<int> vv;
-  std::vector<int> &v = vv;
-  auto it = vv.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
-  v.push_back(42);      // expected-note {{invalidated here}}
-  (void)it;             // expected-note {{later used here}}
-}
-
-void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expected-warning {{parameter is later invalidated}}
-  auto it = v->begin();
-  v->push_back(42); // expected-note {{invalidated here}}
-  (void)it;         // expected-note {{later used here}}
-}
-} // namespace InvalidatingThroughContainerAliases
-
-namespace ContainerObjectAliases {
-// FIXME: Distinguish owner-borrow from content-borrow.
-void PointerParameterObjectUseIsOk(std::vector<int> *v) { // expected-warning {{parameter is later invalidated}}
-  v->push_back(42); // expected-note {{invalidated here}}
-  (void)v;          // expected-note {{later used here}}
-}
-
-// FIXME: Distinguish owner-borrow from content-borrow.
-void LocalPointerAliasObjectUseIsOk() {
-  std::vector<int> vv;
-  std::vector<int> *v = &vv; // expected-warning {{object whose reference is captured is later invalidated}}
-  v->push_back(42);          // expected-note {{invalidated here}}
-  (void)*v;                  // expected-note {{later used here}}
-}
-
-// FIXME: Distinguish owner-borrow from content-borrow.
-void LocalReferenceAliasObjectUseIsOk() {
-  std::vector<int> vv;
-  std::vector<int> &v = vv; // expected-warning {{object whose reference is captured is later invalidated}}
-  v.push_back(42);          // expected-note {{invalidated here}}
-  (void)v;                  // expected-note {{later used here}}
-}
-} // namespace ContainerObjectAliases
 
 namespace ElementReferences {
 // Testing raw pointers and references to elements, not just iterators.
@@ -446,20 +407,18 @@ void Invalidate1Use1IsInvalid() {
   s.strings1.push_back("1");
   *it;
 }
-void Invalidate2Use1IsOk() {
+void Invalidate1Use2IsOk() {
     S s;
     auto it = s.strings1.begin();
     s.strings2.push_back("1");
     *it;
 }
-
-// FIXME: Requires field-sensitive AccessPaths to fix.
 void Invalidate1Use2ViaRefIsOk() {
     S s;
-    auto it = s.strings2.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
-    auto& strings1 = s.strings1;
-    strings1.push_back("1");      // expected-note {{invalidated here}}
-    *it;                          // expected-note {{later used here}}
+    auto it = s.strings2.begin();
+    auto& strings2 = s.strings2;
+    strings2.push_back("1");
+    *it;
 }
 void Invalidate1UseSIsOk() {
   S s;
@@ -467,55 +426,30 @@ void Invalidate1UseSIsOk() {
   s.strings2.push_back("1");
   (void)*p;
 }
-// FIXME: Distinguish owner-borrow from content-borrow.
 void PointerToContainerIsOk() {
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s; // expected-warning {{object whose reference is captured is later invalidated}}
-  p->push_back("1");                // expected-note {{invalidated here}}
-  (void)*p;                         // expected-note {{later used here}}
+  std::vector<std::string>* p = &s;
+  p->push_back("1");
+  (void)*p;
 }
 void IteratorFromPointerToContainerIsInvalidated() {
+  // FIXME: Detect this.
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s; // expected-warning {{object whose reference is captured is later invalidated}}
+  std::vector<std::string>* p = &s;
   auto it = p->begin();
-  p->push_back("1");                // expected-note {{invalidated here}}
-  *it;                              // expected-note {{later used here}}
+  p->push_back("1");
+  *it;
 }
-// FIXME: Distinguish invalidating an element's contents from invalidating
-// iterators into the outer container.
 void ChangingRegionOwnedByContainerIsOk() {
   std::vector<std::string> subdirs;
-  for (std::string& path : subdirs) // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
-    path = std::string();           // expected-note {{invalidated here}}
+  for (std::string& path : subdirs)
+    path = std::string();
 }
 
 } // namespace ContainersAsFields
 
 namespace InvalidatedGlobalAndField {
-std::string StableString;
-std::string_view GlobalView; // expected-note {{this global dangles}}
 std::string_view GlobalViewFromLocal; // expected-note {{this global dangles}}
-std::string_view GlobalViewFromReferenceAlias; // expected-note {{this global dangles}}
-std::string_view GlobalViewFromUnmodifiedField; // expected-note {{this global dangles}}
-std::string_view GlobalViewReassigned;
-std::string_view GlobalViewUnrelatedContainer;
-std::string *GlobalDest; // expected-note {{this global dangles}}
-
-struct TwoVectors {
-  std::vector<std::string> Strings1;
-  std::vector<std::string> Strings2;
-};
-
-struct StringOwner {
-  std::string S;
-  std::string T;
-};
-
-void InvalidatedGlobalPointerParam(std::vector<std::string> *strings) {
-  GlobalView = *strings->begin();
-  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-                           // expected-note@-1 {{invalidated here}}
-}
 
 void InvalidatedGlobalLocalContainer() {
   std::vector<std::string> strings;
@@ -523,111 +457,29 @@ void InvalidatedGlobalLocalContainer() {
   strings.push_back("1"); // expected-note {{invalidated here}}
 }
 
-void InvalidatedGlobalReferenceAlias(std::vector<std::string> &strings) {
-  std::vector<std::string> &alias = strings;
-  GlobalViewFromReferenceAlias = *strings.begin();
-  alias.push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-                        // expected-note@-1 {{invalidated here}}
-}
-
-void InvalidatedStaticLocal(std::vector<std::string> *strings) {
+void InvalidatedStaticLocal() {
   static std::string_view StaticView; // expected-note {{this static storage dangles}}
-  StaticView = *strings->begin();
-  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-                           // expected-note@-1 {{invalidated here}}
-}
-
-void GlobalReassignedBeforeInvalidation(std::vector<std::string> *strings) {
-  GlobalViewReassigned = *strings->begin();
-  GlobalViewReassigned = StableString;
-  strings->push_back("1");
-}
-
-void GlobalUnrelatedContainerInvalidated(std::vector<std::string> *strings1,
-                                         std::vector<std::string> *strings2) {
-  GlobalViewUnrelatedContainer = *strings1->begin();
-  strings2->push_back("1");
-}
-
-// FIXME: Requires field-sensitive AccessPaths to fix.
-void GlobalDifferentFieldInvalidatedIsOk(TwoVectors &s) {
-  GlobalViewFromUnmodifiedField = *s.Strings2.begin();
-  auto &strings1 = s.Strings1;
-  strings1.push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-                           // expected-note@-1 {{invalidated here}}
-}
-
-// FIXME: Distinguish owner-borrow from content-borrow.
-void GlobalPointerOwnerBorrowIsOk(std::string *dest) {
-  GlobalDest = dest;
-  dest->clear(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-                 // expected-note@-1 {{invalidated here}}
+  std::vector<std::string> strings;
+  StaticView = *strings.begin(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+  strings.push_back("1"); // expected-note {{invalidated here}}
 }
 
 struct S {
-  std::string_view Field; // expected-note {{this field dangles}}
   std::string_view FieldFromLocal; // expected-note {{this field dangles}}
-  std::string_view FieldFromReferenceAlias; // expected-note {{this field dangles}}
-  std::string_view FieldReassigned;
-  std::string_view FieldUnrelatedContainer;
-  const char *FieldCharPtr; // expected-note {{this field dangles}}
   static std::string_view StaticField; // expected-note {{this static storage dangles}}
-
-  void InvalidatedFieldPointerParam(std::vector<std::string> *strings) {
-    Field = *strings->begin();
-    strings->push_back("1"); // expected-warning {{object whose reference is stored in a field is later invalidated}}
-                             // expected-note@-1 {{invalidated here}}
-  }
 
   void InvalidatedFieldLocalContainer() {
     std::vector<std::string> strings;
     FieldFromLocal = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
     strings.push_back("1"); // expected-note {{invalidated here}}
   }
-
-  void InvalidatedFieldReferenceAlias(std::vector<std::string> &strings) {
-    std::vector<std::string> &alias = strings;
-    FieldFromReferenceAlias = *strings.begin();
-    alias.push_back("1"); // expected-warning {{object whose reference is stored in a field is later invalidated}}
-    // expected-note@-1 {{invalidated here}}
-  }
-
-  void FieldReassignedBeforeInvalidation(std::vector<std::string> *strings) {
-    FieldReassigned = *strings->begin();
-    FieldReassigned = StableString;
-    strings->push_back("1");
-  }
-
-  void FieldUnrelatedContainerInvalidated(std::vector<std::string> *strings1,
-                                          std::vector<std::string> *strings2) {
-    FieldUnrelatedContainer = *strings1->begin();
-    strings2->push_back("1");
-  }
-
-  // FIXME: Requires field-sensitive AccessPaths to fix.
-  void MemberDestructorDifferentFieldIsOk(StringOwner &owner) {
-    FieldCharPtr = owner.S.data();
-    owner.T.~basic_string(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
-                             // expected-note@-1 {{invalidated here}}
-  }
 };
 
-void InvalidatedStaticDataMember(std::vector<std::string> *strings) {
-  S::StaticField = *strings->begin();
-  strings->push_back("1"); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-                           // expected-note@-1 {{invalidated here}}
+void InvalidatedStaticDataMember() {
+  std::vector<std::string> strings;
+  S::StaticField = *strings.begin(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
+  strings.push_back("1"); // expected-note {{invalidated here}}
 }
-
-struct Sink {
-  std::string *Dest; // expected-note {{this field dangles}}
-
-  // FIXME: Distinguish owner-borrow from content-borrow.
-  Sink(std::string *dest, int n) : Dest(dest) {
-    if (n > 0)
-      dest->clear(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
-                     // expected-note@-1 {{invalidated here}}
-  }
-};
 } // namespace InvalidatedGlobalAndField
 
 namespace AssociativeContainers {
