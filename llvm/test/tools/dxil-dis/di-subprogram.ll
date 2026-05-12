@@ -5,8 +5,6 @@ define float @fmaf(float %x, float %y, float %z) !dbg !4 {
   unreachable
 }
 
-declare !dbg !14 double @fma(double %x, double %y, double %z)
-
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!12, !13}
 !llvm.used = !{!5}
@@ -45,8 +43,3 @@ declare !dbg !14 double @fma(double %x, double %y, double %z)
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 ; CHECK: !13 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{i32 2, !"Debug Info Version", i32 3}
-
-!14 = !DISubprogram(name: "fma", scope: !1, file: !1, line: 1, type: !15, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
-!15 = !DISubroutineType(types: !16)
-!16 = !{!17, !17, !17, !17}
-!17 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
