@@ -146,13 +146,13 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
+VPRecipeValue::~VPRecipeValue() = default;
+
 VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
     : VPRecipeValue(VPVSingleDefValueSC, UV) {
   assert(Def && "VPSingleDefValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
-
-VPRecipeValue::~VPRecipeValue() = default;
 
 VPStandaloneRecipeValue::VPStandaloneRecipeValue(VPRecipeBase *Def, Value *UV)
     : VPRecipeValue(VPVStandaloneRecipeValueSC, UV), Def(Def) {

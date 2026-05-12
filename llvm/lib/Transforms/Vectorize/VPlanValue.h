@@ -39,10 +39,10 @@ class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPSingleDefRecipe;
 class VPPhiAccessors;
 class VPRegionValue;
 class VPRegionBlock;
+class VPSingleDefRecipe;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -314,8 +314,8 @@ class VPRecipeValue : public VPValue {
 
 #if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
-  /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
-  /// /p D are associated with its VPRecipeBase,
+  /// NOTE: Only used by VPDef to assert that VPRecipeValues removed from
+  /// /p D are associated with its VPRecipeBase.
   bool isDefinedBy(const VPDef *D) const;
 #endif
 
@@ -331,7 +331,7 @@ public:
   }
 };
 
-/// A VPRecipeValue embedded as a subobject of VPSingleDefRecipe.
+/// A VPRecipeValue defined by a VPSingleDefRecipe.
 class VPSingleDefValue : public VPRecipeValue {
   friend class VPDef;
   friend class VPSingleDefRecipe;
@@ -482,6 +482,8 @@ class VPDef {
 
   /// Add \p V as a defined value by this VPDef.
   void addDefinedValue(VPRecipeValue *V) {
+    assert(V->isDefinedBy(this) &&
+           "can only add VPValue already linked with this VPDef");
     DefinedValues.push_back(V);
   }
 
