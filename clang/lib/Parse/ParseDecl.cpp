@@ -1555,7 +1555,6 @@ void Parser::ParseExternalSourceSymbolAttribute(
       SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
       continue;
     }
-
     if (Keyword == Ident_language) {
       if (HadLanguage) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
