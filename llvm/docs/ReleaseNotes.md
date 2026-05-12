@@ -199,10 +199,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 
 ### Changes to the SystemZ Backend
------------------------------
 
 ### Changes to the VE Backend
------------------------------
 
 * The backend now stores the frame pointer and stack pointer into the jump buffer
   when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
