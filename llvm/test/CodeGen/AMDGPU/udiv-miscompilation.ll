@@ -3,9 +3,12 @@
 
 ; The precise IR that triggered the bug is optimized before
 ; it reaches amdgpu-isel. Thus, the test starts directly from there.
+; The test ensures that LowerDIVREM24 is not applied when the operands
+; do not fit in 24-bit integers. The opt missed the checks for the unsigned case.
 
-define i32 @baz(i32 noundef %arg) {
-; CHECK-LABEL: baz:
+; This unsigned i32 case was mishandled (LowerDIVREM24 must bail out).
+define i32 @udiv_i32_no_divrem24(i32 noundef %arg) {
+; CHECK-LABEL: udiv_i32_no_divrem24:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v1, v0
@@ -31,4 +34,69 @@ define i32 @baz(i32 noundef %arg) {
 entry:
   %div = udiv i32 -1, %arg
   ret i32 %div
+}
+
+define i8 @udiv_i8_divrem24(i8 noundef %arg) {
+; CHECK-LABEL: udiv_i8_divrem24:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; CHECK-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; CHECK-NEXT:    v_trunc_f32_e32 v1, v1
+; CHECK-NEXT:    v_cvt_u32_f32_e32 v2, v1
+; CHECK-NEXT:    v_mad_f32 v1, -v1, v0, 1.0
+; CHECK-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v1|, v0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; CHECK-NEXT:    v_add_u32_e32 v0, v2, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %div = udiv i8 1, %arg
+  ret i8 %div
+}
+
+define i32 @sdiv_i32_no_divrem24(i32 noundef %arg) {
+; CHECK-LABEL: sdiv_i32_no_divrem24:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_sub_u32_e32 v1, 0, v0
+; CHECK-NEXT:    v_max_i32_e32 v1, v1, v0
+; CHECK-NEXT:    v_sub_u32_e32 v2, 1, v1
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 2, v1
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; CHECK-NEXT:    v_add_u32_e32 v4, 1, v3
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v2, v1
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
+; CHECK-NEXT:    v_xnor_b32_e32 v1, v0, v1
+; CHECK-NEXT:    v_not_b32_e32 v0, v0
+; CHECK-NEXT:    v_sub_u32_e32 v0, v1, v0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %div = sdiv i32 -1, %arg
+  ret i32 %div
+}
+
+define i8 @sdiv_i8_divrem24(i8 noundef %arg) {
+; CHECK-LABEL: sdiv_i8_divrem24:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; CHECK-NEXT:    v_cvt_f32_i32_sdwa v1, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 30
+; CHECK-NEXT:    v_ashrrev_i32_sdwa v0, v3, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; CHECK-NEXT:    v_or_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; CHECK-NEXT:    v_trunc_f32_e32 v2, v2
+; CHECK-NEXT:    v_mad_f32 v3, -v2, v1, 1.0
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; CHECK-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v1|
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NEXT:    v_add_u32_e32 v0, v2, v0
+; CHECK-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %div = sdiv i8 1, %arg
+  ret i8 %div
 }
