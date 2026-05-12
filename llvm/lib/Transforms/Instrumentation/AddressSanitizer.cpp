@@ -563,7 +563,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
     if (IsFuchsia) {
       // kDynamicShadowSentinel tells instrumentation to use the dynamic shadow.
       Mapping.Offset = kDynamicShadowSentinel;
-    else if (IsAIX)
+    } else if (IsAIX)
       Mapping.Offset = kAIXShadowOffset64;
     else if (IsPPC64 && !IsAIX)
       Mapping.Offset = kPPC64_ShadowOffset64;
