@@ -1284,12 +1284,12 @@ void llvm::ComputeCrossModuleImport(
     // exporting module. We do this after the above insertion since we may hit
     // the same ref/call target multiple times in above loop, and it is more
     // efficient to avoid a set lookup each time.
-    for (auto EI = NewExports.begin(); EI != NewExports.end();) {
-      if (!DefinedGVSummaries.count(EI->getGUID()))
-        NewExports.erase(EI++);
-      else
-        ++EI;
-    }
+    SmallVector<ValueInfo, 8> ToRemove;
+    for (const auto &VI : NewExports)
+      if (!DefinedGVSummaries.count(VI.getGUID()))
+        ToRemove.push_back(VI);
+    for (const auto &VI : ToRemove)
+      NewExports.erase(VI);
     ELI.second.insert_range(NewExports);
   }
 

@@ -903,20 +903,21 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  for (auto I = AvailableAnalysis.begin(), E = AvailableAnalysis.end();
-       I != E;) {
-    auto Info = I++;
-    if (Info->second->getAsImmutablePass() == nullptr &&
-        !is_contained(PreservedSet, Info->first)) {
+  SmallVector<AnalysisID, 16> ToRemove;
+  for (auto &Entry : AvailableAnalysis) {
+    if (Entry.second->getAsImmutablePass() == nullptr &&
+        !is_contained(PreservedSet, Entry.first)) {
       // Remove this analysis
       if (PassDebugging >= Details) {
-        Pass *S = Info->second;
+        Pass *S = Entry.second;
         dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
         dbgs() << S->getPassName() << "'\n";
       }
-      AvailableAnalysis.erase(Info);
+      ToRemove.push_back(Entry.first);
     }
   }
+  for (AnalysisID ID : ToRemove)
+    AvailableAnalysis.erase(ID);
 
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
@@ -924,19 +925,21 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     if (!IA)
       continue;
 
-    for (auto I = IA->begin(), E = IA->end(); I != E;) {
-      auto Info = I++;
-      if (Info->second->getAsImmutablePass() == nullptr &&
-          !is_contained(PreservedSet, Info->first)) {
+    ToRemove.clear();
+    for (auto &Entry : *IA) {
+      if (Entry.second->getAsImmutablePass() == nullptr &&
+          !is_contained(PreservedSet, Entry.first)) {
         // Remove this analysis
         if (PassDebugging >= Details) {
-          Pass *S = Info->second;
+          Pass *S = Entry.second;
           dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
           dbgs() << S->getPassName() << "'\n";
         }
-        IA->erase(Info);
+        ToRemove.push_back(Entry.first);
       }
     }
+    for (AnalysisID ID : ToRemove)
+      IA->erase(ID);
   }
 }
 

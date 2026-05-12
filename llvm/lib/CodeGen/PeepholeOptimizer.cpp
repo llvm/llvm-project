@@ -1813,13 +1813,16 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             }
           } else if (MO.isRegMask()) {
             const uint32_t *RegMask = MO.getRegMask();
+            SmallVector<Register> ClobberedDefs;
             for (auto &RegMI : NAPhysToVirtMIs) {
               Register Def = RegMI.first;
-              if (MachineOperand::clobbersPhysReg(RegMask, Def)) {
-                LLVM_DEBUG(dbgs()
-                           << "NAPhysCopy: invalidating because of " << *MI);
-                NAPhysToVirtMIs.erase(Def);
-              }
+              if (MachineOperand::clobbersPhysReg(RegMask, Def))
+                ClobberedDefs.push_back(Def);
+            }
+            for (Register Def : ClobberedDefs) {
+              LLVM_DEBUG(dbgs()
+                         << "NAPhysCopy: invalidating because of " << *MI);
+              NAPhysToVirtMIs.erase(Def);
             }
           }
         }

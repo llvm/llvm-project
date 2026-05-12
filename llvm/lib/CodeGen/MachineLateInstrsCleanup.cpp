@@ -243,14 +243,17 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     }
 
     // Clear any entries in map that MI clobbers.
-    for (auto DefI : llvm::make_early_inc_range(MBBDefs)) {
-      Register Reg = DefI.first;
-      if (MI.modifiesRegister(Reg, TRI)) {
-        MBBDefs.erase(Reg);
-        MBBKills.erase(Reg);
-      } else if (MI.findRegisterUseOperandIdx(Reg, TRI, true /*isKill*/) != -1)
+    SmallVector<Register> Clobbered;
+    for (auto [Reg, DefMI] : MBBDefs) {
+      if (MI.modifiesRegister(Reg, TRI))
+        Clobbered.push_back(Reg);
+      else if (MI.findRegisterUseOperandIdx(Reg, TRI, true /*isKill*/) != -1)
         // Keep track of all instructions that fully or partially kills Reg.
         MBBKills[Reg].push_back(&MI);
+    }
+    for (Register Reg : Clobbered) {
+      MBBDefs.erase(Reg);
+      MBBKills.erase(Reg);
     }
 
     // Record this MI for potential later reuse.

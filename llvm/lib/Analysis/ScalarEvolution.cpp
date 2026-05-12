@@ -8749,8 +8749,9 @@ void ScalarEvolution::visitAndClearUsers(
     ValueExprMapType::iterator It =
         ValueExprMap.find_as(static_cast<Value *>(I));
     if (It != ValueExprMap.end()) {
+      SCEVUse Mapped = It->second;
       eraseValueFromMap(It->first);
-      ToForget.push_back(It->second);
+      ToForget.push_back(Mapped);
       if (PHINode *PN = dyn_cast<PHINode>(I))
         ConstantEvolutionLoopExitValue.erase(PN);
     }
@@ -8774,14 +8775,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     forgetBackedgeTakenCounts(CurrL, /* Predicated */ true);
 
     // Drop information about predicated SCEV rewrites for this loop.
-    for (auto I = PredicatedSCEVRewrites.begin();
-         I != PredicatedSCEVRewrites.end();) {
-      std::pair<const SCEV *, const Loop *> Entry = I->first;
-      if (Entry.second == CurrL)
-        PredicatedSCEVRewrites.erase(I++);
-      else
-        ++I;
-    }
+    SmallVector<std::pair<const SCEVUnknown *, const Loop *>> ToRemove;
+    for (const auto &Entry : PredicatedSCEVRewrites)
+      if (Entry.first.second == CurrL)
+        ToRemove.push_back(Entry.first);
+    for (const auto &K : ToRemove)
+      PredicatedSCEVRewrites.erase(K);
 
     auto LoopUsersItr = LoopUsers.find(CurrL);
     if (LoopUsersItr != LoopUsers.end())
@@ -14567,14 +14566,12 @@ void ScalarEvolution::forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs) {
   for (const auto *S : ToForget)
     forgetMemoizedResultsImpl(S);
 
-  for (auto I = PredicatedSCEVRewrites.begin();
-       I != PredicatedSCEVRewrites.end();) {
-    std::pair<const SCEV *, const Loop *> Entry = I->first;
-    if (ToForget.count(Entry.first))
-      PredicatedSCEVRewrites.erase(I++);
-    else
-      ++I;
-  }
+  SmallVector<std::pair<const SCEVUnknown *, const Loop *>> ToRemove;
+  for (const auto &Entry : PredicatedSCEVRewrites)
+    if (ToForget.count(Entry.first.first))
+      ToRemove.push_back(Entry.first);
+  for (const auto &K : ToRemove)
+    PredicatedSCEVRewrites.erase(K);
 }
 
 void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
