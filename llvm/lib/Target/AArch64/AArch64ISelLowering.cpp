@@ -8096,8 +8096,10 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
          "Unexpected Type");
 
   if (VT == MVT::nxv8i16) {
-    // clmul.i16(a, b) = eortb(pmullb(a_lo, b_lo),
-    //                         pmul(trn2(a, b), trn1(b, a)))
+    // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
+    //                       lsl(xor(pmul(a_hi, b_lo),
+    //                               pmul(a_lo, b_hi)),
+    //                           8))
     SDValue OpA = Op.getOperand(0);
     SDValue OpB = Op.getOperand(1);
     // Bitcast to i8 for byte-wise PMUL and PMULLB.
@@ -8112,7 +8114,7 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
 
     SDValue EORBT =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_eorbt, DL, MVT::i64);
-    EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, OpB,
+    EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, PMUL,
                         PMUL, PMUL);
 
     SDValue PMULLB =
