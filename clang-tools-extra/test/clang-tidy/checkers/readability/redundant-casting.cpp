@@ -196,7 +196,7 @@ void testBinaryOperatorRedundantCasting() {
   const auto diff_types_operands4 {
     static_cast<size_t>(static_cast<size_t>(3) + 2)
   };
-  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: redundant explicit casting to the same type 'size_t' (aka 'unsigned long{{( long)?}}') as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: redundant explicit casting to the same type 'size_t' (aka 'unsigned {{(int|long( long)?)}}') as the sub-expression, remove this casting [readability-redundant-casting]
   // CHECK-FIXES: (static_cast<size_t>(3) + 2)
   // CHECK-FIXES-IMPLICIT: static_cast<size_t>(static_cast<size_t>(3) + 2)
 
