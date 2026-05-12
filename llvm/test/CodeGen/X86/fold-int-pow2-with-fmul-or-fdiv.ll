@@ -1723,32 +1723,14 @@ define double @fmul_pow_shl_cnt_knownbits(i64 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    movq %rax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_knownbits:
-; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    andl $15, %edi
-; CHECK-AVX2-NEXT:    shlq $52, %rdi
-; CHECK-AVX2-NEXT:    movabsq $8930638061065157010, %rax # imm = 0x7BEFFFFFFF5F3992
-; CHECK-AVX2-NEXT:    addq %rdi, %rax
-; CHECK-AVX2-NEXT:    vmovq %rax, %xmm0
-; CHECK-AVX2-NEXT:    retq
-;
-; CHECK-ONLY-AVX512F-LABEL: fmul_pow_shl_cnt_knownbits:
-; CHECK-ONLY-AVX512F:       # %bb.0:
-; CHECK-ONLY-AVX512F-NEXT:    andl $15, %edi
-; CHECK-ONLY-AVX512F-NEXT:    shlq $52, %rdi
-; CHECK-ONLY-AVX512F-NEXT:    movabsq $8930638061065157010, %rax # imm = 0x7BEFFFFFFF5F3992
-; CHECK-ONLY-AVX512F-NEXT:    addq %rdi, %rax
-; CHECK-ONLY-AVX512F-NEXT:    vmovq %rax, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    retq
-;
-; CHECK-SKX-LABEL: fmul_pow_shl_cnt_knownbits:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    andb $15, %dil
-; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
-; CHECK-SKX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-SKX-NEXT:    retq
+; CHECK-AVX-LABEL: fmul_pow_shl_cnt_knownbits:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $15, %edi
+; CHECK-AVX-NEXT:    shlq $52, %rdi
+; CHECK-AVX-NEXT:    movabsq $8930638061065157010, %rax # imm = 0x7BEFFFFFFF5F3992
+; CHECK-AVX-NEXT:    addq %rdi, %rax
+; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    retq
   %cnt_masked = and i64 %cnt, 15
   %shl = shl nuw i64 1, %cnt_masked
   %conv = uitofp i64 %shl to double
@@ -1766,33 +1748,14 @@ define double @fdiv_pow_shl_cnt_knownbits(i64 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    movq %rax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: fdiv_pow_shl_cnt_knownbits:
-; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    andl $15, %edi
-; CHECK-AVX2-NEXT:    shlq $52, %rdi
-; CHECK-AVX2-NEXT:    movabsq $243194378260042637, %rax # imm = 0x35FFFFF9F8FD38D
-; CHECK-AVX2-NEXT:    subq %rdi, %rax
-; CHECK-AVX2-NEXT:    vmovq %rax, %xmm0
-; CHECK-AVX2-NEXT:    retq
-;
-; CHECK-ONLY-AVX512F-LABEL: fdiv_pow_shl_cnt_knownbits:
-; CHECK-ONLY-AVX512F:       # %bb.0:
-; CHECK-ONLY-AVX512F-NEXT:    andl $15, %edi
-; CHECK-ONLY-AVX512F-NEXT:    shlq $52, %rdi
-; CHECK-ONLY-AVX512F-NEXT:    movabsq $243194378260042637, %rax # imm = 0x35FFFFF9F8FD38D
-; CHECK-ONLY-AVX512F-NEXT:    subq %rdi, %rax
-; CHECK-ONLY-AVX512F-NEXT:    vmovq %rax, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    retq
-;
-; CHECK-SKX-LABEL: fdiv_pow_shl_cnt_knownbits:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    andb $15, %dil
-; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
-; CHECK-SKX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.004168E-292,0.0E+0]
-; CHECK-SKX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
-; CHECK-SKX-NEXT:    retq
+; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_knownbits:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $15, %edi
+; CHECK-AVX-NEXT:    shlq $52, %rdi
+; CHECK-AVX-NEXT:    movabsq $243194378260042637, %rax # imm = 0x35FFFFF9F8FD38D
+; CHECK-AVX-NEXT:    subq %rdi, %rax
+; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    retq
   %cnt_masked = and i64 %cnt, 15
   %shl = shl nuw i64 1, %cnt_masked
   %conv = uitofp i64 %shl to double
