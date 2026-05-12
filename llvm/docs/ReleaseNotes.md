@@ -125,6 +125,9 @@ Makes programs 10x faster by doing Special New Thing.
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
   distributed ThinLTO. 
 
+* ``ConstantFP`` now supports vector types and is the canonical form returned by
+  ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
