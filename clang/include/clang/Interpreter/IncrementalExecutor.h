@@ -53,7 +53,8 @@ public:
   /// An optional external IncrementalExecutor
   std::unique_ptr<IncrementalExecutor> IE;
   /// mllvm args from the frontend; on wasm these are re-applied after each
-  /// lldMain call because lld resets all cl options for test-isolation purposes.
+  /// lldMain call because lld resets all cl options for test-isolation
+  /// purposes.
   std::vector<std::string> LLVMArgs;
   /// An optional external orc jit builder
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
