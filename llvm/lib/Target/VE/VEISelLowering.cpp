@@ -2193,21 +2193,21 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   // Store SP (SX11) to buf[2].
   {
     BuildMI(*MBB, MI, DL, TII->get(VE::STrii))
-    .addReg(BufReg)
-    .addImm(0)
-    .addImm(16)
-    .addReg(VE::SX11)
-    .setMemRefs(MMOs);
+        .addReg(BufReg)
+        .addImm(0)
+        .addImm(16)
+        .addReg(VE::SX11)
+        .setMemRefs(MMOs);
   }
 
   // Store BP in buf[3] iff this function is using BP.
   if (TFI->hasBP(*MF)) {
     BuildMI(*MBB, MI, DL, TII->get(VE::STrii))
-    .addReg(BufReg)
-    .addImm(0)
-    .addImm(24)
-    .addReg(VE::SX17)
-    .setMemRefs(MMOs);
+        .addReg(BufReg)
+        .addImm(0)
+        .addImm(24)
+        .addReg(VE::SX17)
+        .setMemRefs(MMOs);
   }
 
   // Store IP in buf[1].
