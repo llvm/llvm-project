@@ -32,6 +32,7 @@ EMPTY: !<thin>
 # Otherwise, if you have foo.txt and FOO.TXT, "-N 2 foo.txt" fails because
 # file is not found.
 
+# RUN: rm -f %t/count-case.a 
 # RUN: mkdir -p %t/a %t/b
 # RUN: echo first > %t/a/foo.txt
 # RUN: echo second > %t/b/FOO.TXT
