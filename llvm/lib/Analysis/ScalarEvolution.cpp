@@ -7464,13 +7464,15 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
 
   // Return early if there are no flags to propagate to the SCEV.
   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
-  if (BinOp->hasNoUnsignedWrap())
-    Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
-  if (BinOp->hasNoSignedWrap())
-    Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
   if (auto *PDI = dyn_cast<PossiblyDisjointInst>(BinOp);
-      PDI && PDI->isDisjoint())
+      PDI && PDI->isDisjoint()) {
     Flags = ScalarEvolution::setFlags(SCEV::FlagNUW, SCEV::FlagNSW);
+  } else {
+    if (BinOp->hasNoUnsignedWrap())
+      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
+    if (BinOp->hasNoSignedWrap())
+      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
+  }
   if (Flags == SCEV::FlagAnyWrap)
     return SCEV::FlagAnyWrap;
 
