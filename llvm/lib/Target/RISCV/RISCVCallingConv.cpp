@@ -405,8 +405,8 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
       ValNo > 1)
     return true;
 
-  if (Subtarget.isPExtPackedType(LocVT) && LocVT.getSizeInBits() > XLen &&
-      IsRet && ValNo > 0)
+  // Double wide packed types require 2 GPRs so we can only return 1 of them.
+  if (Subtarget.isPExtPackedDoubleType(LocVT) && IsRet && ValNo > 0)
     return true;
 
   // AllowFPRForF16_F32 if targeting an FLEN>=32 ABI and the argument isn't
@@ -530,9 +530,8 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // Handle passing f64 on RV32D with a soft float ABI or when floating point
   // registers are exhausted. Or 64-bit P extension vectors on RV32.
   if (XLen == 32 &&
-      (LocVT == MVT::f64 ||
-       (Subtarget.isPExtPackedType(LocVT) && LocVT.getSizeInBits() == 64 &&
-        !ArgFlags.isSplit() && PendingLocs.empty()))) {
+      (LocVT == MVT::f64 || (Subtarget.isPExtPackedDoubleType(LocVT) &&
+                             !ArgFlags.isSplit() && PendingLocs.empty()))) {
     assert(PendingLocs.empty() &&
            "Can't lower f64 or P extension vector if it is split");
     // Depending on available argument GPRS, f64 may be passed in a pair of

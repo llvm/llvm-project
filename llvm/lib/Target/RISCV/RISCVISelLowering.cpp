@@ -24240,8 +24240,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       assert(VA.needsCustom());
       ArgValue = unpackF64OnRV32DSoftABI(DAG, Chain, VA, ArgLocs[++i], DL);
     } else if (VA.getLocVT() == MVT::i32 &&
-               Subtarget.isPExtPackedType(VA.getValVT()) &&
-               VA.getValVT().getSizeInBits() == 64 &&
+               Subtarget.isPExtPackedDoubleType(VA.getValVT()) &&
                VA.getLocInfo() != CCValAssign::Indirect) {
       assert(VA.needsCustom());
       ArgValue = unpackGPRVecOnRV32(DAG, Chain, VA, ArgLocs[++i], DL);
@@ -24540,8 +24539,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     // Handle passing 64-bit vector on RV32 as a special case.
     if (VA.getLocVT() == MVT::i32 &&
-        Subtarget.isPExtPackedType(VA.getValVT()) &&
-        VA.getValVT().getSizeInBits() == 64 &&
+        Subtarget.isPExtPackedDoubleType(VA.getValVT()) &&
         VA.getLocInfo() != CCValAssign::Indirect) {
       assert(VA.isRegLoc() && "Expected register VA assignment");
       assert(VA.needsCustom());
@@ -24787,8 +24785,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
       RetValue = DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
     } else if (VA.getLocVT() == MVT::i32 &&
-               Subtarget.isPExtPackedType(VA.getValVT()) &&
-               VA.getValVT().getSizeInBits() == 64) {
+               Subtarget.isPExtPackedDoubleType(VA.getValVT())) {
       assert(VA.needsCustom());
       SDValue RetValue2 = DAG.getCopyFromReg(Chain, DL, RVLocs[++i].getLocReg(),
                                              MVT::i32, Glue);
@@ -24873,8 +24870,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Glue = Chain.getValue(1);
       RetOps.push_back(DAG.getRegister(RegHi, MVT::i32));
     } else if (VA.getLocVT() == MVT::i32 &&
-               Subtarget.isPExtPackedType(VA.getValVT()) &&
-               VA.getValVT().getSizeInBits() == 64) {
+               Subtarget.isPExtPackedDoubleType(VA.getValVT())) {
       // Handle returning 64-bit vector on RV32.
       assert(VA.isRegLoc() && "Expected return via registers");
       assert(VA.needsCustom());
