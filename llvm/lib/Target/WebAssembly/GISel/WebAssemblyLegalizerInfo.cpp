@@ -103,6 +103,23 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .minScalar(0, s32)
       .scalarSameSizeAs(1, 0);
 
+  getActionDefinitionsBuilder(G_FCMP)
+      .customForCartesianProduct({i32}, {f32, f64})
+      .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+      .legalFor({f32, f64})
+      .minScalar(0, s32);
+
+  getActionDefinitionsBuilder(
+      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM})
+      .customFor({f32, f64})
+      .minScalar(0, s32);
+
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .lowerForCartesianProduct({i32}, {f32, f64})
+      .clampScalar(0, s32, s32);
+
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor({{f64, f32}})
       .clampScalar(0, s64, s64)
@@ -153,6 +170,11 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 bool WebAssemblyLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
+  MachineRegisterInfo &MRI = *Helper.MIRBuilder.getMRI();
+  auto &MIRBuilder = Helper.MIRBuilder;
+
+  const LLT i1 = LLT::integer(1);
+
   switch (MI.getOpcode()) {
   case TargetOpcode::G_SEXT_INREG: {
     assert(MI.getOperand(2).isImm() && "Expected immediate");
@@ -167,6 +189,292 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
     }
 
     return Helper.lower(MI, 0, DstType) != LegalizerHelper::UnableToLegalize;
+  }
+  case TargetOpcode::G_FCMP: {
+    Register LHS = MI.getOperand(2).getReg();
+    Register RHS = MI.getOperand(3).getReg();
+    CmpInst::Predicate Pred =
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+    Register Result = MI.getOperand(0).getReg();
+
+    switch (Pred) {
+    case CmpInst::FCMP_FALSE:
+      MIRBuilder.buildBoolExt(Result, MIRBuilder.buildConstant(i1, 0), false);
+      break;
+    case CmpInst::FCMP_OEQ:
+      return true;
+    case CmpInst::FCMP_OGT:
+      return true;
+    case CmpInst::FCMP_OGE:
+      return true;
+    case CmpInst::FCMP_OLT:
+      return true;
+    case CmpInst::FCMP_OLE:
+      return true;
+    case CmpInst::FCMP_ONE: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildOr(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, i1, LHS, RHS).getReg(0),
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, i1, LHS, RHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_ORD: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildAnd(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, i1, RHS, RHS).getReg(0),
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, i1, LHS, LHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_UNO: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildOr(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, i1, RHS, RHS).getReg(0),
+              MIRBuilder.buildFCmp(CmpInst::FCMP_UNE, i1, LHS, LHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_UEQ: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildNot(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_ONE, i1, LHS, RHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_UGT: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildNot(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OLE, i1, LHS, RHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_UGE: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildNot(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, i1, LHS, RHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_ULT: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildNot(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OGE, i1, LHS, RHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_ULE: {
+      MIRBuilder.buildBoolExt(
+          Result,
+          MIRBuilder.buildNot(
+              i1,
+              MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, i1, LHS, RHS).getReg(0)),
+          false);
+      break;
+    }
+    case CmpInst::FCMP_UNE:
+      return true;
+    case CmpInst::FCMP_TRUE:
+      MIRBuilder.buildBoolExt(Result, MIRBuilder.buildConstant(i1, 1), false);
+      break;
+    default:
+      llvm_unreachable("Unknown FCMP predicate");
+    }
+
+    MI.eraseFromParent();
+
+    return true;
+  }
+  case TargetOpcode::G_FMINNUM: {
+    // We can only use G_FMINIMUM if we can be sure no NaN is present.
+    // This is because G_FMINIMUM propogates NaN, while G_FMINNUM says that
+    // the non-NaN operand must result.
+    if (!MI.getFlag(MachineInstr::MIFlag::FmNoNans))
+      return Helper.libcall(MI, LocObserver) !=
+             LegalizerHelper::UnableToLegalize;
+
+    // this respects minnum signed zero handling. G_FMINNUM has undefined zeros
+    // handling, so G_FMINIMUM's specific choice of zero is irrelavent.
+    MIRBuilder.buildInstr(TargetOpcode::G_FMINIMUM)
+        .addDef(MI.getOperand(0).getReg())
+        .addUse(MI.getOperand(1).getReg())
+        .addUse(MI.getOperand(2).getReg())
+        .setMIFlags(MI.getFlags());
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_FMAXNUM: {
+    // We can only use G_FMAXIMUM if we can be sure no NaN is present.
+    // This is because G_FMAXIMUM propogates NaN, while G_MAXNUM says that
+    // the non-NaN operand must result.
+    if (!MI.getFlag(MachineInstr::MIFlag::FmNoNans))
+      return Helper.libcall(MI, LocObserver) !=
+             LegalizerHelper::UnableToLegalize;
+
+    // this respects maxnum signed zero handling. G_FMAXNUM has undefined zeros
+    // handling, so G_FMAXIMUM's specific choice of zero is irrelavent.
+    MIRBuilder.buildInstr(TargetOpcode::G_FMAXIMUM)
+        .addDef(MI.getOperand(0).getReg())
+        .addUse(MI.getOperand(1).getReg())
+        .addUse(MI.getOperand(2).getReg())
+        .setMIFlags(MI.getFlags());
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case WebAssembly::G_FMINIMUMNUM: {
+    // This is a stripped down version of fminimumnum handling for SelectionDAG
+    // TargetLowering
+    Register Result = MI.getOperand(0).getReg();
+    LLT ResultTy = MRI.getType(Result);
+
+    if (MI.getFlag(MachineInstr::MIFlag::FmNoNans)) {
+      MIRBuilder.buildInstr(TargetOpcode::G_FMINIMUM)
+          .addDef(MI.getOperand(0).getReg())
+          .addUse(MI.getOperand(1).getReg())
+          .addUse(MI.getOperand(2).getReg())
+          .setMIFlags(MI.getFlags());
+    } else {
+      Register LHS = MI.getOperand(1).getReg();
+      Register RHS = MI.getOperand(2).getReg();
+
+      LHS = MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_UNO,
+                                                  i1, LHS, LHS),
+                             RHS, LHS)
+                ->getOperand(0)
+                .getReg();
+      RHS = MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_UNO,
+                                                  i1, RHS, RHS),
+                             LHS, RHS)
+                ->getOperand(0)
+                .getReg();
+
+      if (MI.getFlag(MachineInstr::MIFlag::FmNsz)) {
+        MIRBuilder.buildSelect(
+            Result,
+            MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OLT, i1, LHS, RHS),
+            LHS, RHS);
+      } else {
+        Register MinMax =
+            MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OLT,
+                                                  i1, LHS, RHS),
+                             LHS, RHS)
+                ->getOperand(0)
+                .getReg();
+
+        Register IsZero =
+            MIRBuilder
+                .buildFCmp(CmpInst::Predicate::FCMP_OEQ, i1, MinMax,
+                           MIRBuilder.buildFConstant(ResultTy, 0.0))
+                ->getOperand(0)
+                .getReg();
+
+        Register RetZero =
+            MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildIsFPClass(i1, LHS, fcNegZero), LHS,
+                             MinMax)
+                .setMIFlags(MI.getFlags())
+                ->getOperand(0)
+                .getReg();
+        MIRBuilder.buildSelect(Result, IsZero, RetZero, MinMax)
+            .setMIFlags(MI.getFlags());
+      }
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case WebAssembly::G_FMAXIMUMNUM: {
+    // This is a stripped down version of fmaximumnum handling for SelectionDAG
+    // TargetLowering
+    Register Result = MI.getOperand(0).getReg();
+    LLT ResultTy = MRI.getType(Result);
+
+    if (MI.getFlag(MachineInstr::MIFlag::FmNoNans)) {
+      MIRBuilder.buildInstr(TargetOpcode::G_FMINIMUM)
+          .addDef(MI.getOperand(0).getReg())
+          .addUse(MI.getOperand(1).getReg())
+          .addUse(MI.getOperand(2).getReg())
+          .setMIFlags(MI.getFlags());
+    } else {
+      Register LHS = MI.getOperand(1).getReg();
+      Register RHS = MI.getOperand(2).getReg();
+
+      LHS = MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_UNO,
+                                                  i1, LHS, LHS),
+                             RHS, LHS)
+                ->getOperand(0)
+                .getReg();
+      RHS = MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_UNO,
+                                                  i1, RHS, RHS),
+                             LHS, RHS)
+                ->getOperand(0)
+                .getReg();
+
+      if (MI.getFlag(MachineInstr::MIFlag::FmNsz)) {
+        MIRBuilder.buildSelect(
+            Result,
+            MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OGT, i1, LHS, RHS),
+            LHS, RHS);
+      } else {
+        Register MinMax =
+            MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OGT,
+                                                  i1, LHS, RHS),
+                             LHS, RHS)
+                ->getOperand(0)
+                .getReg();
+
+        Register IsZero =
+            MIRBuilder
+                .buildFCmp(CmpInst::Predicate::FCMP_OEQ, i1, MinMax,
+                           MIRBuilder.buildFConstant(ResultTy, 0.0))
+                ->getOperand(0)
+                .getReg();
+
+        Register RetZero =
+            MIRBuilder
+                .buildSelect(ResultTy,
+                             MIRBuilder.buildIsFPClass(i1, LHS, fcPosZero), LHS,
+                             MinMax)
+                .setMIFlags(MI.getFlags())
+                ->getOperand(0)
+                .getReg();
+        MIRBuilder.buildSelect(Result, IsZero, RetZero, MinMax)
+            .setMIFlags(MI.getFlags());
+      }
+    }
+
+    MI.eraseFromParent();
+    return true;
   }
   default:
     break;
