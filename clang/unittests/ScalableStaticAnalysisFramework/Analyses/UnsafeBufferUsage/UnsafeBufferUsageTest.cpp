@@ -570,4 +570,36 @@ TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
   EXPECT_EQ(Sum, nullptr);
 }
 
+//////////////////////////////////////////////////////////////
+//          Template is ignored.                            //
+//////////////////////////////////////////////////////////////
+
+TEST_F(UnsafeBufferUsageTest, FunctionTemplate) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    template <typename T>
+    T* f(T *p) {
+      return &p[5];
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary<FunctionDecl>("f");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, MethodInClassTemplate) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    template <typename T>
+    struct Wrapper {
+      T *ptr;
+      void set(T *p) { ptr = p[5]; }
+    };
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary<FunctionDecl>("set");
+
+  ASSERT_EQ(Sum, nullptr);
+}
 } // namespace
