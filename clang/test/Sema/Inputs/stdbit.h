@@ -112,4 +112,10 @@ unsigned int stdc_rotate_right_ui(unsigned int, unsigned int);
 unsigned long stdc_rotate_right_ul(unsigned long, unsigned int);
 unsigned long long stdc_rotate_right_ull(unsigned long long, unsigned int);
 
+void stdc_memreverse8(__SIZE_TYPE__, unsigned char *);
+unsigned char stdc_memreverse8u8(unsigned char);
+unsigned short stdc_memreverse8u16(unsigned short);
+__UINT32_TYPE__ stdc_memreverse8u32(__UINT32_TYPE__);
+__UINT64_TYPE__ stdc_memreverse8u64(__UINT64_TYPE__);
+
 #endif

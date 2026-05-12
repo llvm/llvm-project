@@ -3933,6 +3933,18 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  case Builtin::BI__builtin_stdc_memreverse8:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
+    if (Context.getTargetInfo().getCharWidth() != 8) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_requires_char_bit_8)
+          << TheCall->getDirectCallee()->getName();
+      return ExprError();
+    }
+    break;
+
   case Builtin::BI__builtin_stdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_ceil:
     if (BuiltinStdCBuiltin(*this, TheCall, QualType()))

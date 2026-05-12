@@ -4230,6 +4230,64 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Phi);
   }
 
+  // stdc_memreverse8u8 is a no-op (single byte, nothing to swap).
+  case Builtin::BIstdc_memreverse8u8:
+    return RValue::get(EmitScalarExpr(E->getArg(0)));
+
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
+
+  case Builtin::BI__builtin_stdc_memreverse8: {
+    Value *N = EmitScalarExpr(E->getArg(0));
+    Value *Ptr = EmitScalarExpr(E->getArg(1));
+
+    if (auto *CI = dyn_cast<ConstantInt>(N)) {
+      uint64_t Size = CI->getZExtValue();
+      if (Size == 2 || Size == 4 || Size == 8) {
+        llvm::Type *IntTy = Builder.getIntNTy(Size * 8);
+        CharUnits Align = CharUnits::One();
+        Address Addr(Ptr, IntTy, Align);
+        Value *Val = Builder.CreateLoad(Addr);
+        Function *F = CGM.getIntrinsic(Intrinsic::bswap, IntTy);
+        Value *Swapped = Builder.CreateCall(F, Val);
+        Builder.CreateStore(Swapped, Addr);
+        return RValue::get(nullptr);
+      }
+    }
+
+    // General case: emit a loop swapping ptr[i] and ptr[n-i-1].
+    BasicBlock *EntryBB = Builder.GetInsertBlock();
+    BasicBlock *LoopBB = createBasicBlock("memreverse8.loop", CurFn);
+    BasicBlock *AfterBB = createBasicBlock("memreverse8.after", CurFn);
+    Value *Half = Builder.CreateLShr(N, ConstantInt::get(N->getType(), 1));
+    Value *IsEmpty =
+        Builder.CreateICmpEQ(Half, ConstantInt::get(Half->getType(), 0));
+    Builder.CreateCondBr(IsEmpty, AfterBB, LoopBB);
+
+    Builder.SetInsertPoint(LoopBB);
+    PHINode *Idx = Builder.CreatePHI(Half->getType(), 2, "i");
+    Idx->addIncoming(ConstantInt::get(Half->getType(), 0), EntryBB);
+    Value *J = Builder.CreateSub(Builder.CreateSub(N, Idx),
+                                 ConstantInt::get(N->getType(), 1));
+    Address AddrI(Builder.CreateGEP(Int8Ty, Ptr, Idx), Int8Ty,
+                  CharUnits::One());
+    Address AddrJ(Builder.CreateGEP(Int8Ty, Ptr, J), Int8Ty, CharUnits::One());
+    Value *XI = Builder.CreateLoad(AddrI);
+    Value *XJ = Builder.CreateLoad(AddrJ);
+    Builder.CreateStore(XJ, AddrI);
+    Builder.CreateStore(XI, AddrJ);
+    Value *Next = Builder.CreateAdd(Idx, ConstantInt::get(Half->getType(), 1));
+    Idx->addIncoming(Next, LoopBB);
+    Value *Done = Builder.CreateICmpEQ(Next, Half);
+    Builder.CreateCondBr(Done, AfterBB, LoopBB);
+
+    Builder.SetInsertPoint(AfterBB);
+    return RValue::get(nullptr);
+  }
+
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
 

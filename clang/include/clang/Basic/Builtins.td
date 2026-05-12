@@ -34,6 +34,10 @@ class IntBitUtilTemplate : Template<
      "unsigned long int", "unsigned long long int"],
     ["_uc", "_us", "_ui", "_ul", "_ull"]>;
 
+class MemReverse8Template : Template<
+    ["unsigned char", "unsigned short", "uint32_t", "uint64_t"],
+    ["u8",            "u16",            "u32",      "u64"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -984,6 +988,18 @@ def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplat
   let Spellings = ["stdc_rotate_right"];
   let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T(T, unsigned int)";
+}
+
+def StdcMemReverse8: Builtin {
+  let Spellings = ["__builtin_stdc_memreverse8"];
+  let Attributes = [NoThrow, NonNull<NonOptimizing, [1]>];
+  let Prototype = "void(size_t, unsigned char*)";
+}
+
+def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Template {
+  let Spellings = ["stdc_memreverse8"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T)";
 }
 
 

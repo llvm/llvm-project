@@ -232,6 +232,11 @@ C2y Feature Support
   ``stdc_rotate_left_{uc,us,ui,ul,ull}`` and
   ``stdc_rotate_right_{uc,us,ui,ul,ull}``.
 
+- Implemented C2y ``<stdbit.h>`` memory reversal functions:
+  ``__builtin_stdc_memreverse8`` / ``stdc_memreverse8`` (in-place byte
+  reversal of a byte array) and ``stdc_memreverse8u{8,16,32,64}`` (byte-swap
+  of an exact-width unsigned integer value, usable in constant expressions).
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)

@@ -4954,6 +4954,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
