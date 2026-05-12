@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-before.cir %s
-// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-X86-AFTER --input-file=%t.cir %s
+// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-AFTER-X86 --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll --check-prefixes=LLVM,LLVM-X86 %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
@@ -8,7 +8,7 @@
 
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t-arm.cir 2> %t-arm-before.cir
 // RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-arm-before.cir %s
-// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-ARM-AFTER --input-file=%t-arm.cir %s
+// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-AFTER-ARM --input-file=%t-arm.cir %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-arm-cir.ll
 // RUN: FileCheck --input-file=%t-arm-cir.ll --check-prefixes=LLVM,LLVM-ARM %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t-arm.ll
@@ -28,8 +28,8 @@ void (Foo::*m1_ptr)(int) = &Foo::m1;
 
 // CIR-BEFORE: cir.global external @m1_ptr = #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-AFTER-DAG:     cir.global "private" constant cir_private @[[NONVIRT_RET:.*]] = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
-// CIR-X86-AFTER-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<9> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
-// CIR-ARM-AFTER-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<8> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-X86-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<9> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-ARM-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<8> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
 // CIR-AFTER-DAG:     cir.global "private" constant cir_private @[[NULL_RET:.*]] = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
 // CIR-AFTER:         cir.global external @m1_ptr = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
 // LLVM-DAG:     @m1_ptr = global { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
@@ -43,8 +43,8 @@ void (Foo::*m1_ptr)(int) = &Foo::m1;
 void (Foo::*m2_ptr)(int) = &Foo::m2;
 
 // CIR-BEFORE: cir.global external @m2_ptr = #cir.method<vtable_offset = 0> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-X86-AFTER: cir.global external @m2_ptr = #cir.const_record<{#cir.int<1> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
-// CIR-ARM-AFTER: cir.global external @m2_ptr = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-X86: cir.global external @m2_ptr = #cir.const_record<{#cir.int<1> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-ARM: cir.global external @m2_ptr = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
 // LLVM-X86-DAG: @m2_ptr = global { i64, i64 } { i64 1, i64 0 }
 // LLVM-ARM-DAG: @m2_ptr = global { i64, i64 } { i64 0, i64 1 }
 // OGCG-X86: @m2_ptr = global { i64, i64 } { i64 1, i64 0 }
@@ -168,20 +168,20 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-AFTER:      %[[FUNC:.*]] = cir.load{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:      %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-AFTER:      %[[ADJ:.*]] = cir.extract_member %[[FUNC]][1] : !rec_anon_struct -> !s64i
-// CIR-ARM-AFTER:  %[[ADJ_SHIFT:.*]] = cir.shift(right, %[[ADJ]] : !s64i, %[[ONE:.*]] : !s64i) -> !s64i
+// CIR-AFTER-ARM:  %[[ADJ_SHIFT:.*]] = cir.shift(right, %[[ADJ]] : !s64i, %[[ONE:.*]] : !s64i) -> !s64i
 // CIR-AFTER:      %[[THIS:.*]] = cir.cast bitcast %[[OBJ]] : !cir.ptr<!rec_Foo> -> !cir.ptr<!void>
-// CIR-X86-AFTER:  %[[ADJUSTED_THIS:.*]] = cir.ptr_stride %[[THIS]], %[[ADJ]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
-// CIR-ARM-AFTER:  %[[ADJUSTED_THIS:.*]] = cir.ptr_stride %[[THIS]], %[[ADJ_SHIFT]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
+// CIR-AFTER-X86:  %[[ADJUSTED_THIS:.*]] = cir.ptr_stride %[[THIS]], %[[ADJ]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
+// CIR-AFTER-ARM:  %[[ADJUSTED_THIS:.*]] = cir.ptr_stride %[[THIS]], %[[ADJ_SHIFT]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
 // CIR-AFTER:      %[[METHOD_PTR:.*]] = cir.extract_member %[[FUNC]][0] : !rec_anon_struct -> !s64i
-// CIR-X86-AFTER:  %[[VIRT_BIT_TEST:.*]] = cir.and %[[METHOD_PTR]], %[[ONE]] : !s64i
-// CIR-ARM-AFTER:  %[[VIRT_BIT_TEST:.*]] = cir.and %[[ADJ]], %[[ONE]] : !s64i
+// CIR-AFTER-X86:  %[[VIRT_BIT_TEST:.*]] = cir.and %[[METHOD_PTR]], %[[ONE]] : !s64i
+// CIR-AFTER-ARM:  %[[VIRT_BIT_TEST:.*]] = cir.and %[[ADJ]], %[[ONE]] : !s64i
 // CIR-AFTER:      %[[IS_VIRTUAL:.*]] = cir.cmp eq %[[VIRT_BIT_TEST]], %[[ONE]] : !s64i
 // CIR-AFTER:      %[[CALLEE:.*]] = cir.ternary(%[[IS_VIRTUAL]], true {
 // CIR-AFTER:        %[[VTABLE_PTR:.*]] = cir.cast bitcast %[[ADJUSTED_THIS]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!s8i>>
 // CIR-AFTER:        %[[VTABLE:.*]] = cir.load %[[VTABLE_PTR]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-// CIR-X86-AFTER:    %[[OFFSET:.*]] = cir.sub %[[METHOD_PTR]], %[[ONE]] : !s64i
-// CIR-X86-AFTER:    %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[OFFSET]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
-// CIR-ARM-AFTER:    %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[METHOD_PTR]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+// CIR-AFTER-X86:    %[[OFFSET:.*]] = cir.sub %[[METHOD_PTR]], %[[ONE]] : !s64i
+// CIR-AFTER-X86:    %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[OFFSET]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+// CIR-AFTER-ARM:    %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[METHOD_PTR]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
 // CIR-AFTER:        %[[VIRTUAL_FN_PTR:.*]] = cir.cast bitcast %[[VTABLE_SLOT]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>>
 // CIR-AFTER:        %[[VIRTUAL_FN_PTR_LOAD:.*]] = cir.load %[[VIRTUAL_FN_PTR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>
 // CIR-AFTER:        cir.yield %[[VIRTUAL_FN_PTR_LOAD]] : !cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>

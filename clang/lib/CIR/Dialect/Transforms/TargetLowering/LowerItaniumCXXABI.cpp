@@ -338,10 +338,9 @@ void LowerItaniumCXXABI::lowerGetMethod(
   mlir::Value rawAdj =
       cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredMethod, 1);
   mlir::Value adj = rawAdj;
-  if (useARMMethodPtrABI) {
-    adj =
-        cir::ShiftOp::create(locBuilder, ptrdiffCIRTy, adj, ptrdiffOne, false);
-  }
+  if (useARMMethodPtrABI)
+    adj = cir::ShiftOp::create(locBuilder, ptrdiffCIRTy, adj, ptrdiffOne,
+                               /*isLeftShift=*/false);
 
   // Apply the adjustment to the 'this' pointer.
   mlir::Type thisVoidPtrTy =
@@ -360,8 +359,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
   if (useARMMethodPtrABI)
     virtualBit = cir::AndOp::create(locBuilder, rawAdj, ptrdiffOne);
   else
-    virtualBit =
-        cir::AndOp::create(rewriter, op.getLoc(), methodPtrField, ptrdiffOne);
+    virtualBit = cir::AndOp::create(locBuilder, methodPtrField, ptrdiffOne);
   mlir::Value isVirtual = cir::CmpOp::create(locBuilder, cir::CmpOpKind::eq,
                                              virtualBit, ptrdiffOne);
 
@@ -582,11 +580,25 @@ mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
     mlir::Value one =
         cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 1));
 
-    // Compute (lhs.adj | rhs.adj) & 1 and test it against zero.
+    // The low bit of the adjustment field is used to encode whether the member
+    // function is virtual, but the ARM ABI specifies that for null pointers
+    // this bit must be clear. Therefore, to test whether the member pointer is
+    // null, we need to check that bit.
+    //
+    // If we are performing an equality check, ptrCmpToNull indicates that both
+    // pointers are null (if they are equal -- we only actually test lhs).
+    // If we are performing an inequality check, ptrCmpToNull indicates that
+    // one of the pointers is not null.
+    //
+    // To apply the ARM-specific logic, if either virtual bit is set, they
+    // cannot both be null (equality case -- ptrCmpToNull &= orAdjAnd1CmpZero),
+    // and if either virtual bit is set, one of the pointers is not null
+    // (inequality case -- ptrCmpToNull |= orAdjAnd1CmpZero).
     mlir::Value orAdj = create_or(lhsAdjField, rhsAdjField);
     mlir::Value orAdjAnd1 = create_and(orAdj, one);
     mlir::Value orAdjAnd1CmpZero =
         cir::CmpOp::create(locBuilder, op.getKind(), orAdjAnd1, ptrdiffZero);
+
     if (op.getKind() == cir::CmpOpKind::eq)
       ptrCmpToNull = create_and(ptrCmpToNull, orAdjAnd1CmpZero);
     else
@@ -598,7 +610,7 @@ mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
     // (lhs.ptr == null || lhs.adj == rhs.adj) && lhs.ptr == rhs.ptr
     result = create_and(ptrCmp, create_or(ptrCmpToNull, adjCmp));
   } else {
-    // (lhs.ptr != null && lhs.adj != rhs.adj) || lhs.ptr != rhs.ptr
+    // lhs.ptr == rhs.ptr && (lhs.ptr == null || lhs.adj == rhs.adj)
     result = create_or(ptrCmp, create_and(ptrCmpToNull, adjCmp));
   }
 

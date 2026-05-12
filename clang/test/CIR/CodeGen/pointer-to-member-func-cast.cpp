@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-before.cir %s
-// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-X86-AFTER --input-file=%t.cir %s
+// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-AFTER-X86 --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll --check-prefixes=LLVM,LLVM-X86 %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
@@ -8,7 +8,7 @@
 
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t-arm.cir 2> %t-arm-before.cir
 // RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-before.cir %s
-// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-ARM-AFTER --input-file=%t-arm.cir %s
+// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-AFTER-ARM --input-file=%t-arm.cir %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-arm-cir.ll
 // RUN: FileCheck --input-file=%t-arm-cir.ll --check-prefixes=LLVM,LLVM-ARM %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t-arm.ll
@@ -36,15 +36,15 @@ bool memfunc_to_bool(void (Foo::*func)(int)) {
 // CIR-AFTER:       %[[NULL_VAL:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER:       %[[FUNC_PTR:.*]] = cir.extract_member %[[FUNC]][0] : !rec_anon_struct -> !s64i
 // CIR-AFTER:       %[[BOOL_VAL:.*]] = cir.cmp ne %[[FUNC_PTR]], %[[NULL_VAL]] : !s64i
-// CIR-ARM-AFTER:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR-ARM-AFTER:   %[[ADJ:.*]] = cir.extract_member %[[FUNC]][1] : !rec_anon_struct -> !s64i
-// CIR-ARM-AFTER:   %[[AND:.*]] = cir.and %[[ADJ]], %[[ONE]] : !s64i
-// CIR-ARM-AFTER:   %[[NOT_VIRTUAL:.*]] = cir.cmp ne %[[AND]], %[[NULL_VAL]] : !s64i
-// CIR-ARM-AFTER:   %[[TMP:.*]] = cir.or %[[BOOL_VAL]], %[[NOT_VIRTUAL]] : !cir.bool
-// CIR-X86-AFTER-NOT: cir.extract_member
-// CIR-X86-AFTER-NOT: cir.and
-// CIR-X86-AFTER-NOT: cir.cmp
-// CIR-X86-AFTER-NOT: cir.or
+// CIR-AFTER-ARM:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
+// CIR-AFTER-ARM:   %[[ADJ:.*]] = cir.extract_member %[[FUNC]][1] : !rec_anon_struct -> !s64i
+// CIR-AFTER-ARM:   %[[AND:.*]] = cir.and %[[ADJ]], %[[ONE]] : !s64i
+// CIR-AFTER-ARM:   %[[NOT_VIRTUAL:.*]] = cir.cmp ne %[[AND]], %[[NULL_VAL]] : !s64i
+// CIR-AFTER-ARM:   %[[TMP:.*]] = cir.or %[[BOOL_VAL]], %[[NOT_VIRTUAL]] : !cir.bool
+// CIR-AFTER-X86-NOT: cir.extract_member
+// CIR-AFTER-X86-NOT: cir.and
+// CIR-AFTER-X86-NOT: cir.cmp
+// CIR-AFTER-X86-NOT: cir.or
 
 // LLVM:     define {{.*}} i1 @_Z15memfunc_to_boolM3FooFviE
 // LLVM:       %[[FUNC:.*]] = load { i64, i64 }, ptr %{{.*}}
@@ -171,8 +171,8 @@ DerivedMemFunc base_to_derived(Base2MemFunc ptr) {
 // CIR-AFTER:     cir.func {{.*}} @_Z15base_to_derivedM5Base2FviE
 // CIR-AFTER:       %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
-// CIR-X86-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
-// CIR-ARM-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<32> : !s64i
+// CIR-AFTER-X86:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
+// CIR-AFTER-ARM:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<32> : !s64i
 // CIR-AFTER:       %[[BINOP_KIND:.*]] = cir.add nsw %[[OFFSET]], %[[OFFSET_ADJ]] : !s64i
 // CIR-AFTER:       %{{.*}} = cir.insert_member %[[PTR]][1], %[[BINOP_KIND]] : !rec_anon_struct, !s64i
 
@@ -242,8 +242,8 @@ Base2MemFunc derived_to_base(DerivedMemFunc ptr) {
 // CIR-AFTER:     cir.func {{.*}} @_Z15derived_to_baseM7DerivedFviE
 // CIR-AFTER:       %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
-// CIR-X86-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
-// CIR-ARM-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<32> : !s64i
+// CIR-AFTER-X86:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
+// CIR-AFTER-ARM:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<32> : !s64i
 // CIR-AFTER:       %[[BINOP_KIND:.*]] = cir.sub nsw %[[OFFSET]], %[[OFFSET_ADJ]] : !s64i
 // CIR-AFTER:       %{{.*}} = cir.insert_member %[[PTR]][1], %[[BINOP_KIND]] : !rec_anon_struct, !s64i
 

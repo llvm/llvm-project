@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-before.cir %s
-// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-X86-AFTER --input-file=%t.cir %s
+// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-AFTER-X86 --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll --check-prefixes=LLVM,LLVM-X86 %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
@@ -8,7 +8,7 @@
 
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t-arm.cir 2> %t-arm-before.cir
 // RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-arm-before.cir %s
-// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-ARM-AFTER --input-file=%t-arm.cir %s
+// RUN: FileCheck --check-prefixes=CIR-AFTER,CIR-AFTER-ARM --input-file=%t-arm.cir %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-arm-cir.ll
 // RUN: FileCheck --input-file=%t-arm-cir.ll --check-prefixes=LLVM,LLVM-ARM %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t-arm.ll
@@ -41,13 +41,13 @@ bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-AFTER:       %[[LHS_ADJ:.*]] = cir.extract_member %[[LHS]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:       %[[RHS_ADJ:.*]] = cir.extract_member %[[RHS]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:       %[[ADJ_CMP:.*]] = cir.cmp eq %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
-// CIR-X86-AFTER:   %[[TMP:.*]] = cir.or %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
-// CIR-ARM-AFTER:   %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR-ARM-AFTER:   %[[OR_ADJ:.*]] = cir.or %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
-// CIR-ARM-AFTER:   %[[AND_ADJ:.*]] = cir.and %[[OR_ADJ]], %[[ONE]] : !s64i
-// CIR-ARM-AFTER:   %[[ADJ_CMP2:.*]] = cir.cmp eq %[[AND_ADJ]], %[[NULL]] : !s64i
-// CIR-ARM-AFTER:   %[[AND_PTR_NULL:.*]] = cir.and %[[PTR_NULL]], %[[ADJ_CMP2]] : !cir.bool
-// CIR-ARM-AFTER:   %[[TMP:.*]] = cir.or %[[AND_PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
+// CIR-AFTER-X86:   %[[TMP:.*]] = cir.or %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
+// CIR-AFTER-ARM:   %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-AFTER-ARM:   %[[OR_ADJ:.*]] = cir.or %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
+// CIR-AFTER-ARM:   %[[AND_ADJ:.*]] = cir.and %[[OR_ADJ]], %[[ONE]] : !s64i
+// CIR-AFTER-ARM:   %[[ADJ_CMP2:.*]] = cir.cmp eq %[[AND_ADJ]], %[[NULL]] : !s64i
+// CIR-AFTER-ARM:   %[[AND_PTR_NULL:.*]] = cir.and %[[PTR_NULL]], %[[ADJ_CMP2]] : !cir.bool
+// CIR-AFTER-ARM:   %[[TMP:.*]] = cir.or %[[AND_PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
 // CIR-AFTER:       %[[RESULT:.*]] = cir.and %[[PTR_CMP]], %[[TMP]] : !cir.bool
 
 // LLVM:     define {{.*}} i1 @_Z6cmp_eqM3FooFviES1_
@@ -111,13 +111,13 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-AFTER:       %[[LHS_ADJ:.*]] = cir.extract_member %[[LHS]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:       %[[RHS_ADJ:.*]] = cir.extract_member %[[RHS]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:       %[[ADJ_CMP:.*]] = cir.cmp ne %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
-// CIR-X86-AFTER:   %[[TMP:.*]] = cir.and %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
-// CIR-ARM-AFTER:   %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR-ARM-AFTER:   %[[OR_ADJ:.*]] = cir.or %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
-// CIR-ARM-AFTER:   %[[AND_ADJ:.*]] = cir.and %[[OR_ADJ]], %[[ONE]] : !s64i
-// CIR-ARM-AFTER:   %[[ADJ_CMP2:.*]] = cir.cmp ne %[[AND_ADJ]], %[[NULL]] : !s64i
-// CIR-ARM-AFTER:   %[[AND_PTR_NULL:.*]] = cir.or %[[PTR_NULL]], %[[ADJ_CMP2]] : !cir.bool
-// CIR-ARM-AFTER:   %[[TMP:.*]] = cir.and %[[AND_PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
+// CIR-AFTER-X86:   %[[TMP:.*]] = cir.and %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
+// CIR-AFTER-ARM:   %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-AFTER-ARM:   %[[OR_ADJ:.*]] = cir.or %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
+// CIR-AFTER-ARM:   %[[AND_ADJ:.*]] = cir.and %[[OR_ADJ]], %[[ONE]] : !s64i
+// CIR-AFTER-ARM:   %[[ADJ_CMP2:.*]] = cir.cmp ne %[[AND_ADJ]], %[[NULL]] : !s64i
+// CIR-AFTER-ARM:   %[[AND_PTR_NULL:.*]] = cir.or %[[PTR_NULL]], %[[ADJ_CMP2]] : !cir.bool
+// CIR-AFTER-ARM:   %[[TMP:.*]] = cir.and %[[AND_PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
 // CIR-AFTER:       %[[RESULT:.*]] = cir.or %[[PTR_CMP]], %[[TMP]] : !cir.bool
 
 // LLVM:     define {{.*}} i1 @_Z6cmp_neM3FooFviES1_
