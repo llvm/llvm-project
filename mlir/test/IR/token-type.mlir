@@ -1,10 +1,7 @@
 // RUN: mlir-opt %s -verify-diagnostics -split-input-file | FileCheck %s
 
-// Tests for the builtin `token` type and the
-// `Token` / `AnyType` / `AnyTypeOrToken` ODS predicates.
-//
-// The default `AnyType` predicate excludes tokens, while `AnyTypeOrToken` and
-// `Token` accept them.
+// Tests for the builtin `token` type and the `Token`, `AnyType` ODS predicates.
+// The default `AnyType` predicate excludes tokens.
 
 // CHECK-LABEL: @token_produce_consume
 func.func @token_produce_consume() {
@@ -12,18 +9,6 @@ func.func @token_produce_consume() {
   %t = test.token.produce
   // CHECK: test.token.consume %[[T]]
   test.token.consume %t
-  // CHECK: test.token.any_or_token %[[T]] : token
-  test.token.any_or_token %t : token
-  return
-}
-
-// -----
-
-// `AnyTypeOrToken` also accepts non-token types.
-// CHECK-LABEL: @any_or_token_with_non_token
-func.func @any_or_token_with_non_token(%arg0: i32) {
-  // CHECK: test.token.any_or_token %{{.*}} : i32
-  test.token.any_or_token %arg0 : i32
   return
 }
 

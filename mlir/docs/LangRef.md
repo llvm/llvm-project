@@ -738,7 +738,8 @@ dialect types.
 
 The [builtin dialect](Dialects/Builtin.md) defines a set of types that are
 directly usable by any other dialect in MLIR. These types cover a range from
-primitive integer and floating-point types, function types, and more.
+primitive integer and floating-point types, function types,
+[tokens](Tokens.md), and more.
 
 ## Properties
 

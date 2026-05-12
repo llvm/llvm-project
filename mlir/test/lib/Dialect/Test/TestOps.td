@@ -126,13 +126,6 @@ def TestTokenConsumeOp : TEST_Op<"token.consume"> {
   let assemblyFormat = "$token attr-dict";
 }
 
-// Op that accepts any type, including a token. Uses the `AnyTypeOrToken`
-// opt-in predicate.
-def TestTokenAnyTypeOrTokenOp : TEST_Op<"token.any_or_token"> {
-  let arguments = (ins AnyTypeOrToken:$value);
-  let assemblyFormat = "$value attr-dict `:` type($value)";
-}
-
 // Op that uses the default `AnyType` predicate. Tokens are excluded by
 // default and should be rejected by the verifier when passed here.
 def TestTokenAnyTypeOp : TEST_Op<"token.any_type"> {
