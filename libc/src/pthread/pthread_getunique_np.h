@@ -14,8 +14,9 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETUNIQUE_NP_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETUNIQUE_NP_H
 
+#include "include/llvm-libc-types/pthread_id_np_t.h"
+#include "include/llvm-libc-types/pthread_t.h"
 #include "src/__support/macros/config.h"
-#include <pthread.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

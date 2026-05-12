@@ -17,8 +17,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
-#include <pthread.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pthread_id_np_t, pthread_getthreadid_np, ()) {

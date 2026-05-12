@@ -598,7 +598,8 @@ add_entrypoint_object(
   HDRS
     pthread_getthreadid_np.h
   DEPENDS
-    libc.include.pthread
+    libc.include.llvm-libc-types.pthread_id_np_t
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
@@ -608,9 +609,9 @@ add_entrypoint_object(
   HDRS
     pthread_getunique_np.h
   DEPENDS
-    libc.include.pthread
-    libc.src.__support.macros.null_check
-    libc.src.__support.threads.thread
+    libc.hdr.errno_macros
+    libc.include.llvm-libc-types.pthread_id_np_t
+    libc.include.llvm-libc-types.pthread_t
 )
 
 add_entrypoint_object(
