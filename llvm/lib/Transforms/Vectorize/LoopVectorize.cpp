@@ -6620,7 +6620,8 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
     // Only create recipe for the final invariant store of the reduction.
     if (Legal->isInvariantStoreOfReduction(SI)) {
-      VPValue *Val = VPI->getOperand(0), *Addr = VPI->getOperand(1);
+      VPValue *Val = VPI->getOperand(0);
+      VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
       if (auto *Blend = vputils::findUserOf<VPBlendRecipe>(Val))

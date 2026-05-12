@@ -1368,7 +1368,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     VPValue *TailVal =
         Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(V)));
     VPIRFlags Flags;
-    assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) < 2 &&
+    assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
     auto *RedIt = find_if(Users, IsaPred<VPReductionPHIRecipe>);
     auto *RdxPhi =
