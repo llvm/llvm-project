@@ -1809,11 +1809,13 @@ static const Init *SortHelper(const Init *LHS, const Init *MHS, const Init *RHS,
     return ListInit::get({}, cast<ListRecTy>(Type)->getElementType());
 
   // Determine key type from the first element; all keys must agree.
-  bool UseInt = dyn_cast_or_null<IntInit>(
-                    KeyedList[0].first->convertInitializerTo(IntRecTy::get(RK))) != nullptr;
+  bool UseInt =
+      dyn_cast_or_null<IntInit>(KeyedList[0].first->convertInitializerTo(
+          IntRecTy::get(RK))) != nullptr;
   for (auto &[Key, Item] : KeyedList) {
     if (UseInt) {
-      if (!dyn_cast_or_null<IntInit>(Key->convertInitializerTo(IntRecTy::get(RK))))
+      if (!dyn_cast_or_null<IntInit>(
+              Key->convertInitializerTo(IntRecTy::get(RK))))
         return nullptr;
     } else {
       if (!isa<StringInit>(Key))
@@ -1823,9 +1825,12 @@ static const Init *SortHelper(const Init *LHS, const Init *MHS, const Init *RHS,
 
   llvm::stable_sort(KeyedList, [&RK, UseInt](const KV &A, const KV &B) {
     if (UseInt)
-      return cast<IntInit>(A.first->convertInitializerTo(IntRecTy::get(RK)))->getValue() <
-             cast<IntInit>(B.first->convertInitializerTo(IntRecTy::get(RK)))->getValue();
-    return cast<StringInit>(A.first)->getValue() < cast<StringInit>(B.first)->getValue();
+      return cast<IntInit>(A.first->convertInitializerTo(IntRecTy::get(RK)))
+                 ->getValue() <
+             cast<IntInit>(B.first->convertInitializerTo(IntRecTy::get(RK)))
+                 ->getValue();
+    return cast<StringInit>(A.first)->getValue() <
+           cast<StringInit>(B.first)->getValue();
   });
 
   SmallVector<const Init *, 8> Result;
@@ -2077,7 +2082,10 @@ std::string TernOpInit::getAsString() const {
   case DAG: Result = "!dag"; break;
   case FILTER: Result = "!filter"; UnquotedLHS = true; break;
   case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
-  case SORT: Result = "!sort"; UnquotedLHS = true; break;
+  case SORT:
+    Result = "!sort";
+    UnquotedLHS = true;
+    break;
   case IF: Result = "!if"; break;
   case RANGE:
     Result = "!range";

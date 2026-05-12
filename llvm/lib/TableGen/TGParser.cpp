@@ -2630,10 +2630,11 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
     InEltType = InListTy->getElementType();
     if (ItemType) {
       if (const auto *OutListTy = dyn_cast<ListRecTy>(ItemType)) {
-        ExprEltType = (Operation == tgtok::XForEach)
-                          ? OutListTy->getElementType()
-                          : (Operation == tgtok::XFilter ? IntRecTy::get(Records)
-                                                         : nullptr);
+        ExprEltType =
+            (Operation == tgtok::XForEach)
+                ? OutListTy->getElementType()
+                : (Operation == tgtok::XFilter ? IntRecTy::get(Records)
+                                               : nullptr);
       } else {
         Error(OpLoc, "expected value of type '" +
                          Twine(ItemType->getAsString()) +
