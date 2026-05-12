@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=X64
 
 ;; Use cttz to test if we properly prove never-zero. There is a very
-;; simple transform from cttz -> cttz_zero_undef if its operand is
+;; simple transform from cttz -> cttz_zero_poison if its operand is
 ;; known never zero.
 
 define i32 @or_known_nonzero(i32 %x) {
@@ -1624,7 +1624,7 @@ define i32 @udiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpextrd $1, %xmm1, %ecx
-; X64-NEXT:    vpextrd $1, %xmm0, %eax
+; X64-NEXT:    movl $-1, %eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    movl %eax, %ecx
@@ -1754,7 +1754,7 @@ define i32 @sdiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpextrd $1, %xmm1, %ecx
-; X64-NEXT:    vpextrd $1, %xmm0, %eax
+; X64-NEXT:    movl $-1, %eax
 ; X64-NEXT:    cltd
 ; X64-NEXT:    idivl %ecx
 ; X64-NEXT:    movl %eax, %ecx

@@ -204,7 +204,7 @@ std::optional<MergePair> areMergablePartners(MachineInstr &MI,
 
   // Sources may always be VGPRs, but can also be SGPRs if the target supports
   // V_MOV_B64. Either way, the sources must be the same class.
-  bool UsesSGPRSources = ST.hasMovB64() &&
+  bool UsesSGPRSources = ST.hasVMovB64Inst() &&
                          AMDGPU::SGPR_32RegClass.contains(MISrcReg) &&
                          AMDGPU::SGPR_32RegClass.contains(NextMISrcReg);
   if (!UsesSGPRSources && !(AMDGPU::VGPR_32RegClass.contains(MISrcReg) &&
@@ -286,7 +286,7 @@ bool SIMergeVGPRCopies::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   // Only merge when the target has a 64-bit move instruction.
-  if (!ST.hasPkMovB32() && !ST.hasMovB64())
+  if (!ST.hasPkMovB32() && !ST.hasVMovB64Inst())
     return false;
 
   bool Changed = false;
@@ -316,7 +316,7 @@ bool SIMergeVGPRCopies::run(MachineFunction &MF) {
       MachineInstr &MI = *P.First;
       MachineInstr &NextMI = *P.Second;
 
-      if (P.SrcIsInversed || !ST.hasMovB64()) {
+      if (P.SrcIsInversed || !ST.hasVMovB64Inst()) {
         int64_t OpSelImm0 = SISrcMods::OP_SEL_1;
         int64_t OpSelImm1 = SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1;
         if (P.SrcIsInversed)

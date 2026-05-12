@@ -67,23 +67,25 @@ static SmallString<128> getTransformedFileName(mlir::ModuleOp mlirModule) {
   return fileName;
 }
 
-/// Return the FuncOp called by `callOp`.
-static cir::FuncOp getCalledFunction(cir::CallOp callOp) {
-  mlir::SymbolRefAttr sym = llvm::dyn_cast_if_present<mlir::SymbolRefAttr>(
-      callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
-  return dyn_cast_or_null<cir::FuncOp>(
-      mlir::SymbolTable::lookupNearestSymbolFrom(callOp, sym));
-}
-
 namespace {
 struct LoweringPreparePass
     : public impl::LoweringPrepareBase<LoweringPreparePass> {
   LoweringPreparePass() = default;
+
+  // `mlir::SymbolTableCollection` is move-only (it owns lazily-created
+  // `unique_ptr<SymbolTable>` entries), which makes the implicit copy
+  // constructor ill-formed.  MLIR's `clonePass()` requires copy
+  // construction, so define one explicitly.  Per-run state members
+  // (dynamic initializers, guard maps, symbol-table cache, etc.) all
+  // start fresh in the cloned pass, which matches MLIR convention for
+  // pass clones and is more correct than the previous default-generated
+  // behavior that silently copied them.
+  LoweringPreparePass(const LoweringPreparePass &other)
+      : impl::LoweringPrepareBase<LoweringPreparePass>(other) {}
+
   void runOnOperation() override;
 
-  void runOnOp(mlir::Operation *op, mlir::SymbolTableCollection &symbolTables);
+  void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
@@ -94,8 +96,25 @@ struct LoweringPreparePass
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
-  void lowerLocalInitOp(cir::LocalInitOp op,
-                        mlir::SymbolTableCollection &symbolTables);
+  void lowerLocalInitOp(cir::LocalInitOp op);
+
+  /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
+  /// member to avoid the O(M) module-wide scan that the static
+  /// `mlir::SymbolTable::lookupNearestSymbolFrom` would do per call.
+  cir::FuncOp getCalledFunction(cir::CallOp callOp);
+
+  /// Return a private constant cir::GlobalOp with the given type and initial
+  /// value, suitable for backing a memcpy-initialized local aggregate.
+  ///
+  /// If a global with `baseName` (or one of its `.<n>` versioned siblings)
+  /// already has a matching type and initial value, that global is reused.
+  /// Otherwise a new global is created with the next available `.<n>` suffix
+  /// (matching CIRGenBuilder::createVersionedGlobal and OGCG behavior).
+  cir::GlobalOp getOrCreateConstAggregateGlobal(CIRBaseBuilderTy &builder,
+                                                mlir::Location loc,
+                                                llvm::StringRef baseName,
+                                                mlir::Type ty,
+                                                mlir::TypedAttr constant);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -183,6 +202,7 @@ struct LoweringPreparePass
       guard.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
       guard.setDSOLocal(globalOp.getDsoLocal());
       guard.setAlignment(guardAlignment.getAsAlign().value());
+      guard.setTlsModel(globalOp.getTlsModel());
 
       // The ABI says: "It is suggested that it be emitted in the same COMDAT
       // group as the associated data object." In practice, this doesn't work
@@ -212,12 +232,34 @@ struct LoweringPreparePass
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
 
+  /// Cached symbol tables used to avoid repeated O(M) module-wide scans
+  /// during per-call/per-global symbol lookups.  Lazily populated on first
+  /// use.  Pass methods access this directly rather than threading it
+  /// through helper signatures (see PR feedback on #195919).
+  ///
+  /// Invariant: every site that mutates the module's symbol table either
+  /// (a) keeps `symbolTables` in sync via
+  /// `symbolTables.getSymbolTable(mlirModule).insert(...)` (as
+  /// `getOrCreateConstAggregateGlobal` does), or (b) creates a symbol
+  /// that is never resolved through the cache later.  Today
+  /// `buildRuntimeFunction` and `getOrCreateRuntimeVariable` fall in the
+  /// (b) bucket: their callers either use a separate map
+  /// (`cudaKernelMap`, `staticLocalDeclGuardMap`, `dynamicInitializers`)
+  /// or the static `mlir::SymbolTable::lookupNearestSymbolFrom`, never
+  /// the cached path.  If a future change adds a cached lookup of a
+  /// freshly created symbol, the corresponding create site MUST move
+  /// to bucket (a) (insert into the cache or call
+  /// `invalidateSymbolTable`).
+  mlir::SymbolTableCollection symbolTables;
+
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
   llvm::SmallVector<cir::FuncOp> dynamicInitializers;
 
   /// Tracks guard variables for static locals (keyed by global symbol name).
   llvm::StringMap<cir::GlobalOp> staticLocalDeclGuardMap;
+
+  llvm::StringMap<llvm::SmallVector<cir::GlobalOp, 1>> constAggregateGlobals;
 
   /// List of ctors and their priorities to be called before main()
   llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalCtorList;
@@ -241,7 +283,7 @@ struct LoweringPreparePass
 
   void emitGlobalGuardedDtorRegion(CIRBaseBuilderTy &builder,
                                    cir::GlobalOp global,
-                                   mlir::Region &dtorRegion,
+                                   mlir::Region &dtorRegion, bool tls,
                                    mlir::Block &entryBB) {
     // Create a variable that binds the atexit to this shared object.
     builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
@@ -266,6 +308,11 @@ struct LoweringPreparePass
         builder.getVoidFnTy({voidFnPtrTy, voidPtrTy, handlePtrTy});
 
     llvm::StringLiteral nameAtExit = "__cxa_atexit";
+    if (tls)
+      nameAtExit = astCtx->getTargetInfo().getTriple().isOSDarwin()
+                       ? llvm::StringLiteral("_tlv_atexit")
+                       : llvm::StringLiteral("__cxa_thread_atexit");
+
     cir::FuncOp fnAtExit = buildRuntimeFunction(builder, nameAtExit,
                                                 global.getLoc(), fnAtExitType);
 
@@ -317,6 +364,28 @@ struct LoweringPreparePass
     // initialization so that recursive accesses during initialization do not
     // restart initialization.
 
+    auto emitBody = [&]() {
+      // Emit the initializer and add a global destructor if appropriate.
+      mlir::Block *insertBlock = builder.getInsertionBlock();
+      if (!ctorRegion.empty()) {
+        assert(ctorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
+
+        mlir::Block &block = ctorRegion.front();
+        insertBlock->getOperations().splice(
+            insertBlock->end(), block.getOperations(), block.begin(),
+            std::prev(block.end()));
+      }
+
+      if (!dtorRegion.empty()) {
+        assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
+
+        emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion, !threadsafe,
+                                    *insertBlock);
+      }
+      builder.setInsertionPointToEnd(insertBlock);
+      ctorRegion.getBlocks().clear();
+    };
+
     // Variables used when coping with thread-safe statics and exceptions.
     if (threadsafe) {
       // Call __cxa_guard_acquire.
@@ -341,26 +410,7 @@ struct LoweringPreparePass
       // OG: CGF.EHStack.pushCleanup<CallGuardAbort>(EHCleanup, guard);
       assert(!cir::MissingFeatures::guardAbortOnException());
 
-      // Emit the initializer and add a global destructor if appropriate.
-      mlir::Block *insertBlock = builder.getInsertionBlock();
-      if (!ctorRegion.empty()) {
-        assert(ctorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
-
-        mlir::Block &block = ctorRegion.front();
-        insertBlock->getOperations().splice(
-            insertBlock->end(), block.getOperations(), block.begin(),
-            std::prev(block.end()));
-      }
-
-      if (!dtorRegion.empty()) {
-        assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
-
-        emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
-                                    *insertBlock);
-      }
-
-      builder.setInsertionPointToEnd(insertBlock);
-      ctorRegion.getBlocks().clear();
+      emitBody();
 
       // Pop the guard-abort cleanup if we pushed one.
       // OG: CGF.PopCleanupBlock();
@@ -380,11 +430,13 @@ struct LoweringPreparePass
       globalOp->emitError("NYI: non-threadsafe init for non-local variables");
       return;
     } else {
+      emitBody();
       // For local variables, store 1 into the first byte of the guard variable
       // after the object initialization completes so that initialization is
       // retried if initialization is interrupted by an exception.
-      globalOp->emitError("NYI: non-threadsafe init for local variables");
-      return;
+      builder.createStore(
+          loc, builder.getConstantInt(loc, guardPtrTy.getPointee(), 1),
+          guardPtr);
     }
 
     builder.createYield(loc); // Outermost IfOp
@@ -1063,7 +1115,8 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
     assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
-    emitGlobalGuardedDtorRegion(builder, op, dtorRegion, *entryBB);
+    emitGlobalGuardedDtorRegion(builder, op, dtorRegion,
+                                op.getTlsModel().has_value(), *entryBB);
   }
 
   // Replace cir.yield with cir.return
@@ -1159,31 +1212,31 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
                     (varDecl.isLocalVarDecl() || nonTemplateInline) &&
                     !varDecl.getTLSKind();
 
-  // TLS variables need special handling - the guard must also be thread-local.
-  if (varDecl.getTLSKind()) {
-    globalOp->emitError("NYI: guarded initialization for thread-local statics");
-    return;
-  }
-
   // If we have a global variable with internal linkage and thread-safe statics
   // are disabled, we can just let the guard variable be of type i8.
   bool useInt8GuardVariable = !threadsafe && globalOp.hasInternalLinkage();
-  if (useInt8GuardVariable) {
-    globalOp->emitError("NYI: int8 guard variables for non-threadsafe statics");
-    return;
-  }
-
+  cir::CIRDataLayout dataLayout(mlirModule);
+  cir::IntType guardTy;
+  clang::CharUnits guardAlignment;
   // Guard variables are 64 bits in the generic ABI and size width on ARM
   // (i.e. 32-bit on AArch32, 64-bit on AArch64).
-  if (useARMGuardVarABI()) {
-    globalOp->emitError("NYI: ARM-style guard variables for static locals");
-    return;
+  if (useInt8GuardVariable) {
+    guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
+    guardAlignment = clang::CharUnits::One();
+  } else if (useARMGuardVarABI()) {
+    // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
+    const unsigned sizeTypeSize =
+        astCtx->getTypeSize(astCtx->getSignedSizeType());
+    guardTy = cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
+    guardAlignment =
+        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+  } else {
+    guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
+    guardAlignment =
+        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
   }
-  cir::IntType guardTy =
-      cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
-  cir::CIRDataLayout dataLayout(mlirModule);
-  clang::CharUnits guardAlignment =
-      clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+  assert(guardTy && guardAlignment.getQuantity() != 0);
+
   auto guardPtrTy = cir::PointerType::get(guardTy);
 
   // Create the guard variable if we don't already have it.
@@ -1195,7 +1248,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     return;
   }
 
-  mlir::Value guardPtr = builder.createGetGlobal(guard, /*threadLocal*/ false);
+  mlir::Value guardPtr = builder.createGetGlobal(guard, localInitOp.getTls());
 
   // Test whether the variable has completed initialization.
   //
@@ -1259,10 +1312,11 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     //   This ABI instead only specifies the value bit 0 of the static guard
     //   variable; all other bits are platform defined. Bit 0 shall be 0 when
     //   the variable is not initialized and 1 when it is.
-    if (useARMGuardVarABI()) {
-      globalOp->emitError(
-          "NYI: ARM-style guard variable check (bit 0 only) for static locals");
-      return;
+    if (useARMGuardVarABI() && !useInt8GuardVariable) {
+      auto one = builder.getConstantInt(
+          localInitOp.getLoc(), mlir::cast<cir::IntType>(guardLoad.getType()),
+          1);
+      guardLoad = builder.createAnd(localInitOp.getLoc(), guardLoad, one);
     }
 
     // Check if the first byte of the guard variable is zero.
@@ -1290,12 +1344,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   builder.getInsertionBlock()->push_back(ret);
 }
 
-void LoweringPreparePass::lowerLocalInitOp(
-    cir::LocalInitOp initOp, mlir::SymbolTableCollection &symbolTables) {
-  if (!initOp.getStaticLocal()) {
-    initOp->emitError("NYI: Non-static-local in lower-init-local op");
-    return;
-  }
+void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
 
   // If we don't actually need to initialize anything anymore, we're done here.
   if (initOp.getCtorRegion().empty() && initOp.getDtorRegion().empty()) {
@@ -1533,6 +1582,17 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     mlir::Region &partialDtor = arrayCtor.getPartialDtor();
     if (!partialDtor.empty())
       partialDtorBlock = &partialDtor.front();
+  } else if (auto arrayDtor = mlir::dyn_cast<cir::ArrayDtor>(op)) {
+    // When the element destructor may throw, reuse the body block as the
+    // partial-dtor block so that an exception thrown by an element's dtor
+    // continues the reverse-destruction loop in the EH cleanup region. The
+    // body block already stores the next element pointer to `tmpAddr`
+    // before invoking the dtor, so when an exception unwinds from the
+    // dtor call `tmpAddr` already points at the element that threw, and
+    // the cleanup loop picks up from `tmpAddr - 1` and walks back to
+    // `begin`.
+    if (arrayDtor.getDtorMayThrow())
+      partialDtorBlock = bodyBlock;
   }
 
   auto emitCtorDtorLoop = [&]() {
@@ -1656,6 +1716,14 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
                              /*isCtor=*/true);
 }
 
+cir::FuncOp LoweringPreparePass::getCalledFunction(cir::CallOp callOp) {
+  mlir::SymbolRefAttr sym = llvm::dyn_cast_if_present<mlir::SymbolRefAttr>(
+      callOp.getCallableForCallee());
+  if (!sym)
+    return nullptr;
+  return symbolTables.lookupNearestSymbolFrom<cir::FuncOp>(callOp, sym);
+}
+
 void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
   cir::FuncOp funcOp = getCalledFunction(op);
   if (!funcOp)
@@ -1673,6 +1741,64 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
     builder.createCopy(dest, src);
     op.erase();
   }
+}
+
+cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
+    CIRBaseBuilderTy &builder, mlir::Location loc, llvm::StringRef baseName,
+    mlir::Type ty, mlir::TypedAttr constant) {
+  // Look up (and lazily populate) the per-base-name cache.
+  llvm::SmallVector<cir::GlobalOp, 1> &versions =
+      constAggregateGlobals[baseName];
+
+  // First, check globals we've already discovered for this base name.
+  for (cir::GlobalOp gv : versions) {
+    if (gv.getSymType() == ty && gv.getInitialValue() == constant)
+      return gv;
+  }
+
+  // No cached match. Scan the module's symbol table starting from the next
+  // unscanned version. In practice this should usually exit on the first
+  // iteration, but it's possible that some other pass or a previous
+  // invocation of this pass created globals using this same logic.
+  llvm::SmallString<128> name(baseName);
+  size_t baseLen = name.size();
+  unsigned version = versions.size();
+  while (true) {
+    name.resize(baseLen);
+    if (version != 0) {
+      name.push_back('.');
+      llvm::Twine(version).toVector(name);
+    }
+    auto existingGv = symbolTables.lookupSymbolIn<cir::GlobalOp>(
+        mlirModule, mlir::StringAttr::get(&getContext(), name));
+    if (!existingGv)
+      break;
+    versions.push_back(existingGv);
+    if (existingGv.getSymType() == ty &&
+        existingGv.getInitialValue() == constant)
+      return existingGv;
+    ++version;
+  }
+
+  // No match found, create a new global. The loop above found an unused name.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  auto gv =
+      cir::GlobalOp::create(builder, loc, name, ty,
+                            /*isConstant=*/true,
+                            cir::LangAddressSpaceAttr::get(
+                                &getContext(), cir::LangAddressSpace::Default),
+                            cir::GlobalLinkageKind::PrivateLinkage);
+  mlir::SymbolTable::setSymbolVisibility(
+      gv, mlir::SymbolTable::Visibility::Private);
+  gv.setInitialValueAttr(constant);
+
+  // Keep the cached symbol table in sync with the new global so subsequent
+  // lookups for other base names find it.
+  symbolTables.getSymbolTable(mlirModule).insert(gv);
+
+  versions.push_back(gv);
+  return gv;
 }
 
 void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
@@ -1711,36 +1837,21 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   // Get variable name from the alloca.
   llvm::StringRef varName = alloca.getName();
 
-  // Build name: __const.<func>.<var>
-  std::string name = ("__const." + funcName + "." + varName).str();
-
-  // Create the global constant.
+  // Build base name: __const.<func>.<var>
+  std::string baseName = ("__const." + funcName + "." + varName).str();
   CIRBaseBuilderTy builder(getContext());
 
-  // Use InsertionGuard to create the global at module level.
-  builder.setInsertionPointToStart(mlirModule.getBody());
-
-  // If a global with this name already exists (e.g. CIRGen materializes
-  // constexpr locals as globals when their address is taken), reuse it.
-  if (!mlir::SymbolTable::lookupSymbolIn(
-          mlirModule, mlir::StringAttr::get(&getContext(), name))) {
-    auto gv = cir::GlobalOp::create(
-        builder, op.getLoc(), name, ty,
-        /*isConstant=*/true,
-        cir::LangAddressSpaceAttr::get(&getContext(),
-                                       cir::LangAddressSpace::Default),
-        cir::GlobalLinkageKind::PrivateLinkage);
-    mlir::SymbolTable::setSymbolVisibility(
-        gv, mlir::SymbolTable::Visibility::Private);
-    gv.setInitialValueAttr(constant);
-  }
+  // Check for existing globals and create a new global with a unique name
+  // if no match is found.
+  cir::GlobalOp gv = getOrCreateConstAggregateGlobal(builder, op.getLoc(),
+                                                     baseName, ty, constant);
 
   // Now replace the store with get_global + copy.
   builder.setInsertionPoint(op);
 
   auto ptrTy = cir::PointerType::get(ty);
   mlir::Value globalPtr =
-      cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, name);
+      cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, gv.getSymName());
 
   // Replace store with copy.
   builder.createCopy(op.getAddr(), globalPtr);
@@ -1753,8 +1864,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
     constOp.erase();
 }
 
-void LoweringPreparePass::runOnOp(mlir::Operation *op,
-                                  mlir::SymbolTableCollection &symbolTables) {
+void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
@@ -1788,7 +1898,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op,
   } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
   } else if (auto initOp = dyn_cast<cir::LocalInitOp>(op)) {
-    lowerLocalInitOp(initOp, symbolTables);
+    lowerLocalInitOp(initOp);
   }
 }
 
@@ -1893,7 +2003,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
                                         GlobalLinkageKind::PrivateLinkage);
   fatbinStr.setAlignment(8);
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
-      fatbinType, builder.getStringAttr(gpuBinary->getBuffer())));
+      fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -2133,8 +2243,8 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
         /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
 
     // We must make the string zero-terminated.
-    tmpString.setInitialValueAttr(ConstArrayAttr::get(
-        strType, StringAttr::get(&getContext(), str + "\0")));
+    tmpString.setInitialValueAttr(
+        ConstArrayAttr::get(strType, StringAttr::get(str + "\0", strType)));
     tmpString.setPrivate();
     return tmpString;
   };
@@ -2170,7 +2280,6 @@ void LoweringPreparePass::runOnOperation() {
     mlirModule = cast<::mlir::ModuleOp>(op);
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
-  mlir::SymbolTableCollection symbolTables;
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
@@ -2182,7 +2291,7 @@ void LoweringPreparePass::runOnOperation() {
   });
 
   for (mlir::Operation *o : opsToTransform)
-    runOnOp(o, symbolTables);
+    runOnOp(o);
 
   buildCXXGlobalInitFunc();
   if (astCtx->getLangOpts().CUDA && !astCtx->getLangOpts().CUDAIsDevice)

@@ -793,6 +793,10 @@ def FeatureFuseFCmpFCSel : SubtargetFeature<
     "fuse-fcsel", "HasFuseFCmpFCSel", "true",
     "CPU can fuse FCMP and FCSEL operations">;
 
+def FeatureAlignCmpCSelPairs : SubtargetFeature<
+    "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
+    "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs">;
+
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
     "CPU fuses AES/PMULL and EOR operations">;

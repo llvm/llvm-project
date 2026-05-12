@@ -317,8 +317,8 @@ define i1 @test27(ptr %A, ptr %B) {
 
 define <2 x i1> @test27vec(<2 x ptr> %A, <2 x ptr> %B) {
 ; CHECK-LABEL: @test27vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x ptr> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x ptr> [[A:%.*]], splat (ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[B:%.*]], splat (ptr null)
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[E]]
 ;
@@ -373,8 +373,8 @@ define i1 @test29(ptr %A, ptr %B) {
 
 define <2 x i1> @test29vec(<2 x ptr> %A, <2 x ptr> %B) {
 ; CHECK-LABEL: @test29vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x ptr> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x ptr> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x ptr> [[A:%.*]], splat (ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x ptr> [[B:%.*]], splat (ptr null)
 ; CHECK-NEXT:    [[E:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[E]]
 ;

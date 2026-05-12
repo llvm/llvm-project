@@ -18,7 +18,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
+#include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -33,6 +35,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include <regex>
 
@@ -40,24 +43,32 @@ using namespace llvm;
 
 namespace {
 
-class SPIRVPrepareFunctions : public ModulePass {
+class SPIRVPrepareFunctionsImpl {
   const SPIRVTargetMachine &TM;
   bool substituteIntrinsicCalls(Function *F);
+  bool substituteAbortKHRCalls(Function *F);
+  bool terminateBlocksAfterTrap(Module &M, Intrinsic::ID IID);
   Function *removeAggregateTypesFromSignature(Function *F);
   bool removeAggregateTypesFromCalls(Function *F);
 
 public:
+  SPIRVPrepareFunctionsImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
+  bool runOnModule(Module &M);
+};
+
+class SPIRVPrepareFunctionsLegacy : public ModulePass {
+  const SPIRVTargetMachine &TM;
+
+public:
   static char ID;
-  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
+  SPIRVPrepareFunctionsLegacy(const SPIRVTargetMachine &TM)
       : ModulePass(ID), TM(TM) {}
 
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override {
+    return SPIRVPrepareFunctionsImpl(TM).runOnModule(M);
+  }
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ModulePass::getAnalysisUsage(AU);
-  }
 };
 
 static cl::list<std::string> SPVAllowUnknownIntrinsics(
@@ -69,9 +80,9 @@ static cl::list<std::string> SPVAllowUnknownIntrinsics(
     cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
-char SPIRVPrepareFunctions::ID = 0;
+char SPIRVPrepareFunctionsLegacy::ID = 0;
 
-INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
+INITIALIZE_PASS(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
                 "SPIRV prepare functions", false, false)
 
 static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
@@ -425,7 +436,7 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
-bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
+bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   SmallVector<Instruction *> EraseFromParent;
@@ -531,10 +542,12 @@ addFunctionTypeMutation(NamedMDNode *NMD,
 // function with the types replaced by i32 types. The change in types is
 // noted in 'spv.cloned_funcs' metadata for later restoration.
 Function *
-SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
+SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   bool IsRetAggr = F->getReturnType()->isAggregateType();
-  // Allow intrinsics with aggregate return type to reach GlobalISel
-  if (F->isIntrinsic() && IsRetAggr)
+  // Allow intrinsics with aggregate return/argument types to reach GlobalISel.
+  // Renaming/mutating the signature of an intrinsic would desync its name from
+  // its argument types and break the IR verifier.
+  if (F->isIntrinsic())
     return F;
 
   IRBuilder<> B(F->getContext());
@@ -598,6 +611,107 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
   return NewF;
 }
 
+// Returns true iff `F`'s name resolves (after OpenCL/SPIR-V demangling and
+// builtin-name lookup) to the SPIR-V friendly built-in `__spirv_AbortKHR`.
+static bool isAbortKHRBuiltin(const Function &F) {
+  if (F.isIntrinsic())
+    return false;
+  StringRef Name = F.getName();
+  // Quick reject: the mangled or unmangled name must contain the substring.
+  if (!Name.contains("__spirv_AbortKHR"))
+    return false;
+  std::string Demangled = getOclOrSpirvBuiltinDemangledName(Name);
+  if (Demangled.empty())
+    return false;
+  return SPIRV::lookupBuiltinNameHelper(Demangled) == "__spirv_AbortKHR";
+}
+
+// Rewrites a single call to `__spirv_AbortKHR` into a call to the
+// `llvm.spv.abort` target intrinsic, then re-terminates the block with
+// `unreachable`. OpAbortKHR is itself a SPIR-V function-termination
+// instruction and must be the last instruction in its block, so any trailing
+// stores/lifetime intrinsics/`ret` emitted by the OpenCL ABI are dropped.
+// `changeToUnreachable` cleans up any successor PHI predecessor entries.
+static void rewriteAbortKHRCall(CallInst *CI) {
+  IRBuilder<> B(CI);
+  Value *Msg = CI->getArgOperand(0);
+  // The OpenCL C ABI may pass aggregate arguments by pointer (byval). In that
+  // case load the underlying value so that OpAbortKHR receives the composite
+  // itself, as required by the SPV_KHR_abort spec ("Message Type must be a
+  // concrete type").
+  if (CI->isByValArgument(0)) {
+    Type *AggTy = CI->getParamByValType(0);
+    Msg = B.CreateLoad(AggTy, Msg);
+  }
+  B.CreateIntrinsic(Intrinsic::spv_abort, {Msg->getType()}, {Msg});
+  changeToUnreachable(CI);
+}
+
+// Replace OpenCL/SPIR-V style calls to `__spirv_AbortKHR(message)` (i.e.
+// calls to `F` when `F` is the `__spirv_AbortKHR` built-in) with calls to the
+// `llvm.spv.abort` target intrinsic.
+bool SPIRVPrepareFunctionsImpl::substituteAbortKHRCalls(Function *F) {
+  if (!isAbortKHRBuiltin(*F))
+    return false;
+
+  SmallVector<CallInst *> Calls;
+  for (User *U : F->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI || CI->getCalledFunction() != F)
+      continue;
+    if (CI->arg_size() != 1)
+      continue;
+    Calls.push_back(CI);
+  }
+
+  for (CallInst *CI : Calls)
+    rewriteAbortKHRCall(CI);
+
+  return !Calls.empty();
+}
+
+// When the SPV_KHR_abort extension is enabled, `llvm.trap` and
+// `llvm.ubsantrap` are lowered to `OpAbortKHR` during instruction selection.
+// `OpAbortKHR` is itself a SPIR-V block terminator, so any instructions that
+// follow the trap call within the same basic block (e.g. `ret`, lifetime
+// markers) would produce SPIR-V ops after `OpAbortKHR` and break validation.
+// Terminate the block right after each call to the trap intrinsics by replacing
+// the next instruction with `unreachable`.
+bool SPIRVPrepareFunctionsImpl::terminateBlocksAfterTrap(Module &M,
+                                                         Intrinsic::ID IID) {
+  assert((IID == Intrinsic::trap || IID == Intrinsic::ubsantrap) &&
+         "Expected trap intrinsic ID");
+
+  Function *F = Intrinsic::getDeclarationIfExists(&M, IID);
+  if (!F)
+    return false;
+
+  // If the target doesn't support SPV_KHR_abort, we won't be able to lower
+  // the trap intrinsic to OpAbortKHR, so we can skip the block-terminating
+  // transformation.
+  const auto &ST = TM.getSubtarget<SPIRVSubtarget>(*F);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+    return false;
+
+  SmallVector<CallInst *> Calls;
+  for (User *U : F->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI || CI->getCalledFunction() != F)
+      continue;
+    Calls.push_back(CI);
+  }
+
+  bool Changed = false;
+  for (CallInst *CI : Calls) {
+    Instruction *Next = CI->getNextNode();
+    if (!Next || isa<UnreachableInst>(Next))
+      continue;
+    changeToUnreachable(Next);
+    Changed = true;
+  }
+  return Changed;
+}
+
 static std::string fixMultiOutputConstraintString(StringRef Constraints) {
   // We should only have one =r return for the made up ASM type.
   SmallVector<StringRef> Tmp;
@@ -618,7 +732,7 @@ static std::string fixMultiOutputConstraintString(StringRef Constraints) {
 // noted in 'spv.mutated_callsites' metadata for later restoration. For ASM we
 // also have to mutate the constraint string as IRTranslator tries to handle
 // multiple outputs and expects an aggregate return type in their presence.
-bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
+bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
   if (F->isDeclaration() || F->isIntrinsic())
     return false;
 
@@ -691,7 +805,7 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
   return true;
 }
 
-bool SPIRVPrepareFunctions::runOnModule(Module &M) {
+bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   // Resolve the SPIR-V environment from module content before any
   // function-level processing. This must happen before legalization so that
   // isShader()/isKernel() return correct values.
@@ -712,7 +826,11 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
     Changed = true;
   }
 
+  Changed |= terminateBlocksAfterTrap(M, Intrinsic::trap);
+  Changed |= terminateBlocksAfterTrap(M, Intrinsic::ubsantrap);
+
   for (Function &F : M) {
+    Changed |= substituteAbortKHRCalls(&F);
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
     Changed |= removeAggregateTypesFromCalls(&F);
@@ -733,7 +851,14 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
+PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  return SPIRVPrepareFunctionsImpl(TM).runOnModule(M)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
+
 ModulePass *
 llvm::createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) {
-  return new SPIRVPrepareFunctions(TM);
+  return new SPIRVPrepareFunctionsLegacy(TM);
 }

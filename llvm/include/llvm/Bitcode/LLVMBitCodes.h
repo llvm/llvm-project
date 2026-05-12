@@ -524,6 +524,10 @@ enum RMWOperations {
   RMW_FMINIMUMNUM = 22,
 };
 
+enum RMWOperationFlags {
+  RMW_ELEMENTWISE_FLAG = 1 << 5,
+};
+
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
 /// OverflowingBinaryOperator's SubclassOptionalData contents.
 enum OverflowingBinaryOperatorOptionalFlags {

@@ -323,7 +323,7 @@ static bool isPureRankExpansionOrCollapsingRC(memref::ReinterpretCastOp rc) {
 /// Checks statically known and constant indices accessed by a load from a pure
 /// rank expansion/collapsing to ensure in-bounds only access. Fully dynamic
 /// indices are skipped (there is no way to verify them).
-static bool areIndicesInBounds(memref::LoadOp load) {
+[[maybe_unused]] static bool areIndicesInBounds(memref::LoadOp load) {
   auto rc = load.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
   auto rcOutputTy = cast<MemRefType>(rc.getResult().getType());
 

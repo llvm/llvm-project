@@ -6,5 +6,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   %alloc_dyn = alloca i32, i32 poison, align 4 at @main
 ; CHECK-NEXT: Immediate UB detected: Alloca with poison array size.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
