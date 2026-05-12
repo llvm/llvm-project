@@ -1,4 +1,3 @@
-// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/abc/def
 // RUN: echo "[{\"directory\":\".\",\"command\":\"clang++ -c %/t/test.cpp\",\"file\":\"%/t/test.cpp\"}]" | sed -e 's/\\/\\\\/g' > %t/compile_commands.json

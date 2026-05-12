@@ -3,7 +3,6 @@
 
 // First, create a pch that we can later load. Loading the pch will insert
 // a stat cache into the FileManager:
-// REQUIRES: staticanalyzer
 // RUN: %clang -x c++-header %S/Inputs/pch.h -o %t1
 
 // Use the generated pch and enforce a subsequent stat miss by using

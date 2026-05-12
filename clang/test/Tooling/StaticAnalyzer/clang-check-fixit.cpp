@@ -1,4 +1,3 @@
-// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir %t
 //

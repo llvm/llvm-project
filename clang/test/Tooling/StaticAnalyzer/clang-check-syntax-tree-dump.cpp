@@ -1,4 +1,3 @@
-// REQUIRES: staticanalyzer
 // RUN: clang-check -syntax-tree-dump "%s" -- 2>&1 | FileCheck %s
 int abc;
 // CHECK:      TranslationUnit Detached

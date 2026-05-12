@@ -1,5 +1,4 @@
 // REQUIRES: symlinks
-// REQUIRES: staticanalyzer
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/abc/def/ijk/qwe

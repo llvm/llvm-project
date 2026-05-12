@@ -1,7 +1,6 @@
 // Check whether output generation options (like -save-temps) will not affect
 // the execution of the analyzer.
 
-// REQUIRES: staticanalyzer
 // RUN: clang-check -analyze %s -- -save-temps -c -Xclang -verify
 
 // Check whether redundant -fsyntax-only options will affect the execution of

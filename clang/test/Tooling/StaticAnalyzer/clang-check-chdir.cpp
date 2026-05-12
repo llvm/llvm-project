@@ -1,6 +1,5 @@
 // Verifies that paths are resolved relatively to the directory specified in the
 // compilation database.
-// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: echo "[{\"directory\":\"%t\",\"command\":\"clang -c test.cpp -I.\",\"file\":\"%t/test.cpp\"}]" | sed -e 's/\\/\//g' > %t/compile_commands.json

@@ -1,4 +1,3 @@
-// REQUIRES: staticanalyzer
 // RUN: clang-check -ast-dump "%s" -- 2>&1 | FileCheck %s
 // CHECK: NamespaceDecl{{.*}}test_namespace
 // CHECK-NEXT: CXXRecordDecl{{.*}}TheClass

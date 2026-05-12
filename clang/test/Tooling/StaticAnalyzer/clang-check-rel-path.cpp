@@ -1,5 +1,4 @@
 // This block test a compilation database with files relative to the directory
-// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: echo '[{"directory":"%t","command":"clang++ -c test.cpp","file":"test.cpp"}]' | sed -e 's/\\/\//g' > %t/compile_commands.json

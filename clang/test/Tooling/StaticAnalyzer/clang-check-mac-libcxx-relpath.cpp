@@ -1,7 +1,6 @@
 // Clang on MacOS can find libc++ living beside the installed compiler.
 // This test makes sure our libTooling-based tools emulate this properly.
 //
-// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir %t
 //
