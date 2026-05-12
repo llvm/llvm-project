@@ -500,8 +500,8 @@ void SDiagsWriter::EmitBlockInfoBlock() {
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(RECORD_FIXIT));
   AddRangeLocationAbbrev(*Abbrev);
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 16)); // Text size.
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // FixIt text.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // Text size.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // FixIt text.
   Abbrevs.set(RECORD_FIXIT, Stream.EmitBlockInfoAbbrev(BLOCK_DIAG,
                                                        Abbrev));
 
