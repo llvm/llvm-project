@@ -4164,10 +4164,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.APFloatVal = APFloat(ExpectedTy->getFltSemantics());
     // The lexer is responsible for rejecting malformed floating-point
     // literals, so any conversion failure here is a programmer bug.
-    APFloat::opStatus Except = cantFail(
-        ID.APFloatVal.convertFromString(Lex.getStrVal(),
-                                        RoundingMode::NearestTiesToEven),
-        "Invalid float strings should be caught by the lexer");
+    APFloat::opStatus Except =
+        cantFail(ID.APFloatVal.convertFromString(
+                     Lex.getStrVal(), RoundingMode::NearestTiesToEven),
+                 "Invalid float strings should be caught by the lexer");
     // Forbid overflowing and underflowing literals, but permit inexact
     // literals. Underflow is thrown when the result is denormal, so to allow
     // denormals, only reject underflowing literals that resulted in a zero.
