@@ -9,7 +9,7 @@
 // XFAIL: *
 module @gemm attributes {gpu.container_module} {
   gpu.module @kernel {
-    gpu.func @dpas_mx_bf8(%a: memref<8x64xf4E2M1FN>, %b: memref<32x16xi8>, %c: memref<8x16xf32>, %scale_a: memref<8x2xf8E8M0FNU>, %scale_b: memref<2x16xf8E8M0FNU>) kernel {
+    gpu.func @dpas_mx_e2m1(%a: memref<8x64xf4E2M1FN>, %b: memref<32x16xi8>, %c: memref<8x16xf32>, %scale_a: memref<8x2xf8E8M0FNU>, %scale_b: memref<2x16xf8E8M0FNU>) kernel {
 
       %tdesc_a = xegpu.create_nd_tdesc %a : memref<8x64xf4E2M1FN> -> !xegpu.tensor_desc<8x64xf4E2M1FN>
       %a_trunc = xegpu.load_nd %tdesc_a[0, 0] : !xegpu.tensor_desc<8x64xf4E2M1FN> -> vector<32xf4E2M1FN>
@@ -75,7 +75,7 @@ module @gemm attributes {gpu.container_module} {
     %memref_scale_b = gpu.alloc() : memref<2x16xf8E8M0FNU>
     gpu.memcpy %memref_scale_b, %scale_b : memref<2x16xf8E8M0FNU>, memref<2x16xf8E8M0FNU>
 
-    gpu.launch_func @kernel::@dpas_mx_bf8 blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1)
+    gpu.launch_func @kernel::@dpas_mx_e2m1 blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1)
     args(%memref_a : memref<8x64xf4E2M1FN>, %memref_b : memref<32x16xi8>, %memref_c : memref<8x16xf32>, %memref_scale_a : memref<8x2xf8E8M0FNU>, %memref_scale_b : memref<2x16xf8E8M0FNU>)
     gpu.dealloc %memref_a : memref<8x64xf4E2M1FN>
     gpu.dealloc %memref_b : memref<32x16xi8>
@@ -95,7 +95,6 @@ module @gemm attributes {gpu.container_module} {
     %c16 = arith.constant 16 : index
     %c32 = arith.constant 32 : index
     %c1e2m1 = arith.constant 1.0 : f4E2M1FN
-    %c1bf8 = arith.constant 1.0 : f8E5M2
     %c1packed_e2m1 = arith.constant 0x22 : i8
     %c0f32 = arith.constant 0.0 : f32
     %c1f8E8M0FNU = arith.constant 1.0 : f8E8M0FNU

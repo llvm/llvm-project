@@ -883,7 +883,7 @@ class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
   }
 };
 
-auto encodePrecision = [](Type type) -> xevm::ElemType {
+static auto encodePrecision = [](Type type) -> xevm::ElemType {
   if (type.isBF16())
     return xevm::ElemType::BF16;
   else if (type.isF16())

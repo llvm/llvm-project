@@ -811,6 +811,11 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
       auto vecElemType = vecType.getElementType();
       auto vecElemBitWidth = vecElemType.getIntOrFloatBitWidth();
       auto vecNumElems = vecType.getNumElements();
+      // OpenCL Intel 2D block load has a special case
+      // when element bit size is 8 and tile width is 32, which is twice
+      // the subgroup size, loaded element is packed as i16.
+      // To reflect this, element bit size is updated to 16 and
+      // vector length is reduced by half.
       if (op.getElemSizeInBits() == 8 && op.getTileWidth() == 32) {
         vecElemBitWidth = 16;
         vecElemType = rewriter.getI16Type();
