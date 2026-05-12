@@ -8,6 +8,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
 
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+
 define double @v_constained_fmul_f64_fpexcept_strict(double %x, double %y) #0 {
 ; GCN-LABEL: v_constained_fmul_f64_fpexcept_strict:
 ; GCN:       ; %bb.0:
@@ -26,6 +29,16 @@ define double @v_constained_fmul_f64_fpexcept_strict(double %x, double %y) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fmul_f64_fpexcept_strict:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], v[0:1], v[2:3]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret double %val
 }
@@ -48,6 +61,16 @@ define double @v_constained_fmul_f64_fpexcept_ignore(double %x, double %y) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fmul_f64_fpexcept_ignore:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], v[0:1], v[2:3]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret double %val
 }
@@ -70,6 +93,16 @@ define double @v_constained_fmul_f64_fpexcept_maytrap(double %x, double %y) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fmul_f64_fpexcept_maytrap:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], v[0:1], v[2:3]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret double %val
 }
@@ -95,6 +128,17 @@ define <2 x double> @v_constained_fmul_v2f64_fpexcept_strict(<2 x double> %x, <2
 ; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], v[6:7]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fmul_v2f64_fpexcept_strict:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], v[0:1], v[4:5]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], v[2:3], v[6:7]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %x, <2 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x double> %val
 }
@@ -120,6 +164,17 @@ define <2 x double> @v_constained_fmul_v2f64_fpexcept_ignore(<2 x double> %x, <2
 ; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], v[6:7]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fmul_v2f64_fpexcept_ignore:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], v[0:1], v[4:5]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], v[2:3], v[6:7]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %x, <2 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret <2 x double> %val
 }
@@ -145,6 +200,17 @@ define <2 x double> @v_constained_fmul_v2f64_fpexcept_maytrap(<2 x double> %x, <
 ; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], v[6:7]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fmul_v2f64_fpexcept_maytrap:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], v[0:1], v[4:5]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], v[2:3], v[6:7]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %x, <2 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret <2 x double> %val
 }
@@ -173,6 +239,18 @@ define <3 x double> @v_constained_fmul_v3f64_fpexcept_strict(<3 x double> %x, <3
 ; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], v[8:9]
 ; GFX11-NEXT:    v_mul_f64 v[4:5], v[4:5], v[10:11]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fmul_v3f64_fpexcept_strict:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], v[0:1], v[6:7]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], v[2:3], v[8:9]
+; GFX12-NEXT:    v_mul_f64_e32 v[4:5], v[4:5], v[10:11]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x double> @llvm.experimental.constrained.fmul.v3f64(<3 x double> %x, <3 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x double> %val
 }
@@ -222,6 +300,19 @@ define amdgpu_ps <2 x float> @s_constained_fmul_f64_fpexcept_strict(double inreg
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-LABEL: s_constained_fmul_f64_fpexcept_strict:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_mul_f64_e64 v[0:1], s[2:3], s[4:5]
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: s_constained_fmul_f64_fpexcept_strict:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_mul_f64_e64 v[0:1], s[2:3], s[4:5]
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %cast = bitcast double %val to <2 x float>
   ret <2 x float> %cast

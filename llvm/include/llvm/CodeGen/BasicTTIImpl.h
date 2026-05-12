@@ -2196,46 +2196,42 @@ public:
       // The possible expansions are...
       //
       // loop_dependence_war_mask:
-      //   diff = (ptrB - ptrA) / eltSize
+      //   diff = (addrB - addrA) / eltSize
       //   cmp = icmp sle diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
       // loop_dependence_raw_mask:
-      //   diff = (abs(ptrB - ptrA)) / eltSize
+      //   diff = (abs(addrB - addrA)) / eltSize
       //   cmp = icmp eq diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
-      auto *PtrTy = cast<PointerType>(ICA.getArgTypes()[0]);
-      Type *IntPtrTy = IntegerType::getIntNTy(
-          RetTy->getContext(), thisT()->getDataLayout().getPointerSizeInBits(
-                                   PtrTy->getAddressSpace()));
+      Type *AddrTy = ICA.getArgTypes()[0];
       bool IsReadAfterWrite = IID == Intrinsic::loop_dependence_raw_mask;
 
       InstructionCost Cost =
-          thisT()->getArithmeticInstrCost(Instruction::Sub, IntPtrTy, CostKind);
+          thisT()->getArithmeticInstrCost(Instruction::Sub, AddrTy, CostKind);
       if (IsReadAfterWrite) {
-        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, IntPtrTy, {IntPtrTy},
-                                         {});
+        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, AddrTy, {AddrTy}, {});
         Cost += thisT()->getIntrinsicInstrCost(AbsAttrs, CostKind);
       }
 
       TTI::OperandValueInfo EltSizeOpInfo =
           TTI::getOperandInfo(ICA.getArgs()[2]);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, IntPtrTy,
+      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, AddrTy,
                                               CostKind, {}, EltSizeOpInfo);
 
       Type *CondTy = IntegerType::getInt1Ty(RetTy->getContext());
       CmpInst::Predicate Pred =
           IsReadAfterWrite ? CmpInst::ICMP_EQ : CmpInst::ICMP_SLE;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy,
-                                          IntPtrTy, Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, IntPtrTy,
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy, AddrTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, AddrTy,
                                           CondTy, Pred, CostKind);
 
       IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
-                                    {IntPtrTy, IntPtrTy}, FMF);
+                                    {AddrTy, AddrTy}, FMF);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       return Cost;
     }

@@ -906,7 +906,7 @@ protected:
     if (!watch_sp) {
       result.AppendErrorWithFormat(
           "Watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
-          ", variable expression='%s').\n",
+          ", variable expression='%s')",
           addr, static_cast<uint64_t>(size), command.GetArgumentAtIndex(0));
       if (const char *error_message = error.AsCString(nullptr))
         result.AppendError(error_message);
@@ -1104,7 +1104,7 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("Watchpoint creation failed (addr=0x%" PRIx64
-                                   ", size=%" PRIu64 ").\n",
+                                   ", size=%" PRIu64 ")",
                                    addr, (uint64_t)size);
       if (error.AsCString(nullptr))
         result.AppendError(error.AsCString());
