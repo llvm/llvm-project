@@ -36,8 +36,8 @@ struct SyscallReturn {
 
 namespace LIBC_NAMESPACE_DECL {
 
-template <typename... Ts> LIBC_INLINE SyscallReturn syscall_impl(long __number,
-                                                                 Ts... ts) {
+template <typename... Ts>
+LIBC_INLINE SyscallReturn syscall_impl(long __number, Ts... ts) {
   static_assert(sizeof...(Ts) <= 6, "Too many arguments for syscall");
   return syscall_impl(__number, (long)ts...);
 }
