@@ -356,7 +356,7 @@ void SelfInvalidatingMap() {
   // insertion and following is unsafe for this container.
   mp[1] = "42";
   mp[2]     // expected-note {{invalidated here}}
-    =
+    = 
     mp[1];  // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
 }
 
@@ -364,7 +364,7 @@ void InvalidateErase() {
   std::flat_map<int, std::string> mp;
   // None of these containers provide iterator stability. So following is unsafe:
   auto it = mp.find(3); // expected-warning {{object whose reference is captured is later invalidated}}
-  mp.erase(mp.find(4)); // expected-note {{invalidated here}}
+  mp.erase(mp.find(4)); // expected-note {{invalidated here}} 
   if (it != mp.end())   // expected-note {{later used here}}
     *it;
 }
@@ -412,8 +412,7 @@ void Invalidate1Use2IsOk() {
     auto it = s.strings1.begin();
     s.strings2.push_back("1");
     *it;
-}
-void Invalidate1Use2ViaRefIsOk() {
+}void Invalidate1Use2ViaRefIsOk() {
     S s;
     auto it = s.strings2.begin();
     auto& strings2 = s.strings2;
@@ -453,9 +452,9 @@ std::string StableString;
 
 struct S {
   std::string_view FieldFromLocalVector; // expected-note {{this field dangles}}
-  std::string_view FieldFromParamVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamVector; // expected-note {{this field dangles}}
   std::string_view FieldFromLocalString; // expected-note {{this field dangles}}
-  std::string_view FieldFromParamString; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamString; // expected-note {{this field dangles}}
   std::string_view FieldFromRefParamString; // expected-note {{this field dangles}}
   std::string_view FieldReassigned;
 
@@ -465,8 +464,8 @@ struct S {
     strings.push_back("1"); // expected-note {{invalidated here}}
   }
 
-  void InvalidatedFieldParamVector(std::vector<std::string> strings) {
-    FieldFromParamVector = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+  void InvalidatedFieldByValueParamVector(std::vector<std::string> strings) {
+    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
     strings.push_back("1"); // expected-note {{invalidated here}}
   }
 
@@ -476,8 +475,8 @@ struct S {
     s.clear(); // expected-note {{invalidated here}}
   }
 
-  void InvalidatedFieldParamString(std::string s) {
-    FieldFromParamString = s; // expected-warning {{object whose reference is stored in a field is later invalidated}}
+  void InvalidatedFieldByValueParamString(std::string s) {
+    FieldFromByValueParamString = s; // expected-warning {{object whose reference is stored in a field is later invalidated}}
     s.clear(); // expected-note {{invalidated here}}
   }
 
