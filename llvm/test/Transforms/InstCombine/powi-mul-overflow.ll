@@ -6,7 +6,9 @@
 define double @powi_mul_overflow(double %x) {
 ; CHECK-LABEL: define double @powi_mul_overflow(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 -2147483556)
+; CHECK-NEXT:    [[P1:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 2147483640)
+; CHECK-NEXT:    [[P2:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 100)
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc double [[P1]], [[P2]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %p1 = call reassoc double @llvm.powi.f64.i32(double %x, i32 2147483640)
@@ -18,7 +20,9 @@ define double @powi_mul_overflow(double %x) {
 define double @powi_mul_overflow_neg(double %x) {
 ; CHECK-LABEL: define double @powi_mul_overflow_neg(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 2147483556)
+; CHECK-NEXT:    [[P1:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 -2147483640)
+; CHECK-NEXT:    [[P2:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 -100)
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc double [[P1]], [[P2]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %p1 = call reassoc double @llvm.powi.f64.i32(double %x, i32 -2147483640)

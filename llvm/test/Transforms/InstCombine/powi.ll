@@ -177,7 +177,7 @@ entry:
 define double @powi_fmul_powi(double %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @powi_fmul_powi(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[TMP0]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -191,7 +191,7 @@ entry:
 define double @powi_fmul_powi_fast_on_fmul(double %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @powi_fmul_powi_fast_on_fmul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call fast double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[TMP0]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -207,7 +207,7 @@ define double @powi_fmul_powi_fast_on_powi(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[P2:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[X]], i32 [[Z:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[P2]], [[P1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan double [[P2]], [[P1]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
@@ -220,7 +220,7 @@ entry:
 define double @powi_fmul_powi_same_power(double %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @powi_fmul_powi_same_power(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[TMP0]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -251,7 +251,7 @@ define double @powi_fmul_powi_use_first(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    tail call void @use(double [[P1]])
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 [[TMP0]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -268,7 +268,7 @@ define double @powi_fmul_powi_use_second(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = tail call reassoc double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Z:%.*]])
 ; CHECK-NEXT:    tail call void @use(double [[P1]])
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.powi.f64.i32(double [[X]], i32 [[TMP0]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
