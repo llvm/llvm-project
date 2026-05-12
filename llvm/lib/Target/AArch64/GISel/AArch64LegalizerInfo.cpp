@@ -767,7 +767,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
       .clampNumElements(1, v2s64, v2s64)
-      .clampNumElements(1, v2p0, v2p0)
+      .bitcastIf(isPointerVector(1),
+                 [=](const LegalityQuery &Query) {
+                   // Bitcast pointers vector to i64.
+                   const LLT DstTy = Query.Types[1];
+                   return std::pair(1,
+                                    DstTy.changeElementType(LLT::integer(64)));
+                 })
       .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
