@@ -84,21 +84,6 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   list<FuncArgType> ArgumentTypes = ArgTypes;
 }
 
-class FPRuntimeLibcall<string FPTy,
-                       FuncArgType RetType = NoneType,
-                       list<FuncArgType> ArgTypes = []>
-  : RuntimeLibcall<
-      !cond(!and(!eq(FPTy, "F64"), !eq(RetType, Flt)) : Dbl,
-            !and(!eq(FPTy, "F128"), !eq(RetType, Flt)) : LDbl,
-            !or(!eq(FPTy, "F80"), !eq(FPTy, "PPCF128")) : NoneType,
-            true : RetType),
-      !cond(!eq(FPTy, "F64") :
-              !foreach(ArgType, ArgTypes, !if(!eq(ArgType, Flt), Dbl, ArgType)),
-            !eq(FPTy, "F128") :
-              !foreach(ArgType, ArgTypes, !if(!eq(ArgType, Flt), LDbl, ArgType)),
-            !or(!eq(FPTy, "F80"), !eq(FPTy, "PPCF128")) : [],
-            true : ArgTypes)>;
-
 // Concrete implementation of a libcall, which may have a different
 // name and only be valid on some subset of targets.
 
