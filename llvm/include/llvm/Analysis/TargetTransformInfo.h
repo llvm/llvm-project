@@ -253,6 +253,15 @@ enum class TailFoldingStyle {
   DataWithEVL,
 };
 
+enum class WideActiveLaneMask {
+  // Do not consider using wide active lane masks.
+  Disable,
+  // Considered when the TailFoldingStyle is DataAndControlFlow.
+  Default,
+  // Always consider using wide active lane masks.
+  Force,
+};
+
 struct TailFoldingInfo {
   TargetLibraryInfo *TLI;
   LoopVectorizationLegality *LVL;
@@ -1750,6 +1759,11 @@ public:
   LLVM_ABI InstructionCost getMinMaxReductionCost(
       Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF = FastMathFlags(),
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
+  LLVM_ABI InstructionCost getActiveLaneMaskCost(
+      Type *ResTy, Type *ArgTy, FastMathFlags FMF = FastMathFlags(),
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      unsigned NumResults = 1) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of an Add/Sub reduction with multiply and

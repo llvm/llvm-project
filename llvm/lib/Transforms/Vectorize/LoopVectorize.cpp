@@ -236,10 +236,18 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
 
-cl::opt<bool> llvm::EnableWideActiveLaneMask(
-    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
+cl::opt<WideActiveLaneMask> llvm::EnableWideActiveLaneMask(
+    "enable-wide-lane-mask",
     cl::desc("Enable use of wide lane masks when used for control flow in "
-             "tail-folded loops"));
+             "tail-folded loops"),
+    cl::init(WideActiveLaneMask::Default),
+    cl::values(clEnumValN(WideActiveLaneMask::Default, "default",
+                          "Decision to use wide active lane masks based on "
+                          "target preference."),
+               clEnumValN(WideActiveLaneMask::Disable, "disable",
+                          "Use of wide active lane masks disabled."),
+               clEnumValN(WideActiveLaneMask::Force, "force",
+                          "Always use wide active lane masks where possible")));
 
 static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
@@ -1229,10 +1237,14 @@ public:
   /// Returns true if the use of wide lane masks is requested and the loop is
   /// using tail-folding with a lane mask for control flow.
   bool useWideActiveLaneMask() const {
-    if (!EnableWideActiveLaneMask)
+    switch (EnableWideActiveLaneMask.getValue()) {
+    case (WideActiveLaneMask::Disable):
       return false;
-
-    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
+    case (WideActiveLaneMask::Force):
+    case (WideActiveLaneMask::Default):
+      return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
+    }
+    llvm_unreachable("invalid enum");
   }
 
   /// Returns true if the instructions in this block requires predication
@@ -1311,6 +1323,8 @@ public:
   /// Returns true if \p Op should be considered invariant and if it is
   /// trivially hoistable.
   bool shouldConsiderInvariant(Value *Op);
+
+  bool shouldWidenActiveLaneMask(ElementCount VF, unsigned IC);
 
 private:
   unsigned NumPredStores = 0;
@@ -4644,6 +4658,33 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   return getWideningCost(I, VF);
 }
 
+bool LoopVectorizationCostModel::shouldWidenActiveLaneMask(ElementCount VF,
+                                                           unsigned IC) {
+  if (EnableWideActiveLaneMask.getValue() == WideActiveLaneMask::Force ||
+      ForceTargetInstructionCost.getNumOccurrences() > 0)
+    return true;
+
+  LLVMContext &Ctx = TheFunction->getContext();
+  Type *ArgTy = Type::getInt64Ty(Ctx);
+
+  // Compare the cost of one narrow mask per part vs one wide lane mask
+  // with extracts.
+  Type *ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF);
+  InstructionCost ALMCost =
+      TTI.getActiveLaneMaskCost(ResTy, ArgTy, FastMathFlags(),
+                                TTI::TCK_RecipThroughput, 1) *
+      IC;
+
+  ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF * IC);
+  InstructionCost WideALMCost = TTI.getActiveLaneMaskCost(
+      ResTy, ArgTy, FastMathFlags(), TTI::TCK_RecipThroughput, IC);
+
+  if (WideALMCost == InstructionCost::getInvalid())
+    return false;
+
+  return WideALMCost < ALMCost;
+}
+
 InstructionCost
 LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
                                                      ElementCount VF) const {
@@ -6121,7 +6162,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::materializeConstantVectorTripCount, BestVPlan,
                  BestVF, BestUF, PSE);
   RUN_VPLAN_PASS(VPlanTransforms::optimizeForVFAndUF, BestVPlan, BestVF, BestUF,
-                 PSE);
+                 PSE, TTI);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
@@ -8177,6 +8218,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (IsInnerLoop && LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
+
+    if (IC > 1 && !CM.isEpilogueAllowed() &&
+        (CM.preferTailFoldedLoop() && CM.useWideActiveLaneMask()) &&
+        !CM.shouldWidenActiveLaneMask(VF.Width, IC))
+      IC = 1;
 
     unsigned SelectedIC = std::max(IC, UserIC);
     //  Optimistically generate runtime checks if they are needed. Drop them if

@@ -1010,6 +1010,13 @@ public:
     return 1;
   }
 
+  virtual InstructionCost getActiveLaneMaskCost(Type *ResTy, Type *ArgTy,
+                                                FastMathFlags,
+                                                TTI::TargetCostKind CostKind,
+                                                unsigned NumResults) const {
+    return NumResults;
+  }
+
   virtual InstructionCost
   getExtendedReductionCost(unsigned Opcode, bool IsUnsigned, Type *ResTy,
                            VectorType *Ty, std::optional<FastMathFlags> FMF,

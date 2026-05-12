@@ -2108,9 +2108,29 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
 /// new extracts from the first active lane mask, which has it's last
 /// operand (multiplier) set to UF.
 static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
-                                       unsigned UF) {
-  if (!EnableWideActiveLaneMask || !VF.isVector() || UF == 1)
+                                       unsigned UF,
+                                       const TargetTransformInfo &TTI) {
+  if (EnableWideActiveLaneMask == WideActiveLaneMask::Disable ||
+      !VF.isVector() || UF == 1)
     return false;
+
+  LLVMContext &Ctx = Plan.getContext();
+  if (EnableWideActiveLaneMask != WideActiveLaneMask::Force &&
+      ForceTargetInstructionCost.getNumOccurrences() == 0) {
+    Type *ArgTy = Type::getInt64Ty(Ctx);
+    Type *ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF);
+    InstructionCost ALMCost =
+        TTI.getActiveLaneMaskCost(ResTy, ArgTy, FastMathFlags(),
+                                  TTI::TCK_RecipThroughput, 1) *
+        UF;
+
+    ResTy = VectorType::get(Type::getInt1Ty(Ctx), VF * UF);
+    InstructionCost WideALMCost = TTI.getActiveLaneMaskCost(
+        ResTy, ArgTy, FastMathFlags(), TTI::TCK_RecipThroughput, UF);
+
+    if (WideALMCost == InstructionCost::getInvalid() || WideALMCost >= ALMCost)
+      return false;
+  }
 
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
@@ -2122,8 +2142,6 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
     return false;
 
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  LLVMContext &Ctx = Plan.getContext();
-
   auto ExtractFromALM = [&](VPInstruction *ALM,
                             SmallVectorImpl<VPValue *> &Extracts) {
     DebugLoc DL = ALM->getDebugLoc();
@@ -2294,11 +2312,12 @@ bool VPlanTransforms::simplifyKnownEVL(VPlan &Plan, ElementCount VF,
 
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
-                                         PredicatedScalarEvolution &PSE) {
+                                         PredicatedScalarEvolution &PSE,
+                                         const TargetTransformInfo &TTI) {
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
-  bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
+  bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF, TTI);
   MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
