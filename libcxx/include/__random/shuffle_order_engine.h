@@ -109,7 +109,21 @@ public:
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()() { return __eval(integral_constant<bool, _Rp != 0>()); }
+  _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+    if _LIBCPP_CONSTEXPR (_Rp != 0 || !(__k & 1)) {
+      using _Ratio = __uratio<__k, _Rp != 0 ? _Rp : 0x8000000000000000ull>;
+      if _LIBCPP_CONSTEXPR (_Ratio::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)) {
+        return __evalf<_Ratio::num, _Ratio::den>();
+      } else {
+        const size_t __j = static_cast<size_t>(_Ratio::num * (__y_ - _Min) / _Ratio::den);
+        __y_             = __v_[__j];
+        __v_[__j]        = __e_();
+        return __y_;
+      }
+    } else
+      return __evalf<__k, 0>();
+  }
+
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
       operator()();
@@ -137,29 +151,6 @@ private:
     for (size_t __i = 0; __i < __k; ++__i)
       __v_[__i] = __e_();
     __y_ = __e_();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(false_type) { return __eval2(integral_constant<bool, __k & 1>()); }
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(true_type) { return __eval(__uratio<__k, _Rp>()); }
-
-  _LIBCPP_HIDE_FROM_ABI result_type __eval2(false_type) { return __eval(__uratio<__k / 2, 0x8000000000000000ull>()); }
-  _LIBCPP_HIDE_FROM_ABI result_type __eval2(true_type) { return __evalf<__k, 0>(); }
-
-  template <uint64_t _Np,
-            uint64_t _Dp,
-            __enable_if_t<(__uratio<_Np, _Dp>::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(__uratio<_Np, _Dp>) {
-    return __evalf<__uratio<_Np, _Dp>::num, __uratio<_Np, _Dp>::den>();
-  }
-
-  template <uint64_t _Np,
-            uint64_t _Dp,
-            __enable_if_t<__uratio<_Np, _Dp>::num <= 0xFFFFFFFFFFFFFFFFull / (_Max - _Min), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(__uratio<_Np, _Dp>) {
-    const size_t __j = static_cast<size_t>(__uratio<_Np, _Dp>::num * (__y_ - _Min) / __uratio<_Np, _Dp>::den);
-    __y_             = __v_[__j];
-    __v_[__j]        = __e_();
-    return __y_;
   }
 
   template <uint64_t __n, uint64_t __d>

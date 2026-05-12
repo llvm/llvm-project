@@ -427,7 +427,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasCTZLike()) {
     if (Subtarget.is64Bit())
-      setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+      setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_POISON}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
   }
@@ -448,7 +448,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // Use default promotion for i32 without Zbb.
     if (Subtarget.is64Bit() &&
         (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP()))
-      setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
+      setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
@@ -528,15 +528,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FROUNDEVEN};
 
   static const unsigned ZfhminZfbfminPromoteOps[] = {
-      ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FMAXIMUMNUM,
-      ISD::FMINIMUMNUM,  ISD::FADD,          ISD::FSUB,
-      ISD::FMUL,         ISD::FMA,           ISD::FDIV,
-      ISD::FSQRT,        ISD::STRICT_FMA,    ISD::STRICT_FADD,
-      ISD::STRICT_FSUB,  ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
-      ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
-      ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
-      ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
+      ISD::FMINNUM,       ISD::FMAXNUM,        ISD::FMINIMUM,
+      ISD::FMAXIMUM,      ISD::FMAXIMUMNUM,    ISD::FMINIMUMNUM,
+      ISD::FADD,          ISD::FSUB,           ISD::FMUL,
+      ISD::FMA,           ISD::FDIV,           ISD::FSQRT,
+      ISD::STRICT_FMA,    ISD::STRICT_FADD,    ISD::STRICT_FSUB,
+      ISD::STRICT_FMUL,   ISD::STRICT_FDIV,    ISD::STRICT_FSQRT,
+      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS, ISD::SETCC,
+      ISD::FCEIL,         ISD::FFLOOR,         ISD::FTRUNC,
+      ISD::FRINT,         ISD::FROUND,         ISD::FROUNDEVEN,
+      ISD::FCANONICALIZE};
 
   if (Subtarget.hasStdExtP()) {
     static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
@@ -872,7 +873,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
         ISD::VP_MERGE,
         ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
-        ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
+        ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_POISON};
 
     static const unsigned FloatingPointVPOps[] = {
         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
@@ -928,7 +929,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VP_MERGE, VT, Custom);
 
       setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON,
-                          ISD::VP_CTTZ_ELTS, ISD::VP_CTTZ_ELTS_ZERO_UNDEF},
+                          ISD::VP_CTTZ_ELTS, ISD::VP_CTTZ_ELTS_ZERO_POISON},
                          VT, Custom);
 
       setOperationAction(
@@ -1081,12 +1082,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::BITREVERSE, VT, Expand);
         setOperationAction({ISD::CTLZ, ISD::CTTZ, ISD::CTPOP}, VT, Expand);
 
-        // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
+        // Lower CTLZ_ZERO_POISON and CTTZ_ZERO_POISON if element of VT in the
         // range of f32.
         EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         if (isTypeLegal(FloatVT)) {
           setOperationAction(
-              {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+              {ISD::CTLZ, ISD::CTLZ_ZERO_POISON, ISD::CTTZ_ZERO_POISON}, VT,
               Custom);
         }
       }
@@ -1162,6 +1163,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::STRICT_FDIV,
         ISD::STRICT_FSQRT,
         ISD::STRICT_FMA,
+        ISD::VECREDUCE_FADD,
         ISD::VECREDUCE_FMIN,
         ISD::VECREDUCE_FMAX,
         ISD::VECREDUCE_FMINIMUM,
@@ -1180,6 +1182,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                                 ISD::FNEARBYINT,
                                                 ISD::STRICT_FDIV,
                                                 ISD::STRICT_FSQRT,
+                                                ISD::VECREDUCE_FADD,
                                                 ISD::VECREDUCE_FMIN,
                                                 ISD::VECREDUCE_FMAX,
                                                 ISD::VECREDUCE_FMINIMUM,
@@ -1584,16 +1587,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction({ISD::BSWAP, ISD::ROTL, ISD::ROTR}, VT, Custom);
 
         if (Subtarget.hasStdExtZvbb()) {
-          setOperationAction({ISD::BITREVERSE, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
-                              ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP},
+          setOperationAction({ISD::BITREVERSE, ISD::CTLZ, ISD::CTLZ_ZERO_POISON,
+                              ISD::CTTZ, ISD::CTTZ_ZERO_POISON, ISD::CTPOP},
                              VT, Custom);
         } else {
-          // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
+          // Lower CTLZ_ZERO_POISON and CTTZ_ZERO_POISON if element of VT in the
           // range of f32.
           EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           if (isTypeLegal(FloatVT))
             setOperationAction(
-                {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+                {ISD::CTLZ, ISD::CTLZ_ZERO_POISON, ISD::CTTZ_ZERO_POISON}, VT,
                 Custom);
         }
 
@@ -6864,11 +6867,11 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
          isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
 }
 
-// Lower CTLZ_ZERO_UNDEF or CTTZ_ZERO_UNDEF by converting to FP and extracting
+// Lower CTLZ_ZERO_POISON or CTTZ_ZERO_POISON by converting to FP and extracting
 // the exponent.
 SDValue
-RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
-                                               SelectionDAG &DAG) const {
+RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_POISON(SDValue Op,
+                                                SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   unsigned EltSize = VT.getScalarSizeInBits();
   SDValue Src = Op.getOperand(0);
@@ -6889,9 +6892,9 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   assert(DAG.getTargetLoweringInfo().isTypeLegal(FloatVT) &&
          "Expected legal float type!");
 
-  // For CTTZ_ZERO_UNDEF, we need to extract the lowest set bit using X & -X.
+  // For CTTZ_ZERO_POISON, we need to extract the lowest set bit using X & -X.
   // The trailing zero count is equal to log2 of this single bit value.
-  if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
+  if (Op.getOpcode() == ISD::CTTZ_ZERO_POISON) {
     SDValue Neg = DAG.getNegative(Src, DL, VT);
     Src = DAG.getNode(ISD::AND, DL, VT, Src, Neg);
   }
@@ -6932,7 +6935,7 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   // The exponent contains log2 of the value in biased form.
   unsigned ExponentBias = FloatEltVT == MVT::f64 ? 1023 : 127;
   // For trailing zeros, we just need to subtract the bias.
-  if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+  if (Op.getOpcode() == ISD::CTTZ_ZERO_POISON)
     return DAG.getNode(ISD::SUB, DL, VT, Exp,
                        DAG.getConstant(ExponentBias, DL, VT));
 
@@ -6977,7 +6980,7 @@ SDValue RISCVTargetLowering::lowerVPCttzElements(SDValue Op,
   }
 
   SDValue Res = DAG.getNode(RISCVISD::VFIRST_VL, DL, XLenVT, Source, Mask, EVL);
-  if (Op->getOpcode() == ISD::VP_CTTZ_ELTS_ZERO_UNDEF)
+  if (Op->getOpcode() == ISD::VP_CTTZ_ELTS_ZERO_POISON)
     // In this case, we can interpret poison as -1, so nothing to do further.
     return Res;
 
@@ -7560,9 +7563,9 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(SREM)       // VP_SREM
   VP_CASE(UDIV)       // VP_UDIV
   VP_CASE(UREM)       // VP_UREM
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     return RISCVISD::CTLZ_VL;
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     return RISCVISD::CTTZ_VL;
   case ISD::FMA:
     return RISCVISD::VFMADD_VL;
@@ -8374,7 +8377,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerVectorMaskVecReduction(Op, DAG, /*IsVP*/ true);
     return lowerVPREDUCE(Op, DAG);
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     return lowerVPCttzElements(Op, DAG);
   case ISD::UNDEF: {
     MVT ContainerVT = getContainerForFixedLengthVector(Op.getSimpleValueType());
@@ -8889,13 +8892,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::ABS:
     return lowerABS(Op, DAG);
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     if (Subtarget.hasStdExtZvbb())
       return lowerToScalableOp(Op, DAG);
     assert(Op.getOpcode() != ISD::CTTZ);
-    return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
+    return lowerCTLZ_CTTZ_ZERO_POISON(Op, DAG);
   case ISD::CLMUL: {
     MVT VT = Op.getSimpleValueType();
     assert(VT.isScalableVector() && Subtarget.hasStdExtZvbc() &&
@@ -9179,7 +9182,7 @@ SDValue RISCVTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
 
 SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  // Currently, only the vdota4 and vdota4u case (from zvdot4a8i) should be
+  // Currently, only the vdot4a and vdot4au case (from zvdot4a8i) should be
   // legal.
   // TODO: There are many other sub-cases we could potentially lower, are
   // any of them worthwhile?  Ex: via vredsum, vwredsum, vwwmaccu, etc..
@@ -9212,13 +9215,13 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   unsigned Opc;
   switch (Op.getOpcode()) {
   case ISD::PARTIAL_REDUCE_SMLA:
-    Opc = RISCVISD::VDOTA4_VL;
+    Opc = RISCVISD::VDOT4A_VL;
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
-    Opc = RISCVISD::VDOTA4U_VL;
+    Opc = RISCVISD::VDOT4AU_VL;
     break;
   case ISD::PARTIAL_REDUCE_SUMLA:
-    Opc = RISCVISD::VDOTA4SU_VL;
+    Opc = RISCVISD::VDOT4ASU_VL;
     break;
   default:
     llvm_unreachable("Unexpected opcode");
@@ -9581,7 +9584,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
         if (MulImm != INT64_MIN && isInt<12>(MulImm - 1) &&
             Subtarget.hasVendorXqciac())
           return DAG.getNode(RISCVISD::QC_MULIADD, DL, VT, CondV, CondV,
-                             DAG.getTargetConstant(MulImm - 1, DL, VT));
+                             DAG.getSignedTargetConstant(MulImm - 1, DL, VT));
 
         // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
         uint64_t TrueM1 = TrueC->getZExtValue() - 1;
@@ -12111,7 +12114,7 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
   SDValue StartV;
   switch (BaseOpc) {
   default:
-    StartV = DAG.getNeutralElement(BaseOpc, DL, VecEltVT, SDNodeFlags());
+    StartV = DAG.getIdentityElement(BaseOpc, DL, VecEltVT, SDNodeFlags());
     break;
   case ISD::AND:
   case ISD::OR:
@@ -15000,9 +15003,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(customLegalizeToWOp(N, DAG));
     break;
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
   case ISD::CTLS: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
@@ -15013,11 +15016,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     switch (N->getOpcode()) {
     default: llvm_unreachable("Unexpected opcode");
     case ISD::CTTZ:
-    case ISD::CTTZ_ZERO_UNDEF:
+    case ISD::CTTZ_ZERO_POISON:
       Opc = RISCVISD::CTZW;
       break;
     case ISD::CTLZ:
-    case ISD::CTLZ_ZERO_UNDEF:
+    case ISD::CTLZ_ZERO_POISON:
       Opc = RISCVISD::CLZW;
       break;
     case ISD::CTLS:
@@ -15746,8 +15749,8 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
   // Check the scalar of ScalarV is neutral element
   // TODO: Deal with value other than neutral element.
-  if (!isNeutralConstant(N->getOpcode(), N->getFlags(), ScalarV.getOperand(1),
-                         0))
+  if (!DAG.isIdentityElement(N->getOpcode(), N->getFlags(),
+                             ScalarV.getOperand(1), 0))
     return SDValue();
 
   // If the AVL is zero, operand 0 will be returned. So it's not safe to fold.
@@ -19651,7 +19654,7 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
   SDValue OtherOp = TrueVal.getOperand(1 - OpToFold);
   EVT OtherOpVT = OtherOp.getValueType();
   SDValue IdentityOperand =
-      DAG.getNeutralElement(Opc, DL, OtherOpVT, N->getFlags());
+      DAG.getIdentityElement(Opc, DL, OtherOpVT, N->getFlags());
   if (!Commutative)
     IdentityOperand = DAG.getConstant(0, DL, OtherOpVT);
   assert(IdentityOperand && "No identity operand!");
@@ -19695,9 +19698,9 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
     CountZeroes = CountZeroes.getOperand(0);
 
   if (CountZeroes.getOpcode() != ISD::CTTZ &&
-      CountZeroes.getOpcode() != ISD::CTTZ_ZERO_UNDEF &&
+      CountZeroes.getOpcode() != ISD::CTTZ_ZERO_POISON &&
       CountZeroes.getOpcode() != ISD::CTLZ &&
-      CountZeroes.getOpcode() != ISD::CTLZ_ZERO_UNDEF)
+      CountZeroes.getOpcode() != ISD::CTLZ_ZERO_POISON)
     return SDValue();
 
   if (!isNullConstant(ValOnZero))
@@ -19711,10 +19714,10 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
   if (!isPowerOf2_32(BitWidth))
     return SDValue();
 
-  if (CountZeroes.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
+  if (CountZeroes.getOpcode() == ISD::CTTZ_ZERO_POISON) {
     CountZeroes = DAG.getNode(ISD::CTTZ, SDLoc(CountZeroes),
                               CountZeroes.getValueType(), CountZeroesArgument);
-  } else if (CountZeroes.getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+  } else if (CountZeroes.getOpcode() == ISD::CTLZ_ZERO_POISON) {
     CountZeroes = DAG.getNode(ISD::CTLZ, SDLoc(CountZeroes),
                               CountZeroes.getValueType(), CountZeroesArgument);
   }
@@ -19981,7 +19984,7 @@ static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
   return DAG.getInsertSubvector(DL, B, Res, 0);
 }
 
-static SDValue foldReduceOperandViaVDOTA4(SDValue InVec, const SDLoc &DL,
+static SDValue foldReduceOperandViaVDOT4A(SDValue InVec, const SDLoc &DL,
                                           SelectionDAG &DAG,
                                           const RISCVSubtarget &Subtarget,
                                           const RISCVTargetLowering &TLI) {
@@ -19997,8 +20000,8 @@ static SDValue foldReduceOperandViaVDOTA4(SDValue InVec, const SDLoc &DL,
   // form).
   SDValue A, B;
   if (sd_match(InVec, m_AddLike(m_Value(A), m_Value(B)))) {
-    SDValue AOpt = foldReduceOperandViaVDOTA4(A, DL, DAG, Subtarget, TLI);
-    SDValue BOpt = foldReduceOperandViaVDOTA4(B, DL, DAG, Subtarget, TLI);
+    SDValue AOpt = foldReduceOperandViaVDOT4A(A, DL, DAG, Subtarget, TLI);
+    SDValue BOpt = foldReduceOperandViaVDOT4A(B, DL, DAG, Subtarget, TLI);
     if (AOpt || BOpt) {
       if (AOpt)
         A = AOpt;
@@ -20076,7 +20079,7 @@ static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue InVec = N->getOperand(0);
-  if (SDValue V = foldReduceOperandViaVDOTA4(InVec, DL, DAG, Subtarget, TLI))
+  if (SDValue V = foldReduceOperandViaVDOT4A(InVec, DL, DAG, Subtarget, TLI))
     return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, V);
   return SDValue();
 }
@@ -20404,7 +20407,7 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, DL, VT, Ops);
 }
 
-static SDValue combineVdota4Accum(SDNode *N, SelectionDAG &DAG,
+static SDValue combineVdot4aAccum(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
 
   assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
@@ -20421,21 +20424,21 @@ static SDValue combineVdota4Accum(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  auto IsVdota4Opc = [](unsigned Opc) {
+  auto IsVdot4aOpc = [](unsigned Opc) {
     switch (Opc) {
-    case RISCVISD::VDOTA4_VL:
-    case RISCVISD::VDOTA4U_VL:
-    case RISCVISD::VDOTA4SU_VL:
+    case RISCVISD::VDOT4A_VL:
+    case RISCVISD::VDOT4AU_VL:
+    case RISCVISD::VDOT4ASU_VL:
       return true;
     default:
       return false;
     }
   };
 
-  if (!IsVdota4Opc(DotOp.getOpcode()))
+  if (!IsVdot4aOpc(DotOp.getOpcode()))
     std::swap(Addend, DotOp);
 
-  if (!IsVdota4Opc(DotOp.getOpcode()))
+  if (!IsVdot4aOpc(DotOp.getOpcode()))
     return SDValue();
 
   auto [AddMask, AddVL] = [](SDNode *N, SelectionDAG &DAG,
@@ -21271,7 +21274,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
       return V;
-    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
+    if (SDValue V = combineVdot4aAccum(N, DAG, Subtarget))
       return V;
     return performADDCombine(N, DCI, Subtarget);
   }
@@ -21845,7 +21848,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
-    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
+    if (SDValue V = combineVdot4aAccum(N, DAG, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
   case RISCVISD::VWADDU_VL:
@@ -22973,7 +22976,7 @@ bool RISCVTargetLowering::SimplifyDemandedBitsForTargetNode(
 
 bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+    UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const {
 
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
@@ -22994,7 +22997,7 @@ bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
-      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+      Op, DemandedElts, DAG, Kind, ConsiderFlags, Depth);
 }
 
 const Constant *

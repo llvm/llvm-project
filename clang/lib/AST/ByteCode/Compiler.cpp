@@ -2018,7 +2018,7 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-  if (E->getType()->isVoidType())
+  if (E->getType()->isVoidType() || E->containsErrors())
     return false;
 
   const Expr *LHS = E->getLHS();
@@ -2205,15 +2205,15 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (QT->isArrayType()) {
-    if (Inits.size() == 1 && QT == Inits[0]->getType())
-      return this->delegate(Inits[0]);
-
     const ConstantArrayType *CAT =
         Ctx.getASTContext().getAsConstantArrayType(QT);
     uint64_t NumElems = CAT->getZExtSize();
 
-    if (!this->emitCheckArraySize(NumElems, E))
+    if (Initializing && !this->emitCheckArrayDestSize(NumElems, E))
       return false;
+
+    if (Inits.size() == 1 && QT == Inits[0]->getType())
+      return this->delegate(Inits[0]);
 
     OptPrimType InitT = classify(CAT->getElementType());
     unsigned ElementIndex = 0;
@@ -2665,6 +2665,13 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   }
 
   if (!isa<FieldDecl>(Member)) {
+    // A non-static member function access only makes sense as part of the
+    // enclosing call here. Don't try to evaluate it in isolation.
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(Member);
+        MD && !MD->isStatic()) {
+      return false;
+    }
+
     if (!this->discard(Base) && !this->emitSideEffect(E))
       return false;
 
@@ -4749,7 +4756,7 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitFloat(F, E);
   }
   case PT_FixedPoint: {
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(QT);
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
   }
@@ -5149,6 +5156,15 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::visitLValueExpr(const Expr *E,
+                                        bool DestroyToplevelScope) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/true);
+
+  return this->visitExpr(E, DestroyToplevelScope);
+}
+
+template <class Emitter>
 VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
 
   auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true);
@@ -5238,8 +5254,9 @@ template <class Emitter>
 VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
                                                  const Expr *Init,
                                                  bool Toplevel) {
+  QualType VarTy = VD->getType();
   // We don't know what to do with these, so just return false.
-  if (VD->getType().isNull())
+  if (VarTy.isNull())
     return false;
 
   // This case is EvalEmitter-only. If we won't create any instructions for the
@@ -5289,7 +5306,13 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     if (!this->emitGetPtrGlobal(*GlobalIndex, Init))
       return false;
 
+    if (!this->emitStartInit(Init))
+      return false;
+
     if (!visitInitializer(Init))
+      return false;
+
+    if (!this->emitEndInit(Init))
       return false;
 
     return this->emitFinishInitGlobal(Init);
@@ -5299,8 +5322,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
   if (VarT) {
     unsigned Offset = this->allocateLocalPrimitive(
-        VD, *VarT, VD->getType().isConstQualified(),
-        VD->getType().isVolatileQualified(), ScopeKind::Block);
+        VD, *VarT, VarTy.isConstQualified(), VarTy.isVolatileQualified(),
+        ScopeKind::Block);
 
     if (!Init || Init->getType()->isVoidType())
       return true;
@@ -5315,11 +5338,23 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     }
     if (!this->visit(Init))
       return false;
+
+    if (VarTy->isReferenceType()) {
+      // [C++26][decl.ref]
+      // The object designated by such a glvalue can be outside its lifetime
+      // Because a null pointer value or a pointer past the end of an object
+      // does not point to an object, a reference in a well-defined program
+      // cannot refer to such things;
+      assert(classifyPrim(VarTy) == PT_Ptr);
+      if (!this->emitCheckRefInit(Init))
+        return false;
+    }
+
     return this->emitSetLocal(*VarT, Offset, VD);
   }
   // Local composite variables.
   if (UnsignedOrNone Offset =
-          this->allocateLocal(VD, VD->getType(), ScopeKind::Block)) {
+          this->allocateLocal(VD, VarTy, ScopeKind::Block)) {
     if (!Init)
       return true;
 
@@ -6809,12 +6844,13 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     return false;
   bool IsUnion = R->isUnion();
 
+  // Union copy and move ctors are special.
   if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
     LocOverrideScope<Emitter> LOS(this, SourceInfo{});
 
-    if (R->getNumFields() == 0)
-      return this->emitRetVoid(Ctor);
-    // union copy and move ctors are special.
+    // No special case for NumFields == 0 here, so the Memcpy op
+    // below also does its checks in those cases.
+
     assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
     if (!this->emitThis(Ctor))
       return false;
@@ -7662,8 +7698,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // For C.
   if (!Ctx.getLangOpts().CPlusPlus) {
-    if (VD->getInit() && DeclType.isConstant(Ctx.getASTContext()) &&
-        !VD->isWeak() && VD->evaluateValue())
+    if (VD->getInit() && !VD->getInit()->isValueDependent() &&
+        DeclType.isConstant(Ctx.getASTContext()) && !VD->isWeak() &&
+        VD->evaluateValue())
       return revisit(VD, /*IsConstexprUnknown=*/false);
     return this->emitDummyPtr(D, E);
   }
