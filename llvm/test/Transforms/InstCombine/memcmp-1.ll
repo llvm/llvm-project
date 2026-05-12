@@ -36,8 +36,8 @@ define i32 @test_simplify2(ptr %mem1, ptr %mem2) {
 define i32 @test_simplify3(ptr %mem1, ptr %mem2) {
 ; CHECK-LABEL: @test_simplify3(
 ; CHECK-NEXT:    [[LHSC:%.*]] = load i8, ptr %mem1, align 1
-; CHECK-NEXT:    [[LHSV:%.*]] = zext i8 [[LHSC]] to i32
 ; CHECK-NEXT:    [[RHSC:%.*]] = load i8, ptr %mem2, align 1
+; CHECK-NEXT:    [[LHSV:%.*]] = zext i8 [[LHSC]] to i32
 ; CHECK-NEXT:    [[RHSV:%.*]] = zext i8 [[RHSC]] to i32
 ; CHECK-NEXT:    [[CHARDIFF:%.*]] = sub nsw i32 [[LHSV]], [[RHSV]]
 ; CHECK-NEXT:    ret i32 [[CHARDIFF]]
