@@ -2732,6 +2732,8 @@ std::string CondOpInit::getAsString() const {
 }
 
 const Init *CondOpInit::getBit(unsigned Bit) const {
+  if (getType() == BitRecTy::get(getRecordKeeper()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 
