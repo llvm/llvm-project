@@ -126,5 +126,5 @@ jobs:
           echo "Notification JSON Content:"
           echo "$NOTIFICATION_CONTENT"
 
-          #curl -H "Content-Type: application/json" -d "$NOTIFICATION_CONTENT" ${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}
+          curl -H "Content-Type: application/json" -d "$NOTIFICATION_CONTENT" ${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}
 
