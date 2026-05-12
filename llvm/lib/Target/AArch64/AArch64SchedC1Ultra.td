@@ -136,6 +136,7 @@ class C1UCMEWriteRC<int LatencyCycles, list<ProcResourceKind> Resources,
 // Detailed CME scheduling derived from the SME2 software optimization guide.
 def C1UWrite_1c_CMEPERMS : C1UCMEWrite<1, [C1UUnitCMEPERMS]>;
 def C1UWrite_1c_CMEPERMS_1rc : C1UCMEWriteRC<1, [C1UUnitCMEPERMS], [1]>;
+def C1UWrite_1c_CMEPERMS_2rc : C1UCMEWriteRC<1, [C1UUnitCMEPERMS], [2]>;
 def C1UWrite_1c_CMERNMRET : C1UCMEWrite<1, [C1UUnitCMERNMRET]>;
 def C1UWrite_2c_1L_CMELD : C1UCMEWrite<2, [C1UUnitL, C1UUnitCMELD]>;
 def C1UWrite_2c_1I_1L_CMELD : C1UCMEWrite<2, [C1UUnitI, C1UUnitL,
@@ -888,8 +889,6 @@ def C1UWr_ZDOTH_CME : C1UStreamingSchedWrite<C1UWrite_8c_CMEVXMUL_1rc,
                                              C1UWr_ZDOTH>;
 def C1UWr_ZCMABHS_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXMUL,
                                                C1UWr_ZCMABHS>;
-def C1UWr_ZMMA_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEMML0_1rc,
-                                            C1UWr_ZMMA>;
 def C1UWr_ZMA_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXMUL, C1UWr_ZMA>;
 def C1UWr_ZMASQL_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXMUL,
                                               C1UWr_ZMASQL>;
@@ -900,8 +899,6 @@ def C1UWr_ZFMAL_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXMUL,
                                              C1UWr_ZFMAL>;
 def C1UWr_ZBFDOT_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXFPDOT,
                                               C1UWr_ZBFDOT>;
-def C1UWr_ZBFMMA_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEMML0_1rc,
-                                              C1UWr_ZBFMMA>;
 def C1UWr_ZBFMAL_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXMUL,
                                               C1UWr_ZBFMAL>;
 
@@ -957,8 +954,6 @@ def C1UWrite_3c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEPERMF_1rc,
                                                  C1UWrite_3c_1V1>;
 def C1UWrite_4c_1V_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
                                                 C1UWrite_4c_1V>;
-def C1UWrite_4c_1V0_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVX0ALU,
-                                                 C1UWrite_4c_1V0>;
 def C1UWrite_4c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
                                                     C1UWrite_4c_1V0134>;
 def C1UWrite_4c_1V0134_1V_CME
@@ -978,15 +973,11 @@ def C1UWrite_6c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
 def C1UWrite_6c_1V_2V0134_CME
     : C1UStreamingSchedWrite<C1UWrite_12c_CMEVXALU_PERMF_2d3rc,
                              C1UWrite_6c_1V_2V0134>;
-def C1UWrite_6c_2V1_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEPERMS,
-                                                 C1UWrite_6c_2V1>;
 def C1UWrite_6c_2V_1V0134_CME
     : C1UStreamingSchedWrite<C1UWrite_12c_CMEVXALU_PERMF_2d3rc,
                              C1UWrite_6c_2V_1V0134>;
 def C1UWrite_6c_3V_CME : C1UStreamingSchedWrite<C1UWrite_16c_CMEVXALU_PERMF_2d3rc,
                                                 C1UWrite_6c_3V>;
-def C1UWrite_6c_6V0_CME : C1UStreamingSchedWrite<C1UWrite_20c_CMEVXALU_PERMS_1d2rc,
-                                                 C1UWrite_6c_6V0>;
 def C1UWrite_8c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMF_1rc,
                                                  C1UWrite_8c_1V1>;
 def C1UWrite_8c_1V1_4rc_CME
@@ -998,8 +989,6 @@ def C1UWrite_8c_4V_CME : C1UStreamingSchedWrite<C1UWrite_24c_CMEVXALU_PERMS_2d5r
                                                 C1UWrite_8c_4V>;
 def C1UWrite_9c_1V1_2rc_CME
     : C1UStreamingSchedWrite<C1UWrite_11c_CMEMC_11rc, C1UWrite_9c_1V1_2rc>;
-def C1UWrite_10c_10V0_CME : C1UStreamingSchedWrite<C1UWrite_24c_CMEVXALU_PERMS_2d5rc,
-                                                   C1UWrite_10c_10V0>;
 def C1UWrite_11c_1V0_4rc_CME
     : C1UStreamingSchedWrite<C1UWrite_11c_CMEMC_11rc, C1UWrite_11c_1V0_4rc>;
 def C1UWrite_11c_1V1_4rc_CME
@@ -1055,8 +1044,6 @@ def C1UWrite_8c_2L_2V_CME : C1UStreamingSchedWrite<C1UWrite_2c_1V01_1L_CMELD,
                                                    C1UWrite_8c_2L_2V>;
 def C1UWrite_8c_3L_3V_CME : C1UStreamingSchedWrite<C1UWrite_2c_1V01_1L_CMELD,
                                                    C1UWrite_8c_3L_3V>;
-def C1UWrite_9c_1V01_1L_CME
-    : C1UStreamingSchedWrite<C1UWrite_2c_1V01_1L_CMELD, C1UWrite_9c_1V01_1L>;
 def C1UWrite_9c_2L_2V_1I_CME
     : C1UStreamingSchedWrite<C1UWrite_2c_1I_1V01_1L_CMELD,
                              C1UWrite_9c_2L_2V_1I>;
@@ -1081,12 +1068,6 @@ def C1UWrite_2c_1SA_1V01_CME
 def C1UWrite_2c_1SA_1V01_1I_CME
     : C1UStreamingSchedWrite<C1UWrite_2c_1SA_1V01_1I_CMEST,
                              C1UWrite_2c_1SA_1V01_1I>;
-def C1UWrite_2or4c_1SA_1V01_CME
-    : C1UStreamingSchedWrite<C1UWrite_2c_1SA_1V01_CMEST,
-                             C1UWrite_2or4c_1SA_1V01>;
-def C1UWrite_2or4c_3SA_6V01_CME
-    : C1UStreamingSchedWrite<C1UWrite_2c_3SA_6V01_CMEST,
-                             C1UWrite_2or4c_3SA_6V01>;
 def C1UWrite_2c_2SA_2V01_CME
     : C1UStreamingSchedWrite<C1UWrite_2c_2SA_2V01_CMEST,
                              C1UWrite_2c_2SA_2V01>;
@@ -1096,21 +1077,12 @@ def C1UWrite_4c_2SA_2V01_CME
 def C1UWrite_4c_2SA_2V01_1I_CME
     : C1UStreamingSchedWrite<C1UWrite_2c_2SA_2V01_CMEST,
                              C1UWrite_4c_2SA_2V01_1I>;
-def C1UWrite_4or6c_3SA_3V01_CME
-    : C1UStreamingSchedWrite<C1UWrite_2c_3SA_3V01_CMEST,
-                             C1UWrite_4or6c_3SA_3V01>;
 def C1UWrite_5c_3SA_3V01_CME
     : C1UStreamingSchedWrite<C1UWrite_2c_3SA_3V01_CMEST,
                              C1UWrite_5c_3SA_3V01>;
 def C1UWrite_5c_3SA_3V01_1I_CME
     : C1UStreamingSchedWrite<C1UWrite_2c_3SA_3V01_CMEST,
                              C1UWrite_5c_3SA_3V01_1I>;
-def C1UWrite_5or7c_3SA_6V01_CME
-    : C1UStreamingSchedWrite<C1UWrite_2c_3SA_6V01_CMEST,
-                             C1UWrite_5or7c_3SA_6V01>;
-def C1UWrite_5or7c_5SA_5V01_CME
-    : C1UStreamingSchedWrite<C1UWrite_2c_5SA_5V01_CMEST,
-                             C1UWrite_5or7c_5SA_5V01>;
 def C1UWrite_7c_4SA_4V01_CME
     : C1UStreamingSchedWrite<C1UWrite_2c_4SA_4V01_CMEST,
                              C1UWrite_7c_4SA_4V01>;
@@ -1626,8 +1598,8 @@ def : InstRW<[C1UWrite_2c_2SA_2V01_CME], (instregex "^STPQ(post|pre)")>;
 // ASIMD arith, pair-wise
 // ASIMD compare
 // ASIMD logical
-def : SchedAlias<WriteVd, C1UWrite_2c_1V_CMEVXALU>;
-def : SchedAlias<WriteVq, C1UWrite_2c_1V_CMEVXALU>;
+def : SchedAlias<WriteVd, C1UWrite_2c_1V>;
+def : SchedAlias<WriteVq, C1UWrite_2c_1V>;
 
 // ASIMD absolute diff accum
 // ASIMD absolute diff accum long
@@ -1720,7 +1692,9 @@ def : InstRW<[C1UWrite_2c_1V_CME], (instregex "^[SU]SHLv")>;
 // ASIMD FP compare
 // ASIMD FP max/min, normal
 // ASIMD FP negate
-// Handled by SchedAlias<WriteV[dq], ...>
+def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+             (instregex "^FABSv", "^FADDv", "^FSUBv", "^FNEGv",
+                        "^FMAXv", "^FMAXNMv", "^FMINv", "^FMINNMv")>;
 
 // ASIMD FP complex add
 // ASIMD FP max/min, pairwise
@@ -1915,9 +1889,15 @@ def : InstRW<[C1UWrite_6c_3V], (instrs TBXv8i8Three, TBXv16i8Three)>;
 def : InstRW<[C1UWrite_6c_5V], (instrs TBXv8i8Four, TBXv16i8Four)>;
 
 // ASIMD transfer, element to gen reg
-def : InstRW<[C1UWrite_2c_3V], (instregex "^SMOVv")>;
-def : InstRW<[C1UWrite_2c_3V], (instregex "^UMOVvi(8|16)(_idx0)?$")>;
-def : InstRW<[C1UWrite_2c_1V], (instregex "^UMOVvi(32|64)$")>;
+def : InstRW<[C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMS_1rc,
+                                     C1UWrite_2c_3V>],
+             (instregex "^SMOVv")>;
+def : InstRW<[C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMS_1rc,
+                                     C1UWrite_2c_3V>],
+             (instregex "^UMOVvi(8|16)(_idx0)?$")>;
+def : InstRW<[C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMS_1rc,
+                                     C1UWrite_2c_1V>],
+             (instregex "^UMOVvi(32|64)$")>;
 
 // ASIMD transfer, gen reg to element
 def : InstRW<[C1UWrite_2c_1V], (instregex "^INSvi(8|16|32|64)gpr$")>;
@@ -2349,7 +2329,7 @@ def : InstRW<[C1UWrite_4c_1V_CME], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
                                            "^[SU]RSHR_(ZPmI|ZPZI)_[BHSD]")>;
 
 // Bit manipulation
-def : InstRW<[C1UWrite_6c_2V1_CME], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
+def : InstRW<[C1UWrite_6c_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
 def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ")>;
@@ -2449,11 +2429,11 @@ def : InstRW<[C1UWrite_3c_1V1_CME], (instregex "^LAST[AB]_VPZ_[BHSD]")>;
 def : InstRW<[C1UWrite_5c_1V1_1V01_CME], (instregex "^LAST[AB]_RPZ_[BHSD]")>;
 
 // Histogram operations
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^HISTCNT_ZPzZZ_[SD]",
-                                              "^HISTSEG_ZZZ")>;
+def : InstRW<[C1UWrite_2c_1V], (instregex "^HISTCNT_ZPzZZ_[SD]",
+                                     "^HISTSEG_ZZZ")>;
 
 // Horizontal operations,immediate operands only
-def : InstRW<[C1UWrite_4c_1V0134_CME], (instregex "^INDEX_(II)_[BHSD]")>;
+def : InstRW<[C1UWrite_4c_1V0134], (instregex "^INDEX_(II)_[BHSD]")>;
 
 // Horizontal operations, scalar, immediate operands / immediate, scalar operands
 def : InstRW<[C1UWrite_7c_1M0_1V0134_CMEINDEX_IRRI],
@@ -2482,10 +2462,10 @@ def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
                                               "^[SU](MAX|MIN)_ZPZZ_[BHSD]")>;
 
 // Matching operations
-def : InstRW<[C1UWrite_2c_1V0_CMEVX0ALU], (instregex "^N?MATCH_PPzZZ_[BH]")>;
+def : InstRW<[C1UWrite_2c_1V0], (instregex "^N?MATCH_PPzZZ_[BH]")>;
 
 // Matrix multiply-accumulate
-def : InstRW<[C1UWr_ZMMA_CME, C1URd_ZMMA, C1URd_ZMMA], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
+def : InstRW<[C1UWr_ZMMA, C1URd_ZMMA, C1URd_ZMMA], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
 
 // Move prefix
 def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]",
@@ -2552,8 +2532,8 @@ def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
 
 
 // Multiply/multiply long, (8x8) polynomial
-def : InstRW<[C1UWrite_2c_1V0134_CME], (instregex "^PMUL_ZZZ_B",
-                                           "^PMULL[BT]_ZZZ_[HDQ]")>;
+def : InstRW<[C1UWrite_2c_1V0134], (instregex "^PMUL_ZZZ_B",
+                                        "^PMULL[BT]_ZZZ_[HDQ]")>;
 
 // Predicate counting vector
 def : InstRW<[C1UWrite_2c_1V_CME], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI")>;
@@ -2595,7 +2575,9 @@ def : InstRW<[C1UWrite_2c_1V_StreamingCMEPERMS], (instregex "^REV_ZZ_[BHSD]",
                                                        "^REVW_ZPmZ_D")>;
 
 // Select, vector form
-def : InstRW<[C1UWrite_2c_1V_StreamingCMEPERMS], (instregex "^SEL_ZPZZ_[BHSD]")>;
+def : InstRW<[C1UStreamingSchedWrite<C1UWrite_1c_CMEPERMS_2rc,
+                                     C1UWrite_2c_1V>],
+             (instregex "^SEL_ZPZZ_[BHSD]")>;
 
 // Table lookup
 def : InstRW<[C1UWrite_2c_1V_CMEPERMF_1rc], (instregex "^TBL_ZZZZ?_[BHSD]")>;
@@ -2629,13 +2611,13 @@ def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[H
                                               "^FSUBR_(ZPZI|ZPZZ)_[HSD]")>;
 
 // Floating point associative add, F16
-def : InstRW<[C1UWrite_10c_10V0_CME], (instrs FADDA_VPZ_H)>;
+def : InstRW<[C1UWrite_10c_10V0], (instrs FADDA_VPZ_H)>;
 
 // Floating point associative add, F32
-def : InstRW<[C1UWrite_6c_6V0_CME], (instrs FADDA_VPZ_S)>;
+def : InstRW<[C1UWrite_6c_6V0], (instrs FADDA_VPZ_S)>;
 
 // Floating point associative add, F64
-def : InstRW<[C1UWrite_4c_2V_CMEFPReduceD], (instrs FADDA_VPZ_D)>;
+def : InstRW<[C1UWrite_4c_2V], (instrs FADDA_VPZ_D)>;
 
 // Floating point compare
 def : InstRW<[C1UWrite_2c_1V0_CME], (instregex "^FACG[ET]_PPzZZ_[HSD]",
@@ -2773,13 +2755,13 @@ def : InstRW<[C1UWrite_11c_1V1_4rc_CME], (instregex "^FSQRT_ZPmZ_S")>;
 def : InstRW<[C1UWrite_13c_1V1_2rc_CME], (instregex "^FSQRT_ZPmZ_D")>;
 
 // Floating point trigonometric exponentiation
-def : InstRW<[C1UWrite_3c_1V1_CME], (instregex "^FEXPA_ZZ_[HSD]")>;
+def : InstRW<[C1UWrite_3c_1V1], (instregex "^FEXPA_ZZ_[HSD]")>;
 
 // Floating point trigonometric multiply add
-def : InstRW<[C1UWrite_4c_1V_CME], (instregex "^FTMAD_ZZI_[HSD]")>;
+def : InstRW<[C1UWrite_4c_1V], (instregex "^FTMAD_ZZI_[HSD]")>;
 
 // Floating point trigonometric, miscellaneous
-def : InstRW<[C1UWrite_3c_1V_CME], (instregex "^FTS(MUL|SEL)_ZZZ_[HSD]")>;
+def : InstRW<[C1UWrite_3c_1V], (instregex "^FTS(MUL|SEL)_ZZZ_[HSD]")>;
 
 
 // SVE BFloat16 (BF16) instructions
@@ -2792,7 +2774,7 @@ def : InstRW<[C1UWrite_3c_1V0134_CME], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[C1UWr_ZBFDOT_CME, C1URd_ZBFDOT, C1URd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[C1UWr_ZBFMMA_CME, C1URd_ZBFMMA, C1URd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
+def : InstRW<[C1UWr_ZBFMMA, C1URd_ZBFMMA, C1URd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[C1UWr_ZBFMAL_CME, C1URd_ZBFMAL, C1URd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZI?")>;
@@ -2833,24 +2815,24 @@ def : InstRW<[C1UWrite_6c_1L_CME], (instregex "^LD1RQ_[BHWD]$")>;
 def : InstRW<[C1UWrite_6c_1L_CME], (instregex "^LDNT1[BHWD]_ZR[IR]$")>;
 
 // Non temporal gather load, vector + scalar 32-bit element size
-def : InstRW<[C1UWrite_9c_1V01_1L_CME], (instregex "^LDNT1[BHW]_ZZR_S$",
-                                            "^LDNT1S[BH]_ZZR_S$")>;
+def : InstRW<[C1UWrite_9c_1V01_1L], (instregex "^LDNT1[BHW]_ZZR_S$",
+                                         "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[C1UWrite_9c_1V01_1L_CME], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
-def : InstRW<[C1UWrite_6c_1L_CME], (instrs LDNT1D_ZZR_D)>;
+def : InstRW<[C1UWrite_9c_1V01_1L], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[C1UWrite_6c_1L], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
-def : InstRW<[C1UWrite_9c_1V01_1L_CME], (instregex "^LDFF1[BHWD]$",
-                                               "^LDFF1S?B_[HSD]$",
-                                               "^LDFF1S?H_[SD]$",
-                                               "^LDFF1S?W_D$")>;
+def : InstRW<[C1UWrite_9c_1V01_1L], (instregex "^LDFF1[BHWD]$",
+                                          "^LDFF1S?B_[HSD]$",
+                                          "^LDFF1S?H_[SD]$",
+                                          "^LDFF1S?W_D$")>;
 
 // Contiguous non faulting load, scalar + imm
-def : InstRW<[C1UWrite_6c_1L_CME], (instregex "^LDNF1[BHWD]_IMM$",
-                                         "^LDNF1S?B_[HSD]_IMM$",
-                                         "^LDNF1S?H_[SD]_IMM$",
-                                         "^LDNF1S?W_D_IMM$")>;
+def : InstRW<[C1UWrite_6c_1L], (instregex "^LDNF1[BHWD]_IMM$",
+                                      "^LDNF1S?B_[HSD]_IMM$",
+                                      "^LDNF1S?H_[SD]_IMM$",
+                                      "^LDNF1S?W_D_IMM$")>;
 
 // Contiguous Load two structures to two vectors, scalar + imm
 def : InstRW<[C1UWrite_8c_2L_2V_CME], (instregex "^LD2[BHWD]_IMM$")>;
@@ -2871,31 +2853,31 @@ def : InstRW<[C1UWrite_10c_4L_8V_CME], (instregex "^LD4[BHWD]_IMM$")>;
 def : InstRW<[C1UWrite_11c_4L_8V_1I_CME], (instregex "^LD4[BHWD]$")>;
 
 // Gather load, vector + imm, 32-bit element size
-def : InstRW<[C1UWrite_9c_1V01_1L_CME], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
-                                            "^GLD(FF)?1W_IMM$")>;
+def : InstRW<[C1UWrite_9c_1V01_1L], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
+                                         "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[C1UWrite_9c_1V01_1L_CME], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
-                                            "^GLD(FF)?1D_IMM$")>;
+def : InstRW<[C1UWrite_9c_1V01_1L], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+                                         "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 32-bit scaled offset
-def : InstRW<[C1UWrite_9c_1V01_1L_CME],
+def : InstRW<[C1UWrite_9c_1V01_1L],
              (instregex "^GLD(FF)?1S?H_S_[SU]XTW_SCALED$",
                         "^GLD(FF)?1W_[SU]XTW_SCALED")>;
 // Gather load, 64-bit scaled offset
 // NOTE: These instructions are not specified in the SOG.
-def : InstRW<[C1UWrite_9c_1V01_1L_CME],
+def : InstRW<[C1UWrite_9c_1V01_1L],
              (instregex "^GLD(FF)?1S?[HW]_D_([SU]XTW_)?SCALED$",
                         "^GLD(FF)?1D_([SU]XTW_)?SCALED$")>;
 
 
 // Gather load, 32-bit unpacked unscaled offset
-def : InstRW<[C1UWrite_9c_1V01_1L_CME], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW$",
-                                            "^GLD(FF)?1W_[SU]XTW$")>;
+def : InstRW<[C1UWrite_9c_1V01_1L], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW$",
+                                         "^GLD(FF)?1W_[SU]XTW$")>;
 
 // Gather load, 64-bit unpacked unscaled offset
 // NOTE: These instructions are not specified in the SOG.
-def : InstRW<[C1UWrite_9c_1V01_1L_CME],
+def : InstRW<[C1UWrite_9c_1V01_1L],
              (instregex "^GLD(FF)?1S?[BHW]_D(_[SU]XTW)?$",
                         "^GLD(FF)?1D(_[SU]XTW)?$")>;
 // SVE Store instructions
@@ -2944,42 +2926,42 @@ def : InstRW<[C1UWrite_2c_1SA_1V01_CME], (instregex "^STNT1[BHWD]_ZRI$")>;
 def : InstRW<[C1UWrite_2c_1SA_1V01_CME], (instregex "^STNT1[BHWD]_ZRR$")>;
 
 // Scatter non temporal store, vector + scalar 32-bit element size
-def : InstRW<[C1UWrite_5or7c_3SA_6V01_CME], (instregex "^STNT1[BHW]_ZZR_S")>;
+def : InstRW<[C1UWrite_5or7c_3SA_6V01], (instregex "^STNT1[BHW]_ZZR_S")>;
 
 // Scatter non temporal store, vector + scalar 64-bit element size
-def : InstRW<[C1UWrite_4or6c_3SA_3V01_CME], (instregex "^STNT1[BHWD]_ZZR_D")>;
+def : InstRW<[C1UWrite_4or6c_3SA_3V01], (instregex "^STNT1[BHWD]_ZZR_D")>;
 
 // Scatter store vector + imm 32-bit element size
-def : InstRW<[C1UWrite_5or7c_5SA_5V01_CME], (instregex "^SST1[BHW]_S_IMM$",
-                                                  "^SST1W_IMM$")>;
+def : InstRW<[C1UWrite_5or7c_5SA_5V01], (instregex "^SST1[BHW]_S_IMM$",
+                                               "^SST1W_IMM$")>;
 
 // Scatter store vector + imm 64-bit element size
-def : InstRW<[C1UWrite_4or6c_3SA_3V01_CME], (instregex "^SST1[BHW]_D_IMM$",
-                                                   "^SST1D_IMM$")>;
+def : InstRW<[C1UWrite_4or6c_3SA_3V01], (instregex "^SST1[BHW]_D_IMM$",
+                                                "^SST1D_IMM$")>;
 
 // Scatter store, 32-bit scaled offset
-def : InstRW<[C1UWrite_2or4c_3SA_6V01_CME],
+def : InstRW<[C1UWrite_2or4c_3SA_6V01],
              (instregex "^SST1(H_S|W)_[SU]XTW_SCALED$")>;
 
 // Scatter store, 32-bit unpacked unscaled offset
-def : InstRW<[C1UWrite_2or4c_1SA_1V01_CME], (instregex "^SST1[BHW]_D_[SU]XTW$",
-                                                "^SST1D_[SU]XTW$")>;
+def : InstRW<[C1UWrite_2or4c_1SA_1V01], (instregex "^SST1[BHW]_D_[SU]XTW$",
+                                             "^SST1D_[SU]XTW$")>;
 
 // Scatter store, 32-bit unpacked scaled offset
-def : InstRW<[C1UWrite_2or4c_1SA_1V01_CME], (instregex "^SST1[HW]_D_[SU]XTW_SCALED$",
-                                                "^SST1D_[SU]XTW_SCALED$")>;
+def : InstRW<[C1UWrite_2or4c_1SA_1V01], (instregex "^SST1[HW]_D_[SU]XTW_SCALED$",
+                                             "^SST1D_[SU]XTW_SCALED$")>;
 
 // Scatter store, 32-bit unscaled offset
-def : InstRW<[C1UWrite_2or4c_1SA_1V01_CME], (instregex "^SST1[BH]_S_[SU]XTW$",
-                                                "^SST1W_[SU]XTW$")>;
+def : InstRW<[C1UWrite_2or4c_1SA_1V01], (instregex "^SST1[BH]_S_[SU]XTW$",
+                                             "^SST1W_[SU]XTW$")>;
 
 // Scatter store, 64-bit scaled offset
-def : InstRW<[C1UWrite_2or4c_1SA_1V01_CME], (instregex "^SST1[HW]_D_SCALED$",
-                                                "^SST1D_SCALED$")>;
+def : InstRW<[C1UWrite_2or4c_1SA_1V01], (instregex "^SST1[HW]_D_SCALED$",
+                                             "^SST1D_SCALED$")>;
 
 // Scatter store, 64-bit unscaled offset
-def : InstRW<[C1UWrite_2or4c_1SA_1V01_CME], (instregex "^SST1[BHW]_D$",
-                                                "^SST1D$")>;
+def : InstRW<[C1UWrite_2or4c_1SA_1V01], (instregex "^SST1[BHW]_D$",
+                                             "^SST1D$")>;
 
 // SVE Miscellaneous instructions
 // -----------------------------------------------------------------------------
@@ -3005,16 +2987,16 @@ def : InstRW<[C1UWrite_4c_1L], (instregex "^PRF[BHWD]")>;
 // -----------------------------------------------------------------------------
 
 // Crypto AES ops
-def : InstRW<[C1UWrite_2c_1V0134_CME], (instregex "^AES[DE]_ZZZ_B$",
-                                         "^AESI?MC_ZZ_B$")>;
+def : InstRW<[C1UWrite_2c_1V0134], (instregex "^AES[DE]_ZZZ_B$",
+                                     "^AESI?MC_ZZ_B$")>;
 
 // Crypto SHA3 ops
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^(BCAX|EOR3)_ZZZZ$",
-                                              "^RAX1_ZZZ_D$",
-                                              "^XAR_ZZZI_[BHSD]$")>;
+def : InstRW<[C1UWrite_2c_1V], (instregex "^(BCAX|EOR3)_ZZZZ$",
+                                 "^RAX1_ZZZ_D$",
+                                 "^XAR_ZZZI_[BHSD]$")>;
 
 // Crypto SM4 ops
-def : InstRW<[C1UWrite_4c_1V0_CME], (instregex "^SM4E(KEY)?_ZZZ_S$")>;
+def : InstRW<[C1UWrite_4c_1V0], (instregex "^SM4E(KEY)?_ZZZ_S$")>;
 
 // SVE instructions added by SME and available when not in Streaming SVE mode
 // -----------------------------------------------------------------------------
