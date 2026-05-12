@@ -74,16 +74,26 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IV1:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE3:%.*]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[PRED_LOAD_CONTINUE3]] ]
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[VEC_IV1:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 14
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV1]], 14
+; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[SRC]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; CHECK:       pred.load.continue:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi float [ poison, [[VECTOR_BODY]] ], [ [[TMP4]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_LOAD_IF2:%.*]], label [[PRED_LOAD_CONTINUE3]]
+; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[SRC]], i32 [[VEC_IV1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[TMP7]], align 4
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE3]]
+; CHECK:       pred.load.continue2:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi float [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP8]], [[PRED_LOAD_IF2]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP0]], float [[TMP5]], float -0.000000e+00
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd contract float [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP1]], float [[TMP9]], float -0.000000e+00
@@ -103,15 +113,25 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM:       vector.ph:
 ; CHECK-ALM-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ALM:       vector.body:
-; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE3:%.*]] ]
+; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[PRED_LOAD_CONTINUE3]] ]
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[INDEX]], 15
 ; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = icmp ult i32 [[TMP1]], 15
+; CHECK-ALM-NEXT:    br i1 [[ACTIVE_LANE_MASK]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; CHECK-ALM:       pred.load.if:
 ; CHECK-ALM-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[SRC]], i32 [[INDEX]]
+; CHECK-ALM-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4
+; CHECK-ALM-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; CHECK-ALM:       pred.load.continue:
+; CHECK-ALM-NEXT:    [[TMP4:%.*]] = phi float [ poison, [[VECTOR_BODY]] ], [ [[TMP3]], [[PRED_LOAD_IF]] ]
+; CHECK-ALM-NEXT:    br i1 [[ACTIVE_LANE_MASK1]], label [[PRED_LOAD_IF2:%.*]], label [[PRED_LOAD_CONTINUE3]]
+; CHECK-ALM:       pred.load.if2:
 ; CHECK-ALM-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP1]]
-; CHECK-ALM-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP2]], align 4
-; CHECK-ALM-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP5]], align 4
+; CHECK-ALM-NEXT:    [[TMP6:%.*]] = load float, ptr [[TMP5]], align 4
+; CHECK-ALM-NEXT:    br label [[PRED_LOAD_CONTINUE3]]
+; CHECK-ALM:       pred.load.continue3:
+; CHECK-ALM-NEXT:    [[TMP7:%.*]] = phi float [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP6]], [[PRED_LOAD_IF2]] ]
 ; CHECK-ALM-NEXT:    [[TMP8:%.*]] = select contract i1 [[ACTIVE_LANE_MASK]], float [[TMP4]], float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP9:%.*]] = fadd contract float [[VEC_PHI]], [[TMP8]]
 ; CHECK-ALM-NEXT:    [[TMP10:%.*]] = select contract i1 [[ACTIVE_LANE_MASK1]], float [[TMP7]], float -0.000000e+00

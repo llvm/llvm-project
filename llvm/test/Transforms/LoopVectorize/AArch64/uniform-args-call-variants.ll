@@ -199,22 +199,22 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ true, [[PRED_STORE_CONTINUE4]] ]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT5:%.*]], [[PRED_STORE_CONTINUE4]] ]
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[SRC]], i64 [[TMP0]]
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
 ; INTERLEAVE-NEXT:    br i1 [[ACTIVE_LANE_MASK]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; INTERLEAVE:       pred.store.if:
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[SRC]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP3]], align 8
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = call double @foo(double [[TMP4]], i64 [[INDEX]]) #[[ATTR4:[0-9]+]]
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[DST]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    store double [[TMP5]], ptr [[TMP6]], align 8
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr [8 x i8], ptr [[SRC]], i64 [[INDEX]]
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = load double, ptr [[TMP0]], align 8
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = call double @foo(double [[TMP1]], i64 [[INDEX]]) #[[ATTR4:[0-9]+]]
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [8 x i8], ptr [[DST]], i64 [[INDEX]]
+; INTERLEAVE-NEXT:    store double [[TMP2]], ptr [[TMP3]], align 8
 ; INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; INTERLEAVE:       pred.store.continue:
 ; INTERLEAVE-NEXT:    br i1 [[ACTIVE_LANE_MASK2]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
 ; INTERLEAVE:       pred.store.if3:
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = call double @foo(double [[TMP2]], i64 [[TMP0]]) #[[ATTR4]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[DST]], i64 [[TMP0]]
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 1
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr [8 x i8], ptr [[SRC]], i64 [[TMP4]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = load double, ptr [[TMP5]], align 8
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = call double @foo(double [[TMP6]], i64 [[TMP4]]) #[[ATTR4]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[DST]], i64 [[TMP4]]
 ; INTERLEAVE-NEXT:    store double [[TMP7]], ptr [[TMP8]], align 8
 ; INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; INTERLEAVE:       pred.store.continue4:
