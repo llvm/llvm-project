@@ -745,7 +745,7 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       QualType FT = FD->getType();
       QualType FTSingleTy = getSingleElementType(FT);
       auto &Ctx = getContext();
-      if (Ctx.getTypeSize(Ty)!= 2 * Ctx.getTypeSize(FTSingleTy))
+      if (Ctx.getTypeSize(Ty) != 2 * Ctx.getTypeSize(FTSingleTy))
         return std::nullopt;
 
       if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
@@ -831,8 +831,8 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
                                      getDataLayout().getAllocaAddrSpace());
   }
   return (isPromotableIntegerTypeForABI(RetTy)
-                ? ABIArgInfo::getExtend(RetTy, CGT.ConvertType(RetTy))
-                : ABIArgInfo::getDirect(CGT.ConvertType(RetTy)));
+              ? ABIArgInfo::getExtend(RetTy, CGT.ConvertType(RetTy))
+              : ABIArgInfo::getDirect(CGT.ConvertType(RetTy)));
 }
 
 ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
