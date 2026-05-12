@@ -369,7 +369,11 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_not_fn                               201603L
 # define __cpp_lib_optional                             201606L
 // # define __cpp_lib_parallel_algorithm                   201603L
+#if _LIBCPP_STD_VER >= 26
+# define __cpp_lib_raw_memory_algorithms                202406L
+#else
 # define __cpp_lib_raw_memory_algorithms                201606L
+#endif
 # define __cpp_lib_sample                               201603L
 # if _LIBCPP_HAS_THREADS
 #   define __cpp_lib_scoped_lock                        201703L
