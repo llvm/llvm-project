@@ -355,7 +355,6 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vrsqrteh_f16:
   case NEON::BI__builtin_neon_vrsqrtsh_f16:
   case NEON::BI__builtin_neon_vmaxv_s8:
-  case NEON::BI__builtin_neon_vmaxv_s8:
   case NEON::BI__builtin_neon_vmaxvq_s8:
   case NEON::BI__builtin_neon_vmaxv_s16:
   case NEON::BI__builtin_neon_vmaxvq_s16:
