@@ -13,6 +13,43 @@
 
 #include "Inputs/cuda.h"
 
+// Explicit class template instantiation with an implicit __host__ __device__
+// virtual destructor: when no device code references the class, the device
+// vtable should fill destructor slots with NULL so that emitting the
+// destructor body (which may reach host-only callees through e.g.
+// libstdc++ runtime dispatch) is not forced. This block is checked first
+// because comdat globals are emitted before non-comdat globals in IR.
+template <typename T>
+struct ETI {
+  virtual ~ETI() = default;
+};
+template class ETI<float>;
+// CHECK-DEVICE: @_ZTV3ETIIfE = {{.*}} zeroinitializer
+// CHECK-HOST: @_ZTV3ETIIfE = {{.*}} @_ZN3ETIIfED
+
+// Device code does reference ETI_Used<float>: the per-slot NULL extension
+// must NOT fire — the device vtable's complete-destructor slot must hold
+// the real pointer (the deleting-destructor slot stays unused because no
+// device code performs `delete`).
+template <typename T>
+struct ETI_Used {
+  virtual ~ETI_Used() = default;
+};
+template class ETI_Used<float>;
+__device__ void use_eti_used() { ETI_Used<float> x; }
+// CHECK-DEVICE: @_ZTV8ETI_UsedIfE = {{.*}} @_ZN8ETI_UsedIfED1Ev
+// CHECK-HOST: @_ZTV8ETI_UsedIfE = {{.*}} @_ZN8ETI_UsedIfED
+
+// Explicit __device__ virtual destructor on an explicit instantiation:
+// the per-slot NULL extension must NOT fire (it gates on implicit H+D),
+// so the device vtable holds the real destructor pointers.
+template <typename T>
+struct ETI_Dev {
+  virtual __device__ ~ETI_Dev() = default;
+};
+template class ETI_Dev<float>;
+// CHECK-DEVICE: @_ZTV7ETI_DevIfE = {{.*}} @_ZN7ETI_DevIfED
+
 struct H  {
   virtual void method();
 };

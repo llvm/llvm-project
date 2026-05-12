@@ -811,6 +811,35 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
         return builder.add(
             llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
       }
+      // On device, an implicit __host__ __device__ virtual destructor of an
+      // explicit class template instantiation should fill its vtable slot
+      // only if device code has actually referenced the destructor. Otherwise
+      // emitting a real pointer would force body emission whose host-only
+      // callees (e.g. through libstdc++ destructor chains) can become
+      // unresolved external references at link time. The host-side vtable
+      // still gets the real pointer.
+      if (CGM.getLangOpts().CUDAIsDevice) {
+        if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(MD)) {
+          const auto *HAttr = Dtor->getAttr<CUDAHostAttr>();
+          const auto *DAttr = Dtor->getAttr<CUDADeviceAttr>();
+          bool IsImplicitHD =
+              HAttr && DAttr && HAttr->isImplicit() && DAttr->isImplicit();
+          const auto *Spec =
+              dyn_cast<ClassTemplateSpecializationDecl>(Dtor->getParent());
+          bool IsExplicitInst =
+              Spec && (Spec->getTemplateSpecializationKind() ==
+                           TSK_ExplicitInstantiationDeclaration ||
+                       Spec->getTemplateSpecializationKind() ==
+                           TSK_ExplicitInstantiationDefinition);
+          if (IsImplicitHD && IsExplicitInst &&
+              !CGM.GetGlobalValue(CGM.getMangledName(GD))) {
+            if (IsThunk)
+              nextVTableThunkIndex++;
+            return builder.add(
+                llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
+          }
+        }
+      }
       // Method is acceptable, continue processing as usual.
     }
 
