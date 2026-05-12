@@ -142,5 +142,5 @@ int main(int, char**)
     static_assert(test());
 #endif
 
-  return 0;
+    return 0;
 }
