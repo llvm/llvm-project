@@ -3599,24 +3599,27 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   assert(CGM.getLangOpts().OpenMP && "Expected OpenMP to be enabled");
 
   auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
-
-  QualType DREType = DD->getType().getNonReferenceType();
-  DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
-  DeclRefExpr *DRE = DeclRefExpr::Create(
-      getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
-      /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, DREType,
-      VK_LValue);
-  LValue CapLVal = EmitDeclRefLValue(DRE);
-
-  // Extract the specific binding from the decomposed object.
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
-  if (auto *ME = dyn_cast<MemberExpr>(BindingExpr))
-    return EmitLValueForField(CapLVal, cast<FieldDecl>(ME->getMemberDecl()));
+
   if (isa<ArraySubscriptExpr>(BindingExpr))
     return EmitLValue(BD->getBinding(), NotKnownNonNull);
 
-  // Sema ensures tuple-like bindings are rejected earlier, so this path should
-  // never be reached.
+  if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {
+    // DeclRefExpr type must be the non-reference type — EmitDeclRefLValue
+    // checks VD->getType()->isReferenceType() and calls
+    // EmitLoadOfReferenceLValue automatically.
+    QualType DREType = DD->getType().getNonReferenceType();
+    DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
+    DeclRefExpr *DRE = DeclRefExpr::Create(
+        getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
+        /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, DREType,
+        VK_LValue);
+    LValue CapLVal = EmitDeclRefLValue(DRE);
+    return EmitLValueForField(CapLVal, cast<FieldDecl>(ME->getMemberDecl()));
+  }
+
+  // Sema ensures tuple-like bindings are rejected earlier, so this path
+  // should never be reached.
   llvm_unreachable("Unexpected structured binding type in OpenMP");
 }
 
