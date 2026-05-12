@@ -71,6 +71,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
@@ -1060,20 +1061,24 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-
     // If it is not ThinLTO, emits the module flag and sets it to be off.
-    if (!opts.PrepareForThinLTO) {
-      if (emitSummary && !llvmModule->getModuleFlag("ThinLTO")) {
-        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
-      }
+    if (!opts.PrepareForThinLTO && emitSummary &&
+        !llvmModule->getModuleFlag("ThinLTO")) {
+      llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
     }
-    if (action == BackendActionTy::Backend_EmitBC)
-      mpm.addPass(llvm::BitcodeWriterPass(
-          os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
-    else if (action == BackendActionTy::Backend_EmitLL)
-      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                        /*ShouldPreserveUseListOrder=*/false,
-                                        emitSummary));
+
+    if (action == BackendActionTy::Backend_EmitBC) {
+      if (opts.PrepareForThinLTO) {
+        mpm.addPass(llvm::ThinLTOBitcodeWriterPass(os, nullptr));
+      } else {
+        mpm.addPass(llvm::BitcodeWriterPass(
+            os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
+      }
+    } else if (action == BackendActionTy::Backend_EmitLL) {
+        mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
+                                          /*ShouldPreserveUseListOrder=*/false,
+                                          emitSummary));
+    }
   }
 
   // FIXME: This should eventually be replaced by a first-class driver option.
