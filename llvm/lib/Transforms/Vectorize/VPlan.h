@@ -4913,6 +4913,7 @@ public:
            is_contained(ScalarPH->getPredecessors(), getMiddleBlock());
   }
 
+  /// The type of the canonical induction variable of the vector loop.
   Type *getIndexType() const { return VF.getType(); }
 };
 
