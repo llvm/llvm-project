@@ -2170,7 +2170,7 @@ private:
     if (!hasNonZeroOffset())
       return C;
 
-    return llvm::ConstantExpr::getPtrAdd(C, getOffset());
+    return llvm::ConstantExpr::getPtrAdd(CGM.getDataLayout(), C, getOffset());
   }
 };
 
