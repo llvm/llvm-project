@@ -37,6 +37,7 @@ constexpr bool test() {
   std::ranges::concat_view<IntView, IntView> v(IntView{buf1, buf1 + 2}, IntView{buf2, buf2 + 2});
   using Iter = std::ranges::iterator_t<decltype(v)>;
   static_assert(std::default_initializable<Iter>);
+  [[maybe_unused]] Iter iter{};
 
   return true;
 }
