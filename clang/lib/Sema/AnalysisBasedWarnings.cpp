@@ -3040,7 +3040,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   bool EnableLifetimeSafetyAnalysis =
       !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
-      lifetimes::IsLifetimeSafetyDiagnosticEnabled(S, D);
+      lifetimes::IsLifetimeSafetyEnabled(S, D);
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
