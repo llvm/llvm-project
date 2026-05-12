@@ -23,7 +23,7 @@
 namespace clang::lifetimes {
 
 inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
-  if (S.getLangOpts().EnableLifetimeSafety)
+  if (S.getLangOpts().RunLifetimeSafety)
     return true;
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
