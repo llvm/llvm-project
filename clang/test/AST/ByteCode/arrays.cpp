@@ -847,3 +847,11 @@ namespace MultiDimArrayInitLoop {
   constexpr S s = {1};
   constexpr T t = {s};
 }
+
+namespace ErroneousArraySubscriptExpr {
+  constexpr int &foo(int *arr, size_t idx) { return arr[idx]; } // both-error {{unknown type name 'size_t'}}
+  void bar() {
+    int val[] = {1, 2, 3, 4};
+    foo(val, 2) = 42;
+  }
+}
