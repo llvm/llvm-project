@@ -1205,8 +1205,8 @@ class PermlaneVarPat<SDPatternOperator permlane,
 >;
 
 class PermlaneNoDppPat3Src<SDPatternOperator permlane,
-  Instruction inst> : GCNPat<
-  (permlane i32:$src0, i32:$src1, i32:$src2),
+  Instruction inst, ValueType vt> : GCNPat<
+  (vt (permlane vt:$src0, i32:$src1, i32:$src2)),
   (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2)
 >;
 
@@ -1611,10 +1611,12 @@ let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
   defm V_PERMLANE_IDX_GEN_B32 : VOP3Inst<"v_permlane_idx_gen_b32", VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32>>;
   } // End isConvergent = 1
 
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64>;
+  foreach vt = Reg32Types.types in {
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64, vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64,    vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64,  vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64,   vt>;
+  }
   def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
 } // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
 

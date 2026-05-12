@@ -1691,7 +1691,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                    Standard)
       .Div(S32,
            {{Vgpr32},
-            {IntrId, Vgpr32, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}});
+            {IntrId, Vgpr32, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}})
+      .Div(V2S16,
+           {{VgprV2S16},
+            {IntrId, VgprV2S16, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}});
 
   addRulesForIOpcs({amdgcn_permlane_idx_gen}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});

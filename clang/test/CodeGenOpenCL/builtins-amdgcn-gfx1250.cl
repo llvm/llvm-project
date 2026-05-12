@@ -1296,7 +1296,7 @@ void test_permlane16_swap(global uint2* out, uint old, uint src) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.bcast(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.bcast.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1322,7 +1322,7 @@ void test_permlane_bcast(global uint* out, uint src0, uint src1, uint src2) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.down(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.down.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1348,7 +1348,7 @@ void test_permlane_down(global uint* out, uint src0, uint src1, uint src2) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.up(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.up.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1374,7 +1374,7 @@ void test_permlane_up(global uint* out, uint src0, uint src1, uint src2) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.xor(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.xor.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1514,7 +1514,7 @@ void test_s_wakeup_barrier(void *bar)
 // CHECK-NEXT:    store float [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[ADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], float [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.ignore.denormal.mode [[META4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], float [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3:![0-9]+]], !amdgpu.ignore.denormal.mode [[META3]]
 // CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_global_add_f32(global float *addr, float x) {
@@ -1531,7 +1531,7 @@ float test_global_add_f32(global float *addr, float x) {
 // CHECK-NEXT:    store <2 x half> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[ADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[X_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]]
 // CHECK-NEXT:    ret <2 x half> [[TMP2]]
 //
 half2 test_global_add_half2(global half2 *addr, half2 x) {
@@ -1548,7 +1548,7 @@ half2 test_global_add_half2(global half2 *addr, half2 x) {
 // CHECK-NEXT:    store <2 x half> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[X_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]]
 // CHECK-NEXT:    ret <2 x half> [[TMP2]]
 //
 half2 test_flat_add_2f16(generic half2 *addr, half2 x) {
@@ -1566,7 +1566,7 @@ half2 test_flat_add_2f16(generic half2 *addr, half2 x) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to <2 x bfloat>
-// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x bfloat> [[TMP2]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x bfloat> [[TMP2]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]]
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[TMP3]] to <2 x i16>
 // CHECK-NEXT:    ret <2 x i16> [[TMP4]]
 //
@@ -1585,7 +1585,7 @@ short2 test_flat_add_2bf16(generic short2 *addr, short2 x) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[ADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to <2 x bfloat>
-// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], <2 x bfloat> [[TMP2]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], <2 x bfloat> [[TMP2]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]]
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[TMP3]] to <2 x i16>
 // CHECK-NEXT:    ret <2 x i16> [[TMP4]]
 //
