@@ -186,6 +186,10 @@ set(common_defs
   __CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
 )
 
+add_custom_target(libclc ALL)
+add_custom_target(libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins")
+add_dependencies(libclc libclc-opencl-builtins)
+
 # Configure the CLC internal builtins library.
 set(LIBCLC_CLC_TARGET clc)
 libclc_add_builtin_library(${LIBCLC_CLC_TARGET}
@@ -207,10 +211,6 @@ libclc_add_builtin_library(${LIBCLC_OPENCL_TARGET}
 
 add_subdirectory(clc)
 add_subdirectory(opencl)
-
-add_custom_target(libclc ALL)
-add_custom_target(libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins")
-add_dependencies(libclc libclc-opencl-builtins)
 
 # Link and install the final OpenCL builtins library.
 libclc_add_library(libclc-${LIBCLC_TARGET}
