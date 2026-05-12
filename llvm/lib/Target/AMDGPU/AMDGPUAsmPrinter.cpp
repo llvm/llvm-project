@@ -234,12 +234,47 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
 }
 
+/// Set bits in a kernel descriptor MCExpr field:
+///   return ((Dst & ~Mask) | (Value << Shift))
+static const MCExpr *setBits(const MCExpr *Dst, const MCExpr *Value,
+                             uint32_t Mask, uint32_t Shift, MCContext &Ctx) {
+  const auto *Shft = MCConstantExpr::create(Shift, Ctx);
+  const auto *Msk = MCConstantExpr::create(Mask, Ctx);
+  Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
+  Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
+                               Ctx);
+  return Dst;
+}
+
 void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   if (!MFI.isEntryFunction())
     return;
 
   assert(TM.getTargetTriple().getOS() == Triple::AMDHSA);
+
+  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
+  MCContext &Ctx = MF->getContext();
+
+  AMDGPU::MCKernelDescriptor KD =
+      getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo);
+
+  // Compute inst_pref_size using MCExpr label subtraction for exact code
+  // size. At this point .Lfunc_end has been emitted (by the base AsmPrinter)
+  // right after the function code, so (Lfunc_end - func_sym) gives the
+  // exact function code size in bytes.
+  if (STM.hasInstPrefSize()) {
+    const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
+        MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
+
+    uint32_t Mask, Shift, Width, CacheLineSize;
+    STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
+    const MCExpr *InstPrefSize =
+        AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
+    KD.compute_pgm_rsrc3 =
+        setBits(KD.compute_pgm_rsrc3, InstPrefSize, Mask, Shift, Ctx);
+  }
 
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
@@ -254,13 +289,10 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   Streamer.emitValueToAlignment(Align(64), 0, 1, 0);
   ReadOnlySection.ensureMinAlignment(Align(64));
 
-  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
-
   SmallString<128> KernelName;
   getNameWithPrefix(KernelName, &MF->getFunction());
   getTargetStreamer()->EmitAmdhsaKernelDescriptor(
-      STM, KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
-      CurrentProgramInfo.NumVGPRsForWavesPerEU,
+      STM, KernelName, KD, CurrentProgramInfo.NumVGPRsForWavesPerEU,
       MCBinaryExpr::createSub(
           CurrentProgramInfo.NumSGPRsForWavesPerEU,
           AMDGPUMCExpr::createExtraSGPRs(
@@ -1438,33 +1470,22 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.LdsSize = STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks;
   ProgInfo.EXCPEnable = 0;
 
-  // return ((Dst & ~Mask) | (Value << Shift))
-  auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
-                        uint32_t Shift) {
-    const auto *Shft = MCConstantExpr::create(Shift, Ctx);
-    const auto *Msk = MCConstantExpr::create(Mask, Ctx);
-    Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
-    Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
-                                 Ctx);
-    return Dst;
-  };
-
   if (STM.hasGFX90AInsts()) {
     ProgInfo.ComputePGMRSrc3 =
-        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
+        setBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
-                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT);
+                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT, Ctx);
     ProgInfo.ComputePGMRSrc3 =
-        SetBits(ProgInfo.ComputePGMRSrc3, CreateExpr(ProgInfo.TgSplit),
+        setBits(ProgInfo.ComputePGMRSrc3, CreateExpr(ProgInfo.TgSplit),
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
-                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
+                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT, Ctx);
   }
 
   if (STM.hasGFX1250Insts())
     ProgInfo.ComputePGMRSrc3 =
-        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
+        setBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
-                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT, Ctx);
 
   ProgInfo.Occupancy = createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,
@@ -1482,26 +1503,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
             F.getName() + "': desired occupancy was " + Twine(MinWEU) +
             ", final occupancy is " + Twine(Occupancy));
     F.getContext().diagnose(Diag);
-  }
-
-  if (isGFX11Plus(STM)) {
-    uint32_t CodeSizeInBytes = (uint32_t)std::min(
-        ProgInfo.getFunctionCodeSize(MF, true /* IsLowerBound */),
-        (uint64_t)std::numeric_limits<uint32_t>::max());
-    uint32_t CodeSizeInLines = divideCeil(CodeSizeInBytes, 128);
-    uint32_t Field, Shift, Width;
-    if (isGFX11(STM)) {
-      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
-    } else {
-      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
-    }
-    uint64_t InstPrefSize = std::min(CodeSizeInLines, (1u << Width) - 1);
-    ProgInfo.ComputePGMRSrc3 = SetBits(ProgInfo.ComputePGMRSrc3,
-                                       CreateExpr(InstPrefSize), Field, Shift);
   }
 }
 
