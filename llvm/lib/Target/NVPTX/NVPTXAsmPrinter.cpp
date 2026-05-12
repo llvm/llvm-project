@@ -1629,7 +1629,15 @@ void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp,
 
 void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
-    O << CI->getValue();
+    // The emitted PTX storage type for this ConstantInt may have been
+    // width-promoted by getPromotedPtxStorageBits (e.g. an i2 global is
+    // emitted as .u8). Zero-extend the value so its bit pattern matches the
+    // IR ConstantInt's, and print as unsigned so that values whose top bit
+    // is set in the original width do not become signed-extended negative
+    // literals in the promoted storage.
+    CI->getValue()
+        .zextOrTrunc(getPromotedPtxStorageBits(CI->getBitWidth()))
+        .print(O, /*isSigned=*/false);
     return;
   }
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
