@@ -42,10 +42,8 @@ static Expected<ParseResult> parseFormatvString(StringRef Fmt) {
     Fmt = Fmt.drop_front(OpenBrace);
 
     // Handle escaped braces '{{'.
-    if (Fmt.size() > 1 && Fmt[1] == '{') {
-      Fmt = Fmt.drop_front(2);
+    if (Fmt.consume_front("{{"))
       continue;
-    }
 
     // Find the closing '}'.
     const size_t CloseBrace = Fmt.find('}');

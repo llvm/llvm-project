@@ -44,7 +44,7 @@ Options
   pack. The format string is assumed to be the parameter immediately preceding
   the pack.
 
-  For example, to check ``mylib::log(Level, const char *Fmt, Ts&&...)`` set
-  this option to `mylib::log`.
+  For example, to check ``::mylib::log(Level, const char *Fmt, Ts&&...)`` set
+  this option to `::mylib::log`.
 
   Default is the empty string.
