@@ -65,12 +65,13 @@ template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
 
 InstructionListener::InstructionListener(Function &F, CallbackT CB,
                                          RAUWCallbackT RAUWCB)
-    : F(F), Callback(CB), RAUWCallback(RAUWCB) {
+    : F(&F), Callback(CB), RAUWCallback(RAUWCB) {
   F.addInstructionListener(this);
 }
 
 InstructionListener::~InstructionListener() {
-  F.removeInstructionListener(this);
+  if (F)
+    F->removeInstructionListener(this);
 }
 
 void Function::addInstructionListener(InstructionListener *L) {
@@ -83,12 +84,12 @@ void Function::removeInstructionListener(InstructionListener *L) {
   InstructionListeners.erase(llvm::find(InstructionListeners, L));
 }
 
-void Function::notifyInstructionRemoved(Instruction *I) {
+void Function::notifyInstructionRemovedImpl(Instruction *I) {
   for (InstructionListener *L : InstructionListeners)
     L->instructionRemoved(I);
 }
 
-void Function::notifyInstructionRAUW(Instruction *Old, Value *New) {
+void Function::notifyInstructionRAUWImpl(Instruction *Old, Value *New) {
   for (InstructionListener *L : InstructionListeners)
     L->instructionRAUW(Old, New);
 }
@@ -547,6 +548,12 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 }
 
 Function::~Function() {
+  // Detach all instruction listeners before destruction so their destructors
+  // don't try to call back into this Function.
+  for (InstructionListener *L : InstructionListeners)
+    L->detach();
+  InstructionListeners.clear();
+
   validateBlockNumbers();
 
   dropAllReferences();    // After this it is safe to delete instructions.

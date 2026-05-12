@@ -44,7 +44,7 @@ public:
                                  Value *New);
 
 private:
-  Function &F;
+  Function *F;
   CallbackT Callback;
   RAUWCallbackT RAUWCallback;
 
@@ -56,12 +56,16 @@ public:
   InstructionListener(const InstructionListener &) = delete;
   InstructionListener &operator=(const InstructionListener &) = delete;
 
+  /// Called by ~Function() to detach the listener before the Function is
+  /// destroyed. After this call, the destructor becomes a no-op.
+  void detach() { F = nullptr; }
+
   void instructionRemoved(Instruction *I) { Callback(this, I); }
   void instructionRAUW(Instruction *Old, Value *New) {
     if (RAUWCallback)
       RAUWCallback(this, Old, New);
   }
-  Function &getFunction() const { return F; }
+  Function *getFunction() const { return F; }
 };
 
 } // namespace llvm

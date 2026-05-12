@@ -121,17 +121,23 @@ private:
   void removeInstructionListener(InstructionListener *L);
 
 public:
-  /// Notify all registered listeners that an instruction is being removed
-  /// from this function. Called from Instruction::setParent and
-  /// BasicBlock::setParent when the parent is being set to null.
-  LLVM_ABI void notifyInstructionRemoved(Instruction *I);
-
-  /// Notify all registered listeners that an instruction in this function is
-  /// being RAUW'd (replaced with another value). Called from Value::doRAUW().
-  LLVM_ABI void notifyInstructionRAUW(Instruction *Old, Value *New);
-
   bool hasInstructionListeners() const { return !InstructionListeners.empty(); }
 
+  void notifyInstructionRemoved(Instruction *I) {
+    if (hasInstructionListeners())
+      notifyInstructionRemovedImpl(I);
+  }
+
+  void notifyInstructionRAUW(Instruction *Old, Value *New) {
+    if (hasInstructionListeners())
+      notifyInstructionRAUWImpl(Old, New);
+  }
+
+private:
+  LLVM_ABI void notifyInstructionRemovedImpl(Instruction *I);
+  LLVM_ABI void notifyInstructionRAUWImpl(Instruction *Old, Value *New);
+
+public:
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
