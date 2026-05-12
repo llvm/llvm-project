@@ -1,3 +1,4 @@
+// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // Add a path that doesn't exist as argv[0] for the compile command line:

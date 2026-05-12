@@ -554,7 +554,7 @@ public:
       Key = F.getFnAttribute(AttrSYCLModuleId).getValueAsString().str();
       break;
     case IRSplitMode::SPLIT_NONE:
-      llvm_unreachable("categorizer should not be used for SPLIT_NONE");
+      llvm_unreachable("categorizer cannot be used for SPLIT_NONE");
     }
 
     auto [It, Inserted] =
@@ -604,12 +604,14 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
     return Err;
 
   if (Verbose || DryRun) {
-    SmallVector<StringRef> SplitFiles;
-    for (const SplitModule &SI : SplitModules)
-      SplitFiles.push_back(SI.ModuleFilePath);
-    errs() << formatv("sycl-module-split: input: {0}, output: {1}, mode: {2}\n",
-                      LinkedBitcodeFile, llvm::join(SplitFiles, ", "),
-                      splitModeToString(Mode));
+    errs() << formatv("sycl-module-split: input: {0}, mode: {1}\n",
+                      LinkedBitcodeFile, splitModeToString(Mode));
+    for (const SplitModule &SI : SplitModules) {
+      errs() << formatv("{0} [", SI.ModuleFilePath);
+      llvm::offloading::sycl::forEachSymbol(
+          SI.Symbols, [](StringRef Name) { errs() << Name << " "; });
+      errs() << "]\n";
+    }
   }
 
   return SplitModules;

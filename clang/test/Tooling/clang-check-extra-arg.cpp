@@ -1,4 +1,5 @@
 /// Check we do not report "argument unused during compilation: '-c'"
+// REQUIRES: staticanalyzer
 // RUN: clang-check "%s" -extra-arg=-Wunimplemented-warning -extra-arg-before=-Wunimplemented-warning-before -- -c 2>&1 | FileCheck %s --implicit-check-not='argument unused'
 // RUN: clang-check "%s" -extra-arg=-Wunimplemented-warning -extra-arg-before=-Wunimplemented-warning-before -- -S -Xclang -S 2>&1 | FileCheck %s --implicit-check-not='argument unused'
 

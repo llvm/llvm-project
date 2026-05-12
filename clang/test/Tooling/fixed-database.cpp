@@ -1,3 +1,4 @@
+// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/Src
 // RUN: cp "%s" "%t/Src/test.cpp"

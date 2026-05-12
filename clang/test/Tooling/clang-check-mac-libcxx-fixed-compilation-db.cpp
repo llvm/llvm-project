@@ -2,6 +2,7 @@
 // This test makes sure our libTooling-based tools emulate this properly with
 // fixed compilation database.
 //
+// REQUIRES: staticanalyzer
 // RUN: rm -rf %t
 // RUN: mkdir %t
 //

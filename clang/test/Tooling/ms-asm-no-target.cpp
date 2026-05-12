@@ -1,3 +1,4 @@
+// REQUIRES: staticanalyzer
 // RUN: clang-check "%s" -- -fasm-blocks -target x86_64-apple-darwin10 2>&1 | FileCheck -check-prefix=CHECK-X86 %s -allow-empty
 // REQUIRES: x86-registered-target
 
