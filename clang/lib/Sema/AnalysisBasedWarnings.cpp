@@ -2988,7 +2988,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         .TraverseTranslationUnitDecl(TU);
   }
 
-  if (S.getLangOpts().EnableLifetimeSafety && S.getLangOpts().CPlusPlus &&
+  if (S.getLangOpts().CPlusPlus &&
       S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
@@ -3039,7 +3039,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool EnableLifetimeSafetyAnalysis =
-      S.getLangOpts().EnableLifetimeSafety &&
       !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
       lifetimes::IsLifetimeSafetyDiagnosticEnabled(S, D);
 
