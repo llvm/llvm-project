@@ -22,6 +22,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -473,11 +475,12 @@ PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
 }
 
 PreservedAnalyses InstrumentorPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   // Only create them if the user did not provide them.
   std::unique_ptr<InstrumentationConfig> IConfInt(
       !UserIConf ? new InstrumentationConfig() : nullptr);
   std::unique_ptr<InstrumentorIRBuilderTy> IIRBInt(
-      !UserIIRB ? new InstrumentorIRBuilderTy(M) : nullptr);
+      !UserIIRB ? new InstrumentorIRBuilderTy(M, FAM) : nullptr);
 
   auto *IConf = IConfInt ? IConfInt.get() : UserIConf;
   auto *IIRB = IIRBInt ? IIRBInt.get() : UserIIRB;
@@ -520,6 +523,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
+  CallIO::populate(*this, IIRB);
 }
 
 void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
@@ -1452,4 +1456,226 @@ Value *GlobalVarIO::isDefinition(Value &V, Type &Ty,
                                  InstrumentorIRBuilderTy &IIRB) {
   GlobalVariable &GV = cast<GlobalVariable>(V);
   return getCI(&Ty, !GV.isDeclaration());
+}
+
+void CallIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                  ConfigTy *UserConfig) {
+  using namespace std::placeholders;
+  if (UserConfig)
+    Config = *UserConfig;
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (Config.has(PassCallee))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "callee",
+                             "The callee address, or nullptr if an intrinsic.",
+                             IRTArg::NONE, getCallee));
+  if (Config.has(PassCalleeName))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "callee_name",
+                             "The callee name (if available).", IRTArg::STRING,
+                             getCalleeName));
+  if (Config.has(PassIntrinsicId))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "intrinsic_id",
+                             "The intrinsic id, or 0 if not an intrinsic.",
+                             IRTArg::NONE, getIntrinsicId));
+  if (Config.has(PassAllocationInfo))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "allocation_info",
+                             "Encoding of the allocation made by the call, if "
+                             "any, or nullptr otherwise.",
+                             IRTArg::NONE, getAllocationInfo));
+  if (Config.has(PassDeallocationInfo))
+    IRTArgs.push_back(
+        IRTArg(IIRB.PtrTy, "deallocation_info",
+               "Encoding of the deallocation made by the call, if "
+               "any, or nullptr otherwise.",
+               IRTArg::NONE, getDeallocationInfo));
+  if (!IsPRE) {
+    if (Config.has(PassReturnedValue)) {
+      Type *ReturnValueTy = IIRB.Int64Ty;
+      if (auto *RTy = getRetTy(IIRB.Ctx))
+        ReturnValueTy = RTy;
+      IRTArgs.push_back(IRTArg(
+          ReturnValueTy, "return_value", "The returned value.",
+          IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT |
+              (Config.has(PassReturnedValueSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                                 : IRTArg::NONE),
+          getValue, replaceValue));
+    }
+    if (Config.has(PassReturnedValueSize))
+      IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "return_value_size",
+                               "The size of the returned value", IRTArg::NONE,
+                               getValueSize));
+  }
+  if (Config.has(PassNumParameters))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int32Ty, "num_parameters", "Number of call parameters.",
+               IRTArg::NONE,
+               std::bind(&CallIO::getNumCallParameters, this, _1, _2, _3, _4)));
+  if (Config.has(PassParameters))
+    IRTArgs.push_back(
+        IRTArg(IIRB.PtrTy, "parameters", "Description of the call parameters.",
+               IsPRE ? IRTArg::REPLACABLE_CUSTOM : IRTArg::NONE,
+               std::bind(&CallIO::getCallParameters, this, _1, _2, _3, _4),
+               std::bind(&CallIO::setCallParameters, this, _1, _2, _3, _4)));
+  if (Config.has(PassIsDefinition))
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_definition",
+                             "Flag to indicate calls to definitions.",
+                             IRTArg::NONE, isDefinition));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+Value *CallIO::getCallee(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  if (CI.getIntrinsicID() != Intrinsic::not_intrinsic)
+    return Constant::getNullValue(&Ty);
+  return CI.getCalledOperand();
+}
+Value *CallIO::getCalleeName(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  if (auto *Fn = CI.getCalledFunction())
+    return IConf.getGlobalString(IConf.DemangleFunctionNames->getBool()
+                                     ? demangle(Fn->getName())
+                                     : Fn->getName(),
+                                 IIRB);
+  return Constant::getNullValue(&Ty);
+}
+Value *CallIO::getIntrinsicId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  return getCI(&Ty, CI.getIntrinsicID());
+}
+Value *CallIO::getAllocationInfo(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  auto &TLI = IIRB.analysisGetter<TargetLibraryAnalysis>(*CI.getFunction());
+
+  auto ACI = getAllocationCallInfo(&CI, &TLI, IIRB.Int32Ty);
+  if (!ACI)
+    return Constant::getNullValue(&Ty);
+
+  auto &Ctx = CI.getContext();
+
+  StructType *STy = StructType::get(Ctx,
+                                    {IIRB.PtrTy, IIRB.Int32Ty, IIRB.Int32Ty,
+                                     IIRB.Int32Ty, IIRB.Int8Ty, IIRB.Int32Ty},
+                                    /*isPacked=*/true);
+  SmallVector<Constant *> Values;
+
+  if (ACI->Family)
+    Values.push_back(IConf.getGlobalString(*ACI->Family, IIRB));
+  else
+    Values.push_back(Constant::getNullValue(IIRB.PtrTy));
+
+  Values.push_back(getCI(IIRB.Int32Ty, ACI->SizeLHSArgNo, /*IsSigned=*/true));
+  Values.push_back(getCI(IIRB.Int32Ty, ACI->SizeRHSArgNo, /*IsSigned=*/true));
+  Values.push_back(getCI(IIRB.Int32Ty, ACI->AlignmentArgNo, /*IsSigned=*/true));
+
+  if (auto *InitialCI = dyn_cast_if_present<ConstantInt>(ACI->InitialValue)) {
+    Values.push_back(getCI(IIRB.Int8Ty, 1));
+    Values.push_back(getCI(IIRB.Int32Ty, InitialCI->getZExtValue()));
+  } else if (isa_and_present<UndefValue>(ACI->InitialValue)) {
+    Values.push_back(getCI(IIRB.Int8Ty, 2));
+    Values.push_back(getCI(IIRB.Int32Ty, 0));
+  } else {
+    Values.push_back(getCI(IIRB.Int8Ty, 0));
+    Values.push_back(getCI(IIRB.Int32Ty, 0));
+  }
+
+  Constant *Initializer = ConstantStruct::get(STy, Values);
+  GlobalVariable *&GV = IConf.ConstantGlobalsCache[Initializer];
+  if (!GV)
+    GV = new GlobalVariable(*CI.getModule(), STy, true,
+                            GlobalValue::InternalLinkage, Initializer,
+                            IConf.getRTName().str() + "allocation_call_info");
+  return GV;
+}
+Value *CallIO::getDeallocationInfo(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  auto &TLI = IIRB.analysisGetter<TargetLibraryAnalysis>(*CI.getFunction());
+
+  auto DCI = getDeallocationCallInfo(&CI, &TLI);
+  if (!DCI)
+    return Constant::getNullValue(&Ty);
+
+  auto &Ctx = CI.getContext();
+
+  StructType *STy = StructType::get(
+      Ctx, {IIRB.PtrTy, IIRB.Int32Ty, IIRB.Int32Ty, IIRB.Int32Ty},
+      /*isPacked=*/true);
+  SmallVector<Constant *> Values;
+
+  if (DCI->Family)
+    Values.push_back(IConf.getGlobalString(*DCI->Family, IIRB));
+  else
+    Values.push_back(Constant::getNullValue(IIRB.PtrTy));
+
+  Values.push_back(
+      getCI(IIRB.Int32Ty, DCI->FreedOperandArgNo, /*IsSigned=*/true));
+  Values.push_back(getCI(IIRB.Int32Ty, DCI->SizeArgNo, /*IsSigned=*/true));
+  Values.push_back(getCI(IIRB.Int32Ty, DCI->AlignmentArgNo, /*IsSigned=*/true));
+
+  Constant *Initializer = ConstantStruct::get(STy, Values);
+  GlobalVariable *&GV = IConf.ConstantGlobalsCache[Initializer];
+  if (!GV)
+    GV = new GlobalVariable(*CI.getModule(), STy, true,
+                            GlobalValue::InternalLinkage, Initializer,
+                            IConf.getRTName().str() + "deallocation_call_info");
+  return GV;
+}
+Value *CallIO::getValueSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  if (CI.getType()->isVoidTy())
+    return getCI(&Ty, 0);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getType()));
+}
+Value *CallIO::getNumCallParameters(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  if (!Config.ArgFilter)
+    return getCI(&Ty, CI.arg_size());
+  auto FRange = make_filter_range(CI.args(), Config.ArgFilter);
+  return getCI(&Ty, std::distance(FRange.begin(), FRange.end()));
+}
+Value *CallIO::getCallParameters(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  if (!Config.ArgFilter)
+    return createValuePack(CI.args(), IConf, IIRB);
+  return createValuePack(make_filter_range(CI.args(), Config.ArgFilter), IConf,
+                         IIRB);
+}
+Value *CallIO::setCallParameters(Value &V, Value &NewV,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  auto *CIt = CI.arg_begin();
+  auto CB = [&](int Idx, Value *ReplV) {
+    while (Config.ArgFilter && !Config.ArgFilter(*CIt))
+      ++CIt;
+    // Do not replace `immarg` operands with a non-immediate.
+    if (CI.getParamAttr(CIt->getOperandNo(), Attribute::ImmArg).isValid())
+      return;
+    CIt->set(ReplV);
+    ++CIt;
+  };
+  if (!Config.ArgFilter)
+    readValuePack(CI.args(), NewV, IIRB, CB);
+  else
+    readValuePack(make_filter_range(CI.args(), Config.ArgFilter), NewV, IIRB,
+                  CB);
+  return &CI;
+}
+Value *CallIO::isDefinition(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  if (auto *Fn = CI.getCalledFunction())
+    return getCI(&Ty, !Fn->isDeclaration());
+  return getCI(&Ty, 0);
 }

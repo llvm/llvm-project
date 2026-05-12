@@ -954,6 +954,65 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
   }
 };
 
+struct CallIO final : public InstructionIO<Instruction::Call> {
+  CallIO(bool IsPRE) : InstructionIO(IsPRE) {}
+
+  enum ConfigKind {
+    PassCallee,
+    PassCalleeName,
+    PassIntrinsicId,
+    PassAllocationInfo,
+    PassDeallocationInfo,
+    PassReturnedValue,
+    PassReturnedValueSize,
+    PassNumParameters,
+    PassParameters,
+    PassIsDefinition,
+    PassId,
+    NumConfig,
+  };
+
+  struct ConfigTy final : public BaseConfigTy<ConfigKind> {
+    std::function<bool(Use &)> ArgFilter;
+
+    ConfigTy(bool Enable = true) : BaseConfigTy(Enable) {}
+  } Config;
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static Value *getCallee(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB);
+  static Value *getCalleeName(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB);
+  static Value *getIntrinsicId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB);
+  static Value *getAllocationInfo(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  static Value *getDeallocationInfo(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  static Value *getValueSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB);
+  Value *getNumCallParameters(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB);
+  Value *getCallParameters(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB);
+  Value *setCallParameters(Value &V, Value &NewV, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB);
+  static Value *isDefinition(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO = IConf.allocate<CallIO>(true);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO = IConf.allocate<CallIO>(false);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
 } // namespace instrumentor
 
 /// The Instrumentor pass.

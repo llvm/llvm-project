@@ -1,0 +1,48 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_",
+    "runtime_prefix.description": "The runtime API prefix.",
+    "function_regex": "test_.*",
+    "function_regex.description": "Regular expression to be matched against a function name. Only functions that match this regex will be instrumented.",
+    "demangle_function_names": false,
+    "demangle_function_names.description": "Demangle functions names passed to the runtime."
+  },
+  "instruction_pre": {
+    "call": {
+      "enabled": true,
+      "callee": true,
+      "callee.description": "The callee address, or nullptr if an intrinsic.",
+      "callee_name": true,
+      "callee_name.description": "The callee name (if available).",
+      "num_parameters": true,
+      "num_parameters.description": "Number of call parameters.",
+      "parameters": false,
+      "parameters.description": "Description of the call parameters.",
+      "is_definition": true,
+      "is_definition.description": "Flag to indicate calls to definitions.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "instruction_post": {
+    "call": {
+      "enabled": true,
+      "callee": true,
+      "callee.description": "The callee address, or nullptr if an intrinsic.",
+      "callee_name": true,
+      "callee_name.description": "The callee name (if available).",
+      "return_value": true,
+      "return_value.description": "The returned value.",
+      "return_value_size": true,
+      "return_value_size.description": "The size of the returned value",
+      "num_parameters": true,
+      "num_parameters.description": "Number of call parameters.",
+      "parameters": false,
+      "parameters.description": "Description of the call parameters.",
+      "is_definition": true,
+      "is_definition.description": "Flag to indicate calls to definitions.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  }
+}
