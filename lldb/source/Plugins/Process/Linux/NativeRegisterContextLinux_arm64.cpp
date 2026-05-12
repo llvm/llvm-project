@@ -216,8 +216,6 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
 
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr_arm64, 0, sizeof(m_gpr_arm64));
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
   ::memset(&m_sve_header, 0, sizeof(m_sve_header));
   ::memset(&m_pac_mask, 0, sizeof(m_pac_mask));
   ::memset(&m_tls_regs, 0, sizeof(m_tls_regs));
