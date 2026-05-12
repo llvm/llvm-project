@@ -67,9 +67,25 @@ static int __kmp_device_env_count(void) {
   return count;
 }
 
+// Invariant: the eligible-name and denied-base tables must be disjoint --
+// the classifier short-circuits on the first eligible match and never
+// consults the denylist (see `__kmp_classify_device_env_name`). Verified
+// once-per-process in debug builds to protect future maintainers.
+static void __kmp_device_env_assert_tables_disjoint(void) {
+#ifdef KMP_DEBUG
+  for (int i = 0; __kmp_device_env_eligible_names[i] != NULL; ++i) {
+    for (int j = 0; __kmp_device_env_denied_bases[j] != NULL; ++j) {
+      KMP_DEBUG_ASSERT(strcmp(__kmp_device_env_eligible_names[i],
+                              __kmp_device_env_denied_bases[j]) != 0);
+    }
+  }
+#endif
+}
+
 static void __kmp_device_env_lazy_init(void) {
   if (__kmp_device_env_states != NULL)
     return;
+  __kmp_device_env_assert_tables_disjoint();
   int count = __kmp_device_env_count();
   __kmp_device_env_states = (kmp_device_env_state_t *)KMP_INTERNAL_MALLOC(
       sizeof(kmp_device_env_state_t) * count);
@@ -301,6 +317,12 @@ extern "C" char const *__kmp_resolve_device_env(char const *base_name,
   if (device_id == -1) {
     if (st->host_value != NULL)
       return st->host_value;
+    // Defensive: after `__kmp_env_initialize` completes, `host_value` is
+    // always populated whenever `<ENV>` or `<ENV>_ALL` was set (the post-pass
+    // calls `observe_host` after replaying `_ALL`). This `all_value` fallback
+    // covers the narrow window of an early query during init bootstrap (e.g.
+    // a query issued from inside `__kmp_stg_parse` while the post-pass has
+    // not yet run). Kept deliberately so the contract holds end-to-end.
     if (st->all_value != NULL)
       return st->all_value;
     return NULL;

@@ -6084,6 +6084,24 @@ static void __kmp_print_affinity_settings(const kmp_affinity_t *affinity) {
 }
 #endif
 
+// If `base_name` is on the device-scope eligible list, return the value of
+// `<base_name>_ALL` from `block` (or NULL). Returns NULL for non-eligible
+// names.
+static char const *__kmp_aux_env_blk_all_fallback(kmp_env_blk_t *block,
+                                                  char const *base_name) {
+  for (int e = 0;; ++e) {
+    char const *base = __kmp_device_env_eligible_name(e);
+    if (base == NULL)
+      return NULL;
+    if (strcmp(base, base_name) != 0)
+      continue;
+    char *all_name = __kmp_str_format("%s_ALL", base_name);
+    char const *value = __kmp_env_blk_var(block, all_name);
+    __kmp_str_free(&all_name);
+    return value;
+  }
+}
+
 static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
 
   char const *value;
@@ -6091,7 +6109,7 @@ static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
   /* OMP_NUM_THREADS */
   value = __kmp_env_blk_var(block, "OMP_NUM_THREADS");
   if (value == NULL)
-    value = __kmp_env_blk_var(block, "OMP_NUM_THREADS_ALL");
+    value = __kmp_aux_env_blk_all_fallback(block, "OMP_NUM_THREADS");
   if (value) {
     ompc_set_num_threads(__kmp_dflt_team_nth);
   }
@@ -6135,25 +6153,6 @@ void __kmp_env_initialize(char const *string) {
         __kmp_initial_threads_capacity(__kmp_dflt_team_nth_ub);
   }
   __kmp_env_blk_init(&block, string);
-
-  // Device-scope env-var pre-pass: route `<ENV>_ALL`,
-  // `<ENV>_DEV`, `<ENV>_DEV_<d>` into the device-scope registry.
-  for (i = 0; i < block.count; ++i) {
-    if ((block.vars[i].name == NULL) || (*block.vars[i].name == '\0')) {
-      continue;
-    }
-    if (block.vars[i].value == NULL) {
-      continue;
-    }
-    if (__kmp_device_env_record(block.vars[i].name, block.vars[i].value))
-      continue;
-    __kmp_device_env_observe_host(block.vars[i].name, block.vars[i].value);
-
-    kmp_setting_t *setting = __kmp_stg_find(block.vars[i].name);
-    if (setting != NULL) {
-      setting->set = 1;
-    }
-  }
 
   // We need to know if blocktime was set when processing OMP_WAIT_POLICY
   blocktime_str = __kmp_env_blk_var(&block, "KMP_BLOCKTIME");
@@ -6222,6 +6221,26 @@ void __kmp_env_initialize(char const *string) {
   }
 
 #endif /* KMP_AFFINITY_SUPPORTED */
+
+  // Deliberately placed AFTER the KMP_WARNINGS special case above so that any
+  // warnings the pre-pass emits (MalformedDeviceEnvVar /
+  // DeviceEnvVarOnGlobalScope) honour the user-requested warning level.
+  for (i = 0; i < block.count; ++i) {
+    if ((block.vars[i].name == NULL) || (*block.vars[i].name == '\0')) {
+      continue;
+    }
+    if (block.vars[i].value == NULL) {
+      continue;
+    }
+    if (__kmp_device_env_record(block.vars[i].name, block.vars[i].value))
+      continue;
+    __kmp_device_env_observe_host(block.vars[i].name, block.vars[i].value);
+
+    kmp_setting_t *setting = __kmp_stg_find(block.vars[i].name);
+    if (setting != NULL) {
+      setting->set = 1;
+    }
+  }
 
   // Set up the nested proc bind type vector.
   if (__kmp_nested_proc_bind.bind_types == NULL) {
