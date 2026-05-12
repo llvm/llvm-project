@@ -456,33 +456,46 @@ struct S {
   std::string_view FieldFromLocalString; // expected-note {{this field dangles}}
   std::string_view FieldFromByValueParamString; // expected-note {{this field dangles}}
   std::string_view FieldFromRefParamString; // expected-note {{this field dangles}}
+  int *FieldFromNew; // expected-note {{this field dangles}}
+  int *FieldFromPointerParam; // expected-note {{this field dangles}}
   std::string_view FieldReassigned;
 
   void InvalidatedFieldLocalVector() {
     std::vector<std::string> strings;
-    FieldFromLocalVector = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    FieldFromLocalVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
     strings.push_back("1"); // expected-note {{invalidated here}}
   }
 
   void InvalidatedFieldByValueParamVector(std::vector<std::string> strings) {
-    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
     strings.push_back("1"); // expected-note {{invalidated here}}
   }
 
   void InvalidatedFieldLocalString() {
     std::string s;
-    FieldFromLocalString = s; // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    FieldFromLocalString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
     s.clear(); // expected-note {{invalidated here}}
   }
 
   void InvalidatedFieldByValueParamString(std::string s) {
-    FieldFromByValueParamString = s; // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    FieldFromByValueParamString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
     s.clear(); // expected-note {{invalidated here}}
   }
 
-  void InvalidatedFieldRefParamString(std::string &s) { // expected-warning {{parameter whose reference is stored in a field is later invalidated}}
+  void InvalidatedFieldRefParamString(std::string &s) { // expected-warning {{parameter which escapes to a field is later invalidated}}
     FieldFromRefParamString = s;
     s.~basic_string(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldDelete() {
+    int *p = new int; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    FieldFromNew = p;
+    delete p; // expected-note {{freed here}}
+  }
+
+  void InvalidatedFieldDeleteParam(int *p) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    FieldFromPointerParam = p;
+    delete p; // expected-note {{freed here}}
   }
 
   void FieldReassignedBeforeInvalidation() {

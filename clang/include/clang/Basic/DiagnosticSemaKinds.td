@@ -10986,7 +10986,7 @@ def warn_lifetime_safety_invalidation
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 def warn_lifetime_safety_invalidated_field
-    : Warning<"%select{object|parameter}0 whose reference is stored in a field is later invalidated">,
+    : Warning<"%select{object whose reference|parameter which}0 escapes to a field is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 
