@@ -83,16 +83,32 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`
   ``hicpp-move-const-arg``           :doc:`performance-move-const-arg
                                      <clang-tidy/checks/performance/move-const-arg>`
+  ``hicpp-multiway-paths-covered``   :doc:`bugprone-unhandled-code-paths
+                                     <clang-tidy/checks/bugprone/unhandled-code-paths>`
   ``hicpp-named-parameter``          :doc:`readability-named-parameter
                                      <clang-tidy/checks/readability/named-parameter>`
   ``hicpp-new-delete-operators``     :doc:`misc-new-delete-overloads
                                      <clang-tidy/checks/misc/new-delete-overloads>`
   ``hicpp-no-array-decay``           :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
                                      <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>`
+  ``hicpp-no-assembler``             :doc:`portability-no-assembler
+                                     <clang-tidy/checks/portability/no-assembler>`
+  ``hicpp-no-malloc``                :doc:`cppcoreguidelines-no-malloc
+                                     <clang-tidy/checks/cppcoreguidelines/no-malloc>`
   ``hicpp-noexcept-move``            :doc:`performance-noexcept-move-constructor
                                      <clang-tidy/checks/performance/noexcept-move-constructor>`
   ``hicpp-signed-bitwise``           :doc:`bugprone-signed-bitwise
                                      <clang-tidy/checks/bugprone/signed-bitwise>`
+  ``hicpp-special-member-functions`` :doc:`cppcoreguidelines-special-member-functions
+                                     <clang-tidy/checks/cppcoreguidelines/special-member-functions>`
+  ``hicpp-static-assert``            :doc:`misc-static-assert
+                                     <clang-tidy/checks/misc/static-assert>`
+  ``hicpp-undelegated-constructor``  :doc:`bugprone-undelegated-constructor
+                                     <clang-tidy/checks/bugprone/undelegated-constructor>`
+  ``hicpp-use-auto``                 :doc:`modernize-use-auto
+                                     <clang-tidy/checks/modernize/use-auto>`
+  ``hicpp-use-emplace``              :doc:`modernize-use-emplace
+                                     <clang-tidy/checks/modernize/use-emplace>`
   ================================== ========================================================================
 
 Improvements to clangd
@@ -204,6 +220,11 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`misc-static-initialization-cycle
+  <clang-tidy/checks/misc/static-initialization-cycle>` check.
+
+  Finds cyclical initialization of static variables.
+
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 
@@ -269,17 +290,6 @@ New check aliases
   to :doc:`misc-explicit-constructor
   <clang-tidy/checks/misc/explicit-constructor>`. The
   `google-explicit-constructor` name is kept as an alias.
-
-- Renamed :doc:`hicpp-multiway-paths-covered
-  <clang-tidy/checks/hicpp/multiway-paths-covered>`
-  to :doc:`bugprone-unhandled-code-paths
-  <clang-tidy/checks/bugprone/unhandled-code-paths>`.
-  The `hicpp-multiway-paths-covered` name is kept as an alias.
-
-- Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
-  to :doc:`portability-no-assembler
-  <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
-  name is kept as an alias.
 
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
