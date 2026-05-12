@@ -5968,11 +5968,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   FunctionType *IFTy = IF->getFunctionType();
 
   // Walk the descriptors to extract overloaded types.
-  std::string ErrMsg;
-  raw_string_ostream ErrOS(ErrMsg);
   SmallVector<Type *, 4> OverloadTys;
-  bool IsValid = Intrinsic::isSignatureValid(ID, IFTy, OverloadTys, ErrOS);
-  Check(IsValid, ErrMsg, IF);
+  if (!Intrinsic::isSignatureValid(ID, IFTy, OverloadTys)) {
+    std::string Msg;
+    raw_string_ostream MsgOS(Msg);
+    Intrinsic::printIntrinsicSignatureMismatch(MsgOS, ID, IFTy);
+    CheckFailed(Msg, IF);
+    return;
+  }
 
   // Now that we have the intrinsic ID and the actual argument types (and we
   // know they are legal for the intrinsic!) get the intrinsic name through the

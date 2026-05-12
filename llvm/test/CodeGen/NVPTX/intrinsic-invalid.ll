@@ -7,7 +7,7 @@
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/parser-fma-bad-arg.ll 2>&1 | FileCheck %s --check-prefix=PARSER-FMA-ARG
 
 ; Non-overloaded intrinsic: wrong return type — canonical signature shown.
-; CHECK: Intrinsic has incorrect return type!
+; CHECK: intrinsic has incorrect return type!
 ; CHECK-SAME: declared return type is 'i16', canonical signature is 'i32 (i32, i32, i32)'
 ; CHECK-NEXT: @llvm.nvvm.sad.i
 
@@ -22,7 +22,7 @@
 ; CHECK-NEXT: @llvm.nvvm.sad.ull
 
 ; Overloaded intrinsic: wrong argument type in declaration — no canonical signature shown.
-; CHECK: Intrinsic has incorrect argument type!
+; CHECK: intrinsic has incorrect argument type!
 ; CHECK-SAME: declared signature is 'float (float, float, double)'
 ; CHECK-NOT: canonical signature
 ; CHECK-NEXT: @llvm.fma.f32
@@ -41,9 +41,9 @@
 ; PARSER-COUNT: invalid intrinsic signature
 ; PARSER-COUNT-NEXT: for 'llvm.nvvm.sad.ull': got i64 (i64, i64, i64, i64), expected i64 (i64, i64, i64)
 
-; Overloaded intrinsic: parser error — no detail shown until overloaded
+; Overloaded intrinsic: parser error — got/expected not shown until overloaded
 ; diagnostics are extended.
-; PARSER-FMA-ARG: invalid intrinsic signature
+; PARSER-FMA-ARG: intrinsic has incorrect argument type!
 ; PARSER-FMA-ARG-NOT: for 'llvm.fma.f32'
 
 ;--- main.ll
