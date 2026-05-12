@@ -12,6 +12,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -154,6 +155,9 @@ llvm::Expected<uint64_t> ValueObjectMemory::GetByteSize() {
     if (auto size =
             m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope()))
       return *size;
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), size.takeError(),
+                     "failed to get byte size from type: {0}");
     return llvm::createStringError("could not get byte size of memory object");
   }
   return m_compiler_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());

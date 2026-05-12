@@ -310,7 +310,7 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
                                      SmallVectorImpl<Value *> &WhatToStore) {
   std::string Str(SD->Str.str() + '\0');
 
-  DataExtractor Extractor(Str, /*IsLittleEndian=*/true, 8);
+  DataExtractor Extractor(Str, /*IsLittleEndian=*/true);
   DataExtractor::Cursor Offset(0);
   while (Offset && Offset.tell() < Str.size()) {
     const uint64_t ReadSize = 4;

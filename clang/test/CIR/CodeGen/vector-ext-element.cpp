@@ -402,3 +402,27 @@ void store_src_dest_not_same_size() {
 // OGCG: %[[SHUFFLE_A:.*]] = shufflevector <2 x i32> %[[TMP_B]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 // OGCG: %[[RESULT:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[SHUFFLE_A]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 // OGCG: store <4 x i32> %[[RESULT]], ptr %[[A_ADDR]], align 16
+
+void non_simple_base() {
+  vi4 a;
+  int b = a.xy.x;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
+// CIR: %[[RESULT:.*]] = cir.vec.extract %[[TMP_A]][%[[CONST_0]] : !s64i] : !cir.vector<4 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>
+// LLVM: %[[B_ADDR]] = alloca i32
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[RESULT:.*]] = extractelement <4 x i32> %[[TMP_A]], i64 0
+// LLVM: store i32 %[[RESULT]], ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR]] = alloca i32, align 4
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[RESULT:.*]] = extractelement <4 x i32> %[[TMP_A]], i64 0
+// OGCG: store i32 %[[RESULT]], ptr %[[B_ADDR]], align 4

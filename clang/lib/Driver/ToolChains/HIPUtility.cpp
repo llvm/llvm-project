@@ -301,18 +301,20 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   // for backward compatibility. For code object version 4 and greater, the
   // offload kind in bundle ID is 'hipv4'.
   std::string OffloadKind = "hip";
-  auto &TT = T.getToolChain().getTriple();
-  if (TT.isAMDGCN() && getAMDGPUCodeObjectVersion(C.getDriver(), Args) >= 4)
+  if (T.getToolChain().getTriple().isAMDGCN() &&
+      getAMDGPUCodeObjectVersion(C.getDriver(), Args) >= 4)
     OffloadKind = OffloadKind + "v4";
   for (const auto &II : Inputs) {
     const auto *A = II.getAction();
+    const llvm::Triple &InputTriple = A->getOffloadingToolChain()->getTriple();
+
     auto ArchStr = llvm::StringRef(A->getOffloadingArch());
     BundlerTargetArg += ',' + OffloadKind + '-';
     if (ArchStr == "amdgcnspirv")
       BundlerTargetArg +=
           normalizeForBundler(llvm::Triple("spirv64-amd-amdhsa"), true);
     else
-      BundlerTargetArg += normalizeForBundler(TT, !ArchStr.empty());
+      BundlerTargetArg += normalizeForBundler(InputTriple, !ArchStr.empty());
     if (!ArchStr.empty())
       BundlerTargetArg += '-' + ArchStr.str();
   }

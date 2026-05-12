@@ -51,6 +51,16 @@ namespace cwg948 { // cwg948: 3.7
 #endif
 } // namespace cwg948
 
+namespace cwg950 { // cwg950: 3.1
+#if __cplusplus >= 201103L
+struct A {};
+struct B : decltype(A()) {};
+
+template <typename T>
+struct C : decltype(T()) {};
+#endif
+} // namespace cwg950
+
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
 struct A {
@@ -168,6 +178,17 @@ enum struct E3 { e = static_cast<int>(E3()) };
 enum struct E4 : int { e = static_cast<int>(E4()) };
 #endif
 } // namespace cwg977
+
+namespace cwg988 { // cwg988: 2.7
+#if __cplusplus >= 201103L
+void f(int& lvalue_ref, int&& rvalue_ref) {
+  static_assert(__is_same(decltype(lvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(lvalue_ref)&&, int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&&, int&&), "");
+}
+#endif
+} // namespace cwg988
 
 namespace cwg990 { // cwg990: 3.5
 #if __cplusplus >= 201103L

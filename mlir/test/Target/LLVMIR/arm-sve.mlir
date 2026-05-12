@@ -65,7 +65,7 @@ llvm.func @arm_sve_bfmmla(%arg0: vector<[8]xbf16>,
                           %arg1: vector<[8]xbf16>,
                           %arg2: vector<[4]xf32>)
                           -> vector<[4]xf32> {
-  // CHECK: call <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float>
+  // CHECK: call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.nxv4f32.nxv8bf16(<vscale x 4 x float> %2, <vscale x 8 x bfloat> %0, <vscale x 8 x bfloat> %1)
   %0 = "arm_sve.intr.bfmmla"(%arg2, %arg0, %arg1) :
     (vector<[4]xf32>, vector<[8]xbf16>, vector<[8]xbf16>)
         -> vector<[4]xf32>
