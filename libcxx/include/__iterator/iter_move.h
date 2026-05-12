@@ -40,7 +40,7 @@ void iter_move() = delete;
 
 template <class _Tp>
 concept __unqualified_iter_move = __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
-  // NOLINTNEXTLINE(libcpp-robust-against-adl) iter_swap ADL calls should only be made through ranges::iter_swap
+  // NOLINTNEXTLINE(libcpp-robust-against-adl) iter_move ADL calls should only be made through ranges::iter_move
   iter_move(std::forward<_Tp>(__t));
 };
 

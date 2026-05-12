@@ -5,7 +5,7 @@ integer,volatile::a
 integer::n,i
 a=0
 n=1000
-!$omp parallel 
+!$omp parallel
 !$omp do reduction(+:a)
   do i=1,n
     a=a+1

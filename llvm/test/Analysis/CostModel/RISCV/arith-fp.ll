@@ -1248,35 +1248,35 @@ define void @fdiv_f16() {
 
 define void @frem() {
 ; CHECK-LABEL: 'frem'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F32 = frem <1 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F32 = frem <2 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F32 = frem <4 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F32 = frem <8 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F32 = frem <16 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F32 = frem float poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F64 = frem double poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V1F32 = frem <1 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2F32 = frem <2 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4F32 = frem <4 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V8F32 = frem <8 x float> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V16F32 = frem <16 x float> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F32 = frem <vscale x 1 x float> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F32 = frem <vscale x 2 x float> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F32 = frem <vscale x 4 x float> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV8F32 = frem <vscale x 8 x float> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV16F32 = frem <vscale x 16 x float> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F64 = frem <1 x double> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F64 = frem <2 x double> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F64 = frem <4 x double> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F64 = frem <8 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V1F64 = frem <1 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2F64 = frem <2 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V4F64 = frem <4 x double> poison, poison
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V8F64 = frem <8 x double> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F64 = frem <vscale x 1 x double> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F64 = frem <vscale x 2 x double> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F64 = frem <vscale x 4 x double> poison, poison
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV8F64 = frem <vscale x 8 x double> poison, poison
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1F32_VP = call <1 x float> @llvm.vp.frem.v1f32(<1 x float> poison, <1 x float> poison, <1 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2F32_VP = call <2 x float> @llvm.vp.frem.v2f32(<2 x float> poison, <2 x float> poison, <2 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4F32_VP = call <4 x float> @llvm.vp.frem.v4f32(<4 x float> poison, <4 x float> poison, <4 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V8F32_VP = call <8 x float> @llvm.vp.frem.v8f32(<8 x float> poison, <8 x float> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %V16F32_VP = call <16 x float> @llvm.vp.frem.v16f32(<16 x float> poison, <16 x float> poison, <16 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1F64_VP = call <1 x double> @llvm.vp.frem.v1f64(<1 x double> poison, <1 x double> poison, <1 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2F64_VP = call <2 x double> @llvm.vp.frem.v2f64(<2 x double> poison, <2 x double> poison, <2 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4F64_VP = call <4 x double> @llvm.vp.frem.v4f64(<4 x double> poison, <4 x double> poison, <4 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V8F64_VP = call <8 x double> @llvm.vp.frem.v8f64(<8 x double> poison, <8 x double> poison, <8 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V1F32_VP = call <1 x float> @llvm.vp.frem.v1f32(<1 x float> poison, <1 x float> poison, <1 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V2F32_VP = call <2 x float> @llvm.vp.frem.v2f32(<2 x float> poison, <2 x float> poison, <2 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V4F32_VP = call <4 x float> @llvm.vp.frem.v4f32(<4 x float> poison, <4 x float> poison, <4 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %V8F32_VP = call <8 x float> @llvm.vp.frem.v8f32(<8 x float> poison, <8 x float> poison, <8 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %V16F32_VP = call <16 x float> @llvm.vp.frem.v16f32(<16 x float> poison, <16 x float> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V1F64_VP = call <1 x double> @llvm.vp.frem.v1f64(<1 x double> poison, <1 x double> poison, <1 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V2F64_VP = call <2 x double> @llvm.vp.frem.v2f64(<2 x double> poison, <2 x double> poison, <2 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V4F64_VP = call <4 x double> @llvm.vp.frem.v4f64(<4 x double> poison, <4 x double> poison, <4 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %V8F64_VP = call <8 x double> @llvm.vp.frem.v8f64(<8 x double> poison, <8 x double> poison, <8 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F32_VP = call <vscale x 1 x float> @llvm.vp.frem.nxv1f32(<vscale x 1 x float> poison, <vscale x 1 x float> poison, <vscale x 1 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F32_VP = call <vscale x 2 x float> @llvm.vp.frem.nxv2f32(<vscale x 2 x float> poison, <vscale x 2 x float> poison, <vscale x 2 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F32_VP = call <vscale x 4 x float> @llvm.vp.frem.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> poison, <vscale x 4 x i1> poison, i32 poison)
@@ -1340,24 +1340,24 @@ define void @frem() {
 
 define void @frem_bf16() {
 ; ZVFH-LABEL: 'frem_bf16'
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %BF16 = frem bfloat poison, poison
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1BF16 = frem <1 x bfloat> poison, poison
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2BF16 = frem <2 x bfloat> poison, poison
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4BF16 = frem <4 x bfloat> poison, poison
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8BF16 = frem <8 x bfloat> poison, poison
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16BF16 = frem <16 x bfloat> poison, poison
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32BF16 = frem <32 x bfloat> poison, poison
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %BF16 = frem bfloat poison, poison
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V1BF16 = frem <1 x bfloat> poison, poison
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2BF16 = frem <2 x bfloat> poison, poison
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4BF16 = frem <4 x bfloat> poison, poison
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8BF16 = frem <8 x bfloat> poison, poison
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V16BF16 = frem <16 x bfloat> poison, poison
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 191 for instruction: %V32BF16 = frem <32 x bfloat> poison, poison
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV1BF16 = frem <vscale x 1 x bfloat> poison, poison
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV2BF16 = frem <vscale x 2 x bfloat> poison, poison
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV4BF16 = frem <vscale x 4 x bfloat> poison, poison
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV8BF16 = frem <vscale x 8 x bfloat> poison, poison
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV16BF16 = frem <vscale x 16 x bfloat> poison, poison
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV32BF16 = frem <vscale x 32 x bfloat> poison, poison
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1BF16_VP = call <1 x bfloat> @llvm.vp.frem.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison, <1 x i1> poison, i32 poison)
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2BF16_VP = call <2 x bfloat> @llvm.vp.frem.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x i1> poison, i32 poison)
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4BF16_VP = call <4 x bfloat> @llvm.vp.frem.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x i1> poison, i32 poison)
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V8BF16_VP = call <8 x bfloat> @llvm.vp.frem.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x i1> poison, i32 poison)
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %V16BF16_VP = call <16 x bfloat> @llvm.vp.frem.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x i1> poison, i32 poison)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V1BF16_VP = call <1 x bfloat> @llvm.vp.frem.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison, <1 x i1> poison, i32 poison)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V2BF16_VP = call <2 x bfloat> @llvm.vp.frem.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x i1> poison, i32 poison)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V4BF16_VP = call <4 x bfloat> @llvm.vp.frem.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x i1> poison, i32 poison)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %V8BF16_VP = call <8 x bfloat> @llvm.vp.frem.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x i1> poison, i32 poison)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %V16BF16_VP = call <16 x bfloat> @llvm.vp.frem.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x i1> poison, i32 poison)
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV1BF16_VP = call <vscale x 1 x bfloat> @llvm.vp.frem.nxv1bf16(<vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x i1> poison, i32 poison)
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV2BF16_VP = call <vscale x 2 x bfloat> @llvm.vp.frem.nxv2bf16(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x i1> poison, i32 poison)
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV4BF16_VP = call <vscale x 4 x bfloat> @llvm.vp.frem.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x i1> poison, i32 poison)
@@ -1366,24 +1366,24 @@ define void @frem_bf16() {
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZVFHMIN-LABEL: 'frem_bf16'
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %BF16 = frem bfloat poison, poison
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1BF16 = frem <1 x bfloat> poison, poison
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2BF16 = frem <2 x bfloat> poison, poison
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4BF16 = frem <4 x bfloat> poison, poison
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8BF16 = frem <8 x bfloat> poison, poison
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16BF16 = frem <16 x bfloat> poison, poison
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32BF16 = frem <32 x bfloat> poison, poison
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %BF16 = frem bfloat poison, poison
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V1BF16 = frem <1 x bfloat> poison, poison
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2BF16 = frem <2 x bfloat> poison, poison
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4BF16 = frem <4 x bfloat> poison, poison
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8BF16 = frem <8 x bfloat> poison, poison
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V16BF16 = frem <16 x bfloat> poison, poison
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 191 for instruction: %V32BF16 = frem <32 x bfloat> poison, poison
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1BF16 = frem <vscale x 1 x bfloat> poison, poison
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV2BF16 = frem <vscale x 2 x bfloat> poison, poison
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV4BF16 = frem <vscale x 4 x bfloat> poison, poison
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV8BF16 = frem <vscale x 8 x bfloat> poison, poison
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV16BF16 = frem <vscale x 16 x bfloat> poison, poison
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV32BF16 = frem <vscale x 32 x bfloat> poison, poison
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1BF16_VP = call <1 x bfloat> @llvm.vp.frem.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison, <1 x i1> poison, i32 poison)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2BF16_VP = call <2 x bfloat> @llvm.vp.frem.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x i1> poison, i32 poison)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4BF16_VP = call <4 x bfloat> @llvm.vp.frem.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x i1> poison, i32 poison)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V8BF16_VP = call <8 x bfloat> @llvm.vp.frem.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x i1> poison, i32 poison)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %V16BF16_VP = call <16 x bfloat> @llvm.vp.frem.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x i1> poison, i32 poison)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V1BF16_VP = call <1 x bfloat> @llvm.vp.frem.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison, <1 x i1> poison, i32 poison)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V2BF16_VP = call <2 x bfloat> @llvm.vp.frem.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x i1> poison, i32 poison)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V4BF16_VP = call <4 x bfloat> @llvm.vp.frem.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x i1> poison, i32 poison)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %V8BF16_VP = call <8 x bfloat> @llvm.vp.frem.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x i1> poison, i32 poison)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %V16BF16_VP = call <16 x bfloat> @llvm.vp.frem.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x i1> poison, i32 poison)
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1BF16_VP = call <vscale x 1 x bfloat> @llvm.vp.frem.nxv1bf16(<vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x i1> poison, i32 poison)
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV2BF16_VP = call <vscale x 2 x bfloat> @llvm.vp.frem.nxv2bf16(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x i1> poison, i32 poison)
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV4BF16_VP = call <vscale x 4 x bfloat> @llvm.vp.frem.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x i1> poison, i32 poison)
@@ -1392,24 +1392,24 @@ define void @frem_bf16() {
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NO-ZFHMIN-LABEL: 'frem_bf16'
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %BF16 = frem bfloat poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1BF16 = frem <1 x bfloat> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2BF16 = frem <2 x bfloat> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4BF16 = frem <4 x bfloat> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8BF16 = frem <8 x bfloat> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16BF16 = frem <16 x bfloat> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32BF16 = frem <32 x bfloat> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %BF16 = frem bfloat poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1BF16 = frem <1 x bfloat> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2BF16 = frem <2 x bfloat> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4BF16 = frem <4 x bfloat> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8BF16 = frem <8 x bfloat> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16BF16 = frem <16 x bfloat> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32BF16 = frem <32 x bfloat> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1BF16 = frem <vscale x 1 x bfloat> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV2BF16 = frem <vscale x 2 x bfloat> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV4BF16 = frem <vscale x 4 x bfloat> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV8BF16 = frem <vscale x 8 x bfloat> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV16BF16 = frem <vscale x 16 x bfloat> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV32BF16 = frem <vscale x 32 x bfloat> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1BF16_VP = call <1 x bfloat> @llvm.vp.frem.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison, <1 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2BF16_VP = call <2 x bfloat> @llvm.vp.frem.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4BF16_VP = call <4 x bfloat> @llvm.vp.frem.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8BF16_VP = call <8 x bfloat> @llvm.vp.frem.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16BF16_VP = call <16 x bfloat> @llvm.vp.frem.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1BF16_VP = call <1 x bfloat> @llvm.vp.frem.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison, <1 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2BF16_VP = call <2 x bfloat> @llvm.vp.frem.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4BF16_VP = call <4 x bfloat> @llvm.vp.frem.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8BF16_VP = call <8 x bfloat> @llvm.vp.frem.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16BF16_VP = call <16 x bfloat> @llvm.vp.frem.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x i1> poison, i32 poison)
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1BF16_VP = call <vscale x 1 x bfloat> @llvm.vp.frem.nxv1bf16(<vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x i1> poison, i32 poison)
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV2BF16_VP = call <vscale x 2 x bfloat> @llvm.vp.frem.nxv2bf16(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x i1> poison, i32 poison)
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV4BF16_VP = call <vscale x 4 x bfloat> @llvm.vp.frem.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x i1> poison, i32 poison)
@@ -1502,24 +1502,24 @@ define void @frem_f16() {
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NO-ZFHMIN-LABEL: 'frem_f16'
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1F16 = frem <1 x half> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F16 = frem <2 x half> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F16 = frem <4 x half> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F16 = frem <8 x half> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F16 = frem <16 x half> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32F16 = frem <32 x half> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F16 = frem half poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1F16 = frem <1 x half> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2F16 = frem <2 x half> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4F16 = frem <4 x half> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8F16 = frem <8 x half> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16F16 = frem <16 x half> poison, poison
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32F16 = frem <32 x half> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16 = frem <vscale x 1 x half> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F16 = frem <vscale x 2 x half> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F16 = frem <vscale x 4 x half> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV8F16 = frem <vscale x 8 x half> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV16F16 = frem <vscale x 16 x half> poison, poison
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV32F16 = frem <vscale x 32 x half> poison, poison
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1F16_VP = call <1 x half> @llvm.vp.frem.v1f16(<1 x half> poison, <1 x half> poison, <1 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F16_VP = call <2 x half> @llvm.vp.frem.v2f16(<2 x half> poison, <2 x half> poison, <2 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F16_VP = call <4 x half> @llvm.vp.frem.v4f16(<4 x half> poison, <4 x half> poison, <4 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F16_VP = call <8 x half> @llvm.vp.frem.v8f16(<8 x half> poison, <8 x half> poison, <8 x i1> poison, i32 poison)
-; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F16_VP = call <16 x half> @llvm.vp.frem.v16f16(<16 x half> poison, <16 x half> poison, <16 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1F16_VP = call <1 x half> @llvm.vp.frem.v1f16(<1 x half> poison, <1 x half> poison, <1 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2F16_VP = call <2 x half> @llvm.vp.frem.v2f16(<2 x half> poison, <2 x half> poison, <2 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4F16_VP = call <4 x half> @llvm.vp.frem.v4f16(<4 x half> poison, <4 x half> poison, <4 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8F16_VP = call <8 x half> @llvm.vp.frem.v8f16(<8 x half> poison, <8 x half> poison, <8 x i1> poison, i32 poison)
+; NO-ZFHMIN-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16F16_VP = call <16 x half> @llvm.vp.frem.v16f16(<16 x half> poison, <16 x half> poison, <16 x i1> poison, i32 poison)
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16_VP = call <vscale x 1 x half> @llvm.vp.frem.nxv1f16(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x i1> poison, i32 poison)
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F16_VP = call <vscale x 2 x half> @llvm.vp.frem.nxv2f16(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x i1> poison, i32 poison)
 ; NO-ZFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F16_VP = call <vscale x 4 x half> @llvm.vp.frem.nxv4f16(<vscale x 4 x half> poison, <vscale x 4 x half> poison, <vscale x 4 x i1> poison, i32 poison)

@@ -3204,6 +3204,57 @@ TEST_P(ImportExpr, UnresolvedMemberExpr) {
                  compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
 }
 
+TEST_P(ImportDecl, CycleInAutoTemplateSpec) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class _CharT>
+  struct basic_string {
+    using value_type = _CharT;
+  };
+
+  template<typename T>
+  struct basic_string_view {
+    using value_type = T;
+  };
+
+  using string_view = basic_string_view<char>;
+  using string = basic_string<char>;
+
+  template<typename T>
+  struct span {
+  };
+
+  template <typename StringT>
+  auto StrCatT(span<const StringT> pieces) {
+    basic_string<typename StringT::value_type> result;
+    return result;
+  }
+
+  string StrCat(span<const string_view> pieces) {
+      return StrCatT(pieces);
+  }
+
+  string StrCat(span<const string> pieces) {
+      return StrCatT(pieces);
+  }
+
+  template <typename T>
+  auto declToImport(T pieces) {
+    return StrCat(pieces);
+  }
+
+  void test() {
+    span<const string> pieces;
+    auto result = declToImport(pieces);
+  }
+)";
+  // This test reproduces the StrCatT recursion pattern with concepts and span
+  // that may cause infinite recursion during AST import due to circular
+  // dependencies
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             functionTemplateDecl(hasName("declToImport")));
+}
+
 TEST_P(ImportExpr, ConceptNoRequirement) {
   MatchVerifier<Decl> Verifier;
   const char *Code = R"(
@@ -5202,11 +5253,11 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParameterLists) {
   Decl *FromTU = getTuDecl(Code, Lang_CXX03);
   auto *FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU,
       functionDecl(hasName("f"), isExplicitTemplateSpecialization()));
-  ASSERT_EQ(FromD->getNumTemplateParameterLists(), 1u);
+  ASSERT_EQ(FromD->getTemplateParameterLists().size(), 1u);
 
   auto *ToD = Import(FromD, Lang_CXX03);
   // The template parameter list should exist.
-  EXPECT_EQ(ToD->getNumTemplateParameterLists(), 1u);
+  EXPECT_EQ(ToD->getTemplateParameterLists().size(), 1u);
 }
 
 const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
@@ -8091,7 +8142,7 @@ TEST_P(ImportAttributes, ImportGuardedBy) {
       int test __attribute__((guarded_by(G)));
       )",
       FromAttr, ToAttr);
-  checkImported(FromAttr->getArg(), ToAttr->getArg());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
 TEST_P(ImportAttributes, ImportPtGuardedBy) {
@@ -8102,7 +8153,7 @@ TEST_P(ImportAttributes, ImportPtGuardedBy) {
       int *test __attribute__((pt_guarded_by(G)));
       )",
       FromAttr, ToAttr);
-  checkImported(FromAttr->getArg(), ToAttr->getArg());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
 TEST_P(ImportAttributes, ImportAcquiredAfter) {

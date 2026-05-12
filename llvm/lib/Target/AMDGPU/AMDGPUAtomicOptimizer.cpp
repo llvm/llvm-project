@@ -154,6 +154,8 @@ bool AMDGPUAtomicOptimizerImpl::run() {
   // Scan option None disables the Pass
   if (ScanImpl == ScanOptions::None)
     return false;
+  if (ST.isSingleLaneExecution(F))
+    return false;
 
   visit(F);
   if (ToReplace.empty())
@@ -221,11 +223,11 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   // If the pointer operand is divergent, then each lane is doing an atomic
   // operation on a different address, and we cannot optimize that.
-  if (UA.isDivergentUse(I.getOperandUse(PtrIdx))) {
+  if (UA.isDivergentAtUse(I.getOperandUse(PtrIdx))) {
     return;
   }
 
-  bool ValDivergent = UA.isDivergentUse(I.getOperandUse(ValIdx));
+  bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -309,7 +311,7 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
 
   const unsigned ValIdx = 0;
 
-  const bool ValDivergent = UA.isDivergentUse(I.getOperandUse(ValIdx));
+  const bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -326,7 +328,7 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   // If any of the other arguments to the intrinsic are divergent, we can't
   // optimize the operation.
   for (unsigned Idx = 1; Idx < I.getNumOperands(); Idx++) {
-    if (UA.isDivergentUse(I.getOperandUse(Idx)))
+    if (UA.isDivergentAtUse(I.getOperandUse(Idx)))
       return;
   }
 
@@ -589,7 +591,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   // return the next active lane
   auto *Mask = B.CreateShl(ConstantInt::get(WaveTy, 1), FF1);
 
-  auto *InverseMask = B.CreateXor(Mask, ConstantInt::get(WaveTy, -1));
+  auto *InverseMask = B.CreateXor(Mask, ConstantInt::getAllOnesValue(WaveTy));
   auto *NewActiveBits = B.CreateAnd(ActiveBits, InverseMask);
   ActiveBits->addIncoming(NewActiveBits, ComputeLoop);
 
@@ -838,7 +840,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     //
     // OriginalBB is known to have a branch as terminator because
     // SplitBlockAndInsertIfThen will have inserted one.
-    BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
+    CondBrInst *Terminator = cast<CondBrInst>(OriginalBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);

@@ -52,11 +52,11 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
   __kmpc_impl_lanemask_t lanemask_gt = mapping::lanemaskGT();
   do {
     Liveness = mapping::activemask();
-    remote_id = utils::ffs(Liveness & lanemask_gt);
+    remote_id = utils::ctz(Liveness & lanemask_gt);
     size = utils::popc(Liveness);
     logical_lane_id /= 2;
     shflFct(reduce_data, /*LaneId =*/logical_lane_id,
-            /*Offset=*/remote_id - 1 - physical_lane_id, /*AlgoVersion=*/2);
+            /*Offset=*/remote_id - physical_lane_id, /*AlgoVersion=*/2);
   } while (logical_lane_id % 2 == 0 && size > 1);
   return (logical_lane_id == 0);
 }
@@ -84,8 +84,7 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
 
 #if __has_builtin(__nvvm_reflect)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700) {
-    uint32_t WarpsNeeded =
-        (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+    uint32_t WarpsNeeded = utils::roundUp(NumThreads, mapping::getWarpSize());
     uint32_t WarpId = mapping::getWarpIdInBlock();
 
     // Volta execution model:
@@ -136,8 +135,7 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   //
   // Only L1 parallel region can enter this if condition.
   if (NumThreads > mapping::getWarpSize()) {
-    uint32_t WarpsNeeded =
-        (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+    uint32_t WarpsNeeded = utils::roundUp(NumThreads, mapping::getWarpSize());
     // Gather all the reduced values from each warp
     // to the first warp.
     cpyFct(reduce_data, WarpsNeeded);
@@ -158,7 +156,7 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
 uint32_t roundToWarpsize(uint32_t s) {
   if (s < mapping::getWarpSize())
     return 1;
-  return (s & ~(unsigned)(mapping::getWarpSize() - 1));
+  return utils::alignDown(s, mapping::getWarpSize());
 }
 
 uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
@@ -281,8 +279,8 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
       // a block reduction is performed here.
       uint32_t ActiveThreads = kmpcMin(NumRecs, NumThreads);
       if (ActiveThreads > mapping::getWarpSize()) {
-        uint32_t WarpsNeeded = (ActiveThreads + mapping::getWarpSize() - 1) /
-                               mapping::getWarpSize();
+        uint32_t WarpsNeeded =
+            utils::roundUp(ActiveThreads, mapping::getWarpSize());
         // Gather all the reduced values from each warp
         // to the first warp.
         cpyFct(reduce_data, WarpsNeeded);

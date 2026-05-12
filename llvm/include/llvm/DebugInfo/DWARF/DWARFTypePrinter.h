@@ -9,10 +9,12 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/WithColor.h"
 
 #include <string>
 
@@ -166,6 +168,27 @@ const char *toString(std::optional<DWARFFormValueType> F) {
     llvm::consumeError(E.takeError());
   }
   return nullptr;
+}
+
+/// Resolve the DW_AT_type of \c D until we reach a DIE that is not a
+/// DW_TAG_typedef. Gives up if a cycle is detected in malformed DWARF.
+/// In this case, returns the typedef DIE where the cycle is formed.
+template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
+  SmallSet<uint64_t, 4> Visited;
+  while (true) {
+    auto TypeAttr = D.find(dwarf::DW_AT_type);
+    if (!TypeAttr)
+      return DieType();
+
+    auto Unwrapped = detail::resolveReferencedType(D, *TypeAttr);
+    if (!Unwrapped || Unwrapped.getTag() != dwarf::DW_TAG_typedef)
+      return Unwrapped;
+
+    if (!Visited.insert(Unwrapped.getOffset()).second)
+      return Unwrapped;
+
+    D = Unwrapped;
+  }
 }
 } // namespace detail
 
@@ -478,7 +501,8 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
       // symbol in the ELF symbol table to get back to the variable...
       // but probably not worth it.
       if (T.getTag() == dwarf::DW_TAG_pointer_type ||
-          T.getTag() == dwarf::DW_TAG_reference_type)
+          T.getTag() == dwarf::DW_TAG_reference_type ||
+          T.getTag() == dwarf::DW_TAG_ptr_to_member_type)
         continue;
       const char *RawName = detail::toString(T.find(dwarf::DW_AT_name));
       assert(RawName);
@@ -588,10 +612,9 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
     }
     if (C.getTag() != dwarf::DW_TAG_template_type_parameter)
       continue;
-    auto TypeAttr = C.find(dwarf::DW_AT_type);
     Sep();
-    appendQualifiedName(TypeAttr ? detail::resolveReferencedType(C, *TypeAttr)
-                                 : DieType());
+
+    appendQualifiedName(detail::unwrapReferencedTypedefType(C));
   }
   if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue) {
     OS << '<';
@@ -693,7 +716,7 @@ void DWARFTypePrinter<DieType>::appendSubroutineNameAfter(
   DieType FirstParamIfArtificial;
   OS << '(';
   EndedWithTemplate = false;
-  bool First = true;
+  ListSeparator LS;
   bool RealFirst = true;
   for (DieType P : D) {
     if (P.getTag() != dwarf::DW_TAG_formal_parameter &&
@@ -706,10 +729,7 @@ void DWARFTypePrinter<DieType>::appendSubroutineNameAfter(
       RealFirst = false;
       continue;
     }
-    if (!First) {
-      OS << ", ";
-    }
-    First = false;
+    OS << LS;
     if (P.getTag() == dwarf::DW_TAG_unspecified_parameters)
       OS << "...";
     else

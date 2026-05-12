@@ -224,7 +224,7 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]])
 ; SI-OPT-NEXT:    br label [[BB1]]
 ; SI-OPT:       bb10:
-; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
+; SI-OPT-NEXT:    store float +qnan, ptr addrspace(5) null, align 16
 ; SI-OPT-NEXT:    br label [[BB18:%.*]]
 ; SI-OPT:       bb11:
 ; SI-OPT-NEXT:    [[TMP12:%.*]] = call float @spam()
@@ -242,13 +242,13 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    br i1 [[TMP10]], label [[BB17:%.*]], label [[BB16:%.*]]
 ; SI-OPT:       bb16:
 ; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP11]])
-; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
+; SI-OPT-NEXT:    store float +qnan, ptr addrspace(5) null, align 16
 ; SI-OPT-NEXT:    br label [[BB17]]
 ; SI-OPT:       bb17:
 ; SI-OPT-NEXT:    store float [[TMP]], ptr addrspace(5) null, align 16
 ; SI-OPT-NEXT:    br label [[BB18]]
 ; SI-OPT:       bb18:
-; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 4
+; SI-OPT-NEXT:    store float +qnan, ptr addrspace(5) null, align 4
 ; SI-OPT-NEXT:    br label [[BB2]]
 ;
 ; GCN-LABEL: blam:
@@ -477,7 +477,7 @@ bb2:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep  = getelementptr inbounds i32, ptr addrspace(1) null, i32 %tid
   %tmp3 = load i32, ptr addrspace(1) %gep, align 16
-  store float 0.000000e+00, ptr addrspace(5) null, align 8
+  store float 0.000000e+00, ptr addrspace(5) zeroinitializer, align 8
   br label %bb4
 
 bb4:                                              ; preds = %bb2
@@ -493,7 +493,7 @@ bb8:                                              ; preds = %bb4
   br i1 %tmp9, label %bb10, label %bb1
 
 bb10:                                             ; preds = %bb8
-  store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
+  store float 0x7FF8000000000000, ptr addrspace(5) zeroinitializer, align 16
   br label %bb18
 
 bb11:                                             ; preds = %bb6
@@ -506,15 +506,15 @@ bb14:                                             ; preds = %bb11
   br i1 %tmp15, label %bb17, label %bb16
 
 bb16:                                             ; preds = %bb14
-  store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
+  store float 0x7FF8000000000000, ptr addrspace(5) zeroinitializer, align 16
   br label %bb17
 
 bb17:                                             ; preds = %bb16, %bb14
-  store float %tmp, ptr addrspace(5) null, align 16
+  store float %tmp, ptr addrspace(5) zeroinitializer, align 16
   br label %bb18
 
 bb18:                                             ; preds = %bb17, %bb10
-  store float 0x7FF8000000000000, ptr addrspace(5) null, align 4
+  store float 0x7FF8000000000000, ptr addrspace(5) zeroinitializer, align 4
   br label %bb2
 }
 

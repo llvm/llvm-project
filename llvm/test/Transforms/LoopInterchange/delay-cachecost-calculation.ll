@@ -11,7 +11,7 @@
 ;   for (j = 0; j < 16; j++)
 ;     A[j][i] += 1;
 
-; CHECK: Loops are legal to interchange
+; CHECK: Loops 'for.i.header' and 'for.j' are legal to interchange
 ; CHECK: Compute CacheCost
 define void @legal_to_interchange() {
 entry:

@@ -40,5 +40,5 @@ Options
    Default is `false`.
 
 This rule is part of the `Type safety (Type.6)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-memberinit>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-memberinit>`_
 profile from the C++ Core Guidelines.

@@ -196,9 +196,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       SetUInt64(src.GetMaxU64(&src_offset, src_len));
     else {
       std::vector<uint8_t> native_endian_src(src_len, 0);
-      src.ExtractBytes(src_offset, src_len,
-                       llvm::sys::IsLittleEndianHost ? eByteOrderLittle
-                                                     : eByteOrderBig,
+      src.ExtractBytes(src_offset, src_len, endian::InlHostByteOrder(),
                        native_endian_src.data());
       llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
       llvm::LoadIntFromMemory(uint, native_endian_src.data(), src_len);

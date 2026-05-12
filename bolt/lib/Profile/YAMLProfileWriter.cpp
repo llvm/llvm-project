@@ -87,10 +87,6 @@ YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
   yaml::bolt::ProfilePseudoProbeDesc Desc;
   InlineTreeDesc InlineTree;
 
-  for (const MCDecodedPseudoProbeInlineTree &TopLev :
-       Decoder.getDummyInlineRoot().getChildren())
-    InlineTree.TopLevelGUIDToInlineTree[TopLev.Guid] = &TopLev;
-
   for (const auto &FuncDesc : Decoder.getGUID2FuncDescMap())
     ++InlineTree.HashIdxMap[FuncDesc.FuncHash];
 
@@ -191,14 +187,18 @@ std::tuple<std::vector<yaml::bolt::InlineTreeNode>,
            YAMLProfileWriter::InlineTreeMapTy>
 YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
                                        const InlineTreeDesc &InlineTree,
-                                       uint64_t GUID) {
+                                       const BinaryFunction &BF) {
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
   std::vector<yaml::bolt::InlineTreeNode> YamlInlineTree;
-  auto It = InlineTree.TopLevelGUIDToInlineTree.find(GUID);
-  if (It == InlineTree.TopLevelGUIDToInlineTree.end())
+  uint64_t Addr = BF.getAddress();
+  uint64_t Size = BF.getSize();
+  auto Probes = Decoder.getAddress2ProbesMap().find(Addr, Addr + Size);
+  if (Probes.empty())
     return {YamlInlineTree, InlineTreeNodeId};
-  const MCDecodedPseudoProbeInlineTree *Root = It->second;
-  assert(Root && "Malformed TopLevelGUIDToInlineTree");
+  const MCDecodedPseudoProbe &Probe = *Probes.begin();
+  const MCDecodedPseudoProbeInlineTree *Root = Probe.getInlineTreeNode();
+  while (Root->hasInlineSite())
+    Root = (const MCDecodedPseudoProbeInlineTree *)Root->Parent;
   uint32_t Index = 0;
   uint32_t PrevParent = 0;
   uint32_t PrevGUIDIdx = 0;
@@ -240,10 +240,9 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.ExecCount = BF.getKnownExecutionCount();
   YamlBF.ExternEntryCount = BF.getExternEntryCount();
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
-  if (PseudoProbeDecoder && BF.getGUID()) {
+  if (PseudoProbeDecoder)
     std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
-        convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF.getGUID());
-  }
+        convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF);
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),

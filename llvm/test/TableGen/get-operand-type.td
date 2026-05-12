@@ -18,6 +18,8 @@ def OpB : Operand<i32>;
 
 def RegOp : RegisterOperand<RegClass>;
 
+defm : RemapAllTargetPseudoPointerOperands<RegClass>;
+
 def InstA : Instruction {
   let Size = 1;
   let OutOperandList = (outs OpA:$a);

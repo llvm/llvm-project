@@ -19,14 +19,13 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // __find_segment_if is a utility function for optimizing iteration over segmented iterators linearly.
-// [__first, __last) has to be a segmented range. __pred is expected to take a range of local iterators and the __proj.
+// [__first, __last) has to be a segmented range. __pred is expected to take a range of local iterators.
 // It returns an iterator to the first element that satisfies the predicate, or a one-past-the-end iterator if there was
-// no match. __proj may be anything that should be passed to __pred, but is expected to be a projection to support
-// ranges algorithms, or __identity for classic algorithms.
+// no match.
 
-template <class _SegmentedIterator, class _Pred, class _Proj>
+template <class _SegmentedIterator, class _Pred>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
-__find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred __pred, _Proj& __proj) {
+__find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred __pred) {
   using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
 
   auto __sfirst = _Traits::__segment(__first);
@@ -34,11 +33,11 @@ __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred _
 
   // We are in a single segment, so we might not be at the beginning or end
   if (__sfirst == __slast)
-    return _Traits::__compose(__sfirst, __pred(_Traits::__local(__first), _Traits::__local(__last), __proj));
+    return _Traits::__compose(__sfirst, __pred(_Traits::__local(__first), _Traits::__local(__last)));
 
   { // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
     auto __llast = _Traits::__end(__sfirst);
-    auto __liter = __pred(_Traits::__local(__first), __llast, __proj);
+    auto __liter = __pred(_Traits::__local(__first), __llast);
     if (__liter != __llast)
       return _Traits::__compose(__sfirst, __liter);
   }
@@ -47,14 +46,14 @@ __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred _
   // Iterate over the segments which are guaranteed to be completely in the range
   while (__sfirst != __slast) {
     auto __llast = _Traits::__end(__sfirst);
-    auto __liter = __pred(_Traits::__begin(__sfirst), _Traits::__end(__sfirst), __proj);
+    auto __liter = __pred(_Traits::__begin(__sfirst), _Traits::__end(__sfirst));
     if (__liter != __llast)
       return _Traits::__compose(__sfirst, __liter);
     ++__sfirst;
   }
 
   // Iterate over the last segment
-  return _Traits::__compose(__sfirst, __pred(_Traits::__begin(__sfirst), _Traits::__local(__last), __proj));
+  return _Traits::__compose(__sfirst, __pred(_Traits::__begin(__sfirst), _Traits::__local(__last)));
 }
 
 _LIBCPP_END_NAMESPACE_STD

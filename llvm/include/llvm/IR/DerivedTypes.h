@@ -67,7 +67,15 @@ public:
 
   /// Returns type twice as wide the input type.
   IntegerType *getExtendedType() const {
-    return Type::getIntNTy(getContext(), 2 * getScalarSizeInBits());
+    return Type::getIntNTy(getContext(), 2 * getBitWidth());
+  }
+
+  /// Returns type half as wide the input type.
+  IntegerType *getTruncatedType() const {
+    unsigned BitWidth = getBitWidth();
+    assert((BitWidth & 1) == 0 &&
+           "Cannot truncate integer type with odd bit-width");
+    return Type::getIntNTy(getContext(), BitWidth / 2);
   }
 
   /// Get the number of bits in this IntegerType
@@ -98,6 +106,50 @@ public:
 
 unsigned Type::getIntegerBitWidth() const {
   return cast<IntegerType>(this)->getBitWidth();
+}
+
+/// Class to represent byte types.
+class ByteType : public Type {
+  friend class LLVMContextImpl;
+
+protected:
+  explicit ByteType(LLVMContext &C, unsigned NumBits) : Type(C, ByteTyID) {
+    setSubclassData(NumBits);
+  }
+
+public:
+  /// This enum is just used to hold constants we need for ByteType.
+  enum {
+    MIN_BYTE_BITS = 1, ///< Minimum number of bits that can be specified
+    MAX_BYTE_BITS =
+        (1 << 23) ///< Maximum number of bits that can be specified
+                  ///< Note that bit width is stored in the Type classes
+                  ///< SubclassData field which has 24 bits. SelectionDAG type
+                  ///< legalization can require a power of 2 ByteType, so limit
+                  ///< to the largest representable power of 2, 8388608.
+  };
+
+  /// This static method is the primary way of constructing a ByteType.
+  /// If a ByteType with the same NumBits value was previously instantiated,
+  /// that instance will be returned. Otherwise a new one will be created. Only
+  /// one instance with a given NumBits value is ever created.
+  /// Get or create a ByteType instance.
+  LLVM_ABI static ByteType *get(LLVMContext &C, unsigned NumBits);
+
+  /// Get the number of bits in this ByteType
+  unsigned getBitWidth() const { return getSubclassData(); }
+
+  /// For example, this is 0xFF for an 8 bit byte, 0xFFFF for b16, etc.
+  /// @returns a bit mask with ones set for all the bits of this type.
+  /// Get a bit mask for this type.
+  LLVM_ABI APInt getMask() const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const Type *T) { return T->getTypeID() == ByteTyID; }
+};
+
+unsigned Type::getByteBitWidth() const {
+  return cast<ByteType>(this)->getBitWidth();
 }
 
 /// Class to represent function types
@@ -498,9 +550,9 @@ public:
   // the input type, and the element type is an integer or float type which
   // is half as wide as the elements in the input type.
   static VectorType *getTruncatedElementVectorType(VectorType *VTy) {
-    Type *EltTy;
-    if (VTy->getElementType()->isFloatingPointTy()) {
-      switch(VTy->getElementType()->getTypeID()) {
+    Type *EltTy = VTy->getElementType();
+    if (EltTy->isFloatingPointTy()) {
+      switch (EltTy->getTypeID()) {
       case DoubleTyID:
         EltTy = Type::getFloatTy(VTy->getContext());
         break;
@@ -511,11 +563,7 @@ public:
         llvm_unreachable("Cannot create narrower fp vector element type");
       }
     } else {
-      unsigned EltBits =
-          VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
-      assert((EltBits & 1) == 0 &&
-             "Cannot truncate vector element with odd bit-width");
-      EltTy = IntegerType::get(VTy->getContext(), EltBits / 2);
+      EltTy = cast<IntegerType>(EltTy)->getTruncatedType();
     }
     return VectorType::get(EltTy, VTy->getElementCount());
   }
@@ -755,6 +803,16 @@ Type *Type::getExtendedType() const {
     return VectorType::getExtendedElementVectorType(
         const_cast<VectorType *>(VTy));
   return cast<IntegerType>(this)->getExtendedType();
+}
+
+Type *Type::getTruncatedType() const {
+  assert(
+      isIntOrIntVectorTy() &&
+      "Original type expected to be a vector of integers or a scalar integer.");
+  if (auto *VTy = dyn_cast<VectorType>(this))
+    return VectorType::getTruncatedElementVectorType(
+        const_cast<VectorType *>(VTy));
+  return cast<IntegerType>(this)->getTruncatedType();
 }
 
 Type *Type::getWithNewType(Type *EltTy) const {

@@ -358,9 +358,11 @@ static bool isVtableAccess(Instruction *I) {
 // instrumentation. The user has no way of suppressing them.
 static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
   // Peel off GEPs and BitCasts.
-  Addr = Addr->stripInBoundsOffsets();
+  // Note: This also peels AddrspaceCasts, so this should not be used when
+  // checking the address space below.
+  Value *PeeledAddr = Addr->stripInBoundsOffsets();
 
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Addr)) {
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(PeeledAddr)) {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
@@ -373,11 +375,9 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
 
   // Do not instrument accesses from different address spaces; we cannot deal
   // with them.
-  if (Addr) {
-    Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
-    if (PtrTy->getPointerAddressSpace() != 0)
-      return false;
-  }
+  Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
+  if (PtrTy->getPointerAddressSpace() != 0)
+    return false;
 
   return true;
 }
@@ -577,8 +577,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
-    Value *ReturnAddress =
-        IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
+    auto ProgramAsPtrTy = PointerType::get(F.getParent()->getContext(),
+                                           DL.getProgramAddressSpace());
+    Value *ReturnAddress = IRB.CreateIntrinsic(
+        Intrinsic::returnaddress, {ProgramAsPtrTy}, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);

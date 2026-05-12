@@ -153,7 +153,11 @@ class LLVM_ABI AppleAcceleratorTable : public DWARFAcceleratorTable {
   uint64_t getHashBase() const { return getBucketBase() + getNumBuckets() * 4; }
 
   /// Return the offset into the section where the I-th hash is.
-  uint64_t getIthHashBase(uint32_t I) const { return getHashBase() + I * 4; }
+  std::optional<uint64_t> getIthHashBase(uint32_t I) const {
+    if (I < Hdr.HashCount)
+      return getHashBase() + I * 4;
+    return std::nullopt;
+  }
 
   /// Return the offset into the section where the offset list begins.
   uint64_t getOffsetBase() const { return getHashBase() + getNumHashes() * 4; }
@@ -164,8 +168,10 @@ class LLVM_ABI AppleAcceleratorTable : public DWARFAcceleratorTable {
   }
 
   /// Return the offset into the section where the I-th offset is.
-  uint64_t getIthOffsetBase(uint32_t I) const {
-    return getOffsetBase() + I * 4;
+  std::optional<uint64_t> getIthOffsetBase(uint32_t I) const {
+    if (I < Hdr.HashCount)
+      return getOffsetBase() + I * 4;
+    return std::nullopt;
   }
 
   /// Returns the index of the bucket where a hypothetical Hash would be.
@@ -188,14 +194,18 @@ class LLVM_ABI AppleAcceleratorTable : public DWARFAcceleratorTable {
 
   /// Reads the I-th hash in the hash list.
   std::optional<uint32_t> readIthHash(uint32_t I) const {
-    uint64_t Offset = getIthHashBase(I);
-    return readU32FromAccel(Offset);
+    std::optional<uint64_t> OptOffset = getIthHashBase(I);
+    if (OptOffset)
+      return readU32FromAccel(*OptOffset);
+    return std::nullopt;
   }
 
   /// Reads the I-th offset in the offset list.
   std::optional<uint32_t> readIthOffset(uint32_t I) const {
-    uint64_t Offset = getIthOffsetBase(I);
-    return readU32FromAccel(Offset);
+    std::optional<uint64_t> OptOffset = getIthOffsetBase(I);
+    if (OptOffset)
+      return readU32FromAccel(*OptOffset);
+    return std::nullopt;
   }
 
   /// Reads a string offset from the accelerator table at Offset, which is
@@ -282,6 +292,7 @@ public:
     constexpr static auto EndMarker = std::numeric_limits<uint64_t>::max();
 
     EntryWithName Current;
+    uint32_t OffsetIdx = 0;
     uint64_t Offset = EndMarker;
     uint32_t NumEntriesToCome = 0;
 
@@ -298,7 +309,9 @@ public:
     /// Reads the next string pointer and the entry count for that string,
     /// populating `NumEntriesToCome`.
     /// If not possible (e.g. end of the section), becomes the end iterator.
-    /// Assumes `Offset` points to a string reference.
+    /// If `Offset` is zero, then the next valid string offset will be fetched
+    /// from the Offsets array, otherwise it will continue to parse the current
+    /// entry's strings.
     void prepareNextStringOrEnd();
 
   public:

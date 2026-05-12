@@ -80,10 +80,9 @@ DuplicateIncludeCallbacks::DuplicateIncludeCallbacks(
   Files.emplace_back();
 
   AllowedRegexes.reserve(IgnoredList.size());
-  for (const StringRef &It : IgnoredList) {
+  for (const StringRef &It : IgnoredList)
     if (!It.empty())
       AllowedRegexes.emplace_back(It);
-  }
 }
 
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
@@ -118,8 +117,9 @@ void DuplicateIncludeCallbacks::InclusionDirective(
         advanceBeyondCurrentLine(SM, FilenameRange.getEnd(), 1);
     Check.diag(HashLoc, "duplicate include")
         << FixItHint::CreateRemoval(SourceRange{Start, End});
-  } else
+  } else {
     Files.back().push_back(FileName);
+  }
 }
 
 void DuplicateIncludeCallbacks::MacroDefined(const Token &MacroNameTok,

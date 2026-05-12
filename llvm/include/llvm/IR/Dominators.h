@@ -111,12 +111,7 @@ public:
     return Start;
   }
 
-  const BasicBlock *getEnd() const {
-    return End;
-  }
-
-  /// Check if this is the only edge between Start and End.
-  LLVM_ABI bool isSingleEdge() const;
+  const BasicBlock *getEnd() const { return End; }
 };
 
 template <> struct DenseMapInfo<BasicBlockEdge> {
@@ -294,21 +289,19 @@ public:
 
 /// Printer pass for the \c DominatorTree.
 class DominatorTreePrinterPass
-    : public PassInfoMixin<DominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<DominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit DominatorTreePrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c DominatorTree.
-struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
+struct DominatorTreeVerifierPass
+    : RequiredPassInfoMixin<DominatorTreeVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Enables verification of dominator trees.

@@ -177,7 +177,7 @@ add_libc_test(
 
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
     LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
-  list(APPEND strfrom_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+  libc_set_definition(strfrom_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
 add_header_library(
@@ -448,6 +448,19 @@ if(LLVM_LIBC_FULL_BUILD)
       libc-stdlib-tests
     SRCS
       _Exit_test.cpp
+    DEPENDS
+      libc.src.__support.OSUtil.osutil
+      libc.src.stdlib._Exit
+  )
+
+  add_libc_test(
+    exit_test
+    # The EXPECT_EXITS test is only availible for unit tests.
+    UNIT_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      exit_test.cpp
     DEPENDS
       libc.src.stdlib._Exit
       libc.src.stdlib.exit

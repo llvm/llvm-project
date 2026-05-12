@@ -9,8 +9,9 @@
 define double @constraint_f_double(double %a) nounwind {
 ; LA32-LABEL: constraint_f_double:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(gd)
-; LA32-NEXT:    fld.d $fa1, $a0, %pc_lo12(gd)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(gd)
+; LA32-NEXT:    fld.d $fa1, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LA32-NEXT:    #NO_APP

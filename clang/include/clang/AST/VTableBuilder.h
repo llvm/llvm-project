@@ -20,6 +20,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/Thunk.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <utility>
 
@@ -246,17 +247,17 @@ public:
   // point for a given vtable index.
   typedef llvm::SmallVector<unsigned, 4> AddressPointsIndexMapTy;
 
-private:
-  // Stores the component indices of the first component of each virtual table in
-  // the virtual table group. To save a little memory in the common case where
-  // the vtable group contains a single vtable, an empty vector here represents
-  // the vector {0}.
-  OwningArrayRef<size_t> VTableIndices;
+  using VTableIndicesTy = llvm::SmallVector<std::size_t>;
 
-  OwningArrayRef<VTableComponent> VTableComponents;
+private:
+  // Stores the component indices of the first component of each virtual table
+  // in the virtual table group.
+  VTableIndicesTy VTableIndices;
+
+  llvm::SmallVector<VTableComponent, 0> VTableComponents;
 
   /// Contains thunks needed by vtables, sorted by indices.
-  OwningArrayRef<VTableThunkTy> VTableThunks;
+  llvm::SmallVector<VTableThunkTy, 0> VTableThunks;
 
   /// Address points for all vtables.
   AddressPointsMapTy AddressPoints;
@@ -265,7 +266,8 @@ private:
   AddressPointsIndexMapTy AddressPointIndices;
 
 public:
-  VTableLayout(ArrayRef<size_t> VTableIndices,
+  // Requires `VTableIndices.front() == 0`
+  VTableLayout(VTableIndicesTy VTableIndices,
                ArrayRef<VTableComponent> VTableComponents,
                ArrayRef<VTableThunkTy> VTableThunks,
                const AddressPointsMapTy &AddressPoints);
@@ -292,26 +294,11 @@ public:
     return AddressPointIndices;
   }
 
-  size_t getNumVTables() const {
-    if (VTableIndices.empty())
-      return 1;
-    return VTableIndices.size();
-  }
+  size_t getNumVTables() const { return VTableIndices.size(); }
 
-  size_t getVTableOffset(size_t i) const {
-    if (VTableIndices.empty()) {
-      assert(i == 0);
-      return 0;
-    }
-    return VTableIndices[i];
-  }
+  size_t getVTableOffset(size_t i) const { return VTableIndices[i]; }
 
   size_t getVTableSize(size_t i) const {
-    if (VTableIndices.empty()) {
-      assert(i == 0);
-      return vtable_components().size();
-    }
-
     size_t thisIndex = VTableIndices[i];
     size_t nextIndex = (i + 1 == VTableIndices.size())
                            ? vtable_components().size()
@@ -397,17 +384,7 @@ private:
   void computeVTableRelatedInformation(const CXXRecordDecl *RD) override;
 
 public:
-  enum VTableComponentLayout {
-    /// Components in the vtable are pointers to other structs/functions.
-    Pointer,
-
-    /// Components in the vtable are relative offsets between the vtable and the
-    /// other structs/functions.
-    Relative,
-  };
-
-  ItaniumVTableContext(ASTContext &Context,
-                       VTableComponentLayout ComponentLayout = Pointer);
+  ItaniumVTableContext(ASTContext &Context);
   ~ItaniumVTableContext() override;
 
   const VTableLayout &getVTableLayout(const CXXRecordDecl *RD) {
@@ -459,16 +436,6 @@ public:
   static bool classof(const VTableContextBase *VT) {
     return !VT->isMicrosoft();
   }
-
-  VTableComponentLayout getVTableComponentLayout() const {
-    return ComponentLayout;
-  }
-
-  bool isPointerLayout() const { return ComponentLayout == Pointer; }
-  bool isRelativeLayout() const { return ComponentLayout == Relative; }
-
-private:
-  VTableComponentLayout ComponentLayout;
 };
 
 /// Holds information about the inheritance path to a virtual base or function

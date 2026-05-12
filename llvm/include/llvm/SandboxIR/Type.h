@@ -40,7 +40,8 @@ class TargetExtType;
 class VectorType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
 
 /// Just like llvm::Type these are immutable, unique, never get freed and
 /// can only be created via static factory methods.
@@ -72,7 +73,10 @@ protected:
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
+#undef DEF_CONST
   Context &Ctx;
 
   Type(llvm::Type *LLVMTy, Context &Ctx) : LLVMTy(LLVMTy), Ctx(Ctx) {}
@@ -269,11 +273,11 @@ public:
 
   // TODO: ADD MISSING
 
-  LLVM_ABI static Type *getInt64Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt32Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt16Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt8Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt1Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt64Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt32Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt16Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt8Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt1Ty(Context &Ctx);
   LLVM_ABI static Type *getDoubleTy(Context &Ctx);
   LLVM_ABI static Type *getFloatTy(Context &Ctx);
   LLVM_ABI static Type *getHalfTy(Context &Ctx);

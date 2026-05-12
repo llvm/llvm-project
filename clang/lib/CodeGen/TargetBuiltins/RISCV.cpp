@@ -1155,7 +1155,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     // Zbc
     case RISCV::BI__builtin_riscv_clmul_32:
     case RISCV::BI__builtin_riscv_clmul_64:
-      ID = Intrinsic::riscv_clmul;
+      ID = Intrinsic::clmul;
       break;
     case RISCV::BI__builtin_riscv_clmulh_32:
     case RISCV::BI__builtin_riscv_clmulh_64:
@@ -1346,6 +1346,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   case RISCV::BI__builtin_riscv_cv_alu_subuRN:
     ID = Intrinsic::riscv_cv_alu_subuRN;
+    break;
+
+  // XAndesPerf
+  case RISCV::BI__builtin_riscv_nds_ffb_32:
+  case RISCV::BI__builtin_riscv_nds_ffb_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffb;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffzmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffzmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffzmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_flmism_32:
+  case RISCV::BI__builtin_riscv_nds_flmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_flmism;
     break;
 
   // XAndesBFHCvt

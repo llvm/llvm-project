@@ -500,6 +500,17 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+opt<bool> StrongWorkspaceMode{
+    "strong-workspace-mode",
+    cat(Features),
+    desc("An alternate mode of operation for clangd, where the clangd instance "
+         "is used to edit a single workspace.\n"
+         "When enabled, fallback commands use the workspace directory as their "
+         "working directory instead of the parent folder."),
+    init(false),
+    Hidden,
+};
+
 opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
                           desc("Use files open in the editor when parsing "
                                "headers instead of reading from the disk"),
@@ -512,6 +523,14 @@ opt<bool> PreambleParseForwardingFunctions{
     desc("Parse all emplace-like functions in included headers"),
     Hidden,
     init(ParseOptions().PreambleParseForwardingFunctions),
+};
+
+opt<bool> SkipPreambleBuild{
+    "skip-preamble-build",
+    cat(Misc),
+    desc("If ture, skip preamble build"),
+    Hidden,
+    init(ParseOptions().SkipPreambleBuild),
 };
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
@@ -578,30 +597,31 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallString<16> Path(Body);
     path::native(Path);
-    path::make_absolute(TestScheme::TestDir, Path);
+    path::make_absolute(testDir(), Path);
     return std::string(Path);
   }
 
   llvm::Expected<URI>
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
     llvm::StringRef Body = AbsolutePath;
-    if (!Body.consume_front(TestScheme::TestDir))
+    if (!Body.consume_front(testDir()))
       return error("Path {0} doesn't start with root {1}", AbsolutePath,
-                   TestDir);
+                   testDir());
 
     return URI("test", /*Authority=*/"",
                llvm::sys::path::convert_to_slash(Body));
   }
 
 private:
-  const static char TestDir[];
-};
-
+  static llvm::StringRef testDir() {
 #ifdef _WIN32
-const char TestScheme::TestDir[] = "C:\\clangd-test";
+    static const std::string TestDir = llvm::sys::path::native("C:/clangd-test");
+    return TestDir;
 #else
-const char TestScheme::TestDir[] = "/clangd-test";
+    return "/clangd-test";
 #endif
+  }
+};
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
@@ -907,6 +927,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
+  Opts.StrongWorkspaceMode = StrongWorkspaceMode;
   Opts.BuildDynamicSymbolIndex = true;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
@@ -993,6 +1014,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
+  Opts.SkipPreambleBuild = SkipPreambleBuild;
   Opts.ImportInsertions = ImportInsertions;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {

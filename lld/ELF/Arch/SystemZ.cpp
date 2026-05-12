@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -23,7 +24,6 @@ namespace {
 class SystemZ : public TargetInfo {
 public:
   SystemZ(Ctx &);
-  int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -34,7 +34,9 @@ public:
   void addPltHeaderSymbols(InputSection &isd) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
   bool relaxOnce(int pass) const override;
@@ -44,9 +46,7 @@ public:
 
 private:
   void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
-  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsGdCall(uint8_t *loc, const Relocation &rel) const;
 };
 } // namespace
 
@@ -79,95 +79,21 @@ SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   defaultImageBase = 0x1000000;
 }
 
+// Only handles relocations used by relocateNonAlloc and preprocessRelocs.
 RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
                             const uint8_t *loc) const {
   switch (type) {
   case R_390_NONE:
     return R_NONE;
-  // Relocations targeting the symbol value.
-  case R_390_8:
-  case R_390_12:
-  case R_390_16:
-  case R_390_20:
   case R_390_32:
   case R_390_64:
     return R_ABS;
-  case R_390_PC16:
-  case R_390_PC32:
-  case R_390_PC64:
-  case R_390_PC12DBL:
-  case R_390_PC16DBL:
-  case R_390_PC24DBL:
-  case R_390_PC32DBL:
-    return R_PC;
-  case R_390_GOTOFF16:
-  case R_390_GOTOFF: // a.k.a. R_390_GOTOFF32
-  case R_390_GOTOFF64:
-    return R_GOTREL;
-  // Relocations targeting the PLT associated with the symbol.
-  case R_390_PLT32:
-  case R_390_PLT64:
-  case R_390_PLT12DBL:
-  case R_390_PLT16DBL:
-  case R_390_PLT24DBL:
-  case R_390_PLT32DBL:
-    return R_PLT_PC;
-  case R_390_PLTOFF16:
-  case R_390_PLTOFF32:
-  case R_390_PLTOFF64:
-    return R_PLT_GOTREL;
-  // Relocations targeting the GOT entry associated with the symbol.
-  case R_390_GOTENT:
-    return R_GOT_PC;
-  case R_390_GOT12:
-  case R_390_GOT16:
-  case R_390_GOT20:
-  case R_390_GOT32:
-  case R_390_GOT64:
-    return R_GOT_OFF;
-  // Relocations targeting the GOTPLT entry associated with the symbol.
-  case R_390_GOTPLTENT:
-    return R_GOTPLT_PC;
-  case R_390_GOTPLT12:
-  case R_390_GOTPLT16:
-  case R_390_GOTPLT20:
-  case R_390_GOTPLT32:
-  case R_390_GOTPLT64:
-    return R_GOTPLT_GOTREL;
-  // Relocations targeting _GLOBAL_OFFSET_TABLE_.
-  case R_390_GOTPC:
-  case R_390_GOTPCDBL:
-    return R_GOTONLY_PC;
-  // TLS-related relocations.
-  case R_390_TLS_LOAD:
-    return R_NONE;
-  case R_390_TLS_GDCALL:
-    return R_TLSGD_PC;
-  case R_390_TLS_LDCALL:
-    return R_TLSLD_PC;
-  case R_390_TLS_GD32:
-  case R_390_TLS_GD64:
-    return R_TLSGD_GOT;
-  case R_390_TLS_LDM32:
-  case R_390_TLS_LDM64:
-    return R_TLSLD_GOT;
   case R_390_TLS_LDO32:
   case R_390_TLS_LDO64:
     return R_DTPREL;
-  case R_390_TLS_LE32:
-  case R_390_TLS_LE64:
-    return R_TPREL;
-  case R_390_TLS_IE32:
-  case R_390_TLS_IE64:
-    return R_GOT;
-  case R_390_TLS_GOTIE12:
-  case R_390_TLS_GOTIE20:
-  case R_390_TLS_GOTIE32:
-  case R_390_TLS_GOTIE64:
-    return R_GOT_OFF;
-  case R_390_TLS_IEENT:
-    return R_GOT_PC;
-
+  case R_390_PC32:
+  case R_390_PC64:
+    return R_PC;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -265,150 +191,233 @@ int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
+template <class ELFT, class RelTy>
+void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    RelType type = it->getType(false);
+
+    // The assembler emits R_390_PLT32DBL (at the displacement field) before
+    // R_390_TLS_GDCALL/LDCALL (at the instruction start) for the same brasl.
+    // When optimizing TLS, skip PLT32DBL before maybeReportUndefined would
+    // flag __tls_get_offset as undefined.
+    if (type == R_390_PLT32DBL && !ctx.arg.shared &&
+        std::next(it) != rels.end()) {
+      RelType nextType = std::next(it)->getType(false);
+      if (nextType == R_390_TLS_GDCALL || nextType == R_390_TLS_LDCALL)
+        continue;
+    }
+
+    uint32_t symIdx = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = it->r_offset;
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_390_NONE:
+    case R_390_TLS_LOAD:
+      continue;
+
+    // Absolute relocations:
+    case R_390_8:
+    case R_390_12:
+    case R_390_16:
+    case R_390_20:
+    case R_390_32:
+    case R_390_64:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_390_PC16:
+    case R_390_PC32:
+    case R_390_PC64:
+    case R_390_PC12DBL:
+    case R_390_PC16DBL:
+    case R_390_PC24DBL:
+    case R_390_PC32DBL:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // PLT-generating relocations:
+    case R_390_PLT32:
+    case R_390_PLT64:
+    case R_390_PLT12DBL:
+    case R_390_PLT16DBL:
+    case R_390_PLT24DBL:
+    case R_390_PLT32DBL:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+    case R_390_PLTOFF16:
+    case R_390_PLTOFF32:
+    case R_390_PLTOFF64:
+      expr = R_PLT_GOTREL;
+      break;
+
+    // GOT-generating relocations:
+    case R_390_GOTOFF16:
+    case R_390_GOTOFF: // a.k.a. R_390_GOTOFF32
+    case R_390_GOTOFF64:
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTREL;
+      break;
+    case R_390_GOTENT:
+      expr = R_GOT_PC;
+      break;
+    case R_390_GOT12:
+    case R_390_GOT16:
+    case R_390_GOT20:
+    case R_390_GOT32:
+    case R_390_GOT64:
+      expr = R_GOT_OFF;
+      break;
+
+    case R_390_GOTPLTENT:
+      expr = R_GOTPLT_PC;
+      break;
+    case R_390_GOTPLT12:
+    case R_390_GOTPLT16:
+    case R_390_GOTPLT20:
+    case R_390_GOTPLT32:
+    case R_390_GOTPLT64:
+      expr = R_GOTPLT_GOTREL;
+      break;
+    case R_390_GOTPC:
+    case R_390_GOTPCDBL:
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTONLY_PC;
+      break;
+
+    // TLS relocations:
+    case R_390_TLS_LE32:
+    case R_390_TLS_LE64:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_390_TLS_IE32:
+    case R_390_TLS_IE64:
+      // There is no IE to LE optimization.
+      rs.handleTlsIe<false>(R_GOT, type, offset, addend, sym);
+      continue;
+    case R_390_TLS_GOTIE12:
+    case R_390_TLS_GOTIE20:
+    case R_390_TLS_GOTIE32:
+    case R_390_TLS_GOTIE64:
+      sym.setFlags(NEEDS_TLSIE);
+      sec.addReloc({R_GOT_OFF, type, offset, addend, &sym});
+      continue;
+    case R_390_TLS_IEENT:
+      sym.setFlags(NEEDS_TLSIE);
+      sec.addReloc({R_GOT_PC, type, offset, addend, &sym});
+      continue;
+    case R_390_TLS_GDCALL:
+      // Use dummy R_ABS for `sharedExpr` (no optimization), which is a no-op in
+      // relocate().
+      rs.handleTlsGd(R_ABS, R_GOT_OFF, R_TPREL, type, offset, addend, sym);
+      continue;
+    case R_390_TLS_GD32:
+    case R_390_TLS_GD64:
+      rs.handleTlsGd(R_TLSGD_GOT, R_GOT_OFF, R_TPREL, type, offset, addend,
+                     sym);
+      continue;
+
+    case R_390_TLS_LDCALL:
+      // Use dummy R_ABS for `sharedExpr` (no optimization), which is a no-op in
+      // relocate().
+      rs.handleTlsLd(R_ABS, type, offset, addend, sym);
+      continue;
+    // TLS LD GOT relocations:
+    case R_390_TLS_LDM32:
+    case R_390_TLS_LDM64:
+      rs.handleTlsLd(R_TLSLD_GOT, type, offset, addend, sym);
+      continue;
+    // TLS DTPREL relocations:
+    case R_390_TLS_LDO32:
+    case R_390_TLS_LDO64:
+      if (ctx.arg.shared)
+        sec.addReloc({R_DTPREL, type, offset, addend, &sym});
+      else
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+}
+
+void SystemZ::scanSection(InputSectionBase &sec) {
+  elf::scanSection1<SystemZ, ELF64BE>(*this, sec);
+}
+
 RelType SystemZ::getDynRel(RelType type) const {
   if (type == R_390_64 || type == R_390_PC64)
     return type;
   return R_390_NONE;
 }
 
-RelExpr SystemZ::adjustTlsExpr(RelType type, RelExpr expr) const {
-  if (expr == R_RELAX_TLS_GD_TO_IE)
-    return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
-  return expr;
-}
-
-int SystemZ::getTlsGdRelaxSkip(RelType type) const {
-  // A __tls_get_offset call instruction is marked with 2 relocations:
-  //
-  //   R_390_TLS_GDCALL / R_390_TLS_LDCALL: marker relocation
-  //   R_390_PLT32DBL: __tls_get_offset
-  //
-  // After the relaxation we no longer call __tls_get_offset and should skip
-  // both relocations to not create a false dependence on __tls_get_offset
-  // being defined.
-  //
-  // Note that this mechanism only works correctly if the R_390_TLS_[GL]DCALL
-  // is seen immediately *before* the R_390_PLT32DBL.  Unfortunately, current
-  // compilers on the platform will typically generate the inverse sequence.
-  // To fix this, we sort relocations by offset in RelocationScanner::scan;
-  // this ensures the correct sequence as the R_390_TLS_[GL]DCALL applies to
-  // the first byte of the brasl instruction, while the R_390_PLT32DBL applies
-  // to its third byte (the relative displacement).
-
-  if (type == R_390_TLS_GDCALL || type == R_390_TLS_LDCALL)
-    return 2;
-  return 1;
-}
-
-void SystemZ::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                             uint64_t val) const {
-  // The general-dynamic code sequence for a global `x`:
-  //
-  // Instruction                      Relocation       Symbol
-  // ear %rX,%a0
-  // sllg %rX,%rX,32
-  // ear %rX,%a1
-  // larl %r12,_GLOBAL_OFFSET_TABLE_  R_390_GOTPCDBL   _GLOBAL_OFFSET_TABLE_
-  // lgrl %r2,.LC0                    R_390_PC32DBL    .LC0
-  // brasl %r14,__tls_get_offset@plt  R_390_TLS_GDCALL x
-  //            :tls_gdcall:x         R_390_PLT32DBL   __tls_get_offset
-  // la %r2,0(%r2,%rX)
-  //
-  // .LC0:
-  // .quad   x@TLSGD                  R_390_TLS_GD64   x
-  //
-  // Relaxing to initial-exec entails:
-  // 1) Replacing the call by a load from the GOT.
-  // 2) Replacing the relocation on the constant LC0 by R_390_TLS_GOTIE64.
-
-  switch (rel.type) {
-  case R_390_TLS_GDCALL:
+// Rewrite the brasl instruction at loc for TLS GD/LD optimization.
+//
+// The general-dynamic code sequence for a global `x`:
+//
+// Instruction                      Relocation       Symbol
+// ear %rX,%a0
+// sllg %rX,%rX,32
+// ear %rX,%a1
+// larl %r12,_GLOBAL_OFFSET_TABLE_  R_390_GOTPCDBL   _GLOBAL_OFFSET_TABLE_
+// lgrl %r2,.LC0                    R_390_PC32DBL    .LC0
+// brasl %r14,__tls_get_offset@plt  R_390_TLS_GDCALL x
+//            :tls_gdcall:x         R_390_PLT32DBL   __tls_get_offset
+// la %r2,0(%r2,%rX)
+//
+// .LC0:
+// .quad   x@TLSGD                  R_390_TLS_GD64   x
+//
+// GD -> IE: replacing the call by a GOT load and LC0 by R_390_TLS_GOTIE64.
+// GD -> LE: replacing the call by a nop and LC0 by R_390_TLS_LE64.
+//
+// The local-dynamic code sequence for a global `x`:
+//
+// Instruction                      Relocation       Symbol
+// ear %rX,%a0
+// sllg %rX,%rX,32
+// ear %rX,%a1
+// larl %r12,_GLOBAL_OFFSET_TABLE_  R_390_GOTPCDBL   _GLOBAL_OFFSET_TABLE_
+// lgrl %r2,.LC0                    R_390_PC32DBL    .LC0
+// brasl %r14,__tls_get_offset@plt  R_390_TLS_LDCALL <sym>
+//            :tls_ldcall:<sym>     R_390_PLT32DBL   __tls_get_offset
+// la %r2,0(%r2,%rX)
+// lgrl %rY,.LC1                    R_390_PC32DBL    .LC1
+// la %r2,0(%r2,%rY)
+//
+// .LC0:
+// .quad   <sym>@tlsldm             R_390_TLS_LDM64  <sym>
+// .LC1:
+// .quad   x@dtpoff                 R_390_TLS_LDO64  x
+//
+// LD -> LE: replacing the call by a nop, LC0 by 0, LC1 by R_390_TLS_LE64.
+void SystemZ::relaxTlsGdCall(uint8_t *loc, const Relocation &rel) const {
+  if (rel.expr == R_GOT_OFF) {
     // brasl %r14,__tls_get_offset@plt -> lg %r2,0(%r2,%r12)
     write16be(loc, 0xe322);
     write32be(loc + 2, 0xc0000004);
-    break;
-  case R_390_TLS_GD64:
-    relocateNoSym(loc, R_390_TLS_GOTIE64, val);
-    break;
-  default:
-    llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
-  }
-}
-
-void SystemZ::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                             uint64_t val) const {
-  // The general-dynamic code sequence for a global `x`:
-  //
-  // Instruction                      Relocation       Symbol
-  // ear %rX,%a0
-  // sllg %rX,%rX,32
-  // ear %rX,%a1
-  // larl %r12,_GLOBAL_OFFSET_TABLE_  R_390_GOTPCDBL   _GLOBAL_OFFSET_TABLE_
-  // lgrl %r2,.LC0                    R_390_PC32DBL    .LC0
-  // brasl %r14,__tls_get_offset@plt  R_390_TLS_GDCALL x
-  //            :tls_gdcall:x         R_390_PLT32DBL   __tls_get_offset
-  // la %r2,0(%r2,%rX)
-  //
-  // .LC0:
-  // .quad   x@tlsgd                  R_390_TLS_GD64   x
-  //
-  // Relaxing to local-exec entails:
-  // 1) Replacing the call by a nop.
-  // 2) Replacing the relocation on the constant LC0 by R_390_TLS_LE64.
-
-  switch (rel.type) {
-  case R_390_TLS_GDCALL:
+  } else {
     // brasl %r14,__tls_get_offset@plt -> brcl 0,.
     write16be(loc, 0xc004);
     write32be(loc + 2, 0x00000000);
-    break;
-  case R_390_TLS_GD64:
-    relocateNoSym(loc, R_390_TLS_LE64, val);
-    break;
-  default:
-    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
-  }
-}
-
-void SystemZ::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                             uint64_t val) const {
-  // The local-dynamic code sequence for a global `x`:
-  //
-  // Instruction                      Relocation       Symbol
-  // ear %rX,%a0
-  // sllg %rX,%rX,32
-  // ear %rX,%a1
-  // larl %r12,_GLOBAL_OFFSET_TABLE_  R_390_GOTPCDBL   _GLOBAL_OFFSET_TABLE_
-  // lgrl %r2,.LC0                    R_390_PC32DBL    .LC0
-  // brasl %r14,__tls_get_offset@plt  R_390_TLS_LDCALL <sym>
-  //            :tls_ldcall:<sym>     R_390_PLT32DBL   __tls_get_offset
-  // la %r2,0(%r2,%rX)
-  // lgrl %rY,.LC1                    R_390_PC32DBL    .LC1
-  // la %r2,0(%r2,%rY)
-  //
-  // .LC0:
-  // .quad   <sym>@tlsldm             R_390_TLS_LDM64  <sym>
-  // .LC1:
-  // .quad   x@dtpoff                 R_390_TLS_LDO64  x
-  //
-  // Relaxing to local-exec entails:
-  // 1) Replacing the call by a nop.
-  // 2) Replacing the constant LC0 by 0 (i.e. ignoring the relocation).
-  // 3) Replacing the relocation on the constant LC1 by R_390_TLS_LE64.
-
-  switch (rel.type) {
-  case R_390_TLS_LDCALL:
-    // brasl %r14,__tls_get_offset@plt -> brcl 0,.
-    write16be(loc, 0xc004);
-    write32be(loc + 2, 0x00000000);
-    break;
-  case R_390_TLS_LDM64:
-    break;
-  case R_390_TLS_LDO64:
-    relocateNoSym(loc, R_390_TLS_LE64, val);
-    break;
-  default:
-    llvm_unreachable("unsupported relocation for TLS LD to LE relaxation");
   }
 }
 
@@ -477,18 +486,28 @@ void SystemZ::relaxGot(uint8_t *loc, const Relocation &rel,
 
 void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
                        uint64_t val) const {
-  switch (rel.expr) {
-  case R_RELAX_GOT_PC:
+  if (rel.expr == R_RELAX_GOT_PC)
     return relaxGot(loc, rel, val);
-  case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
-    return relaxTlsGdToIe(loc, rel, val);
-  case R_RELAX_TLS_GD_TO_LE:
-    return relaxTlsGdToLe(loc, rel, val);
-  case R_RELAX_TLS_LD_TO_LE:
-    return relaxTlsLdToLe(loc, rel, val);
+
+  // Handle TLS optimizations. GDCALL/LDCALL: rewrite the brasl instruction
+  // and return. LDM slots are zeroed when relaxed to LE. Other TLS data slot
+  // types (GD32/GD64, LDO) fall through to the normal type-based switch below.
+  switch (rel.type) {
+  case R_390_TLS_GDCALL:
+  case R_390_TLS_LDCALL:
+    if (rel.expr == R_ABS) // Shared: no optimization.
+      return;
+    relaxTlsGdCall(loc, rel);
+    return;
+  case R_390_TLS_LDM32:
+  case R_390_TLS_LDM64:
+    if (rel.expr == R_TPREL)
+      return; // LD -> LE: slot stays 0.
+    break;
   default:
     break;
   }
+
   switch (rel.type) {
   case R_390_8:
     checkIntUInt(ctx, loc, val, 8, rel);
@@ -590,8 +609,6 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
     write64be(loc, val);
     break;
   case R_390_TLS_LOAD:
-  case R_390_TLS_GDCALL:
-  case R_390_TLS_LDCALL:
     break;
   default:
     llvm_unreachable("unknown relocation");

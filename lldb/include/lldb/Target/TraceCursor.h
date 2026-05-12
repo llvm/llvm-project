@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_TRACE_CURSOR_H
-#define LLDB_TARGET_TRACE_CURSOR_H
+#ifndef LLDB_TARGET_TRACECURSOR_H
+#define LLDB_TARGET_TRACECURSOR_H
 
 #include "lldb/lldb-private.h"
 
@@ -290,4 +290,4 @@ protected:
 };
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_TRACE_CURSOR_H
+#endif // LLDB_TARGET_TRACECURSOR_H

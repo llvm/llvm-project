@@ -14,6 +14,8 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
+#include "hdr/sys_mman_macros.h" // For POSIX_MADV_DONTNEED.
+
 namespace LIBC_NAMESPACE_DECL {
 
 // This function is currently linux only. It has to be refactored suitably if

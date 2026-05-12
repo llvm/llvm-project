@@ -63,7 +63,10 @@ static mlir::Attribute convertToAttribute(
                             {value.ToUInt64(), value.SHIFTR(64).ToUInt64()}));
     }
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.getIntegerAttr(type, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.getIntegerAttr(type, value.IsTrue());
+    else
+      return builder.getIntegerAttr(type, value.word().ToInt64());
   } else {
     auto getFloatAttr = [&](const auto &value, mlir::Type type) {
       std::string str = value.DumpHexadecimal();
@@ -262,7 +265,15 @@ static mlir::Value genScalarLit(
     }
     return builder.createIntegerConstant(loc, ty, value.ToInt64());
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.createBool(loc, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.createBool(loc, value.IsTrue());
+    mlir::Type logicalType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Logical, KIND, {});
+    mlir::Type intType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND, {});
+    mlir::Value integer =
+        builder.createIntegerConstant(loc, intType, value.word().ToInt64());
+    return fir::BitcastOp::create(builder, loc, logicalType, integer);
   } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
     std::string str = value.DumpHexadecimal();
     if constexpr (KIND == 2) {
@@ -486,18 +497,6 @@ static mlir::Value genInlinedStructureCtorLitImpl(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto recTy = mlir::cast<fir::RecordType>(type);
 
-  if (!converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    mlir::Value res = fir::UndefOp::create(builder, loc, recTy);
-    for (const auto &[sym, expr] : ctor.values()) {
-      // Parent components need more work because they do not appear in the
-      // fir.rec type.
-      if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
-        TODO(loc, "parent component in structure constructor");
-      res = genStructureComponentInit(converter, loc, sym, expr.value(), res);
-    }
-    return res;
-  }
-
   auto fieldTy = fir::FieldType::get(recTy.getContext());
   mlir::Value res{};
   // When the first structure component values belong to some parent type PT
@@ -532,6 +531,12 @@ static mlir::Value genInlinedStructureCtorLitImpl(
   for (const auto &[sym, expr] : ctor.values()) {
     const Fortran::semantics::DerivedTypeSpec *componentParentType =
         sym->owner().derivedTypeSpec();
+    // TODO: This is not a complete fix. For some parameterized derived type
+    // component initializations, the component symbol owner does not have a
+    // derived type spec. Falling back to ctor.derivedTypeSpec() avoids the
+    // crash, but may not always represent the correct parent type.
+    if (!componentParentType)
+      TODO(loc, "parameterized derived types");
     assert(componentParentType && "failed to retrieve component parent type");
     if (!res) {
       mlir::Type parentType = converter.genType(*componentParentType);
@@ -680,7 +685,7 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     // Using a dense attribute for the initial value instead of creating an
-    // intialization body speeds up MLIR/LLVM compilation, but this is not
+    // initialization body speeds up MLIR/LLVM compilation, but this is not
     // always possible.
     if constexpr (T::category == Fortran::common::TypeCategory::Logical ||
                   T::category == Fortran::common::TypeCategory::Integer ||

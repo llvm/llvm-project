@@ -9,7 +9,7 @@ condition is not checked prior to the first iteration.
 This can lead to subtle bugs.
 
 This check implements `ES.75
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Res-do>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#res-do>`_
 from the C++ Core Guidelines.
 
 Examples:

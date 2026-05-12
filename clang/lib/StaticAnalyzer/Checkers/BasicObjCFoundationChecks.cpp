@@ -70,16 +70,12 @@ enum FoundationClass {
 
 static FoundationClass findKnownClass(const ObjCInterfaceDecl *ID,
                                       bool IncludeSuperclasses = true) {
-  static llvm::StringMap<FoundationClass> Classes;
-  if (Classes.empty()) {
-    Classes["NSArray"] = FC_NSArray;
-    Classes["NSDictionary"] = FC_NSDictionary;
-    Classes["NSEnumerator"] = FC_NSEnumerator;
-    Classes["NSNull"] = FC_NSNull;
-    Classes["NSOrderedSet"] = FC_NSOrderedSet;
-    Classes["NSSet"] = FC_NSSet;
-    Classes["NSString"] = FC_NSString;
-  }
+  static const llvm::StringMap<FoundationClass> Classes{
+      {"NSArray", FC_NSArray},           {"NSDictionary", FC_NSDictionary},
+      {"NSEnumerator", FC_NSEnumerator}, {"NSNull", FC_NSNull},
+      {"NSOrderedSet", FC_NSOrderedSet}, {"NSSet", FC_NSSet},
+      {"NSString", FC_NSString},
+  };
 
   // FIXME: Should we cache this at all?
   FoundationClass result = Classes.lookup(ID->getIdentifier()->getName());
@@ -889,8 +885,8 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
     const VarDecl *ElemDecl = cast<VarDecl>(DS->getSingleDecl());
     assert(ElemDecl->getInit() == nullptr);
     ElementLoc = State->getLValue(ElemDecl, LCtx);
-  } else {
-    ElementLoc = State->getSVal(Element, LCtx).getAs<Loc>();
+  } else if (const auto *E = dyn_cast<Expr>(Element)) {
+    ElementLoc = State->getSVal(E, LCtx).getAs<Loc>();
   }
 
   if (!ElementLoc)

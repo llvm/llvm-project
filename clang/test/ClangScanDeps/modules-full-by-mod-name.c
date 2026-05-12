@@ -28,6 +28,17 @@ module transitive { header "transitive.h" }
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
+//--- cdb.cc1.json.template
+[{
+  "file": "",
+  "directory": "DIR",
+  "command": "clang -cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -I DIR -x c"
+}]
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb.cc1.json.template > %t/cdb.cc1.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.cc1.json -format experimental-full -module-names=root > %t/result.cc1.json
+// RUN: cat %t/result.cc1.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {

@@ -44,7 +44,7 @@ public:
   /// Runs the interestingness testing script on a MLIR test case file. Returns
   /// true if the interesting behavior is present in the test case or false
   /// otherwise.
-  std::pair<Interestingness, size_t> isInteresting(ModuleOp module) const;
+  std::pair<Interestingness, size_t> isInteresting(Operation *topOp) const;
 
   /// Return whether the file in the given path is interesting.
   Interestingness isInteresting(StringRef testCase) const;
