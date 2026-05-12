@@ -1161,11 +1161,11 @@ define void @hoistable_predicated_store(ptr %A, ptr %B, ptr %C, ptr %D) {
 ; VEC-NEXT:    [[CONFLICT_RDX18:%.*]] = or i1 [[CONFLICT_RDX14]], [[FOUND_CONFLICT17]]
 ; VEC-NEXT:    br i1 [[CONFLICT_RDX18]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
+; VEC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 8, !alias.scope [[META16:![0-9]+]]
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    store i32 0, ptr [[C]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META19:![0-9]+]]
-; VEC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 8, !alias.scope [[META23:![0-9]+]]
+; VEC-NEXT:    store i32 0, ptr [[C]], align 4, !alias.scope [[META19:![0-9]+]], !noalias [[META21:![0-9]+]]
 ; VEC-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4, !alias.scope [[META24:![0-9]+]], !noalias [[META25:![0-9]+]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
