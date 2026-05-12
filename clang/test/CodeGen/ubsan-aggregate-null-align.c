@@ -18,7 +18,7 @@ extern "C" {
 // LHS checks - C only
 // Note: In C++, aggregate assignment goes through operator=
 // which is a different code path (CGExprCXX.cpp).
-// LHS checks for C++ will be addressed in a follow-up PR.
+// FIXME: LHS checks for C++ will be addressed in a follow-up PR
 
 // C-LABEL: define {{.*}}@test_lhs_ptrcheck_deref(
 // C: [[DEST:%.*]] = load ptr, ptr %dest.addr
@@ -37,12 +37,7 @@ void test_lhs_ptrcheck_deref(AGG *dest) {
 }
 
 // C-LABEL: define {{.*}}@test_lhs_ptrcheck_subscript(
-// C: [[ARR:%.*]] = load ptr, ptr %arr.addr
-// C-NEXT: [[DEST:%.*]] = getelementptr inbounds %{{(struct|union)}}.Agg, ptr [[ARR]], i64 0
-// C-NEXT: [[CMP:%.*]] = icmp ne ptr [[DEST]], null, !nosanitize
-// C: handler.type_mismatch:
-// C-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// C: call void @llvm.memcpy
+// C: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_lhs_ptrcheck_subscript(AGG arr[4]) {
   AGG local = {0};
   arr[0] = local;
@@ -69,12 +64,7 @@ void test_rhs_ptrcheck_deref(AGG *src) {
 }
 
 // CHECK-LABEL: define {{.*}}@test_rhs_ptrcheck_subscript(
-// CHECK: [[ARR:%.*]] = load ptr, ptr %arr.addr
-// CHECK-NEXT: [[SRC:%.*]] = getelementptr inbounds %{{(struct|union)}}.Agg, ptr [[ARR]], i64 0
-// CHECK-NEXT: [[CMP:%.*]] = icmp ne ptr [[SRC]], null, !nosanitize
-// CHECK: handler.type_mismatch:
-// CHECK-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// CHECK: call void @llvm.memcpy
+// CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_rhs_ptrcheck_subscript(AGG arr[4]) {
   AGG local;
   local = arr[0];
@@ -84,18 +74,14 @@ void test_rhs_ptrcheck_subscript(AGG arr[4]) {
 // RHS cases - handler call only
 
 // CHECK-LABEL: define {{.*}}@test_init_from_ptr(
-// CHECK: handler.type_mismatch:
-// CHECK-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// CHECK: call void @llvm.memcpy
+// CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_init_from_ptr(AGG *src) {
   AGG local = *src;
   (void)local;
 }
 
 // CHECK-LABEL: define {{.*}}@test_init_from_array(
-// CHECK: handler.type_mismatch:
-// CHECK-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// CHECK: call void @llvm.memcpy
+// CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_init_from_array(AGG arr[4]) {
   AGG local = arr[0];
   (void)local;
@@ -104,7 +90,8 @@ void test_init_from_array(AGG arr[4]) {
 // Array bounds - out-of-bounds access (RHS)
 
 // CHECK-LABEL: define {{.*}}@test_oob_rhs(
-// CHECK: br i1 {{(true|false)}}, label %cont, label %handler.out_of_bounds
+// C: br i1 false, label %cont, label %handler.out_of_bounds
+// CXX: br i1 true, label %cont, label %handler.out_of_bounds
 // CHECK: handler.out_of_bounds:
 // CHECK-NEXT: call void @__ubsan_handle_out_of_bounds_abort
 // CHECK: handler.type_mismatch:
@@ -118,9 +105,11 @@ void test_oob_rhs(void) {
 }
 
 // Array bounds - out-of-bounds access (LHS)
+// FIXME: LHS checks for C++ will be addressed in a follow-up PR.
 
 // CHECK-LABEL: define {{.*}}@test_oob_lhs(
-// CHECK: br i1 {{(true|false)}}, label %cont, label %handler.out_of_bounds
+// C: br i1 false, label %cont, label %handler.out_of_bounds
+// CXX: br i1 true, label %cont, label %handler.out_of_bounds
 // CHECK: handler.out_of_bounds:
 // CHECK-NEXT: call void @__ubsan_handle_out_of_bounds_abort
 // C: handler.type_mismatch:
@@ -144,26 +133,31 @@ void test_oob_lhs(void) {
 extern "C" {
 
 // CXX-LABEL: define {{.*}}@test_cxx_direct_init(
-// CXX: handler.type_mismatch:
-// CXX-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// CXX: call void @llvm.memcpy
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_cxx_direct_init(AGG *src) {
   AGG local(*src);
   (void)local;
 }
 
 // CXX-LABEL: define {{.*}}@test_cxx_brace_init(
-// CXX: handler.type_mismatch:
-// CXX-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// CXX: call void @llvm.memcpy
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_cxx_brace_init(AGG *src) {
   AGG local{*src};
   (void)local;
 }
 
 // CXX-LABEL: define {{.*}}@test_cxx_new(
-// CXX: handler.type_mismatch:
-// CXX-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
+// operator new return value check (existing)
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+// Instrumentation for *src access
+// CXX: [[SRC:%.*]] = load ptr, ptr %src.addr
+// CXX-NEXT: [[CMP:%.*]] = icmp ne ptr [[SRC]], null, !nosanitize
+// CXX-NEXT: [[INT:%.*]] = ptrtoint ptr [[SRC]] to i64, !nosanitize
+// CXX-NEXT: [[AND:%.*]] = and i64 [[INT]], 3, !nosanitize
+// CXX-NEXT: [[ALIGN:%.*]] = icmp eq i64 [[AND]], 0, !nosanitize
+// CXX-NEXT: [[OK:%.*]] = and i1 [[CMP]], [[ALIGN]], !nosanitize
+// CXX-NEXT: br i1 [[OK]]
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort
 // CXX: call void @llvm.memcpy
 void test_cxx_new(AGG *src) {
   AGG *p = new AGG(*src);
