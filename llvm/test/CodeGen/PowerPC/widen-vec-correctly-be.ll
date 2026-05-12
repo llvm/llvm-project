@@ -8,7 +8,7 @@
 define void @test() local_unnamed_addr #0 align 2 {
 ; CHECK-BE-LABEL: test:
 ; CHECK-BE:       # %bb.0: # %bb
-; CHECK-BE-NEXT:    lwz r3, 0(r3)
+; CHECK-BE-NEXT:    lhz r3, 0(r3)
 ; CHECK-BE-NEXT:    vspltisw v2, -16
 ; CHECK-BE-NEXT:    addi r3, r3, 1
 ; CHECK-BE-NEXT:    xxlxor vs0, vs0, vs0
@@ -31,7 +31,7 @@ define void @test() local_unnamed_addr #0 align 2 {
 ;
 ; CHECK-P9-BE-LABEL: test:
 ; CHECK-P9-BE:       # %bb.0: # %bb
-; CHECK-P9-BE-NEXT:    lwz r3, 0(r3)
+; CHECK-P9-BE-NEXT:    lhz r3, 0(r3)
 ; CHECK-P9-BE-NEXT:    vspltisw v3, -16
 ; CHECK-P9-BE-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-P9-BE-NEXT:    addi r3, r3, 1

@@ -362,6 +362,12 @@ def FeaturePredictableSelectIsExpensive :
 def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
                                        "MFLR is a fast instruction">;
 
+// When enabled indirect calls will place the address of the descriptor
+// into r11 and do a direct branch to the ._ptrgl routine.
+def FeaturePointerGlueHelper :
+ SubtargetFeature<"use-ptrgl-helper", "UsePointerGlueHelper", "true",
+                  "Use ._ptrgl for indirect calls">;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
 

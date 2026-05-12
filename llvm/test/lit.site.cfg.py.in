@@ -8,6 +8,7 @@ config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
 config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
 config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
 config.llvm_ir2vec_test_python_bindings = @LLVM_IR2VEC_TEST_PYTHON_BINDINGS@
+config.llvm_ir2vec_bindings_dir = "@LLVM_IR2VEC_BINDINGS_DIR@"
 config.llvm_lib_dir = lit_config.substitute(path(r"@LLVM_LIBS_DIR@"))
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.llvm_shlib_ext = "@SHLIBEXT@"
@@ -68,6 +69,7 @@ config.have_vc_rev = @LLVM_APPEND_VC_REV@
 config.force_vc_rev = "@LLVM_FORCE_VC_REVISION@"
 config.has_logf128 = @LLVM_HAS_LOGF128@
 config.have_ondisk_cas = @LLVM_ENABLE_ONDISK_CAS@
+config.have_opencsd = @LLVM_HAVE_OPENCSD@
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

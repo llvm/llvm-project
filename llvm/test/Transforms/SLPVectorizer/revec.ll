@@ -64,7 +64,7 @@ define void @test3(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP0]], ptr [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[TMP1]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[Y]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
@@ -125,7 +125,7 @@ define void @test5(ptr %ptr0, ptr %ptr1) {
 ; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr i8, ptr null, i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> <ptr null, ptr null, ptr undef, ptr undef>, ptr [[GETELEMENTPTR0]], i32 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> [[TMP0]], ptr null, i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x ptr> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x ptr> splat (ptr null), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> <ptr poison, ptr null, ptr null, ptr null>, ptr [[PTR0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[PTR1:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <4 x ptr> [[TMP3]], [[TMP4]]
@@ -224,8 +224,7 @@ define void @test8() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x float> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP8:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP8]] = phi <8 x float> [ [[TMP2:%.*]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2]] = shufflevector <8 x float> [[TMP8]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8]] = phi <8 x float> [ [[TMP8]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 false, label [[FOR0]], label [[FOR_BODY]]
 ;
 entry:

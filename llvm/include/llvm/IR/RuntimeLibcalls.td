@@ -218,7 +218,9 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def COSH_#S : RuntimeLibcall;
   def COSPI_#S : RuntimeLibcall;
   def ERFC_#S : RuntimeLibcall;
+  def ERFCINV_#S : RuntimeLibcall;
   def ERF_#S : RuntimeLibcall;
+  def ERFINV_#S : RuntimeLibcall;
   def EXP_#S : RuntimeLibcall;
   def EXP_FINITE_#S : RuntimeLibcall;
   def EXP10_#S : RuntimeLibcall;
@@ -253,6 +255,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def TANH_#S : RuntimeLibcall;
   def TGAMMA_#S : RuntimeLibcall;
   def CDFNORM_#S : RuntimeLibcall;
+  def CDFNORMINV_#S : RuntimeLibcall;
   def ROUND_#S : RuntimeLibcall;
 }
 
@@ -4431,6 +4434,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
   def amd_vrd2_pow : RuntimeLibcallImpl<POW_V2F64>;
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
+  def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
   def amd_vrd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
@@ -4455,6 +4459,12 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
   def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
+  def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
+  def amd_vrd4_erfinv : RuntimeLibcallImpl<ERFINV_V4F64>;
+  def amd_vrd8_erfinv : RuntimeLibcallImpl<ERFINV_V8F64>;
+  def amd_vrd2_erfcinv : RuntimeLibcallImpl<ERFCINV_V2F64>;
+  def amd_vrd4_erfcinv : RuntimeLibcallImpl<ERFCINV_V4F64>;
+  def amd_vrd8_erfcinv : RuntimeLibcallImpl<ERFCINV_V8F64>;
   def amd_vrs16_acosf : RuntimeLibcallImpl<ACOS_V16F32>;
   def amd_vrs16_asinf : RuntimeLibcallImpl<ASIN_V16F32>;
   def amd_vrs16_atanf : RuntimeLibcallImpl<ATAN_V16F32>;
@@ -4509,6 +4519,9 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_cdfnorm : RuntimeLibcallImpl<CDFNORM_V2F64>;
   def amd_vrd4_cdfnorm : RuntimeLibcallImpl<CDFNORM_V4F64>;
   def amd_vrd8_cdfnorm : RuntimeLibcallImpl<CDFNORM_V8F64>;
+  def amd_vrd2_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V2F64>;
+  def amd_vrd4_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V4F64>;
+  def amd_vrd8_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V8F64>;
   def amd_vrs4_roundf : RuntimeLibcallImpl<ROUND_V4F32>;
   def amd_vrs8_roundf : RuntimeLibcallImpl<ROUND_V8F32>;
   def amd_vrs16_roundf : RuntimeLibcallImpl<ROUND_V16F32>;

@@ -1614,6 +1614,9 @@ public:
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override;
+
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
   std::pair<unsigned, unsigned>
@@ -1660,6 +1663,11 @@ public:
                                     Register Dst) const override;
 
   bool isWave32() const;
+
+  bool isVOPDAntidependencyAllowed(const MachineInstr &MI) const;
+
+  bool hasRAWDependency(const MachineInstr &FirstMI,
+                        const MachineInstr &SecondMI) const;
 
   /// Return a partially built integer add instruction without carry.
   /// Caller must add source operands.
