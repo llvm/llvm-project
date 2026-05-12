@@ -8,7 +8,6 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test(self):
         """Test explicit Swift modules"""
         self.build()
@@ -24,7 +23,6 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_disable_esml(self):
         """Test disabling the explicit Swift module loader"""
         self.build()
