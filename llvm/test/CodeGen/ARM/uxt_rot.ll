@@ -25,8 +25,7 @@ define zeroext i32 @test2(i32 %A.u, i32 %B.u) {
 define zeroext i32 @test3(i32 %A.u) {
 ; CHECK-V6-LABEL: test3:
 ; CHECK-V6:       @ %bb.0:
-; CHECK-V6-NEXT:    lsr r0, r0, #8
-; CHECK-V6-NEXT:    uxth r0, r0
+; CHECK-V6-NEXT:    uxth r0, r0, ror #8
 ; CHECK-V6-NEXT:    bx lr
 ;
 ; CHECK-V7-LABEL: test3:
@@ -44,8 +43,7 @@ define zeroext i32 @test3(i32 %A.u) {
 define zeroext i32 @test4(i32 %A.u) {
 ; CHECK-V6-LABEL: test4:
 ; CHECK-V6:       @ %bb.0:
-; CHECK-V6-NEXT:    lsr r0, r0, #8
-; CHECK-V6-NEXT:    uxtb r0, r0
+; CHECK-V6-NEXT:    uxtb r0, r0, ror #8
 ; CHECK-V6-NEXT:    bx lr
 ;
 ; CHECK-V7-LABEL: test4:

@@ -1626,6 +1626,10 @@ def : Pat<(qc_insb GPRNoX0:$rd, GPR:$rs1, uimm5_plus1:$width, uimm5:$shamt),
 let Predicates = [HasVendorXqcibm, NoStdExtZbb, IsRV32] in {
 def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (QC_EXT GPR:$rs1, 16, 0)>;
 def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (QC_EXT GPR:$rs1, 8, 0)>;
+def : Pat<(sext_inreg (srl GPRNoX0:$rs1, uimm5:$shamt), i16),
+          (QC_EXT GPRNoX0:$rs1, 16, uimm5:$shamt)>;
+def : Pat<(sext_inreg (srl GPRNoX0:$rs1, uimm5:$shamt), i8),
+          (QC_EXT GPRNoX0:$rs1, 8, uimm5:$shamt)>;
 } // Predicates = [HasVendorXqcibm, NoStdExtZbb, IsRV32]
 
 let Predicates = [HasVendorXqcibm, HasStdExtZbb, IsRV32] in {

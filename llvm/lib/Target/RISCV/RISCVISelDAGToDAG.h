@@ -75,6 +75,7 @@ public:
 
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
+  bool trySignedBitfieldExtractFromSExtInReg(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
@@ -200,6 +201,8 @@ public:
 #include "RISCVGenDAGISel.inc"
 
 private:
+  SDNode *selectSignedBitfieldExtract(SDValue Src, unsigned Msb, unsigned Lsb,
+                                      const SDLoc &DL, MVT VT, unsigned Opc);
   bool doPeepholeSExtW(SDNode *Node);
   bool doPeepholeMaskedRVV(MachineSDNode *Node);
   bool doPeepholeNoRegPassThru();

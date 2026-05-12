@@ -4,8 +4,7 @@
 define i32 @zext_u8_from_shift8(i32 %0) {
 ; CHECK-LABEL: zext_u8_from_shift8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsr r0, r0, #8
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    uxtb r0, r0, ror #8
 ; CHECK-NEXT:    bx lr
   %2 = lshr i32 %0, 8
   %3 = and i32 %2, 255
@@ -15,8 +14,7 @@ define i32 @zext_u8_from_shift8(i32 %0) {
 define i32 @zext_u8_from_shift16(i32 %0) {
 ; CHECK-LABEL: zext_u8_from_shift16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsr r0, r0, #16
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    uxtb r0, r0, ror #16
 ; CHECK-NEXT:    bx lr
   %2 = lshr i32 %0, 16
   %3 = and i32 %2, 255
@@ -26,8 +24,7 @@ define i32 @zext_u8_from_shift16(i32 %0) {
 define i32 @sext_i8_from_bits8(i32 %0) {
 ; CHECK-LABEL: sext_i8_from_bits8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsl r0, r0, #16
-; CHECK-NEXT:    asr r0, r0, #24
+; CHECK-NEXT:    sxtb r0, r0, ror #8
 ; CHECK-NEXT:    bx lr
   %2 = shl i32 %0, 16
   %3 = ashr i32 %2, 24
@@ -37,8 +34,7 @@ define i32 @sext_i8_from_bits8(i32 %0) {
 define i32 @sext_i8_from_bits16(i32 %0) {
 ; CHECK-LABEL: sext_i8_from_bits16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsl r0, r0, #8
-; CHECK-NEXT:    asr r0, r0, #24
+; CHECK-NEXT:    sxtb r0, r0, ror #16
 ; CHECK-NEXT:    bx lr
   %2 = shl i32 %0, 8
   %3 = ashr i32 %2, 24
@@ -48,8 +44,7 @@ define i32 @sext_i8_from_bits16(i32 %0) {
 define i32 @zext_u16_from_shift8(i32 %0) {
 ; CHECK-LABEL: zext_u16_from_shift8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsr r0, r0, #8
-; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    uxth r0, r0, ror #8
 ; CHECK-NEXT:    bx lr
   %2 = lshr i32 %0, 8
   %3 = and i32 %2, 65535
@@ -59,8 +54,7 @@ define i32 @zext_u16_from_shift8(i32 %0) {
 define i32 @sext_i16_from_shift8(i32 %0) {
 ; CHECK-LABEL: sext_i16_from_shift8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsl r0, r0, #8
-; CHECK-NEXT:    asr r0, r0, #16
+; CHECK-NEXT:    sxth r0, r0, ror #8
 ; CHECK-NEXT:    bx lr
   %2 = shl i32 %0, 8
   %3 = ashr i32 %2, 16

@@ -14,8 +14,7 @@ define i32 @test0(i8 %A) {
 define signext i8 @test1(i32 %A) {
 ; CHECK-V6-LABEL: test1:
 ; CHECK-V6:       @ %bb.0:
-; CHECK-V6-NEXT:    lsr r0, r0, #8
-; CHECK-V6-NEXT:    sxtb r0, r0
+; CHECK-V6-NEXT:    sxtb r0, r0, ror #8
 ; CHECK-V6-NEXT:    bx lr
 ;
 ; CHECK-V7-LABEL: test1:

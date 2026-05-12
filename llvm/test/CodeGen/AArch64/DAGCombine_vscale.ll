@@ -18,8 +18,9 @@ define <vscale x 4 x i32> @sext_inreg(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @ashr_shl(<vscale x 4 x i32> %a)  {
 ; CHECK-LABEL: ashr_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl z0.s, z0.s, #8
-; CHECK-NEXT:    asr z0.s, z0.s, #16
+; CHECK-NEXT:    lsr z0.s, z0.s, #8
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %shl = shl <vscale x 4 x i32> %a, splat(i32 8)
   %r = ashr <vscale x 4 x i32> %shl, splat(i32 16)

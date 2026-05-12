@@ -24,6 +24,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -634,17 +635,76 @@ bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
   return true;
 }
 
-bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
-  unsigned Opc;
+static std::optional<unsigned>
+getSignedBitfieldExtractOpc(const RISCVSubtarget &Subtarget) {
+  if (Subtarget.hasVendorXTHeadBb())
+    return RISCV::TH_EXT;
+  if (Subtarget.hasVendorXAndesPerf())
+    return RISCV::NDS_BFOS;
+  if (Subtarget.hasVendorXqcibm())
+    return RISCV::QC_EXT;
+  return std::nullopt;
+}
 
-  if (Subtarget->hasVendorXTHeadBb())
-    Opc = RISCV::TH_EXT;
-  else if (Subtarget->hasVendorXAndesPerf())
-    Opc = RISCV::NDS_BFOS;
-  else if (Subtarget->hasVendorXqcibm())
-    Opc = RISCV::QC_EXT;
-  else
-    // Only supported with XTHeadBb/XAndesPerf/Xqcibm at the moment.
+SDNode *RISCVDAGToDAGISel::selectSignedBitfieldExtract(SDValue Src,
+                                                       unsigned Msb,
+                                                       unsigned Lsb,
+                                                       const SDLoc &DL, MVT VT,
+                                                       unsigned Opc) {
+  if (Opc == RISCV::QC_EXT) {
+    // QC.EXT X, width, shamt
+    // shamt is the same as Lsb
+    // width is the number of bits to extract from the Lsb
+    Msb = Msb - Lsb + 1;
+  }
+  return CurDAG->getMachineNode(Opc, DL, VT, Src,
+                                CurDAG->getTargetConstant(Msb, DL, VT),
+                                CurDAG->getTargetConstant(Lsb, DL, VT));
+}
+
+bool RISCVDAGToDAGISel::trySignedBitfieldExtractFromSExtInReg(SDNode *Node) {
+  std::optional<unsigned> Opc = getSignedBitfieldExtractOpc(*Subtarget);
+  if (!Opc)
+    return false;
+
+  if (Node->getOpcode() != ISD::SIGN_EXTEND_INREG)
+    return false;
+
+  SDValue N0 = Node->getOperand(0);
+  if (N0.getOpcode() != ISD::SRL || !N0.hasOneUse())
+    return false;
+
+  auto *ShAmtC = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  if (!ShAmtC)
+    return false;
+
+  SDLoc DL(Node);
+  MVT VT = Node->getSimpleValueType(0);
+  unsigned ExtSize =
+      cast<VTSDNode>(Node->getOperand(1))->getVT().getSizeInBits();
+  // Full-register in-reg extensions use sraiw/sext.w, not vendor bitfield ops.
+  if (ExtSize >= VT.getScalarSizeInBits())
+    return false;
+
+  unsigned Lsb = ShAmtC->getZExtValue();
+  unsigned Msb = Lsb + ExtSize - 1;
+  if (Msb >= Subtarget->getXLen())
+    return false;
+
+  // Single-bit extract at the sign bit is a sign-test idiom (srliw/sraiw), not
+  // a vendor bitfield op.
+  if (ExtSize == 1 && Lsb + 1 == VT.getScalarSizeInBits())
+    return false;
+
+  SDNode *Sbe =
+      selectSignedBitfieldExtract(N0.getOperand(0), Msb, Lsb, DL, VT, *Opc);
+  ReplaceNode(Node, Sbe);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
+  std::optional<unsigned> Opc = getSignedBitfieldExtractOpc(*Subtarget);
+  if (!Opc)
     return false;
 
   auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -654,19 +714,6 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   SDValue N0 = Node->getOperand(0);
   if (!N0.hasOneUse())
     return false;
-
-  auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb,
-                             const SDLoc &DL, MVT VT) {
-    if (Opc == RISCV::QC_EXT) {
-      // QC.EXT X, width, shamt
-      // shamt is the same as Lsb
-      // width is the number of bits to extract from the Lsb
-      Msb = Msb - Lsb + 1;
-    }
-    return CurDAG->getMachineNode(Opc, DL, VT, N0.getOperand(0),
-                                  CurDAG->getTargetConstant(Msb, DL, VT),
-                                  CurDAG->getTargetConstant(Lsb, DL, VT));
-  };
 
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
@@ -685,12 +732,18 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
     if (LeftShAmt > RightShAmt)
       return false;
 
+    // (sra (shl X, HalfSize), Size-1) is in-register sign extension, not a
+    // vendor bitfield extract (see DAGCombiner::visitSRA).
+    if (LeftShAmt * 2 == VT.getSizeInBits() &&
+        RightShAmt == VT.getSizeInBits() - 1)
+      return false;
+
     const unsigned MsbPlusOne = VT.getSizeInBits() - LeftShAmt;
     const unsigned Msb = MsbPlusOne - 1;
     const unsigned Lsb = RightShAmt - LeftShAmt;
 
-    SDNode *Sbe = BitfieldExtract(N0, Msb, Lsb, DL, VT);
-    ReplaceNode(Node, Sbe);
+    ReplaceNode(Node, selectSignedBitfieldExtract(N0.getOperand(0), Msb, Lsb,
+                                                  DL, VT, *Opc));
     return true;
   }
 
@@ -700,8 +753,9 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
     unsigned ExtSize =
         cast<VTSDNode>(N0.getOperand(1))->getVT().getSizeInBits();
 
-    // ExtSize of 32 should use sraiw via tablegen pattern.
-    if (ExtSize == 32)
+    // Full-register in-reg extensions use sraiw/sext.w, not vendor bitfield
+    // ops.
+    if (ExtSize >= VT.getScalarSizeInBits())
       return false;
 
     const unsigned Msb = ExtSize - 1;
@@ -709,8 +763,8 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
     // the X[Msb] bit and sign-extend it.
     const unsigned Lsb = RightShAmt > Msb ? Msb : RightShAmt;
 
-    SDNode *Sbe = BitfieldExtract(N0, Msb, Lsb, DL, VT);
-    ReplaceNode(Node, Sbe);
+    ReplaceNode(Node, selectSignedBitfieldExtract(N0.getOperand(0), Msb, Lsb,
+                                                  DL, VT, *Opc));
     return true;
   }
 
@@ -1445,7 +1499,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     unsigned ShAmt = N1C->getZExtValue();
     unsigned ExtSize =
         cast<VTSDNode>(N0.getOperand(1))->getVT().getSizeInBits();
-    // ExtSize of 32 should use sraiw via tablegen pattern.
+    // i32 (or wider) in-reg widths should use sraiw / shift lowering.
     if (ExtSize >= 32 || ShAmt >= ExtSize)
       break;
     unsigned LShAmt = Subtarget->getXLen() - ExtSize;
@@ -1459,6 +1513,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SIGN_EXTEND_INREG: {
+    // Match (sext_inreg (srl X, C), iN) to vendor bitfield extract ops. This
+    // is the form produced by the generic (sra (shl X, C1), C2) combine.
+    if (trySignedBitfieldExtractFromSExtInReg(Node))
+      return;
+
     // Optimize (sext_inreg (srl X, C), i8/i16) ->
     //          (srai (slli X, XLen-ExtSize-C), XLen-ExtSize)
     // This is a bitfield extract pattern where we're extracting a signed
