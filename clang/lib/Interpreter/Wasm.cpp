@@ -60,8 +60,8 @@ bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 namespace clang {
 
-WasmIncrementalExecutor::WasmIncrementalExecutor(llvm::Error &Err,
-                                                 std::vector<std::string> LLVMArgs)
+WasmIncrementalExecutor::WasmIncrementalExecutor(
+    llvm::Error &Err, std::vector<std::string> LLVMArgs)
     : StoredLLVMArgs(std::move(LLVMArgs)) {
   llvm::ErrorAsOutParameter EAO(&Err);
 

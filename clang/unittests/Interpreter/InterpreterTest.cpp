@@ -449,9 +449,8 @@ TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
 #endif
 
   using Args = std::vector<const char *>;
-  Args ExtraArgs = {"-std=c++23", "-v",
-                    "-fwasm-exceptions",
-                    "-mllvm", "-wasm-enable-sjlj"};
+  Args ExtraArgs = {"-std=c++23", "-v", "-fwasm-exceptions", "-mllvm",
+                    "-wasm-enable-sjlj"};
 
   std::unique_ptr<Interpreter> Interp = createInterpreter(ExtraArgs);
 
