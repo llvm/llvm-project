@@ -13,7 +13,6 @@
 #include "LowerToLLVM.h"
 
 #include <array>
-#include <deque>
 #include <optional>
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -44,6 +43,7 @@
 #include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -3445,34 +3445,24 @@ static void buildCtorDtorList(
 // dialect verification errors.
 static void collectUnreachable(mlir::Operation *parent,
                                llvm::SmallVector<mlir::Operation *> &ops) {
-
-  llvm::SmallVector<mlir::Block *> unreachableBlocks;
-  parent->walk([&](mlir::Block *blk) { // check
-    if (blk->hasNoPredecessors() && !blk->isEntryBlock())
-      unreachableBlocks.push_back(blk);
-  });
-
-  std::set<mlir::Block *> visited;
-  for (mlir::Block *root : unreachableBlocks) {
-    // We create a work list for each unreachable block.
-    // Thus we traverse operations in some order.
-    std::deque<mlir::Block *> workList;
-    workList.push_back(root);
-
-    while (!workList.empty()) {
-      mlir::Block *blk = workList.back();
-      workList.pop_back();
-      if (visited.count(blk))
+  // For every region under `parent`, find the blocks unreachable from the
+  // entry via a forward CFG traversal and collect their ops.
+  llvm::df_iterator_default_set<mlir::Block *, 16> reachable;
+  parent->walk([&](mlir::Region *region) {
+    // Empty regions have no blocks; single-block regions have only the
+    // entry, which is trivially reachable. Either way, nothing to collect.
+    if (region->empty() || region->hasOneBlock())
+      return;
+    reachable.clear();
+    for (mlir::Block *blk : llvm::depth_first_ext(&region->front(), reachable))
+      (void)blk;
+    for (mlir::Block &blk : *region) {
+      if (reachable.contains(&blk))
         continue;
-      visited.emplace(blk);
-
-      for (mlir::Operation &op : *blk)
+      for (mlir::Operation &op : blk)
         ops.push_back(&op);
-
-      for (mlir::Block *succ : blk->getSuccessors())
-        workList.push_back(succ);
     }
-  }
+  });
 }
 
 mlir::LogicalResult CIRToLLVMObjSizeOpLowering::matchAndRewrite(
