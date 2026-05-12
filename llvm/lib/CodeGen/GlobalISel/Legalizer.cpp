@@ -320,11 +320,9 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
 
   std::unique_ptr<MachineIRBuilder> MIRBuilder;
   GISelCSEInfo *CSEInfo = nullptr;
-  bool EnableCSE =
-      EnableCSEInLegalizer.getNumOccurrences()
-          ? EnableCSEInLegalizer
-          : TPC.isGISelCSEEnabled() &&
-                MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
+  bool EnableCSE = EnableCSEInLegalizer.getNumOccurrences()
+                       ? EnableCSEInLegalizer
+                       : TPC.isGISelCSEEnabled();
   if (EnableCSE) {
     MIRBuilder = std::make_unique<CSEMIRBuilder>();
     CSEInfo = &Wrapper.get(TPC.getCSEConfig());
