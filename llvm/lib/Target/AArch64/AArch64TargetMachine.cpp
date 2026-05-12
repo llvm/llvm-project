@@ -282,12 +282,12 @@ LLVMInitializeAArch64Target() {
   initializeAArch64Arm64ECCallLoweringPass(PR);
 }
 
-bool llvm::isGlobalISelOptNone(const TargetMachine *TM) {
+bool AArch64TargetMachine::isGlobalISelOptNone() const {
   const bool GlobalISelFlag =
       getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
 
-  return TM->getOptLevel() == CodeGenOptLevel::None ||
-         (static_cast<unsigned>(TM->getOptLevel()) >
+  return getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(getOptLevel()) >
               static_cast<unsigned>(EnableGlobalISelAtO) &&
           !GlobalISelFlag);
 }
@@ -755,7 +755,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (isGlobalISelOptNone(&getAArch64TargetMachine())) {
+  if (getAArch64TargetMachine().isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -773,7 +773,7 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 
 void AArch64PassConfig::addPreRegBankSelect() {
   const bool IsGlobalISelOptNone =
-      isGlobalISelOptNone(&getAArch64TargetMachine());
+      getAArch64TargetMachine().isGlobalISelOptNone();
   if (!IsGlobalISelOptNone) {
     addPass(createAArch64PostLegalizerCombiner(IsGlobalISelOptNone));
     if (EnableGISelLoadStoreOptPostLegal)
@@ -789,7 +789,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (!isGlobalISelOptNone(&getAArch64TargetMachine()))
+  if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }

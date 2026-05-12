@@ -21,13 +21,6 @@
 
 namespace llvm {
 
-// This function checks whether the opt level is explicitly set to none,
-// or whether GlobalISel was enabled due to SDAG encountering an optnone
-// function. If the opt level is greater than the level we automatically enable
-// globalisel at, and it wasn't enabled via CLI, we know that it must be because
-// of an optnone function.
-bool isGlobalISelOptNone(const TargetMachine *TM);
-
 class AArch64TargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -88,6 +81,13 @@ public:
 
   /// Returns the optimisation level that enables GlobalISel.
   unsigned getEnableGlobalISelAtO() const;
+
+  /// This function checks whether the opt level is explicitly set to none,
+  /// or whether GlobalISel was enabled due to SDAG encountering an optnone
+  /// function. If the opt level is greater than the level we automatically
+  /// enable globalisel at, and it wasn't enabled via CLI, we know that it must
+  /// be because of an optnone function.
+  bool isGlobalISelOptNone() const;
 
 private:
   bool isLittle;
