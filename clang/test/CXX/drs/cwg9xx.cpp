@@ -55,6 +55,9 @@ namespace cwg950 { // cwg950: 3.1
 #if __cplusplus >= 201103L
 struct A {};
 struct B : decltype(A()) {};
+
+template <typename T>
+struct C : decltype(T()) {};
 #endif
 } // namespace cwg950
 
