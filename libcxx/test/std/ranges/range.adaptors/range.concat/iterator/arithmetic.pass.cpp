@@ -42,7 +42,7 @@ struct NotSizedSentinelForIter {
   Iter ptr;
 
   NotSizedSentinelForIter() = default;
-  NotSizedSentinelForIter(const Iter& ptr) : ptr(ptr) {}
+  NotSizedSentinelForIter(const Iter& p) : ptr(p) {}
   NotSizedSentinelForIter(const NotSizedSentinelForIter& other) : ptr(other.ptr) {}
 
   value_type& operator*() const { return *ptr; }
