@@ -85,6 +85,56 @@ void explicitTemplateParameterList() {
   (void)L;
 }
 
+void withRequiresClause() {
+  // trailing requires-clause after the parameter list
+  auto L1 = []<typename T>(T X) requires (sizeof(T) > 0) { return X; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L1 = []<typename T>(T X) static requires (sizeof(T) > 0) { return X; };
+  (void)L1;
+
+  // requires-clause on the template params, before '()'
+  auto L2 = []<typename T> requires (sizeof(T) > 0) (T X) { return X; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L2 = []<typename T> requires (sizeof(T) > 0) (T X) static { return X; };
+  (void)L2;
+}
+
+void withFrontAttribute() {
+  // [[nodiscard]] sits between '<>' and '()'
+  auto L = []<typename T> [[nodiscard]] (T X) { return X; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L = []<typename T> {{\[\[nodiscard\]\]}} (T X) static { return X; };
+  (void)L;
+}
+
+void withoutParameterList() {
+  // no '()' — template params only
+  auto L = []<typename T> { return T{}; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L = []<typename T> static { return T{}; };
+  (void)L;
+}
+
+void combinations() {
+  // no '()' with a requires-clause
+  auto L1 = []<typename T> requires (sizeof(T) > 0) { return T{}; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L1 = []<typename T> requires (sizeof(T) > 0) static { return T{}; };
+  (void)L1;
+
+  // attribute, params, and requires-clause all at once
+  auto L2 = []<typename T> [[nodiscard]] (T X) requires (sizeof(T) > 0) { return X; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L2 = []<typename T> {{\[\[nodiscard\]\]}} (T X) static requires (sizeof(T) > 0) { return X; };
+  (void)L2;
+
+  // attribute with no '()'
+  auto L3 = []<typename T> [[nodiscard]] { return T{}; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L3 = []<typename T> {{\[\[nodiscard\]\]}} static { return T{}; };
+  (void)L3;
+}
+
 // The check must not produce duplicate diagnostics for template instantiations.
 template <typename T>
 void templated(T Value) {

@@ -68,15 +68,16 @@ void UseStaticLambdaCheck::check(const MatchFinder::MatchResult &Result) {
     diag(LambdaLoc, "lambda with empty capture list can be marked 'static'")
         << FixItHint::CreateInsertion(InsertLoc, " static");
   } else {
-    // Lambda has no explicit parameter list: [...] { ... }.
-    // In C++23 (form 4), specs such as 'static' may appear without '()'.
-    const SourceLocation IntroEnd = Lambda->getIntroducerRange().getEnd();
-    if (IntroEnd.isInvalid())
+    // No explicit parameter list. Insert just before '{' so 'static' ends up
+    // after any template params, requires-clause, or leading attributes.
+    const auto *Body = cast<CompoundStmt>(Lambda->getBody());
+    if (!Body)
       return;
-    const SourceLocation InsertLoc =
-        Lexer::getLocForEndOfToken(IntroEnd, 0, SM, LangOpts);
+    const SourceLocation LBracLoc = Body->getLBracLoc();
+    if (LBracLoc.isInvalid())
+      return;
     diag(LambdaLoc, "lambda with empty capture list can be marked 'static'")
-        << FixItHint::CreateInsertion(InsertLoc, " static");
+        << FixItHint::CreateInsertion(LBracLoc, "static ");
   }
 }
 

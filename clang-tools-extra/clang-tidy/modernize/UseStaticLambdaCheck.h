@@ -15,10 +15,9 @@ namespace clang::tidy::modernize {
 
 /// Finds non-capturing lambdas that can be marked ``static`` (C++23).
 ///
-/// A lambda with an empty capture list (``[]``) has no dependency on any
-/// enclosing state. Marking it ``static`` communicates this clearly and
-/// enables the implicit conversion-to-function-pointer to return a direct
-/// pointer to ``operator()`` rather than a trampoline.
+/// Marking a non-capturing lambda ``static`` turns ``operator()`` into a
+/// static member function, making it clear the lambda has no dependency on
+/// any closure state.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-static-lambda.html
