@@ -562,6 +562,7 @@ else()
     Support
     Symbolize
     TargetParser
+    TransformUtils
     ${SPIRV_STATIC_LIB}
     )
 endif()
