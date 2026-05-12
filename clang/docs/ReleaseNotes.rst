@@ -504,10 +504,6 @@ Improvements to Clang's diagnostics
 - Fixed false positive host-device mismatch errors in discarded `if constexpr` branches for CUDA/HIP;
   such calls are now correctly skipped.
 
-- Clang now errors when a function declaration aliases a variable or vice versa. (#GH195550)
-
-- Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
-
 Improvements to Clang's time-trace
 ----------------------------------
 
