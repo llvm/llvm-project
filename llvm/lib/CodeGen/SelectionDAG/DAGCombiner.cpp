@@ -19036,7 +19036,6 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
     Pow2Op = Pow2Op.getOperand(0);
 
-    // `Log2(Pow2Op) < Pow2Op.countMaxActiveBits()`.
     int MaxExpChange = DAG.computeKnownBits(Pow2Op).countMaxActiveBits();
 
     auto IsFPConstValid = [N, MaxExpChange, &Mantissa](ConstantFPSDNode *CFP) {
