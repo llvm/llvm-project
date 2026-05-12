@@ -18060,11 +18060,15 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   if (!isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);
 
+  // For -fms-compatibility mode we relax some requirements
+  // for constant folding in non-SFINAE contexts
+  if (!isSFINAEContext() &&
+      getASTContext().shouldIgnoreNotesForConstEval(Notes))
+    Notes.clear();
+
   // In C++11, we can rely on diagnostics being produced for any expression
   // which is not a constant expression. If no diagnostics were produced, then
   // this is a constant expression.
-  if (getASTContext().shouldIgnoreNotesForConstEval(Notes))
-    Notes.clear();
   if (Folded && getLangOpts().CPlusPlus11 && Notes.empty()) {
     if (Result)
       *Result = EvalResult.Val.getInt();
