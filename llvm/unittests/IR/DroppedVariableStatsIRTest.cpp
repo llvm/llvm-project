@@ -24,8 +24,6 @@
 #include <llvm/Support/raw_ostream.h>
 
 using namespace llvm;
-namespace llvm {
-void initializePassTest1Pass(PassRegistry &);
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
@@ -34,7 +32,6 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
     Err.print("AbstractCallSiteTests", errs());
   return Mod;
 }
-} // namespace llvm
 
 namespace {
 

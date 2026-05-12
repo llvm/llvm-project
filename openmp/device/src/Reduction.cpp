@@ -135,7 +135,7 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   //
   // Only L1 parallel region can enter this if condition.
   if (NumThreads > mapping::getWarpSize()) {
-    uint32_t WarpsNeeded = utils::alignUp(NumThreads, mapping::getWarpSize());
+    uint32_t WarpsNeeded = utils::roundUp(NumThreads, mapping::getWarpSize());
     // Gather all the reduced values from each warp
     // to the first warp.
     cpyFct(reduce_data, WarpsNeeded);
@@ -280,7 +280,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
       uint32_t ActiveThreads = kmpcMin(NumRecs, NumThreads);
       if (ActiveThreads > mapping::getWarpSize()) {
         uint32_t WarpsNeeded =
-            utils::alignUp(ActiveThreads, mapping::getWarpSize());
+            utils::roundUp(ActiveThreads, mapping::getWarpSize());
         // Gather all the reduced values from each warp
         // to the first warp.
         cpyFct(reduce_data, WarpsNeeded);

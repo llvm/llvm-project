@@ -17,6 +17,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -91,21 +92,21 @@ cpp::optional<size_t> EnvironmentManager::find_var(cpp::string_view name) {
 // Helper: allocate new storage and ownership arrays of the given capacity,
 // copy the first `copy_count` entries from old_storage/old_ownership, and
 // initialize the remaining ownership slots to default (not-owned).
-// Returns false on allocation failure; on failure the old arrays are untouched.
-bool EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
-                                        EnvStringOwnership *old_ownership,
-                                        size_t copy_count, char **&out_storage,
-                                        EnvStringOwnership *&out_ownership) {
+// Returns nullopt on allocation failure; the old arrays are untouched.
+cpp::optional<EnvironmentManager::AllocResult>
+EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
+                                   EnvStringOwnership *old_ownership,
+                                   size_t copy_count) {
   AllocChecker ac;
   char **new_storage = new (ac) char *[new_capacity + 1];
   if (!ac)
-    return false;
+    return cpp::nullopt;
 
   EnvStringOwnership *new_ownership =
       new (ac) EnvStringOwnership[new_capacity + 1];
   if (!ac) {
     delete[] new_storage;
-    return false;
+    return cpp::nullopt;
   }
 
   for (size_t i = 0; i < copy_count; i++) {
@@ -114,9 +115,7 @@ bool EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
   }
   new_storage[copy_count] = nullptr;
 
-  out_storage = new_storage;
-  out_ownership = new_ownership;
-  return true;
+  return AllocResult{new_storage, new_ownership};
 }
 
 bool EnvironmentManager::ensure_capacity(size_t needed) {
@@ -131,12 +130,11 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
                               ? MIN_ENVIRON_CAPACITY
                               : needed * ENVIRON_GROWTH_FACTOR;
 
-    char **new_storage = nullptr;
-    EnvStringOwnership *new_ownership = nullptr;
-    if (!alloc_and_copy(new_capacity, old_env, nullptr, count, new_storage,
-                        new_ownership))
+    auto result = alloc_and_copy(new_capacity, old_env, nullptr, count);
+    if (!result)
       return false;
 
+    auto [new_storage, new_ownership] = *result;
     storage = new_storage;
     ownership = new_ownership;
     capacity = new_capacity;
@@ -156,15 +154,14 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   // manager in an inconsistent state.
   size_t new_capacity = needed * ENVIRON_GROWTH_FACTOR;
 
-  char **new_storage = nullptr;
-  EnvStringOwnership *new_ownership = nullptr;
-  if (!alloc_and_copy(new_capacity, storage, ownership, count, new_storage,
-                      new_ownership))
+  auto result = alloc_and_copy(new_capacity, storage, ownership, count);
+  if (!result)
     return false;
 
   delete[] storage;
   delete[] ownership;
 
+  auto [new_storage, new_ownership] = *result;
   storage = new_storage;
   ownership = new_ownership;
   capacity = new_capacity;
@@ -173,6 +170,55 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
   return true;
+}
+
+int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
+                            bool overwrite) {
+  cpp::optional<size_t> idx = find_var(name);
+
+  // If the variable exists and we're not overwriting, do nothing.
+  if (idx && !overwrite)
+    return 0;
+
+  // Ensure we have capacity. If the variable doesn't exist, we need one
+  // more slot.
+  size_t needed = idx ? count : count + 1;
+  if (!ensure_capacity(needed))
+    return -1;
+
+  // Build the "name=value" string.
+  size_t name_len = name.size();
+  size_t value_len = value.size();
+  size_t total_len = name_len + 1 + value_len + 1; // name + '=' + value + '\0'
+
+  AllocChecker ac;
+  char *new_string = new (ac) char[total_len];
+  if (!ac)
+    return -1;
+
+  inline_memcpy(new_string, name.data(), name_len);
+  new_string[name_len] = '=';
+  inline_memcpy(new_string + name_len + 1, value.data(), value_len);
+  new_string[name_len + 1 + value_len] = '\0';
+
+  char **env_array = get_array();
+
+  if (idx) {
+    // Replace existing variable. Free old string if we own it.
+    if (ownership[*idx].can_free())
+      delete[] env_array[*idx];
+
+    env_array[*idx] = new_string;
+    ownership[*idx].allocated_by_us = true;
+  } else {
+    // Add new variable at the end.
+    env_array[count] = new_string;
+    ownership[count].allocated_by_us = true;
+    count++;
+    env_array[count] = nullptr; // Maintain null terminator.
+  }
+
+  return 0;
 }
 
 } // namespace internal
