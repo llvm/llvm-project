@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIRDebugTests
+  ActionHandlerTest.cpp
   DebugCounterTest.cpp
   ExecutionContextTest.cpp
   FileLineColLocBreakpointManagerTest.cpp
