@@ -1,9 +1,14 @@
-//===-- Implementation of the pthread_getunique_np function ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of the pthread_getunique_np function.
+///
 //===----------------------------------------------------------------------===//
 
 #include "pthread_getunique_np.h"
