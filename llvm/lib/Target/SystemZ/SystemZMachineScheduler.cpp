@@ -59,16 +59,11 @@ bool SystemZPreRASchedStrategy::closesLiveRange(const SUnit *SU,
       GRX32PChange = PC.getUnitInc();
   }
 
-  // Return true for a (vreg) def when no uses become live. Prioritize
+  // Return true for a (vreg) def when register pressure is reduced. Prioritize
   // FP/vector regs over GPRs.
-  const MachineOperand &MO0 = SU->getInstr()->getOperand(0);
-  if (isRegDef(MO0)) {
-    const TargetRegisterClass *RC = DAG->MRI.getRegClass(MO0.getReg());
-    int RegWeight = TRI->getRegClassWeight(RC).RegWeight;
-    bool VR16DefNoKill = VR16PChange == -RegWeight;
-    bool GRX32DefNoKill = GRX32PChange == -RegWeight;
-    return VR16DefNoKill || (!VR16PChange && GRX32DefNoKill);
-  }
+  if (isRegDef(SU->getInstr()->getOperand(0)))
+    return VR16PChange < 0 || (!VR16PChange && GRX32PChange < 0);
+
   return false;
 }
 
