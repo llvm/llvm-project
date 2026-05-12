@@ -240,6 +240,11 @@ struct SignatureElement {
   uint8_t Stream;
 };
 
+struct StringTableEntry {
+  StringRef String;
+  uint32_t Offset;
+};
+
 struct PSVInfo {
   // The version field isn't actually encoded in the file, but it is inferred by
   // the size of data regions. We include it in the yaml because it simplifies
@@ -261,6 +266,10 @@ struct PSVInfo {
   MaskVector PatchOutputMap;
 
   StringRef EntryName;
+
+  // Output-only fields populated by obj2yaml for inspection.
+  SmallVector<StringTableEntry> StringTable;
+  uint32_t RuntimeInfoSize = 0;
 
   LLVM_ABI void mapInfoForVersion(yaml::IO &IO);
 
@@ -316,6 +325,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterLocationYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StaticSamplerYamlDesc)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StringTableEntry)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -382,6 +392,10 @@ template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
 template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
   LLVM_ABI static void mapping(IO &IO,
                                llvm::DXContainerYAML::SignatureElement &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::StringTableEntry> {
+  static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
 };
 
 template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -45,6 +46,7 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addPreISel(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMW) const;
   void addPreRegBankSelect(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
@@ -85,9 +87,7 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // Add Control Flow Guard checks.
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSWindows())
-    addFunctionPass(CFGuardPass(TT.isX86_64() ? CFGuardPass::Mechanism::Dispatch
-                                              : CFGuardPass::Mechanism::Check),
-                    PMW);
+    addFunctionPass(CFGuardPass(), PMW);
 
   if (TM.Options.JMCInstrument) {
     flushFPMsToMPM(PMW);
@@ -116,6 +116,11 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
   addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
+}
+
+void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
@@ -170,7 +175,7 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(X86ExpandPseudoPass(), PMW);
-  // TODO(boomanaiden154): Add KCFGPass here once it has been ported.
+  addMachineFunctionPass(MachineKCFIPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
@@ -181,8 +186,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   }
 
   addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
-  // TODO(boomanaiden154): Add X86IssueVZeroUpperPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86InsertVZeroUpperPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86FixupBWInstsPass(), PMW);
@@ -198,7 +202,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   const Triple &TT = TM.getTargetTriple();
-  const MCAsmInfo *MAI = TM.getMCAsmInfo();
+  const MCAsmInfo &MAI = TM.getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -225,7 +229,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
     // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
     // ported.
   }

@@ -52,6 +52,9 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-mfma")
       endif()
     endif()
+    if(LIBC_COMPILER_HAS_BUILTIN_ISNAN)
+      list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ISNAN")
+    endif()
     if(ADD_ROUND_OPT_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         # ROUND_OPT_FLAG is only enabled if SSE4.2 is detected, not just SSE4.1,
@@ -152,6 +155,10 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_THREAD_MODE)
     libc_add_definition(config_options "LIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
+  endif()
+
+  if(LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
+    libc_add_definition(config_options "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY")
   endif()
 
   if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)

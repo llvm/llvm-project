@@ -93,7 +93,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], [[TMP1]]
 ; IR-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP4]] to float
 ; IR-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP5]])
-; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], 0x41EFFFFFC0000000
+; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], f0x4F7FFFFE
 ; IR-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP7]] to i32
 ; IR-NEXT:    [[TMP9:%.*]] = sub i32 0, [[TMP4]]
 ; IR-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP8]]
@@ -175,7 +175,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], [[TMP1]]
 ; IR-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP4]] to float
 ; IR-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP5]])
-; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], 0x41EFFFFFC0000000
+; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], f0x4F7FFFFE
 ; IR-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP7]] to i32
 ; IR-NEXT:    [[TMP9:%.*]] = sub i32 0, [[TMP4]]
 ; IR-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP8]]
@@ -486,7 +486,7 @@ define i32 @select_add_bitcast_select(i1 %cond) {
 ; multiple uses.
 define <2 x half> @multi_use_cast_regression(i1 %cond) {
 ; IR-LABEL: @multi_use_cast_regression(
-; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], half 0xH3C00, half 0xH0000
+; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], half 1.000000e+00, half 0.000000e+00
 ; IR-NEXT:    [[FPEXT:%.*]] = fpext half [[SELECT]] to float
 ; IR-NEXT:    [[FSUB:%.*]] = fsub nsz float 1.000000e+00, [[FPEXT]]
 ; IR-NEXT:    [[CALL:%.*]] = call nsz <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[FPEXT]], float [[FSUB]])

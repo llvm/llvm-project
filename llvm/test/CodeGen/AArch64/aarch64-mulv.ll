@@ -25,13 +25,20 @@ declare i64 @llvm.vector.reduce.mul.v4i64(<4 x i64>)
 declare i128 @llvm.vector.reduce.mul.v2i128(<2 x i128>)
 
 define i8 @mulv_v2i8(<2 x i8> %a) {
-; CHECK-LABEL: mulv_v2i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mul w0, w9, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mulv_v2i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mulv_v2i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    mul w0, w9, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> %a)
   ret i8 %arg1
@@ -125,7 +132,7 @@ entry:
 define i8 @mulv_v16i8(<16 x i8> %a) {
 ; CHECK-SD-LABEL: mulv_v16i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    umov w8, v0.b[1]
 ; CHECK-SD-NEXT:    umov w9, v0.b[0]
@@ -173,7 +180,7 @@ define i8 @mulv_v32i8(<32 x i8> %a) {
 ; CHECK-SD-LABEL: mulv_v32i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mul v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    umov w8, v0.b[1]
 ; CHECK-SD-NEXT:    umov w9, v0.b[0]
@@ -221,13 +228,20 @@ entry:
 }
 
 define i16 @mulv_v2i16(<2 x i16> %a) {
-; CHECK-LABEL: mulv_v2i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mul w0, w9, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mulv_v2i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mulv_v2i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    mul w0, w9, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i16 @llvm.vector.reduce.mul.v2i16(<2 x i16> %a)
   ret i16 %arg1
@@ -290,7 +304,7 @@ entry:
 define i16 @mulv_v8i16(<8 x i16> %a) {
 ; CHECK-SD-LABEL: mulv_v8i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    umov w8, v0.h[1]
 ; CHECK-SD-NEXT:    umov w9, v0.h[0]
@@ -322,7 +336,7 @@ define i16 @mulv_v16i16(<16 x i16> %a) {
 ; CHECK-SD-LABEL: mulv_v16i16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    umov w8, v0.h[1]
 ; CHECK-SD-NEXT:    umov w9, v0.h[0]
@@ -354,13 +368,20 @@ entry:
 }
 
 define i32 @mulv_v2i32(<2 x i32> %a) {
-; CHECK-LABEL: mulv_v2i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mul w0, w9, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mulv_v2i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mulv_v2i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    mul w0, w9, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i32 @llvm.vector.reduce.mul.v2i32(<2 x i32> %a)
   ret i32 %arg1
@@ -372,11 +393,10 @@ define i32 @mulv_v3i32(<3 x i32> %a) {
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    mov v1.s[3], w8
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mul w0, w9, w8
+; CHECK-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %arg1 = call i32 @llvm.vector.reduce.mul.v3i32(<3 x i32> %a)
@@ -386,11 +406,10 @@ entry:
 define i32 @mulv_v4i32(<4 x i32> %a) {
 ; CHECK-SD-LABEL: mulv_v4i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mul w0, w9, w8
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mulv_v4i32:
@@ -410,11 +429,10 @@ define i32 @mulv_v8i32(<8 x i32> %a) {
 ; CHECK-SD-LABEL: mulv_v8i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mul w0, w9, w8
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mulv_v8i32:

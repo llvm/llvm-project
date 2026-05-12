@@ -860,14 +860,17 @@ bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
   if (SymbolScanningMode)
     return false;
 
+  // The buffer is consumed only by emitBytes. Skip the NUL termination to
+  // enable mmap in more cases, reading only the touched pages instead of the
+  // whole file.
   std::string IncludedFile;
-  unsigned NewBuf =
-      SrcMgr.AddIncludeFile(Filename, Lexer.getLoc(), IncludedFile);
-  if (!NewBuf)
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = SrcMgr.OpenIncludeFile(
+      Filename, IncludedFile, /*RequiresNullTerminator=*/false);
+  if (!BufOrErr)
     return true;
 
   // Pick up the bytes from the file and emit them.
-  StringRef Bytes = SrcMgr.getMemoryBuffer(NewBuf)->getBuffer();
+  StringRef Bytes = (*BufOrErr)->getBuffer();
   Bytes = Bytes.drop_front(Skip);
   if (Count) {
     int64_t Res;
@@ -1980,7 +1983,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveValue(IDVal, 8);
     case DK_DC_A:
       return parseDirectiveValue(
-          IDVal, getContext().getAsmInfo()->getCodePointerSize());
+          IDVal, getContext().getAsmInfo().getCodePointerSize());
     case DK_OCTA:
       return parseDirectiveOctaValue(IDVal);
     case DK_SINGLE:
@@ -1991,11 +1994,11 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_DC_D:
       return parseDirectiveRealValue(IDVal, APFloat::IEEEdouble());
     case DK_ALIGN: {
-      bool IsPow2 = !getContext().getAsmInfo()->getAlignmentIsInBytes();
+      bool IsPow2 = !getContext().getAsmInfo().getAlignmentIsInBytes();
       return parseDirectiveAlign(IsPow2, /*ExprSize=*/1);
     }
     case DK_ALIGN32: {
-      bool IsPow2 = !getContext().getAsmInfo()->getAlignmentIsInBytes();
+      bool IsPow2 = !getContext().getAsmInfo().getAlignmentIsInBytes();
       return parseDirectiveAlign(IsPow2, /*ExprSize=*/4);
     }
     case DK_BALIGN:
@@ -3592,7 +3595,7 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     // Ignore the directive if there is no number and the target doesn't support
     // numberless .file directives. This allows some portability of assembler
     // between different object file formats.
-    if (getContext().getAsmInfo()->hasSingleParameterDotFile())
+    if (getContext().getAsmInfo().hasSingleParameterDotFile())
       getStreamer().emitFileDirective(Filename);
   } else {
     // In case there is a -g option as well as debug info from directive .file,
@@ -6179,7 +6182,7 @@ bool AsmParser::parseMSInlineAsm(
         OS << "]";
       break;
     case AOK_Label:
-      OS << Ctx.getAsmInfo()->getPrivateLabelPrefix() << AR.Label;
+      OS << Ctx.getAsmInfo().getPrivateLabelPrefix() << AR.Label;
       break;
     case AOK_Input:
       if (AR.IntelExpRestricted)
@@ -6215,7 +6218,7 @@ bool AsmParser::parseMSInlineAsm(
       // MS alignment directives are measured in bytes. If the native assembler
       // measures alignment in bytes, we can pass it straight through.
       OS << ".align";
-      if (getContext().getAsmInfo()->getAlignmentIsInBytes())
+      if (getContext().getAsmInfo().getAlignmentIsInBytes())
         break;
 
       // Alignment is in log2 form, so print that instead and skip the original
@@ -6271,7 +6274,7 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
                  "Cannot have just a label for an HLASM inline asm statement");
 
   MCSymbol *Sym = getContext().parseSymbol(
-      getContext().getAsmInfo()->isHLASM() ? LabelVal.upper() : LabelVal);
+      getContext().getAsmInfo().isHLASM() ? LabelVal.upper() : LabelVal);
 
   // Emit the label.
   Out.emitLabel(Sym, LabelLoc);

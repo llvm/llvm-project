@@ -148,7 +148,7 @@ def test_barriers():
                 reduction_predicate=pred,
             )
 
-        nvvm.barrier0()
+        nvvm.barrier()
         nvvm.bar_warp_sync(mask)
         nvvm.cluster_arrive()
         nvvm.cluster_arrive(aligned=True)
@@ -170,7 +170,7 @@ def test_barriers():
 # CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier #nvvm.reduction<and> %[[PRED]] -> i32
 # CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier #nvvm.reduction<or> %[[BARRIER_1]] -> i32
 # CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
-# CHECK:           nvvm.barrier0
+# CHECK:           nvvm.barrier
 # CHECK:           nvvm.bar.warp.sync %[[ARG0]] : i32
 # CHECK:           nvvm.cluster.arrive
 # CHECK:           nvvm.cluster.arrive {aligned}
@@ -377,3 +377,16 @@ def test_reductions():
 # CHECK:           %[[REDUX_35:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] : f32 -> f32
 # CHECK:           return
 # CHECK:         }
+
+
+# CHECK-LABEL: TEST: testSpecialRegisterInferredResults
+@constructAndPrintInModule
+def testSpecialRegisterInferredResults():
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.tid.x : i32
+    nvvm.ThreadIdXOp()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
+    nvvm.ClockOp()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
+    nvvm.Clock64Op()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
+    nvvm.GlobalTimerOp()

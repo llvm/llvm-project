@@ -15,6 +15,7 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -70,9 +71,19 @@ SyntheticStackFrameList::SyntheticStackFrameList(
 bool SyntheticStackFrameList::FetchFramesUpTo(
     uint32_t end_idx, InterruptionControl allow_interrupt) {
 
-  size_t num_synthetic_frames = 0;
   // Use the provider to generate frames lazily.
   if (m_provider) {
+    // Count how many synthetic frames already exist so we assign unique CFAs
+    // to new ones. This must not be a local initialized to zero — when
+    // FetchFramesUpTo is called incrementally (first for a small range, then
+    // for the full stack), a zero-initialized counter would hand out duplicate
+    // CFA values, creating StackID collisions for PC-less synthetic frames.
+    size_t num_synthetic_frames = 0;
+    for (const auto &f : m_frames) {
+      if (f && f->IsSynthetic())
+        num_synthetic_frames++;
+    }
+
     // Keep fetching until we reach end_idx or the provider returns an error.
     for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
       if (allow_interrupt &&
@@ -796,6 +807,10 @@ void StackFrameList::SelectMostRelevantFrame() {
   // Don't call into the frame recognizers on the private state thread as
   // they can cause code to run in the target, and that can cause deadlocks
   // when fetching stop events for the expression.
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return;
+
   if (m_thread.GetProcess()->CurrentThreadPosesAsPrivateStateThread())
     return;
 

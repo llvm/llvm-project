@@ -44,6 +44,7 @@ class LegalizerInfo;
 struct LegalityQuery;
 class RegisterBank;
 class RegisterBankInfo;
+class TargetInstrInfo;
 class TargetLowering;
 class TargetRegisterInfo;
 
@@ -120,6 +121,7 @@ protected:
   MachineDominatorTree *MDT;
   bool IsPreLegalize;
   const LegalizerInfo *LI;
+  const TargetInstrInfo *TII;
   const RegisterBankInfo *RBI;
   const TargetRegisterInfo *TRI;
 
@@ -134,6 +136,12 @@ public:
   MachineIRBuilder &getBuilder() const {
     return Builder;
   }
+
+  const TargetInstrInfo &getTII() const { return *TII; }
+
+  const TargetRegisterInfo &getTRI() const { return *TRI; }
+
+  const RegisterBankInfo &getRBI() const { return *RBI; }
 
   const TargetLowering &getTargetLowering() const;
 
@@ -408,6 +416,12 @@ public:
   /// Transform fp_instr(cst) to constant result of the fp operation.
   void applyCombineConstantFoldFpUnary(MachineInstr &MI,
                                        const ConstantFP *Cst) const;
+
+  /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
+  /// _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
+  /// a scalar constant or a G_BUILD_VECTOR of constants.
+  bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
 
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;

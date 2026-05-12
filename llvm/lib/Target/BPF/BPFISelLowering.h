@@ -54,6 +54,14 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  // Exception handling support.
+  Register getExceptionPointerRegister(const Constant *) const override {
+    return BPF::R0;
+  }
+  Register getExceptionSelectorRegister(const Constant *) const override {
+    return BPF::R0;
+  }
+
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
   unsigned getJumpTableEncoding() const override;
@@ -89,9 +97,6 @@ private:
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
-
-  // Maximum number of arguments to a call
-  static const size_t MaxArgs;
 
   // Lower a call into CALLSEQ_START - BPFISD:CALL - CALLSEQ_END chain
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,

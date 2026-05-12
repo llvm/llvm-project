@@ -13,6 +13,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class ExprCommandCallUserDefinedFunction(TestBase):
     def test(self):
         """Test return values of user defined function calls."""

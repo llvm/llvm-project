@@ -108,3 +108,49 @@ TEST(ASTExpr, InitListIsConstantInitialized) {
   (void)FooInit->updateInit(Ctx, 2, Ref);
   EXPECT_FALSE(FooInit->isConstantInitializer(Ctx, false));
 }
+
+TEST(ASTExpr, IsKnownToHaveBooleanValue) {
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      R"c(
+    struct S {
+      int signed_bf1 : 1;
+      unsigned unsigned_bf1 : 1;
+      unsigned unsigned_bf2 : 2;
+    };
+
+    _Bool bool_value;
+    int int_value;
+    unsigned _BitInt(1) unsigned_bitint1;
+    unsigned _BitInt(2) unsigned_bitint2;
+    struct S s;
+
+    void f(void) {
+      int from_bool = bool_value;
+      int from_int = int_value;
+      int from_signed_bitfield1 = s.signed_bf1;
+      int from_bitfield1 = s.unsigned_bf1;
+      int from_bitfield2 = s.unsigned_bf2;
+      int from_bitint1 = unsigned_bitint1;
+      int from_bitint2 = unsigned_bitint2;
+    }
+  )c",
+      {"-std=c23"}, "input.c");
+  ASSERT_TRUE(AST);
+
+  auto ExpectKnown = [&](const char *Name, bool Semantic, bool NonSemantic) {
+    const VarDecl *VD = getVariableNode(AST.get(), Name);
+    ASSERT_NE(VD, nullptr);
+    ASSERT_TRUE(VD->hasInit());
+    const Expr *Init = VD->getInit();
+    EXPECT_EQ(Semantic, Init->isKnownToHaveBooleanValue(true)) << Name;
+    EXPECT_EQ(NonSemantic, Init->isKnownToHaveBooleanValue(false)) << Name;
+  };
+
+  ExpectKnown("from_bool", true, true);
+  ExpectKnown("from_int", false, false);
+  ExpectKnown("from_signed_bitfield1", false, false);
+  ExpectKnown("from_bitfield1", false, true);
+  ExpectKnown("from_bitfield2", false, false);
+  ExpectKnown("from_bitint1", false, true);
+  ExpectKnown("from_bitint2", false, false);
+}

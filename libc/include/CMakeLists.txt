@@ -205,8 +205,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .inttypes
-    .llvm-libc-types.in_addr
     .llvm-libc-types.in_addr_t
+    .llvm-libc-types.struct_in_addr
 )
 
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
@@ -227,6 +227,15 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.assert_macros
+)
+
+add_header_macro(
+  byteswap
+  ../libc/include/byteswap.yaml
+  byteswap.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.byteswap_macros
 )
 
 add_header_macro(
@@ -331,6 +340,7 @@ add_header_macro(
     .llvm-libc-types.thrd_start_t
     .llvm-libc-types.tss_t
     .llvm-libc-types.tss_dtor_t
+    .llvm-libc-types.struct_timespec
 )
 
 add_header_macro(
@@ -446,7 +456,9 @@ add_header_macro(
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
+    .llvm-libc-types.clockid_t
     .llvm-libc-types.pthread_attr_t
+    .llvm-libc-types.pthread_cond_t
     .llvm-libc-types.pthread_condattr_t
     .llvm-libc-types.pthread_key_t
     .llvm-libc-types.pthread_barrier_t
@@ -458,6 +470,7 @@ add_header_macro(
     .llvm-libc-types.pthread_rwlockattr_t
     .llvm-libc-types.pthread_spinlock_t
     .llvm-libc-types.pthread_t
+    .llvm-libc-types.struct_timespec
     .llvm_libc_common_h
 )
 
@@ -472,6 +485,14 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
       .llvm-libc-types.ucontext_t
       .llvm-libc-types.sigset_t
       .llvm-libc-types.stack_t
+  )
+
+  add_header_macro(
+    sys_ucontext
+    ../libc/include/sys/ucontext.yaml
+    sys/ucontext.h
+    DEPENDS
+      .ucontext
   )
 endif()
 
@@ -629,6 +650,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_personality
+  ../libc/include/sys/personality.yaml
+  sys/personality.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_personality_macros
+)
+
+add_header_macro(
   sys_prctl
   ../libc/include/sys/prctl.yaml
   sys/prctl.h
@@ -737,9 +767,12 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_cmsghdr
     .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_linger
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.struct_sockaddr_storage
 )
 
 add_header_macro(
@@ -787,6 +820,7 @@ add_header_macro(
     .llvm-libc-types.off_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.pthread_attr_t
+    .llvm-libc-types.pthread_cond_t
     .llvm-libc-types.pthread_key_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
@@ -887,6 +921,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.wint_t
+    .llvm-libc-types.wctype_t
 )
 
 add_header_macro(

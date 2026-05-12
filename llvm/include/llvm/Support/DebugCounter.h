@@ -78,6 +78,14 @@ public:
     CounterInfo(StringRef Name, StringRef Desc) : Name(Name), Desc(Desc) {
       DebugCounter::registerCounter(this);
     }
+
+    void reset() {
+      Active = false;
+      IsSet = false;
+      Count = 0;
+      CurrChunkIdx = 0;
+      Chunks.clear();
+    }
   };
 
   LLVM_ABI static void
@@ -163,6 +171,11 @@ public:
   void activateAllCounters() {
     for (auto &[_, Counter] : Counters)
       Counter->Active = true;
+  }
+
+  void resetAllCounters() {
+    for (auto &[_, Counter] : Counters)
+      Counter->reset();
   }
 
 protected:

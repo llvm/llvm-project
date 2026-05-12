@@ -310,11 +310,12 @@ void Rematerializer::deleteRegIfUnused(RegisterIdx RootIdx) {
     deleteReg(RegIdx);
     if (isRematerializedRegister(RegIdx)) {
       // Delete rematerialized register from its origin's rematerializations.
-      RematsOf &OriginRemats = Rematerializations.at(getOriginOf(RegIdx));
+      const RegisterIdx OriginIdx = getOriginOf(RegIdx);
+      RematsOf &OriginRemats = Rematerializations.at(OriginIdx);
       assert(OriginRemats.contains(RegIdx) && "broken remat<->origin link");
       OriginRemats.erase(RegIdx);
       if (OriginRemats.empty())
-        Rematerializations.erase(RegIdx);
+        Rematerializations.erase(OriginIdx);
     }
     LLVM_DEBUG(dbgs() << "** Deleted " << printID(RegIdx) << "\n");
   }
@@ -483,6 +484,14 @@ bool Rematerializer::isMIRematerializable(const MachineInstr &MI) const {
       return false;
     }
   }
+
+  // Can't remat instructions that define non-reserved physical registers
+  // because updateLiveIntervals only handles virtual registers, so the live
+  // ranges for non-reserved physical register defs can become invalid.
+  // TODO: Update updateLiveIntervals to handle physical registers?
+  for (const MachineOperand &MO : MI.implicit_operands())
+    if (MO.isDef() && MO.getReg().isPhysical() && !MRI.isReserved(MO.getReg()))
+      return false;
 
   return true;
 }

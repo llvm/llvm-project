@@ -72,7 +72,7 @@ define float @returned_freeze_poison() {
 define double @returned_snan() {
 ; CHECK-LABEL: define noundef nofpclass(qnan inf zero sub norm) double @returned_snan() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret double 0x7FF0000000000001
+; CHECK-NEXT:    ret double +snan(0x1)
 ;
   call void @unknown()
   ret double 0x7FF0000000000001
@@ -81,7 +81,7 @@ define double @returned_snan() {
 define double @returned_qnan() {
 ; CHECK-LABEL: define noundef nofpclass(snan inf zero sub norm) double @returned_qnan() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double +qnan
 ;
   call void @unknown()
   ret double 0x7FF8000000000000
@@ -138,7 +138,7 @@ define <3 x double> @returned_poison_constant_vector_elt() {
 define <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-LABEL: define noundef nofpclass(snan inf nzero sub norm) <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0.000000e+00>
+; CHECK-NEXT:    ret <2 x double> <double +qnan, double 0.000000e+00>
 ;
   call void @unknown()
   ret <2 x double> <double 0x7FF8000000000000, double 0.0>
@@ -517,7 +517,7 @@ define half @fcmp_assume_issubnormal_callsite_arg_return(half %arg) {
 ; CHECK-SAME: (half returned nofpclass(nan inf norm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) half @llvm.fabs.f16(half nofpclass(nan inf norm) [[ARG]]) #[[ATTR24:[0-9]+]]
-; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
+; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 6.103520e-05
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_SUBNORMAL]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf norm) [[ARG]])
 ; CHECK-NEXT:    ret half [[ARG]]
@@ -536,7 +536,7 @@ define half @fcmp_assume_not_inf_after_call(half %arg) {
 ; CHECK-SAME: (half returned [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @extern.use.f16(half [[ARG]])
-; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp oeq half [[ARG]], 0xH7C00
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp oeq half [[ARG]], +inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_INF]])
 ; CHECK-NEXT:    ret half [[ARG]]
 ;
@@ -553,9 +553,9 @@ define half @fcmp_assume2_callsite_arg_return(half %arg) {
 ; CHECK-SAME: (half returned nofpclass(nan pinf zero sub) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) half @llvm.fabs.f16(half nofpclass(nan pinf zero sub) [[ARG]]) #[[ATTR24]]
-; CHECK-NEXT:    [[NOT_SUBNORMAL_OR_ZERO:%.*]] = fcmp oge half [[FABS]], 0xH0400
+; CHECK-NEXT:    [[NOT_SUBNORMAL_OR_ZERO:%.*]] = fcmp oge half [[FABS]], 6.103520e-05
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_SUBNORMAL_OR_ZERO]]) #[[ATTR22]]
-; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one half [[ARG]], 0xH7C00
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one half [[ARG]], +inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_INF]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan pinf zero sub) [[ARG]])
 ; CHECK-NEXT:    ret half [[ARG]]
@@ -595,9 +595,9 @@ define half @assume_fcmp_fabs_with_other_fabs_assume(half %arg) {
 ; CHECK-SAME: (half returned nofpclass(nan inf zero norm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan inf zero nsub norm) half @llvm.fabs.f16(half nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR24]]
-; CHECK-NEXT:    [[UNRELATED_FABS:%.*]] = fcmp one half [[FABS]], 0xH0000
+; CHECK-NEXT:    [[UNRELATED_FABS:%.*]] = fcmp one half [[FABS]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNRELATED_FABS]]) #[[ATTR22]]
-; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
+; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 6.103520e-05
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_SUBNORMAL]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf zero norm) [[ARG]])
 ; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf zero nsub norm) [[FABS]])
@@ -623,7 +623,7 @@ define half @assume_fcmp_fabs_with_other_fabs_assume_fallback(half %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan inf nzero sub norm) half @llvm.fabs.f16(half nofpclass(nan inf sub norm) [[ARG]]) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR22]]
-; CHECK-NEXT:    [[UNRELATED_FABS:%.*]] = fcmp oeq half [[FABS]], 0xH0000
+; CHECK-NEXT:    [[UNRELATED_FABS:%.*]] = fcmp oeq half [[FABS]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNRELATED_FABS]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf sub norm) [[ARG]])
@@ -1528,7 +1528,7 @@ define <4 x float> @insertelement_constant_chain() {
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x float> poison, float 1.000000e+00, i32 0
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> [[INS_0]], float 0.000000e+00, i32 1
 ; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float -9.000000e+00, i32 2
-; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float 0x7FF0000000000000, i32 3
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float +inf, i32 3
 ; CHECK-NEXT:    ret <4 x float> [[INS_3]]
 ;
   %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
@@ -1564,7 +1564,7 @@ define <vscale x 4 x float> @insertelement_scalable_constant_chain() {
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <vscale x 4 x float> poison, float 1.000000e+00, i32 0
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <vscale x 4 x float> [[INS_0]], float 0.000000e+00, i32 1
 ; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <vscale x 4 x float> [[INS_1]], float -9.000000e+00, i32 2
-; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <vscale x 4 x float> [[INS_2]], float 0x7FF0000000000000, i32 3
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <vscale x 4 x float> [[INS_2]], float +inf, i32 3
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[INS_3]]
 ;
   %ins.0 = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
@@ -1628,7 +1628,7 @@ define <4 x float> @insertelement_index_oob_chain() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) <4 x float> @insertelement_index_oob_chain
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float +inf, i32 4
 ; CHECK-NEXT:    ret <4 x float> [[INSERT]]
 ;
   %insert = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
@@ -1819,7 +1819,7 @@ define float @shufflevector_constantdatavector_demanded0() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @shufflevector_constantdatavector_demanded0
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float +qnan, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
@@ -1832,7 +1832,7 @@ define float @shufflevector_constantdatavector_demanded1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @shufflevector_constantdatavector_demanded1
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float +qnan, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 1
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
@@ -3903,7 +3903,7 @@ define [2 x float] @constant_data_array_1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) [2 x float] @constant_data_array_1
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    ret [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+; CHECK-NEXT:    ret [2 x float] [float +qnan, float +qnan]
 ;
   ret [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
 }
@@ -3921,7 +3921,7 @@ define { float, float } @constant_data_struct_1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) { float, float } @constant_data_struct_1
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    ret { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 }
+; CHECK-NEXT:    ret { float, float } { float +qnan, float +qnan }
 ;
   ret { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 }
 }
@@ -3930,7 +3930,7 @@ define { float, { float, float } } @constant_data_nested_struct() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define { float, { float, float } } @constant_data_nested_struct
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    ret { float, { float, float } } { float 0x7FF8000000000000, { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 } }
+; CHECK-NEXT:    ret { float, { float, float } } { float +qnan, { float, float } { float +qnan, float +qnan } }
 ;
   ret { float, { float, float } } { float 0x7FF8000000000000, { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 } }
 }
@@ -3939,7 +3939,7 @@ define { float, double } @constant_data_struct_heterogeneous() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define { float, double } @constant_data_struct_heterogeneous
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    ret { float, double } { float 0x7FF8000000000000, double 0x7FF8000000000000 }
+; CHECK-NEXT:    ret { float, double } { float +qnan, double +qnan }
 ;
   ret { float, double } { float 0x7FF8000000000000, double 0x7FF8000000000000 }
 }
@@ -3948,7 +3948,7 @@ define { float, [2 x float] } @constant_data_struct_array() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define { float, [2 x float] } @constant_data_struct_array
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    ret { float, [2 x float] } { float 0x7FF8000000000000, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000] }
+; CHECK-NEXT:    ret { float, [2 x float] } { float +qnan, [2 x float] [float +qnan, float +qnan] }
 ;
   ret { float, [2 x float] } { float 0x7FF8000000000000, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000] }
 }

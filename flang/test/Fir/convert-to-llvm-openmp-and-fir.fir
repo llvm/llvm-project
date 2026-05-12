@@ -696,13 +696,13 @@ func.func @_QPsb() {
 
 // CHECK:  omp.declare_reduction @[[EQV_REDUCTION:.*]] : i32 init {
 // CHECK:  ^bb0(%{{.*}}: i32):
-// CHECK:    %[[TRUE:.*]] = llvm.mlir.constant(1 : i64) : i32
+// CHECK:    %[[TRUE:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:    omp.yield(%[[TRUE]] : i32)
 // CHECK:  } combiner {
 // CHECK:  ^bb0(%[[ARG_1:.*]]: i32, %[[ARG_2:.*]]: i32):
-// CHECK:    %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:    %[[ARGVAL_1:.*]] = llvm.icmp "ne" %[[ARG_1]], %[[ZERO_1]] : i32
-// CHECK:    %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:    %[[ARGVAL_2:.*]] = llvm.icmp "ne" %[[ARG_2]], %[[ZERO_2]] : i32
 // CHECK:    %[[RES:.*]] = llvm.icmp "eq" %[[ARGVAL_1]], %[[ARGVAL_2]] : i1
 // CHECK:    %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
@@ -718,9 +718,9 @@ func.func @_QPsb() {
 // CHECK:          %[[ARRAY_ELEM_REF:.*]] = llvm.getelementptr %[[ARRAY_REF]][0, %{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr
 // CHECK:          %[[ARRAY_ELEM:.*]] = llvm.load %[[ARRAY_ELEM_REF]] : !llvm.ptr -> i32
 // CHECK:          %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> i32
-// CHECK:          %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:          %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:          %[[ARGVAL_1:.*]] = llvm.icmp "ne" %[[LPRV]], %[[ZERO_1]] : i32
-// CHECK:          %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:          %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:          %[[ARGVAL_2:.*]] = llvm.icmp "ne" %[[ARRAY_ELEM]], %[[ZERO_2]] : i32
 // CHECK:          %[[RES:.*]] = llvm.icmp "eq" %[[ARGVAL_2]], %[[ARGVAL_1]] : i1
 // CHECK:          %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32

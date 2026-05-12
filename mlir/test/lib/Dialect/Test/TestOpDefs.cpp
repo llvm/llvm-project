@@ -1062,11 +1062,15 @@ LogicalResult ReifyBoundOp::verify() {
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
-  } else if (getVar().getType().isIndex()) {
+  } else if (getVar().getType().isIndex() || getVar().getType().isInteger()) {
+    if (getVar().getType().isInteger() && !getAllowIntegerType())
+      return emitOpError("integer variable requires 'allow_integer_type'");
     if (getDim().has_value())
-      return emitOpError("unexpected 'dim' attribute for index variable");
+      return emitOpError(
+          "unexpected 'dim' attribute for index/integer variable");
   } else {
-    return emitOpError("expected index-typed variable or shape type variable");
+    return emitOpError(
+        "expected index-typed/integer-typed variable or shape type variable");
   }
   if (getConstant() && getScalable())
     return emitOpError("'scalable' and 'constant' are mutually exlusive");
@@ -1546,6 +1550,30 @@ bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
   return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
 }
 
+void TestRegionTypeChangerOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypeChangerOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypeChangerOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypeChangerOp::areTypesCompatible(Type lhs, Type rhs) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // TestVersionedOpA
 //===----------------------------------------------------------------------===//
@@ -1794,6 +1822,19 @@ convertTensorToBuffer(mlir::Operation *op,
                                                      dummyMemrefOp.getResult());
 
   return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestDummyTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<test::TestTensorType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
+      getContext(), type.getShape(), type.getElementType(), nullptr));
 }
 
 ::mlir::LogicalResult test::TestCreateTensorOp::bufferize(

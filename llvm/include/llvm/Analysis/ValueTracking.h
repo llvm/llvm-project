@@ -629,6 +629,11 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
+inline bool isValidAssumeForContext(const Instruction *I,
+                                    const SimplifyQuery &Q) {
+  return isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.AllowEphemerals);
+}
+
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
 /// memory and the function is marked as NoSync. The latter ensures the current
 /// function cannot arrange for another thread to free on its behalf.
@@ -682,10 +687,7 @@ LLVM_ABI ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.
 LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,
-                                            bool UseInstrInfo = true,
-                                            AssumptionCache *AC = nullptr,
-                                            const Instruction *CtxI = nullptr,
-                                            const DominatorTree *DT = nullptr,
+                                            const SimplifyQuery &SQ,
                                             unsigned Depth = 0);
 
 /// Combine constant ranges from computeConstantRange() and computeKnownBits().

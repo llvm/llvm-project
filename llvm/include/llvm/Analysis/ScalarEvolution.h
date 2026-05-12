@@ -72,7 +72,9 @@ LLVM_ABI extern bool VerifySCEV;
 /// Add and Mul expressions may have no-unsigned-wrap <NUW> or
 /// no-signed-wrap <NSW> properties, which are derived from the IR
 /// operator. NSW is a misnomer that we use to mean no signed overflow or
-/// underflow.
+/// underflow. NUW and NSW must hold for all subsets and orders of
+/// Add/Mul operands. That is, in `(a + b + c)<nsw>`, all of `a + b`,
+/// `b + c`, `a + c` must be nsw as well.
 ///
 /// AddRec expressions may have a no-self-wraparound <NW> property if, in
 /// the integer domain, abs(step) * max-iteration(loop) <=
@@ -2547,23 +2549,20 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public PassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {

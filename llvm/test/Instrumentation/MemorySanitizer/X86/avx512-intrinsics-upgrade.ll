@@ -739,14 +739,14 @@ define void @test_store1(<16 x float> %data, ptr %ptr, ptr %ptr2, i16 %mask)  #0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> [[DATA:%.*]], ptr align 1 [[PTR]], <16 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -783,14 +783,14 @@ define void @test_store2(<8 x double> %data, ptr %ptr, ptr %ptr2, i8 %mask)  #0 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[DATA:%.*]], ptr align 1 [[PTR]], <8 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -827,14 +827,14 @@ define void @test_mask_store_aligned_ps(<16 x float> %data, ptr %ptr, ptr %ptr2,
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> [[DATA:%.*]], ptr align 64 [[PTR]], <16 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -871,14 +871,14 @@ define void @test_mask_store_aligned_pd(<8 x double> %data, ptr %ptr, ptr %ptr2,
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v8f64.p0(<8 x double> [[DATA:%.*]], ptr align 64 [[PTR]], <8 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -915,14 +915,14 @@ define void@test_int_x86_avx512_mask_storeu_q_512(ptr %ptr1, ptr %ptr2, <8 x i64
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i64.p0(<8 x i64> [[X1:%.*]], ptr align 1 [[PTR1]], <8 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -959,14 +959,14 @@ define void@test_int_x86_avx512_mask_storeu_d_512(ptr %ptr1, ptr %ptr2, <16 x i3
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v16i32.p0(<16 x i32> [[X1:%.*]], ptr align 1 [[PTR1]], <16 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -1003,14 +1003,14 @@ define void@test_int_x86_avx512_mask_store_q_512(ptr %ptr1, ptr %ptr2, <8 x i64>
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i64.p0(<8 x i64> [[X1:%.*]], ptr align 64 [[PTR1]], <8 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -1047,14 +1047,14 @@ define void@test_int_x86_avx512_mask_store_d_512(ptr %ptr1, ptr %ptr2, <16 x i32
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    call void @llvm.masked.store.v16i32.p0(<16 x i32> [[X1:%.*]], ptr align 64 [[PTR1]], <16 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[PTR2:%.*]] to i64
@@ -1080,7 +1080,7 @@ define <16 x float> @test_mask_load_aligned_ps(<16 x float> %data, ptr %ptr, i16
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x float>, ptr [[PTR:%.*]], align 64
@@ -1100,7 +1100,7 @@ define <16 x float> @test_mask_load_aligned_ps(<16 x float> %data, ptr %ptr, i16
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call <16 x float> @llvm.masked.load.v16f32.p0(ptr align 64 [[PTR]], <16 x i1> [[TMP10]], <16 x float> [[TMP5]])
@@ -1116,7 +1116,7 @@ define <16 x float> @test_mask_load_aligned_ps(<16 x float> %data, ptr %ptr, i16
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP24:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       24:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       25:
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <16 x float> @llvm.masked.load.v16f32.p0(ptr align 64 [[PTR]], <16 x i1> [[TMP19]], <16 x float> zeroinitializer)
@@ -1143,7 +1143,7 @@ define <16 x float> @test_mask_load_unaligned_ps(<16 x float> %data, ptr %ptr, i
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x float>, ptr [[PTR:%.*]], align 1
@@ -1163,7 +1163,7 @@ define <16 x float> @test_mask_load_unaligned_ps(<16 x float> %data, ptr %ptr, i
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call <16 x float> @llvm.masked.load.v16f32.p0(ptr align 1 [[PTR]], <16 x i1> [[TMP10]], <16 x float> [[TMP5]])
@@ -1179,7 +1179,7 @@ define <16 x float> @test_mask_load_unaligned_ps(<16 x float> %data, ptr %ptr, i
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP24:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       24:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       25:
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <16 x float> @llvm.masked.load.v16f32.p0(ptr align 1 [[PTR]], <16 x i1> [[TMP19]], <16 x float> zeroinitializer)
@@ -1206,7 +1206,7 @@ define <8 x double> @test_mask_load_aligned_pd(<8 x double> %data, ptr %ptr, i8 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x double>, ptr [[PTR:%.*]], align 64
@@ -1226,7 +1226,7 @@ define <8 x double> @test_mask_load_aligned_pd(<8 x double> %data, ptr %ptr, i8 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 64 [[PTR]], <8 x i1> [[TMP10]], <8 x double> [[TMP5]])
@@ -1242,7 +1242,7 @@ define <8 x double> @test_mask_load_aligned_pd(<8 x double> %data, ptr %ptr, i8 
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP24:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       24:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       25:
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 64 [[PTR]], <8 x i1> [[TMP19]], <8 x double> zeroinitializer)
@@ -1269,7 +1269,7 @@ define <8 x double> @test_mask_load_unaligned_pd(<8 x double> %data, ptr %ptr, i
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x double>, ptr [[PTR:%.*]], align 1
@@ -1289,7 +1289,7 @@ define <8 x double> @test_mask_load_unaligned_pd(<8 x double> %data, ptr %ptr, i
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 1 [[PTR]], <8 x i1> [[TMP10]], <8 x double> [[TMP5]])
@@ -1305,7 +1305,7 @@ define <8 x double> @test_mask_load_unaligned_pd(<8 x double> %data, ptr %ptr, i
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP24:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       24:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       25:
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 1 [[PTR]], <8 x i1> [[TMP19]], <8 x double> zeroinitializer)
@@ -1335,7 +1335,7 @@ define <16 x i32> @test_mask_load_unaligned_d(ptr %ptr, ptr %ptr2, <16 x i32> %d
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <16 x i32>, ptr [[PTR:%.*]], align 1
@@ -1355,7 +1355,7 @@ define <16 x i32> @test_mask_load_unaligned_d(ptr %ptr, ptr %ptr2, <16 x i32> %d
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP16:%.*]], label [[TMP17:%.*]], !prof [[PROF1]]
 ; CHECK:       16:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       17:
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 1 [[PTR2]], <16 x i1> [[TMP11]], <16 x i32> [[TMP6]])
@@ -1371,7 +1371,7 @@ define <16 x i32> @test_mask_load_unaligned_d(ptr %ptr, ptr %ptr2, <16 x i32> %d
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP25:%.*]], label [[TMP26:%.*]], !prof [[PROF1]]
 ; CHECK:       25:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       26:
 ; CHECK-NEXT:    [[TMP27:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 1 [[PTR]], <16 x i1> [[TMP20]], <16 x i32> zeroinitializer)
@@ -1399,7 +1399,7 @@ define <8 x i64> @test_mask_load_unaligned_q(ptr %ptr, ptr %ptr2, <8 x i64> %dat
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i64>, ptr [[PTR:%.*]], align 1
@@ -1419,7 +1419,7 @@ define <8 x i64> @test_mask_load_unaligned_q(ptr %ptr, ptr %ptr2, <8 x i64> %dat
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP16:%.*]], label [[TMP17:%.*]], !prof [[PROF1]]
 ; CHECK:       16:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       17:
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <8 x i64> @llvm.masked.load.v8i64.p0(ptr align 1 [[PTR2]], <8 x i1> [[TMP11]], <8 x i64> [[TMP6]])
@@ -1435,7 +1435,7 @@ define <8 x i64> @test_mask_load_unaligned_q(ptr %ptr, ptr %ptr2, <8 x i64> %dat
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP25:%.*]], label [[TMP26:%.*]], !prof [[PROF1]]
 ; CHECK:       25:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       26:
 ; CHECK-NEXT:    [[TMP27:%.*]] = call <8 x i64> @llvm.masked.load.v8i64.p0(ptr align 1 [[PTR]], <8 x i1> [[TMP20]], <8 x i64> zeroinitializer)
@@ -1462,7 +1462,7 @@ define <16 x i32> @test_mask_load_aligned_d(<16 x i32> %data, ptr %ptr, i16 %mas
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i32>, ptr [[PTR:%.*]], align 64
@@ -1482,7 +1482,7 @@ define <16 x i32> @test_mask_load_aligned_d(<16 x i32> %data, ptr %ptr, i16 %mas
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 64 [[PTR]], <16 x i1> [[TMP10]], <16 x i32> [[TMP5]])
@@ -1498,7 +1498,7 @@ define <16 x i32> @test_mask_load_aligned_d(<16 x i32> %data, ptr %ptr, i16 %mas
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP24:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       24:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       25:
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 64 [[PTR]], <16 x i1> [[TMP19]], <16 x i32> zeroinitializer)
@@ -1525,7 +1525,7 @@ define <8 x i64> @test_mask_load_aligned_q(<8 x i64> %data, ptr %ptr, i8 %mask) 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i64>, ptr [[PTR:%.*]], align 64
@@ -1545,7 +1545,7 @@ define <8 x i64> @test_mask_load_aligned_q(<8 x i64> %data, ptr %ptr, i8 %mask) 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call <8 x i64> @llvm.masked.load.v8i64.p0(ptr align 64 [[PTR]], <8 x i1> [[TMP10]], <8 x i64> [[TMP5]])
@@ -1561,7 +1561,7 @@ define <8 x i64> @test_mask_load_aligned_q(<8 x i64> %data, ptr %ptr, i8 %mask) 
 ; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR6]], label [[TMP24:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       24:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       25:
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <8 x i64> @llvm.masked.load.v8i64.p0(ptr align 64 [[PTR]], <8 x i1> [[TMP19]], <8 x i64> zeroinitializer)
@@ -2770,7 +2770,7 @@ define void@test_storent_q_512(<8 x i64> %data, ptr %ptr)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
@@ -2795,7 +2795,7 @@ define void @test_storent_pd_512(<8 x double> %data, ptr %ptr)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
@@ -2820,7 +2820,7 @@ define void @test_storent_ps_512(<16 x float> %data, ptr %ptr)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
@@ -3192,7 +3192,7 @@ define <16 x i32> @test_mask_add_epi32_rm(<16 x i32> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -3221,7 +3221,7 @@ define <16 x i32> @test_mask_add_epi32_rmk(<16 x i32> %a, ptr %ptr_b, <16 x i32>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -3257,7 +3257,7 @@ define <16 x i32> @test_mask_add_epi32_rmkz(<16 x i32> %a, ptr %ptr_b, i16 %mask
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -3294,7 +3294,7 @@ define <16 x i32> @test_mask_add_epi32_rmb(<16 x i32> %a, ptr %ptr_b, <16 x i32>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -3331,7 +3331,7 @@ define <16 x i32> @test_mask_add_epi32_rmbk(<16 x i32> %a, ptr %ptr_b, <16 x i32
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP19:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -3375,7 +3375,7 @@ define <16 x i32> @test_mask_add_epi32_rmbkz(<16 x i32> %a, ptr %ptr_b, i16 %mas
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -3481,7 +3481,7 @@ define <16 x i32> @test_mask_sub_epi32_rm(<16 x i32> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -3510,7 +3510,7 @@ define <16 x i32> @test_mask_sub_epi32_rmk(<16 x i32> %a, ptr %ptr_b, <16 x i32>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -3546,7 +3546,7 @@ define <16 x i32> @test_mask_sub_epi32_rmkz(<16 x i32> %a, ptr %ptr_b, i16 %mask
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -3583,7 +3583,7 @@ define <16 x i32> @test_mask_sub_epi32_rmb(<16 x i32> %a, ptr %ptr_b, <16 x i32>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -3620,7 +3620,7 @@ define <16 x i32> @test_mask_sub_epi32_rmbk(<16 x i32> %a, ptr %ptr_b, <16 x i32
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP19:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -3663,7 +3663,7 @@ define <16 x i32> @test_mask_sub_epi32_rmbkz(<16 x i32> %a, ptr %ptr_b, i16 %mas
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP17:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -3769,7 +3769,7 @@ define <8 x i64> @test_mask_add_epi64_rm(<8 x i64> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i64>, ptr [[PTR_B:%.*]], align 64
@@ -3798,7 +3798,7 @@ define <8 x i64> @test_mask_add_epi64_rmk(<8 x i64> %a, ptr %ptr_b, <8 x i64> %p
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i64>, ptr [[PTR_B:%.*]], align 64
@@ -3834,7 +3834,7 @@ define <8 x i64> @test_mask_add_epi64_rmkz(<8 x i64> %a, ptr %ptr_b, i8 %mask)  
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i64>, ptr [[PTR_B:%.*]], align 64
@@ -3871,7 +3871,7 @@ define <8 x i64> @test_mask_add_epi64_rmb(<8 x i64> %a, ptr %ptr_b, <8 x i64> %e
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -3908,7 +3908,7 @@ define <8 x i64> @test_mask_add_epi64_rmbk(<8 x i64> %a, ptr %ptr_b, <8 x i64> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP19:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -3952,7 +3952,7 @@ define <8 x i64> @test_mask_add_epi64_rmbkz(<8 x i64> %a, ptr %ptr_b, i8 %mask, 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -4058,7 +4058,7 @@ define <8 x i64> @test_mask_sub_epi64_rm(<8 x i64> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i64>, ptr [[PTR_B:%.*]], align 64
@@ -4087,7 +4087,7 @@ define <8 x i64> @test_mask_sub_epi64_rmk(<8 x i64> %a, ptr %ptr_b, <8 x i64> %p
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i64>, ptr [[PTR_B:%.*]], align 64
@@ -4123,7 +4123,7 @@ define <8 x i64> @test_mask_sub_epi64_rmkz(<8 x i64> %a, ptr %ptr_b, i8 %mask)  
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i64>, ptr [[PTR_B:%.*]], align 64
@@ -4160,7 +4160,7 @@ define <8 x i64> @test_mask_sub_epi64_rmb(<8 x i64> %a, ptr %ptr_b, <8 x i64> %e
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -4197,7 +4197,7 @@ define <8 x i64> @test_mask_sub_epi64_rmbk(<8 x i64> %a, ptr %ptr_b, <8 x i64> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP19:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -4241,7 +4241,7 @@ define <8 x i64> @test_mask_sub_epi64_rmbkz(<8 x i64> %a, ptr %ptr_b, i8 %mask, 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -4347,7 +4347,7 @@ define <16 x i32> @test_mask_mullo_epi32_rm_512(<16 x i32> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -4376,7 +4376,7 @@ define <16 x i32> @test_mask_mullo_epi32_rmk_512(<16 x i32> %a, ptr %ptr_b, <16 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -4412,7 +4412,7 @@ define <16 x i32> @test_mask_mullo_epi32_rmkz_512(<16 x i32> %a, ptr %ptr_b, i16
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -4449,7 +4449,7 @@ define <16 x i32> @test_mask_mullo_epi32_rmb_512(<16 x i32> %a, ptr %ptr_b, <16 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -4486,7 +4486,7 @@ define <16 x i32> @test_mask_mullo_epi32_rmbk_512(<16 x i32> %a, ptr %ptr_b, <16
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP19:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -4530,7 +4530,7 @@ define <16 x i32> @test_mask_mullo_epi32_rmbkz_512(<16 x i32> %a, ptr %ptr_b, i1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[PTR_B:%.*]], align 4
@@ -7853,7 +7853,7 @@ define <8 x i64> @test_x86_avx512_psrlv_q_memop(<8 x i64> %a0, ptr %ptr)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i64>, ptr [[PTR:%.*]], align 64
@@ -7880,7 +7880,8 @@ define <8 x double>@test_int_x86_avx512_cvt_dq2pd_512(<8 x i32> %x0, <8 x double
 ; CHECK-LABEL: @test_int_x86_avx512_cvt_dq2pd_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i32> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i1> [[TMP3]] to <8 x i64>
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <8 x i32> [[X0:%.*]] to <8 x double>
 ; CHECK-NEXT:    store <8 x i64> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x double> [[CVT]]
@@ -7896,7 +7897,8 @@ define <8 x double>@test_int_x86_avx512_mask_cvt_dq2pd_512(<8 x i32> %x0, <8 x d
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 96), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i32> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i1> [[TMP14]] to <8 x i64>
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <8 x i32> [[X0:%.*]] to <8 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8 [[TMP2]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[X2:%.*]] to <8 x i1>
@@ -7921,7 +7923,8 @@ define <8 x double>@test_int_x86_avx512_cvt_udq2pd_512(<8 x i32> %x0, <8 x doubl
 ; CHECK-LABEL: @test_int_x86_avx512_cvt_udq2pd_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i32> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i1> [[TMP3]] to <8 x i64>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <8 x i32> [[X0:%.*]] to <8 x double>
 ; CHECK-NEXT:    store <8 x i64> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x double> [[CVT]]
@@ -7937,7 +7940,8 @@ define <8 x double>@test_int_x86_avx512_mask_cvt_udq2pd_512(<8 x i32> %x0, <8 x 
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 96), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i32> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i1> [[TMP14]] to <8 x i64>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <8 x i32> [[X0:%.*]] to <8 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8 [[TMP2]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[X2:%.*]] to <8 x i1>
@@ -7964,7 +7968,7 @@ define <16 x float> @test_x86_vcvtph2ps_512(<16 x i16> %a0)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> [[A0:%.*]], <16 x float> zeroinitializer, i16 -1, i32 4)
@@ -7983,7 +7987,7 @@ define <16 x float> @test_x86_vcvtph2ps_512_sae(<16 x i16> %a0)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> [[A0:%.*]], <16 x float> zeroinitializer, i16 -1, i32 8)
@@ -8010,7 +8014,7 @@ define <16 x float> @test_x86_vcvtph2ps_512_rrk(<16 x i16> %a0,<16 x float> %a1,
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> [[A0:%.*]], <16 x float> [[A1:%.*]], i16 [[MASK:%.*]], i32 4)
@@ -8033,7 +8037,7 @@ define <16 x float> @test_x86_vcvtph2ps_512_sae_rrkz(<16 x i16> %a0, i16 %mask) 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> [[A0:%.*]], <16 x float> zeroinitializer, i16 [[MASK:%.*]], i32 8)
@@ -8056,7 +8060,7 @@ define <16 x float> @test_x86_vcvtph2ps_512_rrkz(<16 x i16> %a0, i16 %mask)  #0 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> [[A0:%.*]], <16 x float> zeroinitializer, i16 [[MASK:%.*]], i32 4)
@@ -8151,7 +8155,7 @@ define <8 x double>@test_int_x86_avx512_vpermilvar_pd_512(<8 x double> %x0, <8 x
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> [[X3:%.*]], <8 x i64> [[X2]])
@@ -8178,7 +8182,7 @@ define <8 x double>@test_int_x86_avx512_mask_vpermilvar_pd_512(<8 x double> %x0,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP19:%.*]], label [[TMP20:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> [[X5:%.*]], <8 x i64> [[X4]])
@@ -8214,7 +8218,7 @@ define <8 x double>@test_int_x86_avx512_maskz_vpermilvar_pd_512(<8 x double> %x0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> [[X4:%.*]], <8 x i64> [[X2]])
@@ -8249,7 +8253,7 @@ define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512(<16 x float> %x0, <16 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X3:%.*]], <16 x i32> [[X2]])
@@ -8276,7 +8280,7 @@ define <16 x float>@test_int_x86_avx512_mask_vpermilvar_ps_512(<16 x float> %x0,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP19:%.*]], label [[TMP20:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X5:%.*]], <16 x i32> [[X4]])
@@ -8313,7 +8317,7 @@ define <16 x float>@test_int_x86_avx512_maskz_vpermilvar_ps_512(<16 x float> %x0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X4:%.*]], <16 x i32> [[X2]])
@@ -8507,7 +8511,7 @@ define <8 x i64> @test_mask_mul_epi32_rm(<16 x i32> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -8552,7 +8556,7 @@ define <8 x i64> @test_mask_mul_epi32_rmk(<16 x i32> %a, ptr %ptr_b, <8 x i64> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -8604,7 +8608,7 @@ define <8 x i64> @test_mask_mul_epi32_rmkz(<16 x i32> %a, ptr %ptr_b, i8 %mask) 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -8657,7 +8661,7 @@ define <8 x i64> @test_mask_mul_epi32_rmb(<16 x i32> %a, ptr %ptr_b, <8 x i64> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP26:%.*]], label [[TMP27:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -8713,7 +8717,7 @@ define <8 x i64> @test_mask_mul_epi32_rmbk(<16 x i32> %a, ptr %ptr_b, <8 x i64> 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP35:%.*]], label [[TMP36:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -8776,7 +8780,7 @@ define <8 x i64> @test_mask_mul_epi32_rmbk_buildvector(<16 x i32> %a, ptr %ptr_b
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP35:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -8857,7 +8861,7 @@ define <8 x i64> @test_mask_mul_epi32_rmbkz(<16 x i32> %a, ptr %ptr_b, i8 %mask,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP34:%.*]], label [[TMP35:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -8919,7 +8923,7 @@ define <8 x i64> @test_mask_mul_epi32_rmbkz_buildvector(<16 x i32> %a, ptr %ptr_
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP34:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -9110,7 +9114,7 @@ define <8 x i64> @test_mask_mul_epu32_rm(<16 x i32> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -9155,7 +9159,7 @@ define <8 x i64> @test_mask_mul_epu32_rmk(<16 x i32> %a, ptr %ptr_b, <8 x i64> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -9207,7 +9211,7 @@ define <8 x i64> @test_mask_mul_epu32_rmkz(<16 x i32> %a, ptr %ptr_b, i8 %mask) 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -9260,7 +9264,7 @@ define <8 x i64> @test_mask_mul_epu32_rmb(<16 x i32> %a, ptr %ptr_b, <8 x i64> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP26:%.*]], label [[TMP27:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -9316,7 +9320,7 @@ define <8 x i64> @test_mask_mul_epu32_rmbk(<16 x i32> %a, ptr %ptr_b, <8 x i64> 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP35:%.*]], label [[TMP36:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -9379,7 +9383,7 @@ define <8 x i64> @test_mask_mul_epu32_rmbkz(<16 x i32> %a, ptr %ptr_b, i8 %mask,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP34:%.*]], label [[TMP35:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -9830,7 +9834,7 @@ define <8 x i64> @test_x86_avx512_movntdqa(ptr %a0)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[A0:%.*]], align 64, !nontemporal [[META2]]
@@ -11122,7 +11126,7 @@ define <16 x float>@test_int_x86_avx512_mask_broadcastf32x4_512_load(ptr %x0ptr,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[X0:%.*]] = load <4 x float>, ptr [[X0PTR:%.*]], align 16
@@ -11225,7 +11229,7 @@ define <8 x double>@test_int_x86_avx512_mask_broadcastf64x4_512_load(ptr %x0ptr,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[X0:%.*]] = load <4 x double>, ptr [[X0PTR:%.*]], align 32
@@ -11312,7 +11316,7 @@ define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x4_512_load(ptr %x0ptr, <
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[X0:%.*]] = load <4 x i32>, ptr [[X0PTR:%.*]], align 16
@@ -11410,7 +11414,7 @@ define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x4_512_load(ptr %x0ptr, <8
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[X0:%.*]] = load <4 x i64>, ptr [[X0PTR:%.*]], align 32
@@ -12127,7 +12131,7 @@ define i16 @test_cmpps(<16 x float> %a, <16 x float> %b)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 2, <16 x i1> splat (i1 true), i32 8)
@@ -12152,7 +12156,7 @@ define i8 @test_cmppd(<8 x double> %a, <8 x double> %b)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 4, <8 x i1> splat (i1 true), i32 4)
@@ -12289,7 +12293,7 @@ define <8 x i64> @test_mul_epi32_rm(<16 x i32> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -12334,7 +12338,7 @@ define <8 x i64> @test_mul_epi32_rmk(<16 x i32> %a, ptr %ptr_b, <8 x i64> %passT
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -12388,7 +12392,7 @@ define <8 x i64> @test_mul_epi32_rmkz(<16 x i32> %a, ptr %ptr_b, i8 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -12442,7 +12446,7 @@ define <8 x i64> @test_mul_epi32_rmb(<16 x i32> %a, ptr %ptr_b, <8 x i64> %extra
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP26:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -12497,7 +12501,7 @@ define <8 x i64> @test_mul_epi32_rmbk(<16 x i32> %a, ptr %ptr_b, <8 x i64> %pass
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP33:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -12561,7 +12565,7 @@ define <8 x i64> @test_mul_epi32_rmbkz(<16 x i32> %a, ptr %ptr_b, i8 %mask, <8 x
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP32:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -12740,7 +12744,7 @@ define <8 x i64> @test_mul_epu32_rm(<16 x i32> %a, ptr %ptr_b)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -12785,7 +12789,7 @@ define <8 x i64> @test_mul_epu32_rmk(<16 x i32> %a, ptr %ptr_b, <8 x i64> %passT
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -12839,7 +12843,7 @@ define <8 x i64> @test_mul_epu32_rmkz(<16 x i32> %a, ptr %ptr_b, i8 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i32>, ptr [[PTR_B:%.*]], align 64
@@ -12893,7 +12897,7 @@ define <8 x i64> @test_mul_epu32_rmb(<16 x i32> %a, ptr %ptr_b, <8 x i64> %extra
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP26:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -12948,7 +12952,7 @@ define <8 x i64> @test_mul_epu32_rmbk(<16 x i32> %a, ptr %ptr_b, <8 x i64> %pass
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP33:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -13012,7 +13016,7 @@ define <8 x i64> @test_mul_epu32_rmbkz(<16 x i32> %a, ptr %ptr_b, i8 %mask, <8 x
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP32:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr [[PTR_B:%.*]], align 8
@@ -13073,7 +13077,8 @@ define <2 x double> @test_x86_avx512_mm_cvtu32_sd(<2 x double> %a, i32 %b)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = uitofp i32 [[B:%.*]] to double
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[A:%.*]], double [[TMP4]], i64 0
@@ -13094,7 +13099,7 @@ define <16 x float> @test_x86_vbroadcast_ss_512(ptr %a0)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[A0:%.*]], align 4
@@ -13150,7 +13155,7 @@ define <8 x double> @test_x86_vbroadcast_sd_512(ptr %a0)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[A0:%.*]], align 8
@@ -13196,7 +13201,7 @@ define <8 x double>@test_int_x86_avx512_permvar_df_512(<8 x double> %x0, <8 x i6
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> [[X0:%.*]], <8 x i64> [[X1:%.*]])
@@ -13222,7 +13227,7 @@ define <8 x double>@test_int_x86_avx512_mask_permvar_df_512(<8 x double> %x0, <8
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> [[X0:%.*]], <8 x i64> [[X1:%.*]])
@@ -13257,7 +13262,7 @@ define <8 x double>@test_int_x86_avx512_maskz_permvar_df_512(<8 x double> %x0, <
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> [[X0:%.*]], <8 x i64> [[X1:%.*]])
@@ -13356,7 +13361,7 @@ define <16 x float>@test_int_x86_avx512_permvar_sf_512(<16 x float> %x0, <16 x i
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float> [[X0:%.*]], <16 x i32> [[X1:%.*]])
@@ -13382,7 +13387,7 @@ define <16 x float>@test_int_x86_avx512_mask_permvar_sf_512(<16 x float> %x0, <1
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float> [[X0:%.*]], <16 x i32> [[X1:%.*]])
@@ -13417,7 +13422,7 @@ define <16 x float>@test_int_x86_avx512_maskz_permvar_sf_512(<16 x float> %x0, <
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float> [[X0:%.*]], <16 x i32> [[X1:%.*]])
@@ -13520,7 +13525,7 @@ define <16 x i32>@test_int_x86_avx512_pternlog_d_512(<16 x i32> %x0, <16 x i32> 
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[X0:%.*]], <16 x i32> [[X1:%.*]], <16 x i32> [[X2:%.*]], i32 33)
@@ -13549,7 +13554,7 @@ define <16 x i32>@test_int_x86_avx512_mask_pternlog_d_512(<16 x i32> %x0, <16 x 
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[X0:%.*]], <16 x i32> [[X1:%.*]], <16 x i32> [[X2:%.*]], i32 33)
@@ -13588,7 +13593,7 @@ define <16 x i32>@test_int_x86_avx512_maskz_pternlog_d_512(<16 x i32> %x0, <16 x
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[X0:%.*]], <16 x i32> [[X1:%.*]], <16 x i32> [[X2:%.*]], i32 33)
@@ -13625,7 +13630,7 @@ define <8 x i64>@test_int_x86_avx512_pternlog_q_512(<8 x i64> %x0, <8 x i64> %x1
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> [[X0:%.*]], <8 x i64> [[X1:%.*]], <8 x i64> [[X2:%.*]], i32 33)
@@ -13654,7 +13659,7 @@ define <8 x i64>@test_int_x86_avx512_mask_pternlog_q_512(<8 x i64> %x0, <8 x i64
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> [[X0:%.*]], <8 x i64> [[X1:%.*]], <8 x i64> [[X2:%.*]], i32 33)
@@ -13693,7 +13698,7 @@ define <8 x i64>@test_int_x86_avx512_maskz_pternlog_q_512(<8 x i64> %x0, <8 x i6
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> [[X0:%.*]], <8 x i64> [[X1:%.*]], <8 x i64> [[X2:%.*]], i32 33)
@@ -13724,7 +13729,7 @@ define <16 x i32>@test_int_x86_avx512_vpermi2var_d_512(<16 x i32> %x0, <16 x i32
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[X2:%.*]] = load <16 x i32>, ptr [[X2P:%.*]], align 64
@@ -13738,7 +13743,7 @@ define <16 x i32>@test_int_x86_avx512_vpermi2var_d_512(<16 x i32> %x0, <16 x i32
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP11]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP13:%.*]], label [[TMP15:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[X0:%.*]], <16 x i32> [[X3]], <16 x i32> [[X4:%.*]])
@@ -13761,7 +13766,7 @@ define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[X2:%.*]] = load <16 x i32>, ptr [[X2P:%.*]], align 64
@@ -13775,7 +13780,7 @@ define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP19]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP20:%.*]], label [[TMP21:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[X0:%.*]], <16 x i32> [[X1]], <16 x i32> [[X2]])
@@ -13812,7 +13817,7 @@ define <8 x double>@test_int_x86_avx512_vpermi2var_pd_512(<8 x double> %x0, <8 x
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP12]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> [[X0:%.*]], <8 x i64> [[X1]], <8 x double> [[X2:%.*]])
@@ -13841,7 +13846,7 @@ define <8 x double>@test_int_x86_avx512_mask_vpermi2var_pd_512(<8 x double> %x0,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP21]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP22:%.*]], label [[TMP23:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> [[X0:%.*]], <8 x i64> [[X1]], <8 x double> [[X2:%.*]])
@@ -13880,7 +13885,7 @@ define <16 x float>@test_int_x86_avx512_vpermi2var_ps_512(<16 x float> %x0, <16 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP12]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> [[X0:%.*]], <16 x i32> [[X1]], <16 x float> [[X2:%.*]])
@@ -13909,7 +13914,7 @@ define <16 x float>@test_int_x86_avx512_mask_vpermi2var_ps_512(<16 x float> %x0,
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP21]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP22:%.*]], label [[TMP23:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> [[X0:%.*]], <16 x i32> [[X1]], <16 x float> [[X2:%.*]])
@@ -13945,7 +13950,7 @@ define <8 x i64>@test_int_x86_avx512_vpermi2var_q_512(<8 x i64> %x0, <8 x i64> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> [[X0:%.*]], <8 x i64> [[X3]], <8 x i64> [[X2:%.*]])
@@ -13970,7 +13975,7 @@ define <8 x i64>@test_int_x86_avx512_mask_vpermi2var_q_512(<8 x i64> %x0, <8 x i
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> [[X0:%.*]], <8 x i64> [[X1]], <8 x i64> [[X2:%.*]])
@@ -14002,7 +14007,7 @@ define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[X2:%.*]] = load <16 x i32>, ptr [[X2P:%.*]], align 64
@@ -14016,7 +14021,7 @@ define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP19]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP20:%.*]], label [[TMP21:%.*]], !prof [[PROF1]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       14:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[X1:%.*]], <16 x i32> [[X4]], <16 x i32> [[X2]])
@@ -14050,7 +14055,7 @@ define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[X2S:%.*]] = load double, ptr [[X2PTR:%.*]], align 8
@@ -14071,7 +14076,7 @@ define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i24 [[TMP25]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP26:%.*]], label [[TMP27:%.*]], !prof [[PROF1]]
 ; CHECK:       17:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       18:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> [[X1:%.*]], <8 x i64> [[X4]], <8 x double> [[X2]])
@@ -14113,7 +14118,7 @@ define <16 x float>@test_int_x86_avx512_maskz_vpermt2var_ps_512(<16 x i32> %x0, 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP20:%.*]], label [[TMP21:%.*]], !prof [[PROF1]]
 ; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       12:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> [[X1:%.*]], <16 x i32> [[X4]], <16 x float> [[X2:%.*]])
@@ -14150,7 +14155,7 @@ define <8 x i64>@test_int_x86_avx512_maskz_vpermt2var_q_512(<8 x i64> %x0, <8 x 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> [[X1:%.*]], <8 x i64> [[X4]], <8 x i64> [[X2:%.*]])
@@ -14183,7 +14188,7 @@ define <16 x i32>@test_int_x86_avx512_vpermt2var_d_512(<16 x i32> %x0, <16 x i32
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[X1:%.*]], <16 x i32> [[X3]], <16 x i32> [[X2:%.*]])
@@ -14208,7 +14213,7 @@ define <16 x i32>@test_int_x86_avx512_mask_vpermt2var_d_512(<16 x i32> %x0, <16 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[X1:%.*]], <16 x i32> [[X4]], <16 x i32> [[X2:%.*]])
@@ -14243,7 +14248,7 @@ define <16 x float> @test_vsubps_rn(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -14267,7 +14272,7 @@ define <16 x float> @test_vsubps_rd(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -14291,7 +14296,7 @@ define <16 x float> @test_vsubps_ru(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -14315,7 +14320,7 @@ define <16 x float> @test_vsubps_rz(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -14339,7 +14344,7 @@ define <16 x float> @test_vmulps_rn(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -14363,7 +14368,7 @@ define <16 x float> @test_vmulps_rd(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -14387,7 +14392,7 @@ define <16 x float> @test_vmulps_ru(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -14411,7 +14416,7 @@ define <16 x float> @test_vmulps_rz(<16 x float> %a0, <16 x float> %a1)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -14438,7 +14443,7 @@ define <16 x float> @test_vmulps_mask_rn(<16 x float> %a0, <16 x float> %a1, i16
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -14473,7 +14478,7 @@ define <16 x float> @test_vmulps_mask_rd(<16 x float> %a0, <16 x float> %a1, i16
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -14508,7 +14513,7 @@ define <16 x float> @test_vmulps_mask_ru(<16 x float> %a0, <16 x float> %a1, i16
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -14543,7 +14548,7 @@ define <16 x float> @test_vmulps_mask_rz(<16 x float> %a0, <16 x float> %a1, i16
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -14580,7 +14585,7 @@ define <16 x float> @test_vmulps_mask_passthru_rn(<16 x float> %a0, <16 x float>
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -14617,7 +14622,7 @@ define <16 x float> @test_vmulps_mask_passthru_rd(<16 x float> %a0, <16 x float>
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -14654,7 +14659,7 @@ define <16 x float> @test_vmulps_mask_passthru_ru(<16 x float> %a0, <16 x float>
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -14691,7 +14696,7 @@ define <16 x float> @test_vmulps_mask_passthru_rz(<16 x float> %a0, <16 x float>
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -14728,7 +14733,7 @@ define <8 x double> @test_vmulpd_mask_rn(<8 x double> %a0, <8 x double> %a1, i8 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> [[A0:%.*]], <8 x double> [[A1:%.*]], i32 8)
@@ -14763,7 +14768,7 @@ define <8 x double> @test_vmulpd_mask_rd(<8 x double> %a0, <8 x double> %a1, i8 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> [[A0:%.*]], <8 x double> [[A1:%.*]], i32 9)
@@ -14798,7 +14803,7 @@ define <8 x double> @test_vmulpd_mask_ru(<8 x double> %a0, <8 x double> %a1, i8 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> [[A0:%.*]], <8 x double> [[A1:%.*]], i32 10)
@@ -14833,7 +14838,7 @@ define <8 x double> @test_vmulpd_mask_rz(<8 x double> %a0, <8 x double> %a1, i8 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> [[A0:%.*]], <8 x double> [[A1:%.*]], i32 11)
@@ -14868,7 +14873,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_rn_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -14901,7 +14906,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_rd_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -14934,7 +14939,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_ru_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -14968,7 +14973,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_rz_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -15003,7 +15008,7 @@ define <16 x float> @test_mm512_maskz_add_round_ps_current(<16 x float> %a0, <16
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -15038,7 +15043,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_rn_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -15073,7 +15078,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_rd_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -15108,7 +15113,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_ru_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -15144,7 +15149,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_rz_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -15181,7 +15186,7 @@ define <16 x float> @test_mm512_mask_add_round_ps_current(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -15215,7 +15220,7 @@ define <16 x float> @test_mm512_add_round_ps_rn_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -15237,7 +15242,7 @@ define <16 x float> @test_mm512_add_round_ps_rd_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -15259,7 +15264,7 @@ define <16 x float> @test_mm512_add_round_ps_ru_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -15282,7 +15287,7 @@ define <16 x float> @test_mm512_add_round_ps_rz_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -15305,7 +15310,7 @@ define <16 x float> @test_mm512_add_round_ps_current(<16 x float> %a0, <16 x flo
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -15332,7 +15337,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_rn_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -15367,7 +15372,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_rd_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -15402,7 +15407,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_ru_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -15438,7 +15443,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_rz_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -15475,7 +15480,7 @@ define <16 x float> @test_mm512_mask_sub_round_ps_current(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -15508,7 +15513,7 @@ define <16 x float> @test_mm512_sub_round_ps_rn_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -15530,7 +15535,7 @@ define <16 x float> @test_mm512_sub_round_ps_rd_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -15552,7 +15557,7 @@ define <16 x float> @test_mm512_sub_round_ps_ru_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -15575,7 +15580,7 @@ define <16 x float> @test_mm512_sub_round_ps_rz_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -15598,7 +15603,7 @@ define <16 x float> @test_mm512_sub_round_ps_current(<16 x float> %a0, <16 x flo
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -15623,7 +15628,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_rn_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -15656,7 +15661,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_rd_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -15689,7 +15694,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_ru_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -15723,7 +15728,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_rz_sae(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -15758,7 +15763,7 @@ define <16 x float> @test_mm512_maskz_div_round_ps_current(<16 x float> %a0, <16
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -15793,7 +15798,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_rn_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -15828,7 +15833,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_rd_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -15863,7 +15868,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_ru_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -15899,7 +15904,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_rz_sae(<16 x float> %a0, <16 x
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -15936,7 +15941,7 @@ define <16 x float> @test_mm512_mask_div_round_ps_current(<16 x float> %a0, <16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -15970,7 +15975,7 @@ define <16 x float> @test_mm512_div_round_ps_rn_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 8)
@@ -15992,7 +15997,7 @@ define <16 x float> @test_mm512_div_round_ps_rd_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 9)
@@ -16014,7 +16019,7 @@ define <16 x float> @test_mm512_div_round_ps_ru_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 10)
@@ -16037,7 +16042,7 @@ define <16 x float> @test_mm512_div_round_ps_rz_sae(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 11)
@@ -16060,7 +16065,7 @@ define <16 x float> @test_mm512_div_round_ps_current(<16 x float> %a0, <16 x flo
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]], i32 4)
@@ -16091,7 +16096,7 @@ define void @test_mask_compress_store_pd_512(ptr %addr, <8 x double> %data, i8 %
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v8f64(<8 x double> [[DATA:%.*]], ptr [[ADDR]], <8 x i1> [[TMP5]])
@@ -16116,7 +16121,7 @@ define void @test_compress_store_pd_512(ptr %addr, <8 x double> %data)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v8f64(<8 x double> [[DATA:%.*]], ptr [[ADDR]], <8 x i1> splat (i1 true))
@@ -16145,7 +16150,7 @@ define void @test_mask_compress_store_ps_512(ptr %addr, <16 x float> %data, i16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v16f32(<16 x float> [[DATA:%.*]], ptr [[ADDR]], <16 x i1> [[TMP5]])
@@ -16170,7 +16175,7 @@ define void @test_compress_store_ps_512(ptr %addr, <16 x float> %data)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v16f32(<16 x float> [[DATA:%.*]], ptr [[ADDR]], <16 x i1> splat (i1 true))
@@ -16199,7 +16204,7 @@ define void @test_mask_compress_store_q_512(ptr %addr, <8 x i64> %data, i8 %mask
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v8i64(<8 x i64> [[DATA:%.*]], ptr [[ADDR]], <8 x i1> [[TMP5]])
@@ -16224,7 +16229,7 @@ define void @test_compress_store_q_512(ptr %addr, <8 x i64> %data)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v8i64(<8 x i64> [[DATA:%.*]], ptr [[ADDR]], <8 x i1> splat (i1 true))
@@ -16253,7 +16258,7 @@ define void @test_mask_compress_store_d_512(ptr %addr, <16 x i32> %data, i16 %ma
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v16i32(<16 x i32> [[DATA:%.*]], ptr [[ADDR]], <16 x i1> [[TMP5]])
@@ -16278,7 +16283,7 @@ define void @test_compress_store_d_512(ptr %addr, <16 x i32> %data)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v16i32(<16 x i32> [[DATA:%.*]], ptr [[ADDR]], <16 x i1> splat (i1 true))
@@ -16307,7 +16312,7 @@ define <8 x double> @test_mask_expand_load_pd_512(ptr %addr, <8 x double> %data,
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x double> @llvm.masked.expandload.v8f64(ptr [[ADDR]], <8 x i1> [[TMP5]], <8 x double> [[DATA:%.*]])
@@ -16336,7 +16341,7 @@ define <8 x double> @test_maskz_expand_load_pd_512(ptr %addr, i8 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x double> @llvm.masked.expandload.v8f64(ptr [[ADDR]], <8 x i1> [[TMP4]], <8 x double> zeroinitializer)
@@ -16362,7 +16367,7 @@ define <8 x double> @test_expand_load_pd_512(ptr %addr, <8 x double> %data)  #0 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.masked.expandload.v8f64(ptr [[ADDR]], <8 x i1> splat (i1 true), <8 x double> [[DATA:%.*]])
@@ -16386,7 +16391,7 @@ define <8 x double> @test_zero_mask_expand_load_pd_512(ptr %addr, <8 x double> %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.masked.expandload.v8f64(ptr [[ADDR]], <8 x i1> zeroinitializer, <8 x double> [[DATA:%.*]])
@@ -16416,7 +16421,7 @@ define <16 x float> @test_mask_expand_load_ps_512(ptr %addr, <16 x float> %data,
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x float> @llvm.masked.expandload.v16f32(ptr [[ADDR]], <16 x i1> [[TMP5]], <16 x float> [[DATA:%.*]])
@@ -16445,7 +16450,7 @@ define <16 x float> @test_maskz_expand_load_ps_512(ptr %addr, i16 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x float> @llvm.masked.expandload.v16f32(ptr [[ADDR]], <16 x i1> [[TMP4]], <16 x float> zeroinitializer)
@@ -16471,7 +16476,7 @@ define <16 x float> @test_expand_load_ps_512(ptr %addr, <16 x float> %data)  #0 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.masked.expandload.v16f32(ptr [[ADDR]], <16 x i1> splat (i1 true), <16 x float> [[DATA:%.*]])
@@ -16501,7 +16506,7 @@ define <8 x i64> @test_mask_expand_load_q_512(ptr %addr, <8 x i64> %data, i8 %ma
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x i64> @llvm.masked.expandload.v8i64(ptr [[ADDR]], <8 x i1> [[TMP5]], <8 x i64> [[DATA:%.*]])
@@ -16530,7 +16535,7 @@ define <8 x i64> @test_maskz_expand_load_q_512(ptr %addr, i8 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x i64> @llvm.masked.expandload.v8i64(ptr [[ADDR]], <8 x i1> [[TMP4]], <8 x i64> zeroinitializer)
@@ -16556,7 +16561,7 @@ define <8 x i64> @test_expand_load_q_512(ptr %addr, <8 x i64> %data)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i64> @llvm.masked.expandload.v8i64(ptr [[ADDR]], <8 x i1> splat (i1 true), <8 x i64> [[DATA:%.*]])
@@ -16586,7 +16591,7 @@ define <16 x i32> @test_mask_expand_load_d_512(ptr %addr, <16 x i32> %data, i16 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i32> @llvm.masked.expandload.v16i32(ptr [[ADDR]], <16 x i1> [[TMP5]], <16 x i32> [[DATA:%.*]])
@@ -16615,7 +16620,7 @@ define <16 x i32> @test_maskz_expand_load_d_512(ptr %addr, i16 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i32> @llvm.masked.expandload.v16i32(ptr [[ADDR]], <16 x i1> [[TMP4]], <16 x i32> zeroinitializer)
@@ -16641,7 +16646,7 @@ define <16 x i32> @test_expand_load_d_512(ptr %addr, <16 x i32> %data)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x i32> @llvm.masked.expandload.v16i32(ptr [[ADDR]], <16 x i1> splat (i1 true), <16 x i32> [[DATA:%.*]])
@@ -16995,7 +17000,7 @@ define <8 x double> @test_sqrt_round_pd_512(<8 x double> %a0, <8 x double> %extr
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> [[A0:%.*]], i32 11)
@@ -17016,7 +17021,7 @@ define <8 x double> @test_mask_sqrt_round_pd_512(<8 x double> %a0, <8 x double> 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> [[A0:%.*]], i32 11)
@@ -17046,7 +17051,7 @@ define <8 x double> @test_maskz_sqrt_round_pd_512(<8 x double> %a0, i8 %mask)  #
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> [[A0:%.*]], i32 11)
@@ -17132,7 +17137,7 @@ define <16 x float> @test_sqrt_round_ps_512(<16 x float> %a0)  #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> [[A0:%.*]], i32 11)
@@ -17153,7 +17158,7 @@ define <16 x float> @test_mask_sqrt_round_ps_512(<16 x float> %a0, <16 x float> 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> [[A0:%.*]], i32 11)
@@ -17183,7 +17188,7 @@ define <16 x float> @test_maskz_sqrt_round_ps_512(<16 x float> %a0, i16 %mask)  
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> [[A0:%.*]], i32 11)
@@ -17754,7 +17759,7 @@ define <2 x double>@test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %x0, <2 x do
 ; CHECK-NEXT:    [[_MSOR21:%.*]] = or i1 [[_MSOR]], [[_MSCMP20]]
 ; CHECK-NEXT:    br i1 [[_MSOR21]], label [[TMP23:%.*]], label [[TMP24:%.*]], !prof [[PROF1]]
 ; CHECK:       23:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       24:
 ; CHECK-NEXT:    [[TMP25:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP20]], double [[TMP21]], double [[TMP22]], i32 11)
@@ -17773,7 +17778,7 @@ define <2 x double>@test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %x0, <2 x do
 ; CHECK-NEXT:    [[_MSOR26:%.*]] = or i1 [[_MSOR24]], [[_MSCMP25]]
 ; CHECK-NEXT:    br i1 [[_MSOR26]], label [[TMP30:%.*]], label [[TMP31:%.*]], !prof [[PROF1]]
 ; CHECK:       30:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       31:
 ; CHECK-NEXT:    [[TMP32:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP27]], double [[TMP28]], double [[TMP29]], i32 10)
@@ -17852,7 +17857,7 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss(<4 x float> %x0, <4 x floa
 ; CHECK-NEXT:    [[_MSOR21:%.*]] = or i1 [[_MSOR]], [[_MSCMP20]]
 ; CHECK-NEXT:    br i1 [[_MSOR21]], label [[TMP23:%.*]], label [[TMP24:%.*]], !prof [[PROF1]]
 ; CHECK:       23:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       24:
 ; CHECK-NEXT:    [[TMP25:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP20]], float [[TMP21]], float [[TMP22]], i32 11)
@@ -17871,7 +17876,7 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss(<4 x float> %x0, <4 x floa
 ; CHECK-NEXT:    [[_MSOR26:%.*]] = or i1 [[_MSOR24]], [[_MSCMP25]]
 ; CHECK-NEXT:    br i1 [[_MSOR26]], label [[TMP30:%.*]], label [[TMP31:%.*]], !prof [[PROF1]]
 ; CHECK:       30:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       31:
 ; CHECK-NEXT:    [[TMP32:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP27]], float [[TMP28]], float [[TMP29]], i32 10)
@@ -17949,7 +17954,7 @@ define <2 x double>@test_int_x86_avx512_maskz_vfmadd_sd(<2 x double> %x0, <2 x d
 ; CHECK-NEXT:    [[_MSOR16:%.*]] = or i1 [[_MSOR]], [[_MSCMP15]]
 ; CHECK-NEXT:    br i1 [[_MSOR16]], label [[TMP22:%.*]], label [[TMP23:%.*]], !prof [[PROF1]]
 ; CHECK:       22:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       23:
 ; CHECK-NEXT:    [[TMP24:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP19]], double [[TMP20]], double [[TMP21]], i32 11)
@@ -18022,7 +18027,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; CHECK-NEXT:    [[_MSOR16:%.*]] = or i1 [[_MSOR]], [[_MSCMP15]]
 ; CHECK-NEXT:    br i1 [[_MSOR16]], label [[TMP22:%.*]], label [[TMP23:%.*]], !prof [[PROF1]]
 ; CHECK:       22:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       23:
 ; CHECK-NEXT:    [[TMP24:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP19]], float [[TMP20]], float [[TMP21]], i32 11)
@@ -18095,7 +18100,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfmadd_sd(<2 x double> %x0, <2 x d
 ; CHECK-NEXT:    [[_MSOR21:%.*]] = or i1 [[_MSOR]], [[_MSCMP20]]
 ; CHECK-NEXT:    br i1 [[_MSOR21]], label [[TMP23:%.*]], label [[TMP24:%.*]], !prof [[PROF1]]
 ; CHECK:       23:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       24:
 ; CHECK-NEXT:    [[TMP25:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP20]], double [[TMP21]], double [[TMP22]], i32 11)
@@ -18114,7 +18119,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfmadd_sd(<2 x double> %x0, <2 x d
 ; CHECK-NEXT:    [[_MSOR26:%.*]] = or i1 [[_MSOR24]], [[_MSCMP25]]
 ; CHECK-NEXT:    br i1 [[_MSOR26]], label [[TMP30:%.*]], label [[TMP31:%.*]], !prof [[PROF1]]
 ; CHECK:       30:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       31:
 ; CHECK-NEXT:    [[TMP32:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP27]], double [[TMP28]], double [[TMP29]], i32 10)
@@ -18193,7 +18198,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; CHECK-NEXT:    [[_MSOR21:%.*]] = or i1 [[_MSOR]], [[_MSCMP20]]
 ; CHECK-NEXT:    br i1 [[_MSOR21]], label [[TMP23:%.*]], label [[TMP24:%.*]], !prof [[PROF1]]
 ; CHECK:       23:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       24:
 ; CHECK-NEXT:    [[TMP25:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP20]], float [[TMP21]], float [[TMP22]], i32 11)
@@ -18212,7 +18217,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; CHECK-NEXT:    [[_MSOR26:%.*]] = or i1 [[_MSOR24]], [[_MSCMP25]]
 ; CHECK-NEXT:    br i1 [[_MSOR26]], label [[TMP30:%.*]], label [[TMP31:%.*]], !prof [[PROF1]]
 ; CHECK:       30:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       31:
 ; CHECK-NEXT:    [[TMP32:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP27]], float [[TMP28]], float [[TMP29]], i32 10)
@@ -18256,7 +18261,7 @@ define void @fmadd_ss_mask_memfold(ptr %a, ptr %b, i8 %c, <4 x float> %extra_par
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load float, ptr [[A:%.*]], align 4
@@ -18275,7 +18280,7 @@ define void @fmadd_ss_mask_memfold(ptr %a, ptr %b, i8 %c, <4 x float> %extra_par
 ; CHECK-NEXT:    [[_MSCMP17:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP17]], label [[TMP10:%.*]], label [[TMP29:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[B_VAL:%.*]] = load float, ptr [[B:%.*]], align 4
@@ -18319,7 +18324,7 @@ define void @fmadd_ss_mask_memfold(ptr %a, ptr %b, i8 %c, <4 x float> %extra_par
 ; CHECK-NEXT:    [[_MSCMP18:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP18]], label [[TMP30:%.*]], label [[TMP34:%.*]], !prof [[PROF1]]
 ; CHECK:       30:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       31:
 ; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[A]] to i64
@@ -18359,7 +18364,7 @@ define void @fmadd_ss_maskz_memfold(ptr %a, ptr %b, i8 %c, <4 x float> %extra_pa
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load float, ptr [[A:%.*]], align 4
@@ -18378,7 +18383,7 @@ define void @fmadd_ss_maskz_memfold(ptr %a, ptr %b, i8 %c, <4 x float> %extra_pa
 ; CHECK-NEXT:    [[_MSCMP17:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP17]], label [[TMP10:%.*]], label [[TMP28:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[B_VAL:%.*]] = load float, ptr [[B:%.*]], align 4
@@ -18421,7 +18426,7 @@ define void @fmadd_ss_maskz_memfold(ptr %a, ptr %b, i8 %c, <4 x float> %extra_pa
 ; CHECK-NEXT:    [[_MSCMP18:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP18]], label [[TMP29:%.*]], label [[TMP33:%.*]], !prof [[PROF1]]
 ; CHECK:       29:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       30:
 ; CHECK-NEXT:    [[TMP30:%.*]] = ptrtoint ptr [[A]] to i64
@@ -18461,7 +18466,7 @@ define void @fmadd_sd_mask_memfold(ptr %a, ptr %b, i8 %c, <2 x double> %extra_pa
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load double, ptr [[A:%.*]], align 8
@@ -18476,7 +18481,7 @@ define void @fmadd_sd_mask_memfold(ptr %a, ptr %b, i8 %c, <2 x double> %extra_pa
 ; CHECK-NEXT:    [[_MSCMP13:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP13]], label [[TMP10:%.*]], label [[TMP29:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[B_VAL:%.*]] = load double, ptr [[B:%.*]], align 8
@@ -18516,7 +18521,7 @@ define void @fmadd_sd_mask_memfold(ptr %a, ptr %b, i8 %c, <2 x double> %extra_pa
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP14]], label [[TMP30:%.*]], label [[TMP34:%.*]], !prof [[PROF1]]
 ; CHECK:       30:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       31:
 ; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[A]] to i64
@@ -18552,7 +18557,7 @@ define void @fmadd_sd_maskz_memfold(ptr %a, ptr %b, i8 %c, <2 x double> %extra_p
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load double, ptr [[A:%.*]], align 8
@@ -18567,7 +18572,7 @@ define void @fmadd_sd_maskz_memfold(ptr %a, ptr %b, i8 %c, <2 x double> %extra_p
 ; CHECK-NEXT:    [[_MSCMP13:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP13]], label [[TMP10:%.*]], label [[TMP28:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[B_VAL:%.*]] = load double, ptr [[B:%.*]], align 8
@@ -18606,7 +18611,7 @@ define void @fmadd_sd_maskz_memfold(ptr %a, ptr %b, i8 %c, <2 x double> %extra_p
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP14]], label [[TMP29:%.*]], label [[TMP33:%.*]], !prof [[PROF1]]
 ; CHECK:       29:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       30:
 ; CHECK-NEXT:    [[TMP30:%.*]] = ptrtoint ptr [[A]] to i64
@@ -18681,7 +18686,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfmsub_sd(<2 x double> %x0, <2 x d
 ; CHECK-NEXT:    [[_MSOR24:%.*]] = or i1 [[_MSOR]], [[_MSCMP23]]
 ; CHECK-NEXT:    br i1 [[_MSOR24]], label [[TMP26:%.*]], label [[TMP27:%.*]], !prof [[PROF1]]
 ; CHECK:       26:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       27:
 ; CHECK-NEXT:    [[TMP28:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP23]], double [[TMP24]], double [[TMP25]], i32 11)
@@ -18703,7 +18708,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfmsub_sd(<2 x double> %x0, <2 x d
 ; CHECK-NEXT:    [[_MSOR29:%.*]] = or i1 [[_MSOR27]], [[_MSCMP28]]
 ; CHECK-NEXT:    br i1 [[_MSOR29]], label [[TMP35:%.*]], label [[TMP36:%.*]], !prof [[PROF1]]
 ; CHECK:       35:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       36:
 ; CHECK-NEXT:    [[TMP37:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP32]], double [[TMP33]], double [[TMP34]], i32 10)
@@ -18788,7 +18793,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmsub_ss(<4 x float> %x0, <4 x flo
 ; CHECK-NEXT:    [[_MSOR24:%.*]] = or i1 [[_MSOR]], [[_MSCMP23]]
 ; CHECK-NEXT:    br i1 [[_MSOR24]], label [[TMP26:%.*]], label [[TMP27:%.*]], !prof [[PROF1]]
 ; CHECK:       26:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       27:
 ; CHECK-NEXT:    [[TMP28:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP23]], float [[TMP24]], float [[TMP25]], i32 11)
@@ -18810,7 +18815,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmsub_ss(<4 x float> %x0, <4 x flo
 ; CHECK-NEXT:    [[_MSOR29:%.*]] = or i1 [[_MSOR27]], [[_MSCMP28]]
 ; CHECK-NEXT:    br i1 [[_MSOR29]], label [[TMP35:%.*]], label [[TMP36:%.*]], !prof [[PROF1]]
 ; CHECK:       35:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       36:
 ; CHECK-NEXT:    [[TMP37:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP32]], float [[TMP33]], float [[TMP34]], i32 10)
@@ -18897,7 +18902,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfnmsub_sd(<2 x double> %x0, <2 x 
 ; CHECK-NEXT:    [[_MSOR24:%.*]] = or i1 [[_MSOR]], [[_MSCMP23]]
 ; CHECK-NEXT:    br i1 [[_MSOR24]], label [[TMP28:%.*]], label [[TMP29:%.*]], !prof [[PROF1]]
 ; CHECK:       28:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       29:
 ; CHECK-NEXT:    [[TMP30:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP25]], double [[TMP26]], double [[TMP27]], i32 11)
@@ -18920,7 +18925,7 @@ define <2 x double>@test_int_x86_avx512_mask3_vfnmsub_sd(<2 x double> %x0, <2 x 
 ; CHECK-NEXT:    [[_MSOR29:%.*]] = or i1 [[_MSOR27]], [[_MSCMP28]]
 ; CHECK-NEXT:    br i1 [[_MSOR29]], label [[TMP38:%.*]], label [[TMP39:%.*]], !prof [[PROF1]]
 ; CHECK:       38:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       39:
 ; CHECK-NEXT:    [[TMP40:%.*]] = call double @llvm.x86.avx512.vfmadd.f64(double [[TMP35]], double [[TMP36]], double [[TMP37]], i32 10)
@@ -19007,7 +19012,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x fl
 ; CHECK-NEXT:    [[_MSOR24:%.*]] = or i1 [[_MSOR]], [[_MSCMP23]]
 ; CHECK-NEXT:    br i1 [[_MSOR24]], label [[TMP28:%.*]], label [[TMP29:%.*]], !prof [[PROF1]]
 ; CHECK:       28:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       29:
 ; CHECK-NEXT:    [[TMP30:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP25]], float [[TMP26]], float [[TMP27]], i32 11)
@@ -19030,7 +19035,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x fl
 ; CHECK-NEXT:    [[_MSOR29:%.*]] = or i1 [[_MSOR27]], [[_MSCMP28]]
 ; CHECK-NEXT:    br i1 [[_MSOR29]], label [[TMP38:%.*]], label [[TMP39:%.*]], !prof [[PROF1]]
 ; CHECK:       38:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       39:
 ; CHECK-NEXT:    [[TMP40:%.*]] = call float @llvm.x86.avx512.vfmadd.f32(float [[TMP35]], float [[TMP36]], float [[TMP37]], i32 10)
@@ -19077,7 +19082,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load float, ptr [[PTR_B:%.*]], align 4
@@ -19131,7 +19136,7 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss_rm(<4 x float> %x0, <4 x f
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP25:%.*]], !prof [[PROF1]]
 ; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       7:
 ; CHECK-NEXT:    [[Q:%.*]] = load float, ptr [[PTR_B:%.*]], align 4
@@ -19184,7 +19189,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP20:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[Q:%.*]] = load float, ptr [[PTR_B:%.*]], align 4
@@ -19292,24 +19297,26 @@ define <16 x float> @test_int_x86_avx512_mask_cvt_dq2ps_512(<16 x i32> %x0, <16 
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr getelementptr (i8, ptr @__msan_param_tls, i64 128), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <16 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = sext <16 x i1> [[TMP14]] to <16 x i32>
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <16 x i32> [[X0:%.*]] to <16 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP2]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[X2:%.*]] to <16 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <16 x i1> [[TMP5]], <16 x i32> [[TMP1]], <16 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <16 x i1> [[TMP5]], <16 x i32> [[TMP15]], <16 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <16 x float> [[CVT]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x float> [[X1:%.*]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <16 x i32> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i32> [[TMP9]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i32> [[TMP9]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <16 x i32> [[TMP10]], [[TMP3]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <16 x i1> [[TMP4]], <16 x i32> [[TMP11]], <16 x i32> [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP5]], <16 x float> [[CVT]], <16 x float> [[X1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <16 x i32> [[TMP1]] to i512
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF1]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP17:%.*]], !prof [[PROF1]]
+; CHECK:       16:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       15:
+; CHECK:       17:
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <16 x float> @llvm.x86.avx512.sitofp.round.v16f32.v16i32(<16 x i32> [[X0]], i32 8)
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i32> [[_MSPROP_SELECT]], zeroinitializer
 ; CHECK-NEXT:    [[RES2:%.*]] = fadd <16 x float> [[TMP12]], [[TMP16]]
@@ -19331,24 +19338,26 @@ define <16 x float> @test_int_x86_avx512_mask_cvt_udq2ps_512(<16 x i32> %x0, <16
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr getelementptr (i8, ptr @__msan_param_tls, i64 128), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <16 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = sext <16 x i1> [[TMP14]] to <16 x i32>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <16 x i32> [[X0:%.*]] to <16 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP2]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[X2:%.*]] to <16 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <16 x i1> [[TMP5]], <16 x i32> [[TMP1]], <16 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <16 x i1> [[TMP5]], <16 x i32> [[TMP15]], <16 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <16 x float> [[CVT]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x float> [[X1:%.*]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <16 x i32> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i32> [[TMP9]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i32> [[TMP9]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <16 x i32> [[TMP10]], [[TMP3]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <16 x i1> [[TMP4]], <16 x i32> [[TMP11]], <16 x i32> [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP5]], <16 x float> [[CVT]], <16 x float> [[X1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <16 x i32> [[TMP1]] to i512
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF1]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP17:%.*]], !prof [[PROF1]]
+; CHECK:       16:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       15:
+; CHECK:       17:
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <16 x float> @llvm.x86.avx512.uitofp.round.v16f32.v16i32(<16 x i32> [[X0]], i32 8)
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i32> [[_MSPROP_SELECT]], zeroinitializer
 ; CHECK-NEXT:    [[RES2:%.*]] = fadd <16 x float> [[TMP12]], [[TMP16]]
@@ -19380,7 +19389,7 @@ define <8 x double> @test_mask_compress_pd_512(<8 x double> %data, <8 x double> 
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> [[DATA:%.*]], <8 x double> [[PASSTHRU:%.*]], <8 x i1> [[TMP5]])
@@ -19406,7 +19415,7 @@ define <8 x double> @test_maskz_compress_pd_512(<8 x double> %data, i8 %mask)  #
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> [[DATA:%.*]], <8 x double> zeroinitializer, <8 x i1> [[TMP4]])
@@ -19429,7 +19438,7 @@ define <8 x double> @test_compress_pd_512(<8 x double> %data, <8 x double> %extr
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> [[DATA:%.*]], <8 x double> [[EXTRA_PARAM:%.*]], <8 x i1> splat (i1 true))
@@ -19461,7 +19470,7 @@ define <16 x float> @test_mask_compress_ps_512(<16 x float> %data, <16 x float> 
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> [[DATA:%.*]], <16 x float> [[PASSTHRU:%.*]], <16 x i1> [[TMP5]])
@@ -19487,7 +19496,7 @@ define <16 x float> @test_maskz_compress_ps_512(<16 x float> %data, i16 %mask)  
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> [[DATA:%.*]], <16 x float> zeroinitializer, <16 x i1> [[TMP4]])
@@ -19510,7 +19519,7 @@ define <16 x float> @test_compress_ps_512(<16 x float> %data, <16 x float> %extr
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> [[DATA:%.*]], <16 x float> [[EXTRA_PARAM:%.*]], <16 x i1> splat (i1 true))
@@ -19542,7 +19551,7 @@ define <8 x i64> @test_mask_compress_q_512(<8 x i64> %data, <8 x i64> %passthru,
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> [[DATA:%.*]], <8 x i64> [[PASSTHRU:%.*]], <8 x i1> [[TMP5]])
@@ -19568,7 +19577,7 @@ define <8 x i64> @test_maskz_compress_q_512(<8 x i64> %data, i8 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> [[DATA:%.*]], <8 x i64> zeroinitializer, <8 x i1> [[TMP4]])
@@ -19591,7 +19600,7 @@ define <8 x i64> @test_compress_q_512(<8 x i64> %data, <8 x i64> %extra_param)  
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> [[DATA:%.*]], <8 x i64> [[EXTRA_PARAM:%.*]], <8 x i1> splat (i1 true))
@@ -19623,7 +19632,7 @@ define <16 x i32> @test_mask_compress_d_512(<16 x i32> %data, <16 x i32> %passth
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> [[DATA:%.*]], <16 x i32> [[PASSTHRU:%.*]], <16 x i1> [[TMP5]])
@@ -19649,7 +19658,7 @@ define <16 x i32> @test_maskz_compress_d_512(<16 x i32> %data, i16 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> [[DATA:%.*]], <16 x i32> zeroinitializer, <16 x i1> [[TMP4]])
@@ -19672,7 +19681,7 @@ define <16 x i32> @test_compress_d_512(<16 x i32> %data, <16 x i32> %extra_param
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> [[DATA:%.*]], <16 x i32> [[EXTRA_PARAM:%.*]], <16 x i1> splat (i1 true))
@@ -19697,7 +19706,7 @@ define <8 x double> @test_expand_pd_512(<8 x double> %data, <8 x double> %extra_
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> [[DATA:%.*]], <8 x double> [[EXTRA_PARAM:%.*]], <8 x i1> splat (i1 true))
@@ -19727,7 +19736,7 @@ define <8 x double> @test_mask_expand_pd_512(<8 x double> %data, <8 x double> %p
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> [[DATA:%.*]], <8 x double> [[PASSTHRU:%.*]], <8 x i1> [[TMP5]])
@@ -19753,7 +19762,7 @@ define <8 x double> @test_maskz_expand_pd_512(<8 x double> %data, i8 %mask)  #0 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> [[DATA:%.*]], <8 x double> zeroinitializer, <8 x i1> [[TMP4]])
@@ -19778,7 +19787,7 @@ define <16 x float> @test_expand_ps_512(<16 x float> %data, <16 x float> %extra_
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> [[DATA:%.*]], <16 x float> [[EXTRA_PARAM:%.*]], <16 x i1> splat (i1 true))
@@ -19808,7 +19817,7 @@ define <16 x float> @test_mask_expand_ps_512(<16 x float> %data, <16 x float> %p
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> [[DATA:%.*]], <16 x float> [[PASSTHRU:%.*]], <16 x i1> [[TMP5]])
@@ -19834,7 +19843,7 @@ define <16 x float> @test_maskz_expand_ps_512(<16 x float> %data, i16 %mask)  #0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> [[DATA:%.*]], <16 x float> zeroinitializer, <16 x i1> [[TMP4]])
@@ -19859,7 +19868,7 @@ define <8 x i64> @test_expand_q_512(<8 x i64> %data, <8 x i64> %extra_param)  #0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> [[DATA:%.*]], <8 x i64> [[EXTRA_PARAM:%.*]], <8 x i1> splat (i1 true))
@@ -19889,7 +19898,7 @@ define <8 x i64> @test_mask_expand_q_512(<8 x i64> %data, <8 x i64> %passthru, i
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> [[DATA:%.*]], <8 x i64> [[PASSTHRU:%.*]], <8 x i1> [[TMP5]])
@@ -19915,7 +19924,7 @@ define <8 x i64> @test_maskz_expand_q_512(<8 x i64> %data, i8 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> [[DATA:%.*]], <8 x i64> zeroinitializer, <8 x i1> [[TMP4]])
@@ -19940,7 +19949,7 @@ define <16 x i32> @test_expand_d_512(<16 x i32> %data, <16 x i32> %extra_param) 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> [[DATA:%.*]], <16 x i32> [[EXTRA_PARAM:%.*]], <16 x i1> splat (i1 true))
@@ -19970,7 +19979,7 @@ define <16 x i32> @test_mask_expand_d_512(<16 x i32> %data, <16 x i32> %passthru
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> [[DATA:%.*]], <16 x i32> [[PASSTHRU:%.*]], <16 x i1> [[TMP5]])
@@ -19996,7 +20005,7 @@ define <16 x i32> @test_maskz_expand_d_512(<16 x i32> %data, i16 %mask)  #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> [[DATA:%.*]], <16 x i32> zeroinitializer, <16 x i1> [[TMP4]])
@@ -20026,7 +20035,7 @@ define <16 x float> @test_cmp_512(<16 x float> %a, <16 x float> %b, <16 x float>
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 1, <16 x i1> splat (i1 true), i32 8)
@@ -20037,14 +20046,14 @@ define <16 x float> @test_cmp_512(<16 x float> %a, <16 x float> %b, <16 x float>
 ; CHECK-NEXT:    [[_MSOR4:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR4]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
 ; CHECK:       12:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       13:
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> [[C:%.*]], <16 x float> [[D:%.*]], i32 1, <16 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <16 x float>, ptr [[P:%.*]], align 64

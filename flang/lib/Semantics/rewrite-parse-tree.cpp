@@ -131,9 +131,9 @@ void RewriteMutator::OpenMPSimdOnly(parser::SpecificationPart &specPart) {
       if (auto *ompDecl{std::get_if<
               common::Indirection<parser::OpenMPDeclarativeConstruct>>(
               &specConstr->u)}) {
-        if (std::holds_alternative<parser::OpenMPThreadprivate>(
+        if (std::holds_alternative<parser::OmpThreadprivateDirective>(
                 ompDecl->value().u) ||
-            std::holds_alternative<parser::OpenMPDeclareMapperConstruct>(
+            std::holds_alternative<parser::OmpDeclareMapperDirective>(
                 ompDecl->value().u)) {
           it = list.erase(it);
           continue;

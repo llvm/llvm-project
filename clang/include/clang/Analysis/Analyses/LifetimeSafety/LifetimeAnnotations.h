@@ -49,8 +49,9 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return
 // pointers or references that depend on the lifetime of the object, such as
-// container iterators (begin, end), data accessors (c_str, data, get), or
-// element accessors (operator[], operator*, front, back, at).
+// container iterators (begin, end), data accessors (c_str, data, get),
+// element accessors (operator[], operator*, front, back, at), or propagating
+// operations (operator+, operator-, operator++, operator--).
 bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety);
 
@@ -60,6 +61,11 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 // the lifetime of the argument, such as std::begin, std::data, std::get, or
 // std::any_cast.
 bool shouldTrackFirstArgument(const FunctionDecl *FD);
+
+// Returns true if the second argument of a free function should be tracked for
+// lifetime analysis. This applies to free operator functions that take a
+// GSL Pointer as their second argument.
+bool shouldTrackSecondArgument(const FunctionDecl *FD);
 
 // Tells whether the type is annotated with [[gsl::Pointer]].
 bool isGslPointerType(QualType QT);
@@ -71,14 +77,18 @@ bool isGslOwnerType(QualType QT);
 // when ownership is manually transferred.
 bool isUniquePtrRelease(const CXXMethodDecl &MD);
 
-// Returns true if the given method invalidates references to container
-// elements (e.g. vector::push_back). Methods that only invalidate iterators
-// but not references (e.g. unordered_map::emplace) are not considered
-// invalidating here.
+// Returns true if the given method invalidates references tracked by lifetime
+// analysis (e.g. vector::push_back). Methods that only invalidate iterators but
+// not references (e.g. unordered_map::emplace) are not considered invalidating
+// here.
 //
-// Invalidation rules are based on:
+// Container invalidation rules are based on:
 // https://en.cppreference.com/w/cpp/container#Iterator_invalidation
-bool isContainerInvalidationMethod(const CXXMethodDecl &MD);
+bool isInvalidationMethod(const CXXMethodDecl &MD);
+
+// Returns true if the function destroys its first argument
+// (e.g., destructors via implicit 'this', std::destroy_at).
+bool destructsFirstArg(const FunctionDecl &FD);
 
 /// Returns true for standard library callable wrappers (e.g., std::function)
 /// that can propagate the stored lambda's origins.

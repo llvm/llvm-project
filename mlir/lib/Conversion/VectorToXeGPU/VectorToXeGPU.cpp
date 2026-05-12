@@ -547,46 +547,100 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     if (failed(transferPreconditions(rewriter, readOp)))
       return failure();
+    auto readMemTy = cast<MemRefType>(readOp.getShapedType());
+    VectorType loadedVecTy = readOp.getVectorType();
+    bool isOutOfBounds = readOp.hasOutOfBoundsDim();
+    // Check if the memref has address space 3 (shared local memory)
+    bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(readMemTy);
+    // Handle the SLM case.
+    if (isSharedMemory) {
+      // If the memref is SLM only support 2D case for now.
+      if (loadedVecTy.getRank() != 2)
+        return rewriter.notifyMatchFailure(
+            readOp, "Only 2D vector loads are supported for SLM");
+      AffineMap readMap = readOp.getPermutationMap();
+      if (!readMap.isMinorIdentity())
+        return rewriter.notifyMatchFailure(
+            readOp,
+            "Non identity transposition is not supported for SLM loads.");
+      // Out of bounds case is not supported for SLM loads.
+      if (isOutOfBounds)
+        return rewriter.notifyMatchFailure(
+            readOp, "Out-of-bounds access is not supported for SLM loads");
+
+      // Create mem_desc for SLM
+      auto memDescType =
+          xegpu::MemDescType::get(rewriter.getContext(), readMemTy.getShape(),
+                                  readMemTy.getElementType(),
+                                  /*mem_layout=*/nullptr);
+      auto createMemDescOp = xegpu::CreateMemDescOp::create(
+          rewriter, loc, memDescType, readOp.getBase());
+      // Convert indices to OpFoldResult for LoadMatrixOp
+      SmallVector<OpFoldResult> indices =
+          getAsOpFoldResult(readOp.getIndices());
+      auto loadMatrixOp = xegpu::LoadMatrixOp::create(
+          rewriter, loc, loadedVecTy, createMemDescOp.getResult(), indices,
+          /*layout=*/nullptr);
+
+      rewriter.replaceOp(readOp, loadMatrixOp.getResult());
+      return success();
+    }
 
     // TODO:This check needs to be replaced with proper uArch capability check
     auto chip = xegpu::getChipStr(readOp);
-    if (chip != "pvc" && chip != "bmg") {
-      // lower to scattered load Op if the target HW doesn't have 2d block load
-      // support
+    // Lower to scattered load Op if the target HW doesn't have 2d block load
+    // support and the load is not from shared memory.
+    if ((chip != "pvc" && chip != "bmg") ||
+        readOp.getVectorType().getRank() > 2) {
+
       // TODO: add support for OutOfBound access
-      if (readOp.hasOutOfBoundsDim())
+      if (isOutOfBounds)
         return failure();
       return lowerToScatteredLoadOp(readOp, rewriter);
     }
 
-    VectorType loadedVecTy = readOp.getVectorType();
-
-    // Lower using load.gather in 1D case
-    if (loadedVecTy.getRank() == 1 && !readOp.hasOutOfBoundsDim())
+    // Handle the 1D non-SLM case using load.gather.
+    if (loadedVecTy.getRank() == 1 && !isOutOfBounds)
       return lowerToScatteredLoadOp(readOp, rewriter);
 
     // Perform common data transfer checks.
-    auto readMemTy = cast<MemRefType>(readOp.getShapedType());
+    // TODO: Maybe too strict for SLM case.
     if (failed(
             storeLoadPreconditions(rewriter, readOp, loadedVecTy, readMemTy)))
       return failure();
 
-    bool isOutOfBounds = readOp.hasOutOfBoundsDim();
     if (isOutOfBounds && !isZeroConstant(readOp.getPadding()))
       return rewriter.notifyMatchFailure(
           readOp, "Unsupported non-zero padded out-of-bounds read");
 
     AffineMap readMap = readOp.getPermutationMap();
-    bool isTransposeLoad = !readMap.isMinorIdentity();
+    // Check if this is a transpose: the map must have exactly 2 results,
+    // and those 2 results must be the last 2 input dimensions interchanged.
+    // Examples:
+    //   (d0, d1) -> (d1, d0)      // transpose
+    //   (d0, d1) -> (d0, d1)      // not a transpose
+    //   (d0, d1, d2) -> (d2, d1)  // transpose (last 2 dims swapped)
+    bool isTransposeLoad = false;
+    if (readMap.getNumResults() == 2) {
+      auto results = readMap.getResults();
+      unsigned numInputs = readMap.getNumInputs();
+      if (numInputs >= 2) {
+        auto lastDim = getAffineDimExpr(numInputs - 1, readMap.getContext());
+        auto secondLastDim =
+            getAffineDimExpr(numInputs - 2, readMap.getContext());
+        isTransposeLoad =
+            (results[0] == lastDim && results[1] == secondLastDim);
+      }
+    }
     auto elementType = loadedVecTy.getElementType();
 
     SmallVector<int64_t> descShape(loadedVecTy.getShape());
     if (isTransposeLoad) {
-      // If load is transposed, then the shape of the source-descriptor
-      // is the opposite from the result-shape. Applying the permutation
-      // to get the reversive shape.
-      auto inversedMap = inversePermutation(readMap);
-      descShape = applyPermutationMap(inversedMap, loadedVecTy.getShape());
+      // If load is transposed, simply swap the last two dimensions of the
+      // loaded vector type to get the descriptor shape.
+      size_t rank = descShape.size();
+      assert(rank >= 2 && "Transpose requires at least 2 dimensions");
+      std::swap(descShape[rank - 1], descShape[rank - 2]);
       loadedVecTy = VectorType::get(descShape, elementType);
     }
     auto descType = xegpu::TensorDescType::get(
@@ -610,10 +664,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       // Transposing the loaded vector with a separate vector.transpose
       // operation
       auto range = llvm::seq<int64_t>(0, readMap.getResults().size());
-      SmallVector<int64_t> perm(range.begin(), range.end());
-      auto permApplied = applyPermutationMap<int64_t>(readMap, perm);
-      loadedOp = vector::TransposeOp::create(
-          rewriter, loc, loadedOp->getResult(0), permApplied);
+      SmallVector<int64_t> perm(
+          range.rbegin(), range.rend()); // reverse the range for transpose
+      loadedOp = vector::TransposeOp::create(rewriter, loc,
+                                             loadedOp->getResult(0), perm);
     }
     rewriter.replaceOp(readOp, loadedOp);
 
@@ -631,21 +685,53 @@ struct TransferWriteLowering
 
     if (failed(transferPreconditions(rewriter, writeOp)))
       return failure();
+    // Perform common data transfer checks.
+    VectorType vecTy = writeOp.getVectorType();
+    auto writeMemTy = cast<MemRefType>(writeOp.getShapedType());
+    // Check if the memref has address space 3 (shared local memory)
+    bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(writeMemTy);
+
+    // For shared local memory (address space 3), use create_mem_desc +
+    // store_matrix
+    if (isSharedMemory) {
+      // Only support 2D case for now.
+      if (vecTy.getRank() != 2)
+        return rewriter.notifyMatchFailure(
+            writeOp, "Only 2D vector stores are supported for SLM");
+      // Create mem_desc for SLM
+      auto memDescType =
+          xegpu::MemDescType::get(rewriter.getContext(), writeMemTy.getShape(),
+                                  writeMemTy.getElementType(),
+                                  /*mem_layout=*/nullptr);
+
+      auto createMemDescOp = xegpu::CreateMemDescOp::create(
+          rewriter, loc, memDescType, writeOp.getBase());
+
+      // Convert indices to OpFoldResult for StoreMatrixOp
+      SmallVector<OpFoldResult> indices =
+          getAsOpFoldResult(writeOp.getIndices());
+
+      xegpu::StoreMatrixOp::create(rewriter, loc, writeOp.getVector(),
+                                   createMemDescOp.getResult(), indices,
+                                   /*layout=*/nullptr);
+
+      rewriter.eraseOp(writeOp);
+      return success();
+    }
 
     // TODO:This check needs to be replaced with proper uArch capability check
     auto chip = xegpu::getChipStr(writeOp);
-    if (chip != "pvc" && chip != "bmg") {
-      // lower to scattered store Op if the target HW doesn't have 2d block
-      // store support
+    // Lower to scattered store Op if the target HW doesn't have 2d block
+    // store support and the memref is not SLM.
+    if ((chip != "pvc" && chip != "bmg") ||
+        writeOp.getVectorType().getRank() > 2) {
+
       // TODO: add support for OutOfBound access
       if (writeOp.hasOutOfBoundsDim())
         return failure();
       return lowerToScatteredStoreOp(writeOp, rewriter);
     }
 
-    // Perform common data transfer checks.
-    VectorType vecTy = writeOp.getVectorType();
-    auto writeMemTy = cast<MemRefType>(writeOp.getShapedType());
     if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy, writeMemTy)))
       return failure();
 

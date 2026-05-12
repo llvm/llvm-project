@@ -850,4 +850,42 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
   }
 }
+
+TEST_F(LexerTest, FindEndOfIdentifierContinuation) {
+  const auto Measure = [&](const StringRef Code,
+                           const unsigned Offset) -> unsigned {
+    auto Buf = llvm::MemoryBuffer::getMemBuffer(Code);
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
+    const auto Loc = SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
+                         .getLocWithOffset(Offset);
+    const auto End =
+        Lexer::findEndOfIdentifierContinuation(Loc, SourceMgr, LangOpts);
+    const unsigned Length = SourceMgr.getFileOffset(End) - Offset;
+    SourceMgr.clearIDTables();
+    return Length;
+  };
+
+  // ASCII identifiers.
+  EXPECT_EQ(Measure("abcd", 0), 4u);       // Full identifier.
+  EXPECT_EQ(Measure("abcd", 1), 3u);       // Mid-identifier.
+  EXPECT_EQ(Measure("ab12", 1), 3u);       // At digit.
+  EXPECT_EQ(Measure("ab cd", 1), 1u);      // At space.
+  EXPECT_EQ(Measure("ab+cd", 1), 1u);      // At non-identifier.
+  EXPECT_EQ(Measure("ab(cd)", 1), 1u);     // At '('.
+  EXPECT_EQ(Measure("ab<cd>(ef)", 1), 1u); // At '<'.
+  EXPECT_EQ(Measure("ab{cd}", 1), 1u);     // At '{'.
+  EXPECT_EQ(Measure("ab=cd;", 1), 1u);     // At '='.
+
+  // UTF-8 identifier characters.
+  LangOpts.CPlusPlus = true;
+  EXPECT_EQ(Measure("ab🙂cd", 2), 6u); // '🙂' (4 bytes) + "cd".
+  EXPECT_EQ(Measure("🙂cd", 0), 6u);   // Starts with '🙂'.
+
+  // Dollar sign (requires DollarIdents).
+  LangOpts.DollarIdents = true;
+  EXPECT_EQ(Measure("ab$cd", 2), 3u); // '$' is identifier continue.
+  LangOpts.DollarIdents = false;
+  EXPECT_EQ(Measure("ab$cd", 2), 0u); // '$' is not identifier continue.
+}
+
 } // anonymous namespace

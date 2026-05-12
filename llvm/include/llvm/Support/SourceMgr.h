@@ -200,7 +200,8 @@ public:
   /// buffer of the stacked file. The full path to the included file can be
   /// found in \p IncludedFile.
   LLVM_ABI ErrorOr<std::unique_ptr<MemoryBuffer>>
-  OpenIncludeFile(const std::string &Filename, std::string &IncludedFile);
+  OpenIncludeFile(const std::string &Filename, std::string &IncludedFile,
+                  bool RequiresNullTerminator = true);
 
   /// Return the ID of the buffer containing the specified location.
   ///

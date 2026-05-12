@@ -61,9 +61,9 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *MovedExpr,
-                                  SourceLocation FreeLoc) {}
+  virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
@@ -107,6 +107,11 @@ public:
   // assignment to a global variable
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const VarDecl *EscapeGlobal) {}
+
+  // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
+  // through return.
+  virtual void
+  reportLifetimeboundViolation(const ParmVarDecl *ParmWithLifetimebound) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

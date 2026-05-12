@@ -252,4 +252,44 @@ func.func @conflict_postop() -> vector<16x16xf16> {
   return %1 : vector<16x16xf16>
 }
 
+// CHECK-LABEL: func.func @convert_layout
+// CHECK: %[[V0:.*]] = xegpu.convert_layout %[[CST:.*]] <{input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>, target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>}> : vector<32x128xf32>
+// CHECK: %[[V1:.*]] = xegpu.convert_layout %[[V0]]  <{input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>, target_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}> : vector<32x128xf32>
+func.func @convert_layout() {
+  %src0 = arith.constant
+    {layout_result_0 = #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>}
+      dense<0.000000e+00>
+     : vector<32x128xf32>
+  %src0_cvt = xegpu.convert_layout %src0
+    <{input_layout = #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>,
+     target_layout = #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>}>
+    : vector<32x128xf32>
+  %src1 = arith.constant
+    {layout_result_0 = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}
+    dense<1.000000e+00>
+    : vector<32x128xf32>
+  %dest = arith.addf %src0_cvt, %src1
+    {layout_result_0 = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}
+    : vector<32x128xf32>
+  %desc_cvt = xegpu.convert_layout %dest
+     <{input_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>,
+      target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
+     : vector<32x128xf32>
+  return
+}
+
+// CHECK-LABEL: func.func @extract_source_conflict_with_order
+// CHECK-DAG:     %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1], order = [2, 3, 0, 1]>} : () -> vector<2x4x16x32xf16>
+// CHECK-DAG:     %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1], order = [2, 3, 0, 1]>, target_layout = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1], order = [2, 3, 1, 0]>}>
+// CHECK-SAME:      : vector<2x4x16x32xf16>
+// CHECK:         %[[EXT:.*]] = vector.extract %[[CVT]][0, 0]
+// CHECK-SAME:      {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [0, 1]>}
+// CHECK-SAME:      : vector<16x32xf16> from vector<2x4x16x32xf16>
+// CHECK:         return %[[EXT]] : vector<16x32xf16>
+func.func @extract_source_conflict_with_order() -> vector<16x32xf16> {
+  %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1], order = [2, 3, 0, 1]>} : () -> vector<2x4x16x32xf16>
+  %1 = vector.extract %0[0, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [0, 1]>} : vector<16x32xf16> from vector<2x4x16x32xf16>
+  return %1 : vector<16x32xf16>
+}
 }

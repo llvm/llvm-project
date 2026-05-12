@@ -36,5 +36,7 @@ target_link_libraries (ompdModule ${CMAKE_DL_LIBS})
 set_target_properties (ompdModule PROPERTIES PREFIX "")
 set_target_properties (ompdModule PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd/")
 
+openmp_register_meta_dep(ompd_gdb_plugin ompdModule)
+
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd DESTINATION share/gdb/python/ PATTERN ompdModule.so PERMISSIONS OWNER_READ WORLD_READ GROUP_READ OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
 

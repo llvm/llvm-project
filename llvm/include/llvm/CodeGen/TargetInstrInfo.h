@@ -433,8 +433,16 @@ public:
     return MI->isTerminator() && isUnspillableTerminatorImpl(MI);
   }
 
+  /// Sum the sizes of instructions inside of a BUNDLE, by calling \ref
+  /// getInstSizeInBytes on each. This is a utility function for implementations
+  /// of \ref getInstSizeInBytes to use.
+  unsigned getInstBundleSize(const MachineInstr &MI) const;
+
   /// Returns the size in bytes of the specified MachineInstr, or ~0U
   /// when this function is not implemented by a target.
+
+  /// For BUNDLE instructions, target implementations are responsible for
+  /// accounting for the size of all bundled instructions.
   virtual unsigned getInstSizeInBytes(const MachineInstr &MI) const {
     return ~0U;
   }
@@ -1277,7 +1285,8 @@ public:
   /// store from / to any address, not just from a specific stack slot.
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
                                   MachineInstr &LoadMI, MachineInstr *&CopyMI,
-                                  LiveIntervals *LIS = nullptr) const;
+                                  LiveIntervals *LIS = nullptr,
+                                  VirtRegMap *VRM = nullptr) const;
 
   /// This function defines the logic to lower COPY instruction to
   /// target specific instruction(s).
@@ -1453,11 +1462,10 @@ protected:
   /// Target-independent code in foldMemoryOperand will
   /// take care of adding a MachineMemOperand to the newly created instruction.
   /// The instruction and any auxiliary instructions necessary will be inserted
-  /// at InsertPt.
+  /// at MI.
   virtual MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
+                        ArrayRef<unsigned> Ops, int FrameIndex,
                         MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
                         VirtRegMap *VRM = nullptr) const {
     return nullptr;
@@ -1467,11 +1475,12 @@ protected:
   /// Target-independent code in foldMemoryOperand will
   /// take care of adding a MachineMemOperand to the newly created instruction.
   /// The instruction and any auxiliary instructions necessary will be inserted
-  /// at InsertPt.
-  virtual MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr) const {
+  /// at MI.
+  virtual MachineInstr *
+  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
+                        MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
+                        VirtRegMap *VRM = nullptr) const {
     return nullptr;
   }
 
@@ -2290,12 +2299,8 @@ public:
                                   MachineBasicBlock::iterator Iter,
                                   DebugLoc &DL,
                                   bool AllowSideEffects = true) const {
-#if 0
-    // FIXME: This should exist once all platforms that use stack protectors
-    // implements it.
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildClearRegister!");
-#endif
   }
 
   /// Return true if the function can safely be outlined from.

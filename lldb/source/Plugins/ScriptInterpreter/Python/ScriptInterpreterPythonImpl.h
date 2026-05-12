@@ -9,7 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 
+// clang-format off
+// LLDB Python header must be included first
 #include "lldb-python.h"
+//clang-format on
 
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
@@ -89,6 +92,8 @@ public:
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
   lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
+
+  lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() override;
 
   lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() override;

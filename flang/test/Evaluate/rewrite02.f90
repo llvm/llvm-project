@@ -8,17 +8,17 @@ subroutine foo(j)
     character*4 sc, ac(1)
   end type
   type(t) st, at(1)
-  !CHECK: PRINT *, sc(1_8:int(j,kind=8))
+  !CHECK: PRINT *, sc(1_8:__builtin_int(j,kind=8))
   print *, sc(1:j)
-  !CHECK: PRINT *, ac(1_8)(1_8:int(j,kind=8))
+  !CHECK: PRINT *, ac(1_8)(1_8:__builtin_int(j,kind=8))
   print *, ac(1)(1:j)
-  !CHECK: PRINT *, st%sc(1_8:int(j,kind=8))
+  !CHECK: PRINT *, st%sc(1_8:__builtin_int(j,kind=8))
   print *, st%sc(1:j)
-  !CHECK: PRINT *, st%ac(1_8)(1_8:int(j,kind=8))
+  !CHECK: PRINT *, st%ac(1_8)(1_8:__builtin_int(j,kind=8))
   print *, st%ac(1)(1:j)
-  !CHECK: PRINT *, at(1_8)%sc(1_8:int(j,kind=8))
+  !CHECK: PRINT *, at(1_8)%sc(1_8:__builtin_int(j,kind=8))
   print *, at(1)%sc(1:j)
-  !CHECK: PRINT *, at(1_8)%ac(1_8)(1_8:int(j,kind=8))
+  !CHECK: PRINT *, at(1_8)%ac(1_8)(1_8:__builtin_int(j,kind=8))
   print *, at(1)%ac(1)(1:j)
   !CHECK: PRINT *, 1_4
   print *, sc(1:j)%kind
@@ -32,16 +32,16 @@ subroutine foo(j)
   print *, at(1)%sc(1:j)%kind
   !CHECK: PRINT *, 1_4
   print *, at(1)%ac(1)(1:j)%kind
-  !CHECK: PRINT *, int(max(0_8,int(j,kind=8)-1_8+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,__builtin_int(j,kind=8)-1_8+1_8),kind=4)
   print *, sc(1:j)%len
-  !CHECK: PRINT *, int(max(0_8,int(j,kind=8)-1_8+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,__builtin_int(j,kind=8)-1_8+1_8),kind=4)
   print *, ac(1)(1:j)%len
-  !CHECK: PRINT *, int(max(0_8,int(j,kind=8)-1_8+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,__builtin_int(j,kind=8)-1_8+1_8),kind=4)
   print *, st%sc(1:j)%len
-  !CHECK: PRINT *, int(max(0_8,int(j,kind=8)-1_8+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,__builtin_int(j,kind=8)-1_8+1_8),kind=4)
   print *, st%ac(1)(1:j)%len
-  !CHECK: PRINT *, int(max(0_8,int(j,kind=8)-1_8+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,__builtin_int(j,kind=8)-1_8+1_8),kind=4)
   print *, at(1)%sc(1:j)%len
-  !CHECK: PRINT *, int(max(0_8,int(j,kind=8)-1_8+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,__builtin_int(j,kind=8)-1_8+1_8),kind=4)
   print *, at(1)%ac(1)(1:j)%len
 end

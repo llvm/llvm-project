@@ -46,15 +46,6 @@ class Value;
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 
-/// Compute the transformed value of Index at offset StartValue using step
-/// StepValue.
-/// For integer induction, returns StartValue + Index * StepValue.
-/// For pointer induction, returns StartValue[Index * StepValue].
-Value *emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
-                            Value *Step,
-                            InductionDescriptor::InductionKind InductionKind,
-                            const BinaryOperator *InductionBinOp);
-
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
 /// [1, 16) = {1, 2, 4, 8}
@@ -206,6 +197,7 @@ struct VPTransformState {
   /// Hold the index to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
+  /// TODO: This is now only used in asserts. Remove as follow-up.
   std::optional<VPLane> Lane;
 
   struct DataState {
@@ -381,6 +373,10 @@ struct VPCostContext {
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(const VPReplicateRecipe *R, ElementCount VF);
+
+  /// Returns true if \p ID is a pseudo intrinsic that is dropped via
+  /// scalarization rather than widened.
+  static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
