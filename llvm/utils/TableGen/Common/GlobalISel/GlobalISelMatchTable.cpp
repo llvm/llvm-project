@@ -149,10 +149,7 @@ optimizeRules(ArrayRef<Matcher *> Rules,
 std::vector<Matcher *> llvm::gi::optimizeRuleset(
     MutableArrayRef<RuleMatcher> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
-  std::vector<Matcher *> InputRules;
-  InputRules.reserve(Rules.size());
-  for (RuleMatcher &Rule : Rules)
-    InputRules.push_back(&Rule);
+  SmallVector<Matcher *> InputRules(make_pointer_range(Rules));
 
   // Now sort the Rules.
   unsigned CurrentOrdering = 0;

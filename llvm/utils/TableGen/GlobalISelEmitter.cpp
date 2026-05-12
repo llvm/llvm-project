@@ -2310,9 +2310,7 @@ MatchTable
 GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                    bool Optimize, bool WithCoverage) {
   if (!Optimize) {
-    std::vector<Matcher *> InputRules;
-    for (Matcher &Rule : Rules)
-      InputRules.push_back(&Rule);
+    SmallVector<Matcher *> InputRules(make_pointer_range(Rules));
     return MatchTable::buildTable(InputRules, WithCoverage);
   }
 
